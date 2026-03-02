@@ -61,20 +61,39 @@ export async function updateSessionActivity(
 
 /**
  * 일일 무료 사용 카운트 증가
+ * - 자정 지나면 카운트 리셋
+ * - RPC 없이 직접 UPDATE
  */
 export async function incrementDailyFreeUsage(
     db: SupabaseClient,
     userId: string,
     currentCount: number,
 ) {
-    try {
-        await db.rpc('increment_daily_free', { uid: userId })
-    } catch {
-        // RPC 미구현 시 직접 업데이트
-        await db
-            .from('users')
-            .update({ daily_free_used: currentCount + 1 })
-            .eq('id', userId)
+    const now = new Date()
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+
+    // 먼저 리셋 날짜 확인 — 오늘 이전이면 카운트 리셋
+    const { data: userData } = await db
+        .from('users')
+        .select('daily_free_reset_at')
+        .eq('id', userId)
+        .single()
+
+    const resetAt = userData?.daily_free_reset_at ? new Date(userData.daily_free_reset_at) : null
+    const needsReset = !resetAt || resetAt < new Date(todayStart)
+
+    const newCount = needsReset ? 1 : currentCount + 1
+
+    const { error } = await db
+        .from('users')
+        .update({
+            daily_free_used: newCount,
+            daily_free_reset_at: needsReset ? now.toISOString() : undefined,
+        })
+        .eq('id', userId)
+
+    if (error) {
+        console.error('[Chat Actions] incrementDailyFreeUsage error:', JSON.stringify(error))
     }
 }
 
