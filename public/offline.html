@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오프라인 | 큐리 AI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+            background: linear-gradient(180deg, #f0f9ff 0%, #faf8f5 100%);
+            min-height: 100dvh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px;
+        }
+        .container {
+            text-align: center;
+            max-width: 400px;
+        }
+        .icon {
+            font-size: 64px;
+            margin-bottom: 24px;
+            animation: bounce 2s ease-in-out infinite;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 800;
+            color: #18181b;
+            margin-bottom: 12px;
+        }
+        p {
+            font-size: 16px;
+            color: #71717a;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+        .retry-btn {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: #fff;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(34,197,94,0.3);
+            transition: transform 0.15s;
+        }
+        .retry-btn:active {
+            transform: scale(0.97);
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📡</div>
+        <h1>인터넷 연결이 필요해요</h1>
+        <p>
+            멘토와 대화하려면 인터넷이 필요합니다.<br>
+            Wi-Fi나 데이터를 확인하고 다시 시도해주세요.
+        </p>
+        <button class="retry-btn" onclick="location.reload()">
+            다시 시도하기
+        </button>
+    </div>
+</body>
+</html>

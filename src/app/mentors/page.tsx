@@ -1,0 +1,265 @@
+export const dynamic = 'force-dynamic'
+
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import Image from 'next/image'
+import { getActiveMentors, MENTOR_IMAGES } from '@/domains/mentor'
+import type { MentorCardData } from '@/domains/mentor'
+import NotificationBanner from './NotificationBanner'
+
+export const metadata: Metadata = {
+    title: '멘토 선택 — 큐리 AI',
+    description: 'AI 멘토를 선택하고, 콘텐츠 수익화·브랜딩·글쓰기·마케팅에 대해 24시간 대화하세요.',
+    openGraph: {
+        title: '멘토 선택 — 큐리 AI',
+        description: 'AI 멘토를 선택하고 24시간 대화하세요. 콘텐츠 수익화, 브랜딩, 글쓰기 전문가가 함께합니다.',
+    },
+}
+
+
+const fallbackMentors = [
+    {
+        id: 'passion-jin',
+        name: '열정진',
+        title: '콘텐츠 수익화 / 브랜딩 전문가',
+        desc: '콘텐츠로 수익을 만들고, 퍼스널 브랜드를 구축하는 방법을 알려드립니다. 큐리어스 대표이자 콘텐츠 크리에이터로서의 실전 경험을 나눕니다.',
+        questions: ['콘텐츠 수익화 어디서 시작하면 좋을까요?', '퍼스널 브랜드 차별화 전략이 궁금해요'],
+    },
+    {
+        id: 'mentor-2',
+        name: '글담쌤',
+        title: '글쓰기 & 콘텐츠 기획 전문가',
+        desc: '매력적인 글쓰기와 콘텐츠 기획의 핵심을 짚어드립니다. 큐리어스에서 글쓰기 클래스를 운영하고 있습니다.',
+        questions: ['블로그 글 잘 쓰는 방법이 궁금해요', '매일 글쓰기 습관 만들기'],
+    },
+    {
+        id: 'mentor-3',
+        name: 'Cathy',
+        title: '실전 마케팅 & 커뮤니티 전문가',
+        desc: '실전 마케팅과 커뮤니티 운영 노하우를 공유합니다. 큐리어스에서 마케팅 클래스를 담당하고 있습니다.',
+        questions: ['인스타그램 팔로워 늘리는 현실적인 방법', '커뮤니티 처음 만들 때 뭐부터 해야 하나요?'],
+    },
+]
+
+/* ─── Mentor Card (Web: wide, responsive) ─── */
+function MentorCard({
+    name, title, description, questions, imageSrc, index,
+}: {
+    name: string; title: string; description: string; questions: string[]; imageSrc: string; index: number
+}) {
+    return (
+        <article
+            className="animate-slide-up"
+            style={{
+                background: '#fff',
+                borderRadius: 20,
+                border: '1px solid #f0f0f0',
+                boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
+                overflow: 'hidden',
+                transition: 'transform 250ms ease, box-shadow 250ms ease',
+                animationDelay: `${index * 80}ms`,
+            }}
+        >
+            {/* Mentor Photo */}
+            <div style={{
+                position: 'relative',
+                width: '100%',
+                aspectRatio: '1 / 1',
+                background: '#f8f9fa',
+                overflow: 'hidden',
+            }}>
+                <Image
+                    src={imageSrc}
+                    alt={`${name} 멘토`}
+                    fill
+                    style={{ objectFit: 'cover' }}
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                />
+            </div>
+
+            {/* Info */}
+            <div style={{ padding: '20px 20px 24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <h2 style={{
+                        fontSize: 24, fontWeight: 800, color: '#18181b',
+                        letterSpacing: '-0.02em', margin: 0,
+                    }}>
+                        {name}
+                    </h2>
+                    <span style={{
+                        fontSize: 13, fontWeight: 600, color: '#16a34a',
+                        background: '#f0fdf4', borderRadius: 100,
+                        padding: '4px 12px',
+                    }}>
+                        AI 멘토
+                    </span>
+                </div>
+
+                <p style={{
+                    fontSize: 16, color: '#6b7280', margin: '0 0 10px',
+                    fontWeight: 500,
+                }}>
+                    {title}
+                </p>
+
+                <p style={{
+                    fontSize: 15, color: '#9ca3af', lineHeight: 1.6, margin: '0 0 16px',
+                    display: '-webkit-box', WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
+                }}>
+                    {description}
+                </p>
+
+                {questions.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {questions.slice(0, 2).map((q, i) => (
+                            <span
+                                key={i}
+                                style={{
+                                    fontSize: 14, color: '#16a34a', lineHeight: 1.4,
+                                    background: '#f0fdf4', borderRadius: 100,
+                                    padding: '6px 16px', border: '1px solid #dcfce7',
+                                }}
+                            >
+                                &ldquo;{q}&rdquo;
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </article>
+    )
+}
+
+export default async function MentorsPage() {
+    const mentors = await getActiveMentors()
+
+    return (
+        <div style={{ minHeight: '100dvh', background: '#f8f9fa' }} role="document">
+
+            {/* ─── Web Header ─── */}
+            <header style={{
+                position: 'sticky', top: 0, zIndex: 50,
+                background: 'rgba(255,255,255,0.95)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderBottom: '1px solid #f0f0f0',
+            }}>
+                <div style={{
+                    maxWidth: 1200, margin: '0 auto',
+                    padding: '0 40px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    height: 64,
+                }}>
+                    {/* Logo */}
+                    <Link href="/mentors" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+                        <Image src="/logo.png" alt="큐리 AI" width={36} height={36} style={{ borderRadius: 10 }} />
+                        <span style={{
+                            fontSize: 20, fontWeight: 800, letterSpacing: '-0.04em',
+                            background: 'linear-gradient(135deg, #16a34a, #22c55e)',
+                            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                        }}>
+                            큐리 AI
+                        </span>
+                    </Link>
+
+                    {/* Nav */}
+                    <nav style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+                        {[
+                            { label: '멘토', href: '/mentors', active: true },
+                            { label: '대화', href: '/chats', active: false },
+                            { label: '마이페이지', href: '/profile', active: false },
+                        ].map((item) => (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                style={{
+                                    textDecoration: 'none',
+                                    fontSize: 16, fontWeight: item.active ? 700 : 500,
+                                    color: item.active ? '#16a34a' : '#9ca3af',
+                                    transition: 'color 200ms',
+                                    borderBottom: item.active ? '2px solid #22c55e' : '2px solid transparent',
+                                    paddingBottom: 4,
+                                }}
+                            >
+                                {item.label}
+                            </Link>
+                        ))}
+                    </nav>
+                </div>
+            </header>
+
+            {/* ─── Hero ─── */}
+            <section style={{
+                maxWidth: 1200, margin: '0 auto',
+                padding: '56px 40px 32px',
+            }}>
+                <h1 style={{
+                    fontSize: 42, fontWeight: 800, color: '#18181b',
+                    lineHeight: 1.35, letterSpacing: '-0.03em', margin: 0,
+                }}>
+                    오늘은 어떤 이야기를{' '}
+                    <span style={{
+                        background: 'linear-gradient(135deg, #16a34a, #22c55e)',
+                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                    }}>
+                        나눠볼까요?
+                    </span>
+                </h1>
+                <p style={{ fontSize: 18, color: '#9ca3af', marginTop: 12 }}>
+                    AI 멘토가 24시간 함께합니다. 궁금한 것을 언제든 물어보세요.
+                </p>
+            </section>
+
+            {/* ─── Notification Banner ─── */}
+            <NotificationBanner />
+
+            {/* ─── Mentor Grid ─── */}
+            <main>
+                <section style={{
+                    maxWidth: 1200, margin: '0 auto',
+                    padding: '0 40px 80px',
+                }}>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                        gap: 28,
+                    }}>
+                        {mentors.length > 0
+                            ? mentors.map((mentor: MentorCardData, index: number) => (
+                                <Link key={mentor.id} href={`/chat/${mentor.id}`} aria-label={`${mentor.name} 멘토와 대화하기`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                    <MentorCard
+                                        name={mentor.name} title={mentor.title}
+                                        description={mentor.description}
+                                        questions={mentor.sample_questions || []}
+                                        imageSrc={mentor.avatar_url || MENTOR_IMAGES[mentor.name] || '/mentors/passion-jin.png'}
+                                        index={index}
+                                    />
+                                </Link>
+                            ))
+                            : fallbackMentors.map((m, index) => (
+                                <Link key={m.id} href={`/chat/${m.id}`} aria-label={`${m.name} 멘토와 대화하기`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                    <MentorCard
+                                        key={m.id} name={m.name} title={m.title}
+                                        description={m.desc} questions={m.questions}
+                                        imageSrc={MENTOR_IMAGES[m.name] || '/mentors/passion-jin.png'}
+                                        index={index}
+                                    />
+                                </Link>
+                            ))}
+                    </div>
+                </section>
+            </main>
+
+            {/* ─── Footer ─── */}
+            <footer style={{
+                borderTop: '1px solid #f0f0f0',
+                padding: '24px 40px',
+                textAlign: 'center',
+                fontSize: 14, color: '#d1d5db',
+            }}>
+                © 2026 큐리 AI — 나를 아는 멘토
+            </footer>
+        </div>
+    )
+}
