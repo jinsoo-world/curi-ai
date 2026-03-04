@@ -14,8 +14,8 @@ const PLANS = {
 }
 
 const FREE_FEATURES = [
-    '하루 5회 무료 대화',
-    '5명의 AI 멘토',
+    '하루 20회 무료 대화',
+    '3명의 AI 멘토',
     '텍스트 채팅',
 ]
 
@@ -35,6 +35,7 @@ export default function PricingPage() {
     const [loading, setLoading] = useState(false)
     const [userId, setUserId] = useState<string | null>(null)
     const [isPremium, setIsPremium] = useState(false)
+    const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
     useEffect(() => {
         const checkUser = async () => {
@@ -63,20 +64,31 @@ export default function PricingPage() {
         if (isPremium) return
 
         setLoading(true)
+        setErrorMsg(null)
+
         try {
+            const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY
+            if (!clientKey) {
+                throw new Error('결제 설정이 완료되지 않았습니다. 관리자에게 문의해주세요.')
+            }
+
+            console.log('[Pricing] Loading TossPayments SDK...')
             const { loadTossPayments } = await import('@tosspayments/tosspayments-sdk')
-            const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!)
+            const tossPayments = await loadTossPayments(clientKey)
+            console.log('[Pricing] SDK loaded, creating payment instance...')
+
             const payment = tossPayments.payment({ customerKey: userId })
+            console.log('[Pricing] Requesting billing auth...')
 
             await payment.requestBillingAuth({
                 method: 'CARD',
                 successUrl: `${window.location.origin}/billing/success?planType=${selectedPlan}`,
                 failUrl: `${window.location.origin}/billing/fail`,
-                customerEmail: undefined,
-                customerName: undefined,
             })
-        } catch (error) {
-            console.error('결제 요청 오류:', error)
+        } catch (error: any) {
+            console.error('[Pricing] 결제 요청 오류:', error)
+            const msg = error?.message || '결제 요청 중 오류가 발생했습니다.'
+            setErrorMsg(msg)
             setLoading(false)
         }
     }
@@ -105,7 +117,7 @@ export default function PricingPage() {
                     height: 64,
                 }}>
                     <Link href="/mentors" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-                        <Image src="/curilogo.png" alt="큐리 AI" width={32} height={32} />
+                        <Image src="/logo.png" alt="큐리 AI" width={36} height={36} style={{ borderRadius: 10 }} />
                         <span style={{
                             fontSize: 20, fontWeight: 800, letterSpacing: '-0.04em',
                             background: 'linear-gradient(135deg, #16a34a, #22c55e)',
@@ -256,6 +268,17 @@ export default function PricingPage() {
                                 </li>
                             ))}
                         </ul>
+
+                        {errorMsg && (
+                            <div style={{
+                                padding: '10px 14px', borderRadius: 10,
+                                background: 'rgba(239,68,68,0.15)', color: '#ef4444',
+                                fontSize: 13, fontWeight: 500, marginBottom: 12,
+                                textAlign: 'left',
+                            }}>
+                                ⚠️ {errorMsg}
+                            </div>
+                        )}
 
                         <button
                             onClick={handleSubscribe}

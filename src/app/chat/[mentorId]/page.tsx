@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { MentorHeader, ChatMessages, ChatInput, SuggestionCards, ElevenLabsWidget } from './components'
+import ChatSidebar from './components/ChatSidebar'
 import type { ChatMessage } from './components'
 
 interface MentorData {
@@ -108,6 +109,8 @@ export default function ChatPage() {
     const [showSuggestions, setShowSuggestions] = useState(true)
     const [lastSentAt, setLastSentAt] = useState(0)
     const [isCallOpen, setIsCallOpen] = useState(false)
+    const [sidebarSessions, setSidebarSessions] = useState<any[]>([])
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -236,6 +239,51 @@ export default function ChatPage() {
         }
         initSession()
     }, [mentorId, existingSessionId, isNewChatRequested])
+
+    // ───── 사이드바 세션 목록 로드 ─────
+    const loadSidebarSessions = useCallback(async () => {
+        try {
+            const res = await fetch(`/api/sessions?mentorId=${mentorId}`)
+            const { sessions } = await res.json()
+            setSidebarSessions(sessions || [])
+        } catch (e) {
+            console.error('사이드바 세션 로드 실패:', e)
+        }
+    }, [mentorId])
+
+    useEffect(() => {
+        loadSidebarSessions()
+    }, [loadSidebarSessions, sessionId])
+
+    // ───── 세션 업데이트 (고정/이름변경) ─────
+    const handleUpdateSession = useCallback(async (sid: string, updates: { title?: string; is_pinned?: boolean }) => {
+        try {
+            await fetch(`/api/sessions/${sid}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updates),
+            })
+            loadSidebarSessions()
+        } catch (e) {
+            console.error('세션 업데이트 실패:', e)
+        }
+    }, [loadSidebarSessions])
+
+    // ───── 세션 선택 ─────
+    const handleSelectSession = useCallback(async (sid: string) => {
+        if (sid === sessionId) return
+        setSessionId(sid)
+        setIsSidebarOpen(false)
+        window.history.replaceState(null, '', `/chat/${mentorId}?session=${sid}`)
+        try {
+            const res = await fetch(`/api/sessions/${sid}/messages`)
+            const { messages: loaded } = await res.json()
+            setMessages(loaded || [])
+            setShowSuggestions(!loaded?.length)
+        } catch (e) {
+            console.error('메시지 로드 실패:', e)
+        }
+    }, [sessionId, mentorId])
 
     // ───── 스크롤 ─────
     useEffect(() => {
@@ -396,11 +444,12 @@ export default function ChatPage() {
             if (session) {
                 setSessionId(session.id)
                 window.history.replaceState(null, '', `/chat/${mentorId}?session=${session.id}`)
+                loadSidebarSessions()
             }
         } catch (e) {
             console.error('새 세션 생성 실패:', e)
         }
-    }, [mentor, mentorId])
+    }, [mentor, mentorId, loadSidebarSessions])
 
     // ───── 로딩 스켈레톤 ─────
     if (!mentor) {
@@ -443,170 +492,202 @@ export default function ChatPage() {
     return (
         <div style={{
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: 'row',
             height: '100dvh',
             background: '#faf8f5',
         }}>
-            <MentorHeader
-                mentor={mentor}
-                mentorImage={mentorImage}
-                mentorEmoji={mentorEmoji}
-                isStreaming={isStreaming}
+            {/* 사이드바 */}
+            <ChatSidebar
+                sessions={sidebarSessions.map(s => ({
+                    id: s.id,
+                    title: s.title || '',
+                    last_message_at: s.last_message_at || s.created_at,
+                    message_count: s.message_count || 0,
+                    is_pinned: s.is_pinned || false,
+                    mentors: s.mentors || null,
+                }))}
+                currentSessionId={sessionId}
+                mentorName={mentor.name}
+                isOpen={isSidebarOpen}
+                onClose={() => setIsSidebarOpen(false)}
+                onSelectSession={handleSelectSession}
                 onNewChat={handleNewChat}
-                onCall={ELEVENLABS_AGENT_IDS[mentor.name] ? () => setIsCallOpen(true) : undefined}
+                onUpdateSession={handleUpdateSession}
             />
 
-            {/* Messages Area */}
-            <div
-                ref={chatContainerRef}
-                role="log"
-                aria-label={`${mentor.name} 멘토와의 대화`}
-                aria-live="polite"
-                style={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    WebkitOverflowScrolling: 'touch',
-                }}
-            >
-                <div className="chat-messages-inner" style={{
-                    width: '100%',
-                    maxWidth: 860,
-                    padding: '24px clamp(16px, 4vw, 32px)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 24,
-                }}>
-                    {/* 멘토 인사 카드 — 대화가 없을 때 */}
-                    {messages.length === 0 && (
-                        <div style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            padding: '48px 20px 32px',
-                        }}>
-                            {mentorImage ? (
-                                <img
-                                    src={mentorImage}
-                                    alt={mentor.name}
-                                    className="chat-welcome-avatar"
-                                    style={{
-                                        width: 88,
-                                        height: 88,
-                                        borderRadius: '50%',
-                                        objectFit: 'cover',
-                                        marginBottom: 16,
-                                        boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
-                                    }}
-                                />
-                            ) : (
-                                <div className="chat-welcome-avatar-emoji" style={{
-                                    width: 88,
-                                    height: 88,
-                                    borderRadius: '50%',
-                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: 44,
-                                    marginBottom: 16,
-                                    boxShadow: '0 4px 16px rgba(34,197,94,0.2)',
-                                }}>
-                                    {mentorEmoji}
-                                </div>
-                            )}
-                            <h2 className="chat-welcome-name" style={{
-                                margin: 0,
-                                fontSize: 28,
-                                fontWeight: 800,
-                                color: '#18181b',
-                                marginBottom: 4,
-                            }}>
-                                {mentor.name}
-                            </h2>
-                            <p className="chat-welcome-title" style={{
-                                margin: 0,
-                                fontSize: 18,
-                                color: '#71717a',
-                                marginBottom: 24,
-                            }}>
-                                {mentor.title}
-                            </p>
-
-                            {/* 인사 메시지 */}
-                            <div className="chat-welcome-greeting" style={{
-                                background: '#f0ede8',
-                                borderRadius: '20px',
-                                padding: '18px 24px',
-                                fontSize: 19,
-                                color: '#18181b',
-                                lineHeight: 1.7,
-                                textAlign: 'left',
-                                maxWidth: 600,
-                            }}>
-                                {mentor.greeting_message}
-                            </div>
-
-                            {showSuggestions && (
-                                <SuggestionCards
-                                    suggestions={suggestions}
-                                    onSelect={sendMessage}
-                                    variant="welcome"
-                                />
-                            )}
-                        </div>
-                    )}
-
-                    {/* 대화 메시지 */}
-                    <ChatMessages
-                        messages={messages}
-                        mentor={mentor}
-                        mentorImage={mentorImage}
-                        mentorEmoji={mentorEmoji}
-                        isStreaming={isStreaming}
-                    />
-
-                    {/* 대화 중 추천 질문 */}
-                    {!isStreaming && messages.length > 0 && showSuggestions && (
-                        <SuggestionCards
-                            suggestions={suggestions}
-                            onSelect={sendMessage}
-                            variant="inline"
-                        />
-                    )}
-
-
-
-                    <div ref={messagesEndRef} />
-                </div>
-            </div>
-
-            <ChatInput
-                value={input}
-                onChange={setInput}
-                onSubmit={sendMessage}
-                isStreaming={isStreaming}
-            />
-
-            {/* ElevenLabs 음성 대화 오버레이 */}
-            {mentor?.name && ELEVENLABS_AGENT_IDS[mentor.name] && (
-                <ElevenLabsWidget
-                    agentId={ELEVENLABS_AGENT_IDS[mentor.name]}
-                    mentorName={mentor.name}
+            {/* 메인 채팅 영역 */}
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                flex: 1,
+                minWidth: 0,
+                height: '100dvh',
+            }}>
+                <MentorHeader
+                    mentor={mentor}
                     mentorImage={mentorImage}
                     mentorEmoji={mentorEmoji}
-                    isOpen={isCallOpen}
-                    onClose={() => setIsCallOpen(false)}
+                    isStreaming={isStreaming}
+                    onNewChat={handleNewChat}
+                    onCall={ELEVENLABS_AGENT_IDS[mentor.name] ? () => setIsCallOpen(true) : undefined}
+                    onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                 />
-            )}
 
-            <style>{`
+                {/* Messages Area */}
+                <div
+                    ref={chatContainerRef}
+                    role="log"
+                    aria-label={`${mentor.name} 멘토와의 대화`}
+                    aria-live="polite"
+                    style={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        WebkitOverflowScrolling: 'touch',
+                    }}
+                >
+                    <div className="chat-messages-inner" style={{
+                        width: '100%',
+                        maxWidth: 720,
+                        padding: '24px clamp(16px, 4vw, 32px)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 28,
+                    }}>
+                        {/* 제미나이 스타일 Welcome */}
+                        {messages.length === 0 && (
+                            <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                padding: '60px 20px 32px',
+                            }}>
+                                {mentorImage ? (
+                                    <img
+                                        src={mentorImage}
+                                        alt={mentor.name}
+                                        style={{
+                                            width: 72,
+                                            height: 72,
+                                            borderRadius: '50%',
+                                            objectFit: 'cover',
+                                            marginBottom: 20,
+                                            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+                                        }}
+                                    />
+                                ) : (
+                                    <div style={{
+                                        width: 72,
+                                        height: 72,
+                                        borderRadius: '50%',
+                                        background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: 36,
+                                        marginBottom: 20,
+                                        boxShadow: '0 2px 12px rgba(34,197,94,0.15)',
+                                    }}>
+                                        {mentorEmoji}
+                                    </div>
+                                )}
+
+                                {/* 제미나이 스타일 큰 인사 */}
+                                <h2 style={{
+                                    margin: 0,
+                                    fontSize: 26,
+                                    fontWeight: 700,
+                                    color: '#1e293b',
+                                    marginBottom: 6,
+                                    letterSpacing: '-0.02em',
+                                }}>
+                                    {mentor.name} AI
+                                </h2>
+                                <p style={{
+                                    margin: 0,
+                                    fontSize: 15,
+                                    color: '#94a3b8',
+                                    marginBottom: 20,
+                                }}>
+                                    {mentor.title}
+                                </p>
+
+                                {/* 인사 메시지 — 버블 없이 깔끔하게 */}
+                                <p style={{
+                                    margin: 0,
+                                    fontSize: 15,
+                                    color: '#475569',
+                                    lineHeight: 1.8,
+                                    textAlign: 'center',
+                                    maxWidth: 480,
+                                }}>
+                                    {mentor.greeting_message}
+                                </p>
+
+                                {showSuggestions && (
+                                    <SuggestionCards
+                                        suggestions={suggestions}
+                                        onSelect={sendMessage}
+                                        variant="welcome"
+                                    />
+                                )}
+                            </div>
+                        )}
+
+                        {/* 대화 메시지 */}
+                        <ChatMessages
+                            messages={messages}
+                            mentor={mentor}
+                            mentorImage={mentorImage}
+                            mentorEmoji={mentorEmoji}
+                            isStreaming={isStreaming}
+                        />
+
+                        {/* 대화 중 추천 질문 */}
+                        {!isStreaming && messages.length > 0 && showSuggestions && (
+                            <SuggestionCards
+                                suggestions={suggestions}
+                                onSelect={sendMessage}
+                                variant="inline"
+                            />
+                        )}
+
+
+
+                        <div ref={messagesEndRef} />
+                    </div>
+                </div>
+
+                <ChatInput
+                    value={input}
+                    onChange={setInput}
+                    onSubmit={sendMessage}
+                    isStreaming={isStreaming}
+                />
+
+                {/* ElevenLabs 음성 대화 오버레이 */}
+                {mentor?.name && ELEVENLABS_AGENT_IDS[mentor.name] && (
+                    <ElevenLabsWidget
+                        agentId={ELEVENLABS_AGENT_IDS[mentor.name]}
+                        mentorName={mentor.name}
+                        mentorImage={mentorImage}
+                        mentorEmoji={mentorEmoji}
+                        isOpen={isCallOpen}
+                        onClose={() => setIsCallOpen(false)}
+                    />
+                )}
+
+                <style>{`
                 @keyframes spin { to { transform: rotate(360deg) } }
                 @keyframes pulseSoft { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
                 @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+                @media (max-width: 768px) {
+                    .sidebar-toggle-btn { display: flex !important; }
+                }
             `}</style>
+            </div>{/* flex: 메인 채팅 영역 끝 */}
         </div>
     )
 }

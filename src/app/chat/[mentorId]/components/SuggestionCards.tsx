@@ -10,8 +10,6 @@ interface SuggestionCardsProps {
     isLoading?: boolean
 }
 
-const SUGGESTION_ICONS = ['💡', '🎯', '🚀', '✨', '📌']
-
 export default function SuggestionCards({
     suggestions,
     onSelect,
@@ -27,20 +25,19 @@ export default function SuggestionCards({
                 display: 'flex',
                 flexDirection: variant === 'welcome' ? 'column' : 'row',
                 gap: variant === 'welcome' ? 10 : 8,
-                marginTop: variant === 'welcome' ? 20 : 0,
+                marginTop: variant === 'welcome' ? 24 : 0,
                 width: '100%',
-                maxWidth: variant === 'welcome' ? 600 : undefined,
+                maxWidth: variant === 'welcome' ? 560 : undefined,
                 flexWrap: variant === 'inline' ? 'wrap' : undefined,
-                paddingLeft: variant === 'inline' ? 48 : undefined,
             }}>
                 {[1, 2, 3].map(i => (
                     <div
                         key={i}
                         style={{
-                            height: variant === 'welcome' ? 52 : 36,
-                            width: variant === 'welcome' ? '100%' : `${100 + i * 20}px`,
-                            borderRadius: variant === 'welcome' ? 16 : 20,
-                            background: 'linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%)',
+                            height: variant === 'welcome' ? 48 : 34,
+                            width: variant === 'welcome' ? '100%' : `${90 + i * 20}px`,
+                            borderRadius: 24,
+                            background: 'linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%)',
                             backgroundSize: '200% 100%',
                             animation: `shimmer 1.5s ease-in-out infinite ${i * 0.15}s`,
                         }}
@@ -58,25 +55,17 @@ export default function SuggestionCards({
 
     if (suggestions.length === 0) return null
 
+    /* ── Welcome 카드 — 제미나이 스타일 둥근 카드 ── */
     if (variant === 'welcome') {
         return (
-            <div className="suggestion-welcome" style={{
+            <div style={{
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 10,
-                marginTop: 20,
+                marginTop: 24,
                 width: '100%',
-                maxWidth: 600,
+                maxWidth: 560,
             }}>
-                <p style={{
-                    margin: 0,
-                    fontSize: 13,
-                    color: '#a1a1aa',
-                    fontWeight: 500,
-                    letterSpacing: '0.02em',
-                }}>
-                    이런 걸 물어보세요
-                </p>
                 {suggestions.map((q, i) => {
                     const isHovered = hoveredIndex === i
                     return (
@@ -86,42 +75,43 @@ export default function SuggestionCards({
                             onMouseEnter={() => setHoveredIndex(i)}
                             onMouseLeave={() => setHoveredIndex(null)}
                             style={{
-                                background: isHovered
-                                    ? 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)'
-                                    : '#fff',
-                                border: `1.5px solid ${isHovered ? '#86efac' : '#e4e4e7'}`,
+                                background: isHovered ? '#f0fdf4' : '#fff',
+                                border: `1px solid ${isHovered ? '#bbf7d0' : '#e2e8f0'}`,
                                 borderRadius: 16,
-                                padding: '14px 18px',
-                                fontSize: 15,
-                                color: '#18181b',
+                                padding: '13px 18px',
+                                fontSize: 14,
+                                color: '#334155',
                                 cursor: 'pointer',
                                 textAlign: 'left',
                                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                                 fontWeight: 500,
+                                lineHeight: 1.5,
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 12,
-                                transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
+                                transform: isHovered ? 'translateY(-1px)' : 'translateY(0)',
                                 boxShadow: isHovered
-                                    ? '0 4px 12px rgba(34,197,94,0.12)'
-                                    : '0 1px 3px rgba(0,0,0,0.04)',
+                                    ? '0 4px 16px rgba(34,197,94,0.08)'
+                                    : '0 1px 3px rgba(0,0,0,0.03)',
                             }}
                         >
+                            {/* 아이콘 → 가벼운 서클 */}
                             <span style={{
-                                fontSize: 18,
                                 width: 32,
                                 height: 32,
+                                borderRadius: 10,
+                                background: isHovered ? '#dcfce7' : '#f1f5f9',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                background: isHovered ? '#dcfce7' : '#f4f4f5',
-                                borderRadius: 10,
-                                transition: 'background 0.2s',
                                 flexShrink: 0,
+                                transition: 'background 0.2s',
                             }}>
-                                {SUGGESTION_ICONS[i % SUGGESTION_ICONS.length]}
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke={isHovered ? '#16a34a' : '#94a3b8'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'stroke 0.2s' }}>
+                                    <path d="M6 3L11 8L6 13" />
+                                </svg>
                             </span>
-                            <span style={{ lineHeight: 1.4 }}>{q}</span>
+                            <span>{q}</span>
                         </button>
                     )
                 })}
@@ -129,13 +119,12 @@ export default function SuggestionCards({
         )
     }
 
-    // inline variant — 대화 중 추천 질문 칩
+    /* ── Inline 칩 — 대화 중 추천 ── */
     return (
-        <div className="suggestion-inline" style={{
+        <div style={{
             display: 'flex',
             flexWrap: 'wrap',
             gap: 8,
-            paddingLeft: 48,
             animation: 'slideUp 0.3s ease-out',
         }}>
             {suggestions.map((q, i) => {
@@ -148,18 +137,16 @@ export default function SuggestionCards({
                         onMouseLeave={() => setHoveredIndex(null)}
                         style={{
                             background: isHovered ? '#f0fdf4' : '#fff',
-                            border: `1px solid ${isHovered ? '#86efac' : '#e4e4e7'}`,
+                            border: `1px solid ${isHovered ? '#bbf7d0' : '#e2e8f0'}`,
                             borderRadius: 20,
                             padding: '8px 16px',
                             fontSize: 13,
-                            color: isHovered ? '#15803d' : '#16a34a',
+                            color: isHovered ? '#15803d' : '#64748b',
                             cursor: 'pointer',
                             fontWeight: 500,
                             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                             transform: isHovered ? 'translateY(-1px)' : 'translateY(0)',
-                            boxShadow: isHovered
-                                ? '0 2px 8px rgba(34,197,94,0.1)'
-                                : 'none',
+                            boxShadow: isHovered ? '0 2px 8px rgba(34,197,94,0.08)' : 'none',
                         }}
                     >
                         {q}
