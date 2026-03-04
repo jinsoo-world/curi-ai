@@ -107,6 +107,22 @@ export async function GET() {
         // domains/user 호출
         const profile = await getUserProfile(db, user.id)
 
+        // 🔄 daily_free_used 날짜 리셋 체크
+        if (profile && profile.daily_free_used > 0) {
+            const now = new Date()
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+            const resetAt = profile.daily_free_reset_at ? new Date(profile.daily_free_reset_at) : null
+
+            if (!resetAt || resetAt < todayStart) {
+                // 날짜가 바뀌었으므로 카운트 리셋
+                profile.daily_free_used = 0
+                await db.from('users').update({
+                    daily_free_used: 0,
+                    daily_free_reset_at: now.toISOString(),
+                }).eq('id', user.id)
+            }
+        }
+
         return new Response(JSON.stringify({
             profile: profile || null,
             google_name: user.user_metadata?.full_name || null,

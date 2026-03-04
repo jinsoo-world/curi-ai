@@ -214,6 +214,7 @@ export default function ChatInput({
 
             <form
                 onSubmit={handleSubmit}
+                className="chat-input-form"
                 style={{
                     width: '100%',
                     maxWidth: 860,
@@ -227,7 +228,7 @@ export default function ChatInput({
                     flex: 1,
                     position: 'relative',
                 }}>
-                    <div style={{
+                    <div className="chat-input-wrapper" style={{
                         background: '#ffffff',
                         borderRadius: 28,
                         padding: '16px 24px',
@@ -246,6 +247,7 @@ export default function ChatInput({
                             onKeyDown={handleKeyDown}
                             placeholder={isListening ? '듣고 있어요... 🎤' : '메시지 입력하기'}
                             aria-label="멘토에게 보낼 메시지"
+                            className="chat-input-textarea"
                             rows={1}
                             maxLength={MAX_INPUT_LENGTH}
                             style={{
@@ -286,6 +288,7 @@ export default function ChatInput({
                         onClick={toggleListening}
                         disabled={isStreaming}
                         aria-label={isListening ? '음성 입력 중지' : '음성으로 입력'}
+                        className="chat-input-mic"
                         style={{
                             width: 48,
                             height: 48,
@@ -316,6 +319,7 @@ export default function ChatInput({
                     type="submit"
                     disabled={!canSend}
                     aria-label="메시지 전송"
+                    className="chat-input-send"
                     style={{
                         width: 48,
                         height: 48,

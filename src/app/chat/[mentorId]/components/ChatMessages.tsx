@@ -237,6 +237,7 @@ export default function ChatMessages({
                                 <img
                                     src={mentorImage}
                                     alt={mentor.name}
+                                    className="chat-msg-avatar"
                                     style={{
                                         width: 48,
                                         height: 48,
@@ -247,7 +248,7 @@ export default function ChatMessages({
                                     }}
                                 />
                             ) : (
-                                <div style={{
+                                <div className="chat-msg-avatar-emoji" style={{
                                     width: 48,
                                     height: 48,
                                     borderRadius: '50%',
@@ -265,13 +266,13 @@ export default function ChatMessages({
                         )}
 
                         {/* 이름 + 메시지 + 액션 */}
-                        <div style={{
+                        <div className="chat-msg-body" style={{
                             display: 'flex',
                             flexDirection: 'column',
                             maxWidth: '70%',
                         }}>
                             {!isUser && (
-                                <div style={{
+                                <div className="chat-msg-name" style={{
                                     fontSize: 17,
                                     fontWeight: 700,
                                     color: '#3f3f46',
@@ -280,7 +281,7 @@ export default function ChatMessages({
                                     {mentor.name} AI
                                 </div>
                             )}
-                            <div style={{
+                            <div className="chat-msg-bubble" style={{
                                 padding: '16px 20px',
                                 borderRadius: isUser
                                     ? '20px 20px 4px 20px'

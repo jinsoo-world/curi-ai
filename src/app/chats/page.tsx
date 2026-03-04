@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import Image from 'next/image'
+import { MembershipBanner } from '@/components/MembershipBanner'
 
 const MENTOR_IMAGES: Record<string, string> = {
     '열정진': '/mentors/passion-jjin.png',
@@ -157,6 +158,7 @@ export default function ChatsPage() {
 
     return (
         <div style={{ minHeight: '100dvh', background: '#f8f9fa' }}>
+            <MembershipBanner />
             {/* Header */}
             <header style={{
                 position: 'sticky', top: 0, zIndex: 50,
@@ -185,6 +187,7 @@ export default function ChatsPage() {
                         {[
                             { label: '멘토', href: '/mentors', active: false },
                             { label: '대화', href: '/chats', active: true },
+                            { label: '프리미엄', href: '/pricing', active: false, highlight: true },
                             { label: '마이페이지', href: '/profile', active: false },
                         ].map((item) => (
                             <Link
@@ -192,14 +195,14 @@ export default function ChatsPage() {
                                 href={item.href}
                                 style={{
                                     textDecoration: 'none',
-                                    fontSize: 16, fontWeight: item.active ? 700 : 500,
-                                    color: item.active ? '#16a34a' : '#9ca3af',
+                                    fontSize: 16, fontWeight: item.active ? 700 : ('highlight' in item && item.highlight) ? 600 : 500,
+                                    color: item.active ? '#16a34a' : ('highlight' in item && item.highlight) ? '#f59e0b' : '#9ca3af',
                                     transition: 'color 200ms',
                                     borderBottom: item.active ? '2px solid #22c55e' : '2px solid transparent',
                                     paddingBottom: 4,
                                 }}
                             >
-                                {item.label}
+                                {('highlight' in item && item.highlight) ? '✨ ' : ''}{item.label}
                             </Link>
                         ))}
                     </nav>

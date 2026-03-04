@@ -29,7 +29,7 @@ export default function MentorHeader({
     const router = useRouter()
 
     return (
-        <header style={{
+        <header className="chat-header" style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -58,6 +58,7 @@ export default function MentorHeader({
                     <img
                         src={mentorImage}
                         alt={mentor.name}
+                        className="chat-header-avatar"
                         style={{
                             width: 40,
                             height: 40,
@@ -66,7 +67,7 @@ export default function MentorHeader({
                         }}
                     />
                 ) : (
-                    <div style={{
+                    <div className="chat-header-avatar-emoji" style={{
                         width: 40,
                         height: 40,
                         borderRadius: '50%',
@@ -80,7 +81,7 @@ export default function MentorHeader({
                     </div>
                 )}
                 <div>
-                    <div style={{
+                    <div className="chat-header-name" style={{
                         fontWeight: 700,
                         fontSize: 18,
                         color: '#18181b',
@@ -88,7 +89,7 @@ export default function MentorHeader({
                     }}>
                         {mentor.name}
                     </div>
-                    <div style={{
+                    <div className="chat-header-title" style={{
                         fontSize: 14,
                         color: '#a1a1aa',
                         lineHeight: 1.3,
@@ -155,6 +156,7 @@ export default function MentorHeader({
 
                 <button
                     onClick={onNewChat}
+                    className="chat-new-btn"
                     style={{
                         background: 'none',
                         border: '1px solid #e4e4e7',

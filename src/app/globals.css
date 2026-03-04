@@ -98,3 +98,200 @@ body {
 .animate-spin-slow {
   animation: spin 600ms linear infinite;
 }
+
+/* ============================================
+   Mobile Responsive — 375~428px (iPhone SE ~ 14 Pro Max)
+   ============================================ */
+
+@media (max-width: 768px) {
+
+  /* ─── Mentors Page ─── */
+  .mentors-header-inner {
+    padding: 0 16px !important;
+    height: 56px !important;
+  }
+
+  .mentors-hero {
+    padding: 32px 16px 20px !important;
+  }
+
+  .mentors-hero h1 {
+    font-size: 28px !important;
+  }
+
+  .mentors-hero p {
+    font-size: 15px !important;
+    margin-top: 8px !important;
+  }
+
+  .mentors-grid-section {
+    padding: 0 16px 60px !important;
+  }
+
+  .mentors-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+
+  .mentors-nav {
+    gap: 20px !important;
+  }
+
+  .mentors-nav a {
+    font-size: 14px !important;
+  }
+
+  .mentors-footer {
+    padding: 20px 16px !important;
+    font-size: 12px !important;
+  }
+
+  /* ─── Chat Page ─── */
+  .chat-header {
+    padding: 10px 12px !important;
+  }
+
+  .chat-header-name {
+    font-size: 16px !important;
+  }
+
+  .chat-header-title {
+    font-size: 12px !important;
+  }
+
+  .chat-header-avatar {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .chat-header-avatar-emoji {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 16px !important;
+  }
+
+  .chat-new-btn {
+    padding: 4px 10px !important;
+    font-size: 13px !important;
+  }
+
+  /* Messages */
+  .chat-messages-inner {
+    padding: 16px 12px !important;
+    gap: 16px !important;
+  }
+
+  .chat-msg-avatar {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .chat-msg-avatar-emoji {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 18px !important;
+  }
+
+  .chat-msg-body {
+    max-width: 85% !important;
+  }
+
+  .chat-msg-name {
+    font-size: 14px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .chat-msg-bubble {
+    padding: 12px 16px !important;
+    font-size: 15px !important;
+  }
+
+  /* Welcome screen */
+  .chat-welcome-avatar {
+    width: 72px !important;
+    height: 72px !important;
+  }
+
+  .chat-welcome-avatar-emoji {
+    width: 72px !important;
+    height: 72px !important;
+    font-size: 36px !important;
+  }
+
+  .chat-welcome-name {
+    font-size: 24px !important;
+  }
+
+  .chat-welcome-title {
+    font-size: 15px !important;
+  }
+
+  .chat-welcome-greeting {
+    padding: 14px 18px !important;
+    font-size: 15px !important;
+  }
+
+  /* Input area */
+  .chat-input-form {
+    padding: 8px 8px max(env(safe-area-inset-bottom, 8px), 12px) !important;
+    gap: 8px !important;
+  }
+
+  .chat-input-wrapper {
+    padding: 12px 16px !important;
+    border-radius: 24px !important;
+  }
+
+  .chat-input-textarea {
+    font-size: 15px !important;
+  }
+
+  .chat-input-send,
+  .chat-input-mic {
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    font-size: 18px !important;
+  }
+
+  /* Suggestion cards */
+  .suggestion-welcome {
+    max-width: 100% !important;
+  }
+
+  .suggestion-welcome button {
+    padding: 12px 14px !important;
+    font-size: 14px !important;
+  }
+
+  .suggestion-inline {
+    padding-left: 0 !important;
+  }
+
+  .suggestion-inline button {
+    font-size: 12px !important;
+    padding: 6px 12px !important;
+  }
+
+}
+
+/* Extra small screens (iPhone SE, 375px) */
+@media (max-width: 390px) {
+  .mentors-hero h1 {
+    font-size: 24px !important;
+  }
+
+  .chat-msg-body {
+    max-width: 88% !important;
+  }
+
+  .chat-msg-bubble {
+    padding: 10px 14px !important;
+    font-size: 14px !important;
+  }
+
+  .chat-welcome-greeting {
+    font-size: 14px !important;
+  }
+}

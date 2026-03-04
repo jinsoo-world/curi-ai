@@ -60,7 +60,7 @@ export default function SuggestionCards({
 
     if (variant === 'welcome') {
         return (
-            <div style={{
+            <div className="suggestion-welcome" style={{
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 10,
@@ -131,7 +131,7 @@ export default function SuggestionCards({
 
     // inline variant — 대화 중 추천 질문 칩
     return (
-        <div style={{
+        <div className="suggestion-inline" style={{
             display: 'flex',
             flexWrap: 'wrap',
             gap: 8,

@@ -8,6 +8,8 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import Image from 'next/image'
 
+import { MembershipBanner } from '@/components/MembershipBanner'
+
 export default function ProfilePage() {
     const router = useRouter()
     const supabase = createClient()
@@ -171,6 +173,7 @@ export default function ProfilePage() {
 
     return (
         <div style={{ minHeight: '100dvh', background: '#f8f9fa' }}>
+            <MembershipBanner />
             {/* Header */}
             <header style={{
                 position: 'sticky', top: 0, zIndex: 50,
@@ -199,6 +202,7 @@ export default function ProfilePage() {
                         {[
                             { label: '멘토', href: '/mentors', active: false },
                             { label: '대화', href: '/chats', active: false },
+                            { label: '프리미엄', href: '/pricing', active: false, highlight: true },
                             { label: '마이페이지', href: '/profile', active: true },
                         ].map((item) => (
                             <Link
@@ -206,14 +210,14 @@ export default function ProfilePage() {
                                 href={item.href}
                                 style={{
                                     textDecoration: 'none',
-                                    fontSize: 16, fontWeight: item.active ? 700 : 500,
-                                    color: item.active ? '#16a34a' : '#9ca3af',
+                                    fontSize: 16, fontWeight: item.active ? 700 : ('highlight' in item && item.highlight) ? 600 : 500,
+                                    color: item.active ? '#16a34a' : ('highlight' in item && item.highlight) ? '#f59e0b' : '#9ca3af',
                                     transition: 'color 200ms',
                                     borderBottom: item.active ? '2px solid #22c55e' : '2px solid transparent',
                                     paddingBottom: 4,
                                 }}
                             >
-                                {item.label}
+                                {('highlight' in item && item.highlight) ? '✨ ' : ''}{item.label}
                             </Link>
                         ))}
                     </nav>
@@ -560,38 +564,83 @@ export default function ProfilePage() {
                                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15 }}>
                                         <span style={{ color: '#6b7280' }}>구독</span>
                                         <span style={{
-                                            color: '#16a34a', fontWeight: 600,
-                                            background: '#f0fdf4', borderRadius: 100,
+                                            color: profile?.subscription_tier === 'premium' ? '#16a34a' : '#6b7280',
+                                            fontWeight: 600,
+                                            background: profile?.subscription_tier === 'premium' ? '#f0fdf4' : '#f4f4f5',
+                                            borderRadius: 100,
                                             padding: '2px 12px',
                                         }}>
-                                            {profile?.membership_tier === 'vip' ? 'VIP' :
-                                                profile?.membership_tier === 'subscriber' ? '구독자' : '무료'}
+                                            {profile?.subscription_tier === 'premium' ? '✨ 프리미엄' : '무료'}
                                         </span>
                                     </div>
-                                    {/* 오늘의 무료 대화 잔여량 */}
-                                    {(!profile?.membership_tier || profile?.membership_tier === 'free') && (
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 15 }}>
-                                            <span style={{ color: '#6b7280' }}>오늘 남은 대화</span>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <div style={{
-                                                    width: 80, height: 6, borderRadius: 3,
-                                                    background: '#e4e4e7', overflow: 'hidden',
-                                                }}>
-                                                    <div style={{
-                                                        width: `${Math.max(0, ((20 - (profile?.daily_free_used || 0)) / 20) * 100)}%`,
-                                                        height: '100%', borderRadius: 3,
-                                                        background: (20 - (profile?.daily_free_used || 0)) <= 5 ? '#f59e0b' : '#22c55e',
-                                                        transition: 'width 0.3s ease',
-                                                    }} />
-                                                </div>
-                                                <span style={{
-                                                    fontWeight: 600, fontSize: 14,
-                                                    color: (20 - (profile?.daily_free_used || 0)) <= 5 ? '#f59e0b' : '#16a34a',
-                                                }}>
-                                                    {Math.max(0, 20 - (profile?.daily_free_used || 0))}/20
+                                    {/* 프리미엄 구독 상세 */}
+                                    {profile?.subscription_tier === 'premium' && (
+                                        <>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                                                <span style={{ color: '#9ca3af' }}>다음 결제일</span>
+                                                <span style={{ color: '#6b7280', fontWeight: 500 }}>
+                                                    구독 관리에서 확인
                                                 </span>
                                             </div>
-                                        </div>
+                                            <button
+                                                onClick={async () => {
+                                                    if (!confirm('정말 구독을 취소하시겠습니까?\n현재 결제 기간이 끝날 때까지는 프리미엄을 이용하실 수 있어요.')) return
+                                                    try {
+                                                        const res = await fetch('/api/billing/cancel', { method: 'POST' })
+                                                        const data = await res.json()
+                                                        if (res.ok) {
+                                                            alert(data.message)
+                                                            window.location.reload()
+                                                        } else {
+                                                            alert(data.error || '구독 취소에 실패했습니다.')
+                                                        }
+                                                    } catch { alert('오류가 발생했습니다.') }
+                                                }}
+                                                style={{
+                                                    padding: '10px', borderRadius: 10, border: '1px solid #e4e4e7',
+                                                    background: '#fff', color: '#6b7280', fontSize: 14,
+                                                    fontWeight: 500, cursor: 'pointer', marginTop: 4,
+                                                }}
+                                            >
+                                                구독 취소
+                                            </button>
+                                        </>
+                                    )}
+                                    {/* 무료 사용자: 남은 대화 + 업그레이드 */}
+                                    {(!profile?.subscription_tier || profile?.subscription_tier === 'free') && (
+                                        <>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 15 }}>
+                                                <span style={{ color: '#6b7280' }}>오늘 남은 대화</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    <div style={{
+                                                        width: 80, height: 6, borderRadius: 3,
+                                                        background: '#e4e4e7', overflow: 'hidden',
+                                                    }}>
+                                                        <div style={{
+                                                            width: `${Math.max(0, ((20 - (profile?.daily_free_used || 0)) / 20) * 100)}%`,
+                                                            height: '100%', borderRadius: 3,
+                                                            background: (20 - (profile?.daily_free_used || 0)) <= 5 ? '#f59e0b' : '#22c55e',
+                                                            transition: 'width 0.3s ease',
+                                                        }} />
+                                                    </div>
+                                                    <span style={{
+                                                        fontWeight: 600, fontSize: 14,
+                                                        color: (20 - (profile?.daily_free_used || 0)) <= 5 ? '#f59e0b' : '#16a34a',
+                                                    }}>
+                                                        {Math.max(0, 20 - (profile?.daily_free_used || 0))}/20
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <Link href="/pricing" style={{
+                                                display: 'block', textAlign: 'center',
+                                                padding: '12px', borderRadius: 12, marginTop: 4,
+                                                background: 'linear-gradient(135deg, #18181b, #27272a)',
+                                                color: '#fff', fontSize: 14, fontWeight: 700,
+                                                textDecoration: 'none',
+                                            }}>
+                                                ✨ 프리미엄으로 무제한 대화하기
+                                            </Link>
+                                        </>
                                     )}
                                 </div>
                             </div>

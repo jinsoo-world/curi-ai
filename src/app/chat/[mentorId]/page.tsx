@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import { MentorHeader, ChatMessages, ChatInput, SuggestionCards, ElevenLabsWidget, InsightCard } from './components'
+import { MentorHeader, ChatMessages, ChatInput, SuggestionCards, ElevenLabsWidget } from './components'
 import type { ChatMessage } from './components'
 
 interface MentorData {
@@ -69,6 +69,29 @@ function incrementGuestMessageCount(): void {
     }
 }
 
+/** 게스트 대화 메시지를 localStorage에 저장 */
+function saveGuestMessages(mentorId: string, msgs: { role: string; content: string }[]): void {
+    if (typeof window === 'undefined') return
+    try {
+        localStorage.setItem(`guest_chat_messages_${mentorId}`, JSON.stringify(msgs))
+    } catch { }
+}
+
+/** localStorage에서 게스트 대화 메시지 읽기 */
+function loadGuestMessages(mentorId: string): { role: string; content: string }[] {
+    if (typeof window === 'undefined') return []
+    try {
+        const raw = localStorage.getItem(`guest_chat_messages_${mentorId}`)
+        return raw ? JSON.parse(raw) : []
+    } catch { return [] }
+}
+
+/** localStorage에서 게스트 대화 메시지 삭제 */
+function clearGuestMessages(mentorId: string): void {
+    if (typeof window === 'undefined') return
+    localStorage.removeItem(`guest_chat_messages_${mentorId}`)
+}
+
 export default function ChatPage() {
     const router = useRouter()
     const params = useParams()
@@ -85,8 +108,7 @@ export default function ChatPage() {
     const [showSuggestions, setShowSuggestions] = useState(true)
     const [lastSentAt, setLastSentAt] = useState(0)
     const [isCallOpen, setIsCallOpen] = useState(false)
-    const [insights, setInsights] = useState<any[]>([])
-    const [isGeneratingInsight, setIsGeneratingInsight] = useState(false)
+
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const chatContainerRef = useRef<HTMLDivElement>(null)
@@ -164,6 +186,36 @@ export default function ChatPage() {
                 } catch (e) {
                     console.error('기존 세션 조회 실패:', e)
                 }
+            }
+
+            // 게스트 대화 Merge 확인
+            const guestMsgs = loadGuestMessages(mentorId)
+            if (guestMsgs.length > 0) {
+                try {
+                    const mergeRes = await fetch('/api/sessions/merge', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mentorId, messages: guestMsgs }),
+                    })
+                    const mergeData = await mergeRes.json()
+                    if (mergeRes.ok && mergeData.session) {
+                        setSessionId(mergeData.session.id)
+                        // 이관된 메시지를 화면에 표시
+                        const restored = guestMsgs.map((m: { role: string; content: string }, i: number) => ({
+                            id: `merged-${i}`,
+                            role: m.role as 'user' | 'assistant',
+                            content: m.content,
+                        }))
+                        setMessages(restored)
+                        setShowSuggestions(false)
+                        clearGuestMessages(mentorId)
+                        window.history.replaceState(null, '', `/chat/${mentorId}?session=${mergeData.session.id}`)
+                        return
+                    }
+                } catch (e) {
+                    console.error('게스트 대화 이관 실패:', e)
+                }
+                clearGuestMessages(mentorId)
             }
 
             // 새 세션 생성
@@ -307,8 +359,15 @@ export default function ChatPage() {
                     { id: assistantId, role: 'assistant', content: fullContent },
                 ])
             }
-            // 비로그인 사용자: localStorage 카운트 증가
-            if (isGuest) incrementGuestMessageCount()
+            // 비로그인 사용자: localStorage 카운트 증가 + 대화 저장
+            if (isGuest) {
+                incrementGuestMessageCount()
+                // 게스트 메시지를 localStorage에 저장 (로그인 시 이관용)
+                const allMsgs = fullContent
+                    ? [...baseMessages, { id: assistantId, role: 'assistant' as const, content: fullContent }]
+                    : baseMessages
+                saveGuestMessages(mentorId, allMsgs.map(m => ({ role: m.role, content: m.content })))
+            }
             setIsStreaming(false)
         } catch (error) {
             console.error('Chat error:', error)
@@ -320,36 +379,7 @@ export default function ChatPage() {
         }
     }, [isStreaming, lastSentAt, messages, mentorId, sessionId, fetchSuggestions])
 
-    // ───── 인사이트 생성 ─────
-    const generateInsight = useCallback(async () => {
-        if (isGeneratingInsight || messages.length < 4 || !sessionId || !mentor) return
-        setIsGeneratingInsight(true)
-        try {
-            const res = await fetch('/api/insights', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sessionId,
-                    mentorId,
-                    mentorName: mentor.name,
-                    messages: messages.map(m => ({ role: m.role, content: m.content })),
-                }),
-            })
-            const data = await res.json()
-            if (!res.ok) {
-                alert(data.error || '인사이트 생성에 실패했어요. 잠시 후 다시 시도해주세요.')
-                return
-            }
-            if (data.insight) {
-                setInsights(prev => [data.insight, ...prev])
-            }
-        } catch (err) {
-            console.error('Insight generation error:', err)
-            alert('네트워크 오류가 발생했어요. 인터넷 연결을 확인해주세요.')
-        } finally {
-            setIsGeneratingInsight(false)
-        }
-    }, [isGeneratingInsight, messages, sessionId, mentorId, mentor])
+
 
     const handleNewChat = useCallback(async () => {
         setMessages([])
@@ -440,7 +470,7 @@ export default function ChatPage() {
                     WebkitOverflowScrolling: 'touch',
                 }}
             >
-                <div style={{
+                <div className="chat-messages-inner" style={{
                     width: '100%',
                     maxWidth: 860,
                     padding: '24px clamp(16px, 4vw, 32px)',
@@ -460,6 +490,7 @@ export default function ChatPage() {
                                 <img
                                     src={mentorImage}
                                     alt={mentor.name}
+                                    className="chat-welcome-avatar"
                                     style={{
                                         width: 88,
                                         height: 88,
@@ -470,7 +501,7 @@ export default function ChatPage() {
                                     }}
                                 />
                             ) : (
-                                <div style={{
+                                <div className="chat-welcome-avatar-emoji" style={{
                                     width: 88,
                                     height: 88,
                                     borderRadius: '50%',
@@ -485,7 +516,7 @@ export default function ChatPage() {
                                     {mentorEmoji}
                                 </div>
                             )}
-                            <h2 style={{
+                            <h2 className="chat-welcome-name" style={{
                                 margin: 0,
                                 fontSize: 28,
                                 fontWeight: 800,
@@ -494,7 +525,7 @@ export default function ChatPage() {
                             }}>
                                 {mentor.name}
                             </h2>
-                            <p style={{
+                            <p className="chat-welcome-title" style={{
                                 margin: 0,
                                 fontSize: 18,
                                 color: '#71717a',
@@ -504,7 +535,7 @@ export default function ChatPage() {
                             </p>
 
                             {/* 인사 메시지 */}
-                            <div style={{
+                            <div className="chat-welcome-greeting" style={{
                                 background: '#f0ede8',
                                 borderRadius: '20px',
                                 padding: '18px 24px',
@@ -545,52 +576,7 @@ export default function ChatPage() {
                         />
                     )}
 
-                    {/* 인사이트 생성 버튼 — 4턴 이상 + 로그인 사용자 */}
-                    {!isStreaming && messages.length >= 4 && sessionId && !sessionId.startsWith('guest-') && (
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'center',
-                            padding: '8px 0',
-                        }}>
-                            <button
-                                onClick={generateInsight}
-                                disabled={isGeneratingInsight}
-                                style={{
-                                    background: isGeneratingInsight
-                                        ? 'linear-gradient(135deg, #e0e7ff, #ede9fe)'
-                                        : 'linear-gradient(135deg, #eef2ff, #faf5ff)',
-                                    border: '1px solid rgba(99,102,241,0.15)',
-                                    borderRadius: 24,
-                                    padding: '10px 20px',
-                                    fontSize: 14,
-                                    fontWeight: 600,
-                                    color: '#6366f1',
-                                    cursor: isGeneratingInsight ? 'default' : 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 6,
-                                    transition: 'all 0.2s',
-                                    opacity: isGeneratingInsight ? 0.7 : 1,
-                                }}
-                            >
-                                {isGeneratingInsight ? (
-                                    <>
-                                        <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span>
-                                        인사이트 추출 중...
-                                    </>
-                                ) : (
-                                    <>
-                                        💡 이 대화의 인사이트 추출
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    )}
 
-                    {/* 생성된 인사이트 카드 */}
-                    {insights.map(insight => (
-                        <InsightCard key={insight.id} insight={insight} />
-                    ))}
 
                     <div ref={messagesEndRef} />
                 </div>

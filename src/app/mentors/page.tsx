@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { getActiveMentors, MENTOR_IMAGES } from '@/domains/mentor'
+import { MembershipBanner } from '@/components/MembershipBanner'
 import type { MentorCardData } from '@/domains/mentor'
 import NotificationBanner from './NotificationBanner'
 
@@ -137,6 +138,9 @@ export default async function MentorsPage() {
     return (
         <div style={{ minHeight: '100dvh', background: '#f8f9fa' }} role="document">
 
+            {/* ─── Membership Top Banner ─── */}
+            <MembershipBanner />
+
             {/* ─── Web Header ─── */}
             <header style={{
                 position: 'sticky', top: 0, zIndex: 50,
@@ -145,7 +149,7 @@ export default async function MentorsPage() {
                 WebkitBackdropFilter: 'blur(20px)',
                 borderBottom: '1px solid #f0f0f0',
             }}>
-                <div style={{
+                <div className="mentors-header-inner" style={{
                     maxWidth: 1200, margin: '0 auto',
                     padding: '0 40px',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -164,10 +168,11 @@ export default async function MentorsPage() {
                     </Link>
 
                     {/* Nav */}
-                    <nav style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+                    <nav className="mentors-nav" style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
                         {[
                             { label: '멘토', href: '/mentors', active: true },
                             { label: '대화', href: '/chats', active: false },
+                            { label: '프리미엄', href: '/pricing', active: false, highlight: true },
                             { label: '마이페이지', href: '/profile', active: false },
                         ].map((item) => (
                             <Link
@@ -175,14 +180,14 @@ export default async function MentorsPage() {
                                 href={item.href}
                                 style={{
                                     textDecoration: 'none',
-                                    fontSize: 16, fontWeight: item.active ? 700 : 500,
-                                    color: item.active ? '#16a34a' : '#9ca3af',
+                                    fontSize: 16, fontWeight: item.active ? 700 : ('highlight' in item && item.highlight) ? 600 : 500,
+                                    color: item.active ? '#16a34a' : ('highlight' in item && item.highlight) ? '#f59e0b' : '#9ca3af',
                                     transition: 'color 200ms',
                                     borderBottom: item.active ? '2px solid #22c55e' : '2px solid transparent',
                                     paddingBottom: 4,
                                 }}
                             >
-                                {item.label}
+                                {('highlight' in item && item.highlight) ? '✨ ' : ''}{item.label}
                             </Link>
                         ))}
                     </nav>
@@ -190,7 +195,7 @@ export default async function MentorsPage() {
             </header>
 
             {/* ─── Hero ─── */}
-            <section style={{
+            <section className="mentors-hero" style={{
                 maxWidth: 1200, margin: '0 auto',
                 padding: '56px 40px 32px',
             }}>
@@ -216,11 +221,11 @@ export default async function MentorsPage() {
 
             {/* ─── Mentor Grid ─── */}
             <main>
-                <section style={{
+                <section className="mentors-grid-section" style={{
                     maxWidth: 1200, margin: '0 auto',
                     padding: '0 40px 80px',
                 }}>
-                    <div style={{
+                    <div className="mentors-grid" style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
                         gap: 28,
@@ -251,8 +256,9 @@ export default async function MentorsPage() {
                 </section>
             </main>
 
+
             {/* ─── Footer ─── */}
-            <footer style={{
+            <footer className="mentors-footer" style={{
                 borderTop: '1px solid #f0f0f0',
                 padding: '24px 40px',
                 textAlign: 'center',
