@@ -31,7 +31,7 @@ export function MembershipBanner() {
                 }}
             >
                 <span style={{ fontSize: 16 }}>✨</span>
-                <span>멤버십 신청하기 — 무제한 대화 & 음성 멘토링</span>
+                <span>멤버십 신청하기 — 하루 500회 대화 & 음성 멘토링</span>
             </Link>
 
             {/* 닫기 버튼 */}

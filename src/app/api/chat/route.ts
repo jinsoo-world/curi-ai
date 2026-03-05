@@ -118,17 +118,46 @@ export async function POST(req: Request) {
         const stream = new ReadableStream({
             async start(controller) {
                 let fullResponse = ''
+                // 🧹 내부 사고 패턴 필터링 정규식
+                // (생각), (분석), (판단) 등 괄호 안 사고 과정 + 관련 분석 라벨 제거
+                const thinkingPatterns = [
+                    /\(생각\)[^]*?(?=\n\n|$)/g,
+                    /\(분석\)[^]*?(?=\n\n|$)/g,
+                    /\(판단\)[^]*?(?=\n\n|$)/g,
+                    /\(내부 분석\)[^]*?(?=\n\n|$)/g,
+                    /\(사고\)[^]*?(?=\n\n|$)/g,
+                    /^\s*(공감\/이해|페르소나 연결|핵심 원칙 적용|간결한 답변|톤 유지|이전 답변):.*$/gm,
+                ]
+                function stripThinkingPatterns(text: string): string {
+                    let cleaned = text
+                    for (const pattern of thinkingPatterns) {
+                        cleaned = cleaned.replace(pattern, '')
+                    }
+                    // 연속 빈줄 정리
+                    cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim()
+                    return cleaned
+                }
 
                 try {
+                    let rawResponse = ''
                     for await (const chunk of response) {
                         const text = chunk.text || ''
                         if (text) {
-                            fullResponse += text
-                            controller.enqueue(
-                                encoder.encode(`data: ${JSON.stringify({ text, done: false })}\n\n`)
-                            )
+                            rawResponse += text
+                            // 실시간으로 사고 패턴 제거 후 전달
+                            const cleaned = stripThinkingPatterns(rawResponse)
+                            const newText = cleaned.slice(fullResponse.length)
+                            if (newText) {
+                                fullResponse = cleaned
+                                controller.enqueue(
+                                    encoder.encode(`data: ${JSON.stringify({ text: newText, done: false })}\n\n`)
+                                )
+                            }
                         }
                     }
+
+                    // 최종 정리
+                    fullResponse = stripThinkingPatterns(rawResponse)
 
                     // 완료 시 메시지 저장 (domains/chat)
                     const isGuestSession = !sessionId || sessionId.startsWith('guest-')

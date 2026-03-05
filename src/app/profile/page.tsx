@@ -21,6 +21,13 @@ export default function ProfilePage() {
     const [isEditing, setIsEditing] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
     const [saveMessage, setSaveMessage] = useState('')
+    const [payments, setPayments] = useState<any[]>([])
+    const [subscription, setSubscription] = useState<any>(null)
+    const [showPayments, setShowPayments] = useState(false)
+    const [showCancelModal, setShowCancelModal] = useState(false)
+    const [isCanceling, setIsCanceling] = useState(false)
+    const [cancelResult, setCancelResult] = useState<{ success: boolean; message: string } | null>(null)
+    const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
     // 편집용 상태
     const [editName, setEditName] = useState('')
@@ -49,6 +56,7 @@ export default function ProfilePage() {
                         setEditGender(data.profile.gender || '')
                         setEditBirthYear(data.profile.birth_year?.toString() || '')
                     }
+                    if (data.subscription) setSubscription(data.subscription)
                     if (data.google_name) setGoogleName(data.google_name)
                     if (data.google_avatar) setGoogleAvatar(data.google_avatar)
                 } catch (err) {
@@ -79,6 +87,60 @@ export default function ProfilePage() {
     const handleLogout = async () => {
         await supabase.auth.signOut()
         router.push('/login')
+    }
+
+    const handleCancelSubscription = async () => {
+        setIsCanceling(true)
+        try {
+            const res = await fetch('/api/billing/cancel', { method: 'POST' })
+            const data = await res.json()
+            if (res.ok) {
+                setCancelResult({ success: true, message: data.message || '구독이 취소되었습니다.' })
+            } else {
+                setCancelResult({ success: false, message: data.error || '구독 취소에 실패했습니다.' })
+            }
+        } catch {
+            setCancelResult({ success: false, message: '오류가 발생했습니다.' })
+        } finally {
+            setIsCanceling(false)
+        }
+    }
+
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file || !user) return
+        if (!file.type.startsWith('image/')) {
+            alert('이미지 파일만 업로드할 수 있습니다.')
+            return
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            alert('5MB 이하의 이미지만 업로드할 수 있습니다.')
+            return
+        }
+        setUploadingPhoto(true)
+        try {
+            const ext = file.name.split('.').pop() || 'jpg'
+            const path = `avatars/${user.id}.${ext}`
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(path, file, { upsert: true })
+            if (uploadError) throw uploadError
+            const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
+            const avatarUrl = urlData.publicUrl + '?t=' + Date.now()
+            await fetch('/api/profile', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ avatar_url: avatarUrl }),
+            })
+            setProfile((prev: any) => ({ ...prev, avatar_url: avatarUrl }))
+            setSaveMessage('프로필 사진이 변경되었습니다 ✓')
+            setTimeout(() => setSaveMessage(''), 3000)
+        } catch (err: any) {
+            console.error('Photo upload error:', err)
+            alert('사진 업로드에 실패했습니다: ' + (err.message || ''))
+        } finally {
+            setUploadingPhoto(false)
+        }
     }
 
     const handleStartEdit = () => {
@@ -312,28 +374,49 @@ export default function ProfilePage() {
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                                     {/* 프로필 사진 */}
-                                    {avatarUrl ? (
-                                        <img
-                                            src={avatarUrl}
-                                            alt="프로필"
-                                            referrerPolicy="no-referrer"
-                                            style={{
-                                                width: 64, height: 64, borderRadius: '50%',
-                                                objectFit: 'cover', flexShrink: 0,
-                                                border: '3px solid #dcfce7',
-                                            }}
-                                        />
-                                    ) : (
-                                        <div style={{
-                                            width: 64, height: 64, borderRadius: '50%',
-                                            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontSize: 28, color: '#fff', fontWeight: 800,
-                                            flexShrink: 0,
-                                        }}>
-                                            {displayName[0]?.toUpperCase() || '?'}
-                                        </div>
-                                    )}
+                                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                                        <label style={{ cursor: 'pointer', display: 'block' }}>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handlePhotoUpload}
+                                                style={{ display: 'none' }}
+                                            />
+                                            {avatarUrl ? (
+                                                <img
+                                                    src={avatarUrl}
+                                                    alt="프로필"
+                                                    referrerPolicy="no-referrer"
+                                                    style={{
+                                                        width: 64, height: 64, borderRadius: '50%',
+                                                        objectFit: 'cover',
+                                                        border: '3px solid #dcfce7',
+                                                        opacity: uploadingPhoto ? 0.5 : 1,
+                                                        transition: 'opacity 200ms',
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div style={{
+                                                    width: 64, height: 64, borderRadius: '50%',
+                                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: 28, color: '#fff', fontWeight: 800,
+                                                    opacity: uploadingPhoto ? 0.5 : 1,
+                                                }}>
+                                                    {displayName[0]?.toUpperCase() || '?'}
+                                                </div>
+                                            )}
+                                            <div style={{
+                                                position: 'absolute', bottom: -2, right: -2,
+                                                width: 24, height: 24, borderRadius: '50%',
+                                                background: '#fff', border: '2px solid #e4e4e7',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: 12,
+                                            }}>
+                                                {uploadingPhoto ? '⏳' : '📷'}
+                                            </div>
+                                        </label>
+                                    </div>
                                     <div>
                                         <h2 style={{
                                             fontSize: 24, fontWeight: 800, color: '#18181b',
@@ -577,33 +660,51 @@ export default function ProfilePage() {
                                     {profile?.subscription_tier === 'premium' && (
                                         <>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                                                <span style={{ color: '#9ca3af' }}>다음 결제일</span>
-                                                <span style={{ color: '#6b7280', fontWeight: 500 }}>
-                                                    구독 관리에서 확인
+                                                <span style={{ color: '#9ca3af' }}>구독 플랜</span>
+                                                <span style={{ color: '#18181b', fontWeight: 600 }}>
+                                                    {subscription?.plan_type === 'annual' ? '연간 플랜' : '월간 플랜'}
                                                 </span>
                                             </div>
-                                            <button
-                                                onClick={async () => {
-                                                    if (!confirm('정말 구독을 취소하시겠습니까?\n현재 결제 기간이 끝날 때까지는 프리미엄을 이용하실 수 있어요.')) return
-                                                    try {
-                                                        const res = await fetch('/api/billing/cancel', { method: 'POST' })
-                                                        const data = await res.json()
-                                                        if (res.ok) {
-                                                            alert(data.message)
-                                                            window.location.reload()
-                                                        } else {
-                                                            alert(data.error || '구독 취소에 실패했습니다.')
-                                                        }
-                                                    } catch { alert('오류가 발생했습니다.') }
-                                                }}
-                                                style={{
-                                                    padding: '10px', borderRadius: 10, border: '1px solid #e4e4e7',
-                                                    background: '#fff', color: '#6b7280', fontSize: 14,
-                                                    fontWeight: 500, cursor: 'pointer', marginTop: 4,
-                                                }}
-                                            >
-                                                구독 취소
-                                            </button>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                                                <span style={{ color: '#9ca3af' }}>구독료</span>
+                                                <span style={{ color: '#18181b', fontWeight: 600 }}>
+                                                    {subscription?.plan_type === 'annual' ? '₩99,000/년' : '₩9,900/월'}
+                                                </span>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                                                <span style={{ color: '#9ca3af' }}>다음 결제일</span>
+                                                <span style={{ color: '#18181b', fontWeight: 500 }}>
+                                                    {subscription?.current_period_end
+                                                        ? new Date(subscription.current_period_end).toLocaleDateString('ko-KR', {
+                                                            year: 'numeric', month: 'long', day: 'numeric'
+                                                        })
+                                                        : '-'
+                                                    }
+                                                </span>
+                                            </div>
+                                            {subscription?.status === 'canceled' && (
+                                                <div style={{
+                                                    padding: '10px 14px', borderRadius: 10,
+                                                    background: '#fef3c7', border: '1px solid #fde68a',
+                                                    fontSize: 13, color: '#92400e', marginTop: 4,
+                                                }}>
+                                                    ⚠️ 구독 취소 예정 — {subscription?.current_period_end
+                                                        ? new Date(subscription.current_period_end).toLocaleDateString('ko-KR')
+                                                        : ''} 까지 이용 가능
+                                                </div>
+                                            )}
+                                            {subscription?.status === 'active' && (
+                                                <button
+                                                    onClick={() => setShowCancelModal(true)}
+                                                    style={{
+                                                        padding: '10px', borderRadius: 10, border: '1px solid #e4e4e7',
+                                                        background: '#fff', color: '#6b7280', fontSize: 14,
+                                                        fontWeight: 500, cursor: 'pointer', marginTop: 4,
+                                                    }}
+                                                >
+                                                    구독 취소
+                                                </button>
+                                            )}
                                         </>
                                     )}
                                     {/* 무료 사용자: 남은 대화 + 업그레이드 */}
@@ -638,7 +739,7 @@ export default function ProfilePage() {
                                                 color: '#fff', fontSize: 14, fontWeight: 700,
                                                 textDecoration: 'none',
                                             }}>
-                                                ✨ 프리미엄으로 무제한 대화하기
+                                                ✨ 프리미엄으로 하루 500회 대화하기
                                             </Link>
                                         </>
                                     )}
@@ -679,6 +780,97 @@ export default function ProfilePage() {
                                     <span>💬 대화 내역</span>
                                     <span style={{ color: '#d1d5db' }}>→</span>
                                 </Link>
+                                {/* 결제 내역 */}
+                                <button
+                                    onClick={async () => {
+                                        if (!showPayments && payments.length === 0) {
+                                            try {
+                                                const res = await fetch('/api/billing/history')
+                                                const data = await res.json()
+                                                if (data.payments) setPayments(data.payments)
+                                                if (data.subscription) setSubscription(data.subscription)
+                                            } catch (e) { console.error(e) }
+                                        }
+                                        setShowPayments(!showPayments)
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        padding: '18px 24px',
+                                        background: 'none', border: 'none',
+                                        fontSize: 16, fontWeight: 500,
+                                        color: '#18181b', cursor: 'pointer',
+                                        textAlign: 'left',
+                                        borderBottom: '1px solid #f0f0f0',
+                                    }}
+                                >
+                                    <span>🧾 결제 내역</span>
+                                    <span style={{ color: '#d1d5db', transform: showPayments ? 'rotate(90deg)' : 'none', transition: 'transform 200ms' }}>→</span>
+                                </button>
+                                {showPayments && (
+                                    <div style={{ padding: '0 24px 16px', background: '#fafafa' }}>
+                                        {payments.length === 0 ? (
+                                            <p style={{ fontSize: 14, color: '#9ca3af', textAlign: 'center', padding: '20px 0' }}>
+                                                결제 내역이 없습니다.
+                                            </p>
+                                        ) : (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 12 }}>
+                                                {payments.map((p: any) => (
+                                                    <div key={p.id} style={{
+                                                        background: '#fff', borderRadius: 12,
+                                                        padding: '14px 16px', border: '1px solid #f0f0f0',
+                                                    }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                                            <span style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>
+                                                                ₩{p.amount?.toLocaleString()}
+                                                            </span>
+                                                            <span style={{
+                                                                fontSize: 12, fontWeight: 600,
+                                                                color: p.status === 'done' ? '#16a34a' : '#ef4444',
+                                                                background: p.status === 'done' ? '#f0fdf4' : '#fef2f2',
+                                                                padding: '2px 8px', borderRadius: 6,
+                                                            }}>
+                                                                {p.status === 'done' ? '결제 완료' : p.status === 'canceled' ? '취소됨' : '실패'}
+                                                            </span>
+                                                        </div>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <span style={{ fontSize: 12, color: '#9ca3af' }}>
+                                                                {p.paid_at ? new Date(p.paid_at).toLocaleDateString('ko-KR', {
+                                                                    year: 'numeric', month: 'long', day: 'numeric',
+                                                                    hour: '2-digit', minute: '2-digit',
+                                                                }) : ''}
+                                                            </span>
+                                                            {p.receipt_url && (
+                                                                <a
+                                                                    href={p.receipt_url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    style={{
+                                                                        fontSize: 12, fontWeight: 600,
+                                                                        color: '#3b82f6', textDecoration: 'none',
+                                                                    }}
+                                                                >
+                                                                    🧾 영수증
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {subscription && (
+                                            <div style={{
+                                                marginTop: 12, padding: '12px 14px', borderRadius: 10,
+                                                background: '#f0fdf4', border: '1px solid #dcfce7',
+                                                fontSize: 13, color: '#16a34a',
+                                            }}>
+                                                <div style={{ fontWeight: 600, marginBottom: 4 }}>현재 구독 정보</div>
+                                                <div>상태: {subscription.status === 'active' ? '✅ 활성' : subscription.status === 'canceled' ? '⏸️ 취소 예정' : subscription.status}</div>
+                                                <div>다음 결제일: {new Date(subscription.current_period_end).toLocaleDateString('ko-KR')}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 <button
                                     onClick={handleLogout}
                                     style={{
@@ -699,9 +891,125 @@ export default function ProfilePage() {
                 )}
             </section>
 
+            {/* 구독 해지 확인 모달 */}
+            {showCancelModal && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 1000,
+                    background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: 24,
+                }} onClick={() => { if (!isCanceling) { setShowCancelModal(false); setCancelResult(null) } }}>
+                    <div
+                        style={{
+                            background: '#fff', borderRadius: 24,
+                            padding: '36px 28px', maxWidth: 400, width: '100%',
+                            boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+                            animation: 'modalIn 200ms ease-out',
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {!cancelResult ? (
+                            <>
+                                <div style={{
+                                    width: 64, height: 64, margin: '0 auto 20px',
+                                    borderRadius: '50%', background: '#fef3c7',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: 32,
+                                }}>⚠️</div>
+                                <h3 style={{
+                                    fontSize: 20, fontWeight: 800, color: '#18181b',
+                                    textAlign: 'center', margin: '0 0 8px',
+                                }}>구독을 취소하시겠어요?</h3>
+                                <p style={{
+                                    fontSize: 14, color: '#6b7280', textAlign: 'center',
+                                    margin: '0 0 20px', lineHeight: 1.6,
+                                }}>
+                                    취소해도 현재 결제 기간이 끝날 때까지<br />
+                                    프리미엄 기능을 계속 이용할 수 있어요.
+                                </p>
+                                <div style={{
+                                    background: '#f8fafc', borderRadius: 14, padding: '16px 18px',
+                                    marginBottom: 24, border: '1px solid #f0f0f0',
+                                }}>
+                                    <div style={{ fontSize: 13, fontWeight: 600, color: '#18181b', marginBottom: 10 }}>
+                                        취소 시 변경사항
+                                    </div>
+                                    {[
+                                        { icon: '📅', text: `${subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString('ko-KR') : ''} 까지 프리미엄 유지` },
+                                        { icon: '🔄', text: '자동 갱신이 중지됩니다' },
+                                        { icon: '📉', text: '만료 후 하루 20회 무료 대화로 전환' },
+                                        { icon: '💡', text: '언제든 다시 구독할 수 있어요' },
+                                    ].map((item, i) => (
+                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: i < 3 ? 8 : 0, fontSize: 13, color: '#4b5563' }}>
+                                            <span>{item.icon}</span>
+                                            <span>{item.text}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div style={{ display: 'flex', gap: 10 }}>
+                                    <button
+                                        onClick={() => { setShowCancelModal(false); setCancelResult(null) }}
+                                        disabled={isCanceling}
+                                        style={{
+                                            flex: 1, padding: '14px 0', borderRadius: 14,
+                                            border: '1px solid #e4e4e7', background: '#fff',
+                                            fontSize: 15, fontWeight: 600, color: '#18181b',
+                                            cursor: 'pointer',
+                                        }}
+                                    >유지하기</button>
+                                    <button
+                                        onClick={handleCancelSubscription}
+                                        disabled={isCanceling}
+                                        style={{
+                                            flex: 1, padding: '14px 0', borderRadius: 14,
+                                            border: 'none', background: '#ef4444',
+                                            fontSize: 15, fontWeight: 600, color: '#fff',
+                                            cursor: isCanceling ? 'not-allowed' : 'pointer',
+                                            opacity: isCanceling ? 0.7 : 1,
+                                        }}
+                                    >{isCanceling ? '처리 중...' : '구독 취소'}</button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div style={{
+                                    width: 64, height: 64, margin: '0 auto 20px',
+                                    borderRadius: '50%',
+                                    background: cancelResult.success ? '#f0fdf4' : '#fef2f2',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: 32,
+                                }}>{cancelResult.success ? '👋' : '😥'}</div>
+                                <h3 style={{
+                                    fontSize: 20, fontWeight: 800, color: '#18181b',
+                                    textAlign: 'center', margin: '0 0 12px',
+                                }}>{cancelResult.success ? '구독이 취소되었습니다' : '취소 실패'}</h3>
+                                <p style={{
+                                    fontSize: 14, color: '#6b7280', textAlign: 'center',
+                                    margin: '0 0 24px', lineHeight: 1.6,
+                                }}>{cancelResult.message}</p>
+                                <button
+                                    onClick={() => {
+                                        setShowCancelModal(false)
+                                        setCancelResult(null)
+                                        if (cancelResult.success) window.location.reload()
+                                    }}
+                                    style={{
+                                        width: '100%', padding: '14px 0', borderRadius: 14,
+                                        border: 'none', fontSize: 15, fontWeight: 600,
+                                        background: cancelResult.success ? '#22c55e' : '#18181b',
+                                        color: '#fff', cursor: 'pointer',
+                                    }}
+                                >확인</button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+
             <style>{`
                 @keyframes spin { to { transform: rotate(360deg) } }
                 @keyframes pulseSkeleton { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+                @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
             `}</style>
         </div>
     )

@@ -74,7 +74,7 @@ export default function MentorHeader({
                             padding: 8,
                             borderRadius: 10,
                             color: '#64748b',
-                            display: 'none',
+                            display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             transition: 'background 0.15s',
@@ -90,7 +90,14 @@ export default function MentorHeader({
                     </button>
                 )}
                 <button
-                    onClick={() => router.push('/mentors')}
+                    onClick={() => {
+                        // 히스토리가 있으면 뒤로, 없으면 멘토 목록으로
+                        if (window.history.length > 1) {
+                            router.back()
+                        } else {
+                            router.push('/mentors')
+                        }
+                    }}
                     style={{
                         background: 'none',
                         border: 'none',
@@ -141,8 +148,21 @@ export default function MentorHeader({
                         fontSize: 16,
                         color: '#1e293b',
                         lineHeight: 1.3,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
                     }}>
-                        {mentor.name} AI
+                        {mentor.name}
+                        <span style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                            color: '#fff',
+                            padding: '2px 7px',
+                            borderRadius: 5,
+                            letterSpacing: '0.03em',
+                            lineHeight: 1.4,
+                        }}>AI</span>
                     </div>
                     <div style={{
                         fontSize: 13,

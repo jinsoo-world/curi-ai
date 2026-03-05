@@ -114,7 +114,7 @@ function BillingSuccessContent() {
                         </h2>
                         <p style={{ fontSize: 15, color: '#6b7280', margin: '0 0 32px' }}>
                             {planType === 'annual' ? '연간' : '월간'} 구독이 활성화되었습니다.<br />
-                            이제 무제한으로 멘토링을 받아보세요!
+                            이제 하루 500회까지 멘토링을 받아보세요!
                         </p>
                         <button
                             onClick={() => router.push('/mentors')}

@@ -123,10 +123,29 @@ export async function GET() {
             }
         }
 
+        // 구독 정보도 함께 조회
+        let subscriptionInfo = null
+        try {
+            const { data: sub } = await db
+                .from('subscriptions')
+                .select('*')
+                .eq('user_id', user.id)
+                .in('status', ['active', 'canceled'])
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+            if (sub) {
+                subscriptionInfo = sub
+            }
+        } catch (e) {
+            console.error('[Profile GET] subscription query error:', e)
+        }
+
         return new Response(JSON.stringify({
             profile: profile || null,
             google_name: user.user_metadata?.full_name || null,
             google_avatar: user.user_metadata?.avatar_url || null,
+            subscription: subscriptionInfo,
         }), {
             headers: { 'Content-Type': 'application/json' },
         })

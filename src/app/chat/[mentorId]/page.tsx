@@ -151,7 +151,35 @@ export default function ChatPage() {
         async function initSession() {
             if (!mentorId) return
 
-            // URL에 ?session=xxx가 있으면 기존 세션 + 메시지 로드
+            // ── 1. 로그인 여부 확인 ──
+            let isLoggedIn = false
+            try {
+                const authRes = await fetch('/api/auth/me')
+                const authData = await authRes.json()
+                isLoggedIn = !!authData?.user
+            } catch {
+                isLoggedIn = false
+            }
+
+            // ── 2. 비로그인(게스트): 고정 ID, URL 변경 없음 ──
+            if (!isLoggedIn) {
+                const guestId = `guest-${mentorId}`
+                setSessionId(guestId)
+                // localStorage에서 이전 게스트 대화 복원
+                const guestMsgs = loadGuestMessages(mentorId)
+                if (guestMsgs.length > 0) {
+                    const restored = guestMsgs.map((m: { role: string; content: string }, i: number) => ({
+                        id: `guest-msg-${i}`,
+                        role: m.role as 'user' | 'assistant',
+                        content: m.content,
+                    }))
+                    setMessages(restored)
+                    setShowSuggestions(false)
+                }
+                return // URL 변경 없이 종료
+            }
+
+            // ── 3. 로그인 유저: URL에 ?session=xxx가 있으면 기존 세션 로드 ──
             if (existingSessionId && !existingSessionId.startsWith('guest-')) {
                 setSessionId(existingSessionId)
                 try {
@@ -160,6 +188,9 @@ export default function ChatPage() {
                     if (loaded?.length) {
                         setMessages(loaded)
                         setShowSuggestions(false)
+                    } else {
+                        // 빈 세션 → 추천 질문 표시
+                        setShowSuggestions(true)
                     }
                 } catch (e) {
                     console.error('메시지 로드 실패:', e)
@@ -181,6 +212,9 @@ export default function ChatPage() {
                         if (loaded?.length) {
                             setMessages(loaded)
                             setShowSuggestions(false)
+                        } else {
+                            // 빈 세션 → 추천 질문 표시
+                            setShowSuggestions(true)
                         }
                         // URL 업데이트 (히스토리 교체, 새로고침 없음)
                         window.history.replaceState(null, '', `/chat/${mentorId}?session=${lastSession.id}`)
@@ -191,7 +225,7 @@ export default function ChatPage() {
                 }
             }
 
-            // 게스트 대화 Merge 확인
+            // 게스트 대화 Merge 확인 (로그인 상태에서 이전 게스트 대화 이관)
             const guestMsgs = loadGuestMessages(mentorId)
             if (guestMsgs.length > 0) {
                 try {
@@ -221,7 +255,7 @@ export default function ChatPage() {
                 clearGuestMessages(mentorId)
             }
 
-            // 새 세션 생성
+            // 새 세션 생성 (로그인 유저만)
             try {
                 const res = await fetch('/api/sessions', {
                     method: 'POST',
@@ -293,6 +327,11 @@ export default function ChatPage() {
     // ───── 추천 질문 ─────
     const fetchSuggestions = useCallback(async (currentMessages: ChatMessage[]) => {
         try {
+            // 이미 사용자가 보낸 질문 수집 (중복 방지)
+            const askedQuestions = currentMessages
+                .filter(m => m.role === 'user')
+                .map(m => m.content.trim().toLowerCase())
+
             const res = await fetch('/api/suggestions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -303,7 +342,11 @@ export default function ChatPage() {
             })
             const data = await res.json()
             if (data.suggestions) {
-                setSuggestions(data.suggestions)
+                // 이미 물어본 질문 필터링
+                const filtered = data.suggestions.filter(
+                    (s: string) => !askedQuestions.includes(s.trim().toLowerCase())
+                )
+                setSuggestions(filtered)
                 setShowSuggestions(true)
             }
         } catch { }
@@ -683,9 +726,6 @@ export default function ChatPage() {
                 @keyframes pulseSoft { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
                 @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-                @media (max-width: 768px) {
-                    .sidebar-toggle-btn { display: flex !important; }
-                }
             `}</style>
             </div>{/* flex: 메인 채팅 영역 끝 */}
         </div>

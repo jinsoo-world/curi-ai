@@ -41,9 +41,9 @@ const MoreIcon = () => (
     </svg>
 )
 const PlusIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <line x1="8" y1="3" x2="8" y2="13" />
-        <line x1="3" y1="8" x2="13" y2="8" />
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <line x1="9" y1="3" x2="9" y2="15" />
+        <line x1="3" y1="9" x2="15" y2="9" />
     </svg>
 )
 const CloseIcon = () => (
@@ -67,10 +67,18 @@ function formatRelativeTime(dateString: string): string {
     const diffDays = Math.floor(diffMs / 86400000)
 
     if (diffMin < 1) return '방금'
-    if (diffMin < 60) return `${diffMin}분`
-    if (diffHours < 24) return `${diffHours}시간`
-    if (diffDays < 7) return `${diffDays}일`
+    if (diffMin < 60) return `${diffMin}분 전`
+    if (diffHours < 24) return `${diffHours}시간 전`
+    if (diffDays < 7) return `${diffDays}일 전`
     return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+}
+
+/** 대화 제목에서 요약 문장 추출 */
+function getSessionSummary(session: SidebarSession): string {
+    if (session.title && !session.title.endsWith('와의 대화') && session.title !== '새 대화') {
+        return session.title
+    }
+    return '새 대화'
 }
 
 /** 세션 항목 — 컨텍스트 메뉴 (고정/이름변경) */
@@ -91,7 +99,6 @@ function SessionItem({
     const menuRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
 
-    // 외부 클릭 시 메뉴 닫기
     useEffect(() => {
         if (!menuOpen) return
         const handler = (e: MouseEvent) => {
@@ -118,23 +125,23 @@ function SessionItem({
         setIsEditing(false)
     }, [editValue, session.title, onUpdate])
 
-    const displayTitle = session.title && !session.title.endsWith('와의 대화')
-        ? session.title
-        : '새 대화'
+    const displayTitle = getSessionSummary(session)
 
     return (
         <div
+            className="session-item"
             style={{
                 position: 'relative',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
-                padding: '10px 12px',
-                borderRadius: 12,
+                gap: 10,
+                padding: '12px 16px',
+                borderRadius: 14,
                 cursor: 'pointer',
                 background: isActive ? '#f0fdf4' : 'transparent',
-                transition: 'background 0.15s',
+                transition: 'all 0.15s ease',
                 borderLeft: isActive ? '3px solid #22c55e' : '3px solid transparent',
+                marginBottom: 2,
             }}
             onClick={isEditing ? undefined : onSelect}
             onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = '#f8fafc' }}
@@ -174,7 +181,7 @@ function SessionItem({
                     <>
                         <div style={{
                             fontSize: 14,
-                            fontWeight: isActive ? 600 : 400,
+                            fontWeight: isActive ? 600 : 500,
                             color: isActive ? '#15803d' : '#374151',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -186,9 +193,15 @@ function SessionItem({
                         <div style={{
                             fontSize: 12,
                             color: '#94a3b8',
-                            marginTop: 2,
+                            marginTop: 3,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
                         }}>
-                            {formatRelativeTime(session.last_message_at || session.id)}
+                            <span>{formatRelativeTime(session.last_message_at || session.id)}</span>
+                            {session.message_count > 0 && (
+                                <span style={{ opacity: 0.7 }}>· 대화 {session.message_count}번</span>
+                            )}
                         </div>
                     </>
                 )}
@@ -283,7 +296,6 @@ export default function ChatSidebar({
     onNewChat,
     onUpdateSession,
 }: ChatSidebarProps) {
-    // 고정 세션 상단, 나머지 시간순
     const pinned = sessions.filter(s => s.is_pinned)
     const unpinned = sessions.filter(s => !s.is_pinned)
 
@@ -300,44 +312,46 @@ export default function ChatSidebar({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '16px 16px 12px',
+                padding: '18px 18px 14px',
                 borderBottom: '1px solid #f1f5f9',
             }}>
                 <h3 style={{
                     margin: 0,
-                    fontSize: 16,
+                    fontSize: 17,
                     fontWeight: 700,
                     color: '#1e293b',
+                    letterSpacing: '-0.01em',
                 }}>
-                    대화 목록
+                    대화
                 </h3>
-                <div style={{ display: 'flex', gap: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <button
                         onClick={onNewChat}
                         title="새 대화"
                         style={{
-                            width: 32, height: 32,
-                            borderRadius: 8,
-                            background: 'none', border: 'none',
+                            width: 36, height: 36,
+                            borderRadius: 10,
+                            background: '#f0fdf4', border: 'none',
                             color: '#22c55e', cursor: 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            transition: 'background 0.15s',
+                            transition: 'all 0.15s',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#f0fdf4' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#dcfce7' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#f0fdf4' }}
                     >
                         <PlusIcon />
                     </button>
-                    {/* 모바일에서만 닫기 버튼 표시 */}
+                    {/* 모바일 오버레이에서만 X 닫기 버튼 */}
                     <button
                         onClick={onClose}
-                        className="sidebar-close-btn"
+                        className="sidebar-mobile-close"
+                        title="닫기"
                         style={{
-                            width: 32, height: 32,
-                            borderRadius: 8,
+                            width: 36, height: 36,
+                            borderRadius: 10,
                             background: 'none', border: 'none',
                             color: '#94a3b8', cursor: 'pointer',
-                            display: 'none', /* 기본은 숨김, CSS로 모바일에서 표시 */
+                            display: 'none',
                             alignItems: 'center', justifyContent: 'center',
                         }}
                     >
@@ -350,15 +364,16 @@ export default function ChatSidebar({
             <div style={{
                 flex: 1,
                 overflowY: 'auto',
-                padding: '8px 8px',
+                padding: '8px 14px',
             }}>
                 {sessions.length === 0 ? (
                     <div style={{
                         textAlign: 'center',
-                        padding: '40px 16px',
+                        padding: '48px 16px',
                         color: '#94a3b8',
                         fontSize: 14,
                     }}>
+                        <div style={{ fontSize: 32, marginBottom: 12 }}>💬</div>
                         아직 대화가 없어요
                     </div>
                 ) : (
@@ -367,12 +382,10 @@ export default function ChatSidebar({
                         {pinned.length > 0 && (
                             <>
                                 <div style={{
-                                    fontSize: 11,
-                                    fontWeight: 600,
-                                    color: '#94a3b8',
-                                    textTransform: 'uppercase',
+                                    fontSize: 11, fontWeight: 600,
+                                    color: '#94a3b8', textTransform: 'uppercase',
                                     letterSpacing: '0.05em',
-                                    padding: '8px 12px 4px',
+                                    padding: '10px 14px 4px',
                                 }}>
                                     📌 고정
                                 </div>
@@ -393,12 +406,10 @@ export default function ChatSidebar({
                             <>
                                 {pinned.length > 0 && (
                                     <div style={{
-                                        fontSize: 11,
-                                        fontWeight: 600,
-                                        color: '#94a3b8',
-                                        textTransform: 'uppercase',
+                                        fontSize: 11, fontWeight: 600,
+                                        color: '#94a3b8', textTransform: 'uppercase',
                                         letterSpacing: '0.05em',
-                                        padding: '12px 12px 4px',
+                                        padding: '14px 14px 4px',
                                     }}>
                                         최근
                                     </div>
@@ -418,55 +429,56 @@ export default function ChatSidebar({
                 )}
             </div>
 
-            {/* 하단 멘토 정보 */}
+            {/* 하단 멘토 정보 + AI 뱃지 */}
             <div style={{
-                padding: '12px 16px',
+                padding: '14px 18px',
                 borderTop: '1px solid #f1f5f9',
-                fontSize: 13,
-                color: '#94a3b8',
-                textAlign: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
             }}>
-                {mentorName} AI
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#374151' }}>
+                    {mentorName}
+                </span>
+                <span style={{
+                    fontSize: 11, fontWeight: 700,
+                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                    color: '#fff',
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                    letterSpacing: '0.03em',
+                }}>AI</span>
             </div>
         </div>
     )
 
     return (
         <>
-            {/* 데스크톱: 고정 사이드바 */}
-            <aside className="chat-sidebar-desktop" style={{
-                width: 280,
-                flexShrink: 0,
-                height: '100%',
-                display: 'flex',
-            }}>
-                {sidebarContent}
-            </aside>
-
-            {/* 모바일: 오버레이 사이드바 */}
+            {/* 모든 화면: 오버레이 사이드바 (Gemini 스타일) */}
             {isOpen && (
                 <div
-                    className="chat-sidebar-overlay"
                     style={{
                         position: 'fixed',
                         inset: 0,
                         zIndex: 200,
-                        display: 'none', /* CSS로 모바일에서만 표시 */
                     }}
                 >
                     <div
                         style={{
                             position: 'absolute',
                             inset: 0,
-                            background: 'rgba(0,0,0,0.3)',
+                            background: 'rgba(0,0,0,0.25)',
+                            backdropFilter: 'blur(2px)',
                         }}
                         onClick={onClose}
                     />
                     <div style={{
                         position: 'absolute',
                         left: 0, top: 0, bottom: 0,
-                        width: 300,
-                        animation: 'sidebarSlideIn 0.25s ease',
+                        width: 'min(320px, 85vw)',
+                        animation: 'sidebarSlideIn 0.2s ease',
+                        boxShadow: '4px 0 24px rgba(0,0,0,0.1)',
                     }}>
                         {sidebarContent}
                     </div>
@@ -474,20 +486,6 @@ export default function ChatSidebar({
             )}
 
             <style>{`
-                /* 데스크톱 (>768px) */
-                @media (min-width: 769px) {
-                    .chat-sidebar-desktop { display: flex !important; }
-                    .chat-sidebar-overlay { display: none !important; }
-                    .sidebar-close-btn { display: none !important; }
-                }
-                /* 모바일 (<=768px) */
-                @media (max-width: 768px) {
-                    .chat-sidebar-desktop { display: none !important; }
-                    .chat-sidebar-overlay { display: block !important; }
-                    .sidebar-close-btn { display: flex !important; }
-                }
-                /* 세션 hover 시 메뉴 버튼 표시 */
-                div:hover > .session-menu-btn { opacity: 1 !important; }
                 @keyframes sidebarSlideIn {
                     from { transform: translateX(-100%); }
                     to { transform: translateX(0); }
@@ -496,6 +494,7 @@ export default function ChatSidebar({
                     from { opacity: 0; transform: translateY(-4px); }
                     to { opacity: 1; transform: translateY(0); }
                 }
+                .session-item:hover .session-menu-btn { opacity: 1 !important; }
             `}</style>
         </>
     )

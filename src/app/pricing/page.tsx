@@ -20,7 +20,7 @@ const FREE_FEATURES = [
 ]
 
 const PREMIUM_FEATURES = [
-    '무제한 대화',
+    '하루 500회 대화',
     '모든 AI 멘토 접근',
     '텍스트 + 음성 멘토링',
     '대화 내역 무제한 저장',
@@ -163,7 +163,7 @@ export default function PricingPage() {
                         프리미엄 멘토링
                     </h1>
                     <p style={{ fontSize: 16, color: '#6b7280', margin: 0 }}>
-                        무제한 대화로 성장을 가속화하세요
+                        더 많은 대화로 성장을 가속화하세요
                     </p>
                 </div>
 
