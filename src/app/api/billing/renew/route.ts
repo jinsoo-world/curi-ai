@@ -1,6 +1,7 @@
 // /api/billing/renew — 정기결제 자동 갱신 (Vercel Cron)
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { sendErrorAlert } from '@/lib/slack'
 import { chargeBilling, generateOrderId } from '@/lib/toss'
 import {
     getExpiredSubscriptions,
@@ -77,6 +78,8 @@ export async function GET(req: Request) {
             } catch (error) {
                 // 결제 실패 → past_due 상태
                 console.error(`[Cron] Failed to renew ${sub.id}:`, error)
+                const errMsg = error instanceof Error ? error.message : '갱신 결제 실패'
+                await sendErrorAlert({ source: 'billing/renew', error: errMsg, userId: sub.user_id, metadata: { subscriptionId: sub.id } })
                 await supabase
                     .from('subscriptions')
                     .update({ status: 'past_due', updated_at: new Date().toISOString() })
@@ -93,6 +96,8 @@ export async function GET(req: Request) {
         })
     } catch (error) {
         console.error('[Cron] Renew error:', error)
+        const errMsg = error instanceof Error ? error.message : 'Cron 처리 중 오류 발생'
+        await sendErrorAlert({ source: 'billing/renew-cron', error: errMsg })
         return NextResponse.json(
             { error: 'Cron 처리 중 오류 발생' },
             { status: 500 },

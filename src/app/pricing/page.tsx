@@ -15,13 +15,13 @@ const PLANS = {
 
 const FREE_FEATURES = [
     '하루 20회 무료 대화',
-    '3명의 AI 멘토',
+    '3개의 AI',
     '텍스트 채팅',
 ]
 
 const PREMIUM_FEATURES = [
     '하루 500회 대화',
-    '모든 AI 멘토 접근',
+    '모든 AI 접근',
     '텍스트 + 음성 멘토링',
     '대화 내역 무제한 저장',
     '우선 응답 속도',
@@ -130,7 +130,6 @@ export default function PricingPage() {
                         {[
                             { label: '멘토', href: '/mentors', active: false },
                             { label: '대화', href: '/chats', active: false },
-                            { label: '✨ 프리미엄', href: '/pricing', active: true },
                             { label: '마이페이지', href: '/profile', active: false },
                         ].map((item) => (
                             <Link
@@ -310,7 +309,7 @@ export default function PricingPage() {
                     {[
                         { q: '언제든 취소할 수 있나요?', a: '네, 프로필에서 언제든 구독을 취소할 수 있습니다. 취소 후에도 현재 결제 기간이 끝날 때까지 프리미엄을 이용하실 수 있어요.' },
                         { q: '결제 수단은 뭐가 있나요?', a: '국내 모든 신용/체크카드로 결제 가능합니다. (토스페이먼츠)' },
-                        { q: '무료로 먼저 사용해볼 수 있나요?', a: '네! 로그인하면 하루 5회 무료로 AI 멘토와 대화할 수 있습니다.' },
+                        { q: '무료로 먼저 사용해볼 수 있나요?', a: '네! 로그인하면 하루 5회 무료로 AI와 대화할 수 있습니다.' },
                     ].map((item, i) => (
                         <details key={i} style={{
                             marginBottom: 8, background: '#fff', borderRadius: 12,

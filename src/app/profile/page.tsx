@@ -28,6 +28,7 @@ export default function ProfilePage() {
     const [isCanceling, setIsCanceling] = useState(false)
     const [cancelResult, setCancelResult] = useState<{ success: boolean; message: string } | null>(null)
     const [uploadingPhoto, setUploadingPhoto] = useState(false)
+    const [isAdmin, setIsAdmin] = useState(false)
 
     // 편집용 상태
     const [editName, setEditName] = useState('')
@@ -73,6 +74,11 @@ export default function ProfilePage() {
                         setEditGender(data.gender || '')
                         setEditBirthYear(data.birth_year?.toString() || '')
                     }
+                }
+
+                // 어드민 여부 확인
+                if (user.email === 'jin@mission-driven.kr') {
+                    setIsAdmin(true)
                 }
             }
             setIsLoading(false)
@@ -264,7 +270,6 @@ export default function ProfilePage() {
                         {[
                             { label: '멘토', href: '/mentors', active: false },
                             { label: '대화', href: '/chats', active: false },
-                            { label: '프리미엄', href: '/pricing', active: false, highlight: true },
                             { label: '마이페이지', href: '/profile', active: true },
                         ].map((item) => (
                             <Link
@@ -780,6 +785,36 @@ export default function ProfilePage() {
                                     <span>💬 대화 내역</span>
                                     <span style={{ color: '#d1d5db' }}>→</span>
                                 </Link>
+                                {/* 내 AI 만들기 - 모든 로그인 사용자 */}
+                                <Link
+                                    href="/creator/create"
+                                    style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        padding: '18px 24px',
+                                        textDecoration: 'none', color: '#18181b',
+                                        fontSize: 16, fontWeight: 500,
+                                        borderBottom: '1px solid #f0f0f0',
+                                    }}
+                                >
+                                    <span>🤖 내 AI 만들기</span>
+                                    <span style={{ color: '#d1d5db' }}>→</span>
+                                </Link>
+                                {/* 어드민 관리 - 관리자만 */}
+                                {isAdmin && (
+                                    <Link
+                                        href="/creator/manage"
+                                        style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                            padding: '18px 24px',
+                                            textDecoration: 'none', color: '#ef4444',
+                                            fontSize: 16, fontWeight: 600,
+                                            borderBottom: '1px solid #f0f0f0',
+                                        }}
+                                    >
+                                        <span>🛡️ 어드민 관리</span>
+                                        <span style={{ color: '#d1d5db' }}>→</span>
+                                    </Link>
+                                )}
                                 {/* 결제 내역 */}
                                 <button
                                     onClick={async () => {

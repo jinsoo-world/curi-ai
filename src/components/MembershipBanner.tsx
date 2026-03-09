@@ -11,7 +11,7 @@ export function MembershipBanner() {
     return (
         <div style={{
             background: 'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)',
-            padding: '10px 16px',
+            padding: '12px 16px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -26,12 +26,12 @@ export function MembershipBanner() {
                     gap: 8,
                     textDecoration: 'none',
                     color: '#fff',
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: 600,
                 }}
             >
-                <span style={{ fontSize: 16 }}>✨</span>
-                <span>멤버십 신청하기 — 하루 500회 대화 & 음성 멘토링</span>
+                <span style={{ fontSize: 18 }}>✨</span>
+                <span>멤버십 신청하기</span>
             </Link>
 
             {/* 닫기 버튼 */}

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createBrowserClient } from '@/lib/supabase/server'
 import { cancelSubscription, getActiveSubscription } from '@/domains/subscription'
+import { sendErrorAlert } from '@/lib/slack'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest) {
     } catch (error: unknown) {
         console.error('[Billing] Cancel error:', error)
         const message = error instanceof Error ? error.message : '구독 취소 중 오류가 발생했습니다.'
+        await sendErrorAlert({ source: 'billing/cancel', error: message })
         return NextResponse.json({ error: message }, { status: 500 })
     }
 }

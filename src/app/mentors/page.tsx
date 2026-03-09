@@ -10,10 +10,10 @@ import NotificationBanner from './NotificationBanner'
 
 export const metadata: Metadata = {
     title: '멘토 선택 — 큐리 AI',
-    description: 'AI 멘토를 선택하고, 콘텐츠 수익화·브랜딩·글쓰기·마케팅에 대해 24시간 대화하세요.',
+    description: 'AI를 선택하고, 콘텐츠 수익화·브랜딩·글쓰기·마케팅에 대해 24시간 대화하세요.',
     openGraph: {
         title: '멘토 선택 — 큐리 AI',
-        description: 'AI 멘토를 선택하고 24시간 대화하세요. 콘텐츠 수익화, 브랜딩, 글쓰기 전문가가 함께합니다.',
+        description: 'AI를 선택하고 24시간 대화하세요. 콘텐츠 수익화, 브랜딩, 글쓰기 전문가가 함께합니다.',
     },
 }
 
@@ -66,16 +66,39 @@ function MentorCard({
                 position: 'relative',
                 width: '100%',
                 aspectRatio: '1 / 1',
-                background: '#f8f9fa',
+                background: 'linear-gradient(135deg, #f0fdf4 0%, #e8f5e9 50%, #f0f9ff 100%)',
                 overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
             }}>
-                <Image
-                    src={imageSrc}
-                    alt={`${name} 멘토`}
-                    fill
-                    style={{ objectFit: 'cover' }}
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                />
+                {imageSrc && !imageSrc.includes('undefined') ? (
+                    <Image
+                        src={imageSrc}
+                        alt={`${name} 멘토`}
+                        fill
+                        style={{ objectFit: 'cover' }}
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                    />
+                ) : (
+                    /* 이미지 없으면 로고 흐릿하게 */
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 12,
+                        opacity: 0.25,
+                    }}>
+                        <Image
+                            src="/logo.png"
+                            alt="큐리 AI"
+                            width={80}
+                            height={80}
+                            style={{ borderRadius: 20, filter: 'grayscale(30%)' }}
+                        />
+                        <span style={{ fontSize: 14, color: '#6b7280', fontWeight: 500 }}>AI</span>
+                    </div>
+                )}
             </div>
 
             {/* Info */}
@@ -92,7 +115,7 @@ function MentorCard({
                         background: '#f0fdf4', borderRadius: 100,
                         padding: '4px 12px',
                     }}>
-                        AI 멘토
+                        AI
                     </span>
                 </div>
 
@@ -172,7 +195,6 @@ export default async function MentorsPage() {
                         {[
                             { label: '멘토', href: '/mentors', active: true },
                             { label: '대화', href: '/chats', active: false },
-                            { label: '프리미엄', href: '/pricing', active: false, highlight: true },
                             { label: '마이페이지', href: '/profile', active: false },
                         ].map((item) => (
                             <Link
@@ -212,7 +234,7 @@ export default async function MentorsPage() {
                     </span>
                 </h1>
                 <p style={{ fontSize: 18, color: '#9ca3af', marginTop: 12 }}>
-                    AI 멘토가 24시간 함께합니다. 궁금한 것을 언제든 물어보세요.
+                    AI가 24시간 함께합니다. 궁금한 것을 언제든 물어보세요.
                 </p>
             </section>
 
@@ -237,7 +259,7 @@ export default async function MentorsPage() {
                                         name={mentor.name} title={mentor.title}
                                         description={mentor.description}
                                         questions={mentor.sample_questions || []}
-                                        imageSrc={mentor.avatar_url || MENTOR_IMAGES[mentor.name] || '/mentors/passion-jin.png'}
+                                        imageSrc={mentor.avatar_url || MENTOR_IMAGES[mentor.name] || ''}
                                         index={index}
                                     />
                                 </Link>
@@ -256,11 +278,39 @@ export default async function MentorsPage() {
                 </section>
             </main>
 
+            {/* ─── Fixed Bottom CTA ─── */}
+            <div style={{
+                position: 'fixed',
+                bottom: 28,
+                left: 0,
+                right: 0,
+                display: 'flex',
+                justifyContent: 'center',
+                zIndex: 50,
+                pointerEvents: 'none',
+            }}>
+                <Link
+                    href="/creator/create"
+                    style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 10,
+                        padding: '16px 48px', borderRadius: 50,
+                        background: 'linear-gradient(135deg, #16a34a, #22c55e)',
+                        color: '#fff',
+                        fontSize: 18, fontWeight: 700,
+                        textDecoration: 'none',
+                        boxShadow: '0 6px 24px rgba(34,197,94,0.45)',
+                        transition: 'transform 0.2s, box-shadow 0.2s',
+                        pointerEvents: 'auto',
+                    }}
+                >
+                    🚀 내 AI 만들기
+                </Link>
+            </div>
 
             {/* ─── Footer ─── */}
             <footer className="mentors-footer" style={{
                 borderTop: '1px solid #f0f0f0',
-                padding: '24px 40px',
+                padding: '24px 40px 80px',
                 textAlign: 'center',
                 fontSize: 14, color: '#d1d5db',
             }}>

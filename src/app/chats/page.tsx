@@ -187,7 +187,6 @@ export default function ChatsPage() {
                         {[
                             { label: '멘토', href: '/mentors', active: false },
                             { label: '대화', href: '/chats', active: true },
-                            { label: '프리미엄', href: '/pricing', active: false, highlight: true },
                             { label: '마이페이지', href: '/profile', active: false },
                         ].map((item) => (
                             <Link

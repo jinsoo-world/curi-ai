@@ -5,6 +5,13 @@ const nextConfig: NextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60 * 60 * 24, // 24시간 캐시
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'ueemicebrauwddtzvuyb.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
   },
   // 빌드 로그 최소화 (배포 속도 향상)
   logging: {

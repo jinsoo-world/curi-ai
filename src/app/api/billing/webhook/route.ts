@@ -5,6 +5,7 @@ import {
     sendSlackNotification,
     buildPaymentStatusMessage,
     buildCancelStatusMessage,
+    sendErrorAlert,
 } from '@/lib/slack'
 
 export const dynamic = 'force-dynamic'
@@ -124,6 +125,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true })
     } catch (error) {
         console.error('[Webhook] Error:', error)
+        const errMsg = error instanceof Error ? error.message : '웹훅 처리 오류'
+        await sendErrorAlert({ source: 'billing/webhook', error: errMsg })
         // 에러 시에도 200 반환 (토스 재전송 방지가 필요한 경우)
         return NextResponse.json({ success: true })
     }

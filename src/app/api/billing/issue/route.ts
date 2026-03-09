@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { issueBillingKey, chargeBilling, generateOrderId } from '@/lib/toss'
 import { createSubscription, savePayment, PLANS } from '@/domains/subscription'
+import { sendErrorAlert } from '@/lib/slack'
 
 export const dynamic = 'force-dynamic'
 
@@ -85,6 +86,7 @@ export async function POST(req: NextRequest) {
     } catch (error: unknown) {
         console.error('[Billing] Issue error:', error)
         const message = error instanceof Error ? error.message : '결제 처리 중 오류가 발생했습니다.'
+        await sendErrorAlert({ source: 'billing/issue', error: message })
         return NextResponse.json({ error: message }, { status: 500 })
     }
 }

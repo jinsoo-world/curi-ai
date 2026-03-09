@@ -13,15 +13,15 @@ const notoSansKr = Noto_Sans_KR({
 export const metadata: Metadata = {
   title: '큐리 AI — 언제든, 나를 아는 멘토에게 물어보세요',
   description:
-    'AI 멘토링 구독 서비스. 콘텐츠 수익화, 브랜딩, 커리어 전환에 대해 24시간 언제든 나만의 AI 멘토와 대화하세요.',
+    'AI 구독 서비스. 콘텐츠 수익화, 브랜딩, 커리어 전환에 대해 24시간 언제든 나만의 AI와 대화하세요.',
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.ico',
     apple: '/icons/icon-192x192.png',
   },
   openGraph: {
-    title: '큐리 AI — 나를 아는 AI 멘토',
-    description: '콘텐츠 수익화부터 커리어 전환까지, 24시간 AI 멘토링',
+    title: '큐리 AI — 나를 아는 AI',
+    description: '콘텐츠 수익화부터 커리어 전환까지, 24시간 AI',
     type: 'website',
   },
 }

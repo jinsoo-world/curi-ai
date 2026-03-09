@@ -140,3 +140,67 @@ export function buildCancelStatusMessage(data: {
 
     return { text, blocks }
 }
+
+// ── 에러 알림 헬퍼 ──
+
+/**
+ * API 에러 발생 시 슬랙 알림 (서버 에러, 결제 실패 등)
+ */
+export async function sendErrorAlert(data: {
+    source: string
+    error: string
+    userId?: string
+    metadata?: Record<string, unknown>
+}) {
+    const text = `🚨 [에러 알림] ${data.source}: ${data.error}`
+    const blocks: SlackBlock[] = [
+        {
+            type: 'header',
+            text: { type: 'plain_text', text: `🚨 에러 발생: ${data.source}`, emoji: true },
+        },
+        {
+            type: 'section',
+            fields: [
+                { type: 'mrkdwn', text: `*에러:*\n\`${data.error}\`` },
+                { type: 'mrkdwn', text: `*유저ID:*\n${data.userId || '-'}` },
+            ],
+        },
+        {
+            type: 'context',
+            elements: [
+                { type: 'mrkdwn', text: `${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}` },
+                ...(data.metadata ? [{ type: 'mrkdwn', text: `메타: \`${JSON.stringify(data.metadata)}\`` }] : []),
+            ],
+        },
+    ]
+    await sendSlackNotification(text, blocks)
+}
+
+/**
+ * Gemini API 비용 임계치 알림 메시지 빌더
+ * @param currentCost - 현재 누적 비용 (USD)
+ * @param threshold - 임계치 (기본 $50)
+ */
+export function buildGeminiCostAlert(currentCost: number, threshold: number = 50) {
+    const isOver = currentCost >= threshold
+    const emoji = isOver ? '🔴' : '🟡'
+    const text = `${emoji} [Gemini 비용] $${currentCost.toFixed(2)} / $${threshold} (${((currentCost / threshold) * 100).toFixed(0)}%)`
+
+    const blocks: SlackBlock[] = [
+        {
+            type: 'header',
+            text: { type: 'plain_text', text: `${emoji} Gemini API 비용 알림`, emoji: true },
+        },
+        {
+            type: 'section',
+            fields: [
+                { type: 'mrkdwn', text: `*현재 비용:*\n$${currentCost.toFixed(2)}` },
+                { type: 'mrkdwn', text: `*임계치:*\n$${threshold}` },
+                { type: 'mrkdwn', text: `*사용률:*\n${((currentCost / threshold) * 100).toFixed(0)}%` },
+                { type: 'mrkdwn', text: `*상태:*\n${isOver ? '⚠️ 초과!' : '정상'}` },
+            ],
+        },
+    ]
+
+    return { text, blocks, isOver }
+}
