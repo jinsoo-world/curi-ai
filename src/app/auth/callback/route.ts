@@ -69,7 +69,7 @@ export async function GET(request: Request) {
                 }
 
                 if (profile.onboarding_completed) {
-                    // 온보딩 완료 → 멘토 페이지
+                    // 기존 유저 재로그인 → 멘토 페이지 (웰컴 모달 없이)
                     return NextResponse.redirect(`${origin}/mentors`)
                 }
 
@@ -91,7 +91,8 @@ export async function GET(request: Request) {
                 await db.from('users').update({
                     onboarding_completed: true,
                 }).eq('id', user.id)
-                return NextResponse.redirect(`${origin}/mentors`)
+                // 최초 온보딩 완료 → 웰컴 모달 표시
+                return NextResponse.redirect(`${origin}/mentors?welcome=true`)
             }
 
             return NextResponse.redirect(`${origin}${next}`)

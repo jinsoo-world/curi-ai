@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import AppSidebar from '@/components/AppSidebar'
 
 interface MentorItem {
     id: string
@@ -83,130 +84,144 @@ export default function CreatorManagePage() {
     }
 
     return (
-        <div style={styles.container}>
-            <div style={styles.header}>
-                <h1 style={styles.heading}>🛠️ AI 관리</h1>
-                <p style={styles.subheading}>내가 만든 AI를 수정·삭제할 수 있습니다</p>
-            </div>
+        <div style={{ minHeight: '100dvh', background: '#f8f9fa' }}>
+            <AppSidebar />
+            <div className="sidebar-content" style={{ marginLeft: 240, minHeight: '100dvh' }}>
+                <div style={styles.container}>
+                    <div style={styles.header}>
+                        <h1 style={styles.heading}>🛠️ AI 관리</h1>
+                        <p style={styles.subheading}>내가 만든 AI를 수정·삭제할 수 있습니다</p>
+                    </div>
 
-            <div style={styles.actions}>
-                <button
-                    style={styles.createBtn}
-                    onClick={() => router.push('/creator/create')}
-                >
-                    ＋ 새 AI 만들기
-                </button>
-                <button
-                    style={styles.backBtn}
-                    onClick={() => router.push('/mentors')}
-                >
-                    ← 멘토 목록
-                </button>
-            </div>
+                    <div style={styles.actions}>
+                        <button
+                            style={styles.createBtn}
+                            onClick={() => router.push('/creator/create')}
+                        >
+                            ＋ 새 AI 만들기
+                        </button>
+                        <button
+                            style={styles.backBtn}
+                            onClick={() => router.push('/mentors')}
+                        >
+                            ← 멘토 목록
+                        </button>
+                    </div>
 
-            {loading ? (
-                <div style={styles.emptyState}>불러오는 중...</div>
-            ) : unauthorized ? (
-                <div style={styles.emptyState}>
-                    <div style={{ fontSize: 48 }}>🔒</div>
-                    <div style={{ fontSize: 16, fontWeight: 600, color: '#18181b' }}>접근 권한이 없습니다</div>
-                    <div style={{ fontSize: 14, color: '#9ca3af' }}>크리에이터 또는 관리자만 이용 가능합니다</div>
-                    <button
-                        style={styles.backBtn}
-                        onClick={() => router.push('/mentors')}
-                    >
-                        ← 멘토 목록으로 돌아가기
-                    </button>
-                </div>
-            ) : mentors.length === 0 ? (
-                <div style={styles.emptyState}>
-                    <div style={{ fontSize: 48 }}>📭</div>
-                    <div>아직 만든 AI가 없습니다</div>
-                    <button
-                        style={styles.createBtn}
-                        onClick={() => router.push('/creator/create')}
-                    >
-                        첫 AI 만들기
-                    </button>
-                </div>
-            ) : (
-                <div style={styles.list}>
-                    {mentors.map(m => {
-                        const effectiveStatus = !m.is_active ? 'inactive' : m.status
-                        const st = statusLabels[effectiveStatus] || statusLabels.draft
-                        const isConfirming = confirmingDelete === m.id
-                        const isDeleting = deleting === m.id
+                    {loading ? (
+                        <div style={styles.emptyState}>불러오는 중...</div>
+                    ) : unauthorized ? (
+                        <div style={styles.emptyState}>
+                            <div style={{ fontSize: 48 }}>🔒</div>
+                            <div style={{ fontSize: 16, fontWeight: 600, color: '#18181b' }}>접근 권한이 없습니다</div>
+                            <div style={{ fontSize: 14, color: '#9ca3af' }}>크리에이터 또는 관리자만 이용 가능합니다</div>
+                            <button
+                                style={styles.backBtn}
+                                onClick={() => router.push('/mentors')}
+                            >
+                                ← 멘토 목록으로 돌아가기
+                            </button>
+                        </div>
+                    ) : mentors.length === 0 ? (
+                        <div style={styles.emptyState}>
+                            <div style={{ fontSize: 48 }}>📭</div>
+                            <div>아직 만든 AI가 없습니다</div>
+                            <button
+                                style={styles.createBtn}
+                                onClick={() => router.push('/creator/create')}
+                            >
+                                첫 AI 만들기
+                            </button>
+                        </div>
+                    ) : (
+                        <div style={styles.list}>
+                            {mentors.map(m => {
+                                const effectiveStatus = !m.is_active ? 'inactive' : m.status
+                                const st = statusLabels[effectiveStatus] || statusLabels.draft
+                                const isConfirming = confirmingDelete === m.id
+                                const isDeleting = deleting === m.id
 
-                        return (
-                            <div key={m.id} style={styles.card}>
-                                <div style={styles.cardInfo}>
-                                    <div style={styles.cardName}>
-                                        {m.name}
-                                        <span style={{
-                                            ...styles.badge,
-                                            color: st.color,
-                                            background: st.bg,
-                                        }}>
-                                            {st.label}
-                                        </span>
-                                        {m.mentor_type === 'creator' && (
-                                            <span style={styles.badgeCreator}>크리에이터</span>
-                                        )}
-                                    </div>
-                                    <div style={styles.cardTitle}>{m.title}</div>
-                                    <div style={styles.cardMeta}>
-                                        생성: {new Date(m.created_at).toLocaleDateString('ko-KR')}
-                                    </div>
-                                </div>
-
-                                <div style={styles.cardActions}>
-                                    {isConfirming ? (
-                                        /* 인라인 삭제 확인 */
-                                        <div style={styles.confirmRow}>
-                                            <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 500 }}>
-                                                삭제할까요?
-                                            </span>
-                                            <button
-                                                style={styles.confirmYes}
-                                                onClick={() => executeDelete(m.id)}
-                                                disabled={isDeleting}
-                                            >
-                                                {isDeleting ? '...' : '✓ 확인'}
-                                            </button>
-                                            <button
-                                                style={styles.confirmNo}
-                                                onClick={() => setConfirmingDelete(null)}
-                                                disabled={isDeleting}
-                                            >
-                                                취소
-                                            </button>
+                                return (
+                                    <div key={m.id} style={styles.card}>
+                                        <div style={styles.cardInfo}>
+                                            <div style={styles.cardName}>
+                                                {m.name}
+                                                <span style={{
+                                                    ...styles.badge,
+                                                    color: st.color,
+                                                    background: st.bg,
+                                                }}>
+                                                    {st.label}
+                                                </span>
+                                                {m.mentor_type === 'creator' && (
+                                                    <span style={styles.badgeCreator}>크리에이터</span>
+                                                )}
+                                            </div>
+                                            <div style={styles.cardTitle}>{m.title}</div>
+                                            <div style={styles.cardMeta}>
+                                                생성: {new Date(m.created_at).toLocaleDateString('ko-KR')}
+                                            </div>
                                         </div>
-                                    ) : (
-                                        /* 수정 + 삭제 버튼 */
-                                        <div style={styles.btnGroup}>
-                                            <button
-                                                style={styles.editBtn}
-                                                onClick={() => router.push(`/creator/edit/${m.id}`)}
-                                            >
-                                                ✏️ 수정
-                                            </button>
-                                            <button
-                                                style={styles.deleteBtn}
-                                                onClick={() => setConfirmingDelete(m.id)}
-                                            >
-                                                🗑️ 삭제
-                                            </button>
+
+                                        <div style={styles.cardActions}>
+                                            {isConfirming ? (
+                                                /* 인라인 삭제 확인 */
+                                                <div style={styles.confirmRow}>
+                                                    <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 500 }}>
+                                                        삭제할까요?
+                                                    </span>
+                                                    <button
+                                                        style={styles.confirmYes}
+                                                        onClick={() => executeDelete(m.id)}
+                                                        disabled={isDeleting}
+                                                    >
+                                                        {isDeleting ? '...' : '✓ 확인'}
+                                                    </button>
+                                                    <button
+                                                        style={styles.confirmNo}
+                                                        onClick={() => setConfirmingDelete(null)}
+                                                        disabled={isDeleting}
+                                                    >
+                                                        취소
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                /* 수정 + 삭제 버튼 */
+                                                <div style={styles.btnGroup}>
+                                                    <button
+                                                        style={styles.editBtn}
+                                                        onClick={() => router.push(`/creator/edit/${m.id}`)}
+                                                    >
+                                                        ✏️ 수정
+                                                    </button>
+                                                    <button
+                                                        style={styles.deleteBtn}
+                                                        onClick={() => setConfirmingDelete(m.id)}
+                                                    >
+                                                        🗑️ 삭제
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-                            </div>
-                        )
-                    })}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
                 </div>
-            )}
+                <style>{`
+                    @media (max-width: 768px) {
+                        .sidebar-content {
+                            margin-left: 0 !important;
+                            padding-bottom: 72px;
+                        }
+                    }
+                `}</style>
+            </div>
         </div>
     )
 }
+
 
 const styles: Record<string, React.CSSProperties> = {
     container: {
