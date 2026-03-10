@@ -167,7 +167,7 @@ export default function MissionsPage() {
                             fontSize: 24, fontWeight: 800, color: '#18181b',
                             letterSpacing: '-0.03em', margin: 0,
                         }}>
-                            🍀 미션
+                            🍀 미션 보상
                         </h1>
                         <p style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
                             미션을 완료하고 클로버를 모아보세요!
@@ -233,7 +233,7 @@ export default function MissionsPage() {
                                     background: '#fff', borderRadius: 12,
                                     padding: '10px 16px', border: '1px solid #dcfce7',
                                 }}>
-                                    <div style={{ fontSize: 11, color: '#9ca3af' }}>미션 달성 보상</div>
+                                    <div style={{ fontSize: 11, color: '#9ca3af' }}>미션 보상</div>
                                     <div style={{ fontSize: 16, fontWeight: 700, color: '#16a34a' }}>
                                         🍀 {totalEarned}
                                     </div>

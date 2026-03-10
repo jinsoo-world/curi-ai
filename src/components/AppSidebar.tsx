@@ -79,7 +79,7 @@ export default function AppSidebar() {
         { label: '내 AI 만들기', href: '/creator/create', icon: '✨' },
         { label: '내 AI 관리', href: '/creator/manage', icon: '📊' },
         { type: 'divider' as const },
-        { label: '미션', href: '/missions', icon: '🍀' },
+        { label: '미션 보상', href: '/missions', icon: '🍀' },
         { label: '스토어', href: '/store', icon: '🎁' },
         { label: '멤버십', href: '/pricing', icon: '👑' },
         { label: '마이페이지', href: '/profile', icon: '👤' },
@@ -331,7 +331,7 @@ export default function AppSidebar() {
                     { label: 'AI', href: '/mentors', icon: '💬' },
                     { label: '대화', href: '/chats', icon: '📋' },
                     { label: 'AI만들기', href: '/creator/create', icon: '✨' },
-                    { label: '미션', href: '/missions', icon: '🍀' },
+                    { label: '미션 보상', href: '/missions', icon: '🍀' },
                     { label: 'MY', href: '/profile', icon: '👤' },
                 ].map(item => {
                     const isActive = pathname === item.href ||
