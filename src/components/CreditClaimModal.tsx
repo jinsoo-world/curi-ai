@@ -12,8 +12,7 @@ interface CreditClaimModalProps {
 export default function CreditClaimModal({ isOpen, onClose, onComplete }: CreditClaimModalProps) {
     const [phone, setPhone] = useState('')
     const [gender, setGender] = useState('')
-    const [birthYear, setBirthYear] = useState('')
-    const [marketingAgreed, setMarketingAgreed] = useState(true) // 기본 체크
+    const [marketingAgreed, setMarketingAgreed] = useState(true)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState('')
 
@@ -26,10 +25,7 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
         return `${nums.slice(0, 3)}-${nums.slice(3, 7)}-${nums.slice(7)}`
     }
 
-    const currentYear = new Date().getFullYear()
-    const years = Array.from({ length: 80 }, (_, i) => currentYear - 14 - i)
-
-    const canSubmit = phone.replace(/\D/g, '').length >= 10 && gender && birthYear
+    const canSubmit = phone.replace(/\D/g, '').length >= 10 && gender
 
     const handleSubmit = async () => {
         if (!canSubmit) return
@@ -46,42 +42,29 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                 return
             }
 
-            // CRM 데이터 저장
+            // CRM 데이터 저장 + 구독 상태를 무료체험으로 변경
             const { error: updateError } = await supabase
                 .from('users')
                 .update({
                     phone: phone.replace(/\D/g, ''),
                     gender,
-                    birth_year: parseInt(birthYear),
                     marketing_agreed: marketingAgreed,
+                    subscription_tier: 'free_trial',
                 })
                 .eq('id', user.id)
 
             if (updateError) {
                 console.error('Update error:', updateError)
-                // phone/marketing_agreed 컬럼이 아직 없을 수 있음 — 기본 필드만 업데이트
+                // phone/marketing_agreed 컬럼이 아직 없을 수 있음
                 const { error: fallbackError } = await supabase
                     .from('users')
                     .update({
                         gender,
-                        birth_year: parseInt(birthYear),
+                        subscription_tier: 'free_trial',
                     })
                     .eq('id', user.id)
 
                 if (fallbackError) throw fallbackError
-            }
-
-            // 1만원 크레딧 지급 시도
-            try {
-                await supabase.from('credits').insert({
-                    user_id: user.id,
-                    amount: 10000,
-                    type: 'welcome_bonus',
-                    description: '가입 축하 크레딧',
-                })
-            } catch {
-                // credits 테이블이 아직 없으면 무시
-                console.log('Credits table not ready yet')
             }
 
             onComplete()
@@ -107,7 +90,33 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                 overflow: 'hidden',
                 boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
                 animation: 'modalIn 0.3s ease',
+                position: 'relative',
             }}>
+                {/* X 닫기 버튼 */}
+                <button
+                    onClick={onClose}
+                    aria-label="닫기"
+                    style={{
+                        position: 'absolute',
+                        top: 16,
+                        right: 16,
+                        zIndex: 10,
+                        width: 32, height: 32,
+                        borderRadius: '50%',
+                        background: 'rgba(0,0,0,0.06)',
+                        border: 'none',
+                        fontSize: 16,
+                        color: '#6b7280',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'background 150ms',
+                    }}
+                >
+                    ✕
+                </button>
+
                 {/* Header */}
                 <div style={{
                     background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
@@ -139,6 +148,16 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                         </div>
                     )}
 
+                    {/* 안내 */}
+                    <div style={{
+                        padding: '10px 14px', marginBottom: 18,
+                        background: '#f0fdf4', borderRadius: 10,
+                        fontSize: 13, color: '#16a34a', lineHeight: 1.5,
+                        border: '1px solid #dcfce7',
+                    }}>
+                        💡 입력하신 정보는 맞춤형 AI 추천에 활용됩니다.
+                    </div>
+
                     {/* 휴대폰 번호 */}
                     <div style={{ marginBottom: 18 }}>
                         <label style={{
@@ -164,70 +183,36 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                         />
                     </div>
 
-                    {/* 성별 + 출생년도 */}
-                    <div style={{
-                        display: 'grid', gridTemplateColumns: '1fr 1fr',
-                        gap: 12, marginBottom: 20,
-                    }}>
-                        {/* 성별 */}
-                        <div>
-                            <label style={{
-                                display: 'block', fontSize: 14, fontWeight: 600,
-                                color: '#374151', marginBottom: 6,
-                            }}>
-                                👤 성별 <span style={{ color: '#dc2626' }}>*</span>
-                            </label>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                                {[
-                                    { value: 'male', label: '남성' },
-                                    { value: 'female', label: '여성' }
-                                ].map((opt) => (
-                                    <button
-                                        key={opt.value}
-                                        type="button"
-                                        onClick={() => setGender(opt.value)}
-                                        style={{
-                                            flex: 1, padding: '12px 0',
-                                            borderRadius: 10, fontSize: 14, fontWeight: 600,
-                                            border: `1.5px solid ${gender === opt.value ? '#22c55e' : '#e5e7eb'}`,
-                                            background: gender === opt.value ? '#f0fdf4' : '#fff',
-                                            color: gender === opt.value ? '#15803d' : '#6b7280',
-                                            cursor: 'pointer',
-                                            transition: 'all 150ms',
-                                        }}
-                                    >
-                                        {opt.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* 출생년도 */}
-                        <div>
-                            <label style={{
-                                display: 'block', fontSize: 14, fontWeight: 600,
-                                color: '#374151', marginBottom: 6,
-                            }}>
-                                🎂 출생년도 <span style={{ color: '#dc2626' }}>*</span>
-                            </label>
-                            <select
-                                value={birthYear}
-                                onChange={(e) => setBirthYear(e.target.value)}
-                                style={{
-                                    width: '100%', padding: '12px 14px',
-                                    fontSize: 14, borderRadius: 10,
-                                    border: '1.5px solid #e5e7eb',
-                                    outline: 'none', background: '#fff',
-                                    color: birthYear ? '#18181b' : '#9ca3af',
-                                    cursor: 'pointer',
-                                    boxSizing: 'border-box',
-                                }}
-                            >
-                                <option value="">선택</option>
-                                {years.map((y) => (
-                                    <option key={y} value={y}>{y}년</option>
-                                ))}
-                            </select>
+                    {/* 성별 */}
+                    <div style={{ marginBottom: 20 }}>
+                        <label style={{
+                            display: 'block', fontSize: 14, fontWeight: 600,
+                            color: '#374151', marginBottom: 6,
+                        }}>
+                            👤 성별 <span style={{ color: '#dc2626' }}>*</span>
+                        </label>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            {[
+                                { value: 'male', label: '남성' },
+                                { value: 'female', label: '여성' }
+                            ].map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => setGender(opt.value)}
+                                    style={{
+                                        flex: 1, padding: '12px 0',
+                                        borderRadius: 10, fontSize: 14, fontWeight: 600,
+                                        border: `1.5px solid ${gender === opt.value ? '#22c55e' : '#e5e7eb'}`,
+                                        background: gender === opt.value ? '#f0fdf4' : '#fff',
+                                        color: gender === opt.value ? '#15803d' : '#6b7280',
+                                        cursor: 'pointer',
+                                        transition: 'all 150ms',
+                                    }}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
@@ -254,7 +239,7 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                         </span>
                     </label>
 
-                    {/* 크레딧 받기 버튼 */}
+                    {/* 무료 체험 시작하기 버튼 */}
                     <button
                         type="button"
                         onClick={handleSubmit}

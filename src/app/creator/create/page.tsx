@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import AppSidebar from '@/components/AppSidebar'
+import { createClient } from '@/lib/supabase/client'
 // PERSONA_TEMPLATES import removed — agent prompt now directly entered
 
 interface UploadedFile {
@@ -49,6 +50,16 @@ export default function CreatorCreatePage() {
 
     // 크리에이터 탭 (AI 설정 / 파일 학습)
     const [creatorTab, setCreatorTab] = useState<'settings' | 'files'>('settings')
+
+    // 로그인 상태 체크
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null)
+
+    useEffect(() => {
+        const supabase = createClient()
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            setIsLoggedIn(!!user)
+        })
+    }, [])
 
     function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0]
@@ -404,6 +415,67 @@ export default function CreatorCreatePage() {
                                 AI에 반영되는 설정만 표시됩니다
                             </p>
                         </div>
+
+                        {/* 로그인 필요 — 전면 유도 화면 */}
+                        {isLoggedIn === false && (
+                            <div style={{
+                                position: 'fixed', inset: 0, zIndex: 100,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: 'rgba(255,255,255,0.92)',
+                                backdropFilter: 'blur(8px)',
+                                padding: 24,
+                            }}>
+                                <div style={{
+                                    textAlign: 'center', maxWidth: 400,
+                                    background: '#fff',
+                                    borderRadius: 24,
+                                    padding: '48px 32px 40px',
+                                    boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
+                                    animation: 'fadeIn 0.4s ease',
+                                }}>
+                                    <div style={{ fontSize: 56, marginBottom: 16 }}>🔐</div>
+                                    <h2 style={{
+                                        fontSize: 22, fontWeight: 800, color: '#18181b',
+                                        marginBottom: 8, letterSpacing: '-0.02em',
+                                    }}>
+                                        로그인이 필요합니다
+                                    </h2>
+                                    <p style={{
+                                        fontSize: 15, color: '#6b7280', lineHeight: 1.6,
+                                        marginBottom: 28,
+                                    }}>
+                                        AI를 만들려면 먼저 로그인해주세요.<br />
+                                        구글 계정으로 바로 시작할 수 있습니다.
+                                    </p>
+                                    <Link
+                                        href="/login"
+                                        style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: 10,
+                                            padding: '14px 36px',
+                                            borderRadius: 14,
+                                            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                            color: '#fff', textDecoration: 'none',
+                                            fontWeight: 700, fontSize: 16,
+                                            boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
+                                            transition: 'transform 150ms',
+                                        }}
+                                    >
+                                        🚀 로그인하기
+                                    </Link>
+                                    <div style={{ marginTop: 16 }}>
+                                        <Link
+                                            href="/mentors"
+                                            style={{
+                                                fontSize: 14, color: '#9ca3af',
+                                                textDecoration: 'none',
+                                            }}
+                                        >
+                                            ← AI 둘러보기
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* ═══ GNB 탭 ═══ */}
                         <div style={{

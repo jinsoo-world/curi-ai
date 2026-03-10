@@ -200,9 +200,15 @@ export default function AppSidebar() {
                                 </div>
                                 <div style={{
                                     fontSize: 11, fontWeight: 600,
-                                    color: profile?.subscription_tier === 'premium' ? '#f59e0b' : '#16a34a',
+                                    color: profile?.subscription_tier === 'premium' ? '#f59e0b'
+                                        : profile?.subscription_tier === 'free' ? '#3b82f6'
+                                        : profile?.subscription_tier === 'free_trial' ? '#16a34a'
+                                        : '#9ca3af',
                                 }}>
-                                    {profile?.subscription_tier === 'premium' ? '✨ 프리미엄' : '🎁 무료 체험 중'}
+                                    {profile?.subscription_tier === 'premium' ? '✨ 프리미엄'
+                                        : profile?.subscription_tier === 'free' ? '🎫 프리'
+                                        : profile?.subscription_tier === 'free_trial' ? '🎁 무료 체험 중'
+                                        : '기본'}
                                 </div>
                             </div>
                         </Link>

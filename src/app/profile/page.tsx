@@ -609,13 +609,22 @@ export default function ProfilePage() {
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15 }}>
                                             <span style={{ color: '#6b7280' }}>구독</span>
                                             <span style={{
-                                                color: profile?.subscription_tier === 'premium' ? '#16a34a' : '#7c3aed',
+                                                color: profile?.subscription_tier === 'premium' ? '#16a34a'
+                                                    : profile?.subscription_tier === 'free' ? '#3b82f6'
+                                                    : profile?.subscription_tier === 'free_trial' ? '#7c3aed'
+                                                    : '#6b7280',
                                                 fontWeight: 600,
-                                                background: profile?.subscription_tier === 'premium' ? '#f0fdf4' : '#f5f3ff',
+                                                background: profile?.subscription_tier === 'premium' ? '#f0fdf4'
+                                                    : profile?.subscription_tier === 'free' ? '#eff6ff'
+                                                    : profile?.subscription_tier === 'free_trial' ? '#f5f3ff'
+                                                    : '#f4f4f5',
                                                 borderRadius: 100,
                                                 padding: '2px 12px',
                                             }}>
-                                                {profile?.subscription_tier === 'premium' ? '✨ 프리미엄' : '🎁 무료 체험'}
+                                                {profile?.subscription_tier === 'premium' ? '✨ 프리미엄'
+                                                    : profile?.subscription_tier === 'free' ? '🎫 프리'
+                                                    : profile?.subscription_tier === 'free_trial' ? '🎁 무료 체험'
+                                                    : '기본'}
                                             </span>
                                         </div>
                                         {/* 프리미엄 구독 상세 */}
@@ -670,7 +679,7 @@ export default function ProfilePage() {
                                             </>
                                         )}
                                         {/* 무료 체험 사용자 */}
-                                        {(!profile?.subscription_tier || profile?.subscription_tier === 'free') && (
+                                        {profile?.subscription_tier === 'free_trial' && (
                                             <>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 15 }}>
                                                     <span style={{ color: '#6b7280' }}>대화 횟수</span>
