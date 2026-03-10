@@ -5,29 +5,66 @@ import { createClient as createAdmin } from '@supabase/supabase-js'
 import { generateEmbedding, splitIntoChunks } from '@/domains/knowledge/embedding'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60 // 60초 타임아웃
+export const maxDuration = 60
 
 /**
- * POST — 파일 파싱 + 임베딩
- * Body: { sourceId, mentorId }
+ * Upstage Document Parse 결과에서 텍스트 추출
+ * 응답 형식: content.html에 실제 컨텐츠, text/markdown은 빈 문자열
  */
+function extractTextFromUpstage(pd: Record<string, unknown>): string {
+    const content = pd.content as Record<string, string> | undefined
+
+    // 1. output_formats에 text를 포함했으면 content.text에 값이 있음
+    if (content?.text) return content.text
+
+    // 2. HTML에서 태그 제거하여 텍스트 추출 (기본 응답 형식)
+    if (content?.html) {
+        return content.html
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<\/?(p|div|h[1-6]|li|tr|td|th)[^>]*>/gi, '\n')
+            .replace(/<[^>]*>/g, '')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim()
+    }
+
+    // 3. markdown
+    if (content?.markdown) return content.markdown
+
+    // 4. elements 배열 fallback
+    if (Array.isArray(pd.elements)) {
+        const texts = pd.elements.map((el: Record<string, unknown>) => {
+            const elContent = el.content as Record<string, string> | undefined
+            if (elContent?.text) return elContent.text
+            if (elContent?.html) {
+                return (elContent.html)
+                    .replace(/<br\s*\/?>/gi, '\n')
+                    .replace(/<[^>]*>/g, '')
+                    .trim()
+            }
+            return ''
+        }).filter(Boolean)
+        if (texts.length > 0) return texts.join('\n\n')
+    }
+
+    return ''
+}
+
 export async function POST(req: NextRequest) {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
-
-        if (!user) {
-            return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
-        }
+        if (!user) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
 
         const { sourceId, mentorId } = await req.json()
-
         const admin = createAdmin(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.SUPABASE_SERVICE_ROLE_KEY!,
         )
 
-        // knowledge_sources에서 파일 경로 조회
         const { data: source, error: srcErr } = await admin
             .from('knowledge_sources')
             .select('*')
@@ -38,7 +75,6 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '소스를 찾을 수 없습니다.' }, { status: 404 })
         }
 
-        // 상태를 processing으로
         await admin.from('knowledge_sources')
             .update({ processing_status: 'processing' })
             .eq('id', sourceId)
@@ -55,99 +91,41 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '파일 다운로드 실패' }, { status: 500 })
         }
 
-        // 텍스트 추출
-        let textContent = ''
         const ext = source.title?.split('.').pop()?.toLowerCase() || ''
+        let textContent = ''
 
         if (['txt', 'md'].includes(ext)) {
             textContent = await fileData.text()
-        } else if (ext === 'pdf') {
-            // PDF → Upstage Document Parse API
+        } else {
+            // PDF/HWP/DOCX/PPT → Upstage Document Parse
             try {
                 const formData = new FormData()
                 formData.append('document', fileData, source.title)
+                formData.append('model', 'document-parse')
+                formData.append('ocr', 'force')
+                formData.append('output_formats', "['html', 'text']")
 
                 const parseRes = await fetch('https://api.upstage.ai/v1/document-digitization', {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${process.env.UPSTAGE_API_KEY}`,
-                    },
+                    headers: { 'Authorization': `Bearer ${process.env.UPSTAGE_API_KEY}` },
                     body: formData,
                 })
 
                 if (parseRes.ok) {
-                    const parseData = await parseRes.json()
-                    textContent = parseData.content?.text || parseData.text || ''
-                    // elements fallback
-                    if (!textContent && parseData.elements) {
-                        textContent = parseData.elements
-                            .map((el: { text?: string }) => el.text || '')
-                            .join('\n\n')
+                    const pd = await parseRes.json()
+                    console.log('[Process] Upstage keys:', Object.keys(pd))
+                    textContent = extractTextFromUpstage(pd)
+                    if (!textContent) {
+                        console.log('[Process] No text, raw:', JSON.stringify(pd).slice(0, 500))
+                    } else {
+                        console.log('[Process] Extracted text length:', textContent.length)
                     }
                 } else {
-                    console.error('[Process] Upstage parse failed:', parseRes.status, await parseRes.text())
-                    // Fallback: 파일 내용 그대로 (바이너리라 제한적)
-                    textContent = `[PDF 파일: ${source.title}] 파싱 실패 — 수동 텍스트 입력이 필요합니다.`
+                    const errText = await parseRes.text()
+                    console.error('[Process] Upstage error:', parseRes.status, errText.slice(0, 300))
                 }
             } catch (parseErr) {
                 console.error('[Process] Parse error:', parseErr)
-                textContent = `[PDF 파일: ${source.title}] 파싱 중 에러 발생`
-            }
-        } else if (['hwp', 'hwpx'].includes(ext)) {
-            // HWP → Upstage
-            try {
-                const formData = new FormData()
-                formData.append('document', fileData, source.title)
-
-                const parseRes = await fetch('https://api.upstage.ai/v1/document-digitization', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${process.env.UPSTAGE_API_KEY}`,
-                    },
-                    body: formData,
-                })
-
-                if (parseRes.ok) {
-                    const parseData = await parseRes.json()
-                    textContent = parseData.content?.text || parseData.text || ''
-                    if (!textContent && parseData.elements) {
-                        textContent = parseData.elements
-                            .map((el: { text?: string }) => el.text || '')
-                            .join('\n\n')
-                    }
-                } else {
-                    textContent = `[HWP 파일: ${source.title}] 파싱 실패`
-                }
-            } catch {
-                textContent = `[HWP 파일: ${source.title}] 파싱 중 에러 발생`
-            }
-        } else if (['doc', 'docx', 'ppt', 'pptx'].includes(ext)) {
-            // DOCX/PPTX → Upstage
-            try {
-                const formData = new FormData()
-                formData.append('document', fileData, source.title)
-
-                const parseRes = await fetch('https://api.upstage.ai/v1/document-digitization', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${process.env.UPSTAGE_API_KEY}`,
-                    },
-                    body: formData,
-                })
-
-                if (parseRes.ok) {
-                    const parseData = await parseRes.json()
-                    textContent = parseData.content?.text || parseData.text || ''
-                    if (!textContent && parseData.elements) {
-                        textContent = parseData.elements
-                            .map((el: { text?: string }) => el.text || '')
-                            .join('\n\n')
-                    }
-                } else {
-                    textContent = `[파일: ${source.title}] 파싱 실패`
-                }
-            } catch {
-                textContent = `[파일: ${source.title}] 파싱 중 에러 발생`
             }
         }
 
@@ -158,7 +136,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '텍스트를 추출할 수 없습니다.' }, { status: 400 })
         }
 
-        // 텍스트 → 청크 분할 → 임베딩
+        // 텍스트 → 청크 → 임베딩
         const chunks = splitIntoChunks(textContent)
         let successCount = 0
 
@@ -178,12 +156,11 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // 완료 업데이트
         await admin.from('knowledge_sources')
             .update({
                 processing_status: 'completed',
                 chunk_count: successCount,
-                content: textContent.slice(0, 5000), // 원본 텍스트 앞부분 저장
+                content: textContent.slice(0, 5000),
             })
             .eq('id', sourceId)
 
