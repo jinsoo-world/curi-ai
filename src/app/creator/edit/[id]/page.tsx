@@ -32,6 +32,12 @@ export default function CreatorEditPage() {
     const [dragOver, setDragOver] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
+    // ── 미리보기 채팅 ──
+    const [previewMessages, setPreviewMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
+    const [previewInput, setPreviewInput] = useState('')
+    const [previewLoading, setPreviewLoading] = useState(false)
+    const previewEndRef = useRef<HTMLDivElement>(null)
+
     useEffect(() => {
         fetchMentor()
     }, [mentorId])
@@ -271,10 +277,6 @@ export default function CreatorEditPage() {
     }
 
     // ── 미리보기 채팅 ──
-    const [previewMessages, setPreviewMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
-    const [previewInput, setPreviewInput] = useState('')
-    const [previewLoading, setPreviewLoading] = useState(false)
-    const previewEndRef = useRef<HTMLDivElement>(null)
 
     async function handlePreviewSend(msg?: string) {
         const text = msg || previewInput.trim()

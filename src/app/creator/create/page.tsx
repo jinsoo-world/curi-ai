@@ -824,7 +824,7 @@ export default function CreatorCreatePage() {
                         </div>
 
                         {/* 미리보기 없을 때 안내 */}
-                        {!mentorIdForUpload && (
+                        {!name.trim() && (
                             <div style={{
                                 position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                                 background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(4px)',
@@ -834,7 +834,7 @@ export default function CreatorCreatePage() {
                                 <div style={{ fontSize: 40 }}>💬</div>
                                 <div style={{ fontSize: 15, fontWeight: 600, color: '#374151' }}>미리보기</div>
                                 <div style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center' as const, maxWidth: 200 }}>
-                                    AI 이름을 입력하고 지식을 추가하면<br />여기서 바로 대화해볼 수 있어요
+                                    AI 이름을 입력하면<br />미리보기가 시작됩니다
                                 </div>
                             </div>
                         )}

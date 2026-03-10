@@ -36,7 +36,7 @@ export default function AppSidebar() {
     const isAdmin = profile?.role === 'admin'
 
     const MENU_ITEMS = [
-        { label: 'AI 대화', href: '/mentors', icon: '💬' },
+        { label: '대화하기', href: '/mentors', icon: '💬' },
         { label: '내 대화 목록', href: '/chats', icon: '📋' },
         { type: 'divider' as const },
         { label: '내 AI 만들기', href: '/creator/create', icon: '✨' },
