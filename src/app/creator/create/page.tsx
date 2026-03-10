@@ -397,17 +397,17 @@ export default function CreatorCreatePage() {
                     <div className="creator-form-col" style={{
                         flex: '1 1 0',
                         maxWidth: 640,
-                        padding: '24px 20px 120px',
+                        padding: '16px 20px 80px',
                         overflowY: 'auto',
                         height: '100dvh',
                         boxSizing: 'border-box',
                     }}>
                         {/* 헤더 */}
-                        <div style={{ marginBottom: 20 }}>
-                            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: '#18181b' }}>
+                        <div style={{ marginBottom: 12 }}>
+                            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#18181b' }}>
                                 🤖 나만의 AI 만들기
                             </h1>
-                            <p style={{ margin: '4px 0 0', fontSize: 14, color: '#9ca3af' }}>
+                            <p style={{ margin: '2px 0 0', fontSize: 13, color: '#9ca3af' }}>
                                 AI에 반영되는 설정만 표시됩니다
                             </p>
                         </div>
@@ -425,11 +425,11 @@ export default function CreatorCreatePage() {
 
                         {/* ── 기본 정보 ── */}
                         <div style={styles.card}>
-                            <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', marginBottom: 20 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', marginBottom: 12 }}>
                                 <div
                                     onClick={() => avatarInputRef.current?.click()}
                                     style={{
-                                        width: 80, height: 80, borderRadius: '50%',
+                                        width: 64, height: 64, borderRadius: '50%',
                                         border: '3px dashed #d1d5db', cursor: 'pointer',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         overflow: 'hidden', background: '#f9fafb',
@@ -512,7 +512,7 @@ export default function CreatorCreatePage() {
                                     placeholder={"예:\n- 반드시 실전 사례를 들어서 설명해줘\n- 질문을 2개 이상 연속으로 하지 마\n- 대화 끝에 항상 액션 아이템을 줘"}
                                     value={customPrompt}
                                     onChange={e => setCustomPrompt(e.target.value)}
-                                    rows={4}
+                                    rows={3}
                                 />
                             </div>
                         </div>
@@ -719,14 +719,14 @@ export default function CreatorCreatePage() {
                                     {/* AI 프로필 카드 */}
                                     <div style={{
                                         textAlign: 'center' as const,
-                                        padding: '24px 16px',
+                                        padding: '16px 12px',
                                         borderRadius: 16,
-                                        background: '#f0fdf4',
+                                        background: '#f9fafb',
                                         marginBottom: 8,
                                     }}>
                                         <div style={{
-                                            width: 56, height: 56, borderRadius: '50%',
-                                            background: '#22c55e', color: '#fff',
+                                            width: 48, height: 48, borderRadius: '50%',
+                                            background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: 24, fontWeight: 700,
                                             margin: '0 auto 8px',
@@ -749,23 +749,26 @@ export default function CreatorCreatePage() {
                                     {/* 인사말 */}
                                     {previewMessages.length === 0 && (
                                         <>
-                                            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                                            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                                                 <div style={{
-                                                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                                                    background: '#22c55e', color: '#fff',
+                                                    width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                     fontSize: 14, fontWeight: 700, overflow: 'hidden',
+                                                    marginTop: 2,
                                                 }}>
                                                     {avatarPreview ? (
                                                         <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     ) : (name ? name[0] : '🤖')}
                                                 </div>
-                                                <div style={{
-                                                    background: '#f3f4f6', borderRadius: '4px 16px 16px 16px',
-                                                    padding: '10px 14px', fontSize: 14, color: '#374151',
-                                                    maxWidth: '80%', lineHeight: 1.5,
-                                                }}>
-                                                    {effectiveGreeting}
+                                                <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '80%' }}>
+                                                    <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>{name || 'AI'}</div>
+                                                    <div style={{
+                                                        padding: '4px 0', fontSize: 14, color: '#1e293b',
+                                                        lineHeight: 1.7,
+                                                    }}>
+                                                        {effectiveGreeting}
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -797,15 +800,17 @@ export default function CreatorCreatePage() {
                                     {previewMessages.map((m, i) => (
                                         <div key={i} style={{
                                             display: 'flex',
-                                            justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',
-                                            gap: 8,
+                                            flexDirection: m.role === 'user' ? 'row-reverse' : 'row',
+                                            alignItems: 'flex-start',
+                                            gap: 10,
                                         }}>
                                             {m.role === 'assistant' && (
                                                 <div style={{
-                                                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                                                    background: '#22c55e', color: '#fff',
+                                                    width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                     fontSize: 14, fontWeight: 700, overflow: 'hidden',
+                                                    marginTop: 2,
                                                 }}>
                                                     {avatarPreview ? (
                                                         <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -813,14 +818,27 @@ export default function CreatorCreatePage() {
                                                 </div>
                                             )}
                                             <div style={{
-                                                maxWidth: '75%',
-                                                padding: '10px 14px',
-                                                borderRadius: m.role === 'user' ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
-                                                background: m.role === 'user' ? '#22c55e' : '#f3f4f6',
-                                                color: m.role === 'user' ? '#fff' : '#374151',
-                                                fontSize: 14,
-                                                lineHeight: 1.5,
+                                                display: 'flex', flexDirection: 'column',
+                                                maxWidth: m.role === 'user' ? '75%' : '80%',
                                             }}>
+                                                {m.role === 'assistant' && (
+                                                    <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>{name || 'AI'}</div>
+                                                )}
+                                                <div style={{
+                                                    ...(m.role === 'user' ? {
+                                                        padding: '12px 18px',
+                                                        borderRadius: '20px 20px 6px 20px',
+                                                        background: '#22c55e',
+                                                        color: '#fff',
+                                                        fontSize: 14,
+                                                        lineHeight: 1.7,
+                                                    } : {
+                                                        padding: '4px 0',
+                                                        color: '#1e293b',
+                                                        fontSize: 14,
+                                                        lineHeight: 1.7,
+                                                    }),
+                                                }}>
                                                 {!m.content && previewLoading && i === previewMessages.length - 1 ? (
                                                     <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center', padding: '4px 0' }}>
                                                         {[0, 1, 2].map(d => (
@@ -855,6 +873,7 @@ export default function CreatorCreatePage() {
                                                         </ReactMarkdown>
                                                     </div>
                                                 )}
+                                            </div>
                                             </div>
                                         </div>
                                     ))}

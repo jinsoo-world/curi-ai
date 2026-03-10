@@ -28,7 +28,7 @@ export default function CreatorEditPage() {
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
     const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null)
     const avatarInputRef = useRef<HTMLInputElement>(null)
-    const [knowledgeSources, setKnowledgeSources] = useState<{ id: string; title: string; source_type: string; processing_status: string; chunk_count: number; content?: string; created_at: string }[]>([])
+    const [knowledgeSources, setKnowledgeSources] = useState<{ id: string; title: string; source_type: string; processing_status: string; chunk_count: number; content?: string; file_size?: number; created_at: string }[]>([])
     const [previewSource, setPreviewSource] = useState<{ title: string; content: string } | null>(null)
     const [uploading, setUploading] = useState(false)
     const [dragOver, setDragOver] = useState(false)
@@ -428,10 +428,10 @@ export default function CreatorEditPage() {
                         </div>
                     </div>
 
-                    {/* ── 시스템 프롬프트 ── */}
+                    {/* ── 에이전트 프롬프트 ── */}
                     <div style={styles.card}>
                         <div style={styles.field}>
-                            <label style={{ ...styles.label, fontSize: 15 }}>🎭 시스템 프롬프트</label>
+                            <label style={{ ...styles.label, fontSize: 15 }}>🎭 에이전트 프롬프트</label>
                             <p style={styles.hint}>AI의 성격, 말투, 전문성을 정의합니다</p>
                             <textarea
                                 style={{ ...styles.textarea, fontFamily: 'monospace', fontSize: 13 }}
@@ -527,7 +527,7 @@ export default function CreatorEditPage() {
                                                 <div>
                                                     <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{src.title}</div>
                                                     <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
-                                                        {src.processing_status === 'processing' ? '📄 파일 읽는 중...' :
+                                                        {src.file_size ? `${(src.file_size / 1024).toFixed(0)}KB · ` : ''}{src.processing_status === 'processing' ? '📄 파일 읽는 중...' :
                                                          src.processing_status === 'completed' ? '✅ AI가 학습 완료' :
                                                          src.processing_status === 'failed' ? '텍스트 추출에 실패했습니다' : ''}
                                                     </div>
@@ -720,14 +720,14 @@ export default function CreatorEditPage() {
                                     {/* AI 프로필 카드 */}
                                     <div style={{
                                         textAlign: 'center' as const,
-                                        padding: '24px 16px',
+                                        padding: '16px 12px',
                                         borderRadius: 16,
-                                        background: '#f0fdf4',
+                                        background: '#f9fafb',
                                         marginBottom: 8,
                                     }}>
                                         <div style={{
-                                            width: 56, height: 56, borderRadius: '50%',
-                                            background: '#22c55e', color: '#fff',
+                                            width: 48, height: 48, borderRadius: '50%',
+                                            background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: 24, fontWeight: 700,
                                             margin: '0 auto 8px',
@@ -750,23 +750,26 @@ export default function CreatorEditPage() {
                                     {/* 인사말 */}
                                     {previewMessages.length === 0 && (
                                         <>
-                                            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                                            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                                                 <div style={{
-                                                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                                                    background: '#22c55e', color: '#fff',
+                                                    width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                     fontSize: 14, fontWeight: 700, overflow: 'hidden',
+                                                    marginTop: 2,
                                                 }}>
                                                     {avatarPreview ? (
                                                         <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     ) : (name ? name[0] : '🤖')}
                                                 </div>
-                                                <div style={{
-                                                    background: '#f3f4f6', borderRadius: '4px 16px 16px 16px',
-                                                    padding: '10px 14px', fontSize: 14, color: '#374151',
-                                                    maxWidth: '80%', lineHeight: 1.5,
-                                                }}>
-                                                    {effectiveGreeting}
+                                                <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '80%' }}>
+                                                    <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>{name || 'AI'}</div>
+                                                    <div style={{
+                                                        padding: '4px 0', fontSize: 14, color: '#1e293b',
+                                                        lineHeight: 1.7,
+                                                    }}>
+                                                        {effectiveGreeting}
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -797,15 +800,17 @@ export default function CreatorEditPage() {
                                     {previewMessages.map((m, i) => (
                                         <div key={i} style={{
                                             display: 'flex',
-                                            justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',
-                                            gap: 8,
+                                            flexDirection: m.role === 'user' ? 'row-reverse' : 'row',
+                                            alignItems: 'flex-start',
+                                            gap: 10,
                                         }}>
                                             {m.role === 'assistant' && (
                                                 <div style={{
-                                                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                                                    background: '#22c55e', color: '#fff',
+                                                    width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                     fontSize: 14, fontWeight: 700, overflow: 'hidden',
+                                                    marginTop: 2,
                                                 }}>
                                                     {avatarPreview ? (
                                                         <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -813,14 +818,27 @@ export default function CreatorEditPage() {
                                                 </div>
                                             )}
                                             <div style={{
-                                                maxWidth: '75%',
-                                                padding: '10px 14px',
-                                                borderRadius: m.role === 'user' ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
-                                                background: m.role === 'user' ? '#22c55e' : '#f3f4f6',
-                                                color: m.role === 'user' ? '#fff' : '#374151',
-                                                fontSize: 14,
-                                                lineHeight: 1.5,
+                                                display: 'flex', flexDirection: 'column',
+                                                maxWidth: m.role === 'user' ? '75%' : '80%',
                                             }}>
+                                                {m.role === 'assistant' && (
+                                                    <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>{name || 'AI'}</div>
+                                                )}
+                                                <div style={{
+                                                    ...(m.role === 'user' ? {
+                                                        padding: '12px 18px',
+                                                        borderRadius: '20px 20px 6px 20px',
+                                                        background: '#22c55e',
+                                                        color: '#fff',
+                                                        fontSize: 14,
+                                                        lineHeight: 1.7,
+                                                    } : {
+                                                        padding: '4px 0',
+                                                        color: '#1e293b',
+                                                        fontSize: 14,
+                                                        lineHeight: 1.7,
+                                                    }),
+                                                }}>
                                                 {!m.content && previewLoading && i === previewMessages.length - 1 ? (
                                                     <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center', padding: '4px 0' }}>
                                                         {[0, 1, 2].map(d => (
@@ -855,6 +873,7 @@ export default function CreatorEditPage() {
                                                         </ReactMarkdown>
                                                     </div>
                                                 )}
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
