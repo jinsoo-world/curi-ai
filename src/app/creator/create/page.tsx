@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -818,9 +820,41 @@ export default function CreatorCreatePage() {
                                                 color: m.role === 'user' ? '#fff' : '#374151',
                                                 fontSize: 14,
                                                 lineHeight: 1.5,
-                                                whiteSpace: 'pre-wrap',
                                             }}>
-                                                {m.content || (previewLoading && i === previewMessages.length - 1 ? '...' : '')}
+                                                {!m.content && previewLoading && i === previewMessages.length - 1 ? (
+                                                    <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center', padding: '4px 0' }}>
+                                                        {[0, 1, 2].map(d => (
+                                                            <span key={d} style={{
+                                                                width: 7, height: 7, borderRadius: '50%',
+                                                                background: '#94a3b8',
+                                                                animation: `previewDot 1.4s ease-in-out ${d * 0.2}s infinite`,
+                                                            }} />
+                                                        ))}
+                                                    </span>
+                                                ) : m.role === 'user' ? (
+                                                    <span style={{ whiteSpace: 'pre-wrap' }}>{m.content}</span>
+                                                ) : (
+                                                    <div className="preview-markdown">
+                                                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
+                                                            p: ({ children }) => <p style={{ margin: '0 0 8px 0', lineHeight: 1.7 }}>{children}</p>,
+                                                            strong: ({ children }) => <strong style={{ fontWeight: 700, color: '#1e293b' }}>{children}</strong>,
+                                                            ul: ({ children }) => <ul style={{ margin: '4px 0 8px 0', paddingLeft: 18 }}>{children}</ul>,
+                                                            ol: ({ children }) => <ol style={{ margin: '4px 0 8px 0', paddingLeft: 18 }}>{children}</ol>,
+                                                            li: ({ children }) => <li style={{ marginBottom: 4, lineHeight: 1.6 }}>{children}</li>,
+                                                            code: ({ children, className }) => {
+                                                                const isInline = !className
+                                                                return isInline ? (
+                                                                    <code style={{ background: '#e5e7eb', padding: '1px 5px', borderRadius: 4, fontSize: '0.88em' }}>{children}</code>
+                                                                ) : (
+                                                                    <code style={{ display: 'block', background: '#f8fafc', border: '1px solid #e2e8f0', padding: 10, borderRadius: 8, fontSize: '0.85em', overflowX: 'auto', margin: '6px 0' }}>{children}</code>
+                                                                )
+                                                            },
+                                                            blockquote: ({ children }) => <blockquote style={{ borderLeft: '3px solid #22c55e', paddingLeft: 12, margin: '6px 0', color: '#64748b' }}>{children}</blockquote>,
+                                                        }}>
+                                                            {m.content}
+                                                        </ReactMarkdown>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -901,6 +935,11 @@ export default function CreatorCreatePage() {
                     from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
                     to { opacity: 1; transform: translateX(-50%) translateY(0); }
                 }
+                @keyframes previewDot {
+                    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+                    40% { opacity: 1; transform: scale(1); }
+                }
+                .preview-markdown p:last-child { margin-bottom: 0 !important; }
                 @media (min-width: 640px) {
                     .template-grid {
                         grid-template-columns: repeat(3, 1fr) !important;
