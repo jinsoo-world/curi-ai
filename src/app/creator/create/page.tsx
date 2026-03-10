@@ -714,7 +714,7 @@ export default function CreatorCreatePage() {
                                         }}>
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                    <span>{f.status === 'processing' ? '⏳' : f.status === 'failed' ? '❌' : (() => { const ext = f.fileName?.split('.').pop()?.toLowerCase(); return ext === 'pdf' ? '📕' : ext === 'hwp' ? '📘' : ext === 'docx' || ext === 'doc' ? '📄' : ext === 'ppt' || ext === 'pptx' ? '📊' : ext === 'txt' ? '📝' : '📁' })()}</span>
+                                                    {f.status === 'processing' ? <span>⏳</span> : f.status === 'failed' ? <span>❌</span> : (() => { const ext = f.fileName?.split('.').pop()?.toLowerCase(); const iconMap: Record<string, string> = { pdf: '/file-icons/pdf.png', hwp: '/file-icons/hwp.png', docx: '/file-icons/docx.png', doc: '/file-icons/doc.png', ppt: '/file-icons/ppt.png', pptx: '/file-icons/ppt.png', txt: '/file-icons/txt.png' }; const iconSrc = ext ? iconMap[ext] : null; return iconSrc ? <img src={iconSrc} alt={ext} style={{ width: 28, height: 28, objectFit: 'contain' }} /> : <span>📁</span> })()}
                                                     <div>
                                                         <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{f.fileName}</div>
                                                         <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
