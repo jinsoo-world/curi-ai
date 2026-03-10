@@ -12,6 +12,12 @@ export const maxDuration = 60
  * 응답 형식: content.html에 실제 컨텐츠, text/markdown은 빈 문자열
  */
 function extractTextFromUpstage(pd: Record<string, unknown>): string {
+    // 0. 최상위 text 키 (Upstage v2 응답 형식)
+    if (typeof pd.text === 'string' && pd.text.trim()) {
+        console.log('[Upstage] Found top-level text, length:', (pd.text as string).length)
+        return (pd.text as string).trim()
+    }
+
     const content = pd.content as Record<string, string> | undefined
 
     // 1. output_formats에 text를 포함했으면 content.text에 값이 있음
@@ -34,7 +40,27 @@ function extractTextFromUpstage(pd: Record<string, unknown>): string {
     // 3. markdown
     if (content?.markdown) return content.markdown
 
-    // 4. elements 배열 fallback
+    // 4. pages 배열에서 텍스트 추출 (Upstage v2)
+    if (Array.isArray(pd.pages)) {
+        const texts = pd.pages.map((page: Record<string, unknown>) => {
+            if (typeof page.text === 'string') return page.text
+            const pageContent = page.content as Record<string, string> | undefined
+            if (pageContent?.text) return pageContent.text
+            if (pageContent?.html) {
+                return pageContent.html
+                    .replace(/<br\s*\/?>/gi, '\n')
+                    .replace(/<[^>]*>/g, '')
+                    .trim()
+            }
+            return ''
+        }).filter(Boolean)
+        if (texts.length > 0) {
+            console.log('[Upstage] Extracted from pages array:', texts.length, 'pages')
+            return texts.join('\n\n')
+        }
+    }
+
+    // 5. elements 배열 fallback
     if (Array.isArray(pd.elements)) {
         const texts = pd.elements.map((el: Record<string, unknown>) => {
             const elContent = el.content as Record<string, string> | undefined
