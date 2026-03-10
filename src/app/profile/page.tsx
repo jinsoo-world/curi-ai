@@ -181,6 +181,18 @@ export default function ProfilePage() {
 
     const handleSave = async () => {
         if (!user) return
+
+        // 필수 필드 검증: 모든 값을 채워야 30클로버 지급
+        const missing: string[] = []
+        if (!editName.trim()) missing.push('닉네임')
+        if (!editGender) missing.push('성별')
+        if (!editPhone.trim()) missing.push('휴대폰번호')
+
+        if (missing.length > 0) {
+            setSaveMessage(`${missing.join(', ')}을(를) 입력해주세요.`)
+            return
+        }
+
         setIsSaving(true)
         setSaveMessage('')
 
