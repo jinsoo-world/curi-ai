@@ -150,11 +150,21 @@ export default function CreatorEditPage() {
             })
             const result = await res.json()
             if (res.ok) {
-                setKnowledgeSources(prev => prev.map(s => s.id === sourceId
-                    ? { ...s, processing_status: 'completed', chunk_count: result.chunksProcessed }
-                    : s
-                ))
-                setToast({ type: 'success', message: `✅ 재처리 완료! ${result.chunksProcessed}개 청크` })
+                // 재처리 완료 → 지식 목록을 다시 불러와서 content도 갱신
+                try {
+                    const listRes = await fetch(`/api/creator/knowledge/list?mentorId=${mentorId}`)
+                    if (listRes.ok) {
+                        const { sources } = await listRes.json()
+                        setKnowledgeSources(sources)
+                    }
+                } catch {
+                    // fallback: chunk count만 업데이트
+                    setKnowledgeSources(prev => prev.map(s => s.id === sourceId
+                        ? { ...s, processing_status: 'completed', chunk_count: result.chunksProcessed }
+                        : s
+                    ))
+                }
+                setToast({ type: 'success', message: `✅ 재처리 완료! ${result.chunksProcessed}개 청크, ${result.totalCharacters ?? 0}자 추출` })
             } else {
                 setKnowledgeSources(prev => prev.map(s => s.id === sourceId
                     ? { ...s, processing_status: 'failed' } : s))

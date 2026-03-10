@@ -184,11 +184,16 @@ export async function POST(req: NextRequest) {
 
         // 텍스트 → 청크 → 임베딩
         const chunks = splitIntoChunks(textContent)
+        console.log(`[Process] Text: ${textContent.length}chars → ${chunks.length} chunks`)
         let successCount = 0
 
         for (let i = 0; i < chunks.length; i++) {
             try {
                 const embedding = await generateEmbedding(chunks[i])
+                if (!embedding || embedding.length === 0) {
+                    console.error(`[Process] Chunk ${i}: empty embedding returned`)
+                    continue
+                }
                 await admin.from('knowledge_chunks').insert({
                     source_id: sourceId,
                     mentor_id: mentorId,
@@ -198,9 +203,10 @@ export async function POST(req: NextRequest) {
                 })
                 successCount++
             } catch (embErr) {
-                console.error(`[Process] Chunk ${i} embedding failed:`, embErr)
+                console.error(`[Process] Chunk ${i}/${chunks.length} failed:`, embErr instanceof Error ? embErr.message : embErr)
             }
         }
+        console.log(`[Process] Embedding result: ${successCount}/${chunks.length} chunks OK`)
 
         await admin.from('knowledge_sources')
             .update({
