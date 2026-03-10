@@ -15,6 +15,7 @@ interface UploadedFile {
     fileName: string
     fileSize: number
     status: 'uploading' | 'processing' | 'completed' | 'failed'
+    content?: string
 }
 
 export default function CreatorCreatePage() {
@@ -37,8 +38,8 @@ export default function CreatorCreatePage() {
     const [sampleQuestions, setSampleQuestions] = useState('')
 
     // 지식 (선택)
-    const [knowledgeText, setKnowledgeText] = useState('')
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
+    const [previewSource, setPreviewSource] = useState<{ title: string; content: string } | null>(null)
     const [uploading, setUploading] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const avatarInputRef = useRef<HTMLInputElement>(null)
@@ -173,18 +174,7 @@ export default function CreatorCreatePage() {
             const data2 = await res2.json()
             if (!res2.ok) throw new Error(data2.error)
 
-            // Step 3: 지식 (있으면)
-            if (knowledgeText.trim()) {
-                await fetch('/api/creator/mentor', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        step: 3,
-                        mentorId,
-                        knowledgeText: knowledgeText.trim(),
-                    }),
-                })
-            }
+            // Step 3: 지식 (생략 — 이제 파일만 지원)
 
             // Publish
             const pubRes = await fetch('/api/creator/mentor', {
@@ -637,7 +627,7 @@ export default function CreatorCreatePage() {
                         {/* ── 지식 추가 ── */}
                         <div style={styles.card}>
                             <label style={{ ...styles.label, marginBottom: 4, fontSize: 15 }}>📚 지식 파일 추가</label>
-                            <p style={styles.hint}>AI가 참고할 문서를 업로드하거나 직접 입력하세요</p>
+                            <p style={styles.hint}>AI가 참고할 문서를 업로드하세요</p>
 
                             <div
                                 style={{
@@ -692,43 +682,107 @@ export default function CreatorCreatePage() {
                             </div>
 
                             {uploadedFiles.length > 0 && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
                                     {uploadedFiles.map(f => (
                                         <div key={f.id} style={{
-                                            ...styles.fileItem,
-                                            background: f.status === 'completed' ? '#f0fdf4' :
+                                            padding: '14px 16px', borderRadius: 14,
+                                            background: f.status === 'completed' ? '#f9fafb' :
                                                         f.status === 'failed' ? '#fef2f2' : '#fffbeb',
+                                            border: '1px solid #f0f0f0',
                                         }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <span>{f.status === 'processing' ? '⏳' : f.status === 'completed' ? '✅' : f.status === 'failed' ? '❌' : '📄'}</span>
-                                                <div>
-                                                    <div style={{ fontSize: 13, fontWeight: 500 }}>{f.fileName}</div>
-                                                    <div style={{ fontSize: 11, color: '#9ca3af' }}>{formatFileSize(f.fileSize)}</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                    <span>{f.status === 'processing' ? '⏳' : f.status === 'completed' ? '✅' : f.status === 'failed' ? '❌' : '📄'}</span>
+                                                    <div>
+                                                        <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{f.fileName}</div>
+                                                        <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+                                                            {formatFileSize(f.fileSize)}
+                                                            {f.status === 'completed' && ' · ✅ AI가 학습 완료'}
+                                                            {f.status === 'processing' && ' · 📄 파일 읽는 중...'}
+                                                            {f.status === 'failed' && ' · ❌ 처리 실패'}
+                                                        </div>
+                                                    </div>
                                                 </div>
+                                                <span style={{
+                                                    fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20,
+                                                    background: f.status === 'completed' ? '#dcfce7' :
+                                                                f.status === 'failed' ? '#fee2e2' : '#fef3c7',
+                                                    color: f.status === 'completed' ? '#16a34a' :
+                                                           f.status === 'failed' ? '#dc2626' : '#d97706',
+                                                }}>
+                                                    {f.status === 'processing' ? '⏳ 읽는 중...' :
+                                                     f.status === 'completed' ? '✅ 완료' :
+                                                     f.status === 'failed' ? '❌ 실패' : '업로드 중...'}
+                                                </span>
                                             </div>
-                                            <span style={{
-                                                fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20,
-                                                background: f.status === 'completed' ? '#dcfce7' :
-                                                            f.status === 'failed' ? '#fee2e2' : '#fef3c7',
-                                                color: f.status === 'completed' ? '#16a34a' :
-                                                       f.status === 'failed' ? '#dc2626' : '#d97706',
-                                            }}>
-                                                {f.status === 'processing' ? '📄 파일 읽는 중...' :
-                                                 f.status === 'completed' ? '✅ 완료' :
-                                                 f.status === 'failed' ? '❌ 실패' : '업로드 중...'}
-                                            </span>
+                                            {/* 내용 보기 / 삭제 버튼 */}
+                                            {(f.status === 'completed' || f.status === 'failed') && (
+                                                <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                                                    {f.status === 'completed' && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (f.content) {
+                                                                    setPreviewSource({ title: f.fileName, content: f.content })
+                                                                } else if (mentorIdForUpload) {
+                                                                    try {
+                                                                        const res = await fetch(`/api/creator/knowledge/list?mentorId=${mentorIdForUpload}`)
+                                                                        const data = await res.json()
+                                                                        const found = data.sources?.find((s: any) => s.id === f.id)
+                                                                        if (found?.content) {
+                                                                            setPreviewSource({ title: f.fileName, content: found.content })
+                                                                            setUploadedFiles(prev => prev.map(p => p.id === f.id ? { ...p, content: found.content } : p))
+                                                                        } else {
+                                                                            setToast('파일 내용을 불러올 수 없습니다.')
+                                                                            setTimeout(() => setToast(null), 3000)
+                                                                        }
+                                                                    } catch {
+                                                                        setToast('파일 내용을 불러올 수 없습니다.')
+                                                                        setTimeout(() => setToast(null), 3000)
+                                                                    }
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                padding: '5px 12px', borderRadius: 8,
+                                                                border: '1px solid #e5e7eb', background: '#fff',
+                                                                color: '#16a34a', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                                            }}
+                                                        >📄 내용 보기</button>
+                                                    )}
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (!mentorIdForUpload) return
+                                                            if (!confirm(`"${f.fileName}" 파일을 삭제하시겠습니까?`)) return
+                                                            try {
+                                                                const res = await fetch('/api/creator/knowledge/delete', {
+                                                                    method: 'DELETE',
+                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                    body: JSON.stringify({ sourceId: f.id, mentorId: mentorIdForUpload }),
+                                                                })
+                                                                if (res.ok) {
+                                                                    setUploadedFiles(prev => prev.filter(p => p.id !== f.id))
+                                                                    setToast(`🗑️ ${f.fileName} 삭제 완료`)
+                                                                    setTimeout(() => setToast(null), 3000)
+                                                                } else {
+                                                                    setToast('삭제에 실패했습니다.')
+                                                                    setTimeout(() => setToast(null), 3000)
+                                                                }
+                                                            } catch {
+                                                                setToast('삭제에 실패했습니다.')
+                                                                setTimeout(() => setToast(null), 3000)
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            padding: '5px 12px', borderRadius: 8,
+                                                            border: '1px solid #e5e7eb', background: '#fff',
+                                                            color: '#9ca3af', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                                        }}
+                                                    >🗑️ 삭제</button>
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
                             )}
-
-                            <textarea
-                                style={{ ...styles.textarea, marginTop: 8 }}
-                                placeholder="직접 입력: AI가 알아야 할 전문 지식, 경험, 노하우"
-                                value={knowledgeText}
-                                onChange={e => setKnowledgeText(e.target.value)}
-                                rows={4}
-                            />
                         </div>
                         </>)}
 
@@ -798,7 +852,9 @@ export default function CreatorCreatePage() {
                                     </button>
                                 ))}
                             </div>
-                            <span style={{ fontSize: 12, color: '#9ca3af' }}>미리보기</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <span style={{ fontSize: 12, color: '#9ca3af' }}>미리보기</span>
+                            </div>
                         </div>
 
                         {/* 디바이스 프레임 외부 래퍼 */}
@@ -1059,6 +1115,45 @@ export default function CreatorCreatePage() {
                         )}
                     </div>
                 </div>
+                {/* 파일 내용 미리보기 모달 */}
+                {previewSource && (
+                    <div
+                        onClick={() => setPreviewSource(null)}
+                        style={{
+                            position: 'fixed', inset: 0, zIndex: 9998,
+                            background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: 24,
+                        }}
+                    >
+                        <div
+                            onClick={e => e.stopPropagation()}
+                            style={{
+                                background: '#fff', borderRadius: 16, width: '100%', maxWidth: 600,
+                                maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+                                boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+                                animation: 'slideDown 0.3s ease',
+                            }}
+                        >
+                            <div style={{
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                padding: '16px 20px', borderBottom: '1px solid #f0f0f0',
+                            }}>
+                                <div style={{ fontSize: 16, fontWeight: 700, color: '#18181b' }}>📄 {previewSource.title}</div>
+                                <button
+                                    onClick={() => setPreviewSource(null)}
+                                    style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#9ca3af', padding: 4 }}
+                                >✕</button>
+                            </div>
+                            <div style={{
+                                padding: '16px 20px', overflowY: 'auto', flex: 1,
+                                fontSize: 14, lineHeight: 1.7, color: '#374151', whiteSpace: 'pre-wrap',
+                            }}>
+                                {previewSource.content}
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {/* 토스트 */}
                 {toast && (
                     <div

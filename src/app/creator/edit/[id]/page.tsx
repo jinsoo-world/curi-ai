@@ -617,35 +617,6 @@ export default function CreatorEditPage() {
                         )}
                     </div>
 
-                    {/* ── 활성화 토글 ── */}
-                    <div style={styles.card}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div>
-                                <div style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>멘토 활성화</div>
-                                <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
-                                    비활성화하면 멘토 목록에서 보이지 않습니다
-                                </div>
-                            </div>
-                            <div
-                                onClick={() => setIsActive(!isActive)}
-                                style={{
-                                    width: 48, height: 26, borderRadius: 13,
-                                    background: isActive ? '#22c55e' : '#d1d5db',
-                                    cursor: 'pointer', transition: 'background 0.2s',
-                                    display: 'flex', alignItems: 'center', padding: '0 3px',
-                                    flexShrink: 0,
-                                }}
-                            >
-                                <div style={{
-                                    width: 20, height: 20, borderRadius: '50%',
-                                    background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                                    transition: 'transform 0.2s',
-                                    transform: isActive ? 'translateX(22px)' : 'translateX(0)',
-                                }} />
-                            </div>
-                        </div>
-                    </div>
-
                     {/* ── 저장 버튼 ── */}
                     <div style={{ paddingBottom: 20 }}>
                         <button
@@ -702,7 +673,28 @@ export default function CreatorEditPage() {
                                     </button>
                                 ))}
                             </div>
-                            <span style={{ fontSize: 12, color: '#9ca3af' }}>미리보기</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <span style={{ fontSize: 12, color: '#9ca3af' }}>미리보기</span>
+                                {/* 활성화 토글 */}
+                                <div
+                                    onClick={() => setIsActive(!isActive)}
+                                    title={isActive ? '활성화됨 — 멘토 목록에 노출' : '비활성화 — 멘토 목록에서 숨김'}
+                                    style={{
+                                        width: 44, height: 24, borderRadius: 12,
+                                        background: isActive ? '#22c55e' : '#d1d5db',
+                                        cursor: 'pointer', transition: 'background 0.2s',
+                                        display: 'flex', alignItems: 'center', padding: '0 3px',
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    <div style={{
+                                        width: 18, height: 18, borderRadius: '50%',
+                                        background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                        transition: 'transform 0.2s',
+                                        transform: isActive ? 'translateX(20px)' : 'translateX(0)',
+                                    }} />
+                                </div>
+                            </div>
                         </div>
 
                         {/* 디바이스 프레임 외부 래퍼 */}
