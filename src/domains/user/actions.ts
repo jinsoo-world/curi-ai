@@ -21,6 +21,8 @@ export async function saveOnboardingProfile(
         interests: data.interests || [],
         birth_year: data.birth_year ? parseInt(String(data.birth_year)) : null,
         gender: data.gender || null,
+        phone: data.phone || null,
+        marketing_consent: data.marketing_consent ?? false,
         onboarding_completed: true,
         updated_at: new Date().toISOString(),
     }

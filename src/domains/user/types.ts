@@ -8,6 +8,8 @@ export interface OnboardingData {
     interests?: string[]
     birth_year?: string | number
     gender?: string
+    phone?: string
+    marketing_consent?: boolean
 }
 
 /** 프로필 업데이트 데이터 */

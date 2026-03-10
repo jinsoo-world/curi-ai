@@ -11,6 +11,8 @@ interface OnboardingData {
     birth_year: string
     gender: string
     interests: string[]
+    phone: string
+    marketing_consent: boolean
 }
 
 const INTEREST_OPTIONS = [
@@ -61,12 +63,14 @@ function OnboardingContent() {
         birth_year: '',
         gender: '',
         interests: [],
+        phone: '',
+        marketing_consent: false,
     })
 
     // resume 모드: 기존 데이터 로드 & 미입력 필드만 표시
     const isResume = searchParams.get('resume') === 'true'
     const missingParam = searchParams.get('missing') || ''
-    const [stepsToShow, setStepsToShow] = useState<number[]>([0, 1, 2])
+    const [stepsToShow, setStepsToShow] = useState<number[]>([0, 1, 2, 3])
 
     useEffect(() => {
         async function loadExistingData() {
@@ -84,7 +88,7 @@ function OnboardingContent() {
                     // 기존 프로필 데이터 로드
                     const { data: profile } = await supabase
                         .from('users')
-                        .select('display_name, interests, birth_year, gender')
+                        .select('display_name, interests, birth_year, gender, phone, marketing_consent')
                         .eq('id', user.id)
                         .single()
 
@@ -94,6 +98,8 @@ function OnboardingContent() {
                             birth_year: profile.birth_year?.toString() || '',
                             gender: profile.gender || '',
                             interests: profile.interests || [],
+                            phone: profile.phone || '',
+                            marketing_consent: profile.marketing_consent || false,
                         })
                     }
 
@@ -105,7 +111,8 @@ function OnboardingContent() {
                     if (missing.includes('name')) steps.push(0)
                     if (missing.includes('gender') || missing.includes('birth_year')) steps.push(1)
                     if (missing.includes('interests')) steps.push(2)
-                    setStepsToShow(steps.length > 0 ? steps : [0, 1, 2])
+                    if (missing.includes('phone') || missing.includes('marketing_consent')) steps.push(3)
+                    setStepsToShow(steps.length > 0 ? steps : [0, 1, 2, 3])
                     setStep(steps.length > 0 ? steps[0] : 0)
                 } else {
                     // 첫 온보딩: Google 이름 기본값
@@ -164,6 +171,8 @@ function OnboardingContent() {
                     interests: data.interests,
                     birth_year: data.birth_year,
                     gender: data.gender,
+                    phone: data.phone,
+                    marketing_consent: data.marketing_consent,
                 }),
             })
 
@@ -563,6 +572,153 @@ function OnboardingContent() {
                             <button
                                 onClick={handleSubmit}
                                 disabled={data.interests.length === 0 || isSubmitting}
+                                className="flex-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                style={{
+                                    padding: '16px',
+                                    borderRadius: 16,
+                                    border: 'none',
+                                    fontSize: 17,
+                                    fontWeight: 600,
+                                    color: '#fff',
+                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                    boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
+                                    transition: 'transform 200ms, box-shadow 200ms',
+                                }}
+                            >
+                                {isSubmitting ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <div
+                                            className="rounded-full animate-spin-slow"
+                                            style={{
+                                                width: 18, height: 18,
+                                                border: '2px solid rgba(255,255,255,0.3)',
+                                                borderTopColor: '#fff',
+                                            }}
+                                        />
+                                        저장 중...
+                                    </span>
+                                ) : (
+                                    '멘토 만나러 가기 🚀'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Step 4: 휴대폰번호 + 마케팅 동의 */}
+                {step === 3 && (
+                    <div className="animate-slide-up">
+                        <div
+                            className="inline-flex items-center justify-center rounded-2xl mb-5"
+                            style={{
+                                width: 56, height: 56,
+                                background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)',
+                            }}
+                        >
+                            <span style={{ fontSize: 28 }}>📱</span>
+                        </div>
+                        <h2
+                            className="font-bold text-gray-900"
+                            style={{ fontSize: 26, letterSpacing: '-0.02em', marginBottom: 8 }}
+                        >
+                            마지막으로!
+                        </h2>
+                        <p style={{ fontSize: 16, color: '#6b7280', marginBottom: 28, lineHeight: 1.6 }}>
+                            연락처와 수신 동의를 알려주세요
+                        </p>
+
+                        {/* 휴대폰번호 */}
+                        <div style={{ marginBottom: 24 }}>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: '#4b5563', marginBottom: 10 }}>
+                                휴대폰 번호
+                            </div>
+                            <input
+                                type="tel"
+                                value={data.phone}
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 11)
+                                    setData({ ...data, phone: val })
+                                }}
+                                placeholder="01012345678"
+                                className="w-full outline-none"
+                                style={{
+                                    padding: '16px 20px',
+                                    borderRadius: 16,
+                                    border: '1.5px solid #e5e7eb',
+                                    fontSize: 18,
+                                    background: '#fafafa',
+                                    transition: 'border-color 200ms, box-shadow 200ms',
+                                }}
+                                onFocus={(e) => {
+                                    e.target.style.borderColor = '#22c55e'
+                                    e.target.style.boxShadow = '0 0 0 3px rgba(34,197,94,0.1)'
+                                }}
+                                onBlur={(e) => {
+                                    e.target.style.borderColor = '#e5e7eb'
+                                    e.target.style.boxShadow = 'none'
+                                }}
+                            />
+                        </div>
+
+                        {/* 마케팅 수신 동의 */}
+                        <div style={{ marginBottom: 8 }}>
+                            <button
+                                onClick={() => setData({ ...data, marketing_consent: !data.marketing_consent })}
+                                className="cursor-pointer w-full"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 12,
+                                    padding: '16px 20px',
+                                    borderRadius: 16,
+                                    border: data.marketing_consent ? '2px solid #22c55e' : '1.5px solid #e5e7eb',
+                                    background: data.marketing_consent ? '#f0fdf4' : '#fff',
+                                    fontSize: 15,
+                                    fontWeight: 500,
+                                    color: data.marketing_consent ? '#15803d' : '#4b5563',
+                                    transition: 'all 200ms ease',
+                                    textAlign: 'left',
+                                }}
+                            >
+                                <div style={{
+                                    width: 24, height: 24, borderRadius: 8, flexShrink: 0,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    background: data.marketing_consent ? '#22c55e' : '#e5e7eb',
+                                    transition: 'background 200ms',
+                                }}>
+                                    {data.marketing_consent && <span style={{ color: '#fff', fontSize: 14 }}>✓</span>}
+                                </div>
+                                <div>
+                                    <div style={{ fontWeight: 600 }}>마케팅 수신 동의 (선택)</div>
+                                    <div style={{ fontSize: 13, color: '#9ca3af', marginTop: 2 }}>
+                                        이벤트, 할인 등 유익한 정보를 받아보세요
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+
+                        <div className="flex gap-3" style={{ marginTop: 24 }}>
+                            {currentStepIndex > 0 && (
+                                <button
+                                    onClick={goToPrevStep}
+                                    className="cursor-pointer"
+                                    style={{
+                                        padding: '16px 24px',
+                                        borderRadius: 16,
+                                        border: '1.5px solid #e5e7eb',
+                                        background: '#fff',
+                                        fontSize: 16,
+                                        color: '#6b7280',
+                                        fontWeight: 500,
+                                        transition: 'background 200ms',
+                                    }}
+                                >
+                                    이전
+                                </button>
+                            )}
+                            <button
+                                onClick={handleSubmit}
+                                disabled={isSubmitting}
                                 className="flex-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                 style={{
                                     padding: '16px',
