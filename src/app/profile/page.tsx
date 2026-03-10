@@ -92,6 +92,7 @@ export default function ProfilePage() {
     const avatarUrl = profile?.avatar_url || googleAvatar
 
     const handleLogout = async () => {
+        if (!confirm('로그아웃 하시겠습니까?')) return
         await supabase.auth.signOut()
         router.push('/login')
     }
@@ -707,7 +708,7 @@ export default function ProfilePage() {
                                     overflow: 'hidden',
                                 }}>
                                     <Link
-                                        href="/mentors"
+                                        href="/creator/create"
                                         style={{
                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                             padding: '18px 24px',
@@ -716,7 +717,20 @@ export default function ProfilePage() {
                                             borderBottom: '1px solid #f0f0f0',
                                         }}
                                     >
-                                        <span>🎓 멘토 목록</span>
+                                        <span>✨ 내 AI 만들기</span>
+                                        <span style={{ color: '#d1d5db' }}>→</span>
+                                    </Link>
+                                    <Link
+                                        href="/creator/manage"
+                                        style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                            padding: '18px 24px',
+                                            textDecoration: 'none', color: '#18181b',
+                                            fontSize: 16, fontWeight: 500,
+                                            borderBottom: '1px solid #f0f0f0',
+                                        }}
+                                    >
+                                        <span>📊 내 AI 관리</span>
                                         <span style={{ color: '#d1d5db' }}>→</span>
                                     </Link>
                                     <Link
@@ -732,36 +746,6 @@ export default function ProfilePage() {
                                         <span>💬 대화 내역</span>
                                         <span style={{ color: '#d1d5db' }}>→</span>
                                     </Link>
-                                    {/* 내 AI 만들기 - 모든 로그인 사용자 */}
-                                    <Link
-                                        href="/creator/create"
-                                        style={{
-                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                            padding: '18px 24px',
-                                            textDecoration: 'none', color: '#18181b',
-                                            fontSize: 16, fontWeight: 500,
-                                            borderBottom: '1px solid #f0f0f0',
-                                        }}
-                                    >
-                                        <span>🤖 내 AI 만들기</span>
-                                        <span style={{ color: '#d1d5db' }}>→</span>
-                                    </Link>
-                                    {/* 어드민 관리 - 관리자만 */}
-                                    {isAdmin && (
-                                        <Link
-                                            href="/creator/manage"
-                                            style={{
-                                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                padding: '18px 24px',
-                                                textDecoration: 'none', color: '#ef4444',
-                                                fontSize: 16, fontWeight: 600,
-                                                borderBottom: '1px solid #f0f0f0',
-                                            }}
-                                        >
-                                            <span>🛡️ 어드민 관리</span>
-                                            <span style={{ color: '#d1d5db' }}>→</span>
-                                        </Link>
-                                    )}
                                     {/* 결제 내역 */}
                                     <button
                                         onClick={async () => {

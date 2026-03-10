@@ -96,7 +96,7 @@ export default function LoginPage() {
                 }} />
             </div>
 
-            {/* 🎉 크레딧 배너 */}
+            {/* 🎉 무료체험 배너 */}
             <div style={{
                 position: 'relative', zIndex: 10,
                 width: '100%', maxWidth: 400,
@@ -108,15 +108,15 @@ export default function LoginPage() {
                 textAlign: 'center',
                 animation: 'fadeIn 0.5s ease',
             }}>
-                <div style={{ fontSize: 28, marginBottom: 4 }}>🎉</div>
+                <div style={{ fontSize: 28, marginBottom: 4 }}>🎁</div>
                 <div style={{
                     fontSize: 17, fontWeight: 800, color: '#15803d',
                     letterSpacing: '-0.02em',
                 }}>
-                    가입하시면 1만원 무료 크레딧을 드립니다!
+                    4월 30일까지 무료체험 이벤트 진행 중!
                 </div>
                 <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
-                    AI 멘토와 바로 대화를 시작해보세요
+                    나만의 AI를 만들고 대화해 보세요
                 </div>
             </div>
 
@@ -148,7 +148,7 @@ export default function LoginPage() {
                         큐리 AI
                     </h1>
                     <p style={{ fontSize: 15, color: '#9ca3af', lineHeight: 1.6 }}>
-                        시니어 전문가의 AI를 만나보세요
+                        나만의 AI를 만들어보세요
                     </p>
                 </div>
 

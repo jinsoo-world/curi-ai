@@ -119,11 +119,11 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                         fontSize: 22, fontWeight: 800, color: '#15803d',
                         letterSpacing: '-0.02em', marginBottom: 6,
                     }}>
-                        1만원 무료 크레딧을 받으세요!
+                        무료 체험권을 받으세요!
                     </h2>
                     <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.5 }}>
                         간단한 정보를 입력하시면<br />
-                        바로 크레딧이 지급됩니다
+                        4월 30일까지 무료로 이용 가능합니다
                     </p>
                 </div>
 
@@ -249,7 +249,7 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                             (선택) 마케팅 정보 수신에 동의합니다.
                             <br />
                             <span style={{ fontSize: 12, color: '#d1d5db' }}>
-                                새로운 AI 멘토, 이벤트, 할인 등의 소식을 받아보세요.
+                                새로운 AI, 이벤트, 할인 등의 소식을 받아보세요.
                             </span>
                         </span>
                     </label>
@@ -272,7 +272,7 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                             boxShadow: canSubmit ? '0 4px 14px rgba(34,197,94,0.3)' : 'none',
                         }}
                     >
-                        {isSubmitting ? '처리 중...' : '🎉 크레딧 잠금 해제'}
+                        {isSubmitting ? '처리 중...' : '🎉 무료 체험 시작하기'}
                     </button>
 
                     {/* 나중에 받기 */}
