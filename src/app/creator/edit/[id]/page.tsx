@@ -166,6 +166,26 @@ export default function CreatorEditPage() {
         }
     }
 
+    async function handleDeleteSource(sourceId: string, title: string) {
+        if (!confirm(`"${title}" 파일을 삭제하시겠습니까?`)) return
+        try {
+            const res = await fetch('/api/creator/knowledge/delete', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sourceId, mentorId }),
+            })
+            if (res.ok) {
+                setKnowledgeSources(prev => prev.filter(s => s.id !== sourceId))
+                setToast({ type: 'success', message: `🗑️ "${title}" 삭제 완료` })
+            } else {
+                const data = await res.json()
+                setToast({ type: 'error', message: `삭제 실패: ${data.error}` })
+            }
+        } catch {
+            setToast({ type: 'error', message: '삭제 중 오류가 발생했습니다.' })
+        }
+    }
+
     function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0]
         if (!file) return
@@ -544,6 +564,17 @@ export default function CreatorEditPage() {
                                                     🔄 재처리
                                                 </button>
                                             )}
+                                            {/* 삭제 */}
+                                            <button
+                                                onClick={() => handleDeleteSource(src.id, src.title)}
+                                                style={{
+                                                    padding: '5px 12px', borderRadius: 8,
+                                                    border: '1px solid #e5e7eb', background: '#fff',
+                                                    color: '#9ca3af', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                                }}
+                                            >
+                                                🗑️ 삭제
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
