@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import AppSidebar from '@/components/AppSidebar'
+import { MENTOR_IMAGES } from '@/domains/mentor'
 
 interface MentorItem {
     id: string
@@ -377,9 +378,9 @@ export default function CreatorManagePage() {
                                                 border: '1px solid #e5e7eb',
                                                 flexShrink: 0,
                                             }}>
-                                                {m.avatar_url ? (
+                                                {(m.avatar_url || MENTOR_IMAGES[m.name]) ? (
                                                     <img
-                                                        src={m.avatar_url}
+                                                        src={m.avatar_url || MENTOR_IMAGES[m.name]}
                                                         alt={m.name}
                                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                     />
