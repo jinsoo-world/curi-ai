@@ -16,11 +16,21 @@ export async function GET() {
             return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
         }
 
-        // 1) AI 몇 개 만들었는지
-        const { count: aiCreated } = await supabaseAdmin
-            .from('mentors')
-            .select('*', { count: 'exact', head: true })
-            .eq('created_by', user.id)
+        // 1) AI 몇 개 만들었는지 (creator_profiles → mentors)
+        const { data: creatorProfile } = await supabaseAdmin
+            .from('creator_profiles')
+            .select('id')
+            .eq('user_id', user.id)
+            .maybeSingle()
+
+        let aiCreated = 0
+        if (creatorProfile) {
+            const { count } = await supabaseAdmin
+                .from('mentors')
+                .select('*', { count: 'exact', head: true })
+                .eq('creator_id', creatorProfile.id)
+            aiCreated = count || 0
+        }
 
         // 2) 질문 횟수 (user role 메시지)
         const { data: sessions } = await supabaseAdmin
