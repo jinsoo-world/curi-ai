@@ -69,7 +69,7 @@ export default function ChatsPage() {
                     last_message_at,
                     message_count,
                     title,
-                    mentors ( name, slug )
+                    mentors ( name, slug, is_active )
                 `)
                 .eq('user_id', user.id)
                 .gt('message_count', 0)
@@ -77,8 +77,8 @@ export default function ChatsPage() {
                 .limit(30)
 
             if (data) {
-                // 삭제된 AI(멘토)와의 대화 제외
-                const activeSessions = data.filter((s: any) => s.mentors != null)
+                // 삭제된 AI(멘토) 또는 비활성 멘토와의 대화 제외
+                const activeSessions = data.filter((s: any) => s.mentors != null && s.mentors.is_active !== false)
 
                 const sessionsWithTopics = await Promise.all(
                     activeSessions.map(async (s: any) => {

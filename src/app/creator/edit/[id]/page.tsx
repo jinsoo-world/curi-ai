@@ -526,8 +526,8 @@ export default function CreatorEditPage() {
                                                     const ext = src.title?.split('.').pop()?.toLowerCase() || ''
                                                     const iconMap: Record<string, { bg: string; color: string; label: string }> = {
                                                         pdf: { bg: '#ef4444', color: '#fff', label: 'PDF' },
-                                                        hwp: { bg: '#18181b', color: '#fff', label: 'HWP' },
-                                                        hwpx: { bg: '#18181b', color: '#fff', label: 'HWP' },
+                                                        hwp: { bg: '#4FB4F7', color: '#fff', label: 'HWP' },
+                                                        hwpx: { bg: '#4FB4F7', color: '#fff', label: 'HWP' },
                                                         doc: { bg: '#3b82f6', color: '#fff', label: 'DOC' },
                                                         docx: { bg: '#3b82f6', color: '#fff', label: 'DOCX' },
                                                         ppt: { bg: '#f97316', color: '#fff', label: 'PPT' },
