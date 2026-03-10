@@ -11,7 +11,7 @@ export function MembershipBanner() {
 
     return (
         <div style={{
-            background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
+            background: 'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)',
             padding: '12px 16px',
             display: 'flex',
             alignItems: 'center',
