@@ -47,8 +47,9 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({ error: '멘토를 찾을 수 없습니다.' }, { status: 404 })
         }
 
-        // 크리에이터가 만든 멘토인 경우 본인 것만 삭제
-        if (mentor.mentor_type === 'creator' && mentor.creator_id !== creator?.id) {
+        // 크리에이터가 만든 멘토인 경우 본인 것만 삭제 (어드민은 전체 가능)
+        const isAdmin = user.email === 'jin@mission-driven.kr'
+        if (!isAdmin && mentor.mentor_type === 'creator' && mentor.creator_id !== creator?.id) {
             return NextResponse.json({ error: '삭제 권한이 없습니다.' }, { status: 403 })
         }
 

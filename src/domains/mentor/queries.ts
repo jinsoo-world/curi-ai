@@ -96,3 +96,60 @@ export async function getMentorsByCreator(
     }
     return (data as MentorCardData[]) || []
 }
+
+/**
+ * 멘토 프로필 상세 조회 (프로필 페이지용)
+ * mentor + knowledge_sources + session count + creator info
+ */
+export async function getMentorProfile(mentorId: string) {
+    const db = createAdminClient()
+
+    // 1) 멘토 기본 정보
+    const mentor = await getMentorById(db, mentorId)
+    if (!mentor) return null
+
+    // 2) 학습 지식 소스 (활성 + 처리 완료된 것만)
+    const { data: knowledgeSources } = await db
+        .from('knowledge_sources')
+        .select('id, file_name, source_type, char_count, summary, status, created_at')
+        .eq('mentor_id', mentor.id)
+        .in('status', ['processed', 'active'])
+        .order('created_at', { ascending: false })
+
+    // 3) 대화 수 (sessions count)
+    const { count: sessionCount } = await db
+        .from('sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('mentor_id', mentor.id)
+
+    // 4) 크리에이터 정보
+    let creatorInfo = null
+    if (mentor.creator_id) {
+        const { data: creator } = await db
+            .from('creator_profiles')
+            .select('user_id, display_name, bio, expertise, organization, job_title')
+            .eq('id', mentor.creator_id)
+            .single()
+
+        if (creator) {
+            // users 테이블에서 아바타
+            const { data: userData } = await db
+                .from('users')
+                .select('avatar_url, email')
+                .eq('id', creator.user_id)
+                .single()
+
+            creatorInfo = {
+                ...creator,
+                avatar_url: userData?.avatar_url || null,
+            }
+        }
+    }
+
+    return {
+        mentor,
+        knowledgeSources: knowledgeSources || [],
+        sessionCount: sessionCount || 0,
+        creatorInfo,
+    }
+}

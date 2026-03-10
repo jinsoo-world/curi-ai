@@ -47,13 +47,21 @@ export async function GET() {
             })
         }
 
+        // 어드민이면 전체 멘토, 일반 유저는 본인 것만
+        const isAdmin = user.email === 'jin@mission-driven.kr'
+
         // 멘토 목록 (avatar_url 포함)
-        const { data: mentors, error } = await admin
+        let mentorQuery = admin
             .from('mentors')
             .select('id, name, title, mentor_type, status, is_active, created_at, creator_id, avatar_url')
-            .eq('creator_id', creator.id)
             .neq('status', 'suspended')
             .order('created_at', { ascending: false })
+
+        if (!isAdmin) {
+            mentorQuery = mentorQuery.eq('creator_id', creator.id)
+        }
+
+        const { data: mentors, error } = await mentorQuery
 
         if (error) throw new Error(error.message)
 

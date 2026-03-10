@@ -2,5 +2,5 @@
 
 export * from './types'
 export * from './constants'
-export { getActiveMentors, getMentorById, getMentorsByCreator } from './queries'
+export { getActiveMentors, getMentorById, getMentorsByCreator, getMentorProfile } from './queries'
 export { buildSystemPrompt, buildGeminiHistory } from './prompt'
