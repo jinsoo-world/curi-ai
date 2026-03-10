@@ -97,13 +97,12 @@ export async function POST(req: NextRequest) {
         if (['txt', 'md'].includes(ext)) {
             textContent = await fileData.text()
         } else {
-            // PDF/HWP/DOCX/PPT → Upstage Document Parse
+            // PDF/HWP/DOCX/PPT → Upstage Document OCR (비용 효율: $0.0015/page)
             try {
                 const formData = new FormData()
                 formData.append('document', fileData, source.title)
-                formData.append('model', 'document-parse')
+                formData.append('model', 'ocr')
                 formData.append('ocr', 'force')
-                formData.append('output_formats', "['html', 'text']")
 
                 const parseRes = await fetch('https://api.upstage.ai/v1/document-digitization', {
                     method: 'POST',
@@ -160,7 +159,7 @@ export async function POST(req: NextRequest) {
             .update({
                 processing_status: 'completed',
                 chunk_count: successCount,
-                content: textContent.slice(0, 5000),
+                content: textContent,
             })
             .eq('id', sourceId)
 
@@ -168,6 +167,7 @@ export async function POST(req: NextRequest) {
             success: true,
             chunksProcessed: successCount,
             totalChunks: chunks.length,
+            totalCharacters: textContent.length,
         })
     } catch (error: unknown) {
         console.error('[Process API] Error:', error)

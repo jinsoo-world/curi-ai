@@ -17,6 +17,20 @@ const ALLOWED_TYPES = [
 const ALLOWED_EXTENSIONS = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx', 'ppt', 'pptx']
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_FILES_PER_MENTOR = 3
+
+// 확장자 → fallback MIME 매핑 (HWP 등 MIME이 빈 파일용)
+const EXT_MIME_MAP: Record<string, string> = {
+    hwp: 'application/x-hwp',
+    hwpx: 'application/x-hwpx',
+    ppt: 'application/vnd.ms-powerpoint',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    pdf: 'application/pdf',
+    txt: 'text/plain',
+    md: 'text/markdown',
+}
 
 /**
  * POST — 파일 업로드
@@ -65,17 +79,32 @@ export async function POST(req: NextRequest) {
             process.env.SUPABASE_SERVICE_ROLE_KEY!,
         )
 
+        // 최대 파일 수 검증 (멘토당 3개)
+        const { count } = await admin
+            .from('knowledge_sources')
+            .select('*', { count: 'exact', head: true })
+            .eq('mentor_id', mentorId)
+        if ((count ?? 0) >= MAX_FILES_PER_MENTOR) {
+            return NextResponse.json(
+                { error: `파일은 최대 ${MAX_FILES_PER_MENTOR}개까지 등록할 수 있습니다.` },
+                { status: 400 },
+            )
+        }
+
         // 파일명 생성
         const timestamp = Date.now()
         const safeName = file.name.replace(/[^a-zA-Z0-9가-힣._-]/g, '_')
         const filePath = `${mentorId}/${timestamp}-${safeName}`
+
+        // contentType: MIME이 비어있으면 확장자 기반 fallback
+        const uploadContentType = file.type || EXT_MIME_MAP[ext] || 'application/octet-stream'
 
         // Supabase Storage에 업로드
         const fileBuffer = Buffer.from(await file.arrayBuffer())
         const { error: uploadError } = await admin.storage
             .from('knowledge-files')
             .upload(filePath, fileBuffer, {
-                contentType: file.type,
+                contentType: uploadContentType,
                 upsert: false,
             })
 

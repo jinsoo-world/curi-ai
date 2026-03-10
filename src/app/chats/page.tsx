@@ -77,8 +77,11 @@ export default function ChatsPage() {
                 .limit(30)
 
             if (data) {
+                // 삭제된 AI(멘토)와의 대화 제외
+                const activeSessions = data.filter((s: any) => s.mentors != null)
+
                 const sessionsWithTopics = await Promise.all(
-                    data.map(async (s: any) => {
+                    activeSessions.map(async (s: any) => {
                         const isGenericTitle = !s.title || s.title.endsWith('와의 대화')
                         let topic = isGenericTitle ? '' : s.title
 

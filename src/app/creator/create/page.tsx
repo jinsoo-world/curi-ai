@@ -12,6 +12,7 @@ interface UploadedFile {
     id: string
     fileName: string
     fileSize: number
+    status: 'uploading' | 'processing' | 'completed' | 'failed'
 }
 
 export default function CreatorCreatePage() {
@@ -70,6 +71,12 @@ export default function CreatorCreatePage() {
         }
         if (!template) {
             setError('AI 성격을 선택해주세요.')
+            return
+        }
+        // 파일 처리 중이면 경고
+        const processingFiles = uploadedFiles.filter(f => f.status === 'uploading' || f.status === 'processing')
+        if (processingFiles.length > 0) {
+            setError(`파일 ${processingFiles.length}개가 처리 중입니다. 잠시 후 다시 시도해주세요.`)
             return
         }
 
@@ -192,6 +199,21 @@ export default function CreatorCreatePage() {
     async function handleFileUpload(files: FileList | null) {
         if (!files || files.length === 0) return
 
+        // 최대 파일 수 검증 (3개)
+        const newFilesArr = Array.from(files)
+        if (uploadedFiles.length + newFilesArr.length > 3) {
+            setError('파일은 최대 3개까지 등록할 수 있습니다.')
+            return
+        }
+
+        // 합산 용량 검증 (10MB)
+        const existingSize = uploadedFiles.reduce((sum, f) => sum + f.fileSize, 0)
+        const newSize = newFilesArr.reduce((sum, f) => sum + f.size, 0)
+        if (existingSize + newSize > 10 * 1024 * 1024) {
+            setError('모든 파일 합산 10MB를 초과할 수 없습니다.')
+            return
+        }
+
         setUploading(true)
         setError(null)
 
@@ -229,14 +251,10 @@ export default function CreatorCreatePage() {
             // HWP/HWPX는 MIME 타입이 없으므로 확장자로 체크
             const allowedExtensions = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx', 'ppt', 'pptx']
 
-            for (const file of Array.from(files)) {
+            for (const file of newFilesArr) {
                 const ext = file.name.split('.').pop()?.toLowerCase() || ''
                 if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(ext)) {
                     setError(`지원하지 않는 형식: ${file.name}`)
-                    continue
-                }
-                if (file.size > 10 * 1024 * 1024) {
-                    setError(`파일 크기 초과: ${file.name} (10MB 이하)`)
                     continue
                 }
 
@@ -251,10 +269,12 @@ export default function CreatorCreatePage() {
                 const data = await res.json()
                 if (!res.ok) throw new Error(data.error)
 
+                const sourceId = data.source.id
                 setUploadedFiles(prev => [...prev, {
-                    id: data.source.id,
+                    id: sourceId,
                     fileName: data.source.fileName,
                     fileSize: data.source.fileSize,
+                    status: 'processing' as const,
                 }])
 
                 // 파일 텍스트 추출 + 임베딩 트리거 (모든 파일)
@@ -262,18 +282,22 @@ export default function CreatorCreatePage() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        sourceId: data.source.id,
+                        sourceId,
                         mentorId: mid,
                     }),
                 }).then(async (r) => {
                     const result = await r.json()
                     if (r.ok) {
-                        setToast(`✅ ${file.name} — ${result.chunksProcessed}개 청크 임베딩 완료!`)
+                        setUploadedFiles(prev => prev.map(f => f.id === sourceId ? { ...f, status: 'completed' as const } : f))
+                        setToast(`✅ ${file.name} — ${result.chunksProcessed}개 청크 처리 완료!`)
                     } else {
+                        setUploadedFiles(prev => prev.map(f => f.id === sourceId ? { ...f, status: 'failed' as const } : f))
                         setToast(`⚠️ ${file.name} 처리 실패: ${result.error}`)
                     }
                     setTimeout(() => setToast(null), 4000)
-                }).catch(console.error)
+                }).catch(() => {
+                    setUploadedFiles(prev => prev.map(f => f.id === sourceId ? { ...f, status: 'failed' as const } : f))
+                })
             }
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : '업로드 실패')
@@ -471,17 +495,37 @@ export default function CreatorCreatePage() {
                                 {uploading ? '업로드 중...' : '클릭하거나 드래그'}
                             </div>
                             <div style={{ fontSize: 11, color: '#9ca3af' }}>
-                                HWP, PDF, PPT, DOCX, TXT · 최대 10MB
+                                HWP, PDF, PPT, DOCX, TXT · 최대 3개 · 합산 10MB
                             </div>
                         </div>
 
-                        {/* 업로드된 파일 */}
+                        {/* 업로드된 파일 + 상태 표시 */}
                         {uploadedFiles.length > 0 && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
                                 {uploadedFiles.map(f => (
-                                    <div key={f.id} style={styles.fileItem}>
-                                        <span>📄 {f.fileName}</span>
-                                        <span style={{ fontSize: 11, color: '#9ca3af' }}>{formatFileSize(f.fileSize)}</span>
+                                    <div key={f.id} style={{
+                                        ...styles.fileItem,
+                                        background: f.status === 'completed' ? '#f0fdf4' :
+                                                    f.status === 'failed' ? '#fef2f2' : '#fffbeb',
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <span>{f.status === 'processing' ? '⏳' : f.status === 'completed' ? '✅' : f.status === 'failed' ? '❌' : '📄'}</span>
+                                            <div>
+                                                <div style={{ fontSize: 13, fontWeight: 500 }}>{f.fileName}</div>
+                                                <div style={{ fontSize: 11, color: '#9ca3af' }}>{formatFileSize(f.fileSize)}</div>
+                                            </div>
+                                        </div>
+                                        <span style={{
+                                            fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20,
+                                            background: f.status === 'completed' ? '#dcfce7' :
+                                                        f.status === 'failed' ? '#fee2e2' : '#fef3c7',
+                                            color: f.status === 'completed' ? '#16a34a' :
+                                                   f.status === 'failed' ? '#dc2626' : '#d97706',
+                                        }}>
+                                            {f.status === 'processing' ? '📄 파일 읽는 중...' :
+                                             f.status === 'completed' ? '✅ 완료' :
+                                             f.status === 'failed' ? '❌ 실패' : '업로드 중...'}
+                                        </span>
                                     </div>
                                 ))}
                             </div>
@@ -498,15 +542,25 @@ export default function CreatorCreatePage() {
 
                     {/* ── 생성 버튼 (하단 고정) ── */}
                     <div style={styles.bottomBar}>
+                        {uploadedFiles.some(f => f.status === 'processing' || f.status === 'uploading') && (
+                            <div style={{
+                                fontSize: 12, color: '#d97706', textAlign: 'center' as const,
+                                marginBottom: 6, fontWeight: 500,
+                            }}>
+                                ⏳ 파일 처리 중... 완료되면 공개할 수 있어요
+                            </div>
+                        )}
                         <button
                             style={{
                                 ...styles.createBtn,
-                                opacity: loading ? 0.6 : 1,
+                                opacity: (loading || uploadedFiles.some(f => f.status === 'processing' || f.status === 'uploading')) ? 0.5 : 1,
                             }}
                             onClick={handleCreate}
-                            disabled={loading}
+                            disabled={loading || uploadedFiles.some(f => f.status === 'processing' || f.status === 'uploading')}
                         >
-                            {loading ? '생성 중...' : '🚀 AI 공개하기'}
+                            {loading ? '생성 중...' :
+                             uploadedFiles.some(f => f.status === 'processing') ? '⏳ 파일 처리 중...' :
+                             '🚀 AI 공개하기'}
                         </button>
                     </div>
 

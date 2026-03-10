@@ -17,6 +17,7 @@ export interface ProfileUpdateData {
     birth_year?: number | null
     gender?: string | null
     handle?: string | null
+    avatar_url?: string | null
 }
 
 /** 프로필 응답 데이터 */

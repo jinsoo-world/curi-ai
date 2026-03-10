@@ -28,6 +28,9 @@ export default function CreatorEditPage() {
     const avatarInputRef = useRef<HTMLInputElement>(null)
     const [knowledgeSources, setKnowledgeSources] = useState<{ id: string; title: string; source_type: string; processing_status: string; chunk_count: number; content?: string; created_at: string }[]>([])
     const [previewSource, setPreviewSource] = useState<{ title: string; content: string } | null>(null)
+    const [uploading, setUploading] = useState(false)
+    const [dragOver, setDragOver] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
         fetchMentor()
@@ -70,6 +73,97 @@ export default function CreatorEditPage() {
             const kData = await kRes.json()
             if (kRes.ok) setKnowledgeSources(kData.sources || [])
         } catch { /* ignore */ }
+    }
+
+    // 파일 업로드
+    async function handleFileUpload(files: FileList | null) {
+        if (!files || files.length === 0) return
+
+        // 최대 파일 수 검증 (3개)
+        const newFilesArr = Array.from(files)
+        if (knowledgeSources.length + newFilesArr.length > 3) {
+            setToast({ type: 'error', message: '파일은 최대 3개까지 등록할 수 있습니다.' })
+            return
+        }
+
+        setUploading(true)
+        try {
+            const allowedExtensions = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx', 'ppt', 'pptx']
+            for (const file of newFilesArr) {
+                const ext = file.name.split('.').pop()?.toLowerCase() || ''
+                if (!allowedExtensions.includes(ext)) {
+                    setToast({ type: 'error', message: `지원하지 않는 형식: ${file.name}` })
+                    continue
+                }
+                const formData = new FormData()
+                formData.append('file', file)
+                formData.append('mentorId', mentorId)
+                const res = await fetch('/api/creator/knowledge/upload', { method: 'POST', body: formData })
+                const data = await res.json()
+                if (!res.ok) throw new Error(data.error)
+
+                const sourceId = data.source.id
+                setKnowledgeSources(prev => [...prev, {
+                    id: sourceId, title: data.source.fileName, source_type: ext,
+                    processing_status: 'processing', chunk_count: 0, created_at: new Date().toISOString(),
+                }])
+
+                // 파일 텍스트 추출
+                fetch('/api/creator/knowledge/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sourceId, mentorId }),
+                }).then(async (r) => {
+                    const result = await r.json()
+                    if (r.ok) {
+                        setKnowledgeSources(prev => prev.map(s => s.id === sourceId
+                            ? { ...s, processing_status: 'completed', chunk_count: result.chunksProcessed }
+                            : s
+                        ))
+                        setToast({ type: 'success', message: `✅ ${file.name} — ${result.chunksProcessed}개 청크 완료!` })
+                    } else {
+                        setKnowledgeSources(prev => prev.map(s => s.id === sourceId
+                            ? { ...s, processing_status: 'failed' } : s))
+                        setToast({ type: 'error', message: `${file.name} 처리 실패` })
+                    }
+                }).catch(() => {
+                    setKnowledgeSources(prev => prev.map(s => s.id === sourceId
+                        ? { ...s, processing_status: 'failed' } : s))
+                })
+            }
+        } catch (err: unknown) {
+            setToast({ type: 'error', message: err instanceof Error ? err.message : '업로드 실패' })
+        }
+        setUploading(false)
+        if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+
+    // 실패한 파일 재처리
+    async function handleReprocess(sourceId: string) {
+        setKnowledgeSources(prev => prev.map(s => s.id === sourceId
+            ? { ...s, processing_status: 'processing' } : s))
+        try {
+            const res = await fetch('/api/creator/knowledge/process', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sourceId, mentorId }),
+            })
+            const result = await res.json()
+            if (res.ok) {
+                setKnowledgeSources(prev => prev.map(s => s.id === sourceId
+                    ? { ...s, processing_status: 'completed', chunk_count: result.chunksProcessed }
+                    : s
+                ))
+                setToast({ type: 'success', message: `✅ 재처리 완료! ${result.chunksProcessed}개 청크` })
+            } else {
+                setKnowledgeSources(prev => prev.map(s => s.id === sourceId
+                    ? { ...s, processing_status: 'failed' } : s))
+                setToast({ type: 'error', message: `재처리 실패: ${result.error}` })
+            }
+        } catch {
+            setKnowledgeSources(prev => prev.map(s => s.id === sourceId
+                ? { ...s, processing_status: 'failed' } : s))
+        }
     }
 
     function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -345,6 +439,44 @@ export default function CreatorEditPage() {
                     <div style={styles.field}>
                         <label style={styles.label}>📚 등록된 지식 파일</label>
                         <p style={styles.hint}>이 AI가 참고하는 파일 목록입니다</p>
+
+                        {/* 파일 추가 업로드 드롭존 */}
+                        <div
+                            style={{
+                                border: `2px dashed ${dragOver ? '#22c55e' : '#d1d5db'}`,
+                                borderRadius: 12, padding: '14px 12px',
+                                display: 'flex', flexDirection: 'column' as const,
+                                alignItems: 'center', gap: 4,
+                                cursor: 'pointer', transition: 'all 0.2s',
+                                background: dragOver ? '#f0fdf4' : '#fafafa',
+                                marginBottom: 8,
+                            }}
+                            onClick={() => fileInputRef.current?.click()}
+                            onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+                            onDragLeave={() => setDragOver(false)}
+                            onDrop={e => {
+                                e.preventDefault()
+                                setDragOver(false)
+                                handleFileUpload(e.dataTransfer.files)
+                            }}
+                        >
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".pdf,.txt,.md,.doc,.docx,.hwp,.hwpx,.ppt,.pptx"
+                                multiple
+                                style={{ display: 'none' }}
+                                onChange={e => handleFileUpload(e.target.files)}
+                            />
+                            <div style={{ fontSize: 22 }}>{uploading ? '⏳' : '➕'}</div>
+                            <div style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>
+                                {uploading ? '업로드 중...' : '파일 추가 (클릭 또는 드래그)'}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#9ca3af' }}>
+                                HWP, PDF, PPT, DOCX, TXT · 최대 3개 · 합산 10MB
+                            </div>
+                        </div>
+
                         {knowledgeSources.length === 0 ? (
                             <div style={{ padding: 20, textAlign: 'center' as const, color: '#9ca3af', fontSize: 14, background: '#f9fafb', borderRadius: 12 }}>
                                 등록된 지식 파일이 없습니다
@@ -354,17 +486,21 @@ export default function CreatorEditPage() {
                                 {knowledgeSources.map((src) => (
                                     <div key={src.id} style={{
                                         padding: '12px 16px', borderRadius: 12,
-                                        background: '#f9fafb', border: '1px solid #f0f0f0',
+                                        background: src.processing_status === 'completed' ? '#f9fafb' :
+                                                    src.processing_status === 'failed' ? '#fef2f2' : '#fffbeb',
+                                        border: '1px solid #f0f0f0',
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                                 <span style={{ fontSize: 18 }}>
-                                                    {src.source_type === 'pdf' ? '📄' : src.source_type === 'hwp' ? '📝' : '📃'}
+                                                    {src.processing_status === 'processing' ? '⏳' :
+                                                     src.source_type === 'pdf' ? '📄' : src.source_type === 'hwp' ? '📝' : '📃'}
                                                 </span>
                                                 <div>
                                                     <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{src.title}</div>
                                                     <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
-                                                        {src.chunk_count ? `${src.chunk_count}개 청크` : ''}
+                                                        {src.processing_status === 'processing' ? '📄 파일 읽는 중...' :
+                                                         src.chunk_count ? `${src.chunk_count}개 항목으로 분류됨` : ''}
                                                     </div>
                                                 </div>
                                             </div>
@@ -380,23 +516,35 @@ export default function CreatorEditPage() {
                                                  src.processing_status === 'pending' ? '⏳ 대기중' : '❌ 실패'}
                                             </span>
                                         </div>
-                                        {/* 파싱 내용 보기 버튼 */}
-                                        {src.processing_status === 'completed' && src.content && (
-                                            <button
-                                                onClick={() => setPreviewSource({ title: src.title, content: src.content! })}
-                                                style={{
-                                                    marginTop: 8, padding: '6px 14px',
-                                                    borderRadius: 8, border: '1px solid #e5e7eb',
-                                                    background: '#fff', color: '#16a34a',
-                                                    fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                                                    transition: 'background 200ms',
-                                                }}
-                                                onMouseEnter={e => (e.currentTarget.style.background = '#f0fdf4')}
-                                                onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
-                                            >
-                                                🔍 Upstage 파싱 결과 보기
-                                            </button>
-                                        )}
+                                        {/* 액션 버튼들 */}
+                                        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                                            {/* 파일 내용 보기 */}
+                                            {src.processing_status === 'completed' && src.content && (
+                                                <button
+                                                    onClick={() => setPreviewSource({ title: src.title, content: src.content! })}
+                                                    style={{
+                                                        padding: '5px 12px', borderRadius: 8,
+                                                        border: '1px solid #e5e7eb', background: '#fff',
+                                                        color: '#16a34a', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    📄 내용 보기
+                                                </button>
+                                            )}
+                                            {/* 실패 시 재처리 */}
+                                            {src.processing_status === 'failed' && (
+                                                <button
+                                                    onClick={() => handleReprocess(src.id)}
+                                                    style={{
+                                                        padding: '5px 12px', borderRadius: 8,
+                                                        border: '1px solid #fca5a5', background: '#fff',
+                                                        color: '#dc2626', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    🔄 재처리
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -445,7 +593,7 @@ export default function CreatorEditPage() {
                     </button>
                 </div>
 
-                {/* 파싱 결과 미리보기 모달 */}
+                {/* 파일 내용 미리보기 모달 */}
                 {previewSource && (
                     <div
                         style={{
@@ -474,7 +622,7 @@ export default function CreatorEditPage() {
                             }}>
                                 <div>
                                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#18181b' }}>
-                                        🔍 Upstage 파싱 결과
+                                        📄 파일에서 읽어온 내용
                                     </h3>
                                     <p style={{ margin: '2px 0 0', fontSize: 13, color: '#9ca3af' }}>
                                         {previewSource.title}
@@ -492,7 +640,7 @@ export default function CreatorEditPage() {
                                     ✕
                                 </button>
                             </div>
-                            {/* 파싱 내용 */}
+                            {/* 파일 내용 */}
                             <div style={{
                                 padding: '16px 20px', overflowY: 'auto' as const,
                                 flex: 1,
@@ -501,16 +649,23 @@ export default function CreatorEditPage() {
                                     background: '#f9fafb', borderRadius: 12,
                                     padding: 16, border: '1px solid #f0f0f0',
                                 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' as const }}>
                                         <span style={{
                                             fontSize: 11, fontWeight: 600, color: '#6b7280',
                                             background: '#e5e7eb', padding: '2px 8px', borderRadius: 6,
                                         }}>
-                                            총 {previewSource.content.length.toLocaleString()}자
+                                            📄 전체 글자수: {previewSource.content.length.toLocaleString()}자
                                         </span>
-                                        <span style={{ fontSize: 11, color: '#9ca3af' }}>
-                                            (최대 5,000자 미리보기)
-                                        </span>
+                                        {previewSource.content.length > 5000 && (
+                                            <span style={{ fontSize: 11, color: '#d97706', fontWeight: 500 }}>
+                                                앞부분 5,000자만 보여드려요 (AI는 전체를 참고해요)
+                                            </span>
+                                        )}
+                                        {previewSource.content.length <= 5000 && (
+                                            <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 500 }}>
+                                                ✅ 전체 내용 표시
+                                            </span>
+                                        )}
                                     </div>
                                     <pre style={{
                                         margin: 0,
@@ -521,7 +676,9 @@ export default function CreatorEditPage() {
                                         lineHeight: 1.7,
                                         color: '#374151',
                                     }}>
-                                        {previewSource.content}
+                                        {previewSource.content.length > 5000
+                                            ? previewSource.content.slice(0, 5000) + '\n\n--- ✂️ 여기까지만 보여드려요 (전체 ' + previewSource.content.length.toLocaleString() + '자) ---'
+                                            : previewSource.content}
                                     </pre>
                                 </div>
                             </div>

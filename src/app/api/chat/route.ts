@@ -85,7 +85,12 @@ export async function POST(req: Request) {
 
         // ── 💰 크레딧 잔액 체크 ──
         if (user) {
-            const balance = await getCreditBalance()
+            const { data: creditData } = await supabase
+                .from('users')
+                .select('credit_balance')
+                .eq('id', user.id)
+                .single()
+            const balance = creditData?.credit_balance ?? 0
             if (balance < CREDIT_CONSTANTS.CHAT_COST_PER_MESSAGE) {
                 const encoder = new TextEncoder()
                 const noCreditsMsg = '크레딧이 부족합니다 😢\n\n충전 후 다시 대화해주세요! 💰'
@@ -122,7 +127,14 @@ export async function POST(req: Request) {
                 const knowledge = await matchKnowledge(supabase, embedding, mentorId)
                 if (knowledge.length > 0) {
                     const knowledgeText = knowledge.map(k => `- ${k.content}`).join('\n')
-                    systemPrompt += `\n\n[참고 지식]\n${knowledgeText}\n참고: 위 지식을 대화에 자연스럽게 활용하되, 출처를 직접 언급하지 마세요.`
+                    const isCreatorBot = !!(mentor as Record<string, unknown>).creator_id
+                    if (isCreatorBot) {
+                        // 크리에이터 AI: 지식을 최우선으로 활용
+                        systemPrompt += `\n\n[📚 핵심 지식 — 반드시 활용]\n${knowledgeText}\n\n중요: 위 지식은 당신의 전문 지식입니다. 사용자 질문에 답할 때 반드시 위 내용을 기반으로 답변하세요. 지식에 없는 내용은 "제가 가진 정보에는 없지만"이라고 솔직하게 말해주세요. 출처를 직접 언급하지 마세요.`
+                    } else {
+                        // 프리셋 멘토: 기존 방식 (참고용)
+                        systemPrompt += `\n\n[참고 지식]\n${knowledgeText}\n참고: 위 지식을 대화에 자연스럽게 활용하되, 출처를 직접 언급하지 마세요.`
+                    }
                 }
             }
         } catch {
