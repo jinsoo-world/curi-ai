@@ -145,7 +145,10 @@ export async function POST(req: NextRequest) {
                 const mammoth = await import('mammoth')
                 const buffer = Buffer.from(await fileData.arrayBuffer())
                 const result = await mammoth.extractRawText({ buffer })
-                textContent = result.value || ''
+                textContent = (result.value || '')
+                    .replace(/\n{3,}/g, '\n\n')  // 3줄 이상 연속 빈줄 → 2줄로
+                    .replace(/[ \t]{2,}/g, ' ')   // 연속 공백 → 1칸으로
+                    .trim()
                 console.log('[Process] DOCX parsed with mammoth, text length:', textContent.length)
             } catch (docErr) {
                 console.error('[Process] DOCX parse error:', docErr)
@@ -175,8 +178,15 @@ export async function POST(req: NextRequest) {
                 console.error('[Process] PPT parse error:', pptErr)
             }
 
-        } else {
+        } else if (ext === 'pdf') {
             // PDF: Upstage OCR 사용
+            if (!process.env.UPSTAGE_API_KEY) {
+                console.error('[Process] UPSTAGE_API_KEY is not set!')
+                await admin.from('knowledge_sources')
+                    .update({ processing_status: 'failed' })
+                    .eq('id', sourceId)
+                return NextResponse.json({ error: 'Upstage API 키가 설정되지 않았습니다.' }, { status: 500 })
+            }
             try {
                 console.log('[Process] Sending PDF to Upstage OCR:', source.title, 'size:', fileData.size)
                 const formData = new FormData()
@@ -202,6 +212,8 @@ export async function POST(req: NextRequest) {
             } catch (parseErr) {
                 console.error('[Process] PDF parse error:', parseErr)
             }
+        } else {
+            console.error('[Process] Unsupported file type:', ext)
         }
 
         if (!textContent.trim()) {
