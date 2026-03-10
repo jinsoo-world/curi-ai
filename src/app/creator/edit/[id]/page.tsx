@@ -38,6 +38,9 @@ export default function CreatorEditPage() {
     const [previewLoading, setPreviewLoading] = useState(false)
     const previewEndRef = useRef<HTMLDivElement>(null)
 
+    // 미리보기 디바이스 모드
+    const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
+
     useEffect(() => {
         fetchMentor()
     }, [mentorId])
@@ -638,184 +641,228 @@ export default function CreatorEditPage() {
                     </div>
                 </div>
 
-                {/* ══════ 우측: 미리보기 채팅 ══════ */}
-                <div className="creator-preview-col" style={{
-                    flex: '1 1 0',
-                    borderLeft: '1px solid #e5e7eb',
-                    background: '#fff',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: '100dvh',
-                    position: 'sticky',
-                    top: 0,
-                }}>
-                    {/* 미리보기 헤더 */}
-                    <div style={{
-                        padding: '16px 20px',
-                        borderBottom: '1px solid #f0f0f0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                    }}>
-                        <span style={{ fontSize: 16 }}>👁️</span>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#374151' }}>미리보기</span>
-                        <span style={{ fontSize: 12, color: '#9ca3af' }}>실시간으로 AI 대화를 테스트하세요</span>
-                    </div>
-
-                    {/* 채팅 영역 */}
-                    <div style={{
-                        flex: 1,
-                        overflowY: 'auto',
-                        padding: '20px 16px',
+                    {/* ══════ 우측: 미리보기 채팅 ══════ */}
+                    <div className="creator-preview-col" style={{
+                        flex: '1 1 0',
+                        borderLeft: '1px solid #e5e7eb',
+                        background: previewDevice !== 'desktop' ? '#f0f0f0' : '#fff',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 12,
+                        height: '100dvh',
+                        position: 'sticky',
+                        top: 0,
+                        transition: 'background 0.2s',
                     }}>
-                        {/* AI 프로필 카드 */}
+                        {/* 미리보기 헤더: 디바이스 전환 버튼 */}
                         <div style={{
-                            textAlign: 'center' as const,
-                            padding: '24px 16px',
-                            borderRadius: 16,
-                            background: '#f0fdf4',
-                            marginBottom: 8,
+                            padding: '10px 20px',
+                            borderBottom: '1px solid #e5e7eb',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            background: '#fff',
                         }}>
-                            <div style={{
-                                width: 56, height: 56, borderRadius: '50%',
-                                background: '#22c55e', color: '#fff',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: 24, fontWeight: 700,
-                                margin: '0 auto 8px',
-                                overflow: 'hidden',
-                            }}>
-                                {avatarPreview ? (
-                                    <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                ) : (
-                                    name ? name[0] : '🤖'
-                                )}
+                            <div style={{ display: 'flex', gap: 4, background: '#f3f4f6', borderRadius: 8, padding: 3 }}>
+                                {(['desktop', 'tablet', 'mobile'] as const).map(device => (
+                                    <button
+                                        key={device}
+                                        onClick={() => setPreviewDevice(device)}
+                                        title={device === 'desktop' ? 'PC' : device === 'tablet' ? '태블릿' : '모바일'}
+                                        style={{
+                                            padding: '6px 10px', borderRadius: 6, border: 'none',
+                                            background: previewDevice === device ? '#fff' : 'transparent',
+                                            boxShadow: previewDevice === device ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            transition: 'all 0.15s',
+                                            color: previewDevice === device ? '#18181b' : '#9ca3af',
+                                            fontSize: 16,
+                                        }}
+                                    >
+                                        {device === 'desktop' ? '🖥️' : device === 'tablet' ? '📱' : '📲'}
+                                    </button>
+                                ))}
                             </div>
-                            <div style={{ fontSize: 16, fontWeight: 700, color: '#18181b' }}>
-                                {name || 'AI 이름'}
-                            </div>
-                            <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
-                                {title || '한줄 소개'}
-                            </div>
+                            <span style={{ fontSize: 12, color: '#9ca3af' }}>미리보기</span>
                         </div>
 
-                        {/* 인사말 */}
-                        {previewMessages.length === 0 && (
-                            <>
-                                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                        {/* 디바이스 프레임 외부 래퍼 */}
+                        <div style={{
+                            flex: 1,
+                            display: 'flex',
+                            justifyContent: 'center',
+                            overflow: 'hidden',
+                            padding: previewDevice !== 'desktop' ? '20px 16px' : 0,
+                        }}>
+                            {/* 디바이스 프레임 */}
+                            <div style={{
+                                width: previewDevice === 'mobile' ? 375 : previewDevice === 'tablet' ? 768 : '100%',
+                                maxWidth: '100%',
+                                background: '#fff',
+                                borderRadius: previewDevice !== 'desktop' ? 16 : 0,
+                                boxShadow: previewDevice !== 'desktop' ? '0 4px 24px rgba(0,0,0,0.12)' : 'none',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                overflow: 'hidden',
+                                transition: 'width 0.3s ease, border-radius 0.3s ease',
+                                height: '100%',
+                            }}>
+                                {/* 채팅 스크롤 영역 */}
+                                <div style={{
+                                    flex: 1,
+                                    overflowY: 'auto',
+                                    padding: '20px 16px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 12,
+                                }}>
+                                    {/* AI 프로필 카드 */}
                                     <div style={{
-                                        width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                                        background: '#22c55e', color: '#fff',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        fontSize: 14, fontWeight: 700, overflow: 'hidden',
+                                        textAlign: 'center' as const,
+                                        padding: '24px 16px',
+                                        borderRadius: 16,
+                                        background: '#f0fdf4',
+                                        marginBottom: 8,
                                     }}>
-                                        {avatarPreview ? (
-                                            <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        ) : (name ? name[0] : '🤖')}
+                                        <div style={{
+                                            width: 56, height: 56, borderRadius: '50%',
+                                            background: '#22c55e', color: '#fff',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: 24, fontWeight: 700,
+                                            margin: '0 auto 8px',
+                                            overflow: 'hidden',
+                                        }}>
+                                            {avatarPreview ? (
+                                                <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : (
+                                                name ? name[0] : '🤖'
+                                            )}
+                                        </div>
+                                        <div style={{ fontSize: 16, fontWeight: 700, color: '#18181b' }}>
+                                            {name || 'AI 이름'}
+                                        </div>
+                                        <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
+                                            {title || '한줄 소개'}
+                                        </div>
                                     </div>
-                                    <div style={{
-                                        background: '#f3f4f6', borderRadius: '4px 16px 16px 16px',
-                                        padding: '10px 14px', fontSize: 14, color: '#374151',
-                                        maxWidth: '80%', lineHeight: 1.5,
-                                    }}>
-                                        {effectiveGreeting}
-                                    </div>
+
+                                    {/* 인사말 */}
+                                    {previewMessages.length === 0 && (
+                                        <>
+                                            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                                                <div style={{
+                                                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                                                    background: '#22c55e', color: '#fff',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: 14, fontWeight: 700, overflow: 'hidden',
+                                                }}>
+                                                    {avatarPreview ? (
+                                                        <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (name ? name[0] : '🤖')}
+                                                </div>
+                                                <div style={{
+                                                    background: '#f3f4f6', borderRadius: '4px 16px 16px 16px',
+                                                    padding: '10px 14px', fontSize: 14, color: '#374151',
+                                                    maxWidth: '80%', lineHeight: 1.5,
+                                                }}>
+                                                    {effectiveGreeting}
+                                                </div>
+                                            </div>
+
+                                            {sampleQArr.length > 0 && (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 40 }}>
+                                                    {sampleQArr.map((q, i) => (
+                                                        <button
+                                                            key={i}
+                                                            onClick={() => handlePreviewSend(q)}
+                                                            style={{
+                                                                padding: '8px 14px', borderRadius: 20,
+                                                                border: '1px solid #d1fae5', background: '#ecfdf5',
+                                                                color: '#065f46', fontSize: 13, cursor: 'pointer',
+                                                                transition: 'all 0.15s',
+                                                            }}
+                                                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#d1fae5' }}
+                                                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#ecfdf5' }}
+                                                        >
+                                                            {q}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+
+                                    {/* 대화 메시지 */}
+                                    {previewMessages.map((m, i) => (
+                                        <div key={i} style={{
+                                            display: 'flex',
+                                            justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',
+                                            gap: 8,
+                                        }}>
+                                            {m.role === 'assistant' && (
+                                                <div style={{
+                                                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                                                    background: '#22c55e', color: '#fff',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: 14, fontWeight: 700, overflow: 'hidden',
+                                                }}>
+                                                    {avatarPreview ? (
+                                                        <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (name ? name[0] : '🤖')}
+                                                </div>
+                                            )}
+                                            <div style={{
+                                                maxWidth: '75%',
+                                                padding: '10px 14px',
+                                                borderRadius: m.role === 'user' ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
+                                                background: m.role === 'user' ? '#22c55e' : '#f3f4f6',
+                                                color: m.role === 'user' ? '#fff' : '#374151',
+                                                fontSize: 14,
+                                                lineHeight: 1.5,
+                                                whiteSpace: 'pre-wrap',
+                                            }}>
+                                                {m.content || (previewLoading && i === previewMessages.length - 1 ? '...' : '')}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <div ref={previewEndRef} />
                                 </div>
 
-                                {sampleQArr.length > 0 && (
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 40 }}>
-                                        {sampleQArr.map((q, i) => (
-                                            <button
-                                                key={i}
-                                                onClick={() => handlePreviewSend(q)}
-                                                style={{
-                                                    padding: '8px 14px', borderRadius: 20,
-                                                    border: '1px solid #d1fae5', background: '#ecfdf5',
-                                                    color: '#065f46', fontSize: 13, cursor: 'pointer',
-                                                    transition: 'all 0.15s',
-                                                }}
-                                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#d1fae5' }}
-                                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#ecfdf5' }}
-                                            >{q}</button>
-                                        ))}
-                                    </div>
-                                )}
-                            </>
-                        )}
-
-                        {/* 대화 메시지 */}
-                        {previewMessages.map((m, i) => (
-                            <div key={i} style={{
-                                display: 'flex',
-                                justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',
-                                gap: 8,
-                            }}>
-                                {m.role === 'assistant' && (
-                                    <div style={{
-                                        width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                                        background: '#22c55e', color: '#fff',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        fontSize: 14, fontWeight: 700, overflow: 'hidden',
-                                    }}>
-                                        {avatarPreview ? (
-                                            <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        ) : (name ? name[0] : '🤖')}
-                                    </div>
-                                )}
+                                {/* 입력창 */}
                                 <div style={{
-                                    maxWidth: '75%',
-                                    padding: '10px 14px',
-                                    borderRadius: m.role === 'user' ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
-                                    background: m.role === 'user' ? '#22c55e' : '#f3f4f6',
-                                    color: m.role === 'user' ? '#fff' : '#374151',
-                                    fontSize: 14,
-                                    lineHeight: 1.5,
-                                    whiteSpace: 'pre-wrap',
+                                    padding: '12px 16px',
+                                    borderTop: '1px solid #f0f0f0',
+                                    display: 'flex',
+                                    gap: 8,
                                 }}>
-                                    {m.content || (previewLoading && i === previewMessages.length - 1 ? '...' : '')}
+                                    <input
+                                        style={{
+                                            flex: 1, padding: '10px 14px',
+                                            borderRadius: 24, border: '1px solid #e5e7eb',
+                                            background: '#fafafa', fontSize: 14, outline: 'none',
+                                        }}
+                                        placeholder="메시지를 입력하세요..."
+                                        value={previewInput}
+                                        onChange={e => setPreviewInput(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePreviewSend() } }}
+                                        disabled={previewLoading}
+                                    />
+                                    <button
+                                        onClick={() => handlePreviewSend()}
+                                        disabled={previewLoading || !previewInput.trim()}
+                                        style={{
+                                            width: 40, height: 40, borderRadius: '50%',
+                                            border: 'none', background: '#22c55e', color: '#fff',
+                                            fontSize: 18, cursor: 'pointer',
+                                            opacity: previewLoading || !previewInput.trim() ? 0.5 : 1,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            transition: 'opacity 0.15s',
+                                        }}
+                                    >↑</button>
                                 </div>
                             </div>
-                        ))}
-                        <div ref={previewEndRef} />
-                    </div>
-
-                    {/* 입력창 */}
-                    <div style={{
-                        padding: '12px 16px',
-                        borderTop: '1px solid #f0f0f0',
-                        display: 'flex',
-                        gap: 8,
-                    }}>
-                        <input
-                            style={{
-                                flex: 1, padding: '10px 14px',
-                                borderRadius: 24, border: '1px solid #e5e7eb',
-                                background: '#fafafa', fontSize: 14, outline: 'none',
-                            }}
-                            placeholder="메시지를 입력하세요..."
-                            value={previewInput}
-                            onChange={e => setPreviewInput(e.target.value)}
-                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePreviewSend() } }}
-                            disabled={previewLoading}
-                        />
-                        <button
-                            onClick={() => handlePreviewSend()}
-                            disabled={previewLoading || !previewInput.trim()}
-                            style={{
-                                width: 40, height: 40, borderRadius: '50%',
-                                border: 'none', background: '#22c55e', color: '#fff',
-                                fontSize: 18, cursor: 'pointer',
-                                opacity: previewLoading || !previewInput.trim() ? 0.5 : 1,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                transition: 'opacity 0.15s',
-                            }}
-                        >↑</button>
+                        </div>
                     </div>
                 </div>
-            </div>
-
             {/* 토스트 */}
             {toast && (
                 <div
