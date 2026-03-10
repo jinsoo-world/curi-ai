@@ -66,3 +66,33 @@ export async function getMentorById(
 
     return null
 }
+
+/**
+ * 크리에이터(유저)가 만든 활성 멘토 목록 조회
+ */
+export async function getMentorsByCreator(
+    db: SupabaseClient,
+    userId: string,
+): Promise<MentorCardData[]> {
+    // creator_profiles에서 해당 유저의 creator_id 조회 후 멘토 목록
+    const { data: creatorProfile } = await db
+        .from('creator_profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .single()
+
+    if (!creatorProfile) return []
+
+    const { data, error } = await db
+        .from('mentors')
+        .select('id, name, title, description, avatar_url, expertise, greeting_message, sample_questions')
+        .eq('creator_id', creatorProfile.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+
+    if (error) {
+        console.error('[Mentor Queries] getMentorsByCreator error:', JSON.stringify(error))
+        return []
+    }
+    return (data as MentorCardData[]) || []
+}

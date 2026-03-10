@@ -8,6 +8,7 @@ export interface User {
     email: string
     display_name: string | null
     avatar_url: string | null
+    handle: string | null
     birth_year: number | null
     gender: 'male' | 'female' | 'other' | null
     interests: string[]

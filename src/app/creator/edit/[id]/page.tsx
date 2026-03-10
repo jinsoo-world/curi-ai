@@ -26,7 +26,8 @@ export default function CreatorEditPage() {
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
     const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null)
     const avatarInputRef = useRef<HTMLInputElement>(null)
-    const [knowledgeSources, setKnowledgeSources] = useState<{ id: string; title: string; source_type: string; processing_status: string; chunk_count: number; created_at: string }[]>([])
+    const [knowledgeSources, setKnowledgeSources] = useState<{ id: string; title: string; source_type: string; processing_status: string; chunk_count: number; content?: string; created_at: string }[]>([])
+    const [previewSource, setPreviewSource] = useState<{ title: string; content: string } | null>(null)
 
     useEffect(() => {
         fetchMentor()
@@ -352,32 +353,50 @@ export default function CreatorEditPage() {
                             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
                                 {knowledgeSources.map((src) => (
                                     <div key={src.id} style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                         padding: '12px 16px', borderRadius: 12,
                                         background: '#f9fafb', border: '1px solid #f0f0f0',
                                     }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                            <span style={{ fontSize: 18 }}>
-                                                {src.source_type === 'pdf' ? '📄' : src.source_type === 'hwp' ? '📝' : '📃'}
-                                            </span>
-                                            <div>
-                                                <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{src.title}</div>
-                                                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
-                                                    {src.chunk_count ? `${src.chunk_count}개 청크` : ''}
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                <span style={{ fontSize: 18 }}>
+                                                    {src.source_type === 'pdf' ? '📄' : src.source_type === 'hwp' ? '📝' : '📃'}
+                                                </span>
+                                                <div>
+                                                    <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{src.title}</div>
+                                                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+                                                        {src.chunk_count ? `${src.chunk_count}개 청크` : ''}
+                                                    </div>
                                                 </div>
                                             </div>
+                                            <span style={{
+                                                fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20,
+                                                background: src.processing_status === 'completed' ? '#dcfce7' :
+                                                            src.processing_status === 'processing' ? '#fef3c7' : '#fee2e2',
+                                                color: src.processing_status === 'completed' ? '#16a34a' :
+                                                       src.processing_status === 'processing' ? '#d97706' : '#dc2626',
+                                            }}>
+                                                {src.processing_status === 'completed' ? '✅ 완료' :
+                                                 src.processing_status === 'processing' ? '⏳ 처리중' :
+                                                 src.processing_status === 'pending' ? '⏳ 대기중' : '❌ 실패'}
+                                            </span>
                                         </div>
-                                        <span style={{
-                                            fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20,
-                                            background: src.processing_status === 'completed' ? '#dcfce7' :
-                                                        src.processing_status === 'processing' ? '#fef3c7' : '#fee2e2',
-                                            color: src.processing_status === 'completed' ? '#16a34a' :
-                                                   src.processing_status === 'processing' ? '#d97706' : '#dc2626',
-                                        }}>
-                                            {src.processing_status === 'completed' ? '✅ 완료' :
-                                             src.processing_status === 'processing' ? '⏳ 처리중' :
-                                             src.processing_status === 'pending' ? '⏳ 대기중' : '❌ 실패'}
-                                        </span>
+                                        {/* 파싱 내용 보기 버튼 */}
+                                        {src.processing_status === 'completed' && src.content && (
+                                            <button
+                                                onClick={() => setPreviewSource({ title: src.title, content: src.content! })}
+                                                style={{
+                                                    marginTop: 8, padding: '6px 14px',
+                                                    borderRadius: 8, border: '1px solid #e5e7eb',
+                                                    background: '#fff', color: '#16a34a',
+                                                    fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                                    transition: 'background 200ms',
+                                                }}
+                                                onMouseEnter={e => (e.currentTarget.style.background = '#f0fdf4')}
+                                                onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
+                                            >
+                                                🔍 Upstage 파싱 결과 보기
+                                            </button>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -426,11 +445,119 @@ export default function CreatorEditPage() {
                     </button>
                 </div>
 
-                {/* 토스트 애니메이션 */}
+                {/* 파싱 결과 미리보기 모달 */}
+                {previewSource && (
+                    <div
+                        style={{
+                            position: 'fixed', inset: 0, zIndex: 9999,
+                            background: 'rgba(0,0,0,0.5)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: 20, animation: 'fadeIn 0.2s ease',
+                        }}
+                        onClick={() => setPreviewSource(null)}
+                    >
+                        <div
+                            style={{
+                                background: '#fff', borderRadius: 20,
+                                maxWidth: 700, width: '100%',
+                                maxHeight: '80dvh', overflow: 'hidden',
+                                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                                display: 'flex', flexDirection: 'column' as const,
+                                animation: 'scaleIn 0.2s ease',
+                            }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* 모달 헤더 */}
+                            <div style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                padding: '16px 20px', borderBottom: '1px solid #f0f0f0',
+                            }}>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#18181b' }}>
+                                        🔍 Upstage 파싱 결과
+                                    </h3>
+                                    <p style={{ margin: '2px 0 0', fontSize: 13, color: '#9ca3af' }}>
+                                        {previewSource.title}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setPreviewSource(null)}
+                                    style={{
+                                        width: 32, height: 32, borderRadius: '50%',
+                                        border: 'none', background: '#f3f4f6',
+                                        fontSize: 16, cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            {/* 파싱 내용 */}
+                            <div style={{
+                                padding: '16px 20px', overflowY: 'auto' as const,
+                                flex: 1,
+                            }}>
+                                <div style={{
+                                    background: '#f9fafb', borderRadius: 12,
+                                    padding: 16, border: '1px solid #f0f0f0',
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                                        <span style={{
+                                            fontSize: 11, fontWeight: 600, color: '#6b7280',
+                                            background: '#e5e7eb', padding: '2px 8px', borderRadius: 6,
+                                        }}>
+                                            총 {previewSource.content.length.toLocaleString()}자
+                                        </span>
+                                        <span style={{ fontSize: 11, color: '#9ca3af' }}>
+                                            (최대 5,000자 미리보기)
+                                        </span>
+                                    </div>
+                                    <pre style={{
+                                        margin: 0,
+                                        whiteSpace: 'pre-wrap' as const,
+                                        wordBreak: 'break-word' as const,
+                                        fontFamily: 'var(--font-noto-sans-kr), Pretendard, monospace',
+                                        fontSize: 13,
+                                        lineHeight: 1.7,
+                                        color: '#374151',
+                                    }}>
+                                        {previewSource.content}
+                                    </pre>
+                                </div>
+                            </div>
+                            {/* 모달 푸터 */}
+                            <div style={{
+                                padding: '12px 20px', borderTop: '1px solid #f0f0f0',
+                                display: 'flex', justifyContent: 'flex-end',
+                            }}>
+                                <button
+                                    onClick={() => setPreviewSource(null)}
+                                    style={{
+                                        padding: '8px 20px', borderRadius: 10,
+                                        border: 'none', background: '#22c55e', color: '#fff',
+                                        fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                                    }}
+                                >
+                                    닫기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 토스트 + 모달 애니메이션 */}
                 <style>{`
                 @keyframes slideDown {
                     from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
                     to { opacity: 1; transform: translateX(-50%) translateY(0); }
+                }
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                @keyframes scaleIn {
+                    from { opacity: 0; transform: scale(0.95); }
+                    to { opacity: 1; transform: scale(1); }
                 }
             `}</style>
             </div>

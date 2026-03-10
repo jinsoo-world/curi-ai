@@ -75,3 +75,76 @@ export async function updateUserProfile(
         throw new Error(error.message || JSON.stringify(error))
     }
 }
+
+// ─── Handle 예약어 (기존 라우트와 충돌 방지) ───
+const RESERVED_HANDLES = new Set([
+    'admin', 'api', 'auth', 'login', 'mentors', 'chat', 'chats',
+    'creator', 'billing', 'onboarding', 'pricing', 'privacy',
+    'profile', 'terms', '_next', 'favicon', 'public', 'static',
+    'settings', 'help', 'support', 'about', 'blog', 'app',
+])
+
+// handle 형식: 영문 소문자 + 숫자 + 하이픈, 3~30자
+const HANDLE_REGEX = /^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/
+
+/**
+ * handle 형식 검증
+ */
+export function validateHandle(handle: string): { valid: boolean; error?: string } {
+    if (!handle) return { valid: false, error: 'handle을 입력해주세요.' }
+
+    const normalized = handle.toLowerCase().trim()
+
+    if (normalized.length < 3) return { valid: false, error: '3자 이상 입력해주세요.' }
+    if (normalized.length > 30) return { valid: false, error: '30자 이하로 입력해주세요.' }
+    if (!HANDLE_REGEX.test(normalized)) {
+        return { valid: false, error: '영문 소문자, 숫자, 하이픈(-)만 사용 가능합니다.' }
+    }
+    if (RESERVED_HANDLES.has(normalized)) {
+        return { valid: false, error: '사용할 수 없는 이름입니다.' }
+    }
+
+    return { valid: true }
+}
+
+/**
+ * 유저 handle 설정
+ */
+export async function setUserHandle(
+    db: SupabaseClient,
+    userId: string,
+    handle: string,
+) {
+    const normalized = handle.toLowerCase().trim()
+
+    // 형식 검증
+    const validation = validateHandle(normalized)
+    if (!validation.valid) {
+        throw new Error(validation.error)
+    }
+
+    // 중복 체크
+    const { data: existing } = await db
+        .from('users')
+        .select('id')
+        .eq('handle', normalized)
+        .neq('id', userId)
+        .maybeSingle()
+
+    if (existing) {
+        throw new Error('이미 사용 중인 handle입니다.')
+    }
+
+    // 저장
+    const { error } = await db
+        .from('users')
+        .update({ handle: normalized, updated_at: new Date().toISOString() })
+        .eq('id', userId)
+
+    if (error) {
+        console.error('[User Actions] setUserHandle error:', JSON.stringify(error))
+        throw new Error(error.message || JSON.stringify(error))
+    }
+
+    return normalized
+}

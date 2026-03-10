@@ -36,3 +36,43 @@ export async function getUserChatContext(
 
     return data
 }
+
+/**
+ * handle로 유저 조회 (크리에이터 프로필 페이지용)
+ */
+export async function getUserByHandle(
+    db: SupabaseClient,
+    handle: string,
+) {
+    const { data, error } = await db
+        .from('users')
+        .select('id, display_name, avatar_url, handle')
+        .eq('handle', handle)
+        .single()
+
+    if (error) {
+        console.error('[User Queries] getUserByHandle error:', JSON.stringify(error))
+    }
+    return data
+}
+
+/**
+ * handle 사용 가능 여부 (중복 체크)
+ */
+export async function isHandleAvailable(
+    db: SupabaseClient,
+    handle: string,
+    excludeUserId?: string,
+): Promise<boolean> {
+    let query = db
+        .from('users')
+        .select('id')
+        .eq('handle', handle)
+
+    if (excludeUserId) {
+        query = query.neq('id', excludeUserId)
+    }
+
+    const { data } = await query.maybeSingle()
+    return !data
+}

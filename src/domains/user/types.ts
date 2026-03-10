@@ -16,6 +16,7 @@ export interface ProfileUpdateData {
     interests?: string[]
     birth_year?: number | null
     gender?: string | null
+    handle?: string | null
 }
 
 /** 프로필 응답 데이터 */
