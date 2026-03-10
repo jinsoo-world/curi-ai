@@ -54,13 +54,88 @@ export async function GET() {
             friendsInvited = count || 0
         }
 
+        // 5) 클로버 이력 (credits 테이블)
+        const { data: creditHistory } = await supabaseAdmin
+            .from('credits')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(20)
+
+        // 6) 클로버 잔액 = credits 합계
+        const { data: balanceData } = await supabaseAdmin
+            .from('credits')
+            .select('amount')
+            .eq('user_id', user.id)
+        const actualBalance = (balanceData || []).reduce((s: number, r: { amount: number }) => s + r.amount, 0)
+
+        // users.clovers 동기화
+        if (actualBalance !== (profile?.clovers || 0)) {
+            await supabaseAdmin
+                .from('users')
+                .update({ clovers: actualBalance })
+                .eq('id', user.id)
+        }
+
+        // 7) 미션 완료 시 자동 적립 (이미 적립했는지 확인)
+        const existingTypes = (creditHistory || []).map((c: { type: string }) => c.type)
+
+        // AI 만들기 미션 (2개 이상 만들면 50 클로버)
+        if ((aiCreated || 0) >= 2 && !existingTypes.includes('mission_create_ai')) {
+            await supabaseAdmin.from('credits').insert({
+                user_id: user.id,
+                amount: 50,
+                type: 'mission_create_ai',
+                description: '미션 완료: AI 2개 만들기',
+            })
+        }
+
+        // 질문 10번 미션 (30 클로버)
+        if ((questionsAsked || 0) >= 10 && !existingTypes.includes('mission_ask_10')) {
+            await supabaseAdmin.from('credits').insert({
+                user_id: user.id,
+                amount: 30,
+                type: 'mission_ask_10',
+                description: '미션 완료: 10번 질문하기',
+            })
+        }
+
+        // 친구 초대 미션 (100 클로버 per 친구)
+        if (friendsInvited >= 1 && !existingTypes.includes('mission_invite')) {
+            await supabaseAdmin.from('credits').insert({
+                user_id: user.id,
+                amount: 100,
+                type: 'mission_invite',
+                description: `미션 완료: 친구 ${friendsInvited}명 초대`,
+            })
+        }
+
+        // 적립 후 최신 잔액 재계산
+        const { data: finalBalance } = await supabaseAdmin
+            .from('credits')
+            .select('amount')
+            .eq('user_id', user.id)
+        const finalClovers = (finalBalance || []).reduce((s: number, r: { amount: number }) => s + r.amount, 0)
+
+        // 최신 이력 다시 조회
+        const { data: finalHistory } = await supabaseAdmin
+            .from('credits')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(20)
+
+        // users.clovers 최종 업데이트
+        await supabaseAdmin.from('users').update({ clovers: finalClovers }).eq('id', user.id)
+
         return NextResponse.json({
             ok: true,
             aiCreated: aiCreated || 0,
             questionsAsked: questionsAsked || 0,
-            clovers: profile?.clovers || 0,
+            clovers: finalClovers,
             referralCode: profile?.referral_code || '',
             friendsInvited,
+            creditHistory: finalHistory || [],
         })
     } catch (err: unknown) {
         console.error('Mission status error:', err)

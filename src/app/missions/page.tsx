@@ -22,6 +22,7 @@ export default function MissionsPage() {
     const [user, setUser] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [clovers, setClovers] = useState(0)
+    const [creditHistory, setCreditHistory] = useState<any[]>([])
     const [missionStatus, setMissionStatus] = useState({
         aiCreated: 0,
         questionsAsked: 0,
@@ -51,6 +52,7 @@ export default function MissionsPage() {
                             friendClovers: (data.friendsInvited || 0) * 100,
                         })
                         setClovers(data.clovers || 0)
+                        setCreditHistory(data.creditHistory || [])
                         if (data.referralCode) setReferralCode(data.referralCode)
                     }
                 } catch (err) {
@@ -209,13 +211,10 @@ export default function MissionsPage() {
                                         🍀 {clovers.toLocaleString()}
                                     </div>
                                 </div>
-                                <div style={{
-                                    background: '#fff', borderRadius: 12,
-                                    padding: '10px 16px', border: '1px solid #dcfce7',
-                                }}>
-                                    <div style={{ fontSize: 11, color: '#9ca3af' }}>미션 보상</div>
-                                    <div style={{ fontSize: 16, fontWeight: 700, color: '#16a34a' }}>
-                                        🍀 {totalEarned}
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>총 적립</div>
+                                    <div style={{ fontSize: 14, fontWeight: 600, color: '#16a34a' }}>
+                                        +{creditHistory.filter((c: any) => c.amount > 0).reduce((s: number, c: any) => s + c.amount, 0)}
                                     </div>
                                 </div>
                             </div>
@@ -328,20 +327,63 @@ export default function MissionsPage() {
                                 </div>
                             )}
 
-                            {/* 클로버 안내 */}
+                            {/* 클로버 이력 */}
                             <div style={{
                                 marginTop: 24, background: '#fff', borderRadius: 16,
                                 border: '1px solid #f0f0f0', padding: '20px 24px',
                                 animation: 'fadeIn 0.6s ease',
                             }}>
-                                <h3 style={{ fontSize: 16, fontWeight: 700, color: '#18181b', marginBottom: 8, margin: 0 }}>
-                                    🍀 클로버란?
+                                <h3 style={{ fontSize: 16, fontWeight: 700, color: '#18181b', marginBottom: 16, margin: '0 0 16px' }}>
+                                    📜 클로버 이력
                                 </h3>
-                                <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.7, margin: '8px 0 0' }}>
-                                    클로버는 큐리 AI에서 미션을 수행하면 받을 수 있는 보상이에요.<br />
-                                    모은 클로버로 프리미엄 기능, 이모티콘, 기프티콘 등<br />
-                                    다양한 혜택과 교환할 수 있습니다! 🎁
-                                </p>
+                                {creditHistory.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '20px 0', color: '#9ca3af', fontSize: 14 }}>
+                                        아직 이력이 없어요. 미션을 완료하면 클로버가 적립돼요! 🍀
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                                        {creditHistory.map((credit: any, idx: number) => {
+                                            const isEarned = credit.amount > 0
+                                            const date = new Date(credit.created_at)
+                                            const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
+                                            const typeLabels: Record<string, string> = {
+                                                welcome_bonus: '🎉 웰컴 보너스',
+                                                mission_create_ai: '🤖 AI 만들기 미션',
+                                                mission_ask_10: '💬 10번 질문 미션',
+                                                mission_invite: '🎉 친구 초대 미션',
+                                                purchase: '💳 충전',
+                                                usage: '🛒 사용',
+                                                refund: '↩️ 환불',
+                                            }
+                                            return (
+                                                <div
+                                                    key={credit.id || idx}
+                                                    style={{
+                                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                        padding: '12px 0',
+                                                        borderBottom: idx < creditHistory.length - 1 ? '1px solid #f5f5f5' : 'none',
+                                                    }}
+                                                >
+                                                    <div>
+                                                        <div style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>
+                                                            {typeLabels[credit.type] || credit.description || credit.type}
+                                                        </div>
+                                                        <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
+                                                            {dateStr}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{
+                                                        fontSize: 15, fontWeight: 700,
+                                                        color: isEarned ? '#16a34a' : '#ef4444',
+                                                    }}>
+                                                        {isEarned ? '+' : ''}{credit.amount} 🍀
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+
                                 <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
                                     <Link href="/store" style={{
                                         flex: 1, textAlign: 'center',
