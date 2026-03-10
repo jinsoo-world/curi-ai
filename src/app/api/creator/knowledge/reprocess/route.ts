@@ -113,6 +113,23 @@ export async function POST() {
                         console.log('[Reprocess] Upstage keys:', Object.keys(pd))
                         textContent = extractTextFromUpstage(pd)
                         console.log('[Reprocess] Extracted text length:', textContent.length)
+                        // 디버그: 텍스트 추출 실패 시 응답 구조 저장
+                        if (!textContent.trim()) {
+                            const debugInfo = {
+                                responseKeys: Object.keys(pd),
+                                contentKeys: pd.content ? Object.keys(pd.content) : 'no content',
+                                contentHtmlLength: pd.content?.html?.length || 0,
+                                contentTextLength: pd.content?.text?.length || 0,
+                                contentMarkdownLength: pd.content?.markdown?.length || 0,
+                                elementsCount: Array.isArray(pd.elements) ? pd.elements.length : 0,
+                                rawContentPreview: JSON.stringify(pd.content || pd).slice(0, 300),
+                            }
+                            results.push({ id: source.id, title: source.title, status: 'no_text', debug: debugInfo })
+                            await admin.from('knowledge_sources')
+                                .update({ processing_status: 'failed' })
+                                .eq('id', source.id)
+                            continue
+                        }
                     } else {
                         const errText = await parseRes.text()
                         console.error('[Reprocess] Upstage error:', parseRes.status, errText.slice(0, 300))
