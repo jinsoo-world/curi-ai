@@ -19,6 +19,7 @@ interface Session {
     message_count: number
     last_message_at: string | null
     created_at: string
+    deleted_at: string | null
     mentors: { id: string; name: string; slug: string; avatar_url: string | null } | null
 }
 
@@ -31,6 +32,11 @@ interface UserDetail {
     concern: string | null
     onboarding_completed: boolean
     created_at: string
+    phone: string | null
+    marketing_consent: boolean | null
+    clovers: number | null
+    gender: string | null
+    referral_code: string | null
 }
 
 interface UserResponse {
@@ -178,7 +184,7 @@ export default function UserDetailPage() {
 
                 {/* 통계 카드 */}
                 <div style={{
-                    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+                    display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)',
                     gap: 12, marginTop: 20,
                 }}>
                     {[
@@ -186,6 +192,7 @@ export default function UserDetailPage() {
                         { label: '총 메시지', value: stats.totalMessages, icon: '📝' },
                         { label: '멘토 이용', value: stats.uniqueMentors, icon: '🤖' },
                         { label: '멘토', value: stats.mentorNames.join(', ') || '—', icon: '👤' },
+                        { label: '클로버', value: user.clovers || 0, icon: '🍀' },
                     ].map((s, i) => (
                         <div key={i} style={{
                             background: 'rgba(0,0,0,0.2)', borderRadius: 12,
@@ -200,6 +207,31 @@ export default function UserDetailPage() {
                                 fontVariantNumeric: 'tabular-nums',
                             }}>
                                 {typeof s.value === 'number' ? s.value.toLocaleString() : s.value}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* 프로필 상세 정보 */}
+                <div style={{
+                    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+                    gap: 10, marginTop: 14,
+                }}>
+                    {[
+                        { label: '휴대폰', value: user.phone || '—', icon: '📱' },
+                        { label: '성별', value: user.gender === '남' ? '🙍‍♂️ 남' : user.gender === '여' ? '🙍‍♀️ 여' : '—' },
+                        { label: '마케팅', value: user.marketing_consent ? '✅ 동의' : '❌ 미동의' },
+                        { label: '초대코드', value: user.referral_code || '—', icon: '🔗' },
+                    ].map((s, i) => (
+                        <div key={i} style={{
+                            background: 'rgba(0,0,0,0.15)', borderRadius: 10,
+                            padding: '10px 14px', textAlign: 'center',
+                        }}>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 3 }}>
+                                {(s as any).icon || ''} {s.label}
+                            </div>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>
+                                {s.value}
                             </div>
                         </div>
                     ))}
@@ -229,10 +261,13 @@ export default function UserDetailPage() {
 
                         return (
                             <div key={session.id} style={{
-                                background: isExpanded ? 'rgba(99,102,241,0.04)' : 'rgba(255,255,255,0.02)',
-                                border: `1px solid ${isExpanded ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                                background: session.deleted_at
+                                    ? 'rgba(239,68,68,0.06)'
+                                    : isExpanded ? 'rgba(99,102,241,0.04)' : 'rgba(255,255,255,0.02)',
+                                border: `1px solid ${session.deleted_at ? 'rgba(239,68,68,0.15)' : isExpanded ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.06)'}`,
                                 borderRadius: 16, overflow: 'hidden',
                                 transition: 'all 0.2s',
+                                opacity: session.deleted_at ? 0.6 : 1,
                             }}>
                                 {/* 세션 헤더 */}
                                 <button
@@ -260,8 +295,17 @@ export default function UserDetailPage() {
                                             }}>
                                                 {session.title || `${mentor?.name || '멘토'} 대화`}
                                             </div>
-                                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
-                                                {mentor?.name || '알 수 없음'} · {session.message_count || 0}개 메시지 · {formatRelative(session.last_message_at || session.created_at)}
+                                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                <span>{mentor?.name || '알 수 없음'} · {session.message_count || 0}개 메시지 · {formatRelative(session.last_message_at || session.created_at)}</span>
+                                                {session.deleted_at && (
+                                                    <span style={{
+                                                        fontSize: 10, color: '#ef4444',
+                                                        background: 'rgba(239,68,68,0.12)',
+                                                        padding: '2px 6px', borderRadius: 6, fontWeight: 600,
+                                                    }}>
+                                                        🗑 삭제됨 ({formatRelative(session.deleted_at)})
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

@@ -18,7 +18,7 @@ export async function GET(
         // 유저 기본 정보
         const { data: user, error: userError } = await supabase
             .from('users')
-            .select('id, email, display_name, avatar_url, membership_tier, concern, onboarding_completed, created_at')
+            .select('id, email, display_name, avatar_url, membership_tier, concern, onboarding_completed, created_at, phone, marketing_consent, clovers, gender, referral_code')
             .eq('id', userId)
             .single()
 
@@ -30,7 +30,7 @@ export async function GET(
         const { data: sessions } = await supabase
             .from('chat_sessions')
             .select(`
-                id, title, message_count, last_message_at, created_at,
+                id, title, message_count, last_message_at, created_at, deleted_at,
                 mentors ( id, name, slug, avatar_url )
             `)
             .eq('user_id', userId)
