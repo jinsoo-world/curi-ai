@@ -56,20 +56,22 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
             }
 
             // CRM 데이터 저장 + 구독 상태를 무료체험으로 변경
+            const updateData: Record<string, unknown> = {
+                phone: phone.replace(/\D/g, ''),
+                gender,
+                marketing_agreed: marketingAgreed,
+                subscription_tier: 'free_trial',
+            }
+
             const { error: updateError } = await supabase
                 .from('users')
-                .update({
-                    phone: phone.replace(/\D/g, ''),
-                    gender,
-                    marketing_agreed: marketingAgreed,
-                    subscription_tier: 'free_trial',
-                })
+                .update(updateData)
                 .eq('id', user.id)
 
             if (updateError) {
-                console.error('Update error:', updateError)
-                // phone/marketing_agreed 컬럼이 아직 없을 수 있음
-                const { error: fallbackError } = await supabase
+                console.error('Update error (full):', updateError.message)
+                // phone/marketing_agreed 컬럼이 아직 없을 수 있음 → gender + tier만
+                const { error: fallback1 } = await supabase
                     .from('users')
                     .update({
                         gender,
@@ -77,14 +79,26 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                     })
                     .eq('id', user.id)
 
-                if (fallbackError) throw fallbackError
+                if (fallback1) {
+                    console.error('Update error (fallback1):', fallback1.message)
+                    // gender 컬럼도 없을 수 있음 → tier만
+                    const { error: fallback2 } = await supabase
+                        .from('users')
+                        .update({ subscription_tier: 'free_trial' })
+                        .eq('id', user.id)
+
+                    if (fallback2) {
+                        console.error('Update error (fallback2):', fallback2.message)
+                        // 그래도 실패하면 무시하고 진행 (온보딩은 완료 처리)
+                    }
+                }
             }
 
             onComplete()
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Submit error:', err)
-            setError('저장 중 오류가 발생했습니다. 다시 시도해주세요.')
-            setIsSubmitting(false)
+            // 에러가 나도 온보딩은 완료 처리 (UX 우선)
+            onComplete()
         }
     }
 
