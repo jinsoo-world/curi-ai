@@ -409,16 +409,48 @@ export default function CreatorManagePage() {
                                             {new Date(m.created_at).toLocaleDateString('ko-KR')}
                                         </div>
 
-                                        {/* 상태 */}
-                                        <div>
+                                        {/* 상태 토글 */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <div
+                                                onClick={async () => {
+                                                    const newVal = !m.is_active
+                                                    // 로컬 상태 즉시 업데이트
+                                                    setMentors(prev => prev.map(item =>
+                                                        item.id === m.id ? { ...item, is_active: newVal } : item
+                                                    ))
+                                                    try {
+                                                        await fetch('/api/creator/mentor/update', {
+                                                            method: 'PATCH',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ mentorId: m.id, isActive: newVal }),
+                                                        })
+                                                    } catch {
+                                                        // 롤백
+                                                        setMentors(prev => prev.map(item =>
+                                                            item.id === m.id ? { ...item, is_active: !newVal } : item
+                                                        ))
+                                                    }
+                                                }}
+                                                style={{
+                                                    width: 36, height: 20, borderRadius: 10,
+                                                    background: m.is_active ? '#22c55e' : '#d1d5db',
+                                                    cursor: 'pointer', transition: 'background 0.2s',
+                                                    display: 'flex', alignItems: 'center', padding: '0 2px',
+                                                    flexShrink: 0,
+                                                }}
+                                            >
+                                                <div style={{
+                                                    width: 16, height: 16, borderRadius: '50%',
+                                                    background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                                    transition: 'transform 0.2s',
+                                                    transform: m.is_active ? 'translateX(16px)' : 'translateX(0)',
+                                                }} />
+                                            </div>
                                             <span style={{
                                                 fontSize: 11, fontWeight: 600,
-                                                padding: '3px 10px',
-                                                borderRadius: 20,
-                                                color: st.color,
-                                                background: st.bg,
+                                                color: m.is_active ? '#15803d' : '#9ca3af',
                                             }}>
-                                                {st.label}
+                                                {m.is_active ? 'Live' : '배포 전'}
                                             </span>
                                         </div>
 

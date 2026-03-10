@@ -93,32 +93,35 @@ export async function GET() {
 
         // AI 만들기 미션 (2개 이상 만들면 50 클로버)
         if ((aiCreated || 0) >= 2 && !existingTypes.includes('mission_create_ai')) {
-            await supabaseAdmin.from('credits').insert({
+            const { error: e1 } = await supabaseAdmin.from('credits').insert({
                 user_id: user.id,
                 amount: 50,
                 type: 'mission_create_ai',
                 description: '미션 완료: AI 2개 만들기',
             })
+            if (e1) console.error('[Credits] mission_create_ai insert failed:', e1.message, e1.code, e1.details)
         }
 
         // 질문 10번 미션 (30 클로버)
         if ((questionsAsked || 0) >= 10 && !existingTypes.includes('mission_ask_10')) {
-            await supabaseAdmin.from('credits').insert({
+            const { error: e2 } = await supabaseAdmin.from('credits').insert({
                 user_id: user.id,
                 amount: 30,
                 type: 'mission_ask_10',
                 description: '미션 완료: 10번 질문하기',
             })
+            if (e2) console.error('[Credits] mission_ask_10 insert failed:', e2.message, e2.code, e2.details)
         }
 
         // 친구 초대 미션 (100 클로버 per 친구)
         if (friendsInvited >= 1 && !existingTypes.includes('mission_invite')) {
-            await supabaseAdmin.from('credits').insert({
+            const { error: e3 } = await supabaseAdmin.from('credits').insert({
                 user_id: user.id,
                 amount: 100,
                 type: 'mission_invite',
                 description: `미션 완료: 친구 ${friendsInvited}명 초대`,
             })
+            if (e3) console.error('[Credits] mission_invite insert failed:', e3.message, e3.code, e3.details)
         }
 
         // 적립 후 최신 잔액 재계산

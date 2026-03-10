@@ -861,7 +861,21 @@ export default function CreatorEditPage() {
                                 <span style={{ fontSize: 11, fontWeight: 600, color: isActive ? '#16a34a' : '#9ca3af' }}>{isActive ? '배포 ON' : '배포 OFF'}</span>
                                 {/* 활성화 토글 */}
                                 <div
-                                    onClick={() => setIsActive(!isActive)}
+                                    onClick={async () => {
+                                        const newVal = !isActive
+                                        setIsActive(newVal)
+                                        try {
+                                            await fetch('/api/creator/mentor/update', {
+                                                method: 'PATCH',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ mentorId, isActive: newVal }),
+                                            })
+                                            setToast({ type: 'success', message: newVal ? '✅ 배포 ON — 큐리AI에 공개됩니다' : '⏸️ 배포 OFF — 비공개 상태입니다' })
+                                        } catch {
+                                            setIsActive(!newVal) // 롤백
+                                            setToast({ type: 'error', message: '상태 변경 실패' })
+                                        }
+                                    }}
                                     title={isActive ? '활성화됨 — 멘토 목록에 노출' : '비활성화 — 멘토 목록에서 숨김'}
                                     style={{
                                         width: 44, height: 24, borderRadius: 12,
