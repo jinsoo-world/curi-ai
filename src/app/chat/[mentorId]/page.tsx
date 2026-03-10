@@ -168,10 +168,11 @@ export default function ChatPage() {
                 // localStorage에서 이전 게스트 대화 복원
                 const guestMsgs = loadGuestMessages(mentorId)
                 if (guestMsgs.length > 0) {
-                    const restored = guestMsgs.map((m: { role: string; content: string }, i: number) => ({
+                    const restored = guestMsgs.map((m: { role: string; content: string; createdAt?: string }, i: number) => ({
                         id: `guest-msg-${i}`,
                         role: m.role as 'user' | 'assistant',
                         content: m.content,
+                        createdAt: m.createdAt || undefined,
                     }))
                     setMessages(restored)
                     setShowSuggestions(false)
@@ -238,10 +239,11 @@ export default function ChatPage() {
                     if (mergeRes.ok && mergeData.session) {
                         setSessionId(mergeData.session.id)
                         // 이관된 메시지를 화면에 표시
-                        const restored = guestMsgs.map((m: { role: string; content: string }, i: number) => ({
+                        const restored = guestMsgs.map((m: { role: string; content: string; createdAt?: string }, i: number) => ({
                             id: `merged-${i}`,
                             role: m.role as 'user' | 'assistant',
                             content: m.content,
+                            createdAt: m.createdAt || undefined,
                         }))
                         setMessages(restored)
                         setShowSuggestions(false)
@@ -365,13 +367,14 @@ export default function ChatPage() {
             id: `user-${now}`,
             role: 'user',
             content: content.trim(),
+            createdAt: new Date().toISOString(),
         }
 
         const assistantId = `assistant-${now}`
         const baseMessages: ChatMessage[] = [...messages, userMessage]
 
         // 빈 어시스턴트 메시지 추가 (타이핑 인디케이터 표시)
-        setMessages([...baseMessages, { id: assistantId, role: 'assistant', content: '' }])
+        setMessages([...baseMessages, { id: assistantId, role: 'assistant', content: '', createdAt: new Date().toISOString() }])
         setInput('')
         setIsStreaming(true)
         setShowSuggestions(false)
@@ -424,14 +427,14 @@ export default function ChatPage() {
                                 const updatedContent = fullContent
                                 setMessages([
                                     ...baseMessages,
-                                    { id: assistantId, role: 'assistant', content: updatedContent },
+                                    { id: assistantId, role: 'assistant', content: updatedContent, createdAt: new Date().toISOString() },
                                 ])
                             }
                             if (data.done) {
                                 setIsStreaming(false)
                                 const finalMessages: ChatMessage[] = [
                                     ...baseMessages,
-                                    { id: assistantId, role: 'assistant', content: fullContent },
+                                    { id: assistantId, role: 'assistant', content: fullContent, createdAt: new Date().toISOString() },
                                 ]
                                 setMessages(finalMessages)
                                 fetchSuggestions(finalMessages)
@@ -447,7 +450,7 @@ export default function ChatPage() {
             if (fullContent) {
                 setMessages([
                     ...baseMessages,
-                    { id: assistantId, role: 'assistant', content: fullContent },
+                    { id: assistantId, role: 'assistant', content: fullContent, createdAt: new Date().toISOString() },
                 ])
             }
             // 비로그인 사용자: localStorage 카운트 증가 + 대화 저장
@@ -455,16 +458,16 @@ export default function ChatPage() {
                 incrementGuestMessageCount()
                 // 게스트 메시지를 localStorage에 저장 (로그인 시 이관용)
                 const allMsgs = fullContent
-                    ? [...baseMessages, { id: assistantId, role: 'assistant' as const, content: fullContent }]
+                    ? [...baseMessages, { id: assistantId, role: 'assistant' as const, content: fullContent, createdAt: new Date().toISOString() }]
                     : baseMessages
-                saveGuestMessages(mentorId, allMsgs.map(m => ({ role: m.role, content: m.content })))
+                saveGuestMessages(mentorId, allMsgs.map(m => ({ role: m.role, content: m.content, createdAt: m.createdAt })))
             }
             setIsStreaming(false)
         } catch (error) {
             console.error('Chat error:', error)
             setMessages([
                 ...baseMessages,
-                { id: assistantId, role: 'assistant', content: '앗, 잠깐 문제가 생겼어요. 다시 한번 말씀해주실래요?' },
+                { id: assistantId, role: 'assistant', content: '앗, 잠깐 문제가 생겼어요. 다시 한번 말씀해주실래요?', createdAt: new Date().toISOString() },
             ])
             setIsStreaming(false)
         }

@@ -236,6 +236,32 @@ function TypingIndicator() {
     )
 }
 
+/** 시간 포맷 — 오후 4:04 형태 */
+function formatTime(dateStr?: string): string {
+    if (!dateStr) return ''
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return ''
+    return d.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit', hour12: true })
+}
+
+/** 날짜 구분선 텍스트 — 📅 2026년 3월 8일 일요일 */
+function formatDateSeparator(dateStr: string): string {
+    const d = new Date(dateStr)
+    return d.toLocaleDateString('ko-KR', {
+        year: 'numeric', month: 'long', day: 'numeric', weekday: 'long',
+    })
+}
+
+/** 같은 날짜인지 비교 */
+function isSameDay(a?: string, b?: string): boolean {
+    if (!a || !b) return false
+    const da = new Date(a)
+    const db = new Date(b)
+    return da.getFullYear() === db.getFullYear() &&
+        da.getMonth() === db.getMonth() &&
+        da.getDate() === db.getDate()
+}
+
 export default function ChatMessages({
     messages,
     mentor,
@@ -245,108 +271,142 @@ export default function ChatMessages({
 }: ChatMessagesProps) {
     return (
         <>
-            {messages.map((msg) => {
+            {messages.map((msg, idx) => {
                 const isUser = msg.role === 'user'
                 const isEmptyAssistant = !isUser && !msg.content
+                const prevMsg = idx > 0 ? messages[idx - 1] : null
+                const showDateSeparator = msg.createdAt && !isSameDay(prevMsg?.createdAt, msg.createdAt)
+                const timeStr = formatTime(msg.createdAt)
 
                 return (
-                    <div
-                        key={msg.id}
-                        className="msg-row"
-                        style={{
-                            display: 'flex',
-                            flexDirection: isUser ? 'row-reverse' : 'row',
-                            alignItems: 'flex-start',
-                            gap: 14,
-                            animation: 'msgFadeIn 0.3s ease-out',
-                        }}
-                    >
-                        {/* 멘토 아바타 — 작고 깔끔하게 */}
-                        {!isUser && (
-                            mentorImage ? (
-                                <img
-                                    src={mentorImage}
-                                    alt={mentor.name}
-                                    style={{
+                    <div key={msg.id}>
+                        {/* 날짜 구분선 */}
+                        {showDateSeparator && msg.createdAt && (
+                            <div style={{
+                                display: 'flex', justifyContent: 'center',
+                                margin: idx === 0 ? '0 0 20px' : '16px 0 20px',
+                            }}>
+                                <span style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                                    padding: '6px 16px',
+                                    borderRadius: 20,
+                                    background: '#f1f5f9',
+                                    color: '#64748b',
+                                    fontSize: 13,
+                                    fontWeight: 500,
+                                }}>
+                                    📅 {formatDateSeparator(msg.createdAt)}
+                                </span>
+                            </div>
+                        )}
+
+                        <div
+                            className="msg-row"
+                            style={{
+                                display: 'flex',
+                                flexDirection: isUser ? 'row-reverse' : 'row',
+                                alignItems: 'flex-start',
+                                gap: 14,
+                                animation: 'msgFadeIn 0.3s ease-out',
+                            }}
+                        >
+                            {/* 멘토 아바타 — 작고 깔끔하게 */}
+                            {!isUser && (
+                                mentorImage ? (
+                                    <img
+                                        src={mentorImage}
+                                        alt={mentor.name}
+                                        style={{
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: '50%',
+                                            objectFit: 'cover',
+                                            flexShrink: 0,
+                                            marginTop: 2,
+                                        }}
+                                    />
+                                ) : (
+                                    <div style={{
                                         width: 36,
                                         height: 36,
                                         borderRadius: '50%',
-                                        objectFit: 'cover',
+                                        background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: 18,
                                         flexShrink: 0,
                                         marginTop: 2,
-                                    }}
-                                />
-                            ) : (
-                                <div style={{
-                                    width: 36,
-                                    height: 36,
-                                    borderRadius: '50%',
-                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: 18,
-                                    flexShrink: 0,
-                                    marginTop: 2,
-                                }}>
-                                    {mentorEmoji}
-                                </div>
-                            )
-                        )}
-
-                        {/* 이름 + 메시지 + 액션 */}
-                        <div style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            maxWidth: isUser ? '75%' : '80%',
-                            minWidth: 0,
-                        }}>
-                            {/* 멘토 이름 — 간결하게 */}
-                            {!isUser && (
-                                <div style={{
-                                    fontSize: 14,
-                                    fontWeight: 600,
-                                    color: '#64748b',
-                                    marginBottom: 6,
-                                    letterSpacing: '-0.01em',
-                                }}>
-                                    {mentor.name}
-                                </div>
+                                    }}>
+                                        {mentorEmoji}
+                                    </div>
+                                )
                             )}
 
-                            {/* 메시지 본문 */}
+                            {/* 이름 + 메시지 + 시간 + 액션 */}
                             <div style={{
-                                ...(isUser ? {
-                                    /* 유저: 부드러운 pill 버블 */
-                                    padding: '12px 18px',
-                                    borderRadius: '20px 20px 6px 20px',
-                                    background: '#22c55e',
-                                    color: '#fff',
-                                    fontSize: 15,
-                                    lineHeight: 1.7,
-                                    wordBreak: 'break-word' as const,
-                                } : {
-                                    /* AI: 배경 없이 깔끔한 텍스트 (제미나이 스타일) */
-                                    padding: '4px 0',
-                                    color: '#1e293b',
-                                    fontSize: 15,
-                                    lineHeight: 1.8,
-                                    wordBreak: 'break-word' as const,
-                                }),
+                                display: 'flex',
+                                flexDirection: 'column',
+                                maxWidth: isUser ? '75%' : '80%',
+                                minWidth: 0,
                             }}>
-                                {isEmptyAssistant ? (
-                                    <TypingIndicator />
-                                ) : isUser ? (
-                                    <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>
-                                ) : (
-                                    <MarkdownContent content={msg.content} />
+                                {/* 멘토 이름 — 간결하게 */}
+                                {!isUser && (
+                                    <div style={{
+                                        fontSize: 14,
+                                        fontWeight: 600,
+                                        color: '#64748b',
+                                        marginBottom: 6,
+                                        letterSpacing: '-0.01em',
+                                    }}>
+                                        {mentor.name}
+                                    </div>
+                                )}
+
+                                {/* 메시지 본문 */}
+                                <div style={{
+                                    ...(isUser ? {
+                                        padding: '12px 18px',
+                                        borderRadius: '20px 20px 6px 20px',
+                                        background: '#22c55e',
+                                        color: '#fff',
+                                        fontSize: 15,
+                                        lineHeight: 1.7,
+                                        wordBreak: 'break-word' as const,
+                                    } : {
+                                        padding: '4px 0',
+                                        color: '#1e293b',
+                                        fontSize: 15,
+                                        lineHeight: 1.8,
+                                        wordBreak: 'break-word' as const,
+                                    }),
+                                }}>
+                                    {isEmptyAssistant ? (
+                                        <TypingIndicator />
+                                    ) : isUser ? (
+                                        <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>
+                                    ) : (
+                                        <MarkdownContent content={msg.content} />
+                                    )}
+                                </div>
+
+                                {/* 시간 표시 */}
+                                {timeStr && msg.content && (
+                                    <div style={{
+                                        fontSize: 11,
+                                        color: '#b0b8c1',
+                                        marginTop: 4,
+                                        textAlign: isUser ? 'right' : 'left',
+                                    }}>
+                                        {timeStr}
+                                    </div>
+                                )}
+
+                                {/* 액션 아이콘 — hover 시 표시 */}
+                                {msg.content && !isEmptyAssistant && (
+                                    <MessageActions message={msg} />
                                 )}
                             </div>
-
-                            {/* 액션 아이콘 — hover 시 표시 */}
-                            {msg.content && !isEmptyAssistant && (
-                                <MessageActions message={msg} />
-                            )}
                         </div>
                     </div>
                 )

@@ -74,10 +74,7 @@ export default function CreatorCreatePage() {
             setError('한줄 소개를 입력해주세요.')
             return
         }
-        if (!template) {
-            setError('AI 성격을 선택해주세요.')
-            return
-        }
+
         // 파일 처리 중이면 경고
         const processingFiles = uploadedFiles.filter(f => f.status === 'uploading' || f.status === 'processing')
         if (processingFiles.length > 0) {
@@ -143,11 +140,7 @@ export default function CreatorCreatePage() {
 
             // Step 2: 페르소나 설정
             const selectedTemplate = PERSONA_TEMPLATES.find(t => t.id === template)
-            const basePrompt = selectedTemplate?.defaultPromptStyle || ''
-            const customPart = customPrompt.trim()
-            const fullPrompt = customPart
-                ? `${basePrompt}\n\n## 크리에이터 추가 지시사항\n${customPart}`
-                : basePrompt
+            const fullPrompt = selectedTemplate?.defaultPromptStyle || ''
 
             const res2 = await fetch('/api/creator/mentor', {
                 method: 'POST',
@@ -484,7 +477,7 @@ export default function CreatorCreatePage() {
 
                         {/* ── AI 성격 선택 ── */}
                         <div style={styles.card}>
-                            <label style={{ ...styles.label, marginBottom: 8, fontSize: 15 }}>🎭 AI 성격 선택 *</label>
+                            <label style={{ ...styles.label, marginBottom: 8, fontSize: 15 }}>🎭 AI 성격 선택 (선택)</label>
                             <div className="template-grid" style={styles.templateGrid}>
                                 {PERSONA_TEMPLATES.map(t => (
                                     <button
@@ -502,18 +495,6 @@ export default function CreatorCreatePage() {
                                         </span>
                                     </button>
                                 ))}
-                            </div>
-
-                            <div style={{ ...styles.field, marginTop: 8 }}>
-                                <label style={styles.label}>추가 지시사항 (선택)</label>
-                                <p style={styles.hint}>원하는 대화 스타일을 자유롭게 적어주세요</p>
-                                <textarea
-                                    style={styles.textarea}
-                                    placeholder={"예:\n- 반드시 실전 사례를 들어서 설명해줘\n- 질문을 2개 이상 연속으로 하지 마\n- 대화 끝에 항상 액션 아이템을 줘"}
-                                    value={customPrompt}
-                                    onChange={e => setCustomPrompt(e.target.value)}
-                                    rows={3}
-                                />
                             </div>
                         </div>
 
