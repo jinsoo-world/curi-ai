@@ -36,6 +36,8 @@ export default function ProfilePage() {
     const [editInterests, setEditInterests] = useState<string[]>([])
     const [editGender, setEditGender] = useState('')
     const [editBirthYear, setEditBirthYear] = useState('')
+    const [editPhone, setEditPhone] = useState('')
+    const [editMarketingConsent, setEditMarketingConsent] = useState(false)
 
     useEffect(() => {
         async function loadProfile() {
@@ -57,6 +59,8 @@ export default function ProfilePage() {
                         setEditInterests(data.profile.interests || [])
                         setEditGender(data.profile.gender || '')
                         setEditBirthYear(data.profile.birth_year?.toString() || '')
+                        setEditPhone(data.profile.phone || '')
+                        setEditMarketingConsent(data.profile.marketing_consent || false)
                     }
                     if (data.subscription) setSubscription(data.subscription)
                     if (data.google_name) setGoogleName(data.google_name)
@@ -74,6 +78,8 @@ export default function ProfilePage() {
                         setEditInterests(data.interests || [])
                         setEditGender(data.gender || '')
                         setEditBirthYear(data.birth_year?.toString() || '')
+                        setEditPhone(data.phone || '')
+                        setEditMarketingConsent(data.marketing_consent || false)
                     }
                 }
 
@@ -156,6 +162,8 @@ export default function ProfilePage() {
         setEditInterests(profile?.interests || [])
         setEditGender(profile?.gender || '')
         setEditBirthYear(profile?.birth_year?.toString() || '')
+        setEditPhone(profile?.phone || '')
+        setEditMarketingConsent(profile?.marketing_consent || false)
         setIsEditing(true)
         setSaveMessage('')
     }
@@ -183,6 +191,8 @@ export default function ProfilePage() {
                 body: JSON.stringify({
                     display_name: editName.trim() || null,
                     gender: editGender || null,
+                    phone: editPhone.trim() || null,
+                    marketing_consent: editMarketingConsent,
                 }),
             })
 
@@ -196,12 +206,16 @@ export default function ProfilePage() {
                     ...prev,
                     display_name: editName.trim(),
                     gender: editGender,
+                    phone: editPhone.trim(),
+                    marketing_consent: editMarketingConsent,
                 }))
                 setIsEditing(false)
                 setSaveMessage('저장되었습니다 ✓')
                 setTimeout(() => setSaveMessage(''), 3000)
                 // 사이드바 프로필 즉시 반영
                 window.dispatchEvent(new Event('profile_updated'))
+                // 미션 보상 페이지로 (30클로버 적립)
+                router.push('/missions?reward_earned=profile_update&amount=30')
             }
         } catch (err) {
             console.error('Profile save error:', err)
@@ -425,10 +439,26 @@ export default function ProfilePage() {
                                         </div>
 
                                         {/* 성별 */}
-                                        <div>
+                                        <div style={{ marginBottom: 20 }}>
                                             <div style={labelStyle}>성별</div>
                                             <div style={{ fontSize: 15, color: '#18181b' }}>
                                                 {profile?.gender === 'female' ? '👩 여성' : profile?.gender === 'male' ? '👨 남성' : profile?.gender === 'other' ? '😊 기타' : <span style={{ color: '#d1d5db' }}>미설정</span>}
+                                            </div>
+                                        </div>
+
+                                        {/* 휴대폰번호 */}
+                                        <div style={{ marginBottom: 20 }}>
+                                            <div style={labelStyle}>휴대폰번호</div>
+                                            <div style={{ fontSize: 15, color: '#18181b' }}>
+                                                {profile?.phone || <span style={{ color: '#d1d5db' }}>미설정</span>}
+                                            </div>
+                                        </div>
+
+                                        {/* 마케팅 수신 동의 */}
+                                        <div>
+                                            <div style={labelStyle}>마케팅 수신 동의</div>
+                                            <div style={{ fontSize: 15, color: profile?.marketing_consent ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
+                                                {profile?.marketing_consent ? '✅ 동의함' : '❌ 미동의'}
                                             </div>
                                         </div>
                                     </>
@@ -492,6 +522,64 @@ export default function ProfilePage() {
                                                         </button>
                                                     )
                                                 })}
+                                            </div>
+                                        </div>
+
+                                        {/* 휴대폰번호 편집 */}
+                                        <div style={{ marginBottom: 24 }}>
+                                            <div style={labelStyle}>휴대폰번호</div>
+                                            <input
+                                                type="tel"
+                                                value={editPhone}
+                                                onChange={(e) => setEditPhone(e.target.value)}
+                                                placeholder="010-0000-0000"
+                                                style={{
+                                                    width: '100%', padding: '12px 16px',
+                                                    borderRadius: 12, border: '2px solid #e4e4e7',
+                                                    fontSize: 16, outline: 'none',
+                                                    transition: 'border-color 200ms',
+                                                    boxSizing: 'border-box',
+                                                }}
+                                                onFocus={(e) => e.target.style.borderColor = '#22c55e'}
+                                                onBlur={(e) => e.target.style.borderColor = '#e4e4e7'}
+                                            />
+                                        </div>
+
+                                        {/* 마케팅 수신 동의 */}
+                                        <div style={{ marginBottom: 24 }}>
+                                            <div style={labelStyle}>마케팅 수신 동의</div>
+                                            <button
+                                                onClick={() => setEditMarketingConsent(!editMarketingConsent)}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: 12,
+                                                    width: '100%', padding: '14px 16px',
+                                                    borderRadius: 12,
+                                                    border: `2px solid ${editMarketingConsent ? '#22c55e' : '#e4e4e7'}`,
+                                                    background: editMarketingConsent ? '#f0fdf4' : '#fff',
+                                                    cursor: 'pointer', transition: 'all 200ms',
+                                                    fontSize: 15, color: '#18181b', textAlign: 'left',
+                                                }}
+                                            >
+                                                <div style={{
+                                                    width: 44, height: 24, borderRadius: 12,
+                                                    background: editMarketingConsent ? '#22c55e' : '#d1d5db',
+                                                    position: 'relative', transition: 'background 200ms',
+                                                    flexShrink: 0,
+                                                }}>
+                                                    <div style={{
+                                                        width: 20, height: 20, borderRadius: '50%',
+                                                        background: '#fff', position: 'absolute',
+                                                        top: 2, left: editMarketingConsent ? 22 : 2,
+                                                        transition: 'left 200ms',
+                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                                    }} />
+                                                </div>
+                                                <span style={{ fontWeight: 500 }}>
+                                                    {editMarketingConsent ? '마케팅 수신에 동의합니다' : '마케팅 수신에 동의하지 않습니다'}
+                                                </span>
+                                            </button>
+                                            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 6, lineHeight: 1.5 }}>
+                                                이벤트, 할인, 새 기능 소식을 받을 수 있습니다.
                                             </div>
                                         </div>
 

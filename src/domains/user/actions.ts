@@ -65,6 +65,8 @@ export async function updateUserProfile(
     if ('birth_year' in data) updateData.birth_year = data.birth_year || null
     if ('gender' in data) updateData.gender = data.gender || null
     if ('avatar_url' in data) updateData.avatar_url = data.avatar_url || null
+    if ('phone' in data) updateData.phone = data.phone || null
+    if ('marketing_consent' in data) updateData.marketing_consent = data.marketing_consent ?? false
 
     const { error } = await db
         .from('users')

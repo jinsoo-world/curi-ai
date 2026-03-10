@@ -18,6 +18,8 @@ export interface ProfileUpdateData {
     gender?: string | null
     handle?: string | null
     avatar_url?: string | null
+    phone?: string | null
+    marketing_consent?: boolean | null
 }
 
 /** 프로필 응답 데이터 */

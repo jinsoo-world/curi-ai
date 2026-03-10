@@ -68,9 +68,12 @@ export async function GET() {
         // 3) 프로필
         const { data: profile } = await supabaseAdmin
             .from('users')
-            .select('clovers, referral_code')
+            .select('clovers, referral_code, phone, gender, marketing_consent')
             .eq('id', user.id)
             .single()
+
+        // 프로필 업데이트 완료 여부 (phone 또는 gender가 있으면)
+        const profileUpdated = !!(profile?.phone || profile?.gender)
 
         // 4) 친구 초대 수
         let friendsInvited = 0
@@ -142,6 +145,11 @@ export async function GET() {
                 newCredits.push({ type: 'mission_invite', amount: 100, description: `미션 완료: 친구 ${friendsInvited}명 초대` })
             }
 
+            // 프로필 업데이트 미션 (30 클로버)
+            if (profileUpdated && !existingTypes.includes('mission_profile_update')) {
+                newCredits.push({ type: 'mission_profile_update', amount: 30, description: '미션 완료: 마이페이지 업데이트' })
+            }
+
             // 일괄 적립
             for (const credit of newCredits) {
                 const { error: insertErr } = await supabaseAdmin.from('credits').insert({
@@ -198,6 +206,11 @@ export async function GET() {
                 totalEarned += 100
                 creditHistory.push({ type: 'mission_invite', amount: 100, description: `미션 완료: 친구 ${friendsInvited}명 초대`, created_at: now })
             }
+            // 프로필 업데이트 미션
+            if (profileUpdated) {
+                totalEarned += 30
+                creditHistory.push({ type: 'mission_profile_update', amount: 30, description: '미션 완료: 마이페이지 업데이트', created_at: now })
+            }
 
             finalClovers = totalEarned
             if (totalEarned > 0) {
@@ -214,6 +227,7 @@ export async function GET() {
             friendsInvited,
             sharesToday,
             creditHistory,
+            profileUpdated,
         })
     } catch (err: unknown) {
         console.error('Mission status error:', err)

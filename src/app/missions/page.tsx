@@ -30,6 +30,7 @@ export default function MissionsPage() {
         friendsInvited: 0,
         friendClovers: 0,
         sharesToday: 0,
+        profileUpdated: false,
     })
     const [copied, setCopied] = useState(false)
     const [showInviteModal, setShowInviteModal] = useState(false)
@@ -65,6 +66,7 @@ export default function MissionsPage() {
                             friendsInvited: data.friendsInvited || 0,
                             friendClovers: (data.friendsInvited || 0) * 100,
                             sharesToday: data.sharesToday || 0,
+                            profileUpdated: data.profileUpdated || false,
                         })
                         setClovers(data.clovers || 0)
                         setCreditHistory(data.creditHistory || [])
@@ -96,6 +98,7 @@ export default function MissionsPage() {
             const labels: Record<string, string> = {
                 ai_create: '🤖 내 AI 만들기 완료!',
                 questions_10: '💬 10번 질문 미션 완료!',
+                profile_update: '👤 마이페이지 업데이트 완료!',
             }
             setTimeout(() => {
                 showCloverAnimation(amount, labels[rewardType] || '미션 완료!')
@@ -220,6 +223,19 @@ export default function MissionsPage() {
             completed: missionStatus.friendsInvited >= 1,
             action: () => setShowInviteModal(true),
             actionLabel: '초대하기',
+        },
+        {
+            id: 'profile-update',
+            icon: '👤',
+            title: '마이페이지 업데이트',
+            description: '마이페이지에서 프로필을 업데이트하세요',
+            reward: 30,
+            rewardLabel: '🍀 +30',
+            progress: missionStatus.profileUpdated ? 1 : 0,
+            goal: 1,
+            completed: missionStatus.profileUpdated,
+            action: () => window.location.href = '/profile',
+            actionLabel: '마이페이지',
         },
     ]
 
@@ -476,6 +492,7 @@ export default function MissionsPage() {
                                                 mission_ask_10: '💬 10번 질문 미션',
                                                 mission_invite: '🎉 친구 초대 미션',
                                                 mission_share: '📤 공유 미션',
+                                                mission_profile_update: '👤 마이페이지 업데이트',
                                                 purchase: '💳 충전',
                                                 usage: '🛒 사용',
                                                 refund: '↩️ 환불',
