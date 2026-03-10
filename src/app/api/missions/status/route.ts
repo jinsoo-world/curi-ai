@@ -16,7 +16,6 @@ export async function GET() {
             return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
         }
 
-        // service_role로 RLS 우회해서 정확한 카운트 조회
         // 1) AI 몇 개 만들었는지
         const { count: aiCreated } = await supabaseAdmin
             .from('mentors')
@@ -24,20 +23,22 @@ export async function GET() {
             .eq('created_by', user.id)
 
         // 2) 질문 횟수 (user role 메시지)
-        const { count: questionsAsked } = await supabaseAdmin
-            .from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('role', 'user')
-            .in('session_id', 
-                // 본인 세션만
-                (await supabaseAdmin
-                    .from('chat_sessions')
-                    .select('id')
-                    .eq('user_id', user.id)
-                ).data?.map(s => s.id) || []
-            )
+        const { data: sessions } = await supabaseAdmin
+            .from('chat_sessions')
+            .select('id')
+            .eq('user_id', user.id)
 
-        // 3) 클로버 잔고 + referral_code
+        let questionsAsked = 0
+        if (sessions && sessions.length > 0) {
+            const { count } = await supabaseAdmin
+                .from('messages')
+                .select('*', { count: 'exact', head: true })
+                .eq('role', 'user')
+                .in('session_id', sessions.map(s => s.id))
+            questionsAsked = count || 0
+        }
+
+        // 3) 프로필
         const { data: profile } = await supabaseAdmin
             .from('users')
             .select('clovers, referral_code')
@@ -54,103 +55,121 @@ export async function GET() {
             friendsInvited = count || 0
         }
 
-        // 4.5) 오늘 공유 횟수
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const { data: todayShareData } = await supabaseAdmin
+        // ── credits 테이블 존재 여부 체크 ──
+        let creditsTableExists = true
+        const { error: creditsCheckError } = await supabaseAdmin
             .from('credits')
             .select('id')
-            .eq('user_id', user.id)
-            .eq('type', 'mission_share')
-            .gte('created_at', today.toISOString())
-        const sharesToday = todayShareData?.length || 0
-
-        // 5) 클로버 이력 (credits 테이블)
-        const { data: creditHistory } = await supabaseAdmin
-            .from('credits')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(20)
-
-        // 6) 클로버 잔액 = credits 합계
-        const { data: balanceData } = await supabaseAdmin
-            .from('credits')
-            .select('amount')
-            .eq('user_id', user.id)
-        const actualBalance = (balanceData || []).reduce((s: number, r: { amount: number }) => s + r.amount, 0)
-
-        // users.clovers 동기화
-        if (actualBalance !== (profile?.clovers || 0)) {
-            await supabaseAdmin
-                .from('users')
-                .update({ clovers: actualBalance })
-                .eq('id', user.id)
+            .limit(0)
+        if (creditsCheckError) {
+            console.warn('[Credits] Table check failed:', creditsCheckError.message)
+            creditsTableExists = false
         }
 
-        // 7) 미션 완료 시 자동 적립 (이미 적립했는지 확인)
-        const existingTypes = (creditHistory || []).map((c: { type: string }) => c.type)
+        let sharesToday = 0
+        let creditHistory: { type: string; amount: number; description: string; created_at: string }[] = []
+        let finalClovers = profile?.clovers || 0
 
-        // AI 만들기 미션 (2개 이상 만들면 50 클로버)
-        if ((aiCreated || 0) >= 2 && !existingTypes.includes('mission_create_ai')) {
-            const { error: e1 } = await supabaseAdmin.from('credits').insert({
-                user_id: user.id,
-                amount: 50,
-                type: 'mission_create_ai',
-                description: '미션 완료: AI 2개 만들기',
-            })
-            if (e1) console.error('[Credits] mission_create_ai insert failed:', e1.message, e1.code, e1.details)
+        if (creditsTableExists) {
+            // 오늘 공유 횟수
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            const { data: todayShareData } = await supabaseAdmin
+                .from('credits')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('type', 'mission_share')
+                .gte('created_at', today.toISOString())
+            sharesToday = todayShareData?.length || 0
+
+            // 클로버 이력
+            const { data: historyData } = await supabaseAdmin
+                .from('credits')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(20)
+            creditHistory = historyData || []
+
+            // 기존 적립 타입
+            const existingTypes = creditHistory.map((c: { type: string }) => c.type)
+
+            // ── 자동 적립 ──
+            const newCredits: { type: string; amount: number; description: string }[] = []
+
+            // AI 만들기 미션 (2개 이상 → 50 클로버)
+            if ((aiCreated || 0) >= 2 && !existingTypes.includes('mission_create_ai')) {
+                newCredits.push({ type: 'mission_create_ai', amount: 50, description: '미션 완료: AI 2개 만들기' })
+            }
+
+            // 질문 10번 미션 (30 클로버)
+            if (questionsAsked >= 10 && !existingTypes.includes('mission_ask_10')) {
+                newCredits.push({ type: 'mission_ask_10', amount: 30, description: '미션 완료: 10번 질문하기' })
+            }
+
+            // 친구 초대 미션 (100 클로버)
+            if (friendsInvited >= 1 && !existingTypes.includes('mission_invite')) {
+                newCredits.push({ type: 'mission_invite', amount: 100, description: `미션 완료: 친구 ${friendsInvited}명 초대` })
+            }
+
+            // 일괄 적립
+            for (const credit of newCredits) {
+                const { error: insertErr } = await supabaseAdmin.from('credits').insert({
+                    user_id: user.id,
+                    ...credit,
+                })
+                if (insertErr) {
+                    console.error(`[Credits] ${credit.type} insert failed:`, insertErr.message, insertErr.code, insertErr.details)
+                }
+            }
+
+            // 적립 후 잔액 재계산
+            const { data: finalBalance } = await supabaseAdmin
+                .from('credits')
+                .select('amount')
+                .eq('user_id', user.id)
+            finalClovers = (finalBalance || []).reduce((s: number, r: { amount: number }) => s + r.amount, 0)
+
+            // 이력 다시 조회
+            const { data: updatedHistory } = await supabaseAdmin
+                .from('credits')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(20)
+            creditHistory = updatedHistory || []
+
+            // users.clovers 동기화
+            await supabaseAdmin.from('users').update({ clovers: finalClovers }).eq('id', user.id)
+
+        } else {
+            // ── credits 테이블 없음 → users.clovers 직접 적립 (fallback) ──
+            console.warn('[Credits] Fallback: using users.clovers directly')
+            
+            let totalEarned = 0
+
+            // AI 만들기 미션
+            if ((aiCreated || 0) >= 2) totalEarned += 50
+            // 질문 10번 미션
+            if (questionsAsked >= 10) totalEarned += 30
+            // 친구 초대 미션
+            if (friendsInvited >= 1) totalEarned += 100
+
+            if (totalEarned > 0 && (profile?.clovers || 0) < totalEarned) {
+                finalClovers = totalEarned
+                await supabaseAdmin.from('users').update({ clovers: finalClovers }).eq('id', user.id)
+            }
         }
-
-        // 질문 10번 미션 (30 클로버)
-        if ((questionsAsked || 0) >= 10 && !existingTypes.includes('mission_ask_10')) {
-            const { error: e2 } = await supabaseAdmin.from('credits').insert({
-                user_id: user.id,
-                amount: 30,
-                type: 'mission_ask_10',
-                description: '미션 완료: 10번 질문하기',
-            })
-            if (e2) console.error('[Credits] mission_ask_10 insert failed:', e2.message, e2.code, e2.details)
-        }
-
-        // 친구 초대 미션 (100 클로버 per 친구)
-        if (friendsInvited >= 1 && !existingTypes.includes('mission_invite')) {
-            const { error: e3 } = await supabaseAdmin.from('credits').insert({
-                user_id: user.id,
-                amount: 100,
-                type: 'mission_invite',
-                description: `미션 완료: 친구 ${friendsInvited}명 초대`,
-            })
-            if (e3) console.error('[Credits] mission_invite insert failed:', e3.message, e3.code, e3.details)
-        }
-
-        // 적립 후 최신 잔액 재계산
-        const { data: finalBalance } = await supabaseAdmin
-            .from('credits')
-            .select('amount')
-            .eq('user_id', user.id)
-        const finalClovers = (finalBalance || []).reduce((s: number, r: { amount: number }) => s + r.amount, 0)
-
-        // 최신 이력 다시 조회
-        const { data: finalHistory } = await supabaseAdmin
-            .from('credits')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(20)
-
-        // users.clovers 최종 업데이트
-        await supabaseAdmin.from('users').update({ clovers: finalClovers }).eq('id', user.id)
 
         return NextResponse.json({
             ok: true,
             aiCreated: aiCreated || 0,
-            questionsAsked: questionsAsked || 0,
+            questionsAsked,
             clovers: finalClovers,
             referralCode: profile?.referral_code || '',
             friendsInvited,
             sharesToday,
-            creditHistory: finalHistory || [],
+            creditHistory,
         })
     } catch (err: unknown) {
         console.error('Mission status error:', err)
