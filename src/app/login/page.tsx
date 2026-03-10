@@ -132,15 +132,14 @@ export default function LoginPage() {
             }}>
                 {/* Logo */}
                 <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                    <div style={{
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        width: 64, height: 64, borderRadius: 16,
-                        background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                        boxShadow: '0 8px 24px rgba(34,197,94,0.25)',
-                        marginBottom: 16,
-                    }}>
-                        <span style={{ fontSize: 28 }}>🎓</span>
-                    </div>
+                    <img
+                        src="/logo.png"
+                        alt="큐리 AI"
+                        style={{
+                            width: 80, height: 80, objectFit: 'contain',
+                            marginBottom: 16,
+                        }}
+                    />
                     <h1 style={{
                         fontSize: 28, fontWeight: 800, color: '#18181b',
                         letterSpacing: '-0.03em', marginBottom: 6,
