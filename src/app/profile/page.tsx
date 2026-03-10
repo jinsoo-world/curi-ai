@@ -182,9 +182,7 @@ export default function ProfilePage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     display_name: editName.trim() || null,
-                    interests: editInterests,
                     gender: editGender || null,
-                    birth_year: editBirthYear ? parseInt(editBirthYear) : null,
                 }),
             })
 
@@ -197,13 +195,13 @@ export default function ProfilePage() {
                 setProfile((prev: any) => ({
                     ...prev,
                     display_name: editName.trim(),
-                    interests: editInterests,
                     gender: editGender,
-                    birth_year: editBirthYear ? parseInt(editBirthYear) : null,
                 }))
                 setIsEditing(false)
                 setSaveMessage('저장되었습니다 ✓')
                 setTimeout(() => setSaveMessage(''), 3000)
+                // 사이드바 프로필 즉시 반영
+                window.dispatchEvent(new Event('profile_updated'))
             }
         } catch (err) {
             console.error('Profile save error:', err)
@@ -418,43 +416,19 @@ export default function ProfilePage() {
                                             </div>
                                         </div>
 
-                                        {/* 관심사 */}
+                                        {/* 이메일 */}
                                         <div style={{ marginBottom: 20 }}>
-                                            <div style={labelStyle}>관심사</div>
-                                            {profile?.interests && profile.interests.length > 0 ? (
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                                    {profile.interests.map((interest: string) => (
-                                                        <span
-                                                            key={interest}
-                                                            style={{
-                                                                fontSize: 14, color: '#16a34a',
-                                                                background: '#f0fdf4', borderRadius: 100,
-                                                                padding: '6px 14px', border: '1px solid #dcfce7',
-                                                                fontWeight: 500,
-                                                            }}
-                                                        >
-                                                            {INTEREST_LABELS[interest] || interest}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <span style={{ fontSize: 15, color: '#d1d5db' }}>미설정</span>
-                                            )}
-                                        </div>
-
-                                        {/* 성별 */}
-                                        <div style={{ marginBottom: 20 }}>
-                                            <div style={labelStyle}>성별</div>
-                                            <div style={{ fontSize: 15, color: '#18181b' }}>
-                                                {profile?.gender === 'female' ? '👩 여성' : profile?.gender === 'male' ? '👨 남성' : profile?.gender === 'other' ? '😊 기타' : <span style={{ color: '#d1d5db' }}>미설정</span>}
+                                            <div style={labelStyle}>이메일</div>
+                                            <div style={{ fontSize: 15, color: '#6b7280' }}>
+                                                {user?.email || <span style={{ color: '#d1d5db' }}>없음</span>}
                                             </div>
                                         </div>
 
-                                        {/* 출생 연도 */}
+                                        {/* 성별 */}
                                         <div>
-                                            <div style={labelStyle}>출생 연도</div>
+                                            <div style={labelStyle}>성별</div>
                                             <div style={{ fontSize: 15, color: '#18181b' }}>
-                                                {profile?.birth_year ? `${profile.birth_year}년` : <span style={{ color: '#d1d5db' }}>미설정</span>}
+                                                {profile?.gender === 'female' ? '👩 여성' : profile?.gender === 'male' ? '👨 남성' : profile?.gender === 'other' ? '😊 기타' : <span style={{ color: '#d1d5db' }}>미설정</span>}
                                             </div>
                                         </div>
                                     </>
@@ -483,29 +457,15 @@ export default function ProfilePage() {
                                             />
                                         </div>
 
-                                        {/* 관심사 편집 */}
+                                        {/* 이메일 (읽기전용) */}
                                         <div style={{ marginBottom: 24 }}>
-                                            <div style={labelStyle}>관심사 (복수 선택 가능)</div>
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                                {INTEREST_OPTIONS.map((opt) => {
-                                                    const selected = editInterests.includes(opt.key)
-                                                    return (
-                                                        <button
-                                                            key={opt.key}
-                                                            onClick={() => handleToggleInterest(opt.key)}
-                                                            style={{
-                                                                padding: '8px 16px', borderRadius: 100,
-                                                                border: `2px solid ${selected ? '#22c55e' : '#e4e4e7'}`,
-                                                                background: selected ? '#f0fdf4' : '#fff',
-                                                                color: selected ? '#16a34a' : '#6b7280',
-                                                                fontSize: 14, fontWeight: selected ? 600 : 500,
-                                                                cursor: 'pointer', transition: 'all 200ms',
-                                                            }}
-                                                        >
-                                                            {opt.emoji} {opt.label}
-                                                        </button>
-                                                    )
-                                                })}
+                                            <div style={labelStyle}>이메일</div>
+                                            <div style={{
+                                                padding: '12px 16px', borderRadius: 12,
+                                                border: '2px solid #f0f0f0', background: '#f9fafb',
+                                                fontSize: 15, color: '#9ca3af',
+                                            }}>
+                                                {user?.email || '없음'}
                                             </div>
                                         </div>
 
@@ -533,28 +493,6 @@ export default function ProfilePage() {
                                                     )
                                                 })}
                                             </div>
-                                        </div>
-
-                                        {/* 출생 연도 편집 */}
-                                        <div style={{ marginBottom: 24 }}>
-                                            <div style={labelStyle}>출생 연도</div>
-                                            <input
-                                                type="number"
-                                                value={editBirthYear}
-                                                onChange={(e) => setEditBirthYear(e.target.value)}
-                                                placeholder="예: 1990"
-                                                min="1940"
-                                                max={new Date().getFullYear()}
-                                                style={{
-                                                    width: '100%', padding: '12px 16px',
-                                                    borderRadius: 12, border: '2px solid #e4e4e7',
-                                                    fontSize: 16, outline: 'none',
-                                                    transition: 'border-color 200ms',
-                                                    boxSizing: 'border-box',
-                                                }}
-                                                onFocus={(e) => e.target.style.borderColor = '#22c55e'}
-                                                onBlur={(e) => e.target.style.borderColor = '#e4e4e7'}
-                                            />
                                         </div>
 
                                         {/* 저장/취소 버튼 */}

@@ -18,40 +18,56 @@ export default function AppSidebar() {
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [user, setUser] = useState<any>(null)
 
-    useEffect(() => {
+    const fetchProfile = async () => {
         const supabase = createClient()
-        const fetchProfile = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                setUser(user)
-                const { data } = await supabase
-                    .from('users')
-                    .select('display_name, avatar_url, role, subscription_tier')
-                    .eq('id', user.id)
-                    .single()
-                if (data) {
-                    setProfile(data)
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+            setUser(user)
+            try {
+                const res = await fetch('/api/profile')
+                const data = await res.json()
+                if (data.profile) {
+                    setProfile({
+                        display_name: data.profile.display_name,
+                        avatar_url: data.profile.avatar_url,
+                        role: data.profile.role,
+                        subscription_tier: data.profile.subscription_tier,
+                    })
                 } else {
-                    // users 테이블에 레코드가 없으면 자동 생성
-                    const newProfile = {
-                        id: user.id,
-                        email: user.email,
+                    // API에 프로필 없으면 Google 메타데이터 fallback
+                    setProfile({
                         display_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
                         avatar_url: user.user_metadata?.avatar_url || null,
                         role: 'user',
                         subscription_tier: null,
-                    }
-                    await supabase.from('users').upsert(newProfile, { onConflict: 'id' })
-                    setProfile({
-                        display_name: newProfile.display_name,
-                        avatar_url: newProfile.avatar_url,
-                        role: newProfile.role,
-                        subscription_tier: newProfile.subscription_tier,
                     })
                 }
+            } catch {
+                // API 실패 시 Google 메타데이터 fallback
+                setProfile({
+                    display_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+                    avatar_url: user.user_metadata?.avatar_url || null,
+                    role: 'user',
+                    subscription_tier: null,
+                })
             }
         }
+    }
+
+    useEffect(() => {
         fetchProfile()
+        // 프로필 업데이트 시 사이드바 즉시 반영 (storage event)
+        const handleProfileUpdate = (e: StorageEvent) => {
+            if (e.key === 'profile_updated') fetchProfile()
+        }
+        window.addEventListener('storage', handleProfileUpdate)
+        // 같은 탭에서도 반영
+        const handleCustomEvent = () => fetchProfile()
+        window.addEventListener('profile_updated', handleCustomEvent)
+        return () => {
+            window.removeEventListener('storage', handleProfileUpdate)
+            window.removeEventListener('profile_updated', handleCustomEvent)
+        }
     }, [])
 
     const isAdmin = profile?.role === 'admin'
