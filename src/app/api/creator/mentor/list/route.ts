@@ -1,11 +1,9 @@
-// /api/creator/mentor/list — 내가 만든 멘토 목록
+// /api/creator/mentor/list — 내가 만든 멘토 목록 + 통계
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
-
-const ADMIN_EMAIL = 'jin@mission-driven.kr'
 
 export async function GET() {
     try {
@@ -16,47 +14,85 @@ export async function GET() {
             return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
         }
 
-        const isAdmin = user.email === ADMIN_EMAIL
-
         const admin = createAdmin(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.SUPABASE_SERVICE_ROLE_KEY!,
         )
 
-        // 어드민: 전체 멘토 (삭제된 것 제외)
-        if (isAdmin) {
-            const { data: mentors, error } = await admin
-                .from('mentors')
-                .select('id, name, title, mentor_type, status, is_active, created_at, creator_id')
-                .neq('status', 'suspended')
-                .order('created_at', { ascending: false })
-
-            if (error) throw new Error(error.message)
-            return NextResponse.json({ success: true, mentors: mentors || [], role: 'admin' })
-        }
-
-        // 크리에이터 프로필 확인
-        const { data: creator } = await admin
+        // 크리에이터 프로필 확인 (없으면 자동 생성)
+        let { data: creator } = await admin
             .from('creator_profiles')
             .select('id')
             .eq('user_id', user.id)
             .maybeSingle()
 
         if (!creator) {
-            // 일반 회원 → 권한 없음
-            return NextResponse.json({ success: true, mentors: [], role: 'member' })
+            const { data: newCreator } = await admin
+                .from('creator_profiles')
+                .insert({
+                    user_id: user.id,
+                    display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '크리에이터',
+                })
+                .select('id')
+                .single()
+            creator = newCreator
         }
 
-        // 크리에이터: 본인이 만든 멘토만 (삭제된 것 제외)
+        if (!creator) {
+            return NextResponse.json({
+                success: true,
+                mentors: [],
+                stats: { total: 0, active: 0, totalMessages: 0, totalUsers: 0 },
+                role: 'creator',
+            })
+        }
+
+        // 멘토 목록 (avatar_url 포함)
         const { data: mentors, error } = await admin
             .from('mentors')
-            .select('id, name, title, mentor_type, status, is_active, created_at, creator_id')
+            .select('id, name, title, mentor_type, status, is_active, created_at, creator_id, avatar_url')
             .eq('creator_id', creator.id)
             .neq('status', 'suspended')
             .order('created_at', { ascending: false })
 
         if (error) throw new Error(error.message)
-        return NextResponse.json({ success: true, mentors: mentors || [], role: 'creator' })
+
+        const mentorList = mentors || []
+        const mentorIds = mentorList.map(m => m.id)
+
+        // 통계 계산
+        let totalMessages = 0
+        let totalUsers = 0
+
+        if (mentorIds.length > 0) {
+            // 전체 메시지 수
+            const { count: msgCount } = await admin
+                .from('chat_messages')
+                .select('*', { count: 'exact', head: true })
+                .in('mentor_id', mentorIds)
+
+            totalMessages = msgCount || 0
+
+            // 대화한 사용자 수 (unique user_id)
+            const { data: sessions } = await admin
+                .from('chat_sessions')
+                .select('user_id')
+                .in('mentor_id', mentorIds)
+
+            if (sessions) {
+                const uniqueUsers = new Set(sessions.map(s => s.user_id))
+                totalUsers = uniqueUsers.size
+            }
+        }
+
+        const stats = {
+            total: mentorList.length,
+            active: mentorList.filter(m => m.status === 'active' && m.is_active).length,
+            totalMessages,
+            totalUsers,
+        }
+
+        return NextResponse.json({ success: true, mentors: mentorList, stats, role: 'creator' })
     } catch (error: unknown) {
         console.error('[Creator List API] Error:', error)
         const message = error instanceof Error ? error.message : '멘토 목록 조회 중 오류가 발생했습니다.'

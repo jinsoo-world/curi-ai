@@ -17,6 +17,10 @@ export async function POST(req: Request) {
         const { messages, mentorId, sessionId, guestMessageCount } = await req.json()
         const lastUserMessage = messages[messages.length - 1]?.content || ''
 
+        // 🎁 2026-04-30까지 무료 체험 기간
+        const FREE_TRIAL_END = new Date('2026-04-30T23:59:59+09:00')
+        const isFreeTrial = new Date() < FREE_TRIAL_END
+
         // ── 🔒 비로그인 사용자 대화 제한 (클라이언트 카운트 기반) ──
         if (!user && typeof guestMessageCount === 'number' && guestMessageCount >= MAX_DAILY_FREE_GUEST) {
             const encoder = new TextEncoder()
@@ -65,10 +69,10 @@ export async function POST(req: Request) {
             memories = await getUserMemories(supabase, user.id, mentorId)
         }
 
-        // ── 🔒 무료 대화 제한 체크 ──
+        // ── 🔒 무료 대화 제한 체크 (무료 체험 기간에는 스킵) ──
         const dailyUsed = (userProfile as any)?.daily_free_used || 0
         const isPremium = (userProfile as any)?.subscription_tier === 'premium'
-        if (user && !isPremium && dailyUsed >= MAX_DAILY_FREE) {
+        if (user && !isPremium && !isFreeTrial && dailyUsed >= MAX_DAILY_FREE) {
             const encoder = new TextEncoder()
             const limitStream = new ReadableStream({
                 start(controller) {
@@ -84,7 +88,7 @@ export async function POST(req: Request) {
         }
 
         // ── 💰 크레딧 잔액 체크 ──
-        if (user) {
+        if (user && !isFreeTrial) {
             const { data: creditData } = await supabase
                 .from('users')
                 .select('credit_balance')
@@ -212,13 +216,15 @@ export async function POST(req: Request) {
                             const dailyUsed = (userProfile as any)?.daily_free_used || 0
                             await incrementDailyFreeUsage(supabase, user.id, dailyUsed)
 
-                            // 💰 크레딧 차감 (fire-and-forget)
-                            deductCredit({
-                                user_id: user.id,
-                                amount: CREDIT_CONSTANTS.CHAT_COST_PER_MESSAGE,
-                                mentor_id: mentorId,
-                                description: `대화 차감 (${mentor.name})`,
-                            }).catch(err => console.error('[Chat] Credit deduction failed:', err))
+                            // 💰 크레딧 차감 (무료 체험 기간에는 스킵)
+                            if (!isFreeTrial) {
+                                deductCredit({
+                                    user_id: user.id,
+                                    amount: CREDIT_CONSTANTS.CHAT_COST_PER_MESSAGE,
+                                    mentor_id: mentorId,
+                                    description: `대화 차감 (${mentor.name})`,
+                                }).catch(err => console.error('[Chat] Credit deduction failed:', err))
+                            }
 
                             // 🧠 메모리 추출 (fire-and-forget, 응답 속도에 영향 없음)
                             extractAndSaveMemories(supabase, user.id, mentorId, lastUserMessage, fullResponse)

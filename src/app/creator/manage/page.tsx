@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import AppSidebar from '@/components/AppSidebar'
 
@@ -12,20 +12,39 @@ interface MentorItem {
     status: string
     is_active: boolean
     created_at: string
+    avatar_url: string | null
+}
+
+interface Stats {
+    total: number
+    active: number
+    totalMessages: number
+    totalUsers: number
 }
 
 export default function CreatorManagePage() {
     const router = useRouter()
     const [mentors, setMentors] = useState<MentorItem[]>([])
     const [loading, setLoading] = useState(true)
+    const [stats, setStats] = useState<Stats>({ total: 0, active: 0, totalMessages: 0, totalUsers: 0 })
+    const [search, setSearch] = useState('')
+    const [openMenu, setOpenMenu] = useState<string | null>(null)
     const [deleting, setDeleting] = useState<string | null>(null)
-    const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
-
-    const [role, setRole] = useState<string>('')
-    const [unauthorized, setUnauthorized] = useState(false)
+    const menuRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         fetchMentors()
+    }, [])
+
+    // 외부 클릭으로 메뉴 닫기
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setOpenMenu(null)
+            }
+        }
+        document.addEventListener('mousedown', handleClick)
+        return () => document.removeEventListener('mousedown', handleClick)
     }, [])
 
     async function fetchMentors() {
@@ -33,19 +52,12 @@ export default function CreatorManagePage() {
             const res = await fetch('/api/creator/mentor/list')
             const data = await res.json()
             if (res.status === 401) {
-                // 비로그인 → 로그인 페이지
                 router.push('/login')
                 return
             }
             if (res.ok) {
-                const userRole = data.role || ''
-                setRole(userRole)
-                if (userRole === 'member') {
-                    // 일반 회원 → 권한 없음
-                    setUnauthorized(true)
-                } else {
-                    setMentors(data.mentors || [])
-                }
+                setMentors(data.mentors || [])
+                if (data.stats) setStats(data.stats)
             }
         } catch {
             console.error('Failed to fetch mentors')
@@ -55,6 +67,7 @@ export default function CreatorManagePage() {
     }
 
     async function executeDelete(mentorId: string) {
+        if (!confirm('정말 이 AI를 삭제하시겠습니까?')) return
         setDeleting(mentorId)
         try {
             const res = await fetch('/api/creator/mentor/delete', {
@@ -64,144 +77,378 @@ export default function CreatorManagePage() {
             })
             const data = await res.json()
             if (!res.ok) throw new Error(data.error)
-
             setMentors(prev => prev.filter(m => m.id !== mentorId))
+            setOpenMenu(null)
         } catch (err: unknown) {
             alert(err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다.')
         } finally {
             setDeleting(null)
-            setConfirmingDelete(null)
         }
     }
 
+    const filteredMentors = mentors.filter(m =>
+        m.name.toLowerCase().includes(search.toLowerCase()) ||
+        m.title.toLowerCase().includes(search.toLowerCase())
+    )
+
     const statusLabels: Record<string, { label: string; color: string; bg: string }> = {
-        active: { label: '활성', color: '#15803d', bg: '#f0fdf4' },
-        draft: { label: '초안', color: '#d97706', bg: '#fffbeb' },
-        review: { label: '심사중', color: '#2563eb', bg: '#eff6ff' },
-        suspended: { label: '중지됨', color: '#dc2626', bg: '#fef2f2' },
-        rejected: { label: '거절됨', color: '#6b7280', bg: '#f9fafb' },
-        inactive: { label: '비활성', color: '#9ca3af', bg: '#f3f4f6' },
+        active: { label: 'Live', color: '#15803d', bg: '#dcfce7' },
+        draft: { label: '초안', color: '#d97706', bg: '#fef3c7' },
+        review: { label: '심사중', color: '#2563eb', bg: '#dbeafe' },
+        inactive: { label: '비활성', color: '#6b7280', bg: '#f3f4f6' },
     }
+
+    const statCards = [
+        { icon: '🤖', label: '내가 만든 AI', value: stats.total, color: '#e0e7ff', iconBg: '#c7d2fe' },
+        { icon: '⚡', label: '공개된 AI', value: stats.active, color: '#dcfce7', iconBg: '#bbf7d0' },
+        { icon: '💬', label: '전체 메시지', value: stats.totalMessages, color: '#fef3c7', iconBg: '#fde68a' },
+        { icon: '👥', label: '대화한 사용자', value: stats.totalUsers, color: '#fce7f3', iconBg: '#fbcfe8' },
+    ]
 
     return (
         <div style={{ minHeight: '100dvh', background: '#f8f9fa' }}>
             <AppSidebar />
             <div className="sidebar-content" style={{ marginLeft: 240, minHeight: '100dvh' }}>
-                <div style={styles.container}>
-                    <div style={styles.header}>
-                        <h1 style={styles.heading}>🛠️ AI 관리</h1>
-                        <p style={styles.subheading}>내가 만든 AI를 수정·삭제할 수 있습니다</p>
-                    </div>
-
-                    <div style={styles.actions}>
+                <div style={{
+                    maxWidth: 900,
+                    margin: '0 auto',
+                    padding: '28px 24px 80px',
+                    fontFamily: 'var(--font-noto-sans-kr), Pretendard, sans-serif',
+                }}>
+                    {/* 헤더 */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+                        <div>
+                            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#18181b', margin: 0 }}>
+                                🎨 내 AI 관리
+                            </h1>
+                            <p style={{ fontSize: 14, color: '#6b7280', margin: '4px 0 0' }}>
+                                내가 만든 AI를 관리하세요
+                            </p>
+                        </div>
                         <button
-                            style={styles.createBtn}
                             onClick={() => router.push('/creator/create')}
+                            style={{
+                                padding: '10px 20px',
+                                borderRadius: 10,
+                                border: 'none',
+                                background: '#18181b',
+                                color: '#fff',
+                                fontSize: 14,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                            }}
                         >
                             ＋ 새 AI 만들기
                         </button>
-                        <button
-                            style={styles.backBtn}
-                            onClick={() => router.push('/mentors')}
-                        >
-                            ← 멘토 목록
-                        </button>
                     </div>
 
-                    {loading ? (
-                        <div style={styles.emptyState}>불러오는 중...</div>
-                    ) : unauthorized ? (
-                        <div style={styles.emptyState}>
-                            <div style={{ fontSize: 48 }}>🔒</div>
-                            <div style={{ fontSize: 16, fontWeight: 600, color: '#18181b' }}>접근 권한이 없습니다</div>
-                            <div style={{ fontSize: 14, color: '#9ca3af' }}>크리에이터 또는 관리자만 이용 가능합니다</div>
-                            <button
-                                style={styles.backBtn}
-                                onClick={() => router.push('/mentors')}
-                            >
-                                ← 멘토 목록으로 돌아가기
-                            </button>
+                    {/* 통계 카드 */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(4, 1fr)',
+                        gap: 14,
+                        marginBottom: 24,
+                    }}>
+                        {statCards.map(card => (
+                            <div key={card.label} style={{
+                                background: '#fff',
+                                borderRadius: 14,
+                                padding: '18px 16px',
+                                border: '1px solid #f0f0f0',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 8,
+                            }}>
+                                <div style={{
+                                    width: 44, height: 44, borderRadius: '50%',
+                                    background: card.iconBg,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: 22,
+                                }}>
+                                    {card.icon}
+                                </div>
+                                <div style={{ fontSize: 26, fontWeight: 700, color: '#18181b' }}>
+                                    {card.value}
+                                </div>
+                                <div style={{ fontSize: 12, color: '#6b7280', fontWeight: 500 }}>
+                                    {card.label}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* 검색 */}
+                    <div style={{
+                        display: 'flex', gap: 10,
+                        marginBottom: 16,
+                    }}>
+                        <div style={{
+                            flex: 1,
+                            position: 'relative',
+                        }}>
+                            <input
+                                type="text"
+                                placeholder="AI 이름 또는 소개로 검색..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 14px 10px 36px',
+                                    borderRadius: 10,
+                                    border: '1px solid #e5e7eb',
+                                    fontSize: 14,
+                                    background: '#fff',
+                                    outline: 'none',
+                                    boxSizing: 'border-box',
+                                }}
+                            />
+                            <span style={{
+                                position: 'absolute',
+                                left: 12, top: '50%', transform: 'translateY(-50%)',
+                                fontSize: 16, color: '#9ca3af', pointerEvents: 'none',
+                            }}>🔍</span>
                         </div>
-                    ) : mentors.length === 0 ? (
-                        <div style={styles.emptyState}>
-                            <div style={{ fontSize: 48 }}>📭</div>
-                            <div>아직 만든 AI가 없습니다</div>
-                            <button
-                                style={styles.createBtn}
-                                onClick={() => router.push('/creator/create')}
-                            >
-                                첫 AI 만들기
-                            </button>
+                    </div>
+
+                    {/* 테이블 */}
+                    {loading ? (
+                        <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>
+                            불러오는 중...
+                        </div>
+                    ) : filteredMentors.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>
+                            <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
+                            <div>{search ? '검색 결과가 없습니다' : '아직 만든 AI가 없습니다'}</div>
+                            {!search && (
+                                <button
+                                    onClick={() => router.push('/creator/create')}
+                                    style={{
+                                        marginTop: 12,
+                                        padding: '10px 20px',
+                                        borderRadius: 10,
+                                        border: 'none',
+                                        background: '#22c55e',
+                                        color: '#fff',
+                                        fontSize: 14,
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    첫 AI 만들기
+                                </button>
+                            )}
                         </div>
                     ) : (
-                        <div style={styles.list}>
-                            {mentors.map(m => {
+                        <div style={{
+                            background: '#fff',
+                            borderRadius: 14,
+                            border: '1px solid #f0f0f0',
+                            overflow: 'hidden',
+                        }}>
+                            {/* 테이블 헤더 */}
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: '40px 56px 1fr 120px 100px 80px',
+                                padding: '12px 16px',
+                                background: '#fafafa',
+                                borderBottom: '1px solid #f0f0f0',
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: '#6b7280',
+                                textTransform: 'uppercase' as const,
+                                letterSpacing: '0.02em',
+                            }}>
+                                <div></div>
+                                <div>AI</div>
+                                <div>이름</div>
+                                <div>생성일</div>
+                                <div>상태</div>
+                                <div style={{ textAlign: 'center' }}>관리</div>
+                            </div>
+
+                            {/* 테이블 행 */}
+                            {filteredMentors.map(m => {
                                 const effectiveStatus = !m.is_active ? 'inactive' : m.status
                                 const st = statusLabels[effectiveStatus] || statusLabels.draft
-                                const isConfirming = confirmingDelete === m.id
-                                const isDeleting = deleting === m.id
 
                                 return (
-                                    <div key={m.id} style={styles.card}>
-                                        <div style={styles.cardInfo}>
-                                            <div style={styles.cardName}>
-                                                {m.name}
-                                                <span style={{
-                                                    ...styles.badge,
-                                                    color: st.color,
-                                                    background: st.bg,
+                                    <div
+                                        key={m.id}
+                                        style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: '40px 56px 1fr 120px 100px 80px',
+                                            padding: '14px 16px',
+                                            borderBottom: '1px solid #f5f5f5',
+                                            alignItems: 'center',
+                                            transition: 'background 100ms',
+                                        }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
+                                    >
+                                        {/* 점 3개 메뉴 */}
+                                        <div style={{ position: 'relative' }} ref={openMenu === m.id ? menuRef : null}>
+                                            <button
+                                                onClick={() => setOpenMenu(openMenu === m.id ? null : m.id)}
+                                                style={{
+                                                    background: 'none', border: 'none', cursor: 'pointer',
+                                                    fontSize: 18, color: '#9ca3af', padding: '4px',
+                                                    lineHeight: 1,
+                                                }}
+                                            >
+                                                ⋮
+                                            </button>
+                                            {openMenu === m.id && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: '100%',
+                                                    left: 0,
+                                                    background: '#fff',
+                                                    borderRadius: 10,
+                                                    boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                                                    border: '1px solid #e5e7eb',
+                                                    zIndex: 100,
+                                                    minWidth: 160,
+                                                    padding: '6px 0',
                                                 }}>
-                                                    {st.label}
-                                                </span>
-                                                {m.mentor_type === 'creator' && (
-                                                    <span style={styles.badgeCreator}>크리에이터</span>
-                                                )}
-                                            </div>
-                                            <div style={styles.cardTitle}>{m.title}</div>
-                                            <div style={styles.cardMeta}>
-                                                생성: {new Date(m.created_at).toLocaleDateString('ko-KR')}
-                                            </div>
-                                        </div>
-
-                                        <div style={styles.cardActions}>
-                                            {isConfirming ? (
-                                                /* 인라인 삭제 확인 */
-                                                <div style={styles.confirmRow}>
-                                                    <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 500 }}>
-                                                        삭제할까요?
-                                                    </span>
+                                                    {[
+                                                        { icon: '👁️', label: '미리보기', action: () => router.push(`/chat/${m.id}`) },
+                                                        { icon: '✏️', label: '편집', action: () => router.push(`/creator/edit/${m.id}`) },
+                                                        { icon: '📋', label: '복사', action: () => { navigator.clipboard.writeText(`${window.location.origin}/chat/${m.id}`); setOpenMenu(null) } },
+                                                        { icon: '🌐', label: '배포', action: () => { window.open(`/chat/${m.id}`, '_blank'); setOpenMenu(null) } },
+                                                        { icon: '🔄', label: '소유권 이전', action: () => { alert('준비 중인 기능입니다'); setOpenMenu(null) } },
+                                                        { icon: '👤', label: '사용자 초대', action: () => { navigator.clipboard.writeText(`${window.location.origin}/chat/${m.id}`); alert('링크가 복사되었습니다'); setOpenMenu(null) } },
+                                                        { icon: '📊', label: '분석', action: () => { alert('준비 중인 기능입니다'); setOpenMenu(null) } },
+                                                    ].map(item => (
+                                                        <button
+                                                            key={item.label}
+                                                            onClick={item.action}
+                                                            style={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: 10,
+                                                                width: '100%',
+                                                                padding: '9px 14px',
+                                                                background: 'none',
+                                                                border: 'none',
+                                                                cursor: 'pointer',
+                                                                fontSize: 13,
+                                                                color: '#374151',
+                                                                textAlign: 'left',
+                                                            }}
+                                                            onMouseEnter={e => (e.currentTarget.style.background = '#f5f5f5')}
+                                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                                        >
+                                                            <span>{item.icon}</span>
+                                                            {item.label}
+                                                        </button>
+                                                    ))}
+                                                    <div style={{ borderTop: '1px solid #f0f0f0', margin: '4px 0' }} />
                                                     <button
-                                                        style={styles.confirmYes}
                                                         onClick={() => executeDelete(m.id)}
-                                                        disabled={isDeleting}
+                                                        disabled={deleting === m.id}
+                                                        style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: 10,
+                                                            width: '100%',
+                                                            padding: '9px 14px',
+                                                            background: 'none',
+                                                            border: 'none',
+                                                            cursor: 'pointer',
+                                                            fontSize: 13,
+                                                            color: '#dc2626',
+                                                            textAlign: 'left',
+                                                        }}
+                                                        onMouseEnter={e => (e.currentTarget.style.background = '#fef2f2')}
+                                                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                                     >
-                                                        {isDeleting ? '...' : '✓ 확인'}
-                                                    </button>
-                                                    <button
-                                                        style={styles.confirmNo}
-                                                        onClick={() => setConfirmingDelete(null)}
-                                                        disabled={isDeleting}
-                                                    >
-                                                        취소
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                /* 수정 + 삭제 버튼 */
-                                                <div style={styles.btnGroup}>
-                                                    <button
-                                                        style={styles.editBtn}
-                                                        onClick={() => router.push(`/creator/edit/${m.id}`)}
-                                                    >
-                                                        ✏️ 수정
-                                                    </button>
-                                                    <button
-                                                        style={styles.deleteBtn}
-                                                        onClick={() => setConfirmingDelete(m.id)}
-                                                    >
-                                                        🗑️ 삭제
+                                                        <span>🗑️</span>
+                                                        {deleting === m.id ? '삭제 중...' : '삭제'}
                                                     </button>
                                                 </div>
                                             )}
+                                        </div>
+
+                                        {/* 프로필 이미지 */}
+                                        <div style={{
+                                            width: 40, height: 40, borderRadius: '50%',
+                                            background: '#f3f4f6',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            overflow: 'hidden',
+                                            border: '1px solid #e5e7eb',
+                                        }}>
+                                            {m.avatar_url ? (
+                                                <img
+                                                    src={m.avatar_url}
+                                                    alt={m.name}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                />
+                                            ) : (
+                                                <span style={{ fontSize: 20 }}>🤖</span>
+                                            )}
+                                        </div>
+
+                                        {/* 이름 + 소개 */}
+                                        <div>
+                                            <div style={{
+                                                fontSize: 14, fontWeight: 600, color: '#18181b',
+                                                display: 'flex', alignItems: 'center', gap: 6,
+                                            }}>
+                                                {m.name}
+                                                <span
+                                                    style={{
+                                                        fontSize: 11, color: '#6366f1', cursor: 'pointer',
+                                                    }}
+                                                    onClick={() => window.open(`/chat/${m.id}`, '_blank')}
+                                                >↗</span>
+                                            </div>
+                                            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
+                                                {m.title}
+                                            </div>
+                                        </div>
+
+                                        {/* 생성일 */}
+                                        <div style={{ fontSize: 12, color: '#6b7280' }}>
+                                            {new Date(m.created_at).toLocaleDateString('ko-KR')}
+                                        </div>
+
+                                        {/* 상태 */}
+                                        <div>
+                                            <span style={{
+                                                fontSize: 11, fontWeight: 600,
+                                                padding: '3px 10px',
+                                                borderRadius: 20,
+                                                color: st.color,
+                                                background: st.bg,
+                                            }}>
+                                                {st.label}
+                                            </span>
+                                        </div>
+
+                                        {/* 관리 버튼 */}
+                                        <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                                            <button
+                                                onClick={() => router.push(`/creator/edit/${m.id}`)}
+                                                title="편집"
+                                                style={{
+                                                    background: 'none', border: 'none', cursor: 'pointer',
+                                                    fontSize: 16, padding: '4px',
+                                                }}
+                                            >✏️</button>
+                                            <button
+                                                onClick={() => executeDelete(m.id)}
+                                                title="삭제"
+                                                disabled={deleting === m.id}
+                                                style={{
+                                                    background: 'none', border: 'none', cursor: 'pointer',
+                                                    fontSize: 16, padding: '4px',
+                                                    opacity: deleting === m.id ? 0.4 : 1,
+                                                }}
+                                            >🗑️</button>
                                         </div>
                                     </div>
                                 )
@@ -216,175 +463,13 @@ export default function CreatorManagePage() {
                             padding-bottom: 72px;
                         }
                     }
+                    @media (max-width: 640px) {
+                        .sidebar-content [style*="grid-template-columns: repeat(4"] {
+                            grid-template-columns: repeat(2, 1fr) !important;
+                        }
+                    }
                 `}</style>
             </div>
         </div>
     )
-}
-
-
-const styles: Record<string, React.CSSProperties> = {
-    container: {
-        maxWidth: 600,
-        margin: '0 auto',
-        padding: '24px 16px 80px',
-        minHeight: '100dvh',
-        background: '#f8f9fa',
-        color: '#1a1a2e',
-        fontFamily: 'var(--font-noto-sans-kr), Pretendard, sans-serif',
-    },
-    header: {
-        marginBottom: 20,
-    },
-    heading: {
-        fontSize: 24,
-        fontWeight: 700,
-        margin: '0 0 6px',
-    },
-    subheading: {
-        fontSize: 14,
-        color: '#6b7280',
-        margin: 0,
-    },
-    actions: {
-        display: 'flex',
-        gap: 10,
-        marginBottom: 20,
-    },
-    createBtn: {
-        padding: '10px 18px',
-        borderRadius: 10,
-        border: 'none',
-        background: '#22c55e',
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: 600,
-        cursor: 'pointer',
-    },
-    backBtn: {
-        padding: '10px 18px',
-        borderRadius: 10,
-        border: '1px solid #e5e7eb',
-        background: '#fff',
-        color: '#6b7280',
-        fontSize: 14,
-        fontWeight: 500,
-        cursor: 'pointer',
-    },
-    list: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 10,
-    },
-    card: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '16px',
-        borderRadius: 14,
-        background: '#fff',
-        border: '1px solid #e5e7eb',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-    },
-    cardInfo: {
-        flex: 1,
-        minWidth: 0,
-    },
-    cardName: {
-        fontSize: 16,
-        fontWeight: 600,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        flexWrap: 'wrap',
-    },
-    cardTitle: {
-        fontSize: 13,
-        color: '#6b7280',
-        marginTop: 4,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-    },
-    cardMeta: {
-        fontSize: 11,
-        color: '#9ca3af',
-        marginTop: 4,
-    },
-    cardActions: {
-        flexShrink: 0,
-        marginLeft: 12,
-    },
-    badge: {
-        fontSize: 11,
-        fontWeight: 600,
-        padding: '2px 8px',
-        borderRadius: 6,
-    },
-    badgeCreator: {
-        fontSize: 11,
-        fontWeight: 600,
-        padding: '2px 8px',
-        borderRadius: 6,
-        color: '#7c3aed',
-        background: '#f5f3ff',
-    },
-    btnGroup: {
-        display: 'flex',
-        gap: 6,
-    },
-    editBtn: {
-        padding: '8px 12px',
-        borderRadius: 8,
-        border: '1px solid #e5e7eb',
-        background: '#fff',
-        color: '#374151',
-        fontSize: 13,
-        fontWeight: 500,
-        cursor: 'pointer',
-    },
-    deleteBtn: {
-        padding: '8px 12px',
-        borderRadius: 8,
-        border: '1px solid #fca5a5',
-        background: '#fff',
-        color: '#dc2626',
-        fontSize: 13,
-        fontWeight: 500,
-        cursor: 'pointer',
-    },
-    confirmRow: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-    },
-    confirmYes: {
-        padding: '6px 12px',
-        borderRadius: 6,
-        border: 'none',
-        background: '#dc2626',
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: 600,
-        cursor: 'pointer',
-    },
-    confirmNo: {
-        padding: '6px 10px',
-        borderRadius: 6,
-        border: '1px solid #d1d5db',
-        background: '#fff',
-        color: '#6b7280',
-        fontSize: 12,
-        cursor: 'pointer',
-    },
-    emptyState: {
-        textAlign: 'center',
-        padding: '60px 20px',
-        color: '#6b7280',
-        fontSize: 15,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 12,
-    },
 }
