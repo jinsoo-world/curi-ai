@@ -51,3 +51,51 @@ export async function PATCH(
         return Response.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
     }
 }
+
+/**
+ * DELETE /api/sessions/[sessionId] — 세션 soft delete (deleted_at 기록)
+ * 실제 DB 데이터는 유지하며 유저에게만 숨김. 어드민에서 추적 가능.
+ */
+export async function DELETE(
+    req: Request,
+    { params }: { params: Promise<{ sessionId: string }> }
+) {
+    try {
+        const { sessionId } = await params
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) {
+            return Response.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+        }
+
+        // soft delete: deleted_at 타임스탬프 기록
+        const { error } = await supabase
+            .from('chat_sessions')
+            .update({ deleted_at: new Date().toISOString() })
+            .eq('id', sessionId)
+            .eq('user_id', user.id)
+
+        if (error) {
+            console.error('[Sessions DELETE] Error:', error)
+            // deleted_at 컬럼이 없으면 실제 삭제 (fallback)
+            if (error.message?.includes('deleted_at')) {
+                const { error: deleteErr } = await supabase
+                    .from('chat_sessions')
+                    .delete()
+                    .eq('id', sessionId)
+                    .eq('user_id', user.id)
+                if (deleteErr) {
+                    return Response.json({ error: '삭제에 실패했습니다.' }, { status: 500 })
+                }
+            } else {
+                return Response.json({ error: '삭제에 실패했습니다.' }, { status: 500 })
+            }
+        }
+
+        return Response.json({ ok: true, sessionId })
+    } catch (error) {
+        console.error('[Sessions DELETE] Error:', error)
+        return Response.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+    }
+}

@@ -278,6 +278,36 @@ function SessionItem({
                                 <EditIcon />
                                 이름 변경
                             </button>
+                            <button
+                                onClick={async (e) => {
+                                    e.stopPropagation()
+                                    setMenuOpen(false)
+                                    if (!confirm('이 대화를 삭제하시겠습니까?')) return
+                                    try {
+                                        const res = await fetch(`/api/sessions/${session.id}`, { method: 'DELETE' })
+                                        const data = await res.json()
+                                        if (data.ok) {
+                                            window.location.reload()
+                                        } else {
+                                            alert(data.error || '삭제 실패')
+                                        }
+                                    } catch {
+                                        alert('삭제 중 오류가 발생했습니다.')
+                                    }
+                                }}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                    width: '100%', padding: '10px 14px',
+                                    background: 'none', border: 'none',
+                                    fontSize: 14, color: '#ef4444',
+                                    cursor: 'pointer', textAlign: 'left',
+                                    borderTop: '1px solid #f1f5f9',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#fef2f2' }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+                            >
+                                🗑 대화 삭제
+                            </button>
                         </div>
                     )}
                 </div>

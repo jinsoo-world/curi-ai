@@ -69,6 +69,7 @@ export default function ChatsPage() {
                     mentors ( name, slug, avatar_url, is_active )
                 `)
                 .eq('user_id', user.id)
+                .is('deleted_at', null)
                 .gt('message_count', 0)
                 .order('last_message_at', { ascending: false, nullsFirst: false })
                 .limit(50)
@@ -179,6 +180,42 @@ export default function ChatsPage() {
 
     const getMentorImage = (session: FlatSession) => {
         return session.mentor_avatar_url || MENTOR_IMAGES[session.mentor_name] || null
+    }
+
+    // 개별 대화 삭제
+    const deleteSession = async (sessionId: string) => {
+        if (!confirm('이 대화를 삭제하시겠습니까?')) return
+        try {
+            const res = await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' })
+            const data = await res.json()
+            if (data.ok) {
+                setSessions(prev => prev.filter(s => s.id !== sessionId))
+            } else {
+                alert(data.error || '삭제 실패')
+            }
+        } catch {
+            alert('삭제 중 오류가 발생했습니다.')
+        }
+    }
+
+    // 멘토별 전체 대화 삭제
+    const deleteAllByMentor = async (mentorId: string, mentorName: string) => {
+        if (!confirm(`${mentorName}와의 모든 대화를 삭제하시겠습니까?`)) return
+        try {
+            const res = await fetch('/api/sessions/delete-by-mentor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mentorId }),
+            })
+            const data = await res.json()
+            if (data.ok) {
+                setSessions(prev => prev.filter(s => s.mentor_id !== mentorId))
+            } else {
+                alert(data.error || '삭제 실패')
+            }
+        } catch {
+            alert('삭제 중 오류가 발생했습니다.')
+        }
     }
 
     return (
@@ -339,6 +376,27 @@ export default function ChatsPage() {
                                             }}>
                                                 ▼
                                             </span>
+
+                                            {/* 멘토 전체 대화 삭제 버튼 */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    deleteAllByMentor(group.mentor_id, group.mentor_name)
+                                                }}
+                                                title="모든 대화 삭제"
+                                                style={{
+                                                    width: 32, height: 32, borderRadius: 8,
+                                                    background: 'none', border: 'none',
+                                                    color: '#d1d5db', fontSize: 14,
+                                                    cursor: 'pointer', display: 'flex',
+                                                    alignItems: 'center', justifyContent: 'center',
+                                                    flexShrink: 0, transition: 'all 150ms',
+                                                }}
+                                                onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fef2f2' }}
+                                                onMouseLeave={e => { e.currentTarget.style.color = '#d1d5db'; e.currentTarget.style.background = 'none' }}
+                                            >
+                                                🗑
+                                            </button>
                                         </div>
 
                                         {/* 하위 세션 리스트 */}
@@ -387,6 +445,29 @@ export default function ChatsPage() {
                                                         }}>
                                                             💬 {session.message_count}
                                                         </span>
+                                                        {/* 개별 대화 삭제 버튼 */}
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.preventDefault()
+                                                                e.stopPropagation()
+                                                                deleteSession(session.id)
+                                                            }}
+                                                            title="이 대화 삭제"
+                                                            className="delete-session-btn"
+                                                            style={{
+                                                                width: 28, height: 28, borderRadius: 6,
+                                                                background: 'none', border: 'none',
+                                                                color: '#d1d5db', fontSize: 12,
+                                                                cursor: 'pointer', display: 'flex',
+                                                                alignItems: 'center', justifyContent: 'center',
+                                                                flexShrink: 0, opacity: 0,
+                                                                transition: 'all 150ms',
+                                                            }}
+                                                            onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fef2f2' }}
+                                                            onMouseLeave={e => { e.currentTarget.style.color = '#d1d5db'; e.currentTarget.style.background = 'none' }}
+                                                        >
+                                                            ✕
+                                                        </button>
                                                     </Link>
                                                 ))}
                                             </div>
@@ -403,6 +484,9 @@ export default function ChatsPage() {
                 @keyframes spin { to { transform: rotate(360deg) } }
                 .session-row:hover {
                     background: #f9fafb !important;
+                }
+                .session-row:hover .delete-session-btn {
+                    opacity: 1 !important;
                 }
                 @media (max-width: 768px) {
                     .sidebar-content {
