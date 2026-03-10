@@ -95,37 +95,83 @@ export async function POST(req: NextRequest) {
         let textContent = ''
 
         if (['txt', 'md'].includes(ext)) {
+            // 텍스트/마크다운: 직접 읽기
             textContent = await fileData.text()
-        } else {
-            // PDF/HWP/DOCX/PPT → Upstage Document OCR (비용 효율: $0.0015/page)
+
+        } else if (['hwp', 'hwpx'].includes(ext)) {
+            // HWP: @ohah/hwpjs로 마크다운 변환 (무료, 로컬 처리)
             try {
-                console.log('[Process] Sending to Upstage OCR:', source.title, 'size:', fileData.size, 'ext:', ext)
+                const { toMarkdown } = await import('@ohah/hwpjs')
+                const uint8 = Buffer.from(await fileData.arrayBuffer())
+                const result = toMarkdown(uint8, { image: 'base64', useHtml: false })
+                textContent = typeof result === 'string' ? result : result.markdown || ''
+                console.log('[Process] HWP parsed with hwpjs, text length:', textContent.length)
+            } catch (hwpErr) {
+                console.error('[Process] HWP parse error:', hwpErr)
+            }
+
+        } else if (['doc', 'docx'].includes(ext)) {
+            // DOCX: mammoth로 텍스트 추출 (무료, 로컬 처리)
+            try {
+                const mammoth = await import('mammoth')
+                const buffer = Buffer.from(await fileData.arrayBuffer())
+                const result = await mammoth.extractRawText({ buffer })
+                textContent = result.value || ''
+                console.log('[Process] DOCX parsed with mammoth, text length:', textContent.length)
+            } catch (docErr) {
+                console.error('[Process] DOCX parse error:', docErr)
+            }
+
+        } else if (['ppt', 'pptx'].includes(ext)) {
+            // PPT: Upstage OCR 사용 (로컬 파서 없음)
+            try {
+                console.log('[Process] Sending PPT to Upstage OCR:', source.title)
                 const formData = new FormData()
                 formData.append('document', fileData, source.title)
                 formData.append('model', 'ocr')
                 formData.append('ocr', 'force')
-
                 const parseRes = await fetch('https://api.upstage.ai/v1/document-digitization', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${process.env.UPSTAGE_API_KEY}` },
                     body: formData,
                 })
+                if (parseRes.ok) {
+                    const pd = await parseRes.json()
+                    textContent = extractTextFromUpstage(pd)
+                } else {
+                    const errText = await parseRes.text()
+                    console.error('[Process] Upstage PPT error:', parseRes.status, errText.slice(0, 500))
+                }
+            } catch (pptErr) {
+                console.error('[Process] PPT parse error:', pptErr)
+            }
 
+        } else {
+            // PDF: Upstage OCR 사용
+            try {
+                console.log('[Process] Sending PDF to Upstage OCR:', source.title, 'size:', fileData.size)
+                const formData = new FormData()
+                formData.append('document', fileData, source.title)
+                formData.append('model', 'ocr')
+                formData.append('ocr', 'force')
+                const parseRes = await fetch('https://api.upstage.ai/v1/document-digitization', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${process.env.UPSTAGE_API_KEY}` },
+                    body: formData,
+                })
                 if (parseRes.ok) {
                     const pd = await parseRes.json()
                     console.log('[Process] Upstage keys:', Object.keys(pd))
                     textContent = extractTextFromUpstage(pd)
                     if (!textContent) {
-                        console.log('[Process] No text extracted. Raw response:', JSON.stringify(pd).slice(0, 1000))
-                    } else {
-                        console.log('[Process] Extracted text length:', textContent.length)
+                        console.log('[Process] No text extracted. Raw:', JSON.stringify(pd).slice(0, 1000))
                     }
                 } else {
                     const errText = await parseRes.text()
-                    console.error('[Process] Upstage error:', parseRes.status, parseRes.statusText, errText.slice(0, 500))
+                    console.error('[Process] Upstage PDF error:', parseRes.status, parseRes.statusText, errText.slice(0, 500))
                 }
             } catch (parseErr) {
-                console.error('[Process] Parse error:', parseErr)
+                console.error('[Process] PDF parse error:', parseErr)
             }
         }
 

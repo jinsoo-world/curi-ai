@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // WASM/네이티브 패키지는 Turbopack 번들링 건너뛰기
+  serverExternalPackages: ['@ohah/hwpjs'],
   // 이미지 최적화
   images: {
     formats: ['image/avif', 'image/webp'],

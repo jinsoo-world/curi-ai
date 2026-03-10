@@ -118,7 +118,8 @@ export async function POST(req: NextRequest) {
         }
 
         // knowledge_sources에 레코드 삽입
-        const sourceType = ext === 'pdf' ? 'pdf' : (ext === 'hwp' || ext === 'hwpx') ? 'hwp' : 'text'
+        // source_type: DB에 허용된 값으로 매핑 (pdf, text가 안전한 값)
+        const sourceType = ext === 'pdf' ? 'pdf' : 'text'
         const fileUrl = admin.storage.from('knowledge-files').getPublicUrl(filePath).data.publicUrl
         const { data: source, error: dbError } = await admin
             .from('knowledge_sources')
@@ -133,11 +134,11 @@ export async function POST(req: NextRequest) {
             .single()
 
         if (dbError) {
-            console.error('[Upload] DB error:', dbError.message)
+            console.error('[Upload] DB error:', dbError.message, 'code:', dbError.code, 'details:', dbError.details)
             // 실패 시 업로드된 파일 삭제
             await admin.storage.from('knowledge-files').remove([filePath])
             return NextResponse.json(
-                { error: '파일 정보 저장에 실패했습니다.' },
+                { error: `파일 정보 저장에 실패했습니다: ${dbError.message}` },
                 { status: 500 },
             )
         }
