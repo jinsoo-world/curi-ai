@@ -563,7 +563,7 @@ export default function CreatorEditPage() {
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                <span>{src.processing_status === 'processing' ? '⏳' : src.processing_status === 'completed' ? '✅' : '❌'}</span>
+                                                <span>{src.processing_status === 'processing' ? '⏳' : src.processing_status === 'failed' ? '❌' : (() => { const ext = src.title?.split('.').pop()?.toLowerCase(); return ext === 'pdf' ? '📕' : ext === 'hwp' ? '📘' : ext === 'docx' || ext === 'doc' ? '📄' : ext === 'ppt' || ext === 'pptx' ? '📊' : ext === 'txt' ? '📝' : '📁' })()}</span>
                                                 <div>
                                                     <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{src.title}</div>
                                                     <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>

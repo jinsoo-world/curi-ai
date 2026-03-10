@@ -714,7 +714,7 @@ export default function CreatorCreatePage() {
                                         }}>
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                    <span>{f.status === 'processing' ? '⏳' : f.status === 'completed' ? '✅' : f.status === 'failed' ? '❌' : '📄'}</span>
+                                                    <span>{f.status === 'processing' ? '⏳' : f.status === 'failed' ? '❌' : (() => { const ext = f.fileName?.split('.').pop()?.toLowerCase(); return ext === 'pdf' ? '📕' : ext === 'hwp' ? '📘' : ext === 'docx' || ext === 'doc' ? '📄' : ext === 'ppt' || ext === 'pptx' ? '📊' : ext === 'txt' ? '📝' : '📁' })()}</span>
                                                     <div>
                                                         <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{f.fileName}</div>
                                                         <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
