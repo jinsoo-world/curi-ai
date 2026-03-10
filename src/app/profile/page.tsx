@@ -559,10 +559,10 @@ export default function ProfilePage() {
                                                 borderRadius: 100,
                                                 padding: '2px 12px',
                                             }}>
-                                                {profile?.subscription_tier === 'premium' ? '✨ 프리미엄'
-                                                    : profile?.subscription_tier === 'free' ? '🎫 프리'
-                                                    : profile?.subscription_tier === 'free_trial' ? '🎁 무료 체험'
-                                                    : '기본'}
+                                                {profile?.subscription_tier === 'premium' ? '✨ Premium'
+                                                    : profile?.subscription_tier === 'pro' ? '🚀 Pro'
+                                                    : profile?.subscription_tier === 'free_trial' ? '🎁 무료체험'
+                                                    : 'Free'}
                                             </span>
                                         </div>
                                         {/* 프리미엄 구독 상세 */}

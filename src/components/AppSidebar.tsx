@@ -242,10 +242,10 @@ export default function AppSidebar() {
                                         : profile?.subscription_tier === 'free_trial' ? '#16a34a'
                                         : '#9ca3af',
                                 }}>
-                                    {profile?.subscription_tier === 'premium' ? '✨ 프리미엄'
-                                        : profile?.subscription_tier === 'free' ? '🎫 프리'
-                                        : profile?.subscription_tier === 'free_trial' ? '🎁 무료 체험 중'
-                                        : '기본'}
+                                    {profile?.subscription_tier === 'premium' ? '✨ Premium'
+                                        : profile?.subscription_tier === 'pro' ? '🚀 Pro'
+                                        : profile?.subscription_tier === 'free_trial' ? '🎁 무료체험'
+                                        : '📋 Free'}
                                 </div>
                             </div>
                         </Link>
