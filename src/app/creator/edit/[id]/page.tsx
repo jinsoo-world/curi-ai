@@ -728,7 +728,7 @@ export default function CreatorEditPage() {
                                                 <div>
                                                     <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{src.title}</div>
                                                     <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
-                                                        {src.file_size ? `${(src.file_size / 1024).toFixed(0)}KB · ` : ''}{src.processing_status === 'processing' ? '📄 파일 읽는 중...' :
+                                                        {src.file_size ? `${src.file_size >= 1048576 ? (src.file_size / 1048576).toFixed(1) + 'MB' : (src.file_size / 1024).toFixed(0) + 'KB'} · ` : ''}{src.processing_status === 'processing' ? '📄 파일 읽는 중...' :
                                                          src.processing_status === 'completed' ? '✅ AI가 학습 완료' :
                                                          src.processing_status === 'failed' ? '텍스트 추출에 실패했습니다' : ''}
                                                     </div>
@@ -1237,7 +1237,7 @@ export default function CreatorEditPage() {
                                     {summaryLoading ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: 24 }}>
                                             <div style={{ width: 32, height: 32, border: '3px solid #d1fae5', borderTopColor: '#22c55e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                                            <div style={{ fontSize: 14, color: '#16a34a', fontWeight: 600 }}>Gemini AI가 분석 중...</div>
+                                            <div style={{ fontSize: 14, color: '#16a34a', fontWeight: 600 }}>큐리 AI가 분석중...</div>
                                             <div style={{ fontSize: 12, color: '#6b7280' }}>파일 내용을 요약하고 있어요</div>
                                         </div>
                                     ) : previewSource.summary ? (

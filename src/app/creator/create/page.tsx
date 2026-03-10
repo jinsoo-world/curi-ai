@@ -1401,7 +1401,7 @@ export default function CreatorCreatePage() {
                                         {summaryLoading ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: 24 }}>
                                                 <div style={{ width: 32, height: 32, border: '3px solid #d1fae5', borderTopColor: '#22c55e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                                                <div style={{ fontSize: 14, color: '#16a34a', fontWeight: 600 }}>Gemini AI가 분석 중...</div>
+                                                <div style={{ fontSize: 14, color: '#16a34a', fontWeight: 600 }}>큐리 AI가 분석중...</div>
                                                 <div style={{ fontSize: 12, color: '#6b7280' }}>파일 내용을 요약하고 있어요</div>
                                             </div>
                                         ) : previewSource.summary ? (

@@ -97,12 +97,14 @@ export default function MissionsPage() {
         })
     }
 
-    // 카톡 공유 + 클로버 적립
+    // 공유 확인 모달
+    const [showShareConfirm, setShowShareConfirm] = useState(false)
+
+    // 카톡 공유 + 확인 후 클로버 적립
     const handleShare = async () => {
         if (sharing || missionStatus.sharesToday >= 3) return
-        setSharing(true)
 
-        // Web Share API 시도 → 실패 시 카카오 URL로 fallback
+        // 공유 창 열기
         const shareText = '큐리 AI에서 나만의 AI 멘토를 만들어보세요! 🤖'
         const shareUrl = shareLink
 
@@ -113,15 +115,26 @@ export default function MissionsPage() {
                     text: shareText,
                     url: shareUrl,
                 })
+                // Web Share API는 공유 완료 시 resolve → 바로 적립
+                await confirmShare()
             } else {
-                // 카카오톡 공유 URL
+                // 데스크톱: 카톡 URL 열고, 확인 모달 띄움
                 window.open(
                     `https://sharer.kakao.com/talk/friends/picker/link?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`,
                     '_blank'
                 )
+                setShowShareConfirm(true)
             }
+        } catch (err) {
+            // 사용자가 공유 취소한 경우 — 적립 안함
+            console.log('Share cancelled:', err)
+        }
+    }
 
-            // 공유 완료 → 클로버 적립
+    const confirmShare = async () => {
+        setSharing(true)
+        setShowShareConfirm(false)
+        try {
             const res = await fetch('/api/missions/share', { method: 'POST' })
             const data = await res.json()
             if (data.ok) {
@@ -132,8 +145,7 @@ export default function MissionsPage() {
                 alert(data.error)
             }
         } catch (err) {
-            // 사용자가 공유 취소한 경우 — 적립 안함
-            console.log('Share cancelled or failed:', err)
+            console.error('Share confirm error:', err)
         }
         setSharing(false)
     }
@@ -499,48 +511,97 @@ export default function MissionsPage() {
             {cloverAnim.show && (
                 <div style={{
                     position: 'fixed', inset: 0, zIndex: 9999,
-                    pointerEvents: 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(0,0,0,0.5)',
+                    backdropFilter: 'blur(6px)',
+                    animation: 'fadeIn 0.3s ease',
                 }}>
-                    {/* 배경 반짝이 */}
                     <div style={{
-                        position: 'absolute', top: '45%', left: '50%',
-                        width: 200, height: 200,
-                        animation: 'sparkle 1.5s ease-out forwards',
-                        background: 'radial-gradient(circle, rgba(34,197,94,0.15) 0%, transparent 70%)',
-                        borderRadius: '50%',
-                        transform: 'translate(-50%, -50%)',
-                    }} />
-
-                    {/* 메인 클로버 */}
-                    <div style={{
-                        position: 'absolute', top: '50%', left: '50%',
-                        animation: 'cloverFloat 2.5s ease-out forwards',
+                        background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+                        borderRadius: 28,
+                        padding: '48px 56px',
                         textAlign: 'center',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.2), 0 0 80px rgba(34,197,94,0.3)',
+                        animation: 'cloverPulse 0.6s ease-in-out',
+                        border: '2px solid #bbf7d0',
                     }}>
                         <div style={{
-                            fontSize: 64,
+                            fontSize: 80,
                             animation: 'cloverPulse 0.5s ease-in-out 3',
                             filter: 'drop-shadow(0 4px 20px rgba(34,197,94,0.5))',
+                            marginBottom: 12,
                         }}>
                             🍀
                         </div>
                         <div style={{
-                            fontSize: 28, fontWeight: 800,
+                            fontSize: 36, fontWeight: 900,
                             color: '#15803d',
-                            textShadow: '0 2px 12px rgba(34,197,94,0.3)',
-                            whiteSpace: 'nowrap',
-                            marginTop: 4,
+                            letterSpacing: '-0.02em',
+                            marginBottom: 8,
                         }}>
                             +{cloverAnim.amount} 클로버!
                         </div>
                         <div style={{
-                            fontSize: 15, fontWeight: 600,
+                            fontSize: 18, fontWeight: 600,
                             color: '#16a34a',
-                            marginTop: 4,
-                            whiteSpace: 'nowrap',
+                            marginBottom: 4,
                         }}>
                             {cloverAnim.label}
+                        </div>
+                        <div style={{
+                            fontSize: 13, color: '#6b7280', marginTop: 12,
+                        }}>
+                            잠시 후 자동으로 닫힙니다
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 공유 확인 모달 */}
+            {showShareConfirm && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 100,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: 24,
+                }}>
+                    <div style={{
+                        background: '#fff', borderRadius: 20,
+                        padding: '32px 28px', maxWidth: 380, width: '100%',
+                        textAlign: 'center', position: 'relative',
+                        animation: 'fadeIn 0.3s ease',
+                    }}>
+                        <div style={{ fontSize: 48, marginBottom: 12 }}>📤</div>
+                        <h3 style={{ fontSize: 20, fontWeight: 700, color: '#18181b', marginBottom: 8 }}>
+                            공유를 완료했나요?
+                        </h3>
+                        <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, marginBottom: 24 }}>
+                            친구에게 공유를 완료하셨으면<br />아래 버튼을 눌러 클로버를 받으세요! 🍀
+                        </p>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <button
+                                onClick={() => setShowShareConfirm(false)}
+                                style={{
+                                    flex: 1, padding: '14px', borderRadius: 12,
+                                    border: '1px solid #e5e7eb', background: '#f9fafb',
+                                    fontSize: 14, fontWeight: 600, color: '#6b7280',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                아직 안 했어요
+                            </button>
+                            <button
+                                onClick={confirmShare}
+                                style={{
+                                    flex: 1, padding: '14px', borderRadius: 12,
+                                    border: 'none',
+                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                    fontSize: 14, fontWeight: 600, color: '#fff',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
+                                }}
+                            >
+                                🍀 공유 완료!
+                            </button>
                         </div>
                     </div>
                 </div>

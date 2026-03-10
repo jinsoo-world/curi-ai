@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
         const { data, error } = await supabase
             .from('knowledge_sources')
-            .select('id, title, source_type, processing_status, chunk_count, content, created_at')
+            .select('id, title, source_type, processing_status, chunk_count, content, file_size, created_at')
             .eq('mentor_id', mentorId)
             .order('created_at', { ascending: false })
 

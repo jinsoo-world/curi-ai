@@ -21,12 +21,12 @@ const CATEGORIES = ['전체', '편의점', '커피/음료', '아이스크림']
 
 const STORE_ITEMS: StoreItem[] = [
     // 편의점
-    { id: '1', name: 'CU 모바일상품권 1천원', brand: 'CU', category: '편의점', originalPrice: 1000, discountPercent: 10, cloverPrice: 900, emoji: '🏬', image: '/store-cu.svg' },
-    { id: '2', name: 'GS25 모바일상품권 1천원', brand: 'GS25', category: '편의점', originalPrice: 1000, discountPercent: 10, cloverPrice: 900, emoji: '🏪', image: '/store-gs25.svg' },
+    { id: '1', name: 'CU 모바일상품권 1천원', brand: 'CU', category: '편의점', originalPrice: 1000, discountPercent: 10, cloverPrice: 900, emoji: '🏬', image: '/store-cu.png' },
+    { id: '2', name: 'GS25 모바일상품권 1천원', brand: 'GS25', category: '편의점', originalPrice: 1000, discountPercent: 10, cloverPrice: 900, emoji: '🏪', image: '/store-gs25.png' },
     // 커피/음료
-    { id: '3', name: '스타벅스 아메리카노 Tall', brand: '스타벅스', category: '커피/음료', originalPrice: 4500, discountPercent: 10, cloverPrice: 4050, emoji: '☕', image: '/store-starbucks.svg' },
+    { id: '3', name: '스타벅스 아메리카노 Tall', brand: '스타벅스', category: '커피/음료', originalPrice: 4500, discountPercent: 10, cloverPrice: 4050, emoji: '☕', image: '/store-starbucks.png' },
     // 아이스크림
-    { id: '4', name: '베스킨라빈스 싱글킹', brand: '배스킨라빈스', category: '아이스크림', originalPrice: 3800, discountPercent: 10, cloverPrice: 3420, emoji: '🍦', image: '/store-baskinrobbins.svg' },
+    { id: '4', name: '베스킨라빈스 싱글킹', brand: '배스킨라빈스', category: '아이스크림', originalPrice: 3800, discountPercent: 10, cloverPrice: 3420, emoji: '🍦', image: '/store-baskinrobbins.png' },
 ]
 
 export default function CloverStorePage() {
@@ -236,14 +236,16 @@ export default function CloverStorePage() {
                             >
                                 {/* 이미지 영역 */}
                                 <div style={{
-                                    height: 140,
-                                    background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
+                                    height: 160,
+                                    background: '#fff',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     fontSize: 56,
                                     position: 'relative',
+                                    borderRadius: '14px 14px 0 0',
+                                    overflow: 'hidden',
                                 }}>
                                     {item.image ? (
-                                        <img src={item.image} alt={item.brand} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <img src={item.image} alt={item.brand} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                                     ) : item.emoji}
                                     {/* 할인 배지 */}
                                     <div style={{

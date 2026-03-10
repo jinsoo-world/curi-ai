@@ -96,7 +96,7 @@ export default function CreatorManagePage() {
         active: { label: 'Live', color: '#15803d', bg: '#dcfce7' },
         draft: { label: '초안', color: '#d97706', bg: '#fef3c7' },
         review: { label: '심사중', color: '#2563eb', bg: '#dbeafe' },
-        inactive: { label: '비활성', color: '#6b7280', bg: '#f3f4f6' },
+        inactive: { label: '배포 전', color: '#6b7280', bg: '#f3f4f6' },
     }
 
     const statCards = [

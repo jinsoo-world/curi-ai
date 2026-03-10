@@ -17,7 +17,8 @@ const ALLOWED_TYPES = [
 const ALLOWED_EXTENSIONS = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx', 'ppt', 'pptx']
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-const MAX_FILES_PER_MENTOR = 3
+const MAX_FILES_PER_MENTOR = 10
+const MAX_TOTAL_SIZE = 50 * 1024 * 1024 // 합산 50MB
 
 // 확장자 → fallback MIME 매핑 (HWP 등 MIME이 빈 파일용)
 // Supabase Storage는 비표준 MIME을 거부할 수 있어 octet-stream 사용
@@ -80,14 +81,21 @@ export async function POST(req: NextRequest) {
             process.env.SUPABASE_SERVICE_ROLE_KEY!,
         )
 
-        // 최대 파일 수 검증 (멘토당 3개)
-        const { count } = await admin
+        // 최대 파일 수 + 합산 용량 검증 (멘토당 10개, 합산 50MB)
+        const { data: existingFiles, count } = await admin
             .from('knowledge_sources')
-            .select('*', { count: 'exact', head: true })
+            .select('file_size', { count: 'exact' })
             .eq('mentor_id', mentorId)
         if ((count ?? 0) >= MAX_FILES_PER_MENTOR) {
             return NextResponse.json(
                 { error: `파일은 최대 ${MAX_FILES_PER_MENTOR}개까지 등록할 수 있습니다.` },
+                { status: 400 },
+            )
+        }
+        const totalSize = (existingFiles || []).reduce((s: number, f: { file_size: number | null }) => s + (f.file_size || 0), 0)
+        if (totalSize + file.size > MAX_TOTAL_SIZE) {
+            return NextResponse.json(
+                { error: '파일 합산 용량이 50MB를 초과합니다.' },
                 { status: 400 },
             )
         }
@@ -127,6 +135,7 @@ export async function POST(req: NextRequest) {
                 mentor_id: mentorId,
                 source_type: sourceType,
                 title: file.name,
+                file_size: file.size,
                 original_url: filePath,
                 processing_status: 'pending',
             })
