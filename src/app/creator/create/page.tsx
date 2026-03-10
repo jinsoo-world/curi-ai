@@ -97,22 +97,37 @@ export default function CreatorCreatePage() {
                 }
             }
 
-            // Step 1: 기본 정보 생성
-            const res1 = await fetch('/api/creator/mentor', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    step: 1,
-                    name: name.trim(),
-                    title: title.trim(),
-                    description: '',
-                    expertise: [],
-                    avatarUrl,
-                }),
-            })
-            const data1 = await res1.json()
-            if (!res1.ok) throw new Error(data1.error)
-            const mentorId = data1.mentor.id
+            // Step 1: 기본 정보 생성 (이미 draft가 있으면 스킵)
+            let mentorId = mentorIdForUpload
+            if (!mentorId) {
+                const res1 = await fetch('/api/creator/mentor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        step: 1,
+                        name: name.trim(),
+                        title: title.trim(),
+                        description: '',
+                        expertise: [],
+                        avatarUrl,
+                    }),
+                })
+                const data1 = await res1.json()
+                if (!res1.ok) throw new Error(data1.error)
+                mentorId = data1.mentor.id
+            } else {
+                // draft 멘토가 있으면 이름/소개/아바타만 업데이트
+                await fetch('/api/creator/mentor/update', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mentorId,
+                        name: name.trim(),
+                        title: title.trim(),
+                        ...(avatarUrl && { avatarUrl }),
+                    }),
+                })
+            }
 
             // Step 2: 페르소나 설정
             const selectedTemplate = PERSONA_TEMPLATES.find(t => t.id === template)

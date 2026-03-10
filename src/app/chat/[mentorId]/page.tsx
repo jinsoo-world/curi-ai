@@ -529,7 +529,7 @@ export default function ChatPage() {
         )
     }
 
-    const mentorImage = MENTOR_IMAGES[mentor.name]
+    const mentorImage = mentor.avatar_url || MENTOR_IMAGES[mentor.name]
     const mentorEmoji = MENTOR_EMOJI[mentor.slug] || '🎓'
 
     return (
