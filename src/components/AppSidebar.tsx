@@ -16,12 +16,14 @@ interface UserProfile {
 export default function AppSidebar() {
     const pathname = usePathname()
     const [profile, setProfile] = useState<UserProfile | null>(null)
+    const [user, setUser] = useState<any>(null)
 
     useEffect(() => {
         const supabase = createClient()
         const fetchProfile = async () => {
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
+                setUser(user)
                 const { data } = await supabase
                     .from('users')
                     .select('display_name, avatar_url, role, subscription_tier')
@@ -156,7 +158,7 @@ export default function AppSidebar() {
 
                 {/* Bottom — User profile + badge */}
                 <div style={{ padding: '12px', borderTop: '1px solid #f0f0f0' }}>
-                    {profile ? (
+                    {(profile || user) ? (
                         <Link
                             href="/profile"
                             style={{
@@ -167,9 +169,9 @@ export default function AppSidebar() {
                                 transition: 'background 150ms',
                             }}
                         >
-                            {profile.avatar_url ? (
+                            {(profile?.avatar_url || user?.user_metadata?.avatar_url) ? (
                                 <img
-                                    src={profile.avatar_url}
+                                    src={profile?.avatar_url || user?.user_metadata?.avatar_url}
                                     alt="프로필"
                                     style={{
                                         width: 36, height: 36,
@@ -186,7 +188,7 @@ export default function AppSidebar() {
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     color: '#fff', fontSize: 16, fontWeight: 700,
                                 }}>
-                                    {(profile.display_name || '?')[0]}
+                                    {(profile?.display_name || user?.user_metadata?.name || '?')[0]}
                                 </div>
                             )}
                             <div style={{ flex: 1, minWidth: 0 }}>
@@ -194,13 +196,13 @@ export default function AppSidebar() {
                                     fontSize: 14, fontWeight: 600, color: '#18181b',
                                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                 }}>
-                                    {profile.display_name || '사용자'}
+                                    {profile?.display_name || user?.user_metadata?.name || '사용자'}
                                 </div>
                                 <div style={{
                                     fontSize: 11, fontWeight: 600,
-                                    color: profile.subscription_tier === 'premium' ? '#f59e0b' : '#16a34a',
+                                    color: profile?.subscription_tier === 'premium' ? '#f59e0b' : '#16a34a',
                                 }}>
-                                    {profile.subscription_tier === 'premium' ? '✨ 프리미엄' : '🎁 무료 체험 중'}
+                                    {profile?.subscription_tier === 'premium' ? '✨ 프리미엄' : '🎁 무료 체험 중'}
                                 </div>
                             </div>
                         </Link>

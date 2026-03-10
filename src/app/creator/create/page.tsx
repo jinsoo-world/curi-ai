@@ -47,6 +47,9 @@ export default function CreatorCreatePage() {
     // 미리보기 디바이스 모드
     const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
 
+    // 크리에이터 탭 (AI 설정 / 파일 학습)
+    const [creatorTab, setCreatorTab] = useState<'settings' | 'files'>('settings')
+
     function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0]
         if (!file) return
@@ -393,13 +396,45 @@ export default function CreatorCreatePage() {
                         boxSizing: 'border-box',
                     }}>
                         {/* 헤더 */}
-                        <div style={{ marginBottom: 12 }}>
+                        <div style={{ marginBottom: 0 }}>
                             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#18181b' }}>
                                 🤖 나만의 AI 만들기
                             </h1>
                             <p style={{ margin: '2px 0 0', fontSize: 13, color: '#9ca3af' }}>
                                 AI에 반영되는 설정만 표시됩니다
                             </p>
+                        </div>
+
+                        {/* ═══ GNB 탭 ═══ */}
+                        <div style={{
+                            display: 'flex', gap: 0,
+                            borderBottom: '2px solid #f0f0f0',
+                            marginBottom: 16, marginTop: 12,
+                        }}>
+                            {[
+                                { key: 'settings' as const, label: '🎯 AI 설정' },
+                                { key: 'files' as const, label: '📁 파일 학습' },
+                            ].map(tab => (
+                                <button
+                                    key={tab.key}
+                                    onClick={() => setCreatorTab(tab.key)}
+                                    style={{
+                                        flex: 1,
+                                        padding: '10px 0',
+                                        fontSize: 14,
+                                        fontWeight: creatorTab === tab.key ? 700 : 500,
+                                        color: creatorTab === tab.key ? '#18181b' : '#9ca3af',
+                                        background: 'none',
+                                        border: 'none',
+                                        borderBottom: creatorTab === tab.key ? '2px solid #22c55e' : '2px solid transparent',
+                                        cursor: 'pointer',
+                                        transition: 'all 150ms',
+                                        marginBottom: -2,
+                                    }}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
                         </div>
 
                         {/* 에러 */}
@@ -413,6 +448,7 @@ export default function CreatorCreatePage() {
                             </div>
                         )}
 
+                        {creatorTab === 'settings' && (<>
                         {/* ── 기본 정보 ── */}
                         <div style={styles.card}>
                             <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', marginBottom: 12 }}>
@@ -523,17 +559,13 @@ export default function CreatorCreatePage() {
                                 </div>
                             </div>
                         </div>
+                        </>)}
 
-                        {/* ═══════ 층위 2: 파일 학습 ═══════ */}
-                        <div style={{ marginTop: 20, marginBottom: 12 }}>
-                            <h3 style={{ fontSize: 17, fontWeight: 700, color: '#18181b', letterSpacing: '-0.02em', margin: 0 }}>📁 지식 파일</h3>
-                            <p style={{ fontSize: 13, color: '#9ca3af', margin: '4px 0 0' }}>AI가 참고할 문서를 업로드하세요 (선택)</p>
-                        </div>
-
+                        {creatorTab === 'files' && (<>
                         {/* ── 지식 추가 ── */}
                         <div style={styles.card}>
-                            <label style={{ ...styles.label, marginBottom: 4, fontSize: 15 }}>📚 지식 추가 (선택)</label>
-                            <p style={styles.hint}>AI가 참고할 정보를 입력하거나 파일을 첨부하세요</p>
+                            <label style={{ ...styles.label, marginBottom: 4, fontSize: 15 }}>📚 지식 파일 추가</label>
+                            <p style={styles.hint}>AI가 참고할 문서를 업로드하거나 직접 입력하세요</p>
 
                             <div
                                 style={{
@@ -605,6 +637,8 @@ export default function CreatorCreatePage() {
                                 rows={4}
                             />
                         </div>
+                        </>)}
+
 
                         {/* ── 하단 버튼 ── */}
                         <div style={{ paddingBottom: 20 }}>
