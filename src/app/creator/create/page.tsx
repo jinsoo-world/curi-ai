@@ -39,7 +39,9 @@ export default function CreatorCreatePage() {
 
     // 지식 (선택)
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
-    const [previewSource, setPreviewSource] = useState<{ title: string; content: string } | null>(null)
+    const [previewSource, setPreviewSource] = useState<{ title: string; content: string; summary?: string; sourceId?: string } | null>(null)
+    const [previewTab, setPreviewTab] = useState<'summary' | 'text'>('summary')
+    const [summaryLoading, setSummaryLoading] = useState(false)
     const [uploading, setUploading] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const avatarInputRef = useRef<HTMLInputElement>(null)
@@ -61,6 +63,26 @@ export default function CreatorCreatePage() {
             setIsLoggedIn(!!user)
         })
     }, [])
+
+    // previewSource 열리면 요약 자동 로드
+    useEffect(() => {
+        if (!previewSource || previewSource.summary) return
+        setPreviewTab('summary')
+        setSummaryLoading(true)
+        fetch('/api/creator/knowledge/summarize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sourceId: previewSource.sourceId, content: previewSource.content }),
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.summary) {
+                    setPreviewSource(prev => prev ? { ...prev, summary: data.summary } : prev)
+                }
+            })
+            .catch(() => {})
+            .finally(() => setSummaryLoading(false))
+    }, [previewSource?.sourceId])
 
     function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0]
@@ -722,14 +744,14 @@ export default function CreatorCreatePage() {
                                                         <button
                                                             onClick={async () => {
                                                                 if (f.content) {
-                                                                    setPreviewSource({ title: f.fileName, content: f.content })
+                                                                    setPreviewSource({ title: f.fileName, content: f.content, sourceId: f.id })
                                                                 } else if (mentorIdForUpload) {
                                                                     try {
                                                                         const res = await fetch(`/api/creator/knowledge/list?mentorId=${mentorIdForUpload}`)
                                                                         const data = await res.json()
                                                                         const found = data.sources?.find((s: any) => s.id === f.id)
                                                                         if (found?.content) {
-                                                                            setPreviewSource({ title: f.fileName, content: found.content })
+                                                                            setPreviewSource({ title: f.fileName, content: found.content, sourceId: f.id })
                                                                             setUploadedFiles(prev => prev.map(p => p.id === f.id ? { ...p, content: found.content } : p))
                                                                         } else {
                                                                             setToast('파일 내용을 불러올 수 없습니다.')
@@ -1129,27 +1151,122 @@ export default function CreatorCreatePage() {
                         <div
                             onClick={e => e.stopPropagation()}
                             style={{
-                                background: '#fff', borderRadius: 16, width: '100%', maxWidth: 600,
+                                background: '#fff', borderRadius: 20, width: '100%', maxWidth: 700,
                                 maxHeight: '80vh', display: 'flex', flexDirection: 'column',
                                 boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-                                animation: 'slideDown 0.3s ease',
+                                animation: 'slideDown 0.3s ease', overflow: 'hidden',
                             }}
                         >
                             <div style={{
                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                                 padding: '16px 20px', borderBottom: '1px solid #f0f0f0',
                             }}>
-                                <div style={{ fontSize: 16, fontWeight: 700, color: '#18181b' }}>📄 {previewSource.title}</div>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#18181b' }}>
+                                        📄 파일에서 읽어온 내용
+                                    </h3>
+                                    <p style={{ margin: '2px 0 0', fontSize: 13, color: '#9ca3af' }}>
+                                        {previewSource.title}
+                                    </p>
+                                </div>
                                 <button
                                     onClick={() => setPreviewSource(null)}
-                                    style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#9ca3af', padding: 4 }}
+                                    style={{
+                                        width: 32, height: 32, borderRadius: '50%',
+                                        border: 'none', background: '#f3f4f6',
+                                        fontSize: 16, cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    }}
                                 >✕</button>
                             </div>
-                            <div style={{
-                                padding: '16px 20px', overflowY: 'auto', flex: 1,
-                                fontSize: 14, lineHeight: 1.7, color: '#374151', whiteSpace: 'pre-wrap',
-                            }}>
-                                {previewSource.content}
+                            <div style={{ padding: '16px 20px', overflowY: 'auto', flex: 1 }}>
+                                {/* 탭 전환 */}
+                                <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: '#f3f4f6', borderRadius: 10, padding: 4 }}>
+                                    <button
+                                        onClick={() => setPreviewTab('summary')}
+                                        style={{
+                                            flex: 1, padding: '8px 0', borderRadius: 8, border: 'none',
+                                            background: previewTab === 'summary' ? '#fff' : 'transparent',
+                                            boxShadow: previewTab === 'summary' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                                            color: previewTab === 'summary' ? '#18181b' : '#9ca3af',
+                                            fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                                        }}
+                                    >✨ AI 요약</button>
+                                    <button
+                                        onClick={() => setPreviewTab('text')}
+                                        style={{
+                                            flex: 1, padding: '8px 0', borderRadius: 8, border: 'none',
+                                            background: previewTab === 'text' ? '#fff' : 'transparent',
+                                            boxShadow: previewTab === 'text' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                                            color: previewTab === 'text' ? '#18181b' : '#9ca3af',
+                                            fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                                        }}
+                                    >📄 원본 텍스트</button>
+                                </div>
+
+                                {/* AI 요약 탭 */}
+                                {previewTab === 'summary' && (
+                                    <div style={{ background: 'linear-gradient(135deg, #f0fdf4, #ecfeff)', borderRadius: 14, padding: 20, border: '1px solid #d1fae5' }}>
+                                        {summaryLoading ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: 24 }}>
+                                                <div style={{ width: 32, height: 32, border: '3px solid #d1fae5', borderTopColor: '#22c55e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                                                <div style={{ fontSize: 14, color: '#16a34a', fontWeight: 600 }}>Gemini AI가 분석 중...</div>
+                                                <div style={{ fontSize: 12, color: '#6b7280' }}>파일 내용을 요약하고 있어요</div>
+                                            </div>
+                                        ) : previewSource.summary ? (
+                                            <div style={{ fontSize: 14, lineHeight: 2, color: '#1e293b', whiteSpace: 'pre-wrap' }}>
+                                                {previewSource.summary}
+                                            </div>
+                                        ) : (
+                                            <div style={{ textAlign: 'center', padding: 24, color: '#9ca3af' }}>
+                                                <div style={{ fontSize: 14 }}>요약을 생성할 수 없습니다</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* 원본 텍스트 탭 */}
+                                {previewTab === 'text' && (
+                                    <div style={{ background: '#f9fafb', borderRadius: 12, padding: 16, border: '1px solid #f0f0f0' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+                                            <span style={{
+                                                fontSize: 11, fontWeight: 600, color: '#6b7280',
+                                                background: '#e5e7eb', padding: '2px 8px', borderRadius: 6,
+                                            }}>
+                                                📄 전체 글자수: {previewSource.content.length.toLocaleString()}자
+                                            </span>
+                                            {previewSource.content.length > 5000 && (
+                                                <span style={{ fontSize: 11, color: '#d97706', fontWeight: 500 }}>
+                                                    앞부분 5,000자만 보여드려요 (AI는 전체를 참고해요)
+                                                </span>
+                                            )}
+                                            {previewSource.content.length <= 5000 && (
+                                                <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 500 }}>
+                                                    ✅ 전체 내용 표시
+                                                </span>
+                                            )}
+                                        </div>
+                                        <pre style={{
+                                            margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                                            fontFamily: 'inherit',
+                                            fontSize: 13, lineHeight: 1.7, color: '#374151',
+                                        }}>
+                                            {previewSource.content.length > 5000
+                                                ? previewSource.content.slice(0, 5000) + '\n\n--- ✂️ 여기까지만 보여드려요 (전체 ' + previewSource.content.length.toLocaleString() + '자) ---'
+                                                : previewSource.content}
+                                        </pre>
+                                    </div>
+                                )}
+                            </div>
+                            <div style={{ padding: '12px 20px', borderTop: '1px solid #f0f0f0', display: 'flex', justifyContent: 'flex-end' }}>
+                                <button
+                                    onClick={() => setPreviewSource(null)}
+                                    style={{
+                                        padding: '8px 20px', borderRadius: 10,
+                                        border: 'none', background: '#22c55e', color: '#fff',
+                                        fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                                    }}
+                                >닫기</button>
                             </div>
                         </div>
                     </div>
@@ -1175,6 +1292,9 @@ export default function CreatorCreatePage() {
                 @keyframes slideDown {
                     from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
                     to { opacity: 1; transform: translateX(-50%) translateY(0); }
+                }
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
                 }
                 @keyframes previewDot {
                     0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }

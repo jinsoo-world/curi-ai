@@ -29,7 +29,9 @@ export default function CreatorEditPage() {
     const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null)
     const avatarInputRef = useRef<HTMLInputElement>(null)
     const [knowledgeSources, setKnowledgeSources] = useState<{ id: string; title: string; source_type: string; processing_status: string; chunk_count: number; content?: string; file_size?: number; created_at: string }[]>([])
-    const [previewSource, setPreviewSource] = useState<{ title: string; content: string } | null>(null)
+    const [previewSource, setPreviewSource] = useState<{ title: string; content: string; summary?: string; sourceId?: string } | null>(null)
+    const [previewTab, setPreviewTab] = useState<'summary' | 'text'>('summary')
+    const [summaryLoading, setSummaryLoading] = useState(false)
     const [uploading, setUploading] = useState(false)
     const [dragOver, setDragOver] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -46,6 +48,26 @@ export default function CreatorEditPage() {
     useEffect(() => {
         fetchMentor()
     }, [mentorId])
+
+    // previewSource 열리면 요약 자동 로드
+    useEffect(() => {
+        if (!previewSource || previewSource.summary) return
+        setPreviewTab('summary')
+        setSummaryLoading(true)
+        fetch('/api/creator/knowledge/summarize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sourceId: previewSource.sourceId, content: previewSource.content }),
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.summary) {
+                    setPreviewSource(prev => prev ? { ...prev, summary: data.summary } : prev)
+                }
+            })
+            .catch(() => {})
+            .finally(() => setSummaryLoading(false))
+    }, [previewSource?.sourceId])
 
     // 토스트 자동 숨김
     useEffect(() => {
@@ -568,14 +590,14 @@ export default function CreatorEditPage() {
                                                 <button
                                                     onClick={async () => {
                                                         if (src.content) {
-                                                            setPreviewSource({ title: src.title, content: src.content })
+                                                            setPreviewSource({ title: src.title, content: src.content, sourceId: src.id })
                                                         } else {
                                                             try {
                                                                 const res = await fetch(`/api/creator/knowledge/list?mentorId=${mentorId}`)
                                                                 const data = await res.json()
                                                                 const found = data.sources?.find((s: any) => s.id === src.id)
                                                                 if (found?.content) {
-                                                                    setPreviewSource({ title: src.title, content: found.content })
+                                                                    setPreviewSource({ title: src.title, content: found.content, sourceId: src.id })
                                                                     setKnowledgeSources(prev => prev.map(p => p.id === src.id ? { ...p, content: found.content } : p))
                                                                 } else {
                                                                     setToast({ type: 'error', message: '파일 내용을 불러올 수 없습니다.' })
@@ -990,6 +1012,53 @@ export default function CreatorEditPage() {
                             >✕</button>
                         </div>
                         <div style={{ padding: '16px 20px', overflowY: 'auto' as const, flex: 1 }}>
+                            {/* 탭 전환 */}
+                            <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: '#f3f4f6', borderRadius: 10, padding: 4 }}>
+                                <button
+                                    onClick={() => setPreviewTab('summary')}
+                                    style={{
+                                        flex: 1, padding: '8px 0', borderRadius: 8, border: 'none',
+                                        background: previewTab === 'summary' ? '#fff' : 'transparent',
+                                        boxShadow: previewTab === 'summary' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                                        color: previewTab === 'summary' ? '#18181b' : '#9ca3af',
+                                        fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                                    }}
+                                >✨ AI 요약</button>
+                                <button
+                                    onClick={() => setPreviewTab('text')}
+                                    style={{
+                                        flex: 1, padding: '8px 0', borderRadius: 8, border: 'none',
+                                        background: previewTab === 'text' ? '#fff' : 'transparent',
+                                        boxShadow: previewTab === 'text' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                                        color: previewTab === 'text' ? '#18181b' : '#9ca3af',
+                                        fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                                    }}
+                                >📄 원본 텍스트</button>
+                            </div>
+
+                            {/* AI 요약 탭 */}
+                            {previewTab === 'summary' && (
+                                <div style={{ background: 'linear-gradient(135deg, #f0fdf4, #ecfeff)', borderRadius: 14, padding: 20, border: '1px solid #d1fae5' }}>
+                                    {summaryLoading ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: 24 }}>
+                                            <div style={{ width: 32, height: 32, border: '3px solid #d1fae5', borderTopColor: '#22c55e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                                            <div style={{ fontSize: 14, color: '#16a34a', fontWeight: 600 }}>Gemini AI가 분석 중...</div>
+                                            <div style={{ fontSize: 12, color: '#6b7280' }}>파일 내용을 요약하고 있어요</div>
+                                        </div>
+                                    ) : previewSource.summary ? (
+                                        <div style={{ fontSize: 14, lineHeight: 2, color: '#1e293b', whiteSpace: 'pre-wrap' }}>
+                                            {previewSource.summary}
+                                        </div>
+                                    ) : (
+                                        <div style={{ textAlign: 'center', padding: 24, color: '#9ca3af' }}>
+                                            <div style={{ fontSize: 14 }}>요약을 생성할 수 없습니다</div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* 원본 텍스트 탭 */}
+                            {previewTab === 'text' && (
                             <div style={{ background: '#f9fafb', borderRadius: 12, padding: 16, border: '1px solid #f0f0f0' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' as const }}>
                                     <span style={{
@@ -1019,6 +1088,7 @@ export default function CreatorEditPage() {
                                         : previewSource.content}
                                 </pre>
                             </div>
+                            )}
                         </div>
                         <div style={{ padding: '12px 20px', borderTop: '1px solid #f0f0f0', display: 'flex', justifyContent: 'flex-end' }}>
                             <button
@@ -1048,6 +1118,9 @@ export default function CreatorEditPage() {
                 @keyframes fadeIn {
                     from { opacity: 0; }
                     to { opacity: 1; }
+                }
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
                 }
                 @keyframes scaleIn {
                     from { opacity: 0; transform: scale(0.95); }
