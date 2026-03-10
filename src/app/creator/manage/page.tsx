@@ -247,7 +247,7 @@ export default function CreatorManagePage() {
                             background: '#fff',
                             borderRadius: 14,
                             border: '1px solid #f0f0f0',
-                            overflow: 'hidden',
+                            overflow: 'visible',
                         }}>
                             {/* 테이블 헤더 */}
                             <div style={{
@@ -256,6 +256,7 @@ export default function CreatorManagePage() {
                                 padding: '12px 16px',
                                 background: '#fafafa',
                                 borderBottom: '1px solid #f0f0f0',
+                                borderRadius: '14px 14px 0 0',
                                 fontSize: 12,
                                 fontWeight: 600,
                                 color: '#6b7280',
@@ -393,18 +394,14 @@ export default function CreatorManagePage() {
                                         </div>
 
                                         {/* 이름 + 소개 */}
-                                        <div>
+                                        <div
+                                            style={{ cursor: 'pointer' }}
+                                            onClick={() => router.push(`/chat/${m.id}`)}
+                                        >
                                             <div style={{
                                                 fontSize: 14, fontWeight: 600, color: '#18181b',
-                                                display: 'flex', alignItems: 'center', gap: 6,
                                             }}>
                                                 {m.name}
-                                                <span
-                                                    style={{
-                                                        fontSize: 11, color: '#6366f1', cursor: 'pointer',
-                                                    }}
-                                                    onClick={() => window.open(`/chat/${m.id}`, '_blank')}
-                                                >↗</span>
                                             </div>
                                             <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
                                                 {m.title}
@@ -430,25 +427,19 @@ export default function CreatorManagePage() {
                                         </div>
 
                                         {/* 관리 버튼 */}
-                                        <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'center' }}>
                                             <button
                                                 onClick={() => router.push(`/creator/edit/${m.id}`)}
-                                                title="편집"
                                                 style={{
                                                     background: 'none', border: 'none', cursor: 'pointer',
-                                                    fontSize: 16, padding: '4px',
+                                                    fontSize: 13, padding: '6px 10px',
+                                                    display: 'flex', alignItems: 'center', gap: 4,
+                                                    color: '#374151', fontWeight: 500,
+                                                    borderRadius: 6,
                                                 }}
-                                            >✏️</button>
-                                            <button
-                                                onClick={() => executeDelete(m.id)}
-                                                title="삭제"
-                                                disabled={deleting === m.id}
-                                                style={{
-                                                    background: 'none', border: 'none', cursor: 'pointer',
-                                                    fontSize: 16, padding: '4px',
-                                                    opacity: deleting === m.id ? 0.4 : 1,
-                                                }}
-                                            >🗑️</button>
+                                                onMouseEnter={e => (e.currentTarget.style.background = '#f3f4f6')}
+                                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                            >✏️ 수정하기</button>
                                         </div>
                                     </div>
                                 )
