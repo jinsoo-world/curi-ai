@@ -608,13 +608,13 @@ export default function ProfilePage() {
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15 }}>
                                             <span style={{ color: '#6b7280' }}>구독</span>
                                             <span style={{
-                                                color: profile?.subscription_tier === 'premium' ? '#16a34a' : '#6b7280',
+                                                color: profile?.subscription_tier === 'premium' ? '#16a34a' : '#7c3aed',
                                                 fontWeight: 600,
-                                                background: profile?.subscription_tier === 'premium' ? '#f0fdf4' : '#f4f4f5',
+                                                background: profile?.subscription_tier === 'premium' ? '#f0fdf4' : '#f5f3ff',
                                                 borderRadius: 100,
                                                 padding: '2px 12px',
                                             }}>
-                                                {profile?.subscription_tier === 'premium' ? '✨ 프리미엄' : '무료'}
+                                                {profile?.subscription_tier === 'premium' ? '✨ 프리미엄' : '🎁 무료 체험'}
                                             </span>
                                         </div>
                                         {/* 프리미엄 구독 상세 */}
@@ -668,40 +668,31 @@ export default function ProfilePage() {
                                                 )}
                                             </>
                                         )}
-                                        {/* 무료 사용자: 남은 대화 + 업그레이드 */}
+                                        {/* 무료 체험 사용자 */}
                                         {(!profile?.subscription_tier || profile?.subscription_tier === 'free') && (
                                             <>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 15 }}>
-                                                    <span style={{ color: '#6b7280' }}>오늘 남은 대화</span>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                        <div style={{
-                                                            width: 80, height: 6, borderRadius: 3,
-                                                            background: '#e4e4e7', overflow: 'hidden',
-                                                        }}>
-                                                            <div style={{
-                                                                width: `${Math.max(0, ((20 - (profile?.daily_free_used || 0)) / 20) * 100)}%`,
-                                                                height: '100%', borderRadius: 3,
-                                                                background: (20 - (profile?.daily_free_used || 0)) <= 5 ? '#f59e0b' : '#22c55e',
-                                                                transition: 'width 0.3s ease',
-                                                            }} />
-                                                        </div>
-                                                        <span style={{
-                                                            fontWeight: 600, fontSize: 14,
-                                                            color: (20 - (profile?.daily_free_used || 0)) <= 5 ? '#f59e0b' : '#16a34a',
-                                                        }}>
-                                                            {Math.max(0, 20 - (profile?.daily_free_used || 0))}/20
+                                                    <span style={{ color: '#6b7280' }}>대화 횟수</span>
+                                                    <span style={{ fontWeight: 600, fontSize: 14, color: '#7c3aed' }}>
+                                                        무제한
+                                                    </span>
+                                                </div>
+                                                <div style={{
+                                                    padding: '14px 16px', borderRadius: 12, marginTop: 4,
+                                                    background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)',
+                                                    border: '1px solid #ddd6fe',
+                                                }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                                        <span style={{ fontSize: 18 }}>🎁</span>
+                                                        <span style={{ fontSize: 14, fontWeight: 700, color: '#5b21b6' }}>
+                                                            무료 체험 기간
                                                         </span>
                                                     </div>
+                                                    <div style={{ fontSize: 13, color: '#6d28d9', lineHeight: 1.5 }}>
+                                                        <strong>2026년 4월 30일</strong>까지 모든 기능을 무료로 이용할 수 있습니다.
+                                                        대화 횟수 제한 없이 마음껏 사용하세요! ✨
+                                                    </div>
                                                 </div>
-                                                <Link href="/pricing" style={{
-                                                    display: 'block', textAlign: 'center',
-                                                    padding: '12px', borderRadius: 12, marginTop: 4,
-                                                    background: 'linear-gradient(135deg, #18181b, #27272a)',
-                                                    color: '#fff', fontSize: 14, fontWeight: 700,
-                                                    textDecoration: 'none',
-                                                }}>
-                                                    ✨ 프리미엄으로 하루 500회 대화하기
-                                                </Link>
                                             </>
                                         )}
                                     </div>
