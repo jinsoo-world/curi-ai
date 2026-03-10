@@ -220,18 +220,18 @@ export default function CreatorCreatePage() {
     async function handleFileUpload(files: FileList | null) {
         if (!files || files.length === 0) return
 
-        // 최대 파일 수 검증 (3개)
+        // 최대 파일 수 검증 (10개)
         const newFilesArr = Array.from(files)
-        if (uploadedFiles.length + newFilesArr.length > 3) {
-            setError('파일은 최대 3개까지 등록할 수 있습니다.')
+        if (uploadedFiles.length + newFilesArr.length > 10) {
+            setError('파일은 최대 10개까지 등록할 수 있습니다.')
             return
         }
 
-        // 합산 용량 검증 (10MB)
+        // 합산 용량 검증 (50MB)
         const existingSize = uploadedFiles.reduce((sum, f) => sum + f.fileSize, 0)
         const newSize = newFilesArr.reduce((sum, f) => sum + f.size, 0)
-        if (existingSize + newSize > 10 * 1024 * 1024) {
-            setError('모든 파일 합산 10MB를 초과할 수 없습니다.')
+        if (existingSize + newSize > 50 * 1024 * 1024) {
+            setError('모든 파일 합산 50MB를 초과할 수 없습니다.')
             return
         }
 
@@ -699,7 +699,7 @@ export default function CreatorCreatePage() {
                                     ))}
                                 </div>
                                 <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>
-                                    최대 3개 · 합산 10MB
+                                    최대 10개 · 합산 50MB
                                 </div>
                             </div>
 

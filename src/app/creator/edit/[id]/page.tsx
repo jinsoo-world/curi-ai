@@ -112,10 +112,10 @@ export default function CreatorEditPage() {
     async function handleFileUpload(files: FileList | null) {
         if (!files || files.length === 0) return
 
-        // 최대 파일 수 검증 (3개)
+        // 최대 파일 수 검증 (10개)
         const newFilesArr = Array.from(files)
-        if (knowledgeSources.length + newFilesArr.length > 3) {
-            setToast({ type: 'error', message: '파일은 최대 3개까지 등록할 수 있습니다.' })
+        if (knowledgeSources.length + newFilesArr.length > 10) {
+            setToast({ type: 'error', message: '파일은 최대 10개까지 등록할 수 있습니다.' })
             return
         }
 
@@ -544,7 +544,7 @@ export default function CreatorEditPage() {
                                 {uploading ? '업로드 중...' : '파일 추가 (클릭 또는 드래그)'}
                             </div>
                             <div style={{ fontSize: 11, color: '#9ca3af' }}>
-                                HWP, PDF, PPT, DOCX, TXT · 최대 3개 · 합산 10MB
+                                HWP, PDF, PPT, DOCX, TXT · 최대 10개 · 합산 50MB
                             </div>
                         </div>
 
@@ -697,6 +697,7 @@ export default function CreatorEditPage() {
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                 <span style={{ fontSize: 12, color: '#9ca3af' }}>미리보기</span>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: isActive ? '#16a34a' : '#9ca3af' }}>{isActive ? '배포 ON' : '배포 OFF'}</span>
                                 {/* 활성화 토글 */}
                                 <div
                                     onClick={() => setIsActive(!isActive)}
@@ -759,7 +760,7 @@ export default function CreatorEditPage() {
                                     }}>
                                         <div style={{
                                             width: 48, height: 48, borderRadius: '50%',
-                                            background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff',
+                                            background: avatarPreview ? 'transparent' : 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: 24, fontWeight: 700,
                                             margin: '0 auto 8px',
@@ -785,7 +786,7 @@ export default function CreatorEditPage() {
                                             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                                                 <div style={{
                                                     width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff',
+                                                    background: avatarPreview ? 'transparent' : 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                     fontSize: 14, fontWeight: 700, overflow: 'hidden',
                                                     marginTop: 2,
