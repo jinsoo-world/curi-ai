@@ -340,7 +340,7 @@ function OnboardingContent() {
                                 transition: 'transform 200ms, box-shadow 200ms',
                             }}
                         >
-                            {isLastStep() ? (isSubmitting ? '저장 중...' : '멘토 만나러 가기 🎓') : '다음'}
+                            {isLastStep() ? (isSubmitting ? '저장 중...' : '멘토 만나러 가기 🚀') : '다음'}
                         </button>
                     </div>
                 )}
@@ -479,7 +479,7 @@ function OnboardingContent() {
                                     transition: 'transform 200ms, box-shadow 200ms',
                                 }}
                             >
-                                {isLastStep() ? (isSubmitting ? '저장 중...' : '멘토 만나러 가기 🎓') : '다음'}
+                                {isLastStep() ? (isSubmitting ? '저장 중...' : '멘토 만나러 가기 🚀') : '다음'}
                             </button>
                         </div>
                     </div>
@@ -589,7 +589,7 @@ function OnboardingContent() {
                                         저장 중...
                                     </span>
                                 ) : (
-                                    '멘토 만나러 가기 🎓'
+                                    '멘토 만나러 가기 🚀'
                                 )}
                             </button>
                         </div>

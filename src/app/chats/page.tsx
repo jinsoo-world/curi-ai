@@ -300,14 +300,16 @@ export default function ChatsPage() {
                                                     }}
                                                 />
                                             ) : (
-                                                <div style={{
-                                                    width: 44, height: 44, borderRadius: '50%',
-                                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    fontSize: 20, flexShrink: 0, color: '#fff',
-                                                }}>
-                                                    🎓
-                                                </div>
+                                                <img
+                                                    src="/logo.png"
+                                                    alt="큐리 AI"
+                                                    style={{
+                                                        width: 44, height: 44,
+                                                        borderRadius: '50%', objectFit: 'cover',
+                                                        flexShrink: 0,
+                                                        border: '2px solid #f0fdf4',
+                                                    }}
+                                                />
                                             )}
 
                                             <div style={{ flex: 1, minWidth: 0 }}>

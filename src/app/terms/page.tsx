@@ -21,7 +21,7 @@ export default function TermsPage() {
                         WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                         textDecoration: 'none',
                     }}>
-                        🎓 큐리 AI
+                        🤖 큐리 AI
                     </a>
                 </div>
             </header>

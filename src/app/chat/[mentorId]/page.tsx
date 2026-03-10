@@ -533,7 +533,7 @@ export default function ChatPage() {
     }
 
     const mentorImage = mentor.avatar_url || MENTOR_IMAGES[mentor.name]
-    const mentorEmoji = MENTOR_EMOJI[mentor.slug] || '🎓'
+    const mentorEmoji = MENTOR_EMOJI[mentor.slug] || ''
 
     return (
         <div style={{
@@ -623,20 +623,18 @@ export default function ChatPage() {
                                         }}
                                     />
                                 ) : (
-                                    <div style={{
-                                        width: 72,
-                                        height: 72,
-                                        borderRadius: '50%',
-                                        background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: 36,
-                                        marginBottom: 20,
-                                        boxShadow: '0 2px 12px rgba(34,197,94,0.15)',
-                                    }}>
-                                        {mentorEmoji}
-                                    </div>
+                                    <img
+                                        src="/logo.png"
+                                        alt="큐리 AI"
+                                        style={{
+                                            width: 72,
+                                            height: 72,
+                                            borderRadius: '50%',
+                                            objectFit: 'cover',
+                                            marginBottom: 20,
+                                            boxShadow: '0 2px 12px rgba(34,197,94,0.15)',
+                                        }}
+                                    />
                                 )}
 
                                 {/* 제미나이 스타일 큰 인사 */}

@@ -184,7 +184,7 @@ export default function UserDetailPage() {
                     {[
                         { label: '총 세션', value: stats.totalSessions, icon: '💬' },
                         { label: '총 메시지', value: stats.totalMessages, icon: '📝' },
-                        { label: '멘토 이용', value: stats.uniqueMentors, icon: '🎓' },
+                        { label: '멘토 이용', value: stats.uniqueMentors, icon: '🤖' },
                         { label: '멘토', value: stats.mentorNames.join(', ') || '—', icon: '👤' },
                     ].map((s, i) => (
                         <div key={i} style={{
@@ -251,7 +251,7 @@ export default function UserDetailPage() {
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: 16, flexShrink: 0,
                                         }}>
-                                            🎓
+                                            🤖
                                         </div>
                                         <div style={{ minWidth: 0, flex: 1 }}>
                                             <div style={{
@@ -305,7 +305,7 @@ export default function UserDetailPage() {
                                                                 marginBottom: 4,
                                                             }}>
                                                                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
-                                                                    {isUser ? `👤 ${user.display_name || '유저'}` : `🎓 ${mentor?.name || 'AI'}`}
+                                                                    {isUser ? `👤 ${user.display_name || '유저'}` : `🤖 ${mentor?.name || 'AI'}`}
                                                                 </span>
                                                                 <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>
                                                                     {formatTime(msg.created_at)}

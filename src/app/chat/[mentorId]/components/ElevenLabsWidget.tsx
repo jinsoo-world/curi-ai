@@ -261,13 +261,9 @@ export default function ElevenLabsWidget({
                             style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }}
                         />
                     ) : (
-                        <div style={{
-                            width: 40, height: 40, borderRadius: '50%',
-                            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
-                        }}>
-                            {mentorEmoji}
-                        </div>
+                        <img src="/logo.png" alt="큐리 AI"
+                            style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }}
+                        />
                     )}
                     <div>
                         <div style={{ fontWeight: 700, fontSize: 18, color: '#18181b', lineHeight: 1.3 }}>

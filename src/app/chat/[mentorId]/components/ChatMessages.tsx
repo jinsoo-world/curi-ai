@@ -326,20 +326,18 @@ export default function ChatMessages({
                                         }}
                                     />
                                 ) : (
-                                    <div style={{
-                                        width: 36,
-                                        height: 36,
-                                        borderRadius: '50%',
-                                        background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: 18,
-                                        flexShrink: 0,
-                                        marginTop: 2,
-                                    }}>
-                                        {mentorEmoji}
-                                    </div>
+                                    <img
+                                        src="/logo.png"
+                                        alt="큐리 AI"
+                                        style={{
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: '50%',
+                                            objectFit: 'cover',
+                                            flexShrink: 0,
+                                            marginTop: 2,
+                                        }}
+                                    />
                                 )
                             )}
 

@@ -128,18 +128,16 @@ export default function MentorHeader({
                         }}
                     />
                 ) : (
-                    <div style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 18,
-                    }}>
-                        {mentorEmoji}
-                    </div>
+                    <img
+                        src="/logo.png"
+                        alt="큐리 AI"
+                        style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                        }}
+                    />
                 )}
 
                 <div>
