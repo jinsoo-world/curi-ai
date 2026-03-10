@@ -384,14 +384,24 @@ export default function MissionsPage() {
                                 </p>
                                 <div style={{
                                     marginTop: 14,
-                                    padding: '10px 14px',
-                                    background: '#fef3c7',
-                                    borderRadius: 10,
-                                    fontSize: 13,
-                                    color: '#92400e',
-                                    border: '1px solid #fde68a',
+                                    display: 'flex', gap: 8,
                                 }}>
-                                    🚧 클로버 스토어는 곧 오픈됩니다!
+                                    <Link
+                                        href="/store"
+                                        style={{
+                                            flex: 1, textAlign: 'center',
+                                            padding: '12px 14px',
+                                            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                            borderRadius: 10,
+                                            fontSize: 14,
+                                            fontWeight: 600,
+                                            color: '#fff',
+                                            textDecoration: 'none',
+                                            boxShadow: '0 2px 8px rgba(34,197,94,0.3)',
+                                        }}
+                                    >
+                                        🎁 클로버 스토어 바로가기
+                                    </Link>
                                 </div>
                             </div>
                         </div>

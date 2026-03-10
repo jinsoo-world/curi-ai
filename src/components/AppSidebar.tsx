@@ -64,6 +64,7 @@ export default function AppSidebar() {
         { label: '내 AI 관리', href: '/creator/manage', icon: '📊' },
         { type: 'divider' as const },
         { label: '미션', href: '/missions', icon: '🍀' },
+        { label: '스토어', href: '/store', icon: '🎁' },
         { label: '멤버십', href: '/pricing', icon: '👑' },
         { label: '마이페이지', href: '/profile', icon: '👤' },
     ]
