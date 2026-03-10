@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         switch (step) {
             // ── Step 1: 기본 정보 ──
             case 1: {
-                const { name, title, description, expertise, avatarUrl } = body
+                const { name, title, description, expertise, avatarUrl, category, organization } = body
 
                 if (!name || !title) {
                     return NextResponse.json(
@@ -59,6 +59,8 @@ export async function POST(req: NextRequest) {
                     description: description || '',
                     expertise: expertise || [],
                     avatarUrl: avatarUrl || '',
+                    category: category || null,
+                    organization: organization || null,
                 })
 
                 return NextResponse.json({ success: true, mentor })

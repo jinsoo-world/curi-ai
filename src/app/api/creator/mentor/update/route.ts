@@ -26,6 +26,9 @@ export async function PATCH(req: NextRequest) {
             sampleQuestions,
             isActive,
             avatarUrl,
+            category,
+            organization,
+            personaTemplate,
         } = body
 
         if (!mentorId) {
@@ -50,6 +53,9 @@ export async function PATCH(req: NextRequest) {
         if (greetingMessage !== undefined) updateData.greeting_message = greetingMessage
         if (sampleQuestions !== undefined) updateData.sample_questions = sampleQuestions
         if (avatarUrl !== undefined) updateData.avatar_url = avatarUrl
+        if (category !== undefined) updateData.category = category
+        if (organization !== undefined) updateData.organization = organization
+        if (personaTemplate !== undefined) updateData.persona_template = personaTemplate
         if (isActive !== undefined) {
             updateData.is_active = isActive
             // is_active와 status 동기화

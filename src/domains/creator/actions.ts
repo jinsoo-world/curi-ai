@@ -60,6 +60,8 @@ export async function createMentorDraft(
             description: input.description,
             expertise: input.expertise,
             avatar_url: input.avatarUrl || null,
+            category: input.category || null,
+            organization: input.organization || null,
             system_prompt: '',       // Step 2에서 채움
             greeting_message: '',    // Step 2에서 채움
             sample_questions: [],    // Step 2에서 채움

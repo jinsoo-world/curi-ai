@@ -27,6 +27,8 @@ export interface CreateMentorInput {
     description: string
     expertise: string[]
     avatarUrl?: string
+    category?: string | null
+    organization?: string | null
 }
 
 /** AI 멘토 페르소나 설정 (Step 2) */
