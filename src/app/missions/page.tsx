@@ -39,52 +39,32 @@ export default function MissionsPage() {
             setUser(user)
 
             if (user) {
-                // 미션 진행 상황 확인
-                // 1) AI 몇 개 만들었는지
-                const { count: mentorCount } = await supabase
-                    .from('mentors')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('created_by', user.id)
+                // 서버 API로 미션 진행 상황 조회 (RLS 우회)
+                try {
+                    const res = await fetch('/api/missions/status')
+                    const data = await res.json()
+                    if (data.ok) {
+                        setMissionStatus({
+                            aiCreated: Math.min(data.aiCreated || 0, 2),
+                            questionsAsked: Math.min(data.questionsAsked || 0, 10),
+                            friendsInvited: data.friendsInvited || 0,
+                            friendClovers: (data.friendsInvited || 0) * 100,
+                        })
+                        setClovers(data.clovers || 0)
+                        if (data.referralCode) setReferralCode(data.referralCode)
+                    }
+                } catch (err) {
+                    console.error('Mission status error:', err)
+                }
 
-                // 2) 질문 횟수
-                const { count: msgCount } = await supabase
-                    .from('messages')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('user_id', user.id)
-                    .eq('role', 'user')
-
-                // 3) 클로버 잔고 + referral_code
-                const { data: profile } = await supabase
-                    .from('users')
-                    .select('clovers, referral_code')
-                    .eq('id', user.id)
-                    .single()
-
-                // 4) 친구 초대 수 (referred_by = 내 referral_code)
-                let friendCount = 0
-                if (profile?.referral_code) {
-                    setReferralCode(profile.referral_code)
-                    const { count } = await supabase
-                        .from('users')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('referred_by', profile.referral_code)
-                    friendCount = count || 0
-                } else {
-                    // referral_code 없으면 생성 요청
+                // referral_code 없으면 생성 요청
+                if (!referralCode) {
                     try {
                         const res = await fetch('/api/referral', { method: 'POST' })
                         const data = await res.json()
                         if (data.referral_code) setReferralCode(data.referral_code)
                     } catch {}
                 }
-
-                setMissionStatus({
-                    aiCreated: Math.min(mentorCount || 0, 2),
-                    questionsAsked: Math.min(msgCount || 0, 10),
-                    friendsInvited: friendCount,
-                    friendClovers: friendCount * 100,
-                })
-                setClovers(profile?.clovers || 0)
             }
             setLoading(false)
         }
