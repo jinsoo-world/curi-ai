@@ -320,6 +320,70 @@ export default function AppSidebar() {
                 })}
             </nav>
 
+            {/* ═══ 우측 하단 플로팅 버튼 ═══ */}
+            <div
+                className="floating-action-btns"
+                style={{
+                    position: 'fixed',
+                    right: 20,
+                    bottom: 24,
+                    zIndex: 50,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                    alignItems: 'flex-end',
+                }}
+            >
+                {/* 커뮤니티 — 카카오 오픈채팅 */}
+                <a
+                    href="https://open.kakao.com/o/gCuriAI"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                        width: 48, height: 48,
+                        borderRadius: '50%',
+                        background: '#FEE500',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+                        cursor: 'pointer',
+                        transition: 'transform 150ms, box-shadow 150ms',
+                        textDecoration: 'none',
+                        position: 'relative',
+                    }}
+                    title="커뮤니티"
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.2)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.15)' }}
+                >
+                    {/* 카카오톡 말풍선 아이콘 */}
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 3C6.48 3 2 6.58 2 10.94c0 2.8 1.86 5.27 4.66 6.67-.15.55-.95 3.47-.98 3.67 0 0-.02.17.09.24.11.06.23.01.23.01.3-.04 3.54-2.32 4.1-2.72.6.09 1.23.13 1.9.13 5.52 0 10-3.58 10-7.95S17.52 3 12 3z" fill="#3C1E1E"/>
+                    </svg>
+                </a>
+
+                {/* AI 만들기 (+) */}
+                <Link
+                    href="/creator/create"
+                    style={{
+                        width: 52, height: 52,
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 4px 14px rgba(34,197,94,0.35)',
+                        cursor: 'pointer',
+                        transition: 'transform 150ms, box-shadow 150ms',
+                        textDecoration: 'none',
+                    }}
+                    title="AI 만들기"
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(34,197,94,0.45)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(34,197,94,0.35)' }}
+                >
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                </Link>
+            </div>
+
             {/* CSS for responsive sidebar/mobile-nav */}
             <style>{`
                 @media (min-width: 769px) {
@@ -331,6 +395,7 @@ export default function AppSidebar() {
                     .app-sidebar { display: none !important; }
                     .app-mobile-nav { display: flex !important; }
                     .app-mobile-header { display: flex !important; }
+                    .floating-action-btns { bottom: 72px !important; right: 14px !important; }
                 }
             `}</style>
         </>
