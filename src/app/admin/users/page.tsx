@@ -7,6 +7,7 @@ interface UserData {
     id: string
     email: string
     display_name: string
+    avatar_url?: string | null
     created_at: string
     auth_provider: string
     segment?: string
@@ -17,6 +18,7 @@ interface UserData {
     gender?: string | null
     marketing_agreed?: boolean | null
     subscription_tier?: string | null
+    created_ai_count?: number
 }
 
 interface UsersResponse {
@@ -170,9 +172,12 @@ export default function UsersPage() {
                                 { key: 'phone', label: '전화번호' },
                                 { key: 'gender', label: '성별' },
                                 { key: 'subscription_tier', label: '체험권' },
+                                { key: 'created_ai_count', label: '만든AI' },
                                 { key: 'total_sessions', label: '세션' },
                                 { key: 'total_messages', label: '메시지' },
                                 { key: 'created_at', label: '가입일' },
+                                { key: 'last_active_at', label: '최근활동' },
+                                { key: 'marketing_agreed', label: '마케팅' },
                             ].map(col => (
                                 <th
                                     key={col.key}
@@ -193,9 +198,9 @@ export default function UsersPage() {
                     </thead>
                     <tbody>
                         {loading && !data ? (
-                            <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>로딩 중...</td></tr>
+                            <tr><td colSpan={11} style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>로딩 중...</td></tr>
                         ) : !data?.users?.length ? (
-                            <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>유저 없음</td></tr>
+                            <tr><td colSpan={11} style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>유저 없음</td></tr>
                         ) : data.users.map((user, i) => (
                             <tr
                                 key={user.id}
@@ -211,20 +216,34 @@ export default function UsersPage() {
                             >
                                 <td style={{ padding: '12px 16px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                        <div style={{
-                                            width: 32, height: 32, borderRadius: '50%',
-                                            background: `hsl(${user.id.charCodeAt(0) * 7 % 360}, 50%, 30%)`,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontSize: 14, fontWeight: 700, flexShrink: 0,
-                                        }}>
-                                            {(user.display_name || user.email || '?')[0]?.toUpperCase()}
-                                        </div>
+                                        {(user as any).avatar_url ? (
+                                            <img
+                                                src={(user as any).avatar_url}
+                                                alt=""
+                                                style={{
+                                                    width: 32, height: 32, borderRadius: '50%',
+                                                    objectFit: 'cover', flexShrink: 0,
+                                                }}
+                                            />
+                                        ) : (
+                                            <div style={{
+                                                width: 32, height: 32, borderRadius: '50%',
+                                                background: `hsl(${user.id.charCodeAt(0) * 7 % 360}, 50%, 30%)`,
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: 14, fontWeight: 700, flexShrink: 0,
+                                            }}>
+                                                {(user.display_name || user.email || '?')[0]?.toUpperCase()}
+                                            </div>
+                                        )}
                                         <div>
                                             <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
                                                 {user.display_name || '이름 없음'}
                                             </div>
                                             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
                                                 {user.email || '—'}
+                                            </div>
+                                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.15)', fontFamily: 'monospace' }}>
+                                                {user.id.slice(0, 8)}
                                             </div>
                                         </div>
                                     </div>
@@ -257,6 +276,9 @@ export default function UsersPage() {
                                         <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>—</span>
                                     )}
                                 </td>
+                                <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>
+                                    {(user as any).created_ai_count || 0}
+                                </td>
                                 <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                                     {user.total_sessions?.toLocaleString() || 0}
                                 </td>
@@ -265,6 +287,18 @@ export default function UsersPage() {
                                 </td>
                                 <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
                                     {new Date(user.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                                </td>
+                                <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                                    {user.last_active_at
+                                        ? new Date(user.last_active_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+                                        : '—'}
+                                </td>
+                                <td style={{ padding: '12px 16px', fontSize: 12, textAlign: 'center' }}>
+                                    {user.marketing_agreed ? (
+                                        <span style={{ color: '#4ade80' }}>✅</span>
+                                    ) : (
+                                        <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>
+                                    )}
                                 </td>
                             </tr>
                         ))}

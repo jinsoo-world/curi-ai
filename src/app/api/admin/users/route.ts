@@ -48,6 +48,12 @@ export async function GET(request: NextRequest) {
                     ?.sort((a, b) => new Date(b.last_message_at!).getTime() - new Date(a.last_message_at!).getTime())
                     ?.[0]?.last_message_at || null
 
+                // 만든 AI 수
+                const { count: aiCount } = await supabase
+                    .from('mentors')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('creator_id', user.id)
+
                 // 세그먼트 판단
                 const daysSinceJoin = Math.floor((Date.now() - new Date(user.created_at).getTime()) / 86400000)
                 const daysSinceActive = lastActive
@@ -83,6 +89,7 @@ export async function GET(request: NextRequest) {
                     gender: (user as Record<string, unknown>).gender || null,
                     marketing_agreed: (user as Record<string, unknown>).marketing_agreed ?? null,
                     subscription_tier: (user as Record<string, unknown>).subscription_tier || null,
+                    created_ai_count: aiCount || 0,
                 }
             })
         )
