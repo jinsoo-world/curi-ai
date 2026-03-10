@@ -517,12 +517,12 @@ export default function CreatorCreatePage() {
                                     style={{ ...styles.textarea, fontFamily: 'monospace', fontSize: 13 }}
                                     value={systemPrompt}
                                     onChange={e => setSystemPrompt(e.target.value)}
-                                    maxLength={500}
+                                    maxLength={1000}
                                     placeholder="예: 당신은 마케팅 전문가입니다. 데이터 기반 분석과 실전 사례를 통해 조언합니다."
                                     rows={8}
                                 />
-                                <div style={{ textAlign: 'right' as const, fontSize: 11, color: systemPrompt.length > 450 ? '#f59e0b' : '#b0b8c1', marginTop: 4 }}>
-                                    {systemPrompt.length}/500
+                                <div style={{ textAlign: 'right' as const, fontSize: 11, color: systemPrompt.length > 900 ? '#f59e0b' : '#b0b8c1', marginTop: 4 }}>
+                                    {systemPrompt.length}/1,000
                                 </div>
                             </div>
                         </div>
@@ -748,7 +748,7 @@ export default function CreatorCreatePage() {
                                     }}>
                                         <div style={{
                                             width: 48, height: 48, borderRadius: '50%',
-                                            background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff',
+                                            background: 'linear-gradient(135deg, #6b7280, #9ca3af)', color: '#fff',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: 24, fontWeight: 700,
                                             margin: '0 auto 8px',
@@ -774,7 +774,7 @@ export default function CreatorCreatePage() {
                                             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                                                 <div style={{
                                                     width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff',
+                                                    background: 'linear-gradient(135deg, #6b7280, #9ca3af)', color: '#fff',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                     fontSize: 14, fontWeight: 700, overflow: 'hidden',
                                                     marginTop: 2,

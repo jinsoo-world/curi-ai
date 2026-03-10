@@ -439,7 +439,7 @@ export default function CreatorManagePage() {
                                                 }}
                                                 onMouseEnter={e => (e.currentTarget.style.background = '#f3f4f6')}
                                                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                                            >✏️ 수정하기</button>
+                                            >✏️ 수정</button>
                                         </div>
                                     </div>
                                 )

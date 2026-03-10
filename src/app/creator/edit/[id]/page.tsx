@@ -437,11 +437,11 @@ export default function CreatorEditPage() {
                                 style={{ ...styles.textarea, fontFamily: 'monospace', fontSize: 13 }}
                                 value={systemPrompt}
                                 onChange={e => setSystemPrompt(e.target.value)}
-                                maxLength={500}
+                                maxLength={1000}
                                 rows={12}
                             />
-                            <div style={{ textAlign: 'right' as const, fontSize: 11, color: systemPrompt.length > 450 ? '#f59e0b' : '#b0b8c1', marginTop: 4 }}>
-                                {systemPrompt.length}/500
+                            <div style={{ textAlign: 'right' as const, fontSize: 11, color: systemPrompt.length > 900 ? '#f59e0b' : '#b0b8c1', marginTop: 4 }}>
+                                {systemPrompt.length}/1,000
                             </div>
                         </div>
                     </div>
