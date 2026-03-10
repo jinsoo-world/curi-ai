@@ -14,18 +14,19 @@ interface StoreItem {
     discountPercent: number
     cloverPrice: number
     emoji: string
+    image?: string
 }
 
 const CATEGORIES = ['전체', '편의점', '커피/음료', '아이스크림']
 
 const STORE_ITEMS: StoreItem[] = [
     // 편의점
-    { id: '1', name: 'CU 모바일상품권 1천원', brand: 'CU', category: '편의점', originalPrice: 1000, discountPercent: 10, cloverPrice: 900, emoji: '🏬' },
-    { id: '2', name: 'GS25 모바일상품권 1천원', brand: 'GS25', category: '편의점', originalPrice: 1000, discountPercent: 10, cloverPrice: 900, emoji: '🏪' },
+    { id: '1', name: 'CU 모바일상품권 1천원', brand: 'CU', category: '편의점', originalPrice: 1000, discountPercent: 10, cloverPrice: 900, emoji: '🏬', image: '/store-cu.svg' },
+    { id: '2', name: 'GS25 모바일상품권 1천원', brand: 'GS25', category: '편의점', originalPrice: 1000, discountPercent: 10, cloverPrice: 900, emoji: '🏪', image: '/store-gs25.svg' },
     // 커피/음료
-    { id: '3', name: '스타벅스 아메리카노 Tall', brand: '스타벅스', category: '커피/음료', originalPrice: 4500, discountPercent: 10, cloverPrice: 4050, emoji: '☕' },
+    { id: '3', name: '스타벅스 아메리카노 Tall', brand: '스타벅스', category: '커피/음료', originalPrice: 4500, discountPercent: 10, cloverPrice: 4050, emoji: '☕', image: '/store-starbucks.svg' },
     // 아이스크림
-    { id: '4', name: '베스킨라빈스 싱글킹', brand: '배스킨라빈스', category: '아이스크림', originalPrice: 3800, discountPercent: 10, cloverPrice: 3420, emoji: '🍦' },
+    { id: '4', name: '베스킨라빈스 싱글킹', brand: '배스킨라빈스', category: '아이스크림', originalPrice: 3800, discountPercent: 10, cloverPrice: 3420, emoji: '🍦', image: '/store-baskinrobbins.svg' },
 ]
 
 export default function CloverStorePage() {
@@ -241,7 +242,9 @@ export default function CloverStorePage() {
                                     fontSize: 56,
                                     position: 'relative',
                                 }}>
-                                    {item.emoji}
+                                    {item.image ? (
+                                        <img src={item.image} alt={item.brand} style={{ width: 48, height: 48, objectFit: 'contain' }} />
+                                    ) : item.emoji}
                                     {/* 할인 배지 */}
                                     <div style={{
                                         position: 'absolute', top: 8, left: 8,
@@ -393,7 +396,11 @@ export default function CloverStorePage() {
                         >
                             ✕
                         </button>
-                        <div style={{ fontSize: 56, marginBottom: 12 }}>{showPurchaseModal.emoji}</div>
+                        <div style={{ fontSize: 56, marginBottom: 12 }}>
+                            {showPurchaseModal.image ? (
+                                <img src={showPurchaseModal.image} alt={showPurchaseModal.brand} style={{ width: 72, height: 72, objectFit: 'contain' }} />
+                            ) : showPurchaseModal.emoji}
+                        </div>
                         <h3 style={{ fontSize: 18, fontWeight: 700, color: '#18181b', marginBottom: 4 }}>
                             {showPurchaseModal.name}
                         </h3>
