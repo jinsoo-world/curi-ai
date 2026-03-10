@@ -17,19 +17,36 @@ export async function GET() {
         }
 
         // 1) AI 몇 개 만들었는지 (creator_profiles → mentors)
-        const { data: creatorProfile } = await supabaseAdmin
+        // 방법 1: creator_profiles 경유
+        const { data: creatorProfile, error: cpError } = await supabaseAdmin
             .from('creator_profiles')
             .select('id')
             .eq('user_id', user.id)
             .maybeSingle()
 
+        console.log('[Mission] user.id:', user.id, 'creatorProfile:', creatorProfile, 'cpError:', cpError?.message)
+
         let aiCreated = 0
         if (creatorProfile) {
-            const { count } = await supabaseAdmin
+            const { count, error: mentorCountErr } = await supabaseAdmin
                 .from('mentors')
                 .select('*', { count: 'exact', head: true })
                 .eq('creator_id', creatorProfile.id)
+            console.log('[Mission] creator_profiles.id:', creatorProfile.id, 'mentor count:', count, 'err:', mentorCountErr?.message)
             aiCreated = count || 0
+        }
+
+        // 방법 2: fallback — creator_profiles 없으면 mentors에서 직접 검색
+        if (aiCreated === 0) {
+            // mentors.creator_id가 user.id와 직접 매칭되는지도 확인
+            const { count: directCount } = await supabaseAdmin
+                .from('mentors')
+                .select('*', { count: 'exact', head: true })
+                .eq('creator_id', user.id)
+            console.log('[Mission] fallback direct mentor count:', directCount)
+            if ((directCount || 0) > aiCreated) {
+                aiCreated = directCount || 0
+            }
         }
 
         // 2) 질문 횟수 (user role 메시지)
