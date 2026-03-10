@@ -13,6 +13,10 @@ interface UserData {
     total_sessions?: number
     total_messages?: number
     last_active_at?: string
+    phone?: string | null
+    gender?: string | null
+    marketing_agreed?: boolean | null
+    subscription_tier?: string | null
 }
 
 interface UsersResponse {
@@ -163,10 +167,11 @@ export default function UsersPage() {
                             {[
                                 { key: 'display_name', label: '유저' },
                                 { key: 'segment', label: '세그먼트' },
-                                { key: 'auth_provider', label: '가입경로' },
+                                { key: 'phone', label: '전화번호' },
+                                { key: 'gender', label: '성별' },
+                                { key: 'subscription_tier', label: '체험권' },
                                 { key: 'total_sessions', label: '세션' },
                                 { key: 'total_messages', label: '메시지' },
-                                { key: 'last_active_at', label: '마지막 활동' },
                                 { key: 'created_at', label: '가입일' },
                             ].map(col => (
                                 <th
@@ -188,9 +193,9 @@ export default function UsersPage() {
                     </thead>
                     <tbody>
                         {loading && !data ? (
-                            <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>로딩 중...</td></tr>
+                            <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>로딩 중...</td></tr>
                         ) : !data?.users?.length ? (
-                            <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>유저 없음</td></tr>
+                            <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>유저 없음</td></tr>
                         ) : data.users.map((user, i) => (
                             <tr
                                 key={user.id}
@@ -225,20 +230,38 @@ export default function UsersPage() {
                                     </div>
                                 </td>
                                 <td style={{ padding: '12px 16px' }}>{getSegmentBadge(user.segment)}</td>
+                                <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.5)', fontVariantNumeric: 'tabular-nums' }}>
+                                    {user.phone ? user.phone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3') : '—'}
+                                </td>
                                 <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
-                                    {user.auth_provider === 'google' ? '🔵 Google' :
-                                        user.auth_provider === 'kakao' ? '🟡 카카오' :
-                                            user.auth_provider === 'anonymous' ? '👤 게스트' :
-                                                user.auth_provider || '—'}
+                                    {user.gender === 'male' ? '👨 남' : user.gender === 'female' ? '👩 여' : '—'}
+                                </td>
+                                <td style={{ padding: '12px 16px' }}>
+                                    {user.subscription_tier === 'free_trial' ? (
+                                        <span style={{
+                                            fontSize: 11, fontWeight: 600,
+                                            padding: '3px 10px', borderRadius: 20,
+                                            background: 'rgba(34,197,94,0.15)', color: '#4ade80',
+                                        }}>
+                                            🎁 체험중
+                                        </span>
+                                    ) : user.subscription_tier === 'premium' ? (
+                                        <span style={{
+                                            fontSize: 11, fontWeight: 600,
+                                            padding: '3px 10px', borderRadius: 20,
+                                            background: 'rgba(139,92,246,0.15)', color: '#a78bfa',
+                                        }}>
+                                            ✨ 프리미엄
+                                        </span>
+                                    ) : (
+                                        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>—</span>
+                                    )}
                                 </td>
                                 <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                                     {user.total_sessions?.toLocaleString() || 0}
                                 </td>
                                 <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                                     {user.total_messages?.toLocaleString() || 0}
-                                </td>
-                                <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
-                                    {formatDate(user.last_active_at || '')}
                                 </td>
                                 <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
                                     {new Date(user.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}

@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
         // 유저 기본 정보 조회 (users 테이블 - auth_provider 없음)
         let query = supabase
             .from('users')
-            .select('id, email, display_name, avatar_url, membership_tier, created_at', { count: 'exact' })
+            .select('id, email, display_name, avatar_url, membership_tier, created_at, phone, gender, marketing_agreed, subscription_tier', { count: 'exact' })
             .order('created_at', { ascending: false })
             .range(offset, offset + pageSize - 1)
 
@@ -74,11 +74,15 @@ export async function GET(request: NextRequest) {
                     avatar_url: user.avatar_url,
                     membership_tier: user.membership_tier,
                     created_at: user.created_at,
-                    auth_provider: 'google', // 현재 Google만 지원
+                    auth_provider: 'google',
                     total_sessions: totalSessions,
                     total_messages: totalMessages,
                     last_active_at: lastActive,
                     segment: userSegment,
+                    phone: (user as Record<string, unknown>).phone || null,
+                    gender: (user as Record<string, unknown>).gender || null,
+                    marketing_agreed: (user as Record<string, unknown>).marketing_agreed ?? null,
+                    subscription_tier: (user as Record<string, unknown>).subscription_tier || null,
                 }
             })
         )

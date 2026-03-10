@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface CreditClaimModalProps {
@@ -15,9 +15,39 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
     const [marketingAgreed, setMarketingAgreed] = useState(true)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState('')
+    const [alreadyClaimed, setAlreadyClaimed] = useState(false)
+    const [checkingStatus, setCheckingStatus] = useState(true)
 
     // 인증 관련 상태 (번호 입력 → [인증] 클릭 → 완료)
     const [verifyStep, setVerifyStep] = useState<'idle' | 'sending' | 'done'>('idle')
+
+    // 이미 체험권을 받았는지 체크
+    useEffect(() => {
+        if (!isOpen) return
+        setCheckingStatus(true)
+        const checkStatus = async () => {
+            try {
+                const supabase = createClient()
+                const { data: { user } } = await supabase.auth.getUser()
+                if (!user) { setCheckingStatus(false); return }
+
+                const { data: profile } = await supabase
+                    .from('users')
+                    .select('subscription_tier')
+                    .eq('id', user.id)
+                    .single()
+
+                if (profile?.subscription_tier === 'free_trial' || profile?.subscription_tier === 'premium') {
+                    setAlreadyClaimed(true)
+                }
+            } catch {
+                // 체크 실패시 폼 표시
+            } finally {
+                setCheckingStatus(false)
+            }
+        }
+        checkStatus()
+    }, [isOpen])
 
     if (!isOpen) return null
 
@@ -112,6 +142,87 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
             backdropFilter: 'blur(4px)',
             padding: 24,
         }}>
+            {checkingStatus ? (
+                <div style={{
+                    width: '100%', maxWidth: 420,
+                    background: '#fff', borderRadius: 24,
+                    padding: '60px 28px', textAlign: 'center',
+                    boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
+                }}>
+                    <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
+                    <p style={{ color: '#9ca3af', fontSize: 14 }}>확인 중...</p>
+                </div>
+            ) : alreadyClaimed ? (
+                <div style={{
+                    width: '100%', maxWidth: 420,
+                    background: '#fff', borderRadius: 24,
+                    overflow: 'hidden',
+                    boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
+                    animation: 'modalIn 0.3s ease',
+                    position: 'relative',
+                }}>
+                    {/* X 닫기 버튼 */}
+                    <button
+                        onClick={onClose}
+                        aria-label="닫기"
+                        style={{
+                            position: 'absolute', top: 16, right: 16, zIndex: 10,
+                            width: 32, height: 32, borderRadius: '50%',
+                            background: 'rgba(0,0,0,0.06)', border: 'none',
+                            fontSize: 16, color: '#6b7280', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                    >✕</button>
+
+                    <div style={{
+                        background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+                        padding: '40px 28px 32px', textAlign: 'center',
+                    }}>
+                        <div style={{ fontSize: 56, marginBottom: 12 }}>✅</div>
+                        <h2 style={{
+                            fontSize: 22, fontWeight: 800, color: '#15803d',
+                            letterSpacing: '-0.02em', marginBottom: 8,
+                        }}>
+                            이미 무료 체험 중입니다!
+                        </h2>
+                        <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6 }}>
+                            무료 체험권이 이미 적용되어 있습니다.
+                        </p>
+                    </div>
+
+                    <div style={{ padding: '24px 28px 28px', textAlign: 'center' }}>
+                        <div style={{
+                            padding: '16px 20px', marginBottom: 20,
+                            background: '#f0fdf4', borderRadius: 14,
+                            border: '1px solid #dcfce7',
+                        }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: '#15803d', marginBottom: 4 }}>
+                                🎁 무료 이용 기간
+                            </div>
+                            <div style={{ fontSize: 24, fontWeight: 800, color: '#16a34a' }}>
+                                ~ 2026년 4월 30일
+                            </div>
+                            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 6 }}>
+                                기간 내 모든 AI 상담을 무제한으로 이용할 수 있습니다
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={onClose}
+                            style={{
+                                width: '100%', padding: '16px',
+                                fontSize: 17, fontWeight: 700,
+                                borderRadius: 14, border: 'none',
+                                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                color: '#fff', cursor: 'pointer',
+                                boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
+                            }}
+                        >
+                            확인
+                        </button>
+                    </div>
+                </div>
+            ) : (
             <div style={{
                 width: '100%', maxWidth: 420,
                 background: '#fff',
@@ -350,6 +461,7 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                     </button>
                 </div>
             </div>
+            )}
 
             <style>{`
                 @keyframes modalIn {
