@@ -52,7 +52,7 @@ export default function CreatorEditPage() {
     // previewSource 열리면 요약 자동 로드
     useEffect(() => {
         if (!previewSource || previewSource.summary) return
-        setPreviewTab('summary')
+        setPreviewTab('text')
         setSummaryLoading(true)
         fetch('/api/creator/knowledge/summarize', {
             method: 'POST',
@@ -1081,7 +1081,7 @@ export default function CreatorEditPage() {
                                         </div>
                                     ) : previewSource.summary ? (
                                         <div style={{ fontSize: 14, lineHeight: 2, color: '#1e293b', whiteSpace: 'pre-wrap' }}>
-                                            {previewSource.summary}
+                                            {previewSource.summary.replace(/\*\*/g, '')}
                                         </div>
                                     ) : (
                                         <div style={{ textAlign: 'center', padding: 24, color: '#9ca3af' }}>
