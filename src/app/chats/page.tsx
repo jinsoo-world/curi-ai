@@ -30,12 +30,22 @@ interface FlatSession {
     topic: string
 }
 
+interface MentorGroup {
+    mentor_id: string
+    mentor_name: string
+    mentor_avatar_url: string | null
+    sessions: FlatSession[]
+    total_messages: number
+    latest_at: string
+}
+
 export default function ChatsPage() {
     const router = useRouter()
     const supabase = createClient()
     const [sessions, setSessions] = useState<FlatSession[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [user, setUser] = useState<any>(null)
+    const [expandedMentors, setExpandedMentors] = useState<Set<string>>(new Set())
 
     useEffect(() => {
         async function loadSessions() {
@@ -61,7 +71,7 @@ export default function ChatsPage() {
                 .eq('user_id', user.id)
                 .gt('message_count', 0)
                 .order('last_message_at', { ascending: false, nullsFirst: false })
-                .limit(30)
+                .limit(50)
 
             if (data) {
                 const activeSessions = data.filter((s: any) => s.mentors != null && s.mentors.is_active !== false)
@@ -98,13 +108,53 @@ export default function ChatsPage() {
                 )
 
                 setSessions(sessionsWithTopics)
+
+                // 자동으로 첫 번째 멘토 펼침
+                if (sessionsWithTopics.length > 0) {
+                    setExpandedMentors(new Set([sessionsWithTopics[0].mentor_id]))
+                }
             }
             setIsLoading(false)
         }
         loadSessions()
     }, [])
 
-    const formatDate = (dateString: string) => {
+    // 멘토별 그룹핑
+    const mentorGroups: MentorGroup[] = (() => {
+        const map = new Map<string, MentorGroup>()
+        for (const s of sessions) {
+            if (!map.has(s.mentor_id)) {
+                map.set(s.mentor_id, {
+                    mentor_id: s.mentor_id,
+                    mentor_name: s.mentor_name,
+                    mentor_avatar_url: s.mentor_avatar_url,
+                    sessions: [],
+                    total_messages: 0,
+                    latest_at: s.last_message_at,
+                })
+            }
+            const group = map.get(s.mentor_id)!
+            group.sessions.push(s)
+            group.total_messages += s.message_count
+            if (s.last_message_at > group.latest_at) {
+                group.latest_at = s.last_message_at
+            }
+        }
+        return Array.from(map.values()).sort((a, b) =>
+            new Date(b.latest_at).getTime() - new Date(a.latest_at).getTime()
+        )
+    })()
+
+    const toggleMentor = (mentorId: string) => {
+        setExpandedMentors(prev => {
+            const next = new Set(prev)
+            if (next.has(mentorId)) next.delete(mentorId)
+            else next.add(mentorId)
+            return next
+        })
+    }
+
+    const formatRelativeTime = (dateString: string) => {
         const date = new Date(dateString)
         const now = new Date()
         const diffMs = now.getTime() - date.getTime()
@@ -115,8 +165,9 @@ export default function ChatsPage() {
         if (diffMin < 1) return '방금 전'
         if (diffMin < 60) return `${diffMin}분 전`
         if (diffHours < 24) return `${diffHours}시간 전`
-        if (diffDays < 7) return `${diffDays}일 전`
-        return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+        if (diffDays < 30) return `${diffDays}일 전`
+        if (diffDays < 365) return `${Math.floor(diffDays / 30)}개월 전`
+        return `${Math.floor(diffDays / 365)}년 전`
     }
 
     const truncate = (msg: string, maxLen = 40) => {
@@ -215,99 +266,130 @@ export default function ChatsPage() {
                             </Link>
                         </div>
                     ) : (
-                        <div className="chat-grid" style={{
-                            display: 'flex', flexDirection: 'column', gap: 10,
-                        }}>
-                            {sessions.map((session) => {
-                                const mentorImg = getMentorImage(session)
-                                const topic = truncate(session.topic || '')
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {mentorGroups.map((group) => {
+                                const isExpanded = expandedMentors.has(group.mentor_id)
+                                const mentorImg = group.mentor_avatar_url || MENTOR_IMAGES[group.mentor_name] || null
 
                                 return (
-                                    <Link
-                                        key={session.id}
-                                        href={`/chat/${session.mentor_id}?session=${session.id}`}
-                                        className="chat-card"
-                                        style={{
-                                            display: 'flex', alignItems: 'center',
-                                            gap: 14, padding: '14px 18px',
-                                            background: '#fff', borderRadius: 16,
-                                            border: '1px solid #f0f0f0',
-                                            textDecoration: 'none', color: 'inherit',
-                                            transition: 'box-shadow 150ms, border-color 150ms',
-                                        }}
-                                    >
-                                        {/* 멘토 아바타 */}
-                                        {mentorImg ? (
-                                            <img
-                                                src={mentorImg}
-                                                alt={session.mentor_name}
-                                                style={{
-                                                    width: 44, height: 44,
-                                                    borderRadius: '50%', objectFit: 'cover',
-                                                    flexShrink: 0,
-                                                    border: '2px solid #f0fdf4',
-                                                }}
-                                            />
-                                        ) : (
-                                            <div style={{
-                                                width: 44, height: 44, borderRadius: '50%',
-                                                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontSize: 20, flexShrink: 0, color: '#fff',
-                                            }}>
-                                                🎓
-                                            </div>
-                                        )}
-
-                                        {/* 내용 */}
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{
-                                                display: 'flex', alignItems: 'center',
-                                                gap: 6, marginBottom: 3,
-                                            }}>
-                                                <span style={{
-                                                    fontSize: 15, fontWeight: 700, color: '#18181b',
-                                                }}>
-                                                    {session.mentor_name}
-                                                </span>
-                                                <span style={{
-                                                    fontSize: 12, color: '#b0b8c1',
-                                                }}>
-                                                    {formatDate(session.last_message_at)}
-                                                </span>
-                                            </div>
-                                            {topic ? (
-                                                <div style={{
-                                                    fontSize: 14, color: '#6b7280',
-                                                    lineHeight: 1.4,
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap',
-                                                }}>
-                                                    {topic}
-                                                </div>
+                                    <div key={group.mentor_id} style={{
+                                        background: '#fff', borderRadius: 16,
+                                        border: '1px solid #f0f0f0',
+                                        overflow: 'hidden',
+                                        transition: 'box-shadow 150ms',
+                                    }}>
+                                        {/* 멘토 헤더 — 클릭하면 펼침/접힘 */}
+                                        <div
+                                            onClick={() => toggleMentor(group.mentor_id)}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: 14,
+                                                padding: '14px 18px',
+                                                cursor: 'pointer',
+                                                transition: 'background 150ms',
+                                            }}
+                                        >
+                                            {mentorImg ? (
+                                                <img
+                                                    src={mentorImg}
+                                                    alt={group.mentor_name}
+                                                    style={{
+                                                        width: 44, height: 44,
+                                                        borderRadius: '50%', objectFit: 'cover',
+                                                        flexShrink: 0,
+                                                        border: '2px solid #f0fdf4',
+                                                    }}
+                                                />
                                             ) : (
                                                 <div style={{
-                                                    fontSize: 14, color: '#d1d5db',
-                                                    fontStyle: 'italic',
+                                                    width: 44, height: 44, borderRadius: '50%',
+                                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: 20, flexShrink: 0, color: '#fff',
                                                 }}>
-                                                    대화를 시작해보세요
+                                                    🎓
                                                 </div>
                                             )}
+
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    <span style={{ fontSize: 15, fontWeight: 700, color: '#18181b' }}>
+                                                        {group.mentor_name}
+                                                    </span>
+                                                    <span style={{
+                                                        fontSize: 11, color: '#9ca3af',
+                                                        background: '#f5f5f5', borderRadius: 6,
+                                                        padding: '2px 6px', fontWeight: 500,
+                                                    }}>
+                                                        {group.sessions.length}개 대화
+                                                    </span>
+                                                </div>
+                                                <div style={{ fontSize: 12, color: '#b0b8c1', marginTop: 2 }}>
+                                                    마지막 대화 {formatRelativeTime(group.latest_at)}
+                                                </div>
+                                            </div>
+
+                                            {/* 펼침 화살표 */}
+                                            <span style={{
+                                                fontSize: 14, color: '#b0b8c1',
+                                                transition: 'transform 200ms',
+                                                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                                flexShrink: 0,
+                                            }}>
+                                                ▼
+                                            </span>
                                         </div>
 
-                                        {/* 메시지 수 뱃지 */}
-                                        <span style={{
-                                            fontSize: 11, color: '#9ca3af',
-                                            background: '#f5f5f5',
-                                            borderRadius: 8,
-                                            padding: '3px 8px',
-                                            flexShrink: 0,
-                                            fontWeight: 500,
-                                        }}>
-                                            💬 {session.message_count}
-                                        </span>
-                                    </Link>
+                                        {/* 하위 세션 리스트 */}
+                                        {isExpanded && (
+                                            <div style={{
+                                                borderTop: '1px solid #f0f0f0',
+                                                padding: '4px 0',
+                                            }}>
+                                                {group.sessions.map((session) => (
+                                                    <Link
+                                                        key={session.id}
+                                                        href={`/chat/${session.mentor_id}?session=${session.id}`}
+                                                        className="session-row"
+                                                        style={{
+                                                            display: 'flex', alignItems: 'center',
+                                                            gap: 10,
+                                                            padding: '10px 18px 10px 76px',
+                                                            textDecoration: 'none', color: 'inherit',
+                                                            transition: 'background 100ms',
+                                                        }}
+                                                    >
+                                                        <div style={{
+                                                            width: 6, height: 6, borderRadius: '50%',
+                                                            background: '#d1d5db', flexShrink: 0,
+                                                        }} />
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <div style={{
+                                                                fontSize: 14, color: '#374151',
+                                                                overflow: 'hidden', textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap', lineHeight: 1.4,
+                                                            }}>
+                                                                {truncate(session.topic || '새 대화')}
+                                                            </div>
+                                                        </div>
+                                                        <span style={{
+                                                            fontSize: 12, color: '#b0b8c1',
+                                                            flexShrink: 0, whiteSpace: 'nowrap',
+                                                        }}>
+                                                            {formatRelativeTime(session.last_message_at)}
+                                                        </span>
+                                                        <span style={{
+                                                            fontSize: 11, color: '#9ca3af',
+                                                            background: '#f5f5f5', borderRadius: 6,
+                                                            padding: '2px 7px', fontWeight: 500,
+                                                            flexShrink: 0,
+                                                        }}>
+                                                            💬 {session.message_count}
+                                                        </span>
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 )
                             })}
                         </div>
@@ -317,29 +399,14 @@ export default function ChatsPage() {
 
             <style>{`
                 @keyframes spin { to { transform: rotate(360deg) } }
-                .chat-card:hover {
-                    box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important;
-                    border-color: #e0e0e0 !important;
+                .session-row:hover {
+                    background: #f9fafb !important;
                 }
                 @media (max-width: 768px) {
                     .sidebar-content {
                         margin-left: 0 !important;
                         padding-bottom: 72px;
-                    }
-                    .chat-grid {
-                        display: grid !important;
-                        grid-template-columns: 1fr 1fr !important;
-                        gap: 10px !important;
-                    }
-                    .chat-card {
-                        flex-direction: column !important;
-                        align-items: flex-start !important;
-                        padding: 14px !important;
-                        gap: 10px !important;
-                    }
-                    .chat-card img, .chat-card > div:first-child {
-                        width: 36px !important;
-                        height: 36px !important;
+                        padding-top: 48px;
                     }
                 }
             `}</style>

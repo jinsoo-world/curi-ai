@@ -411,7 +411,7 @@ export default function ProfilePage() {
                                     <>
                                         {/* 닉네임 */}
                                         <div style={{ marginBottom: 20 }}>
-                                            <div style={labelStyle}>뭐라고 불러드릴까요?</div>
+                                            <div style={labelStyle}>닉네임</div>
                                             <div style={{ fontSize: 16, color: '#18181b', fontWeight: 500 }}>
                                                 {profile?.display_name || googleName || <span style={{ color: '#d1d5db' }}>미설정</span>}
                                             </div>
@@ -464,7 +464,7 @@ export default function ProfilePage() {
                                     <>
                                         {/* 닉네임 편집 */}
                                         <div style={{ marginBottom: 24 }}>
-                                            <div style={labelStyle}>뭐라고 불러드릴까요?</div>
+                                            <div style={labelStyle}>닉네임</div>
                                             <input
                                                 type="text"
                                                 value={editName}
