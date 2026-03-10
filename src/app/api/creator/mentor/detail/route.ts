@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
         const { data: mentor, error } = await admin
             .from('mentors')
-            .select('id, name, title, description, expertise, system_prompt, greeting_message, sample_questions, is_active, status, mentor_type, creator_id, created_at')
+            .select('id, name, title, description, expertise, system_prompt, greeting_message, sample_questions, is_active, status, mentor_type, creator_id, avatar_url, created_at')
             .eq('id', mentorId)
             .single()
 

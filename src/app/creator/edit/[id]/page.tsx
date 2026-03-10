@@ -522,10 +522,41 @@ export default function CreatorEditPage() {
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                <span style={{ fontSize: 18 }}>
-                                                    {src.processing_status === 'processing' ? '⏳' :
-                                                     src.source_type === 'pdf' ? '📄' : src.source_type === 'hwp' ? '📝' : '📃'}
-                                                </span>
+                                                {(() => {
+                                                    const ext = src.title?.split('.').pop()?.toLowerCase() || ''
+                                                    const iconMap: Record<string, { bg: string; color: string; label: string }> = {
+                                                        pdf: { bg: '#ef4444', color: '#fff', label: 'PDF' },
+                                                        hwp: { bg: '#18181b', color: '#fff', label: 'HWP' },
+                                                        hwpx: { bg: '#18181b', color: '#fff', label: 'HWP' },
+                                                        doc: { bg: '#3b82f6', color: '#fff', label: 'DOC' },
+                                                        docx: { bg: '#3b82f6', color: '#fff', label: 'DOCX' },
+                                                        ppt: { bg: '#f97316', color: '#fff', label: 'PPT' },
+                                                        pptx: { bg: '#f97316', color: '#fff', label: 'PPT' },
+                                                        txt: { bg: '#8b6f47', color: '#fff', label: 'TXT' },
+                                                        md: { bg: '#6b7280', color: '#fff', label: 'MD' },
+                                                    }
+                                                    const icon = iconMap[ext] || { bg: '#9ca3af', color: '#fff', label: ext.toUpperCase().slice(0, 4) }
+                                                    if (src.processing_status === 'processing') return <span style={{ fontSize: 18 }}>⏳</span>
+                                                    return (
+                                                        <div style={{
+                                                            width: 36, height: 42, borderRadius: 6, background: icon.bg,
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            position: 'relative' as const, overflow: 'hidden', flexShrink: 0,
+                                                        }}>
+                                                            {/* 접힌 코너 */}
+                                                            <div style={{
+                                                                position: 'absolute' as const, top: 0, right: 0,
+                                                                width: 10, height: 10,
+                                                                background: 'rgba(255,255,255,0.3)',
+                                                                borderBottomLeftRadius: 4,
+                                                            }} />
+                                                            <span style={{
+                                                                fontSize: 9, fontWeight: 800, color: icon.color,
+                                                                letterSpacing: 0.3, marginTop: 4,
+                                                            }}>{icon.label}</span>
+                                                        </div>
+                                                    )
+                                                })()}
                                                 <div>
                                                     <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{src.title}</div>
                                                     <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>

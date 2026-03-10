@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
             textContent = await fileData.text()
 
         } else if (['hwp', 'hwpx'].includes(ext)) {
-            // HWP: @ohah/hwpjs로 마크다운 변환 (무료, 로컬 처리)
+            // HWP: @ohah/hwpjs로 마크다운 변환 시도 (무료, 로컬 처리)
             try {
                 const { toMarkdown } = await import('@ohah/hwpjs')
                 const uint8 = Buffer.from(await fileData.arrayBuffer())
@@ -107,7 +107,36 @@ export async function POST(req: NextRequest) {
                 textContent = typeof result === 'string' ? result : result.markdown || ''
                 console.log('[Process] HWP parsed with hwpjs, text length:', textContent.length)
             } catch (hwpErr) {
-                console.error('[Process] HWP parse error:', hwpErr)
+                console.error('[Process] HWP hwpjs parse error:', hwpErr instanceof Error ? hwpErr.message : hwpErr)
+            }
+
+            // hwpjs가 본문을 못 읽은 경우 (200자 이하 = 메타데이터뿐) → Upstage OCR fallback
+            if (textContent.trim().length < 200) {
+                console.log('[Process] HWP hwpjs result too short, falling back to Upstage OCR')
+                try {
+                    const formData = new FormData()
+                    formData.append('document', fileData, source.title)
+                    formData.append('model', 'ocr')
+                    formData.append('ocr', 'force')
+                    const parseRes = await fetch('https://api.upstage.ai/v1/document-digitization', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${process.env.UPSTAGE_API_KEY}` },
+                        body: formData,
+                    })
+                    if (parseRes.ok) {
+                        const pd = await parseRes.json()
+                        const ocrText = extractTextFromUpstage(pd)
+                        if (ocrText && ocrText.length > textContent.length) {
+                            textContent = ocrText
+                            console.log('[Process] HWP Upstage OCR fallback OK, text length:', textContent.length)
+                        }
+                    } else {
+                        const errText = await parseRes.text()
+                        console.error('[Process] HWP Upstage fallback error:', parseRes.status, errText.slice(0, 500))
+                    }
+                } catch (ocrErr) {
+                    console.error('[Process] HWP OCR fallback error:', ocrErr)
+                }
             }
 
         } else if (['doc', 'docx'].includes(ext)) {
