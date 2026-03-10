@@ -54,6 +54,17 @@ export async function GET() {
             friendsInvited = count || 0
         }
 
+        // 4.5) 오늘 공유 횟수
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const { data: todayShareData } = await supabaseAdmin
+            .from('credits')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('type', 'mission_share')
+            .gte('created_at', today.toISOString())
+        const sharesToday = todayShareData?.length || 0
+
         // 5) 클로버 이력 (credits 테이블)
         const { data: creditHistory } = await supabaseAdmin
             .from('credits')
@@ -135,6 +146,7 @@ export async function GET() {
             clovers: finalClovers,
             referralCode: profile?.referral_code || '',
             friendsInvited,
+            sharesToday,
             creditHistory: finalHistory || [],
         })
     } catch (err: unknown) {

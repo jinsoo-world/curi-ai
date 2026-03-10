@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import AppSidebar from '@/components/AppSidebar'
 import { createClient } from '@/lib/supabase/client'
@@ -11,6 +11,7 @@ interface MissionItem {
     title: string
     description: string
     reward: number
+    rewardLabel: string
     progress: number
     goal: number
     completed: boolean
@@ -28,10 +29,24 @@ export default function MissionsPage() {
         questionsAsked: 0,
         friendsInvited: 0,
         friendClovers: 0,
+        sharesToday: 0,
     })
     const [copied, setCopied] = useState(false)
     const [showInviteModal, setShowInviteModal] = useState(false)
     const [referralCode, setReferralCode] = useState('')
+
+    // 클로버 애니메이션
+    const [cloverAnim, setCloverAnim] = useState<{ show: boolean; amount: number; label: string }>({
+        show: false, amount: 0, label: '',
+    })
+
+    const showCloverAnimation = useCallback((amount: number, label: string) => {
+        setCloverAnim({ show: true, amount, label })
+        setTimeout(() => setCloverAnim({ show: false, amount: 0, label: '' }), 2500)
+    }, [])
+
+    // 공유 처리
+    const [sharing, setSharing] = useState(false)
 
     useEffect(() => {
         const supabase = createClient()
@@ -40,7 +55,6 @@ export default function MissionsPage() {
             setUser(user)
 
             if (user) {
-                // 서버 API로 미션 진행 상황 조회 (RLS 우회)
                 try {
                     const res = await fetch('/api/missions/status')
                     const data = await res.json()
@@ -50,6 +64,7 @@ export default function MissionsPage() {
                             questionsAsked: Math.min(data.questionsAsked || 0, 10),
                             friendsInvited: data.friendsInvited || 0,
                             friendClovers: (data.friendsInvited || 0) * 100,
+                            sharesToday: data.sharesToday || 0,
                         })
                         setClovers(data.clovers || 0)
                         setCreditHistory(data.creditHistory || [])
@@ -59,7 +74,6 @@ export default function MissionsPage() {
                     console.error('Mission status error:', err)
                 }
 
-                // referral_code 없으면 생성 요청
                 if (!referralCode) {
                     try {
                         const res = await fetch('/api/referral', { method: 'POST' })
@@ -74,6 +88,7 @@ export default function MissionsPage() {
     }, [])
 
     const inviteLink = `https://app-seven-delta-90.vercel.app/?ref=${referralCode || 'curi'}`
+    const shareLink = `https://app-seven-delta-90.vercel.app/`
 
     const handleCopyInviteLink = () => {
         navigator.clipboard.writeText(inviteLink).then(() => {
@@ -82,25 +97,55 @@ export default function MissionsPage() {
         })
     }
 
+    // 카톡 공유 + 클로버 적립
+    const handleShare = async () => {
+        if (sharing || missionStatus.sharesToday >= 3) return
+        setSharing(true)
+
+        // Web Share API 시도 → 실패 시 카카오 URL로 fallback
+        const shareText = '큐리 AI에서 나만의 AI 멘토를 만들어보세요! 🤖'
+        const shareUrl = shareLink
+
+        try {
+            if (navigator.share) {
+                await navigator.share({
+                    title: '큐리 AI',
+                    text: shareText,
+                    url: shareUrl,
+                })
+            } else {
+                // 카카오톡 공유 URL
+                window.open(
+                    `https://sharer.kakao.com/talk/friends/picker/link?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`,
+                    '_blank'
+                )
+            }
+
+            // 공유 완료 → 클로버 적립
+            const res = await fetch('/api/missions/share', { method: 'POST' })
+            const data = await res.json()
+            if (data.ok) {
+                setClovers(data.clovers)
+                setMissionStatus(prev => ({ ...prev, sharesToday: data.sharesToday }))
+                showCloverAnimation(10, '친구에게 공유 완료!')
+            } else if (data.error) {
+                alert(data.error)
+            }
+        } catch (err) {
+            // 사용자가 공유 취소한 경우 — 적립 안함
+            console.log('Share cancelled or failed:', err)
+        }
+        setSharing(false)
+    }
+
     const missions: MissionItem[] = [
-        {
-            id: 'create-ai',
-            icon: '🤖',
-            title: '내 AI 만들어보기',
-            description: 'AI를 2개 만들어보세요',
-            reward: 50,
-            progress: missionStatus.aiCreated,
-            goal: 2,
-            completed: missionStatus.aiCreated >= 2,
-            action: () => window.location.href = '/creator/create',
-            actionLabel: 'AI 만들기',
-        },
         {
             id: 'ask-10',
             icon: '💬',
             title: '10번 질문하기',
             description: 'AI에게 10번 대화해보세요',
             reward: 30,
+            rewardLabel: '🍀 +30',
             progress: missionStatus.questionsAsked,
             goal: 10,
             completed: missionStatus.questionsAsked >= 10,
@@ -108,11 +153,38 @@ export default function MissionsPage() {
             actionLabel: '대화하기',
         },
         {
+            id: 'create-ai',
+            icon: '🤖',
+            title: '내 AI 만들어보기',
+            description: 'AI를 2개 만들어보세요',
+            reward: 50,
+            rewardLabel: '🍀 +50',
+            progress: missionStatus.aiCreated,
+            goal: 2,
+            completed: missionStatus.aiCreated >= 2,
+            action: () => window.location.href = '/creator/create',
+            actionLabel: 'AI 만들기',
+        },
+        {
+            id: 'share',
+            icon: '📤',
+            title: '친구에게 공유하기',
+            description: `하루 3번, 공유당 10클로버 (오늘 ${missionStatus.sharesToday}/3)`,
+            reward: 10,
+            rewardLabel: '🍀 +10/회',
+            progress: missionStatus.sharesToday,
+            goal: 3,
+            completed: missionStatus.sharesToday >= 3,
+            action: handleShare,
+            actionLabel: sharing ? '공유 중...' : '공유하기',
+        },
+        {
             id: 'invite-friend',
             icon: '🎉',
             title: '친구 초대하기',
             description: '친구 1명이 가입하면 100클로버!',
             reward: 100,
+            rewardLabel: '🍀 +100',
             progress: missionStatus.friendsInvited,
             goal: 1,
             completed: missionStatus.friendsInvited >= 1,
@@ -120,8 +192,6 @@ export default function MissionsPage() {
             actionLabel: '초대하기',
         },
     ]
-
-    const totalEarned = missions.filter(m => m.completed).reduce((s, m) => s + m.reward, 0)
 
     return (
         <>
@@ -139,6 +209,22 @@ export default function MissionsPage() {
                     @keyframes fadeIn {
                         from { opacity: 0; transform: translateY(10px); }
                         to { opacity: 1; transform: translateY(0); }
+                    }
+                    @keyframes cloverFloat {
+                        0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+                        15% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+                        30% { transform: translate(-50%, -55%) scale(1); }
+                        80% { opacity: 1; transform: translate(-50%, -70%) scale(1); }
+                        100% { opacity: 0; transform: translate(-50%, -90%) scale(0.8); }
+                    }
+                    @keyframes cloverPulse {
+                        0%, 100% { transform: scale(1); }
+                        50% { transform: scale(1.15); }
+                    }
+                    @keyframes sparkle {
+                        0% { opacity: 0; transform: scale(0) rotate(0deg); }
+                        50% { opacity: 1; transform: scale(1) rotate(180deg); }
+                        100% { opacity: 0; transform: scale(0) rotate(360deg); }
                     }
                 `}</style>
 
@@ -284,18 +370,24 @@ export default function MissionsPage() {
                                                 fontSize: 12, fontWeight: 600, color: '#16a34a',
                                                 background: '#f0fdf4', borderRadius: 8, padding: '3px 10px',
                                             }}>
-                                                🍀 +{mission.reward}
+                                                {mission.rewardLabel}
                                             </div>
                                             {mission.completed ? (
-                                                <span style={{ fontSize: 12, fontWeight: 600, color: '#16a34a' }}>완료!</span>
+                                                mission.id === 'share' ? (
+                                                    <span style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af' }}>오늘 완료</span>
+                                                ) : (
+                                                    <span style={{ fontSize: 12, fontWeight: 600, color: '#16a34a' }}>완료!</span>
+                                                )
                                             ) : (
                                                 <button
                                                     onClick={mission.action}
+                                                    disabled={mission.id === 'share' && sharing}
                                                     style={{
                                                         padding: '8px 16px', borderRadius: 10, border: 'none',
                                                         background: 'linear-gradient(135deg, #22c55e, #16a34a)',
                                                         color: '#fff', fontSize: 13, fontWeight: 600,
                                                         cursor: 'pointer', transition: 'transform 150ms', whiteSpace: 'nowrap',
+                                                        opacity: (mission.id === 'share' && sharing) ? 0.6 : 1,
                                                     }}
                                                     onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                                                     onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
@@ -351,6 +443,7 @@ export default function MissionsPage() {
                                                 mission_create_ai: '🤖 AI 만들기 미션',
                                                 mission_ask_10: '💬 10번 질문 미션',
                                                 mission_invite: '🎉 친구 초대 미션',
+                                                mission_share: '📤 공유 미션',
                                                 purchase: '💳 충전',
                                                 usage: '🛒 사용',
                                                 refund: '↩️ 환불',
@@ -401,6 +494,57 @@ export default function MissionsPage() {
                     )}
                 </div>
             </main>
+
+            {/* 클로버 획득 애니메이션 오버레이 */}
+            {cloverAnim.show && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 9999,
+                    pointerEvents: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                    {/* 배경 반짝이 */}
+                    <div style={{
+                        position: 'absolute', top: '45%', left: '50%',
+                        width: 200, height: 200,
+                        animation: 'sparkle 1.5s ease-out forwards',
+                        background: 'radial-gradient(circle, rgba(34,197,94,0.15) 0%, transparent 70%)',
+                        borderRadius: '50%',
+                        transform: 'translate(-50%, -50%)',
+                    }} />
+
+                    {/* 메인 클로버 */}
+                    <div style={{
+                        position: 'absolute', top: '50%', left: '50%',
+                        animation: 'cloverFloat 2.5s ease-out forwards',
+                        textAlign: 'center',
+                    }}>
+                        <div style={{
+                            fontSize: 64,
+                            animation: 'cloverPulse 0.5s ease-in-out 3',
+                            filter: 'drop-shadow(0 4px 20px rgba(34,197,94,0.5))',
+                        }}>
+                            🍀
+                        </div>
+                        <div style={{
+                            fontSize: 28, fontWeight: 800,
+                            color: '#15803d',
+                            textShadow: '0 2px 12px rgba(34,197,94,0.3)',
+                            whiteSpace: 'nowrap',
+                            marginTop: 4,
+                        }}>
+                            +{cloverAnim.amount} 클로버!
+                        </div>
+                        <div style={{
+                            fontSize: 15, fontWeight: 600,
+                            color: '#16a34a',
+                            marginTop: 4,
+                            whiteSpace: 'nowrap',
+                        }}>
+                            {cloverAnim.label}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* 친구 초대 모달 */}
             {showInviteModal && (

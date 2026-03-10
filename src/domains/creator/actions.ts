@@ -156,7 +156,7 @@ export async function publishMentor(
         .from('mentors')
         .update({
             status: 'active',
-            is_active: true,
+            is_active: false,
             updated_at: new Date().toISOString(),
         })
         .eq('id', mentorId)

@@ -243,7 +243,7 @@ export default function CloverStorePage() {
                                     position: 'relative',
                                 }}>
                                     {item.image ? (
-                                        <img src={item.image} alt={item.brand} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 12 }} />
+                                        <img src={item.image} alt={item.brand} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     ) : item.emoji}
                                     {/* 할인 배지 */}
                                     <div style={{
