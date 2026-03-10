@@ -205,22 +205,65 @@ export default function AppSidebar() {
                             </div>
                         </Link>
                     ) : (
-                        <div style={{
-                            padding: '12px',
-                            background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
-                            borderRadius: 12,
-                            border: '1px solid #dcfce7',
-                        }}>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: '#16a34a', marginBottom: 4 }}>
-                                🎁 무료 체험
+                        <Link
+                            href="/login"
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 10,
+                                textDecoration: 'none',
+                                padding: '8px',
+                                borderRadius: 10,
+                                transition: 'background 150ms',
+                            }}
+                        >
+                            <div style={{
+                                width: 36, height: 36,
+                                borderRadius: '50%',
+                                background: '#f0f0f0',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: '#9ca3af', fontSize: 16,
+                            }}>
+                                👤
                             </div>
-                            <div style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>
-                                AI를 무료로 체험해보세요
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>
+                                    마이페이지
+                                </div>
+                                <div style={{ fontSize: 11, color: '#9ca3af' }}>
+                                    로그인하기
+                                </div>
                             </div>
-                        </div>
+                        </Link>
                     )}
                 </div>
             </aside>
+
+            {/* Mobile Top Header — 큐리AI 로고 */}
+            <div
+                className="app-mobile-header"
+                style={{
+                    position: 'fixed',
+                    top: 0, left: 0, right: 0,
+                    height: 48,
+                    background: 'rgba(255,255,255,0.97)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    borderBottom: '1px solid #f0f0f0',
+                    display: 'none',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: 8,
+                    zIndex: 41,
+                }}
+            >
+                <Image src="/logo.png" alt="큐리 AI" width={26} height={26} style={{ borderRadius: 6 }} />
+                <span style={{
+                    fontSize: 16, fontWeight: 800, letterSpacing: '-0.04em',
+                    background: 'linear-gradient(135deg, #16a34a, #22c55e)',
+                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                }}>
+                    큐리 AI
+                </span>
+            </div>
 
             {/* Mobile Bottom Nav */}
             <nav
@@ -274,10 +317,12 @@ export default function AppSidebar() {
                 @media (min-width: 769px) {
                     .app-sidebar { display: flex !important; }
                     .app-mobile-nav { display: none !important; }
+                    .app-mobile-header { display: none !important; }
                 }
                 @media (max-width: 768px) {
                     .app-sidebar { display: none !important; }
                     .app-mobile-nav { display: flex !important; }
+                    .app-mobile-header { display: flex !important; }
                 }
             `}</style>
         </>

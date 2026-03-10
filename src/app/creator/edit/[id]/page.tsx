@@ -437,8 +437,12 @@ export default function CreatorEditPage() {
                                 style={{ ...styles.textarea, fontFamily: 'monospace', fontSize: 13 }}
                                 value={systemPrompt}
                                 onChange={e => setSystemPrompt(e.target.value)}
+                                maxLength={500}
                                 rows={12}
                             />
+                            <div style={{ textAlign: 'right' as const, fontSize: 11, color: systemPrompt.length > 450 ? '#f59e0b' : '#b0b8c1', marginTop: 4 }}>
+                                {systemPrompt.length}/500
+                            </div>
                         </div>
                     </div>
 
@@ -451,8 +455,12 @@ export default function CreatorEditPage() {
                                 style={styles.textarea}
                                 value={greetingMessage}
                                 onChange={e => setGreetingMessage(e.target.value)}
+                                maxLength={200}
                                 rows={3}
                             />
+                            <div style={{ textAlign: 'right' as const, fontSize: 11, color: greetingMessage.length > 180 ? '#f59e0b' : '#b0b8c1', marginTop: 4 }}>
+                                {greetingMessage.length}/200
+                            </div>
                         </div>
 
                         <div style={styles.field}>
@@ -462,10 +470,20 @@ export default function CreatorEditPage() {
                                 style={styles.textarea}
                                 value={sampleQuestions}
                                 onChange={e => setSampleQuestions(e.target.value)}
+                                maxLength={300}
                                 placeholder={"질문 1\n질문 2\n질문 3"}
                                 rows={4}
                             />
+                            <div style={{ textAlign: 'right' as const, fontSize: 11, color: sampleQuestions.length > 270 ? '#f59e0b' : '#b0b8c1', marginTop: 4 }}>
+                                {sampleQuestions.length}/300
+                            </div>
                         </div>
+                    </div>
+
+                    {/* ═══════════ 층위 2: 파일 학습 ═══════════ */}
+                    <div style={{ marginTop: 20, marginBottom: 12 }}>
+                        <h3 style={{ fontSize: 17, fontWeight: 700, color: '#18181b', letterSpacing: '-0.02em', margin: 0 }}>📁 지식 파일</h3>
+                        <p style={{ fontSize: 13, color: '#9ca3af', margin: '4px 0 0' }}>AI가 참고할 문서를 업로드하세요</p>
                     </div>
 
                     {/* ── 지식 파일 관리 ── */}

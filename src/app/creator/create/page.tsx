@@ -7,8 +7,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import AppSidebar from '@/components/AppSidebar'
-import { PERSONA_TEMPLATES } from '@/domains/creator/types'
-import type { PersonaTemplate } from '@/domains/creator/types'
+// PERSONA_TEMPLATES import removed — agent prompt now directly entered
 
 interface UploadedFile {
     id: string
@@ -29,9 +28,8 @@ export default function CreatorCreatePage() {
     const [avatarFile, setAvatarFile] = useState<File | null>(null)
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
 
-    // AI 성격
-    const [template, setTemplate] = useState<PersonaTemplate | null>(null)
-    const [customPrompt, setCustomPrompt] = useState('')
+    // AI 성격 → 에이전트 프롬프트
+    const [systemPrompt, setSystemPrompt] = useState('')
 
     // 인사말 / 예시 질문
     const [greetingMessage, setGreetingMessage] = useState('')
@@ -139,8 +137,7 @@ export default function CreatorCreatePage() {
             }
 
             // Step 2: 페르소나 설정
-            const selectedTemplate = PERSONA_TEMPLATES.find(t => t.id === template)
-            const fullPrompt = selectedTemplate?.defaultPromptStyle || ''
+            const fullPrompt = systemPrompt.trim()
 
             const res2 = await fetch('/api/creator/mentor', {
                 method: 'POST',
@@ -149,7 +146,7 @@ export default function CreatorCreatePage() {
                     step: 2,
                     mentorId,
                     mentorName: name,
-                    template,
+                    template: null,
                     systemPrompt: fullPrompt,
                     greetingMessage: greetingMessage.trim() ||
                         `안녕하세요! ${name}입니다 😊 무엇이 궁금하세요?`,
@@ -475,26 +472,22 @@ export default function CreatorCreatePage() {
                             </div>
                         </div>
 
-                        {/* ── AI 성격 선택 ── */}
+                        {/* ── 에이전트 프롬프트 ── */}
                         <div style={styles.card}>
-                            <label style={{ ...styles.label, marginBottom: 8, fontSize: 15 }}>🎭 AI 성격 선택 (선택)</label>
-                            <div className="template-grid" style={styles.templateGrid}>
-                                {PERSONA_TEMPLATES.map(t => (
-                                    <button
-                                        key={t.id}
-                                        style={{
-                                            ...styles.templateCard,
-                                            ...(template === t.id ? styles.templateCardSelected : {}),
-                                        }}
-                                        onClick={() => setTemplate(t.id)}
-                                    >
-                                        <span style={{ fontSize: 24 }}>{t.emoji}</span>
-                                        <strong style={{ fontSize: 13 }}>{t.label}</strong>
-                                        <span style={{ fontSize: 11, color: '#9ca3af', lineHeight: '1.3' }}>
-                                            {t.description}
-                                        </span>
-                                    </button>
-                                ))}
+                            <div style={styles.field}>
+                                <label style={{ ...styles.label, fontSize: 15 }}>🎭 에이전트 프롬프트</label>
+                                <p style={styles.hint}>AI의 성격, 말투, 전문성을 정의합니다</p>
+                                <textarea
+                                    style={{ ...styles.textarea, fontFamily: 'monospace', fontSize: 13 }}
+                                    value={systemPrompt}
+                                    onChange={e => setSystemPrompt(e.target.value)}
+                                    maxLength={500}
+                                    placeholder="예: 당신은 마케팅 전문가입니다. 데이터 기반 분석과 실전 사례를 통해 조언합니다."
+                                    rows={8}
+                                />
+                                <div style={{ textAlign: 'right' as const, fontSize: 11, color: systemPrompt.length > 450 ? '#f59e0b' : '#b0b8c1', marginTop: 4 }}>
+                                    {systemPrompt.length}/500
+                                </div>
                             </div>
                         </div>
 
@@ -507,7 +500,11 @@ export default function CreatorCreatePage() {
                                     placeholder={`안녕하세요! ${name || 'AI'}입니다 😊`}
                                     value={greetingMessage}
                                     onChange={e => setGreetingMessage(e.target.value)}
+                                    maxLength={200}
                                 />
+                                <div style={{ textAlign: 'right' as const, fontSize: 11, color: greetingMessage.length > 180 ? '#f59e0b' : '#b0b8c1', marginTop: 4 }}>
+                                    {greetingMessage.length}/200
+                                </div>
                             </div>
 
                             <div style={styles.field}>
@@ -518,9 +515,19 @@ export default function CreatorCreatePage() {
                                     placeholder={"질문 1\n질문 2\n질문 3"}
                                     value={sampleQuestions}
                                     onChange={e => setSampleQuestions(e.target.value)}
+                                    maxLength={300}
                                     rows={3}
                                 />
+                                <div style={{ textAlign: 'right' as const, fontSize: 11, color: sampleQuestions.length > 270 ? '#f59e0b' : '#b0b8c1', marginTop: 4 }}>
+                                    {sampleQuestions.length}/300
+                                </div>
                             </div>
+                        </div>
+
+                        {/* ═══════ 층위 2: 파일 학습 ═══════ */}
+                        <div style={{ marginTop: 20, marginBottom: 12 }}>
+                            <h3 style={{ fontSize: 17, fontWeight: 700, color: '#18181b', letterSpacing: '-0.02em', margin: 0 }}>📁 지식 파일</h3>
+                            <p style={{ fontSize: 13, color: '#9ca3af', margin: '4px 0 0' }}>AI가 참고할 문서를 업로드하세요 (선택)</p>
                         </div>
 
                         {/* ── 지식 추가 ── */}
