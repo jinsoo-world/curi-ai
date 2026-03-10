@@ -205,38 +205,48 @@ export async function POST(req: NextRequest) {
             }
 
         } else if (ext === 'pdf') {
-            // PDF: Upstage OCR 사용
-            if (!process.env.UPSTAGE_API_KEY) {
-                console.error('[Process] UPSTAGE_API_KEY is not set!')
-                await admin.from('knowledge_sources')
-                    .update({ processing_status: 'failed' })
-                    .eq('id', sourceId)
-                return NextResponse.json({ error: 'Upstage API 키가 설정되지 않았습니다.' }, { status: 500 })
-            }
+            // PDF: pdf-parse로 텍스트 추출 (무료, 로컬, 페이지 무제한)
             try {
-                console.log('[Process] Sending PDF to Upstage OCR:', source.title, 'size:', fileData.size)
-                const formData = new FormData()
-                formData.append('document', fileData, source.title)
-                formData.append('model', 'ocr')
-                formData.append('ocr', 'force')
-                const parseRes = await fetch('https://api.upstage.ai/v1/document-digitization', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${process.env.UPSTAGE_API_KEY}` },
-                    body: formData,
-                })
-                if (parseRes.ok) {
-                    const pd = await parseRes.json()
-                    console.log('[Process] Upstage keys:', Object.keys(pd))
-                    textContent = extractTextFromUpstage(pd)
-                    if (!textContent) {
-                        console.log('[Process] No text extracted. Raw:', JSON.stringify(pd).slice(0, 1000))
+                const pdfParseModule = await import('pdf-parse')
+                const pdfParse = pdfParseModule.default || pdfParseModule
+                const buffer = Buffer.from(await fileData.arrayBuffer())
+                const pdfData = await pdfParse(buffer)
+                textContent = (pdfData.text || '')
+                    .replace(/\n{3,}/g, '\n\n')
+                    .replace(/[ \t]{2,}/g, ' ')
+                    .trim()
+                console.log('[Process] PDF parsed with pdf-parse, text length:', textContent.length, 'pages:', pdfData.numpages)
+            } catch (pdfErr) {
+                console.error('[Process] pdf-parse error:', pdfErr instanceof Error ? pdfErr.message : pdfErr)
+            }
+
+            // pdf-parse로 텍스트 못 읽은 경우 (스캔 PDF) → Upstage OCR fallback
+            if (textContent.trim().length < 200 && process.env.UPSTAGE_API_KEY) {
+                console.log('[Process] PDF text too short, falling back to Upstage OCR')
+                try {
+                    const formData = new FormData()
+                    formData.append('document', fileData, source.title)
+                    formData.append('model', 'ocr')
+                    formData.append('ocr', 'force')
+                    const parseRes = await fetch('https://api.upstage.ai/v1/document-digitization', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${process.env.UPSTAGE_API_KEY}` },
+                        body: formData,
+                    })
+                    if (parseRes.ok) {
+                        const pd = await parseRes.json()
+                        const ocrText = extractTextFromUpstage(pd)
+                        if (ocrText && ocrText.length > textContent.length) {
+                            textContent = ocrText
+                            console.log('[Process] PDF Upstage OCR fallback OK, text length:', textContent.length)
+                        }
+                    } else {
+                        const errText = await parseRes.text()
+                        console.error('[Process] Upstage PDF fallback error:', parseRes.status, errText.slice(0, 500))
                     }
-                } else {
-                    const errText = await parseRes.text()
-                    console.error('[Process] Upstage PDF error:', parseRes.status, parseRes.statusText, errText.slice(0, 500))
+                } catch (ocrErr) {
+                    console.error('[Process] PDF OCR fallback error:', ocrErr)
                 }
-            } catch (parseErr) {
-                console.error('[Process] PDF parse error:', parseErr)
             }
         } else {
             console.error('[Process] Unsupported file type:', ext)
