@@ -16,28 +16,16 @@ interface StoreItem {
     emoji: string
 }
 
-const CATEGORIES = ['전체', '상품권', '커피/음료', '편의점', '치킨', '아이스크림']
+const CATEGORIES = ['전체', '편의점', '커피/음료', '아이스크림']
 
 const STORE_ITEMS: StoreItem[] = [
-    // 상품권
-    { id: '1', name: '파리바게뜨 교환권 1천원', brand: '파리바게뜨', category: '상품권', originalPrice: 1000, discountPercent: 10, cloverPrice: 900, emoji: '🥐' },
-    { id: '2', name: 'GS25 모바일상품권 1천원', brand: 'GS25', category: '편의점', originalPrice: 1000, discountPercent: 10, cloverPrice: 900, emoji: '🏪' },
-    { id: '3', name: 'CU 모바일상품권 1천원', brand: 'CU', category: '편의점', originalPrice: 1000, discountPercent: 10, cloverPrice: 900, emoji: '🏬' },
-    { id: '4', name: '네이버페이 포인트 1,000원', brand: '네이버페이', category: '상품권', originalPrice: 1000, discountPercent: 10, cloverPrice: 900, emoji: '💚' },
-    // 커피/음료
-    { id: '5', name: '스타벅스 아메리카노 Tall', brand: '스타벅스', category: '커피/음료', originalPrice: 4500, discountPercent: 10, cloverPrice: 4050, emoji: '☕' },
-    { id: '6', name: '투썸플레이스 아메리카노', brand: '투썸플레이스', category: '커피/음료', originalPrice: 4300, discountPercent: 10, cloverPrice: 3870, emoji: '🍵' },
-    { id: '7', name: '이디야커피 아메리카노', brand: '이디야', category: '커피/음료', originalPrice: 3200, discountPercent: 10, cloverPrice: 2880, emoji: '🧋' },
-    { id: '8', name: '빽다방 완전 아메리카노', brand: '빽다방', category: '커피/음료', originalPrice: 2000, discountPercent: 10, cloverPrice: 1800, emoji: '🥤' },
     // 편의점
-    { id: '9', name: 'GS25 금액권 3천원', brand: 'GS25', category: '편의점', originalPrice: 3000, discountPercent: 10, cloverPrice: 2700, emoji: '🏪' },
-    { id: '10', name: 'CU 금액권 3천원', brand: 'CU', category: '편의점', originalPrice: 3000, discountPercent: 10, cloverPrice: 2700, emoji: '🏬' },
-    // 치킨
-    { id: '11', name: 'BBQ 황금올리브 반반', brand: 'BBQ', category: '치킨', originalPrice: 20000, discountPercent: 10, cloverPrice: 18000, emoji: '🍗' },
-    { id: '12', name: '교촌치킨 허니콤보', brand: '교촌', category: '치킨', originalPrice: 19000, discountPercent: 10, cloverPrice: 17100, emoji: '🍗' },
+    { id: '1', name: 'CU 모바일상품권 1천원', brand: 'CU', category: '편의점', originalPrice: 1000, discountPercent: 10, cloverPrice: 900, emoji: '🏬' },
+    { id: '2', name: 'GS25 모바일상품권 1천원', brand: 'GS25', category: '편의점', originalPrice: 1000, discountPercent: 10, cloverPrice: 900, emoji: '🏪' },
+    // 커피/음료
+    { id: '3', name: '스타벅스 아메리카노 Tall', brand: '스타벅스', category: '커피/음료', originalPrice: 4500, discountPercent: 10, cloverPrice: 4050, emoji: '☕' },
     // 아이스크림
-    { id: '13', name: '베스킨라빈스 싱글킹', brand: '배스킨라빈스', category: '아이스크림', originalPrice: 3800, discountPercent: 10, cloverPrice: 3420, emoji: '🍦' },
-    { id: '14', name: '하겐다즈 파인트', brand: '하겐다즈', category: '아이스크림', originalPrice: 8900, discountPercent: 10, cloverPrice: 8010, emoji: '🍨' },
+    { id: '4', name: '베스킨라빈스 싱글킹', brand: '배스킨라빈스', category: '아이스크림', originalPrice: 3800, discountPercent: 10, cloverPrice: 3420, emoji: '🍦' },
 ]
 
 export default function CloverStorePage() {
