@@ -26,6 +26,7 @@ export default function CreatorEditPage() {
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
     const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null)
     const avatarInputRef = useRef<HTMLInputElement>(null)
+    const [knowledgeSources, setKnowledgeSources] = useState<{ id: string; title: string; source_type: string; processing_status: string; chunk_count: number; created_at: string }[]>([])
 
     useEffect(() => {
         fetchMentor()
@@ -61,6 +62,13 @@ export default function CreatorEditPage() {
         } finally {
             setLoading(false)
         }
+
+        // 지식 파일 목록 로드
+        try {
+            const kRes = await fetch(`/api/creator/knowledge/list?mentorId=${mentorId}`)
+            const kData = await kRes.json()
+            if (kRes.ok) setKnowledgeSources(kData.sources || [])
+        } catch { /* ignore */ }
     }
 
     function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -331,6 +339,50 @@ export default function CreatorEditPage() {
 
                     {/* 구분선 */}
                     <div style={styles.divider} />
+
+                    {/* 📚 지식 파일 목록 */}
+                    <div style={styles.field}>
+                        <label style={styles.label}>📚 등록된 지식 파일</label>
+                        <p style={styles.hint}>이 AI가 참고하는 파일 목록입니다</p>
+                        {knowledgeSources.length === 0 ? (
+                            <div style={{ padding: 20, textAlign: 'center' as const, color: '#9ca3af', fontSize: 14, background: '#f9fafb', borderRadius: 12 }}>
+                                등록된 지식 파일이 없습니다
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                                {knowledgeSources.map((src) => (
+                                    <div key={src.id} style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        padding: '12px 16px', borderRadius: 12,
+                                        background: '#f9fafb', border: '1px solid #f0f0f0',
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            <span style={{ fontSize: 18 }}>
+                                                {src.source_type === 'pdf' ? '📄' : src.source_type === 'hwp' ? '📝' : '📃'}
+                                            </span>
+                                            <div>
+                                                <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{src.title}</div>
+                                                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+                                                    {src.chunk_count ? `${src.chunk_count}개 청크` : ''}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span style={{
+                                            fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20,
+                                            background: src.processing_status === 'completed' ? '#dcfce7' :
+                                                        src.processing_status === 'processing' ? '#fef3c7' : '#fee2e2',
+                                            color: src.processing_status === 'completed' ? '#16a34a' :
+                                                   src.processing_status === 'processing' ? '#d97706' : '#dc2626',
+                                        }}>
+                                            {src.processing_status === 'completed' ? '✅ 완료' :
+                                             src.processing_status === 'processing' ? '⏳ 처리중' :
+                                             src.processing_status === 'pending' ? '⏳ 대기중' : '❌ 실패'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
                     {/* 활성화 토글 */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

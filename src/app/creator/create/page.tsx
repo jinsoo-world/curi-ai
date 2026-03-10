@@ -242,23 +242,23 @@ export default function CreatorCreatePage() {
                     fileSize: data.source.fileSize,
                 }])
 
-                // Upstage 문서 파싱 트리거 (HWP/PDF/DOCX)
-                const parsableExtensions = ['hwp', 'hwpx', 'pdf', 'docx', 'ppt', 'pptx']
-                if (parsableExtensions.includes(ext)) {
-                    fetch('/api/creator/knowledge/parse', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            mentor_id: mid,
-                            file_url: data.source.fileUrl || data.source.url,
-                            file_name: file.name,
-                            file_type: ext,
-                        }),
-                    }).then(() => {
-                        setToast(`📄 ${file.name} 파싱이 시작되었습니다!`)
-                        setTimeout(() => setToast(null), 3000)
-                    }).catch(console.error)
-                }
+                // 파일 텍스트 추출 + 임베딩 트리거 (모든 파일)
+                fetch('/api/creator/knowledge/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sourceId: data.source.id,
+                        mentorId: mid,
+                    }),
+                }).then(async (r) => {
+                    const result = await r.json()
+                    if (r.ok) {
+                        setToast(`✅ ${file.name} — ${result.chunksProcessed}개 청크 임베딩 완료!`)
+                    } else {
+                        setToast(`⚠️ ${file.name} 처리 실패: ${result.error}`)
+                    }
+                    setTimeout(() => setToast(null), 4000)
+                }).catch(console.error)
             }
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : '업로드 실패')

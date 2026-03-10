@@ -4,6 +4,8 @@ import { getUserChatContext } from '@/domains/user'
 import { generateChatStream, getUserMemories, saveUserMessage, saveAssistantMessage, updateSessionActivity, incrementDailyFreeUsage, detectCrisisKeywords, CRISIS_RESPONSE, ERROR_MESSAGES, extractAndSaveMemories, extractAndUpdateTopic } from '@/domains/chat'
 import { MAX_DAILY_FREE, MAX_DAILY_FREE_GUEST } from '@/domains/chat/constants'
 import { generateEmbedding, matchKnowledge } from '@/domains/knowledge'
+import { deductCredit, getCreditBalance } from '@/domains/credit'
+import { CREDIT_CONSTANTS } from '@/domains/credit/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -79,6 +81,26 @@ export async function POST(req: Request) {
             return new Response(limitStream, {
                 headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
             })
+        }
+
+        // ── 💰 크레딧 잔액 체크 ──
+        if (user) {
+            const balance = await getCreditBalance()
+            if (balance < CREDIT_CONSTANTS.CHAT_COST_PER_MESSAGE) {
+                const encoder = new TextEncoder()
+                const noCreditsMsg = '크레딧이 부족합니다 😢\n\n충전 후 다시 대화해주세요! 💰'
+                const creditStream = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue(
+                            encoder.encode(`data: ${JSON.stringify({ text: noCreditsMsg, done: true, fullResponse: noCreditsMsg, needsCredit: true })}\n\n`)
+                        )
+                        controller.close()
+                    },
+                })
+                return new Response(creditStream, {
+                    headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
+                })
+            }
         }
 
         // 시스템 프롬프트 조립 (domains/mentor)
@@ -169,6 +191,14 @@ export async function POST(req: Request) {
                         if (user) {
                             const dailyUsed = (userProfile as any)?.daily_free_used || 0
                             await incrementDailyFreeUsage(supabase, user.id, dailyUsed)
+
+                            // 💰 크레딧 차감 (fire-and-forget)
+                            deductCredit({
+                                user_id: user.id,
+                                amount: CREDIT_CONSTANTS.CHAT_COST_PER_MESSAGE,
+                                mentor_id: mentorId,
+                                description: `대화 차감 (${mentor.name})`,
+                            }).catch(err => console.error('[Chat] Credit deduction failed:', err))
 
                             // 🧠 메모리 추출 (fire-and-forget, 응답 속도에 영향 없음)
                             extractAndSaveMemories(supabase, user.id, mentorId, lastUserMessage, fullResponse)

@@ -172,6 +172,12 @@ function OnboardingContent() {
                 console.error('Onboarding API error:', JSON.stringify(result), 'Status:', response.status)
             } else {
                 console.log('Onboarding saved successfully')
+                // 가입 크레딧 보너스 지급 (실패해도 온보딩은 정상 진행)
+                try {
+                    await fetch('/api/credits/signup-bonus', { method: 'POST' })
+                } catch (e) {
+                    console.error('Signup bonus error:', e)
+                }
             }
 
             router.push('/mentors')

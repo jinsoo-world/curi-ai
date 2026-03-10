@@ -50,6 +50,6 @@ export interface CreditDeductRequest {
 /** 크레딧 상수 */
 export const CREDIT_CONSTANTS = {
     SIGNUP_BONUS: 10000,            // 가입 보너스 크레딧
-    CHAT_COST_PER_MESSAGE: 500,     // 메시지당 차감 크레딧
+    CHAT_COST_PER_MESSAGE: 100,     // 메시지당 차감 크레딧
     MIN_CHARGE_AMOUNT: 1000,        // 최소 충전 금액
 } as const
