@@ -24,6 +24,12 @@ export default function CreatorEditPage() {
     const [greetingMessage, setGreetingMessage] = useState('')
     const [sampleQuestions, setSampleQuestions] = useState('')
     const [isActive, setIsActive] = useState(true)
+
+    // 새 필드 (create 페이지와 통일)
+    const [category, setCategory] = useState<string | null>(null)
+    const [expertise, setExpertise] = useState<string[]>([])
+    const [personaTemplate, setPersonaTemplate] = useState<string | null>(null)
+    const [organization, setOrganization] = useState('')
     const [avatarFile, setAvatarFile] = useState<File | null>(null)
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
     const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null)
@@ -90,6 +96,10 @@ export default function CreatorEditPage() {
             setGreetingMessage(m.greeting_message || '')
             setSampleQuestions((m.sample_questions || []).join('\n'))
             setIsActive(m.is_active)
+            setCategory(m.category || null)
+            setExpertise(m.expertise || [])
+            setPersonaTemplate(m.persona_template || null)
+            setOrganization(m.organization || '')
             if (m.avatar_url) {
                 setCurrentAvatarUrl(m.avatar_url)
                 setAvatarPreview(m.avatar_url)
@@ -273,6 +283,10 @@ export default function CreatorEditPage() {
                     greetingMessage,
                     sampleQuestions: sampleQuestions.split('\n').map(s => s.trim()).filter(Boolean),
                     isActive,
+                    category,
+                    expertise,
+                    personaTemplate,
+                    organization,
                     ...(avatarUrl !== undefined && { avatarUrl }),
                 }),
             })
@@ -447,6 +461,153 @@ export default function CreatorEditPage() {
                                 onChange={e => setTitle(e.target.value)}
                                 placeholder="멘토 카드에 표시될 소개"
                             />
+                        </div>
+                        <div style={styles.field}>
+                            <label style={styles.label}>🏢 소속 / 직함 (선택)</label>
+                            <input
+                                style={styles.input}
+                                placeholder="예: ABC대학교 교수, 마케팅 디렉터"
+                                value={organization}
+                                onChange={e => setOrganization(e.target.value)}
+                                maxLength={40}
+                            />
+                        </div>
+                    </div>
+
+                    {/* ── 카테고리 선택 ── */}
+                    <div style={styles.card}>
+                        <label style={{ ...styles.label, fontSize: 15 }}>📂 카테고리</label>
+                        <p style={styles.hint}>AI가 다루는 분야를 선택하세요</p>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                            gap: 8,
+                            marginTop: 8,
+                        }}>
+                            {[
+                                { id: 'business', emoji: '💼', label: '비즈니스/창업' },
+                                { id: 'marketing', emoji: '📢', label: '마케팅/브랜딩' },
+                                { id: 'finance', emoji: '💰', label: '재테크/투자' },
+                                { id: 'content', emoji: '🎬', label: '콘텐츠/미디어' },
+                                { id: 'tech', emoji: '💻', label: 'IT/개발' },
+                                { id: 'education', emoji: '📚', label: '교육/코칭' },
+                                { id: 'design', emoji: '🎨', label: '디자인/예술' },
+                                { id: 'health', emoji: '🏥', label: '건강/웰빙' },
+                                { id: 'writing', emoji: '✍️', label: '글쓰기/출판' },
+                                { id: 'career', emoji: '🎯', label: '커리어/자기개발' },
+                            ].map(cat => (
+                                <button
+                                    key={cat.id}
+                                    type="button"
+                                    onClick={() => setCategory(category === cat.id ? null : cat.id)}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: 6,
+                                        padding: '10px 12px',
+                                        borderRadius: 10,
+                                        border: category === cat.id ? '2px solid #22c55e' : '2px solid #e5e7eb',
+                                        background: category === cat.id ? '#f0fdf4' : '#fff',
+                                        cursor: 'pointer',
+                                        fontSize: 13, fontWeight: category === cat.id ? 600 : 400,
+                                        color: category === cat.id ? '#15803d' : '#374151',
+                                        transition: 'all 150ms',
+                                    }}
+                                >
+                                    <span style={{ fontSize: 18 }}>{cat.emoji}</span>
+                                    {cat.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* ── 전문분야 태그 ── */}
+                    <div style={styles.card}>
+                        <label style={{ ...styles.label, fontSize: 15 }}>🏷️ 전문분야 태그</label>
+                        <p style={styles.hint}>최대 5개까지 선택하세요</p>
+                        <div style={{
+                            display: 'flex', flexWrap: 'wrap' as const, gap: 6, marginTop: 8,
+                        }}>
+                            {[
+                                '전략', '브랜딩', '퍼포먼스마케팅', 'SNS', '콘텐츠기획',
+                                '카피라이팅', '영상편집', '디자인', 'UX/UI', '데이터분석',
+                                'AI활용', '자동화', '이커머스', '투자', '부동산',
+                                '코칭', '심리상담', '영어', '중국어', '취업',
+                                '이직', '면접', '자기소개서', '프로그래밍', '노코드',
+                            ].map(tag => {
+                                const selected = expertise.includes(tag)
+                                return (
+                                    <button
+                                        key={tag}
+                                        type="button"
+                                        onClick={() => {
+                                            if (selected) {
+                                                setExpertise(expertise.filter(t => t !== tag))
+                                            } else if (expertise.length < 5) {
+                                                setExpertise([...expertise, tag])
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '6px 14px',
+                                            borderRadius: 20,
+                                            border: selected ? '1.5px solid #22c55e' : '1.5px solid #e5e7eb',
+                                            background: selected ? '#dcfce7' : '#fff',
+                                            color: selected ? '#15803d' : '#6b7280',
+                                            fontSize: 13, fontWeight: selected ? 600 : 400,
+                                            cursor: expertise.length >= 5 && !selected ? 'not-allowed' : 'pointer',
+                                            opacity: expertise.length >= 5 && !selected ? 0.4 : 1,
+                                            transition: 'all 150ms',
+                                        }}
+                                    >
+                                        {selected ? '✓ ' : ''}{tag}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                        {expertise.length > 0 && (
+                            <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>
+                                {expertise.length}/5 선택됨
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── AI 유형 ── */}
+                    <div style={styles.card}>
+                        <label style={{ ...styles.label, fontSize: 15 }}>🤖 AI 유형</label>
+                        <p style={styles.hint}>AI의 대화 스타일을 선택하세요</p>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                            gap: 8,
+                            marginTop: 8,
+                        }}>
+                            {[
+                                { id: 'coach', emoji: '🎓', label: '코치', desc: '목표 달성 가이드' },
+                                { id: 'teacher', emoji: '📖', label: '선생님', desc: '지식 전달 중심' },
+                                { id: 'friend', emoji: '💬', label: '친구', desc: '편안한 대화' },
+                                { id: 'expert', emoji: '🔬', label: '전문가', desc: '분석적 조언' },
+                                { id: 'character', emoji: '🎭', label: '캐릭터', desc: '역할 연기' },
+                            ].map(pt => (
+                                <button
+                                    key={pt.id}
+                                    type="button"
+                                    onClick={() => setPersonaTemplate(personaTemplate === pt.id ? null : pt.id)}
+                                    style={{
+                                        padding: '12px',
+                                        borderRadius: 12,
+                                        border: personaTemplate === pt.id ? '2px solid #22c55e' : '2px solid #e5e7eb',
+                                        background: personaTemplate === pt.id ? '#f0fdf4' : '#fff',
+                                        cursor: 'pointer',
+                                        textAlign: 'center' as const,
+                                        transition: 'all 150ms',
+                                    }}
+                                >
+                                    <div style={{ fontSize: 24, marginBottom: 4 }}>{pt.emoji}</div>
+                                    <div style={{
+                                        fontSize: 13, fontWeight: 600,
+                                        color: personaTemplate === pt.id ? '#15803d' : '#18181b',
+                                    }}>{pt.label}</div>
+                                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{pt.desc}</div>
+                                </button>
+                            ))}
                         </div>
                     </div>
 
