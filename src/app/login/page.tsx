@@ -138,6 +138,7 @@ export default function LoginPage() {
                         style={{
                             width: 80, height: 80, objectFit: 'contain',
                             marginBottom: 16,
+                            display: 'block', margin: '0 auto 16px',
                         }}
                     />
                     <h1 style={{
