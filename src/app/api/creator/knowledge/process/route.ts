@@ -207,8 +207,8 @@ export async function POST(req: NextRequest) {
         } else if (ext === 'pdf') {
             // PDF: pdf-parse로 텍스트 추출 (무료, 로컬, 페이지 무제한)
             try {
-                const pdfParseModule = await import('pdf-parse')
-                const pdfParse = pdfParseModule.default || pdfParseModule
+                // eslint-disable-next-line @typescript-eslint/no-require-imports
+                const pdfParse = require('pdf-parse')
                 const buffer = Buffer.from(await fileData.arrayBuffer())
                 const pdfData = await pdfParse(buffer)
                 textContent = (pdfData.text || '')
