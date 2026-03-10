@@ -748,16 +748,21 @@ export default function CreatorCreatePage() {
                                     }}>
                                         <div style={{
                                             width: 48, height: 48, borderRadius: '50%',
-                                            background: 'linear-gradient(135deg, #6b7280, #9ca3af)', color: '#fff',
+                                            background: '#f3f4f6',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: 24, fontWeight: 700,
                                             margin: '0 auto 8px',
                                             overflow: 'hidden',
+                                            border: '1px solid #e5e7eb',
                                         }}>
                                             {avatarPreview ? (
                                                 <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                             ) : (
-                                                name ? name[0] : '🤖'
+                                                <img
+                                                    src="/logo.png"
+                                                    alt="큐리"
+                                                    style={{ width: '70%', height: '70%', objectFit: 'contain', opacity: 0.35 }}
+                                                />
                                             )}
                                         </div>
                                         <div style={{ fontSize: 16, fontWeight: 700, color: '#18181b' }}>
@@ -774,14 +779,21 @@ export default function CreatorCreatePage() {
                                             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                                                 <div style={{
                                                     width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                                                    background: 'linear-gradient(135deg, #6b7280, #9ca3af)', color: '#fff',
+                                                    background: '#f3f4f6',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    fontSize: 14, fontWeight: 700, overflow: 'hidden',
+                                                    overflow: 'hidden',
+                                                    border: '1px solid #e5e7eb',
                                                     marginTop: 2,
                                                 }}>
                                                     {avatarPreview ? (
                                                         <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    ) : (name ? name[0] : '🤖')}
+                                                    ) : (
+                                                        <img
+                                                            src="/logo.png"
+                                                            alt="큐리"
+                                                            style={{ width: '70%', height: '70%', objectFit: 'contain', opacity: 0.35 }}
+                                                        />
+                                                    )}
                                                 </div>
                                                 <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '80%' }}>
                                                     <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>{name || 'AI'}</div>

@@ -99,10 +99,10 @@ export default function CreatorManagePage() {
     }
 
     const statCards = [
-        { icon: '🤖', label: '내가 만든 AI', value: stats.total, color: '#e0e7ff', iconBg: '#c7d2fe' },
-        { icon: '⚡', label: '공개된 AI', value: stats.active, color: '#dcfce7', iconBg: '#bbf7d0' },
-        { icon: '💬', label: '전체 메시지', value: stats.totalMessages, color: '#fef3c7', iconBg: '#fde68a' },
-        { icon: '👥', label: '대화한 사용자', value: stats.totalUsers, color: '#fce7f3', iconBg: '#fbcfe8' },
+        { icon: '🤖', label: '내가 만든 AI', value: stats.total },
+        { icon: '🌐', label: '공개된 AI', value: stats.active },
+        { icon: '💬', label: '전체 메시지', value: stats.totalMessages },
+        { icon: '👤', label: '대화한 사용자', value: stats.totalUsers },
     ]
 
     return (
@@ -156,26 +156,18 @@ export default function CreatorManagePage() {
                             <div key={card.label} style={{
                                 background: '#fff',
                                 borderRadius: 14,
-                                padding: '18px 16px',
+                                padding: '20px 16px',
                                 border: '1px solid #f0f0f0',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                gap: 8,
+                                gap: 6,
                             }}>
-                                <div style={{
-                                    width: 44, height: 44, borderRadius: '50%',
-                                    background: card.iconBg,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: 22,
-                                }}>
-                                    {card.icon}
-                                </div>
-                                <div style={{ fontSize: 26, fontWeight: 700, color: '#18181b' }}>
-                                    {card.value}
-                                </div>
-                                <div style={{ fontSize: 12, color: '#6b7280', fontWeight: 500 }}>
+                                <div style={{ fontSize: 12, color: '#9ca3af', fontWeight: 500 }}>
                                     {card.label}
+                                </div>
+                                <div style={{ fontSize: 28, fontWeight: 700, color: '#18181b' }}>
+                                    {card.value}
                                 </div>
                             </div>
                         ))}
@@ -252,7 +244,7 @@ export default function CreatorManagePage() {
                             {/* 테이블 헤더 */}
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: '40px 56px 1fr 120px 100px 80px',
+                                gridTemplateColumns: '40px 1fr 120px 100px 80px',
                                 padding: '12px 16px',
                                 background: '#fafafa',
                                 borderBottom: '1px solid #f0f0f0',
@@ -260,12 +252,10 @@ export default function CreatorManagePage() {
                                 fontSize: 12,
                                 fontWeight: 600,
                                 color: '#6b7280',
-                                textTransform: 'uppercase' as const,
                                 letterSpacing: '0.02em',
                             }}>
                                 <div></div>
                                 <div>AI</div>
-                                <div>이름</div>
                                 <div>생성일</div>
                                 <div>상태</div>
                                 <div style={{ textAlign: 'center' }}>관리</div>
@@ -281,7 +271,7 @@ export default function CreatorManagePage() {
                                         key={m.id}
                                         style={{
                                             display: 'grid',
-                                            gridTemplateColumns: '40px 56px 1fr 120px 100px 80px',
+                                            gridTemplateColumns: '40px 1fr 120px 100px 80px',
                                             padding: '14px 16px',
                                             borderBottom: '1px solid #f5f5f5',
                                             alignItems: 'center',
@@ -374,37 +364,42 @@ export default function CreatorManagePage() {
                                             )}
                                         </div>
 
-                                        {/* 프로필 이미지 */}
-                                        <div style={{
-                                            width: 40, height: 40, borderRadius: '50%',
-                                            background: '#f3f4f6',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            overflow: 'hidden',
-                                            border: '1px solid #e5e7eb',
-                                        }}>
-                                            {m.avatar_url ? (
-                                                <img
-                                                    src={m.avatar_url}
-                                                    alt={m.name}
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                />
-                                            ) : (
-                                                <span style={{ fontSize: 20 }}>🤖</span>
-                                            )}
-                                        </div>
-
-                                        {/* 이름 + 소개 */}
+                                        {/* AI: 프로필 이미지 + 이름 + 소개 */}
                                         <div
-                                            style={{ cursor: 'pointer' }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
                                             onClick={() => router.push(`/chat/${m.id}`)}
                                         >
                                             <div style={{
-                                                fontSize: 14, fontWeight: 600, color: '#18181b',
+                                                width: 40, height: 40, borderRadius: '50%',
+                                                background: '#f3f4f6',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                overflow: 'hidden',
+                                                border: '1px solid #e5e7eb',
+                                                flexShrink: 0,
                                             }}>
-                                                {m.name}
+                                                {m.avatar_url ? (
+                                                    <img
+                                                        src={m.avatar_url}
+                                                        alt={m.name}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    />
+                                                ) : (
+                                                    <img
+                                                        src="/logo.png"
+                                                        alt="큐리"
+                                                        style={{ width: '70%', height: '70%', objectFit: 'contain', opacity: 0.35 }}
+                                                    />
+                                                )}
                                             </div>
-                                            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
-                                                {m.title}
+                                            <div>
+                                                <div style={{
+                                                    fontSize: 14, fontWeight: 600, color: '#18181b',
+                                                }}>
+                                                    {m.name}
+                                                </div>
+                                                <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
+                                                    {m.title}
+                                                </div>
                                             </div>
                                         </div>
 
