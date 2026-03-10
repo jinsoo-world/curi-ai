@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface CreditClaimModalProps {
@@ -16,17 +16,8 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState('')
 
-    // 인증 관련 상태
-    const [verifyStep, setVerifyStep] = useState<'idle' | 'sending' | 'code' | 'verifying' | 'done'>('idle')
-    const [verifyCode, setVerifyCode] = useState('')
-    const [verifyTimer, setVerifyTimer] = useState(0)
-
-    // 타이머
-    useEffect(() => {
-        if (verifyTimer <= 0) return
-        const t = setTimeout(() => setVerifyTimer(v => v - 1), 1000)
-        return () => clearTimeout(t)
-    }, [verifyTimer])
+    // 인증 관련 상태 (번호 입력 → [인증] 클릭 → 완료)
+    const [verifyStep, setVerifyStep] = useState<'idle' | 'sending' | 'done'>('idle')
 
     if (!isOpen) return null
 
@@ -38,26 +29,15 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
     }
 
     const phoneDigits = phone.replace(/\D/g, '')
-    const canSendCode = phoneDigits.length >= 10 && verifyStep === 'idle'
     const canSubmit = verifyStep === 'done' && gender
 
-    // 인증번호 전송 (페이크)
-    const handleSendCode = () => {
+    // 인증 버튼 클릭 → 바로 완료
+    const handleVerify = () => {
         if (phoneDigits.length < 10) return
         setVerifyStep('sending')
         setTimeout(() => {
-            setVerifyStep('code')
-            setVerifyTimer(180) // 3분 타이머
-        }, 1500)
-    }
-
-    // 인증번호 확인 (페이크 — 아무 4자리 이상 입력하면 성공)
-    const handleVerifyCode = () => {
-        if (verifyCode.length < 4) return
-        setVerifyStep('verifying')
-        setTimeout(() => {
             setVerifyStep('done')
-        }, 1200)
+        }, 800)
     }
 
     const handleSubmit = async () => {
@@ -108,7 +88,7 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
         }
     }
 
-    const fmtTimer = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`
+
 
     return (
         <div style={{
@@ -225,7 +205,7 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                             {verifyStep === 'idle' && (
                                 <button
                                     type="button"
-                                    onClick={handleSendCode}
+                                    onClick={handleVerify}
                                     disabled={phoneDigits.length < 10}
                                     style={{
                                         padding: '14px 16px',
@@ -238,7 +218,7 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                                         transition: 'all 150ms',
                                     }}
                                 >
-                                    인증요청
+                                    인증
                                 </button>
                             )}
                             {verifyStep === 'sending' && (
@@ -260,61 +240,7 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                             )}
                         </div>
 
-                        {/* 인증코드 입력 (페이크) */}
-                        {(verifyStep === 'code' || verifyStep === 'verifying') && (
-                            <div style={{
-                                marginTop: 10, display: 'flex', gap: 8,
-                                animation: 'fadeIn 0.3s ease',
-                            }}>
-                                <div style={{ flex: 1, position: 'relative' }}>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        placeholder="인증번호 입력"
-                                        maxLength={6}
-                                        value={verifyCode}
-                                        onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ''))}
-                                        disabled={verifyStep === 'verifying'}
-                                        style={{
-                                            width: '100%', padding: '12px 60px 12px 14px',
-                                            fontSize: 15, fontWeight: 600,
-                                            borderRadius: 10,
-                                            border: '1.5px solid #e5e7eb',
-                                            outline: 'none', boxSizing: 'border-box',
-                                            letterSpacing: '0.15em',
-                                        }}
-                                        onFocus={(e) => e.target.style.borderColor = '#22c55e'}
-                                        onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-                                    />
-                                    {verifyTimer > 0 && (
-                                        <span style={{
-                                            position: 'absolute', right: 14, top: '50%',
-                                            transform: 'translateY(-50%)',
-                                            fontSize: 13, fontWeight: 600, color: '#dc2626',
-                                        }}>
-                                            {fmtTimer(verifyTimer)}
-                                        </span>
-                                    )}
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={handleVerifyCode}
-                                    disabled={verifyCode.length < 4 || verifyStep === 'verifying'}
-                                    style={{
-                                        padding: '12px 16px',
-                                        fontSize: 13, fontWeight: 600,
-                                        borderRadius: 10, border: 'none',
-                                        background: verifyCode.length >= 4 ? '#22c55e' : '#e5e7eb',
-                                        color: verifyCode.length >= 4 ? '#fff' : '#9ca3af',
-                                        cursor: verifyCode.length >= 4 ? 'pointer' : 'not-allowed',
-                                        whiteSpace: 'nowrap',
-                                        transition: 'all 150ms',
-                                    }}
-                                >
-                                    {verifyStep === 'verifying' ? '확인 중...' : '확인'}
-                                </button>
-                            </div>
-                        )}
+
                     </div>
 
                     {/* 성별 */}
