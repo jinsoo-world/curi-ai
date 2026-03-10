@@ -81,12 +81,12 @@ export async function setMentorPersona(
     db: SupabaseClient,
     input: SetPersonaInput,
 ) {
-    const template = PERSONA_TEMPLATES.find(t => t.id === input.template)
+    const template = input.template ? PERSONA_TEMPLATES.find(t => t.id === input.template) : null
 
     const { error } = await db
         .from('mentors')
         .update({
-            persona_template: input.template,
+            persona_template: input.template || null,
             system_prompt: input.systemPrompt || template?.defaultPromptStyle || '',
             greeting_message: input.greetingMessage,
             sample_questions: input.sampleQuestions,

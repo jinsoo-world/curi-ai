@@ -68,16 +68,16 @@ export async function POST(req: NextRequest) {
             case 2: {
                 const { mentorId, template, systemPrompt, greetingMessage, sampleQuestions } = body
 
-                if (!mentorId || !template) {
+                if (!mentorId) {
                     return NextResponse.json(
-                        { error: '멘토 ID와 템플릿은 필수입니다.' },
+                        { error: '멘토 ID는 필수입니다.' },
                         { status: 400 },
                     )
                 }
 
                 await setMentorPersona(admin, {
                     mentorId,
-                    template,
+                    template: template || null,
                     systemPrompt: systemPrompt || '',
                     greetingMessage: greetingMessage || `안녕하세요! ${body.mentorName || 'AI'}입니다 😊`,
                     sampleQuestions: sampleQuestions || [],
