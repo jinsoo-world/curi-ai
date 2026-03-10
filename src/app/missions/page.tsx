@@ -87,6 +87,24 @@ export default function MissionsPage() {
         fetchData()
     }, [])
 
+    // URL 파라미터로 보상 애니메이션 트리거 (AI 만들기 완료 후 etc)
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        const rewardType = params.get('reward_earned')
+        const amount = parseInt(params.get('amount') || '0')
+        if (rewardType && amount > 0) {
+            const labels: Record<string, string> = {
+                ai_create: '🤖 내 AI 만들기 완료!',
+                questions_10: '💬 10번 질문 미션 완료!',
+            }
+            setTimeout(() => {
+                showCloverAnimation(amount, labels[rewardType] || '미션 완료!')
+            }, 500)
+            // URL에서 파라미터 제거
+            window.history.replaceState({}, '', '/missions')
+        }
+    }, [showCloverAnimation])
+
     const inviteLink = `https://app-seven-delta-90.vercel.app/?ref=${referralCode || 'curi'}`
     const shareLink = `https://app-seven-delta-90.vercel.app/`
 
@@ -168,9 +186,9 @@ export default function MissionsPage() {
             id: 'create-ai',
             icon: '🤖',
             title: '내 AI 만들어보기',
-            description: 'AI를 2개 만들어보세요',
-            reward: 50,
-            rewardLabel: '🍀 +50',
+            description: '1개당 25클로버 (최대 2개)',
+            reward: 25,
+            rewardLabel: '🍀 +25/개',
             progress: missionStatus.aiCreated,
             goal: 2,
             completed: missionStatus.aiCreated >= 2,
@@ -453,6 +471,8 @@ export default function MissionsPage() {
                                             const typeLabels: Record<string, string> = {
                                                 welcome_bonus: '🎉 웰컴 보너스',
                                                 mission_create_ai: '🤖 AI 만들기 미션',
+                                                mission_create_ai_1: '🤖 AI 1개 만들기',
+                                                mission_create_ai_2: '🤖 AI 2개 만들기',
                                                 mission_ask_10: '💬 10번 질문 미션',
                                                 mission_invite: '🎉 친구 초대 미션',
                                                 mission_share: '📤 공유 미션',

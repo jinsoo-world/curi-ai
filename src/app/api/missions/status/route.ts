@@ -124,9 +124,12 @@ export async function GET() {
             // ── 자동 적립 ──
             const newCredits: { type: string; amount: number; description: string }[] = []
 
-            // AI 만들기 미션 (2개 이상 → 50 클로버)
-            if ((aiCreated || 0) >= 2 && !existingTypes.includes('mission_create_ai')) {
-                newCredits.push({ type: 'mission_create_ai', amount: 50, description: '미션 완료: AI 2개 만들기' })
+            // AI 만들기 미션 (1개당 25클로버, 최대 2개=50)
+            if ((aiCreated || 0) >= 1 && !existingTypes.includes('mission_create_ai_1')) {
+                newCredits.push({ type: 'mission_create_ai_1', amount: 25, description: '미션 완료: AI 1개 만들기' })
+            }
+            if ((aiCreated || 0) >= 2 && !existingTypes.includes('mission_create_ai_2')) {
+                newCredits.push({ type: 'mission_create_ai_2', amount: 25, description: '미션 완료: AI 2개 만들기' })
             }
 
             // 질문 10번 미션 (30 클로버)
@@ -174,16 +177,30 @@ export async function GET() {
             console.warn('[Credits] Fallback: using users.clovers directly')
             
             let totalEarned = 0
+            const now = new Date().toISOString()
 
-            // AI 만들기 미션
-            if ((aiCreated || 0) >= 2) totalEarned += 50
+            // AI 만들기 미션 (1개당 25, 최대 2개)
+            if ((aiCreated || 0) >= 1) {
+                totalEarned += 25
+                creditHistory.push({ type: 'mission_create_ai_1', amount: 25, description: '미션 완료: AI 1개 만들기', created_at: now })
+            }
+            if ((aiCreated || 0) >= 2) {
+                totalEarned += 25
+                creditHistory.push({ type: 'mission_create_ai_2', amount: 25, description: '미션 완료: AI 2개 만들기', created_at: now })
+            }
             // 질문 10번 미션
-            if (questionsAsked >= 10) totalEarned += 30
+            if (questionsAsked >= 10) {
+                totalEarned += 30
+                creditHistory.push({ type: 'mission_ask_10', amount: 30, description: '미션 완료: 10번 질문하기', created_at: now })
+            }
             // 친구 초대 미션
-            if (friendsInvited >= 1) totalEarned += 100
+            if (friendsInvited >= 1) {
+                totalEarned += 100
+                creditHistory.push({ type: 'mission_invite', amount: 100, description: `미션 완료: 친구 ${friendsInvited}명 초대`, created_at: now })
+            }
 
-            if (totalEarned > 0 && (profile?.clovers || 0) < totalEarned) {
-                finalClovers = totalEarned
+            finalClovers = totalEarned
+            if (totalEarned > 0) {
                 await supabaseAdmin.from('users').update({ clovers: finalClovers }).eq('id', user.id)
             }
         }

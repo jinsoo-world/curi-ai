@@ -218,8 +218,8 @@ export default function CreatorCreatePage() {
             const pubData = await pubRes.json()
             if (!pubRes.ok) throw new Error(pubData.error)
 
-            // 성공 → 멘토 목록으로
-            router.push('/mentors')
+            // 성공 → 미션 보상 페이지로 (클로버 적립 알림)
+            router.push('/missions?reward_earned=ai_create&amount=25')
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : '오류가 발생했습니다.')
         } finally {
