@@ -211,9 +211,12 @@ export default function CreatorCreatePage() {
                 'application/msword',
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             ]
+            // HWP/HWPX는 MIME 타입이 없으므로 확장자로 체크
+            const allowedExtensions = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx']
 
             for (const file of Array.from(files)) {
-                if (!allowedTypes.includes(file.type)) {
+                const ext = file.name.split('.').pop()?.toLowerCase() || ''
+                if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(ext)) {
                     setError(`지원하지 않는 형식: ${file.name}`)
                     continue
                 }
@@ -238,6 +241,24 @@ export default function CreatorCreatePage() {
                     fileName: data.source.fileName,
                     fileSize: data.source.fileSize,
                 }])
+
+                // Upstage 문서 파싱 트리거 (HWP/PDF/DOCX)
+                const parsableExtensions = ['hwp', 'hwpx', 'pdf', 'docx']
+                if (parsableExtensions.includes(ext)) {
+                    fetch('/api/creator/knowledge/parse', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            mentor_id: mid,
+                            file_url: data.source.fileUrl || data.source.url,
+                            file_name: file.name,
+                            file_type: ext,
+                        }),
+                    }).then(() => {
+                        setToast(`📄 ${file.name} 파싱이 시작되었습니다!`)
+                        setTimeout(() => setToast(null), 3000)
+                    }).catch(console.error)
+                }
             }
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : '업로드 실패')
@@ -435,7 +456,7 @@ export default function CreatorCreatePage() {
                                 {uploading ? '업로드 중...' : '클릭하거나 드래그'}
                             </div>
                             <div style={{ fontSize: 11, color: '#9ca3af' }}>
-                                PDF, TXT, MD, DOC, DOCX · 최대 10MB
+                                HWP, PDF, DOCX, TXT, MD · 최대 10MB
                             </div>
                         </div>
 

@@ -9,9 +9,49 @@ import Link from 'next/link'
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState<string | null>(null)
     const [error, setError] = useState('')
+
+    // 약관 동의 state
+    const [agreeAll, setAgreeAll] = useState(false)
+    const [agreeAge, setAgreeAge] = useState(false)
+    const [agreeTerms, setAgreeTerms] = useState(false)
+    const [agreePrivacy, setAgreePrivacy] = useState(false)
+
+    const allChecked = agreeAge && agreeTerms && agreePrivacy
+
+    const handleAgreeAll = () => {
+        const next = !agreeAll
+        setAgreeAll(next)
+        setAgreeAge(next)
+        setAgreeTerms(next)
+        setAgreePrivacy(next)
+    }
+
+    const handleIndividual = (
+        setter: (v: boolean) => void,
+        currentAge: boolean,
+        currentTerms: boolean,
+        currentPrivacy: boolean,
+        which: 'age' | 'terms' | 'privacy'
+    ) => {
+        const newVal = which === 'age' ? !currentAge : currentAge
+        const newTerms = which === 'terms' ? !currentTerms : currentTerms
+        const newPrivacy = which === 'privacy' ? !currentPrivacy : currentPrivacy
+        setter(which === 'age' ? !currentAge : which === 'terms' ? !currentTerms : !currentPrivacy)
+
+        if (newVal && newTerms && newPrivacy) {
+            setAgreeAll(true)
+        } else {
+            setAgreeAll(false)
+        }
+    }
+
     const supabase = createClient()
 
     const handleSocialLogin = async (provider: 'google' | 'kakao') => {
+        if (!allChecked) {
+            setError('필수 약관에 모두 동의해주세요.')
+            return
+        }
         setIsLoading(provider)
         setError('')
         try {
@@ -34,94 +74,232 @@ export default function LoginPage() {
     }
 
     return (
-        <main className="min-h-dvh flex flex-col items-center justify-center px-6 bg-gray-50 relative">
-            {/* Background decoration */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div
-                    className="absolute rounded-full"
-                    style={{
-                        width: 320, height: 320, top: -120, right: -100,
-                        background: 'rgba(187, 247, 208, 0.25)', filter: 'blur(80px)',
-                    }}
-                />
-                <div
-                    className="absolute rounded-full"
-                    style={{
-                        width: 280, height: 280, bottom: -100, left: -80,
-                        background: 'rgba(220, 252, 231, 0.3)', filter: 'blur(80px)',
-                    }}
-                />
+        <main style={{
+            minHeight: '100dvh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            background: '#fafafa',
+            position: 'relative',
+        }}>
+            {/* Background blobs */}
+            <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+                <div style={{
+                    position: 'absolute', width: 320, height: 320, top: -120, right: -100,
+                    background: 'rgba(187, 247, 208, 0.25)', filter: 'blur(80px)', borderRadius: '50%',
+                }} />
+                <div style={{
+                    position: 'absolute', width: 280, height: 280, bottom: -100, left: -80,
+                    background: 'rgba(220, 252, 231, 0.3)', filter: 'blur(80px)', borderRadius: '50%',
+                }} />
+            </div>
+
+            {/* 🎉 크레딧 배너 */}
+            <div style={{
+                position: 'relative', zIndex: 10,
+                width: '100%', maxWidth: 400,
+                background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
+                border: '1.5px solid #bbf7d0',
+                borderRadius: 16,
+                padding: '16px 20px',
+                marginBottom: 20,
+                textAlign: 'center',
+                animation: 'fadeIn 0.5s ease',
+            }}>
+                <div style={{ fontSize: 28, marginBottom: 4 }}>🎉</div>
+                <div style={{
+                    fontSize: 17, fontWeight: 800, color: '#15803d',
+                    letterSpacing: '-0.02em',
+                }}>
+                    가입하시면 1만원 무료 크레딧을 드립니다!
+                </div>
+                <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+                    AI 멘토와 바로 대화를 시작해보세요
+                </div>
             </div>
 
             {/* Card */}
-            <div
-                className="relative z-10 w-full max-w-sm bg-white rounded-3xl animate-fade-in"
-                style={{
-                    padding: '48px 32px 36px',
-                    boxShadow: '0 2px 16px rgba(0,0,0,0.05), 0 1px 4px rgba(0,0,0,0.03)',
-                }}
-            >
+            <div style={{
+                position: 'relative', zIndex: 10,
+                width: '100%', maxWidth: 400,
+                background: '#fff',
+                borderRadius: 24,
+                padding: '44px 32px 32px',
+                boxShadow: '0 2px 16px rgba(0,0,0,0.05), 0 1px 4px rgba(0,0,0,0.03)',
+                animation: 'fadeIn 0.5s ease 0.1s both',
+            }}>
                 {/* Logo */}
-                <div className="text-center mb-10">
-                    <div
-                        className="inline-flex items-center justify-center rounded-2xl mb-6"
-                        style={{
-                            width: 72, height: 72,
-                            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                            boxShadow: '0 8px 24px rgba(34,197,94,0.25)',
-                        }}
-                    >
-                        <span className="text-3xl">🎓</span>
+                <div style={{ textAlign: 'center', marginBottom: 32 }}>
+                    <div style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: 64, height: 64, borderRadius: 16,
+                        background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                        boxShadow: '0 8px 24px rgba(34,197,94,0.25)',
+                        marginBottom: 16,
+                    }}>
+                        <span style={{ fontSize: 28 }}>🎓</span>
                     </div>
-                    <h1
-                        className="font-extrabold text-gray-900 mb-2"
-                        style={{ fontSize: 32, letterSpacing: '-0.03em' }}
-                    >
+                    <h1 style={{
+                        fontSize: 28, fontWeight: 800, color: '#18181b',
+                        letterSpacing: '-0.03em', marginBottom: 6,
+                    }}>
                         큐리 AI
                     </h1>
-                    <p className="text-gray-500" style={{ fontSize: 17, lineHeight: 1.6 }}>
-                        언제든, 나를 아는 멘토에게
-                        <br />
-                        <span className="text-green-600 font-semibold">물어보세요</span>
+                    <p style={{ fontSize: 15, color: '#9ca3af', lineHeight: 1.6 }}>
+                        시니어 전문가의 AI를 만나보세요
                     </p>
                 </div>
 
                 {/* Error */}
                 {error && (
-                    <div
-                        role="alert"
-                        className="mb-5 rounded-xl text-center"
-                        style={{ padding: '12px 16px', background: '#fef2f2', color: '#991b1b', fontSize: 14 }}
-                    >
+                    <div style={{
+                        padding: '12px 16px', marginBottom: 16,
+                        background: '#fef2f2', color: '#991b1b',
+                        borderRadius: 12, fontSize: 14, textAlign: 'center',
+                    }}>
                         {error}
                     </div>
                 )}
 
-                {/* Social Login Buttons */}
-                <div className="flex flex-col gap-3">
-                    {/* 구글 */}
+                {/* 약관 동의 */}
+                <div style={{
+                    background: '#f9fafb',
+                    borderRadius: 16,
+                    padding: '16px 18px',
+                    marginBottom: 20,
+                    border: '1px solid #f3f4f6',
+                }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#374151', marginBottom: 14 }}>
+                        약관 및 개인정보 처리방침
+                    </div>
+
+                    {/* 모두 동의 */}
+                    <label style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 0',
+                        borderBottom: '1px solid #e5e7eb',
+                        cursor: 'pointer', userSelect: 'none',
+                        marginBottom: 8,
+                    }}>
+                        <input
+                            type="checkbox"
+                            checked={agreeAll}
+                            onChange={handleAgreeAll}
+                            style={{
+                                width: 20, height: 20, borderRadius: 4,
+                                accentColor: '#16a34a', cursor: 'pointer',
+                            }}
+                        />
+                        <span style={{ fontSize: 15, fontWeight: 600, color: '#18181b' }}>
+                            모두 동의
+                        </span>
+                    </label>
+
+                    {/* 만 14세 */}
+                    <label style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '8px 0', cursor: 'pointer', userSelect: 'none',
+                    }}>
+                        <input
+                            type="checkbox"
+                            checked={agreeAge}
+                            onChange={() => handleIndividual(setAgreeAge, agreeAge, agreeTerms, agreePrivacy, 'age')}
+                            style={{
+                                width: 18, height: 18, borderRadius: 4,
+                                accentColor: '#16a34a', cursor: 'pointer',
+                            }}
+                        />
+                        <span style={{ fontSize: 14, color: '#374151' }}>
+                            <span style={{ color: '#dc2626', fontWeight: 600 }}>*</span> 만 14세 이상임을 확인합니다.
+                        </span>
+                    </label>
+
+                    {/* 이용약관 */}
+                    <label style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '8px 0', cursor: 'pointer', userSelect: 'none',
+                    }}>
+                        <input
+                            type="checkbox"
+                            checked={agreeTerms}
+                            onChange={() => handleIndividual(setAgreeTerms, agreeAge, agreeTerms, agreePrivacy, 'terms')}
+                            style={{
+                                width: 18, height: 18, borderRadius: 4,
+                                accentColor: '#16a34a', cursor: 'pointer',
+                            }}
+                        />
+                        <span style={{ fontSize: 14, color: '#374151' }}>
+                            <span style={{ color: '#dc2626', fontWeight: 600 }}>*</span>{' '}
+                            큐리 AI의{' '}
+                            <Link
+                                href="/terms"
+                                target="_blank"
+                                style={{ color: '#16a34a', textDecoration: 'underline', fontWeight: 600 }}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                서비스 이용약관
+                            </Link>
+                        </span>
+                    </label>
+
+                    {/* 개인정보 */}
+                    <label style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '8px 0', cursor: 'pointer', userSelect: 'none',
+                    }}>
+                        <input
+                            type="checkbox"
+                            checked={agreePrivacy}
+                            onChange={() => handleIndividual(setAgreePrivacy, agreeAge, agreeTerms, agreePrivacy, 'privacy')}
+                            style={{
+                                width: 18, height: 18, borderRadius: 4,
+                                accentColor: '#16a34a', cursor: 'pointer',
+                            }}
+                        />
+                        <span style={{ fontSize: 14, color: '#374151' }}>
+                            <span style={{ color: '#dc2626', fontWeight: 600 }}>*</span>{' '}
+                            큐리 AI의{' '}
+                            <Link
+                                href="/privacy"
+                                target="_blank"
+                                style={{ color: '#16a34a', textDecoration: 'underline', fontWeight: 600 }}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                개인정보 처리방침
+                            </Link>
+                        </span>
+                    </label>
+                </div>
+
+                {/* Social Login */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {/* Google */}
                     <button
                         type="button"
                         onClick={() => handleSocialLogin('google')}
-                        disabled={isLoading !== null}
-                        className="w-full flex items-center justify-center gap-3 rounded-2xl font-semibold cursor-pointer disabled:opacity-50"
+                        disabled={isLoading !== null || !allChecked}
                         style={{
-                            padding: '16px 24px', fontSize: 18,
-                            background: '#fff', color: '#1a1a2e',
-                            border: '1.5px solid #e5e7eb',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                            transition: 'transform 200ms',
+                            width: '100%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+                            padding: '16px 24px', fontSize: 17, fontWeight: 600,
+                            borderRadius: 16,
+                            background: allChecked ? '#fff' : '#f3f4f6',
+                            color: allChecked ? '#1a1a2e' : '#9ca3af',
+                            border: `1.5px solid ${allChecked ? '#e5e7eb' : '#e5e7eb'}`,
+                            boxShadow: allChecked ? '0 1px 3px rgba(0,0,0,0.04)' : 'none',
+                            cursor: allChecked ? 'pointer' : 'not-allowed',
+                            transition: 'all 200ms',
+                            opacity: isLoading !== null ? 0.5 : 1,
                         }}
                     >
                         {isLoading === 'google' ? (
-                            <div
-                                className="rounded-full animate-spin-slow"
-                                style={{
-                                    width: 20, height: 20,
-                                    border: '2px solid #d1d5db',
-                                    borderTopColor: '#22c55e',
-                                }}
-                            />
+                            <div style={{
+                                width: 20, height: 20, borderRadius: '50%',
+                                border: '2px solid #d1d5db', borderTopColor: '#22c55e',
+                                animation: 'spin 0.8s linear infinite',
+                            }} />
                         ) : (
                             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                                 <path d="M19.6 10.23c0-.68-.06-1.36-.17-2.02H10v3.83h5.38a4.6 4.6 0 01-2 3.02v2.5h3.24c1.89-1.74 2.98-4.3 2.98-7.33z" fill="#4285F4" />
@@ -132,66 +310,41 @@ export default function LoginPage() {
                         )}
                         Google로 시작하기
                     </button>
-
-                    {/* 카카오 — 비즈니스 인증 승인 후 활성화 예정 */}
-                    {/* 
-                    <button
-                        onClick={() => handleSocialLogin('kakao')}
-                        disabled={isLoading !== null}
-                        className="w-full flex items-center justify-center gap-3 rounded-2xl font-semibold cursor-pointer disabled:opacity-50"
-                        style={{
-                            padding: '16px 24px', fontSize: 18,
-                            background: '#FEE500', color: '#191919',
-                            border: 'none', transition: 'transform 200ms',
-                        }}
-                    >
-                        {isLoading === 'kakao' ? (
-                            <div
-                                className="rounded-full animate-spin-slow"
-                                style={{
-                                    width: 20, height: 20,
-                                    border: '2px solid rgba(25,25,25,0.2)',
-                                    borderTopColor: '#191919',
-                                }}
-                            />
-                        ) : (
-                            <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
-                                <path
-                                    d="M10 3C5.58 3 2 5.79 2 9.21c0 2.17 1.45 4.08 3.63 5.18l-.93 3.44c-.08.3.26.54.52.37l4.13-2.74c.21.02.43.03.65.03 4.42 0 8-2.79 8-6.28S14.42 3 10 3z"
-                                    fill="#191919"
-                                />
-                            </svg>
-                        )}
-                        카카오로 시작하기
-                    </button>
-                    */}
                 </div>
 
                 {/* Divider */}
-                <div className="flex items-center gap-4 my-8">
-                    <div className="flex-1 h-px bg-gray-100" />
-                    <span className="text-gray-400" style={{ fontSize: 14 }}>또는</span>
-                    <div className="flex-1 h-px bg-gray-100" />
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 16, margin: '24px 0',
+                }}>
+                    <div style={{ flex: 1, height: 1, background: '#f0f0f0' }} />
+                    <span style={{ fontSize: 14, color: '#d1d5db' }}>또는</span>
+                    <div style={{ flex: 1, height: 1, background: '#f0f0f0' }} />
                 </div>
 
                 {/* Skip */}
                 <Link
                     href="/mentors"
-                    className="w-full bg-transparent text-gray-400 hover:text-gray-600 block text-center"
-                    style={{ padding: '12px', fontSize: 16, textDecoration: 'none', transition: 'color 200ms' }}
+                    style={{
+                        display: 'block', width: '100%',
+                        padding: 12, fontSize: 15,
+                        color: '#9ca3af', textAlign: 'center',
+                        textDecoration: 'none', transition: 'color 200ms',
+                    }}
                 >
                     먼저 둘러볼게요 →
                 </Link>
-
-                {/* Footer */}
-                <p className="text-center text-gray-400 mt-8" style={{ fontSize: 13, lineHeight: 1.6 }}>
-                    시작하면{' '}
-                    <a href="/terms" className="underline text-gray-400 hover:text-gray-500">이용약관</a>
-                    {' '}및{' '}
-                    <a href="/privacy" className="underline text-gray-400 hover:text-gray-500">개인정보처리방침</a>
-                    에 동의하게 됩니다.
-                </p>
             </div>
+
+            {/* Animation keyframes */}
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(12px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+            `}</style>
         </main>
     )
 }

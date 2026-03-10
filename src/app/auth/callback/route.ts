@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
-    const next = searchParams.get('next') ?? '/onboarding'
+    const next = searchParams.get('next') ?? '/mentors'
 
     if (code) {
         const supabase = await createClient()
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
                 // 기존 프로필 확인
                 const { data: profile, error: profileError } = await db
                     .from('users')
-                    .select('onboarding_completed, display_name, avatar_url, interests, gender, birth_year')
+                    .select('onboarding_completed, display_name, avatar_url, phone, gender, birth_year')
                     .eq('id', user.id)
                     .single()
 
@@ -57,8 +57,8 @@ export async function GET(request: Request) {
                         console.error('[Auth Callback] User create error:', JSON.stringify(insertError))
                     }
 
-                    // 온보딩으로 이동
-                    return NextResponse.redirect(`${origin}/onboarding`)
+                    // 신규 유저 → 멘토 페이지
+                    return NextResponse.redirect(`${origin}/mentors`)
                 }
 
                 // 프로필 있지만 avatar_url이 없으면 Google 아바타 업데이트
@@ -68,31 +68,13 @@ export async function GET(request: Request) {
                     }).eq('id', user.id)
                 }
 
-                if (profile.onboarding_completed) {
-                    // 기존 유저 재로그인 → 멘토 페이지 (웰컴 모달 없이)
+                // 크레딧 미수령 유저 → 멘토 페이지
+                if (!profile.phone) {
                     return NextResponse.redirect(`${origin}/mentors`)
                 }
 
-                // 온보딩 미완료: 어떤 항목이 누락되었는지 체크
-                const missingFields: string[] = []
-                if (!profile.display_name) missingFields.push('name')
-                if (!profile.gender) missingFields.push('gender')
-                if (!profile.birth_year) missingFields.push('birth_year')
-                if (!profile.interests || profile.interests.length === 0) missingFields.push('interests')
-
-                if (missingFields.length > 0) {
-                    // 미입력 항목이 있으면 resume 모드로 온보딩
-                    return NextResponse.redirect(
-                        `${origin}/onboarding?resume=true&missing=${missingFields.join(',')}`
-                    )
-                }
-
-                // 모든 항목 있지만 onboarding_completed 안됨 → 완료 처리
-                await db.from('users').update({
-                    onboarding_completed: true,
-                }).eq('id', user.id)
-                // 최초 온보딩 완료 → 웰컴 모달 표시
-                return NextResponse.redirect(`${origin}/mentors?welcome=true`)
+                // 기존 유저 재로그인 → 멘토 페이지
+                return NextResponse.redirect(`${origin}/mentors`)
             }
 
             return NextResponse.redirect(`${origin}${next}`)

@@ -8,7 +8,7 @@ import { MembershipBanner } from '@/components/MembershipBanner'
 import type { MentorCardData } from '@/domains/mentor'
 import NotificationBanner from './NotificationBanner'
 import AppSidebar from '@/components/AppSidebar'
-import WelcomeModal from '@/components/WelcomeModal'
+import CreditClaimWrapper from './CreditClaimWrapper'
 import { Suspense } from 'react'
 
 export const metadata: Metadata = {
@@ -167,9 +167,9 @@ export default async function MentorsPage() {
             {/* ─── Sidebar ─── */}
             <AppSidebar />
 
-            {/* ─── Welcome Modal (client, wrapped in Suspense for searchParams) ─── */}
+            {/* ─── Credit Claim Modal (client, wrapped in Suspense for searchParams) ─── */}
             <Suspense fallback={null}>
-                <WelcomeModal />
+                <CreditClaimWrapper />
             </Suspense>
 
             {/* ─── Main Content (offset by sidebar on desktop) ─── */}
