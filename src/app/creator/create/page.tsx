@@ -661,12 +661,33 @@ export default function CreatorCreatePage() {
                                     style={{ display: 'none' }}
                                     onChange={e => handleFileUpload(e.target.files)}
                                 />
-                                <div style={{ fontSize: 28 }}>{uploading ? '⏳' : '📄'}</div>
+                                <div style={{ fontSize: 28, marginBottom: 4 }}>{uploading ? '⏳' : '📄'}</div>
                                 <div style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>
                                     {uploading ? '업로드 중...' : '클릭하거나 드래그'}
                                 </div>
-                                <div style={{ fontSize: 11, color: '#9ca3af' }}>
-                                    HWP, PDF, PPT, DOCX, TXT · 최대 3개 · 합산 10MB
+                                <div style={{
+                                    display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
+                                    gap: 6, marginTop: 10,
+                                }}>
+                                    {[
+                                        { ext: 'HWP', color: '#2563eb', bg: '#dbeafe' },
+                                        { ext: 'PDF', color: '#dc2626', bg: '#fee2e2' },
+                                        { ext: 'PPT', color: '#ea580c', bg: '#ffedd5' },
+                                        { ext: 'DOCX', color: '#2563eb', bg: '#dbeafe' },
+                                        { ext: 'TXT', color: '#6b7280', bg: '#f3f4f6' },
+                                    ].map(f => (
+                                        <span key={f.ext} style={{
+                                            fontSize: 10, fontWeight: 700,
+                                            color: f.color, background: f.bg,
+                                            padding: '3px 8px', borderRadius: 6,
+                                            letterSpacing: '0.02em',
+                                        }}>
+                                            .{f.ext}
+                                        </span>
+                                    ))}
+                                </div>
+                                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>
+                                    최대 3개 · 합산 10MB
                                 </div>
                             </div>
 
@@ -820,12 +841,12 @@ export default function CreatorCreatePage() {
                                     }}>
                                         <div style={{
                                             width: 48, height: 48, borderRadius: '50%',
-                                            background: '#f3f4f6',
+                                            background: avatarPreview ? '#f3f4f6' : 'transparent',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: 24, fontWeight: 700,
                                             margin: '0 auto 8px',
                                             overflow: 'hidden',
-                                            border: '1px solid #e5e7eb',
+                                            border: avatarPreview ? '1px solid #e5e7eb' : 'none',
                                         }}>
                                             {avatarPreview ? (
                                                 <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -833,7 +854,7 @@ export default function CreatorCreatePage() {
                                                 <img
                                                     src="/logo.png"
                                                     alt="큐리"
-                                                    style={{ width: '70%', height: '70%', objectFit: 'contain', opacity: 0.35 }}
+                                                    style={{ width: 48, height: 48, objectFit: 'contain', opacity: 0.3 }}
                                                 />
                                             )}
                                         </div>
@@ -851,10 +872,10 @@ export default function CreatorCreatePage() {
                                             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                                                 <div style={{
                                                     width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                                                    background: '#f3f4f6',
+                                                    background: avatarPreview ? '#f3f4f6' : 'transparent',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                     overflow: 'hidden',
-                                                    border: '1px solid #e5e7eb',
+                                                    border: avatarPreview ? '1px solid #e5e7eb' : 'none',
                                                     marginTop: 2,
                                                 }}>
                                                     {avatarPreview ? (
@@ -863,7 +884,7 @@ export default function CreatorCreatePage() {
                                                         <img
                                                             src="/logo.png"
                                                             alt="큐리"
-                                                            style={{ width: '70%', height: '70%', objectFit: 'contain', opacity: 0.35 }}
+                                                            style={{ width: 36, height: 36, objectFit: 'contain', opacity: 0.3 }}
                                                         />
                                                     )}
                                                 </div>
