@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 interface UserProfile {
     display_name: string | null
     avatar_url: string | null
+    email: string | null
     role: string | null
     subscription_tier: string | null
 }
@@ -30,6 +31,7 @@ export default function AppSidebar() {
                     setProfile({
                         display_name: data.profile.display_name,
                         avatar_url: data.profile.avatar_url,
+                        email: user.email || null,
                         role: data.profile.role,
                         subscription_tier: data.profile.subscription_tier,
                     })
@@ -38,6 +40,7 @@ export default function AppSidebar() {
                     setProfile({
                         display_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
                         avatar_url: user.user_metadata?.avatar_url || null,
+                        email: user.email || null,
                         role: 'user',
                         subscription_tier: null,
                     })
@@ -47,6 +50,7 @@ export default function AppSidebar() {
                 setProfile({
                     display_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
                     avatar_url: user.user_metadata?.avatar_url || null,
+                    email: user.email || null,
                     role: 'user',
                     subscription_tier: null,
                 })
@@ -70,7 +74,7 @@ export default function AppSidebar() {
         }
     }, [])
 
-    const isAdmin = profile?.role === 'admin'
+    const isAdmin = profile?.role === 'admin' || profile?.email === 'jin@mission-driven.kr'
 
     const MENU_ITEMS = [
         { label: '대화하기', href: '/mentors', icon: '💬' },

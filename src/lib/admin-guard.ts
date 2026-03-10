@@ -2,8 +2,11 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 
-// 허용된 admin 이메일 목록 (환경변수 또는 하드코딩)
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean)
+// 허용된 admin 이메일 목록 (환경변수 + 하드코딩 폴백)
+const ADMIN_EMAILS = [
+    'jin@mission-driven.kr',
+    ...(process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean)
+]
 
 /**
  * 서버 컴포넌트에서 admin 인증 확인
