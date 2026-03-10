@@ -122,9 +122,12 @@ export async function POST(req: Request) {
 
         // 📚 RAG 지식 검색 (멘토별 지식 베이스)
         try {
+            console.log('[Chat RAG] Generating embedding for:', lastUserMessage.slice(0, 50))
             const embedding = await generateEmbedding(lastUserMessage)
+            console.log('[Chat RAG] Embedding length:', embedding.length)
             if (embedding.length > 0) {
                 const knowledge = await matchKnowledge(supabase, embedding, mentorId)
+                console.log('[Chat RAG] Matched knowledge:', knowledge.length, 'items for mentor:', mentorId)
                 if (knowledge.length > 0) {
                     const knowledgeText = knowledge.map(k => `- ${k.content}`).join('\n')
                     const isCreatorBot = !!(mentor as Record<string, unknown>).creator_id
@@ -135,10 +138,15 @@ export async function POST(req: Request) {
                         // 프리셋 멘토: 기존 방식 (참고용)
                         systemPrompt += `\n\n[참고 지식]\n${knowledgeText}\n참고: 위 지식을 대화에 자연스럽게 활용하되, 출처를 직접 언급하지 마세요.`
                     }
+                } else {
+                    console.log('[Chat RAG] No knowledge matched above threshold for mentor:', mentorId)
                 }
+            } else {
+                console.log('[Chat RAG] Empty embedding returned')
             }
-        } catch {
-            // RAG 검색 실패는 대화에 영향 없음
+        } catch (ragErr) {
+            console.error('[Chat RAG] Error:', ragErr instanceof Error ? ragErr.message : ragErr)
+            // RAG 검색 실패는 대화에 영향 없음 — 지식 없이 일반 대화 진행
         }
 
         // Gemini 대화 히스토리 구성 (domains/mentor)

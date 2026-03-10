@@ -120,7 +120,7 @@ export default function CreatorEditPage() {
                             ? { ...s, processing_status: 'completed', chunk_count: result.chunksProcessed }
                             : s
                         ))
-                        setToast({ type: 'success', message: `✅ ${file.name} — ${result.chunksProcessed}개 청크 완료!` })
+                        setToast({ type: 'success', message: `✅ ${file.name} — AI 학습 완료!` })
                     } else {
                         setKnowledgeSources(prev => prev.map(s => s.id === sourceId
                             ? { ...s, processing_status: 'failed' } : s))
@@ -164,7 +164,7 @@ export default function CreatorEditPage() {
                         : s
                     ))
                 }
-                setToast({ type: 'success', message: `✅ 재처리 완료! ${result.chunksProcessed}개 청크, ${result.totalCharacters ?? 0}자 추출` })
+                setToast({ type: 'success', message: `✅ 재처리 완료! ${result.totalCharacters?.toLocaleString() ?? 0}자 추출, AI 학습 완료` })
             } else {
                 setKnowledgeSources(prev => prev.map(s => s.id === sourceId
                     ? { ...s, processing_status: 'failed' } : s))

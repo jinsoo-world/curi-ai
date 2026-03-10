@@ -289,7 +289,7 @@ export default function CreatorCreatePage() {
                     const result = await r.json()
                     if (r.ok) {
                         setUploadedFiles(prev => prev.map(f => f.id === sourceId ? { ...f, status: 'completed' as const } : f))
-                        setToast(`✅ ${file.name} — ${result.chunksProcessed}개 청크 처리 완료!`)
+                        setToast(`✅ ${file.name} — AI 학습 완료!`)
                     } else {
                         setUploadedFiles(prev => prev.map(f => f.id === sourceId ? { ...f, status: 'failed' as const } : f))
                         setToast(`⚠️ ${file.name} 처리 실패: ${result.error}`)
