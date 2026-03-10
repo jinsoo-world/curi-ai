@@ -29,7 +29,26 @@ export default function AppSidebar() {
                     .select('display_name, avatar_url, role, subscription_tier')
                     .eq('id', user.id)
                     .single()
-                if (data) setProfile(data)
+                if (data) {
+                    setProfile(data)
+                } else {
+                    // users 테이블에 레코드가 없으면 자동 생성
+                    const newProfile = {
+                        id: user.id,
+                        email: user.email,
+                        display_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+                        avatar_url: user.user_metadata?.avatar_url || null,
+                        role: 'user',
+                        subscription_tier: null,
+                    }
+                    await supabase.from('users').upsert(newProfile, { onConflict: 'id' })
+                    setProfile({
+                        display_name: newProfile.display_name,
+                        avatar_url: newProfile.avatar_url,
+                        role: newProfile.role,
+                        subscription_tier: newProfile.subscription_tier,
+                    })
+                }
             }
         }
         fetchProfile()
