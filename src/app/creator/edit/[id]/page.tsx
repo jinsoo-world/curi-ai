@@ -560,8 +560,9 @@ export default function CreatorEditPage() {
                                                 <div>
                                                     <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{src.title}</div>
                                                     <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
-                                                        {src.processing_status === 'processing' ? '📄 파일 읽는 중...' :
-                                                         src.chunk_count ? `${src.chunk_count}개 항목으로 분류됨` : ''}
+                                                        {src.processing_status === 'processing' ? '📄 파일 읽는 중... (보통 30초~1분 소요)' :
+                                                         src.processing_status === 'completed' ? '✅ AI가 학습 완료' :
+                                                         src.processing_status === 'failed' ? '텍스트 추출에 실패했습니다' : ''}
                                                     </div>
                                                 </div>
                                             </div>
@@ -573,16 +574,36 @@ export default function CreatorEditPage() {
                                                        src.processing_status === 'processing' ? '#d97706' : '#dc2626',
                                             }}>
                                                 {src.processing_status === 'completed' ? '✅ 완료' :
-                                                 src.processing_status === 'processing' ? '⏳ 처리중' :
+                                                 src.processing_status === 'processing' ? '⏳ 읽는 중...' :
                                                  src.processing_status === 'pending' ? '⏳ 대기중' : '❌ 실패'}
                                             </span>
                                         </div>
                                         {/* 액션 버튼들 */}
                                         <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                                             {/* 파일 내용 보기 */}
-                                            {src.processing_status === 'completed' && src.content && (
+                                            {src.processing_status === 'completed' && (src.content || src.chunk_count > 0) && (
                                                 <button
-                                                    onClick={() => setPreviewSource({ title: src.title, content: src.content! })}
+                                                    onClick={async () => {
+                                                        if (src.content) {
+                                                            setPreviewSource({ title: src.title, content: src.content })
+                                                        } else {
+                                                            // content가 state에 없으면 API에서 가져오기
+                                                            try {
+                                                                const res = await fetch(`/api/creator/knowledge/list?mentorId=${mentorId}`)
+                                                                const data = await res.json()
+                                                                const found = data.sources?.find((s: any) => s.id === src.id)
+                                                                if (found?.content) {
+                                                                    setPreviewSource({ title: src.title, content: found.content })
+                                                                    // state도 업데이트
+                                                                    setKnowledgeSources(prev => prev.map(p => p.id === src.id ? { ...p, content: found.content } : p))
+                                                                } else {
+                                                                    setToast({ type: 'error', message: '파일 내용을 불러올 수 없습니다.' })
+                                                                }
+                                                            } catch {
+                                                                setToast({ type: 'error', message: '파일 내용을 불러올 수 없습니다.' })
+                                                            }
+                                                        }
+                                                    }}
                                                     style={{
                                                         padding: '5px 12px', borderRadius: 8,
                                                         border: '1px solid #e5e7eb', background: '#fff',
