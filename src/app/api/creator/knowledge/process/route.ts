@@ -99,6 +99,7 @@ export async function POST(req: NextRequest) {
         } else {
             // PDF/HWP/DOCX/PPT → Upstage Document OCR (비용 효율: $0.0015/page)
             try {
+                console.log('[Process] Sending to Upstage OCR:', source.title, 'size:', fileData.size, 'ext:', ext)
                 const formData = new FormData()
                 formData.append('document', fileData, source.title)
                 formData.append('model', 'ocr')
@@ -115,13 +116,13 @@ export async function POST(req: NextRequest) {
                     console.log('[Process] Upstage keys:', Object.keys(pd))
                     textContent = extractTextFromUpstage(pd)
                     if (!textContent) {
-                        console.log('[Process] No text, raw:', JSON.stringify(pd).slice(0, 500))
+                        console.log('[Process] No text extracted. Raw response:', JSON.stringify(pd).slice(0, 1000))
                     } else {
                         console.log('[Process] Extracted text length:', textContent.length)
                     }
                 } else {
                     const errText = await parseRes.text()
-                    console.error('[Process] Upstage error:', parseRes.status, errText.slice(0, 300))
+                    console.error('[Process] Upstage error:', parseRes.status, parseRes.statusText, errText.slice(0, 500))
                 }
             } catch (parseErr) {
                 console.error('[Process] Parse error:', parseErr)

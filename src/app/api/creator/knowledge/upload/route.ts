@@ -20,9 +20,10 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const MAX_FILES_PER_MENTOR = 3
 
 // 확장자 → fallback MIME 매핑 (HWP 등 MIME이 빈 파일용)
+// Supabase Storage는 비표준 MIME을 거부할 수 있어 octet-stream 사용
 const EXT_MIME_MAP: Record<string, string> = {
-    hwp: 'application/x-hwp',
-    hwpx: 'application/x-hwpx',
+    hwp: 'application/octet-stream',
+    hwpx: 'application/octet-stream',
     ppt: 'application/vnd.ms-powerpoint',
     pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     doc: 'application/msword',
@@ -109,9 +110,9 @@ export async function POST(req: NextRequest) {
             })
 
         if (uploadError) {
-            console.error('[Upload] Storage error:', uploadError.message)
+            console.error('[Upload] Storage error:', uploadError.message, 'contentType:', uploadContentType, 'path:', filePath)
             return NextResponse.json(
-                { error: '파일 업로드에 실패했습니다.' },
+                { error: `파일 업로드에 실패했습니다: ${uploadError.message}` },
                 { status: 500 },
             )
         }
