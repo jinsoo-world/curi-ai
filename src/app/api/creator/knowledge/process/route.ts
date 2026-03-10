@@ -181,27 +181,111 @@ export async function POST(req: NextRequest) {
             }
 
         } else if (['ppt', 'pptx'].includes(ext)) {
-            // PPT: Upstage OCR 사용 (로컬 파서 없음)
-            try {
-                console.log('[Process] Sending PPT to Upstage OCR:', source.title)
-                const formData = new FormData()
-                formData.append('document', fileData, source.title)
-                formData.append('model', 'ocr')
-                formData.append('ocr', 'force')
-                const parseRes = await fetch('https://api.upstage.ai/v1/document-digitization', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${process.env.UPSTAGE_API_KEY}` },
-                    body: formData,
-                })
-                if (parseRes.ok) {
-                    const pd = await parseRes.json()
-                    textContent = extractTextFromUpstage(pd)
-                } else {
-                    const errText = await parseRes.text()
-                    console.error('[Process] Upstage PPT error:', parseRes.status, errText.slice(0, 500))
+            // PPTX: pptxtojson 로컬 파서로 텍스트 추출
+            if (ext === 'pptx') {
+                try {
+                    console.log('[Process] Parsing PPTX locally with pptxtojson:', source.title)
+                    // eslint-disable-next-line @typescript-eslint/no-require-imports
+                    const { parse: parsePptx } = require('pptxtojson/dist/index.cjs')
+                    const buffer = Buffer.from(await fileData.arrayBuffer())
+                    const result = await parsePptx(buffer.buffer)
+
+                    // 슬라이드별 텍스트 추출
+                    const slideTexts: string[] = []
+                    if (result?.slides) {
+                        for (let i = 0; i < result.slides.length; i++) {
+                            const slide = result.slides[i]
+                            const texts: string[] = []
+
+                            const extractText = (elements: any[]) => {
+                                for (const el of elements || []) {
+                                    if (el.content) {
+                                        // HTML 태그 제거해서 순수 텍스트 추출
+                                        const plainText = el.content
+                                            .replace(/<[^>]*>/g, ' ')
+                                            .replace(/&nbsp;/g, ' ')
+                                            .replace(/&amp;/g, '&')
+                                            .replace(/&lt;/g, '<')
+                                            .replace(/&gt;/g, '>')
+                                            .replace(/\s+/g, ' ')
+                                            .trim()
+                                        if (plainText) texts.push(plainText)
+                                    }
+                                    if (el.data) {
+                                        // 테이블 데이터
+                                        for (const row of el.data || []) {
+                                            for (const cell of row || []) {
+                                                if (cell?.text) texts.push(cell.text)
+                                            }
+                                        }
+                                    }
+                                    if (el.elements) {
+                                        extractText(el.elements)
+                                    }
+                                }
+                            }
+
+                            extractText(slide.elements || [])
+                            extractText(slide.layoutElements || [])
+
+                            if (texts.length > 0) {
+                                slideTexts.push(`[슬라이드 ${i + 1}]\n${texts.join('\n')}`)
+                            }
+
+                            // 슬라이드 노트
+                            if (slide.note) {
+                                slideTexts.push(`[슬라이드 ${i + 1} 노트]\n${slide.note}`)
+                            }
+                        }
+                    }
+
+                    textContent = slideTexts.join('\n\n')
+                    console.log(`[Process] PPTX parsed: ${result?.slides?.length || 0} slides, ${textContent.length} chars`)
+                } catch (pptxErr) {
+                    console.error('[Process] PPTX local parse error:', pptxErr)
+                    // 로컬 파서 실패 시 Upstage OCR 폴백
+                    console.log('[Process] Falling back to Upstage OCR for PPTX')
+                    try {
+                        const formData = new FormData()
+                        formData.append('document', fileData, source.title)
+                        formData.append('model', 'ocr')
+                        formData.append('ocr', 'force')
+                        const parseRes = await fetch('https://api.upstage.ai/v1/document-digitization', {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${process.env.UPSTAGE_API_KEY}` },
+                            body: formData,
+                        })
+                        if (parseRes.ok) {
+                            const pd = await parseRes.json()
+                            textContent = extractTextFromUpstage(pd)
+                        }
+                    } catch (fallbackErr) {
+                        console.error('[Process] PPTX fallback error:', fallbackErr)
+                    }
                 }
-            } catch (pptErr) {
-                console.error('[Process] PPT parse error:', pptErr)
+            } else {
+                // .ppt (구형): Upstage OCR 사용
+                try {
+                    console.log('[Process] Sending PPT (legacy) to Upstage OCR:', source.title)
+                    const formData = new FormData()
+                    formData.append('document', fileData, source.title)
+                    formData.append('model', 'ocr')
+                    formData.append('ocr', 'force')
+                    const parseRes = await fetch('https://api.upstage.ai/v1/document-digitization', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${process.env.UPSTAGE_API_KEY}` },
+                        body: formData,
+                    })
+                    if (parseRes.ok) {
+                        const pd = await parseRes.json()
+                        textContent = extractTextFromUpstage(pd)
+                    } else {
+                        const errText = await parseRes.text()
+                        console.error('[Process] Upstage PPT error:', parseRes.status, errText.slice(0, 500))
+                    }
+                } catch (pptErr) {
+                    console.error('[Process] PPT parse error:', pptErr)
+                }
             }
 
         } else if (ext === 'pdf') {
