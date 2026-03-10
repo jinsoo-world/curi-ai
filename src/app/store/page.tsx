@@ -243,7 +243,7 @@ export default function CloverStorePage() {
                                     position: 'relative',
                                 }}>
                                     {item.image ? (
-                                        <img src={item.image} alt={item.brand} style={{ width: 48, height: 48, objectFit: 'contain' }} />
+                                        <img src={item.image} alt={item.brand} style={{ width: 100, height: 100, objectFit: 'contain' }} />
                                     ) : item.emoji}
                                     {/* 할인 배지 */}
                                     <div style={{
@@ -398,7 +398,7 @@ export default function CloverStorePage() {
                         </button>
                         <div style={{ fontSize: 56, marginBottom: 12 }}>
                             {showPurchaseModal.image ? (
-                                <img src={showPurchaseModal.image} alt={showPurchaseModal.brand} style={{ width: 72, height: 72, objectFit: 'contain' }} />
+                                <img src={showPurchaseModal.image} alt={showPurchaseModal.brand} style={{ width: 120, height: 120, objectFit: 'contain' }} />
                             ) : showPurchaseModal.emoji}
                         </div>
                         <h3 style={{ fontSize: 18, fontWeight: 700, color: '#18181b', marginBottom: 4 }}>
