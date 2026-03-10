@@ -13,6 +13,9 @@ const ALLOWED_TYPES = [
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]
 
+// HWP/HWPX는 MIME 타입이 없으므로 확장자로 체크
+const ALLOWED_EXTENSIONS = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx']
+
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 /**
@@ -39,10 +42,11 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        // 파일 타입 검증
-        if (!ALLOWED_TYPES.includes(file.type)) {
+        // 파일 타입 검증 (MIME 또는 확장자)
+        const ext = file.name.split('.').pop()?.toLowerCase() || ''
+        if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTENSIONS.includes(ext)) {
             return NextResponse.json(
-                { error: '지원하지 않는 파일 형식입니다. PDF, TXT, MD, DOC, DOCX만 가능합니다.' },
+                { error: '지원하지 않는 파일 형식입니다. HWP, PDF, TXT, MD, DOC, DOCX만 가능합니다.' },
                 { status: 400 },
             )
         }
@@ -84,7 +88,8 @@ export async function POST(req: NextRequest) {
         }
 
         // knowledge_sources에 레코드 삽입
-        const sourceType = file.type === 'application/pdf' ? 'pdf' : 'text'
+        const sourceType = ext === 'pdf' ? 'pdf' : (ext === 'hwp' || ext === 'hwpx') ? 'hwp' : 'text'
+        const fileUrl = admin.storage.from('knowledge-files').getPublicUrl(filePath).data.publicUrl
         const { data: source, error: dbError } = await admin
             .from('knowledge_sources')
             .insert({
@@ -115,6 +120,7 @@ export async function POST(req: NextRequest) {
                 fileSize: file.size,
                 sourceType,
                 filePath,
+                fileUrl,
             },
         })
     } catch (error: unknown) {
