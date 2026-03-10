@@ -312,260 +312,553 @@ export default function CreatorCreatePage() {
         return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
     }
 
+    // ── 미리보기 채팅 ──
+    const [previewMessages, setPreviewMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
+    const [previewInput, setPreviewInput] = useState('')
+    const [previewLoading, setPreviewLoading] = useState(false)
+    const previewEndRef = useRef<HTMLDivElement>(null)
+
+    async function handlePreviewSend(msg?: string) {
+        const text = msg || previewInput.trim()
+        if (!text || previewLoading) return
+        if (!mentorIdForUpload) {
+            setError('미리보기를 사용하려면 먼저 AI 이름과 소개를 입력 후 파일을 첨부하거나 지식을 입력해주세요.')
+            return
+        }
+
+        const newMessages = [...previewMessages, { role: 'user' as const, content: text }]
+        setPreviewMessages(newMessages)
+        setPreviewInput('')
+        setPreviewLoading(true)
+
+        try {
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+                    mentorId: mentorIdForUpload,
+                }),
+            })
+
+            const reader = res.body?.getReader()
+            if (!reader) return
+
+            let fullText = ''
+            setPreviewMessages(prev => [...prev, { role: 'assistant', content: '' }])
+
+            while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+
+                const chunk = new TextDecoder().decode(value)
+                const lines = chunk.split('\n').filter(l => l.startsWith('data: '))
+                for (const line of lines) {
+                    try {
+                        const data = JSON.parse(line.slice(6))
+                        if (data.text) {
+                            fullText = data.fullResponse || (fullText + data.text)
+                            setPreviewMessages(prev => {
+                                const updated = [...prev]
+                                updated[updated.length - 1] = { role: 'assistant', content: fullText }
+                                return updated
+                            })
+                        }
+                    } catch { /* skip */ }
+                }
+            }
+        } catch {
+            setPreviewMessages(prev => [...prev, { role: 'assistant', content: '미리보기 응답을 가져올 수 없습니다.' }])
+        }
+        setPreviewLoading(false)
+        setTimeout(() => previewEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+    }
+
+    const effectiveGreeting = greetingMessage.trim() || `안녕하세요! ${name || 'AI'}입니다 😊 무엇이 궁금하세요?`
+    const sampleQArr = sampleQuestions.split('\n').map(s => s.trim()).filter(Boolean)
+
     return (
         <div style={{ minHeight: '100dvh', background: '#f8f9fa' }}>
             <AppSidebar />
 
             <div className="sidebar-content" style={{ marginLeft: 240, minHeight: '100dvh' }}>
-                {/* ── 콘텐츠 ── */}
-                <div style={styles.container}>
-                    {/* ── 헤더 ── */}
-                    <div style={{ marginBottom: 20 }}>
-                        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: '#18181b' }}>
-                            🤖 나만의 AI 만들기
-                        </h1>
-                        <p style={{ margin: '4px 0 0', fontSize: 14, color: '#9ca3af' }}>
-                            AI에 반영되는 설정만 표시됩니다
-                        </p>
-                    </div>
-
-                    {/* ── 에러 ── */}
-                    {error && (
-                        <div style={styles.errorBox}>
-                            {error}
-                            <button
-                                onClick={() => setError(null)}
-                                style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', marginLeft: 8, fontWeight: 600 }}
-                            >✕</button>
-                        </div>
-                    )}
-
-                    {/* ── 기본 정보 카드 ── */}
-                    <div style={styles.card}>
-                        {/* 프로필 이미지 */}
-                        <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', marginBottom: 20 }}>
-                            <div
-                                onClick={() => avatarInputRef.current?.click()}
-                                style={{
-                                    width: 100, height: 100, borderRadius: '50%',
-                                    border: '3px dashed #d1d5db', cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    overflow: 'hidden', background: '#f9fafb',
-                                    transition: 'border-color 200ms',
-                                }}
-                                onMouseEnter={e => ((e.currentTarget as HTMLElement).style.borderColor = '#22c55e')}
-                                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.borderColor = '#d1d5db')}
-                            >
-                                {avatarPreview ? (
-                                    <img src={avatarPreview} alt="프로필" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                ) : (
-                                    <div style={{ textAlign: 'center' as const, color: '#9ca3af' }}>
-                                        <div style={{ fontSize: 28 }}>📷</div>
-                                        <div style={{ fontSize: 11, marginTop: 2 }}>프로필</div>
-                                    </div>
-                                )}
-                            </div>
-                            <input
-                                ref={avatarInputRef}
-                                type="file"
-                                accept="image/*"
-                                style={{ display: 'none' }}
-                                onChange={handleAvatarChange}
-                            />
-                            <span style={{ fontSize: 12, color: '#9ca3af', marginTop: 6 }}>
-                                클릭하여 프로필 사진 업로드 (선택)
-                            </span>
-                        </div>
-
-                        <div style={styles.field}>
-                            <label style={styles.label}>AI 이름 *</label>
-                            <input
-                                style={styles.input}
-                                placeholder="예: 커피마스터, 영어코치"
-                                value={name}
-                                onChange={e => setName(e.target.value)}
-                                maxLength={20}
-                            />
-                        </div>
-
-                        <div style={styles.field}>
-                            <label style={styles.label}>한줄 소개 *</label>
-                            <input
-                                style={styles.input}
-                                placeholder="예: 바리스타 경력 10년, 커피 로스팅 전문가"
-                                value={title}
-                                onChange={e => setTitle(e.target.value)}
-                                maxLength={50}
-                            />
-                        </div>
-                    </div>
-
-                    {/* ── AI 성격 선택 카드 ── */}
-                    <div style={styles.card}>
-                        <label style={{ ...styles.label, marginBottom: 8, fontSize: 15 }}>🎭 AI 성격 선택 *</label>
-                        <div className="template-grid" style={styles.templateGrid}>
-                            {PERSONA_TEMPLATES.map(t => (
-                                <button
-                                    key={t.id}
-                                    style={{
-                                        ...styles.templateCard,
-                                        ...(template === t.id ? styles.templateCardSelected : {}),
-                                    }}
-                                    onClick={() => setTemplate(t.id)}
-                                >
-                                    <span style={{ fontSize: 24 }}>{t.emoji}</span>
-                                    <strong style={{ fontSize: 13 }}>{t.label}</strong>
-                                    <span style={{ fontSize: 11, color: '#9ca3af', lineHeight: '1.3' }}>
-                                        {t.description}
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
-
-                        <div style={{ ...styles.field, marginTop: 8 }}>
-                            <label style={styles.label}>추가 지시사항 (선택)</label>
-                            <p style={styles.hint}>
-                                원하는 대화 스타일을 자유롭게 적어주세요
+                {/* ── 2컬럼 레이아웃 ── */}
+                <div className="creator-layout" style={{
+                    display: 'flex',
+                    gap: 0,
+                    minHeight: '100dvh',
+                }}>
+                    {/* ══════ 좌측: 설정 폼 ══════ */}
+                    <div className="creator-form-col" style={{
+                        flex: '1 1 0',
+                        maxWidth: 640,
+                        padding: '24px 20px 120px',
+                        overflowY: 'auto',
+                        height: '100dvh',
+                        boxSizing: 'border-box',
+                    }}>
+                        {/* 헤더 */}
+                        <div style={{ marginBottom: 20 }}>
+                            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: '#18181b' }}>
+                                🤖 나만의 AI 만들기
+                            </h1>
+                            <p style={{ margin: '4px 0 0', fontSize: 14, color: '#9ca3af' }}>
+                                AI에 반영되는 설정만 표시됩니다
                             </p>
+                        </div>
+
+                        {/* 에러 */}
+                        {error && (
+                            <div style={styles.errorBox}>
+                                {error}
+                                <button
+                                    onClick={() => setError(null)}
+                                    style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', marginLeft: 8, fontWeight: 600 }}
+                                >✕</button>
+                            </div>
+                        )}
+
+                        {/* ── 기본 정보 ── */}
+                        <div style={styles.card}>
+                            <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', marginBottom: 20 }}>
+                                <div
+                                    onClick={() => avatarInputRef.current?.click()}
+                                    style={{
+                                        width: 80, height: 80, borderRadius: '50%',
+                                        border: '3px dashed #d1d5db', cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        overflow: 'hidden', background: '#f9fafb',
+                                        transition: 'border-color 200ms',
+                                    }}
+                                    onMouseEnter={e => ((e.currentTarget as HTMLElement).style.borderColor = '#22c55e')}
+                                    onMouseLeave={e => ((e.currentTarget as HTMLElement).style.borderColor = '#d1d5db')}
+                                >
+                                    {avatarPreview ? (
+                                        <img src={avatarPreview} alt="프로필" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        <div style={{ textAlign: 'center' as const, color: '#9ca3af' }}>
+                                            <div style={{ fontSize: 24 }}>📷</div>
+                                            <div style={{ fontSize: 10 }}>프로필</div>
+                                        </div>
+                                    )}
+                                </div>
+                                <input
+                                    ref={avatarInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    style={{ display: 'none' }}
+                                    onChange={handleAvatarChange}
+                                />
+                                <span style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
+                                    클릭하여 프로필 사진 업로드 (선택)
+                                </span>
+                            </div>
+
+                            <div style={styles.field}>
+                                <label style={styles.label}>AI 이름 *</label>
+                                <input
+                                    style={styles.input}
+                                    placeholder="예: 커피마스터, 영어코치"
+                                    value={name}
+                                    onChange={e => setName(e.target.value)}
+                                    maxLength={20}
+                                />
+                            </div>
+
+                            <div style={styles.field}>
+                                <label style={styles.label}>한줄 소개 *</label>
+                                <input
+                                    style={styles.input}
+                                    placeholder="예: 바리스타 경력 10년, 커피 로스팅 전문가"
+                                    value={title}
+                                    onChange={e => setTitle(e.target.value)}
+                                    maxLength={50}
+                                />
+                            </div>
+                        </div>
+
+                        {/* ── AI 성격 선택 ── */}
+                        <div style={styles.card}>
+                            <label style={{ ...styles.label, marginBottom: 8, fontSize: 15 }}>🎭 AI 성격 선택 *</label>
+                            <div className="template-grid" style={styles.templateGrid}>
+                                {PERSONA_TEMPLATES.map(t => (
+                                    <button
+                                        key={t.id}
+                                        style={{
+                                            ...styles.templateCard,
+                                            ...(template === t.id ? styles.templateCardSelected : {}),
+                                        }}
+                                        onClick={() => setTemplate(t.id)}
+                                    >
+                                        <span style={{ fontSize: 24 }}>{t.emoji}</span>
+                                        <strong style={{ fontSize: 13 }}>{t.label}</strong>
+                                        <span style={{ fontSize: 11, color: '#9ca3af', lineHeight: '1.3' }}>
+                                            {t.description}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div style={{ ...styles.field, marginTop: 8 }}>
+                                <label style={styles.label}>추가 지시사항 (선택)</label>
+                                <p style={styles.hint}>원하는 대화 스타일을 자유롭게 적어주세요</p>
+                                <textarea
+                                    style={styles.textarea}
+                                    placeholder={"예:\n- 반드시 실전 사례를 들어서 설명해줘\n- 질문을 2개 이상 연속으로 하지 마\n- 대화 끝에 항상 액션 아이템을 줘"}
+                                    value={customPrompt}
+                                    onChange={e => setCustomPrompt(e.target.value)}
+                                    rows={4}
+                                />
+                            </div>
+                        </div>
+
+                        {/* ── 인사말 / 예시 질문 ── */}
+                        <div style={styles.card}>
+                            <div style={styles.field}>
+                                <label style={styles.label}>👋 인사말 (선택)</label>
+                                <input
+                                    style={styles.input}
+                                    placeholder={`안녕하세요! ${name || 'AI'}입니다 😊`}
+                                    value={greetingMessage}
+                                    onChange={e => setGreetingMessage(e.target.value)}
+                                />
+                            </div>
+
+                            <div style={styles.field}>
+                                <label style={styles.label}>💬 예시 질문 (선택)</label>
+                                <p style={styles.hint}>줄바꿈으로 구분 — 대화 시작 시 추천 질문으로 표시</p>
+                                <textarea
+                                    style={styles.textarea}
+                                    placeholder={"질문 1\n질문 2\n질문 3"}
+                                    value={sampleQuestions}
+                                    onChange={e => setSampleQuestions(e.target.value)}
+                                    rows={3}
+                                />
+                            </div>
+                        </div>
+
+                        {/* ── 지식 추가 ── */}
+                        <div style={styles.card}>
+                            <label style={{ ...styles.label, marginBottom: 4, fontSize: 15 }}>📚 지식 추가 (선택)</label>
+                            <p style={styles.hint}>AI가 참고할 정보를 입력하거나 파일을 첨부하세요</p>
+
+                            <div
+                                style={{
+                                    ...styles.dropZone,
+                                    ...(dragOver ? styles.dropZoneActive : {}),
+                                }}
+                                onClick={() => fileInputRef.current?.click()}
+                                onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+                                onDragLeave={() => setDragOver(false)}
+                                onDrop={e => {
+                                    e.preventDefault()
+                                    setDragOver(false)
+                                    handleFileUpload(e.dataTransfer.files)
+                                }}
+                            >
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".pdf,.txt,.md,.doc,.docx,.hwp,.hwpx,.ppt,.pptx"
+                                    multiple
+                                    style={{ display: 'none' }}
+                                    onChange={e => handleFileUpload(e.target.files)}
+                                />
+                                <div style={{ fontSize: 28 }}>{uploading ? '⏳' : '📄'}</div>
+                                <div style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>
+                                    {uploading ? '업로드 중...' : '클릭하거나 드래그'}
+                                </div>
+                                <div style={{ fontSize: 11, color: '#9ca3af' }}>
+                                    HWP, PDF, PPT, DOCX, TXT · 최대 3개 · 합산 10MB
+                                </div>
+                            </div>
+
+                            {uploadedFiles.length > 0 && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+                                    {uploadedFiles.map(f => (
+                                        <div key={f.id} style={{
+                                            ...styles.fileItem,
+                                            background: f.status === 'completed' ? '#f0fdf4' :
+                                                        f.status === 'failed' ? '#fef2f2' : '#fffbeb',
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <span>{f.status === 'processing' ? '⏳' : f.status === 'completed' ? '✅' : f.status === 'failed' ? '❌' : '📄'}</span>
+                                                <div>
+                                                    <div style={{ fontSize: 13, fontWeight: 500 }}>{f.fileName}</div>
+                                                    <div style={{ fontSize: 11, color: '#9ca3af' }}>{formatFileSize(f.fileSize)}</div>
+                                                </div>
+                                            </div>
+                                            <span style={{
+                                                fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20,
+                                                background: f.status === 'completed' ? '#dcfce7' :
+                                                            f.status === 'failed' ? '#fee2e2' : '#fef3c7',
+                                                color: f.status === 'completed' ? '#16a34a' :
+                                                       f.status === 'failed' ? '#dc2626' : '#d97706',
+                                            }}>
+                                                {f.status === 'processing' ? '📄 파일 읽는 중...' :
+                                                 f.status === 'completed' ? '✅ 완료' :
+                                                 f.status === 'failed' ? '❌ 실패' : '업로드 중...'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
                             <textarea
-                                style={styles.textarea}
-                                placeholder={"예:\n- 반드시 실전 사례를 들어서 설명해줘\n- 질문을 2개 이상 연속으로 하지 마\n- 대화 끝에 항상 액션 아이템을 줘"}
-                                value={customPrompt}
-                                onChange={e => setCustomPrompt(e.target.value)}
+                                style={{ ...styles.textarea, marginTop: 8 }}
+                                placeholder="직접 입력: AI가 알아야 할 전문 지식, 경험, 노하우"
+                                value={knowledgeText}
+                                onChange={e => setKnowledgeText(e.target.value)}
                                 rows={4}
                             />
                         </div>
+
+                        {/* ── 하단 버튼 ── */}
+                        <div style={{ paddingBottom: 20 }}>
+                            {uploadedFiles.some(f => f.status === 'processing' || f.status === 'uploading') && (
+                                <div style={{
+                                    fontSize: 12, color: '#d97706', textAlign: 'center' as const,
+                                    marginBottom: 6, fontWeight: 500,
+                                }}>
+                                    ⏳ 파일 처리 중... 완료되면 공개할 수 있어요
+                                </div>
+                            )}
+                            <button
+                                style={{
+                                    ...styles.createBtn,
+                                    opacity: (loading || uploadedFiles.some(f => f.status === 'processing' || f.status === 'uploading')) ? 0.5 : 1,
+                                }}
+                                onClick={handleCreate}
+                                disabled={loading || uploadedFiles.some(f => f.status === 'processing' || f.status === 'uploading')}
+                            >
+                                {loading ? '생성 중...' :
+                                 uploadedFiles.some(f => f.status === 'processing') ? '⏳ 파일 처리 중...' :
+                                 '🚀 AI 공개하기'}
+                            </button>
+                        </div>
                     </div>
 
-                    {/* ── 인사말 / 예시 질문 카드 ── */}
-                    <div style={styles.card}>
-                        <div style={styles.field}>
-                            <label style={styles.label}>👋 인사말 (선택)</label>
-                            <input
-                                style={styles.input}
-                                placeholder={`안녕하세요! ${name || 'AI'}입니다 😊`}
-                                value={greetingMessage}
-                                onChange={e => setGreetingMessage(e.target.value)}
-                            />
+                    {/* ══════ 우측: 미리보기 채팅 ══════ */}
+                    <div className="creator-preview-col" style={{
+                        flex: '1 1 0',
+                        borderLeft: '1px solid #e5e7eb',
+                        background: '#fff',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        height: '100dvh',
+                        position: 'sticky',
+                        top: 0,
+                    }}>
+                        {/* 미리보기 헤더 */}
+                        <div style={{
+                            padding: '16px 20px',
+                            borderBottom: '1px solid #f0f0f0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                        }}>
+                            <span style={{ fontSize: 16 }}>👁️</span>
+                            <span style={{ fontSize: 14, fontWeight: 600, color: '#374151' }}>미리보기</span>
+                            <span style={{ fontSize: 12, color: '#9ca3af' }}>실시간으로 AI 대화를 테스트하세요</span>
                         </div>
 
-                        <div style={styles.field}>
-                            <label style={styles.label}>💬 예시 질문 (선택)</label>
-                            <p style={styles.hint}>줄바꿈으로 구분 — 대화 시작 시 추천 질문으로 표시</p>
-                            <textarea
-                                style={styles.textarea}
-                                placeholder={"질문 1\n질문 2\n질문 3"}
-                                value={sampleQuestions}
-                                onChange={e => setSampleQuestions(e.target.value)}
-                                rows={3}
-                            />
-                        </div>
-                    </div>
-
-                    {/* ── 지식 추가 카드 (선택) ── */}
-                    <div style={styles.card}>
-                        <label style={{ ...styles.label, marginBottom: 4, fontSize: 15 }}>📚 지식 추가 (선택)</label>
-                        <p style={styles.hint}>AI가 참고할 정보를 입력하거나 파일을 첨부하세요</p>
-
-                        {/* 파일 첨부 */}
-                        <div
-                            style={{
-                                ...styles.dropZone,
-                                ...(dragOver ? styles.dropZoneActive : {}),
-                            }}
-                            onClick={() => fileInputRef.current?.click()}
-                            onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-                            onDragLeave={() => setDragOver(false)}
-                            onDrop={e => {
-                                e.preventDefault()
-                                setDragOver(false)
-                                handleFileUpload(e.dataTransfer.files)
-                            }}
-                        >
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept=".pdf,.txt,.md,.doc,.docx,.hwp,.hwpx,.ppt,.pptx"
-                                multiple
-                                style={{ display: 'none' }}
-                                onChange={e => handleFileUpload(e.target.files)}
-                            />
-                            <div style={{ fontSize: 28 }}>{uploading ? '⏳' : '📄'}</div>
-                            <div style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>
-                                {uploading ? '업로드 중...' : '클릭하거나 드래그'}
-                            </div>
-                            <div style={{ fontSize: 11, color: '#9ca3af' }}>
-                                HWP, PDF, PPT, DOCX, TXT · 최대 3개 · 합산 10MB
-                            </div>
-                        </div>
-
-                        {/* 업로드된 파일 + 상태 표시 */}
-                        {uploadedFiles.length > 0 && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
-                                {uploadedFiles.map(f => (
-                                    <div key={f.id} style={{
-                                        ...styles.fileItem,
-                                        background: f.status === 'completed' ? '#f0fdf4' :
-                                                    f.status === 'failed' ? '#fef2f2' : '#fffbeb',
-                                    }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <span>{f.status === 'processing' ? '⏳' : f.status === 'completed' ? '✅' : f.status === 'failed' ? '❌' : '📄'}</span>
-                                            <div>
-                                                <div style={{ fontSize: 13, fontWeight: 500 }}>{f.fileName}</div>
-                                                <div style={{ fontSize: 11, color: '#9ca3af' }}>{formatFileSize(f.fileSize)}</div>
-                                            </div>
-                                        </div>
-                                        <span style={{
-                                            fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20,
-                                            background: f.status === 'completed' ? '#dcfce7' :
-                                                        f.status === 'failed' ? '#fee2e2' : '#fef3c7',
-                                            color: f.status === 'completed' ? '#16a34a' :
-                                                   f.status === 'failed' ? '#dc2626' : '#d97706',
-                                        }}>
-                                            {f.status === 'processing' ? '📄 파일 읽는 중...' :
-                                             f.status === 'completed' ? '✅ 완료' :
-                                             f.status === 'failed' ? '❌ 실패' : '업로드 중...'}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        <textarea
-                            style={{ ...styles.textarea, marginTop: 8 }}
-                            placeholder="직접 입력: AI가 알아야 할 전문 지식, 경험, 노하우"
-                            value={knowledgeText}
-                            onChange={e => setKnowledgeText(e.target.value)}
-                            rows={4}
-                        />
-                    </div>
-
-                    {/* ── 생성 버튼 (하단 고정) ── */}
-                    <div style={styles.bottomBar}>
-                        {uploadedFiles.some(f => f.status === 'processing' || f.status === 'uploading') && (
+                        {/* 채팅 영역 */}
+                        <div style={{
+                            flex: 1,
+                            overflowY: 'auto',
+                            padding: '20px 16px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 12,
+                        }}>
+                            {/* AI 프로필 카드 */}
                             <div style={{
-                                fontSize: 12, color: '#d97706', textAlign: 'center' as const,
-                                marginBottom: 6, fontWeight: 500,
+                                textAlign: 'center' as const,
+                                padding: '24px 16px',
+                                borderRadius: 16,
+                                background: '#f0fdf4',
+                                marginBottom: 8,
                             }}>
-                                ⏳ 파일 처리 중... 완료되면 공개할 수 있어요
+                                <div style={{
+                                    width: 56, height: 56, borderRadius: '50%',
+                                    background: '#22c55e', color: '#fff',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: 24, fontWeight: 700,
+                                    margin: '0 auto 8px',
+                                    overflow: 'hidden',
+                                }}>
+                                    {avatarPreview ? (
+                                        <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        name ? name[0] : '🤖'
+                                    )}
+                                </div>
+                                <div style={{ fontSize: 16, fontWeight: 700, color: '#18181b' }}>
+                                    {name || 'AI 이름'}
+                                </div>
+                                <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
+                                    {title || '한줄 소개'}
+                                </div>
+                            </div>
+
+                            {/* 인사말 */}
+                            {previewMessages.length === 0 && (
+                                <>
+                                    <div style={{
+                                        display: 'flex', gap: 8, alignItems: 'flex-start',
+                                    }}>
+                                        <div style={{
+                                            width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                                            background: '#22c55e', color: '#fff',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: 14, fontWeight: 700, overflow: 'hidden',
+                                        }}>
+                                            {avatarPreview ? (
+                                                <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : (name ? name[0] : '🤖')}
+                                        </div>
+                                        <div style={{
+                                            background: '#f3f4f6', borderRadius: '4px 16px 16px 16px',
+                                            padding: '10px 14px', fontSize: 14, color: '#374151',
+                                            maxWidth: '80%', lineHeight: 1.5,
+                                        }}>
+                                            {effectiveGreeting}
+                                        </div>
+                                    </div>
+
+                                    {/* 예시 질문 버튼 */}
+                                    {sampleQArr.length > 0 && (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 40 }}>
+                                            {sampleQArr.map((q, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => handlePreviewSend(q)}
+                                                    style={{
+                                                        padding: '8px 14px', borderRadius: 20,
+                                                        border: '1px solid #d1fae5', background: '#ecfdf5',
+                                                        color: '#065f46', fontSize: 13, cursor: 'pointer',
+                                                        transition: 'all 0.15s',
+                                                    }}
+                                                    onMouseEnter={e => {
+                                                        (e.currentTarget as HTMLElement).style.background = '#d1fae5'
+                                                    }}
+                                                    onMouseLeave={e => {
+                                                        (e.currentTarget as HTMLElement).style.background = '#ecfdf5'
+                                                    }}
+                                                >
+                                                    {q}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {/* 대화 메시지 */}
+                            {previewMessages.map((m, i) => (
+                                <div key={i} style={{
+                                    display: 'flex',
+                                    justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',
+                                    gap: 8,
+                                }}>
+                                    {m.role === 'assistant' && (
+                                        <div style={{
+                                            width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                                            background: '#22c55e', color: '#fff',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: 14, fontWeight: 700, overflow: 'hidden',
+                                        }}>
+                                            {avatarPreview ? (
+                                                <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : (name ? name[0] : '🤖')}
+                                        </div>
+                                    )}
+                                    <div style={{
+                                        maxWidth: '75%',
+                                        padding: '10px 14px',
+                                        borderRadius: m.role === 'user' ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
+                                        background: m.role === 'user' ? '#22c55e' : '#f3f4f6',
+                                        color: m.role === 'user' ? '#fff' : '#374151',
+                                        fontSize: 14,
+                                        lineHeight: 1.5,
+                                        whiteSpace: 'pre-wrap',
+                                    }}>
+                                        {m.content || (previewLoading && i === previewMessages.length - 1 ? '...' : '')}
+                                    </div>
+                                </div>
+                            ))}
+                            <div ref={previewEndRef} />
+                        </div>
+
+                        {/* 입력창 */}
+                        <div style={{
+                            padding: '12px 16px',
+                            borderTop: '1px solid #f0f0f0',
+                            display: 'flex',
+                            gap: 8,
+                        }}>
+                            <input
+                                style={{
+                                    flex: 1, padding: '10px 14px',
+                                    borderRadius: 24, border: '1px solid #e5e7eb',
+                                    background: '#fafafa', fontSize: 14, outline: 'none',
+                                }}
+                                placeholder="메시지를 입력하세요..."
+                                value={previewInput}
+                                onChange={e => setPreviewInput(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePreviewSend() } }}
+                                disabled={previewLoading}
+                            />
+                            <button
+                                onClick={() => handlePreviewSend()}
+                                disabled={previewLoading || !previewInput.trim()}
+                                style={{
+                                    width: 40, height: 40, borderRadius: '50%',
+                                    border: 'none', background: '#22c55e', color: '#fff',
+                                    fontSize: 18, cursor: 'pointer',
+                                    opacity: previewLoading || !previewInput.trim() ? 0.5 : 1,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    transition: 'opacity 0.15s',
+                                }}
+                            >↑</button>
+                        </div>
+
+                        {/* 미리보기 없을 때 안내 */}
+                        {!mentorIdForUpload && (
+                            <div style={{
+                                position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                                background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(4px)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                flexDirection: 'column', gap: 8, zIndex: 10,
+                            }}>
+                                <div style={{ fontSize: 40 }}>💬</div>
+                                <div style={{ fontSize: 15, fontWeight: 600, color: '#374151' }}>미리보기</div>
+                                <div style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center' as const, maxWidth: 200 }}>
+                                    AI 이름을 입력하고 지식을 추가하면<br />여기서 바로 대화해볼 수 있어요
+                                </div>
                             </div>
                         )}
-                        <button
-                            style={{
-                                ...styles.createBtn,
-                                opacity: (loading || uploadedFiles.some(f => f.status === 'processing' || f.status === 'uploading')) ? 0.5 : 1,
-                            }}
-                            onClick={handleCreate}
-                            disabled={loading || uploadedFiles.some(f => f.status === 'processing' || f.status === 'uploading')}
-                        >
-                            {loading ? '생성 중...' :
-                             uploadedFiles.some(f => f.status === 'processing') ? '⏳ 파일 처리 중...' :
-                             '🚀 AI 공개하기'}
-                        </button>
                     </div>
+                </div>
 
-                    {/* 반응형 + 애니메이션 */}
-                    <style>{`
+                {/* 토스트 */}
+                {toast && (
+                    <div
+                        style={{
+                            position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
+                            background: '#18181b', color: '#fff', padding: '10px 20px',
+                            borderRadius: 10, fontSize: 14, zIndex: 9999,
+                            animation: 'slideDown 0.3s ease',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                        }}
+                        onClick={() => setToast(null)}
+                    >
+                        {toast}
+                    </div>
+                )}
+
+                {/* 반응형 CSS */}
+                <style>{`
                 @keyframes slideDown {
                     from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
                     to { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -575,14 +868,21 @@ export default function CreatorCreatePage() {
                         grid-template-columns: repeat(3, 1fr) !important;
                     }
                 }
+                @media (max-width: 1023px) {
+                    .creator-preview-col {
+                        display: none !important;
+                    }
+                    .creator-form-col {
+                        max-width: 100% !important;
+                        height: auto !important;
+                    }
+                }
                 @media (max-width: 768px) {
                     .sidebar-content {
                         margin-left: 0 !important;
-                        padding-bottom: 72px;
                     }
                 }
             `}</style>
-                </div>
             </div>
         </div>
     )
@@ -590,15 +890,6 @@ export default function CreatorCreatePage() {
 
 
 const styles: Record<string, React.CSSProperties> = {
-    container: {
-        maxWidth: 760,
-        margin: '0 auto',
-        padding: '20px 16px 100px',
-        minHeight: '100dvh',
-        background: '#f8f9fa',
-        color: '#18181b',
-        fontFamily: 'var(--font-noto-sans-kr), Pretendard, sans-serif',
-    },
     card: {
         background: '#fff',
         borderRadius: 16,
@@ -709,21 +1000,8 @@ const styles: Record<string, React.CSSProperties> = {
         background: '#f0fdf4',
         fontSize: 13,
     },
-    bottomBar: {
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        padding: '12px 16px',
-        background: 'rgba(255,255,255,0.95)',
-        backdropFilter: 'blur(10px)',
-        borderTop: '1px solid #f0f0f0',
-        display: 'flex',
-        justifyContent: 'center',
-    },
     createBtn: {
         width: '100%',
-        maxWidth: 760,
         padding: '16px 24px',
         borderRadius: 14,
         border: 'none',
@@ -736,3 +1014,4 @@ const styles: Record<string, React.CSSProperties> = {
         boxShadow: '0 2px 12px rgba(34,197,94,0.3)',
     },
 }
+
