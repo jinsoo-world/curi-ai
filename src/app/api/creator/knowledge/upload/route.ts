@@ -14,7 +14,7 @@ const ALLOWED_TYPES = [
 ]
 
 // HWP/HWPX는 MIME 타입이 없으므로 확장자로 체크
-const ALLOWED_EXTENSIONS = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx']
+const ALLOWED_EXTENSIONS = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx', 'ppt', 'pptx']
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 

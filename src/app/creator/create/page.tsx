@@ -212,7 +212,7 @@ export default function CreatorCreatePage() {
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             ]
             // HWP/HWPX는 MIME 타입이 없으므로 확장자로 체크
-            const allowedExtensions = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx']
+            const allowedExtensions = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx', 'ppt', 'pptx']
 
             for (const file of Array.from(files)) {
                 const ext = file.name.split('.').pop()?.toLowerCase() || ''
@@ -243,7 +243,7 @@ export default function CreatorCreatePage() {
                 }])
 
                 // Upstage 문서 파싱 트리거 (HWP/PDF/DOCX)
-                const parsableExtensions = ['hwp', 'hwpx', 'pdf', 'docx']
+                const parsableExtensions = ['hwp', 'hwpx', 'pdf', 'docx', 'ppt', 'pptx']
                 if (parsableExtensions.includes(ext)) {
                     fetch('/api/creator/knowledge/parse', {
                         method: 'POST',
@@ -446,7 +446,7 @@ export default function CreatorCreatePage() {
                             <input
                                 ref={fileInputRef}
                                 type="file"
-                                accept=".pdf,.txt,.md,.doc,.docx"
+                                accept=".pdf,.txt,.md,.doc,.docx,.hwp,.hwpx,.ppt,.pptx"
                                 multiple
                                 style={{ display: 'none' }}
                                 onChange={e => handleFileUpload(e.target.files)}
@@ -456,7 +456,7 @@ export default function CreatorCreatePage() {
                                 {uploading ? '업로드 중...' : '클릭하거나 드래그'}
                             </div>
                             <div style={{ fontSize: 11, color: '#9ca3af' }}>
-                                HWP, PDF, DOCX, TXT, MD · 최대 10MB
+                                HWP, PDF, PPT, DOCX, TXT · 최대 10MB
                             </div>
                         </div>
 
