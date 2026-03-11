@@ -1,5 +1,6 @@
 // /api/creator/mentor/update — 멘토 수정 API
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 
@@ -74,6 +75,11 @@ export async function PATCH(req: NextRequest) {
         if (error) {
             console.error('[Creator Update] Error:', error.message)
             throw new Error(error.message)
+        }
+
+        // 멘토 활성/비활성 변경 시 멘토 목록 ISR 캐시 즉시 무효화
+        if (isActive !== undefined) {
+            revalidatePath('/mentors')
         }
 
         return NextResponse.json({ success: true, message: '멘토가 수정되었습니다.' })
