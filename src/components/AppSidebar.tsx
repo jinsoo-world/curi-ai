@@ -532,7 +532,7 @@ export default function AppSidebar() {
                     .app-sidebar { display: none !important; }
                     .app-mobile-nav { display: flex !important; }
                     .app-mobile-header { display: flex !important; }
-                    .floating-action-btns { bottom: 72px !important; right: 14px !important; }
+                    .floating-action-btns { bottom: 130px !important; right: 14px !important; }
                 }
             `}</style>
         </>
