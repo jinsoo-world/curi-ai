@@ -121,7 +121,14 @@ export async function POST(req: NextRequest) {
 
                 await publishMentor(admin, mentorId, creator.id, isPublic !== false)
 
-                return NextResponse.json({ success: true, message: 'AI가 공개되었습니다! 🎉' })
+                // 해당 크리에이터의 총 AI 수 조회 (보상 제한 체크용)
+                const { count: aiCount } = await admin
+                    .from('mentors')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('creator_id', creator.id)
+                    .eq('status', 'active')
+
+                return NextResponse.json({ success: true, message: 'AI가 공개되었습니다! 🎉', aiCount: aiCount || 0 })
             }
 
             default:

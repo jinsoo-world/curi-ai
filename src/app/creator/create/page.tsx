@@ -212,8 +212,13 @@ export default function CreatorCreatePage() {
             const pubData = await pubRes.json()
             if (!pubRes.ok) throw new Error(pubData.error)
 
-            // 성공 → 미션 보상 페이지로 (클로버 적립 알림)
-            router.push('/missions?reward_earned=ai_create&amount=25')
+            // 성공 → 미션 보상 페이지로 (2회 이하일 때만 보상 애니메이션)
+            const aiCount = pubData.aiCount || 0
+            if (aiCount <= 2) {
+                router.push('/missions?reward_earned=ai_create&amount=25')
+            } else {
+                router.push('/missions')
+            }
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : '오류가 발생했습니다.')
         } finally {
