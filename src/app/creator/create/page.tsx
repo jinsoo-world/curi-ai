@@ -58,7 +58,7 @@ export default function CreatorCreatePage() {
     const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
 
     // 크리에이터 탭 (AI 설정 / 파일 학습)
-    const [creatorTab, setCreatorTab] = useState<'settings' | 'files'>('settings')
+    const [creatorTab, setCreatorTab] = useState<'settings' | 'files' | 'premium'>('settings')
 
     // 로그인 상태 체크
     const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null)
@@ -517,6 +517,7 @@ export default function CreatorCreatePage() {
                             {[
                                 { key: 'settings' as const, label: '🎯 AI 설정' },
                                 { key: 'files' as const, label: '📁 파일 학습' },
+                                { key: 'premium' as const, label: '💎 프리미엄' },
                             ].map(tab => (
                                 <button
                                     key={tab.key}
@@ -827,6 +828,53 @@ export default function CreatorCreatePage() {
                         </div>
                         </>)}
 
+                        {/* ══════ 프리미엄 탭 (생성 전 안내) ══════ */}
+                        {creatorTab === 'premium' && (
+                        <div style={{
+                            textAlign: 'center' as const,
+                            padding: '48px 24px',
+                        }}>
+                            <div style={{ fontSize: 48, marginBottom: 16 }}>💎</div>
+                            <div style={{ fontSize: 18, fontWeight: 700, color: '#18181b', marginBottom: 8 }}>
+                                프리미엄 설정
+                            </div>
+                            <div style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, marginBottom: 24 }}>
+                                AI를 먼저 만든 후,<br />
+                                수정 화면에서 유료 전환 및 구독료 설정이 가능합니다.
+                            </div>
+
+                            {/* 프리뷰 카드 */}
+                            <div style={{
+                                padding: 20, borderRadius: 16,
+                                background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
+                                border: '1px solid #bbf7d0',
+                                maxWidth: 320, margin: '0 auto',
+                            }}>
+                                <div style={{ fontSize: 13, color: '#16a34a', fontWeight: 600, marginBottom: 12 }}>
+                                    이런 설정이 가능해요
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, textAlign: 'left' as const }}>
+                                    {[
+                                        '🔓 유료 AI 전환 토글',
+                                        '💰 월 구독료 설정 (슬라이더)',
+                                        '🎁 무료 체험 횟수/기간 설정',
+                                        '📊 예상 수익 시뮬레이션',
+                                        '🔗 커스텀 URL 설정',
+                                    ].map(item => (
+                                        <div key={item} style={{ fontSize: 13, color: '#374151' }}>{item}</div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div style={{
+                                marginTop: 16, padding: '10px 16px', borderRadius: 10,
+                                background: '#fef3c7', border: '1px solid #fcd34d',
+                                fontSize: 12, color: '#92400e',
+                            }}>
+                                ⚠️ 현재 베타 테스트 중 · 정식 출시 시 활성화됩니다
+                            </div>
+                        </div>
+                        )}
 
                         {/* ── 하단 버튼 ── */}
                         <div style={{ paddingBottom: 20 }}>

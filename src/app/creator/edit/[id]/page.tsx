@@ -26,7 +26,18 @@ export default function CreatorEditPage() {
     const [isActive, setIsActive] = useState(true)
 
     // 탭 상태
-    const [creatorTab, setCreatorTab] = useState<'settings' | 'files'>('settings')
+    const [creatorTab, setCreatorTab] = useState<'settings' | 'files' | 'premium'>('settings')
+
+    // ── 프리미엄 탭 상태 ──
+    const [isPremium, setIsPremium] = useState(false)
+    const [monthlyPrice, setMonthlyPrice] = useState(9900)
+    const [freeTrialChats, setFreeTrialChats] = useState(3)
+    const [freeTrialDays, setFreeTrialDays] = useState(7)
+    const [mentorHandle, setMentorHandle] = useState('')
+    const [handleError, setHandleError] = useState<string | null>(null)
+    const [premiumSaving, setPremiumSaving] = useState(false)
+    const [premiumLoaded, setPremiumLoaded] = useState(false)
+    const premiumSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
 
     // 새 필드 (create 페이지와 통일)
     const [category, setCategory] = useState<string | null>(null)
@@ -119,6 +130,65 @@ export default function CreatorEditPage() {
             const kData = await kRes.json()
             if (kRes.ok) setKnowledgeSources(kData.sources || [])
         } catch { /* ignore */ }
+    }
+
+    // ── 프리미엄 데이터 로드 ──
+    async function fetchMonetization() {
+        if (premiumLoaded) return
+        try {
+            const res = await fetch(`/api/creator/monetization?mentorId=${mentorId}`)
+            const data = await res.json()
+            if (res.ok) {
+                const m = data.monetization
+                setIsPremium(m.is_premium || false)
+                setMonthlyPrice(m.monthly_price || 9900)
+                setFreeTrialChats(m.free_trial_chats || 3)
+                setFreeTrialDays(m.free_trial_days || 7)
+                if (data.handle) setMentorHandle(data.handle)
+                setPremiumLoaded(true)
+            }
+        } catch { /* ignore */ }
+    }
+
+    // 프리미엄 탭 진입 시 데이터 로드
+    useEffect(() => {
+        if (creatorTab === 'premium' && !premiumLoaded) {
+            fetchMonetization()
+        }
+    }, [creatorTab])
+
+    // ── 프리미엄 자동저장 (디바운스) ──
+    function debounceSavePremium(overrides: Record<string, unknown> = {}) {
+        if (premiumSaveTimerRef.current) clearTimeout(premiumSaveTimerRef.current)
+        premiumSaveTimerRef.current = setTimeout(async () => {
+            setPremiumSaving(true)
+            try {
+                const res = await fetch('/api/creator/monetization', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mentorId,
+                        isPremium: overrides.isPremium !== undefined ? overrides.isPremium : isPremium,
+                        monthlyPrice: overrides.monthlyPrice !== undefined ? overrides.monthlyPrice : monthlyPrice,
+                        freeTrialChats: overrides.freeTrialChats !== undefined ? overrides.freeTrialChats : freeTrialChats,
+                        freeTrialDays: overrides.freeTrialDays !== undefined ? overrides.freeTrialDays : freeTrialDays,
+                        handle: overrides.handle !== undefined ? overrides.handle : undefined,
+                    }),
+                })
+                const data = await res.json()
+                if (!res.ok) {
+                    if (res.status === 409) {
+                        setHandleError(data.error || '이미 사용 중인 URL입니다.')
+                    } else {
+                        setToast({ type: 'error', message: data.error || '저장 실패' })
+                    }
+                }
+            } catch {
+                setToast({ type: 'error', message: '프리미엄 설정 저장 실패' })
+            } finally {
+                setPremiumSaving(false)
+            }
+        }, 500)
     }
 
     // 파일 업로드
@@ -432,6 +502,7 @@ export default function CreatorEditPage() {
                         {[
                             { id: 'settings' as const, label: '🎯 AI 설정' },
                             { id: 'files' as const, label: '📁 파일 학습' },
+                            { id: 'premium' as const, label: '💎 프리미엄' },
                         ].map(tab => (
                             <button
                                 key={tab.id}
@@ -695,6 +766,210 @@ export default function CreatorEditPage() {
                             </div>
                         )}
                     </div>
+                    </>)}
+
+                    {/* ══════ 프리미엄 탭 ══════ */}
+                    {creatorTab === 'premium' && (<>
+                    {/* ── 유료 전환 토글 ── */}
+                    <div style={styles.card}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div>
+                                <div style={{ fontSize: 16, fontWeight: 700, color: '#18181b' }}>🔓 이 AI를 유료로 전환하기</div>
+                                <div style={{ fontSize: 13, color: '#9ca3af', marginTop: 2 }}>구독자만 대화할 수 있도록 설정합니다</div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const next = !isPremium
+                                    setIsPremium(next)
+                                    debounceSavePremium({ isPremium: next })
+                                }}
+                                style={{
+                                    width: 52, height: 28, borderRadius: 14,
+                                    border: 'none', cursor: 'pointer',
+                                    background: isPremium ? '#22c55e' : '#d1d5db',
+                                    position: 'relative' as const,
+                                    transition: 'background 200ms',
+                                }}
+                            >
+                                <div style={{
+                                    width: 22, height: 22, borderRadius: '50%',
+                                    background: '#fff', position: 'absolute' as const,
+                                    top: 3, left: isPremium ? 27 : 3,
+                                    transition: 'left 200ms',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                }} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* ── 토글 ON 시 세부 설정 ── */}
+                    {isPremium && (<>
+                    {/* 구독료 슬라이더 */}
+                    <div style={styles.card}>
+                        <div style={styles.field}>
+                            <label style={{ ...styles.label, fontSize: 15 }}>💰 월 구독료</label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8 }}>
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={49900}
+                                    step={100}
+                                    value={monthlyPrice}
+                                    onChange={e => {
+                                        setMonthlyPrice(Number(e.target.value))
+                                    }}
+                                    onMouseUp={() => debounceSavePremium({ monthlyPrice })}
+                                    onTouchEnd={() => debounceSavePremium({ monthlyPrice })}
+                                    style={{
+                                        flex: 1, height: 6, cursor: 'pointer',
+                                        accentColor: '#22c55e',
+                                    }}
+                                />
+                                <div style={{
+                                    minWidth: 90, textAlign: 'right' as const,
+                                    fontSize: 20, fontWeight: 800, color: '#18181b',
+                                }}>
+                                    ₩{monthlyPrice.toLocaleString()}
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                                {[3900, 9900, 19900].map(price => (
+                                    <button
+                                        key={price}
+                                        onClick={() => {
+                                            setMonthlyPrice(price)
+                                            debounceSavePremium({ monthlyPrice: price })
+                                        }}
+                                        style={{
+                                            flex: 1, padding: '8px 0', borderRadius: 8,
+                                            border: monthlyPrice === price ? '2px solid #22c55e' : '1px solid #e5e7eb',
+                                            background: monthlyPrice === price ? '#f0fdf4' : '#fff',
+                                            color: monthlyPrice === price ? '#16a34a' : '#6b7280',
+                                            fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                                            transition: 'all 150ms',
+                                        }}
+                                    >
+                                        ₩{price.toLocaleString()}
+                                        {price === 9900 && <span style={{ fontSize: 10, display: 'block', color: '#22c55e' }}>인기</span>}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 무료 체험 설정 */}
+                    <div style={styles.card}>
+                        <label style={{ ...styles.label, fontSize: 15 }}>🎁 무료 체험 설정</label>
+                        <p style={styles.hint}>유료 전환 전, 무료로 체험할 수 있는 범위를 정합니다</p>
+                        <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                            <div style={{ flex: 1 }}>
+                                <label style={{ fontSize: 12, color: '#6b7280', marginBottom: 4, display: 'block' }}>무료 대화 횟수</label>
+                                <select
+                                    value={freeTrialChats}
+                                    onChange={e => {
+                                        const v = Number(e.target.value)
+                                        setFreeTrialChats(v)
+                                        debounceSavePremium({ freeTrialChats: v })
+                                    }}
+                                    style={{ ...styles.input, width: '100%' }}
+                                >
+                                    {[1, 3, 5, 10, 20].map(n => <option key={n} value={n}>{n}회</option>)}
+                                </select>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label style={{ fontSize: 12, color: '#6b7280', marginBottom: 4, display: 'block' }}>무료 체험 기간</label>
+                                <select
+                                    value={freeTrialDays}
+                                    onChange={e => {
+                                        const v = Number(e.target.value)
+                                        setFreeTrialDays(v)
+                                        debounceSavePremium({ freeTrialDays: v })
+                                    }}
+                                    style={{ ...styles.input, width: '100%' }}
+                                >
+                                    {[3, 7, 14, 30].map(n => <option key={n} value={n}>{n}일</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 수익 시뮬레이션 */}
+                    <div style={{
+                        ...styles.card,
+                        background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
+                        border: '1px solid #bbf7d0',
+                    }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#16a34a', marginBottom: 12 }}>📊 예상 수익 시뮬레이션</div>
+                        <div style={{ display: 'flex', gap: 12 }}>
+                            {[10, 50, 100].map(subs => (
+                                <div key={subs} style={{
+                                    flex: 1, textAlign: 'center' as const,
+                                    padding: '12px 8px', borderRadius: 10,
+                                    background: '#fff', border: '1px solid #d1fae5',
+                                }}>
+                                    <div style={{ fontSize: 12, color: '#6b7280' }}>구독자 {subs}명</div>
+                                    <div style={{ fontSize: 18, fontWeight: 800, color: '#16a34a', marginTop: 4 }}>
+                                        ₩{Math.floor(monthlyPrice * subs * 0.8).toLocaleString()}
+                                    </div>
+                                    <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>수수료 20% 제외</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    </>)}
+
+                    {/* ── 커스텀 URL ── */}
+                    <div style={styles.card}>
+                        <div style={styles.field}>
+                            <label style={{ ...styles.label, fontSize: 15 }}>🔗 커스텀 URL</label>
+                            <p style={styles.hint}>이 AI만의 고유 링크를 설정하세요</p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginTop: 8 }}>
+                                <span style={{
+                                    padding: '10px 12px', background: '#f3f4f6', borderRadius: '10px 0 0 10px',
+                                    border: '1px solid #e5e7eb', borderRight: 'none',
+                                    fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap' as const,
+                                }}>curiai.com/</span>
+                                <input
+                                    type="text"
+                                    value={mentorHandle}
+                                    onChange={e => {
+                                        const v = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+                                        setMentorHandle(v)
+                                        setHandleError(null)
+                                    }}
+                                    onBlur={() => {
+                                        if (mentorHandle) debounceSavePremium({ handle: mentorHandle })
+                                    }}
+                                    placeholder="my-ai-name"
+                                    style={{
+                                        ...styles.input,
+                                        borderRadius: '0 10px 10px 0',
+                                        flex: 1,
+                                        borderColor: handleError ? '#ef4444' : '#e5e7eb',
+                                    }}
+                                />
+                            </div>
+                            {handleError && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 4 }}>{handleError}</div>}
+                            {mentorHandle && !handleError && (
+                                <div style={{ fontSize: 12, color: '#22c55e', marginTop: 4 }}>✓ curiai.com/{mentorHandle}</div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 베타 안내 */}
+                    <div style={{
+                        padding: '12px 16px', borderRadius: 10,
+                        background: '#fef3c7', border: '1px solid #fcd34d',
+                        fontSize: 13, color: '#92400e',
+                        display: 'flex', alignItems: 'center', gap: 8,
+                    }}>
+                        <span>⚠️</span>
+                        <span>현재 베타 테스트 중입니다. 유료 전환은 정식 출시 시 활성화됩니다.</span>
+                    </div>
+
+                    {premiumSaving && (
+                        <div style={{ textAlign: 'center' as const, fontSize: 12, color: '#9ca3af', marginTop: 4 }}>자동 저장 중...</div>
+                    )}
                     </>)}
 
                     {/* ── 저장 버튼 ── */}
