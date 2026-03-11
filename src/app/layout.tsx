@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Noto_Sans_KR } from 'next/font/google'
 import GoogleAnalytics from '@/components/GoogleAnalytics'
+import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 const notoSansKr = Noto_Sans_KR({
@@ -51,6 +52,7 @@ export default function RootLayout({
       </head>
       <body>
         <GoogleAnalytics />
+        <Analytics />
         {children}
         <script
           dangerouslySetInnerHTML={{
