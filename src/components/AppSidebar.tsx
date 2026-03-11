@@ -19,7 +19,20 @@ export default function AppSidebar() {
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [user, setUser] = useState<any>(null)
 
-    const fetchProfile = async () => {
+    const fetchProfile = async (skipCache = false) => {
+        // sessionStorage 캐시 체크 (페이지 이동 시 API 호출 스킵)
+        if (!skipCache) {
+            try {
+                const cached = sessionStorage.getItem('sidebar_profile')
+                if (cached) {
+                    const { profile: cachedProfile, user: cachedUser } = JSON.parse(cached)
+                    setProfile(cachedProfile)
+                    setUser(cachedUser)
+                    return
+                }
+            } catch {}
+        }
+
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
@@ -27,46 +40,49 @@ export default function AppSidebar() {
             try {
                 const res = await fetch('/api/profile')
                 const data = await res.json()
-                if (data.profile) {
-                    setProfile({
-                        display_name: data.profile.display_name,
-                        avatar_url: data.profile.avatar_url,
-                        email: user.email || null,
-                        role: data.profile.role,
-                        subscription_tier: data.profile.subscription_tier,
-                    })
-                } else {
-                    // API에 프로필 없으면 Google 메타데이터 fallback
-                    setProfile({
-                        display_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
-                        avatar_url: user.user_metadata?.avatar_url || null,
-                        email: user.email || null,
-                        role: 'user',
-                        subscription_tier: null,
-                    })
-                }
-            } catch {
-                // API 실패 시 Google 메타데이터 fallback
-                setProfile({
+                const p = data.profile ? {
+                    display_name: data.profile.display_name,
+                    avatar_url: data.profile.avatar_url,
+                    email: user.email || null,
+                    role: data.profile.role,
+                    subscription_tier: data.profile.subscription_tier,
+                } : {
                     display_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
                     avatar_url: user.user_metadata?.avatar_url || null,
                     email: user.email || null,
                     role: 'user',
                     subscription_tier: null,
-                })
+                }
+                setProfile(p)
+                // 캐시 저장
+                try { sessionStorage.setItem('sidebar_profile', JSON.stringify({ profile: p, user: { id: user.id, email: user.email } })) } catch {}
+            } catch {
+                const p = {
+                    display_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+                    avatar_url: user.user_metadata?.avatar_url || null,
+                    email: user.email || null,
+                    role: 'user',
+                    subscription_tier: null,
+                }
+                setProfile(p)
             }
         }
     }
 
     useEffect(() => {
         fetchProfile()
-        // 프로필 업데이트 시 사이드바 즉시 반영 (storage event)
+        // 프로필 업데이트 시 캐시 무효화 + 사이드바 즉시 반영
         const handleProfileUpdate = (e: StorageEvent) => {
-            if (e.key === 'profile_updated') fetchProfile()
+            if (e.key === 'profile_updated') {
+                try { sessionStorage.removeItem('sidebar_profile') } catch {}
+                fetchProfile(true)
+            }
         }
         window.addEventListener('storage', handleProfileUpdate)
-        // 같은 탭에서도 반영
-        const handleCustomEvent = () => fetchProfile()
+        const handleCustomEvent = () => {
+            try { sessionStorage.removeItem('sidebar_profile') } catch {}
+            fetchProfile(true)
+        }
         window.addEventListener('profile_updated', handleCustomEvent)
         return () => {
             window.removeEventListener('storage', handleProfileUpdate)

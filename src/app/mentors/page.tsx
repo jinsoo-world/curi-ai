@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic'
+export const revalidate = 300 // 5분마다 재생성 (ISR)
 
 import type { Metadata } from 'next'
 import Link from 'next/link'

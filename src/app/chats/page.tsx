@@ -77,43 +77,59 @@ export default function ChatsPage() {
             if (data) {
                 const activeSessions = data.filter((s: any) => s.mentors != null && s.mentors.is_active !== false)
 
-                const sessionsWithTopics = await Promise.all(
-                    activeSessions.map(async (s: any) => {
-                        const isGenericTitle = !s.title || s.title.endsWith('와의 대화')
-                        let topic = isGenericTitle ? '' : s.title
+                // 즉시 렌더링 (title 있으면 바로, 없으면 빈 채로)
+                const initialSessions = activeSessions.map((s: any) => {
+                    const isGenericTitle = !s.title || s.title.endsWith('와의 대화')
+                    return {
+                        id: s.id,
+                        mentor_id: s.mentor_id,
+                        mentor_name: s.mentors?.name || '멘토',
+                        mentor_slug: s.mentors?.slug || s.mentor_id,
+                        mentor_avatar_url: s.mentors?.avatar_url || null,
+                        last_message_at: s.last_message_at || s.created_at,
+                        created_at: s.created_at,
+                        message_count: s.message_count || 0,
+                        topic: isGenericTitle ? '' : s.title,
+                    }
+                })
 
-                        if (!topic) {
-                            const { data: firstUserMsg } = await supabase
-                                .from('messages')
-                                .select('content')
-                                .eq('session_id', s.id)
-                                .eq('role', 'user')
-                                .order('created_at', { ascending: true })
-                                .limit(1)
-                                .single()
-                            topic = firstUserMsg?.content || ''
-                        }
-
-                        return {
-                            id: s.id,
-                            mentor_id: s.mentor_id,
-                            mentor_name: s.mentors?.name || '멘토',
-                            mentor_slug: s.mentors?.slug || s.mentor_id,
-                            mentor_avatar_url: s.mentors?.avatar_url || null,
-                            last_message_at: s.last_message_at || s.created_at,
-                            created_at: s.created_at,
-                            message_count: s.message_count || 0,
-                            topic,
-                        }
-                    })
-                )
-
-                setSessions(sessionsWithTopics)
+                setSessions(initialSessions)
+                setIsLoading(false)
 
                 // 자동으로 첫 번째 멘토 펼침
-                if (sessionsWithTopics.length > 0) {
-                    setExpandedMentors(new Set([sessionsWithTopics[0].mentor_id]))
+                if (initialSessions.length > 0) {
+                    setExpandedMentors(new Set([initialSessions[0].mentor_id]))
                 }
+
+                // 백그라운드: title 없는 세션들의 topic 조회 (lazy fill)
+                const missingTopicSessions = initialSessions.filter(s => !s.topic)
+                if (missingTopicSessions.length > 0) {
+                    // 한 번에 최대 10개씩 병렬 조회
+                    const batchSize = 10
+                    for (let i = 0; i < missingTopicSessions.length; i += batchSize) {
+                        const batch = missingTopicSessions.slice(i, i + batchSize)
+                        const results = await Promise.all(
+                            batch.map(async (s) => {
+                                const { data: firstMsg } = await supabase
+                                    .from('messages')
+                                    .select('content')
+                                    .eq('session_id', s.id)
+                                    .eq('role', 'user')
+                                    .order('created_at', { ascending: true })
+                                    .limit(1)
+                                    .single()
+                                return { id: s.id, topic: firstMsg?.content || '' }
+                            })
+                        )
+
+                        // 점진적 업데이트
+                        setSessions(prev => prev.map(s => {
+                            const found = results.find(r => r.id === s.id)
+                            return found ? { ...s, topic: found.topic } : s
+                        }))
+                    }
+                }
+                return
             }
             setIsLoading(false)
         }

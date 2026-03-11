@@ -58,12 +58,12 @@ export async function PATCH(req: NextRequest) {
         if (personaTemplate !== undefined) updateData.persona_template = personaTemplate
         if (isActive !== undefined) {
             updateData.is_active = isActive
-            // is_active와 status 동기화
+            // 비활성화는 is_active 컬럼으로만 관리
+            // status는 활성화 시에만 'active'로 복원 (suspended → active 복구)
             if (isActive) {
                 updateData.status = 'active'
-            } else {
-                updateData.status = 'suspended'
             }
+            // is_active=false 시 status는 변경하지 않음 (관리 목록에서 유지)
         }
 
         const { error } = await admin
