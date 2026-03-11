@@ -432,12 +432,16 @@ export default function ChatPage() {
                             }
                             if (data.done) {
                                 setIsStreaming(false)
+                                // 비회원 대화 제한 → 로그인 유도 마커 추가
+                                const finalContent = data.guestLimit 
+                                    ? fullContent + '\n\n__GUEST_LOGIN_CTA__'
+                                    : fullContent
                                 const finalMessages: ChatMessage[] = [
                                     ...baseMessages,
-                                    { id: assistantId, role: 'assistant', content: fullContent, createdAt: new Date().toISOString() },
+                                    { id: assistantId, role: 'assistant', content: finalContent, createdAt: new Date().toISOString() },
                                 ]
                                 setMessages(finalMessages)
-                                fetchSuggestions(finalMessages)
+                                if (!data.guestLimit) fetchSuggestions(finalMessages)
                             }
                         } catch {
                             // SSE parse error — skip malformed data

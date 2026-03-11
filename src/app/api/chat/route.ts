@@ -28,7 +28,7 @@ export async function POST(req: Request) {
             const limitStream = new ReadableStream({
                 start(controller) {
                     controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ text: guestLimitMsg, done: true, fullResponse: guestLimitMsg })}\n\n`)
+                        encoder.encode(`data: ${JSON.stringify({ text: guestLimitMsg, done: true, fullResponse: guestLimitMsg, guestLimit: true })}\n\n`)
                     )
                     controller.close()
                 },
