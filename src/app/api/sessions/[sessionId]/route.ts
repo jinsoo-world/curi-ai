@@ -53,8 +53,8 @@ export async function PATCH(
 }
 
 /**
- * DELETE /api/sessions/[sessionId] — 세션 soft delete (deleted_at 기록)
- * 실제 DB 데이터는 유지하며 유저에게만 숨김. 어드민에서 추적 가능.
+ * DELETE /api/sessions/[sessionId] — 세션 삭제 (하드 삭제)
+ * admin(service_role) 클라이언트로 RLS 우회. 인증은 별도 확인.
  */
 export async function DELETE(
     req: Request,
@@ -62,44 +62,55 @@ export async function DELETE(
 ) {
     try {
         const { sessionId } = await params
+        
+        // 1) 인증 확인 (일반 클라이언트)
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
-
+        
         if (!user) {
             return Response.json({ error: '로그인이 필요합니다.' }, { status: 401 })
         }
 
-        // 1차: soft delete (deleted_at 컬럼이 있으면)
-        const { error: softErr } = await supabase
-            .from('chat_sessions')
-            .update({ deleted_at: new Date().toISOString() })
-            .eq('id', sessionId)
-            .eq('user_id', user.id)
+        // 2) admin 클라이언트로 삭제 (RLS 우회)
+        const { createAdminClient } = await import('@/lib/supabase/admin')
+        const admin = createAdminClient()
 
-        if (!softErr) {
-            return Response.json({ ok: true, sessionId })
+        // 3) 세션 소유자 확인
+        const { data: session } = await admin
+            .from('chat_sessions')
+            .select('id, user_id')
+            .eq('id', sessionId)
+            .single()
+
+        if (!session) {
+            return Response.json({ error: '세션을 찾을 수 없습니다.' }, { status: 404 })
+        }
+        if (session.user_id !== user.id) {
+            return Response.json({ error: '권한이 없습니다.' }, { status: 403 })
         }
 
-        console.warn('[Sessions DELETE] Soft delete failed, trying hard delete:', softErr.message)
-
-        // 2차: 하드 삭제 fallback (deleted_at 컬럼이 없는 경우)
-        // 먼저 관련 메시지 삭제
-        await supabase
+        // 4) 메시지 먼저 삭제
+        const { error: msgErr } = await admin
             .from('messages')
             .delete()
             .eq('session_id', sessionId)
 
-        const { error: hardErr } = await supabase
+        if (msgErr) {
+            console.error('[Sessions DELETE] 메시지 삭제 실패:', msgErr)
+        }
+
+        // 5) 세션 삭제
+        const { error: sessErr } = await admin
             .from('chat_sessions')
             .delete()
             .eq('id', sessionId)
-            .eq('user_id', user.id)
 
-        if (hardErr) {
-            console.error('[Sessions DELETE] Hard delete also failed:', hardErr)
-            return Response.json({ error: '삭제에 실패했습니다.' }, { status: 500 })
+        if (sessErr) {
+            console.error('[Sessions DELETE] 세션 삭제 실패:', sessErr)
+            return Response.json({ error: `삭제 실패: ${sessErr.message}` }, { status: 500 })
         }
 
+        console.log(`[Sessions DELETE] 세션 ${sessionId} 삭제 완료 (user: ${user.id})`)
         return Response.json({ ok: true, sessionId })
     } catch (error) {
         console.error('[Sessions DELETE] Error:', error)
