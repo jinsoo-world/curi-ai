@@ -314,32 +314,108 @@ export default function AppSidebar() {
                 </span>
             </div>
 
-            {/* Mobile Bottom Nav */}
+            {/* Mobile Bottom Nav — 토스 스타일 */}
             <nav
                 className="app-mobile-nav"
                 style={{
                     position: 'fixed',
                     bottom: 0, left: 0, right: 0,
-                    background: 'rgba(255,255,255,0.97)',
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
-                    borderTop: '1px solid #f0f0f0',
+                    background: '#fff',
+                    borderTop: '1px solid #f2f3f4',
                     display: 'none', /* shown via CSS media query */
                     justifyContent: 'space-around',
                     alignItems: 'center',
-                    padding: '6px 0 max(6px, env(safe-area-inset-bottom))',
+                    padding: '8px 0 max(8px, env(safe-area-inset-bottom))',
                     zIndex: 40,
                 }}
             >
                 {[
-                    { label: 'AI', href: '/mentors', icon: '💬' },
-                    { label: '대화', href: '/chats', icon: '📋' },
-                    { label: 'AI만들기', href: '/creator/create', icon: '✨' },
-                    { label: '미션 보상', href: '/missions', icon: '🍀' },
-                    { label: 'MY', href: '/profile', icon: '👤' },
+                    {
+                        label: '대화',
+                        href: '/mentors',
+                        icon: (active: boolean) => (
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                {active ? (
+                                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="#191F28"/>
+                                ) : (
+                                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z" fill="#B0B8C1"/>
+                                )}
+                            </svg>
+                        ),
+                    },
+                    {
+                        label: '목록',
+                        href: '/chats',
+                        icon: (active: boolean) => (
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                {active ? (
+                                    <>
+                                        <rect x="3" y="4" width="18" height="4" rx="1" fill="#191F28"/>
+                                        <rect x="3" y="10" width="18" height="4" rx="1" fill="#191F28"/>
+                                        <rect x="3" y="16" width="12" height="4" rx="1" fill="#191F28"/>
+                                    </>
+                                ) : (
+                                    <>
+                                        <rect x="3" y="4.5" width="18" height="3" rx="1" stroke="#B0B8C1" strokeWidth="1.5" fill="none"/>
+                                        <rect x="3" y="10.5" width="18" height="3" rx="1" stroke="#B0B8C1" strokeWidth="1.5" fill="none"/>
+                                        <rect x="3" y="16.5" width="12" height="3" rx="1" stroke="#B0B8C1" strokeWidth="1.5" fill="none"/>
+                                    </>
+                                )}
+                            </svg>
+                        ),
+                    },
+                    {
+                        label: 'AI 제작',
+                        href: '/creator/manage',
+                        icon: (active: boolean) => (
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                {active ? (
+                                    <path d="M19.36 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.64-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z" fill="#191F28"/>
+                                ) : (
+                                    <>
+                                        <path d="M12 6.5L7 11.5h3v4h4v-4h3l-5-5z" stroke="#B0B8C1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                        <path d="M19.35 10.04A7.49 7.49 0 0012 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 000 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z" stroke="#B0B8C1" strokeWidth="1.5" fill="none"/>
+                                    </>
+                                )}
+                            </svg>
+                        ),
+                    },
+                    {
+                        label: '미션보상',
+                        href: '/missions',
+                        icon: (active: boolean) => (
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                {active ? (
+                                    <path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35L12 4l-.5-.65C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 12 7.4 15.38 12 17 10.83 14.92 8H20v6z" fill="#191F28"/>
+                                ) : (
+                                    <path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35L12 4l-.5-.65C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 12 7.4 15.38 12 17 10.83 14.92 8H20v6z" stroke="#B0B8C1" strokeWidth="0.5" fill="#B0B8C1"/>
+                                )}
+                            </svg>
+                        ),
+                    },
+                    {
+                        label: '마이페이지',
+                        href: '/profile',
+                        icon: (active: boolean) => (
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                {active ? (
+                                    <>
+                                        <circle cx="12" cy="8" r="4" fill="#191F28"/>
+                                        <path d="M12 14c-4.42 0-8 1.79-8 4v2h16v-2c0-2.21-3.58-4-8-4z" fill="#191F28"/>
+                                    </>
+                                ) : (
+                                    <>
+                                        <circle cx="12" cy="8" r="3.25" stroke="#B0B8C1" strokeWidth="1.5"/>
+                                        <path d="M12 14c-4.42 0-8 1.79-8 4v2h16v-2c0-2.21-3.58-4-8-4z" stroke="#B0B8C1" strokeWidth="1.5" fill="none"/>
+                                    </>
+                                )}
+                            </svg>
+                        ),
+                    },
                 ].map(item => {
                     const isActive = pathname === item.href ||
-                        (item.href === '/mentors' && pathname === '/')
+                        (item.href === '/mentors' && pathname === '/') ||
+                        (item.href === '/creator/manage' && pathname.startsWith('/creator'))
                     return (
                         <Link
                             key={item.href}
@@ -348,14 +424,18 @@ export default function AppSidebar() {
                                 display: 'flex', flexDirection: 'column',
                                 alignItems: 'center', gap: 2,
                                 textDecoration: 'none',
-                                fontSize: 10, fontWeight: isActive ? 700 : 500,
-                                color: isActive ? '#16a34a' : '#9ca3af',
-                                padding: '4px 8px',
-                                transition: 'color 150ms',
+                                fontSize: 11,
+                                fontWeight: isActive ? 700 : 400,
+                                color: isActive ? '#191F28' : '#B0B8C1',
+                                padding: '2px 0',
+                                minWidth: 56,
+                                transition: 'color 200ms ease',
                             }}
                         >
-                            <span style={{ fontSize: 20 }}>{item.icon}</span>
-                            {item.label}
+                            <div style={{ height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {item.icon(isActive)}
+                            </div>
+                            <span style={{ letterSpacing: '-0.02em' }}>{item.label}</span>
                         </Link>
                     )
                 })}
@@ -377,7 +457,7 @@ export default function AppSidebar() {
             >
                 {/* 커뮤니티 — 카카오 오픈채팅 */}
                 <a
-                    href="https://open.kakao.com/o/gCuriAI"
+                    href="https://open.kakao.com/me/500won"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{

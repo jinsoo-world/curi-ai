@@ -271,8 +271,8 @@ export default async function MentorsPage() {
                         padding: 0 16px 40px !important;
                     }
                     .mentors-grid {
-                        grid-template-columns: 1fr !important;
-                        gap: 16px !important;
+                        grid-template-columns: repeat(2, 1fr) !important;
+                        gap: 12px !important;
                     }
                     .mentors-footer {
                         padding: 24px 20px 80px !important;
