@@ -69,28 +69,35 @@ export async function DELETE(
             return Response.json({ error: '로그인이 필요합니다.' }, { status: 401 })
         }
 
-        // soft delete: deleted_at 타임스탬프 기록
-        const { error } = await supabase
+        // 1차: soft delete (deleted_at 컬럼이 있으면)
+        const { error: softErr } = await supabase
             .from('chat_sessions')
             .update({ deleted_at: new Date().toISOString() })
             .eq('id', sessionId)
             .eq('user_id', user.id)
 
-        if (error) {
-            console.error('[Sessions DELETE] Error:', error)
-            // deleted_at 컬럼이 없으면 실제 삭제 (fallback)
-            if (error.message?.includes('deleted_at')) {
-                const { error: deleteErr } = await supabase
-                    .from('chat_sessions')
-                    .delete()
-                    .eq('id', sessionId)
-                    .eq('user_id', user.id)
-                if (deleteErr) {
-                    return Response.json({ error: '삭제에 실패했습니다.' }, { status: 500 })
-                }
-            } else {
-                return Response.json({ error: '삭제에 실패했습니다.' }, { status: 500 })
-            }
+        if (!softErr) {
+            return Response.json({ ok: true, sessionId })
+        }
+
+        console.warn('[Sessions DELETE] Soft delete failed, trying hard delete:', softErr.message)
+
+        // 2차: 하드 삭제 fallback (deleted_at 컬럼이 없는 경우)
+        // 먼저 관련 메시지 삭제
+        await supabase
+            .from('messages')
+            .delete()
+            .eq('session_id', sessionId)
+
+        const { error: hardErr } = await supabase
+            .from('chat_sessions')
+            .delete()
+            .eq('id', sessionId)
+            .eq('user_id', user.id)
+
+        if (hardErr) {
+            console.error('[Sessions DELETE] Hard delete also failed:', hardErr)
+            return Response.json({ error: '삭제에 실패했습니다.' }, { status: 500 })
         }
 
         return Response.json({ ok: true, sessionId })
