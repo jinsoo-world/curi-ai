@@ -151,12 +151,13 @@ export async function publishMentor(
     db: SupabaseClient,
     mentorId: string,
     creatorId: string,
+    isPublic: boolean = true,
 ) {
     const { error } = await db
         .from('mentors')
         .update({
             status: 'active',
-            is_active: true,
+            is_active: isPublic,
             updated_at: new Date().toISOString(),
         })
         .eq('id', mentorId)

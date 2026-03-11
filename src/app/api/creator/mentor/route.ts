@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
 
             // ── 발행 ──
             case 'publish': {
-                const { mentorId } = body
+                const { mentorId, isPublic } = body
 
                 if (!mentorId) {
                     return NextResponse.json(
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
                     )
                 }
 
-                await publishMentor(admin, mentorId, creator.id)
+                await publishMentor(admin, mentorId, creator.id, isPublic !== false)
 
                 return NextResponse.json({ success: true, message: 'AI가 공개되었습니다! 🎉' })
             }

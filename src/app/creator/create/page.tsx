@@ -60,6 +60,9 @@ export default function CreatorCreatePage() {
     // 크리에이터 탭 (AI 설정 / 파일 학습)
     const [creatorTab, setCreatorTab] = useState<'settings' | 'files' | 'premium'>('settings')
 
+    // 공개/비공개 선택 모달
+    const [showPublishModal, setShowPublishModal] = useState(false)
+
     // 로그인 상태 체크
     const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null)
 
@@ -113,24 +116,7 @@ export default function CreatorCreatePage() {
         setAvatarPreview(URL.createObjectURL(file))
     }
 
-    async function handleCreate() {
-        // 유효성 검사
-        if (!name.trim()) {
-            setError('AI 이름을 입력해주세요.')
-            return
-        }
-        if (!title.trim()) {
-            setError('한줄 소개를 입력해주세요.')
-            return
-        }
-
-        // 파일 처리 중이면 경고
-        const processingFiles = uploadedFiles.filter(f => f.status === 'uploading' || f.status === 'processing')
-        if (processingFiles.length > 0) {
-            setError(`파일 ${processingFiles.length}개가 처리 중입니다. 잠시 후 다시 시도해주세요.`)
-            return
-        }
-
+    async function handleCreate(isPublic: boolean = true) {
         setLoading(true)
         setError(null)
 
@@ -217,11 +203,11 @@ export default function CreatorCreatePage() {
 
             // Step 3: 지식 (생략 — 이제 파일만 지원)
 
-            // Publish
+            // Publish (선택한 공개 여부 반영)
             const pubRes = await fetch('/api/creator/mentor', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ step: 'publish', mentorId }),
+                body: JSON.stringify({ step: 'publish', mentorId, isPublic }),
             })
             const pubData = await pubRes.json()
             if (!pubRes.ok) throw new Error(pubData.error)
@@ -232,6 +218,7 @@ export default function CreatorCreatePage() {
             setError(err instanceof Error ? err.message : '오류가 발생했습니다.')
         } finally {
             setLoading(false)
+            setShowPublishModal(false)
         }
     }
 
@@ -891,7 +878,14 @@ export default function CreatorCreatePage() {
                                     ...styles.createBtn,
                                     opacity: (loading || uploadedFiles.some(f => f.status === 'processing' || f.status === 'uploading')) ? 0.5 : 1,
                                 }}
-                                onClick={handleCreate}
+                                onClick={() => {
+                                    // 유효성 검사
+                                    if (!name.trim()) { setError('AI 이름을 입력해주세요.'); return }
+                                    if (!title.trim()) { setError('한줄 소개를 입력해주세요.'); return }
+                                    const processingFiles = uploadedFiles.filter(f => f.status === 'uploading' || f.status === 'processing')
+                                    if (processingFiles.length > 0) { setError(`파일 ${processingFiles.length}개가 처리 중입니다.`); return }
+                                    setShowPublishModal(true)
+                                }}
                                 disabled={loading || uploadedFiles.some(f => f.status === 'processing' || f.status === 'uploading')}
                             >
                                 {loading ? '생성 중...' :
@@ -1389,6 +1383,97 @@ export default function CreatorCreatePage() {
                 }
             `}</style>
             </div>
+
+            {/* ══════ 공개/비공개 선택 모달 ══════ */}
+            {showPublishModal && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 9999,
+                    background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: 20,
+                }}>
+                    <div style={{
+                        background: '#fff', borderRadius: 20,
+                        padding: '28px 24px', maxWidth: 380, width: '100%',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+                        animation: 'fadeInUp 200ms ease-out',
+                    }}>
+                        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                            <div style={{ fontSize: 36, marginBottom: 8 }}>🚀</div>
+                            <div style={{ fontSize: 18, fontWeight: 700, color: '#18181b' }}>
+                                AI 공개 설정
+                            </div>
+                            <div style={{ fontSize: 13, color: '#9ca3af', marginTop: 4 }}>
+                                공개 범위를 선택해주세요
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {/* 전체 공개 */}
+                            <button
+                                onClick={() => handleCreate(true)}
+                                disabled={loading}
+                                style={{
+                                    padding: '16px 18px', borderRadius: 14,
+                                    border: '2px solid #22c55e', background: '#f0fdf4',
+                                    cursor: loading ? 'wait' : 'pointer',
+                                    textAlign: 'left', transition: 'all 150ms',
+                                    opacity: loading ? 0.6 : 1,
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <span style={{ fontSize: 24 }}>🌍</span>
+                                    <div>
+                                        <div style={{ fontSize: 15, fontWeight: 700, color: '#16a34a' }}>
+                                            {loading ? '생성 중...' : '전체 공개'}
+                                        </div>
+                                        <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                                            누구나 내 AI와 대화할 수 있어요
+                                        </div>
+                                    </div>
+                                </div>
+                            </button>
+
+                            {/* 비공개 */}
+                            <button
+                                onClick={() => handleCreate(false)}
+                                disabled={loading}
+                                style={{
+                                    padding: '16px 18px', borderRadius: 14,
+                                    border: '1px solid #e5e7eb', background: '#fff',
+                                    cursor: loading ? 'wait' : 'pointer',
+                                    textAlign: 'left', transition: 'all 150ms',
+                                    opacity: loading ? 0.6 : 1,
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <span style={{ fontSize: 24 }}>🔒</span>
+                                    <div>
+                                        <div style={{ fontSize: 15, fontWeight: 700, color: '#374151' }}>
+                                            {loading ? '생성 중...' : '비공개 (나만 보기)'}
+                                        </div>
+                                        <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
+                                            나만 대화할 수 있어요 · 나중에 변경 가능
+                                        </div>
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+
+                        <button
+                            onClick={() => setShowPublishModal(false)}
+                            disabled={loading}
+                            style={{
+                                width: '100%', marginTop: 12, padding: '10px 0',
+                                border: 'none', background: 'transparent',
+                                color: '#9ca3af', fontSize: 13, cursor: 'pointer',
+                            }}
+                        >
+                            취소
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
