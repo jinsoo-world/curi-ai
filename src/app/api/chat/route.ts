@@ -21,8 +21,8 @@ export async function POST(req: Request) {
         const FREE_TRIAL_END = new Date('2026-04-30T23:59:59+09:00')
         const isFreeTrial = new Date() < FREE_TRIAL_END
 
-        // ── 🔒 비로그인 사용자 대화 제한 (클라이언트 카운트 기반) ──
-        if (!user && typeof guestMessageCount === 'number' && guestMessageCount >= MAX_DAILY_FREE_GUEST) {
+        // ── 🔒 비로그인 사용자 대화 제한 (무료 체험 기간에는 스킵) ──
+        if (!user && !isFreeTrial && typeof guestMessageCount === 'number' && guestMessageCount >= MAX_DAILY_FREE_GUEST) {
             const encoder = new TextEncoder()
             const guestLimitMsg = '오늘의 무료 체험 대화를 다 사용하셨어요! 🙏\n로그인하시면 하루 20회까지 대화할 수 있어요 ✨'
             const limitStream = new ReadableStream({
