@@ -811,8 +811,8 @@ export default function CreatorEditPage() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8 }}>
                                 <input
                                     type="range"
-                                    min={0}
-                                    max={49900}
+                                    min={1000}
+                                    max={99000}
                                     step={100}
                                     value={monthlyPrice}
                                     onChange={e => {
@@ -857,6 +857,30 @@ export default function CreatorEditPage() {
                         </div>
                     </div>
 
+                    {/* 수익 시뮬레이션 */}
+                    <div style={{
+                        ...styles.card,
+                        background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
+                        border: '1px solid #bbf7d0',
+                    }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#16a34a', marginBottom: 12 }}>📊 예상 수익 시뮬레이션</div>
+                        <div style={{ display: 'flex', gap: 12 }}>
+                            {[10, 50, 100].map(subs => (
+                                <div key={subs} style={{
+                                    flex: 1, textAlign: 'center' as const,
+                                    padding: '12px 8px', borderRadius: 10,
+                                    background: '#fff', border: '1px solid #d1fae5',
+                                }}>
+                                    <div style={{ fontSize: 12, color: '#6b7280' }}>구독자 {subs}명</div>
+                                    <div style={{ fontSize: 18, fontWeight: 800, color: '#16a34a', marginTop: 4 }}>
+                                        ₩{Math.floor(monthlyPrice * subs * 0.8).toLocaleString()}
+                                    </div>
+                                    <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>수수료 20% 제외</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* 무료 체험 설정 */}
                     <div style={styles.card}>
                         <label style={{ ...styles.label, fontSize: 15 }}>🎁 무료 체험 설정</label>
@@ -893,29 +917,6 @@ export default function CreatorEditPage() {
                         </div>
                     </div>
 
-                    {/* 수익 시뮬레이션 */}
-                    <div style={{
-                        ...styles.card,
-                        background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
-                        border: '1px solid #bbf7d0',
-                    }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#16a34a', marginBottom: 12 }}>📊 예상 수익 시뮬레이션</div>
-                        <div style={{ display: 'flex', gap: 12 }}>
-                            {[10, 50, 100].map(subs => (
-                                <div key={subs} style={{
-                                    flex: 1, textAlign: 'center' as const,
-                                    padding: '12px 8px', borderRadius: 10,
-                                    background: '#fff', border: '1px solid #d1fae5',
-                                }}>
-                                    <div style={{ fontSize: 12, color: '#6b7280' }}>구독자 {subs}명</div>
-                                    <div style={{ fontSize: 18, fontWeight: 800, color: '#16a34a', marginTop: 4 }}>
-                                        ₩{Math.floor(monthlyPrice * subs * 0.8).toLocaleString()}
-                                    </div>
-                                    <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>수수료 20% 제외</div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
                     </>)}
 
                     {/* ── 커스텀 URL ── */}
@@ -928,7 +929,7 @@ export default function CreatorEditPage() {
                                     padding: '10px 12px', background: '#f3f4f6', borderRadius: '10px 0 0 10px',
                                     border: '1px solid #e5e7eb', borderRight: 'none',
                                     fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap' as const,
-                                }}>curiai.com/</span>
+                                }}>curi-ai.com/</span>
                                 <input
                                     type="text"
                                     value={mentorHandle}
@@ -951,7 +952,7 @@ export default function CreatorEditPage() {
                             </div>
                             {handleError && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 4 }}>{handleError}</div>}
                             {mentorHandle && !handleError && (
-                                <div style={{ fontSize: 12, color: '#22c55e', marginTop: 4 }}>✓ curiai.com/{mentorHandle}</div>
+                                <div style={{ fontSize: 12, color: '#22c55e', marginTop: 4 }}>✓ curi-ai.com/{mentorHandle}</div>
                             )}
                         </div>
                     </div>
