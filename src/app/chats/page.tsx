@@ -225,7 +225,7 @@ export default function ChatsPage() {
             <div className="sidebar-content" style={{ marginLeft: 240, minHeight: '100dvh' }}>
                 <MembershipBanner />
 
-                <section style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px' }}>
+                <section className="chats-section" style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px' }}>
                     <h2 style={{
                         fontSize: 28, fontWeight: 800, color: '#18181b',
                         letterSpacing: '-0.03em', margin: '0 0 6px',
@@ -493,6 +493,15 @@ export default function ChatsPage() {
                         margin-left: 0 !important;
                         padding-bottom: 72px;
                         padding-top: 48px;
+                    }
+                    .chats-section {
+                        padding: 16px 16px 24px !important;
+                    }
+                    .session-row {
+                        padding: 10px 14px 10px 18px !important;
+                    }
+                    .delete-session-btn {
+                        opacity: 1 !important;
                     }
                 }
             `}</style>

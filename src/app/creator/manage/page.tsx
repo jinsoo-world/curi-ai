@@ -243,7 +243,7 @@ export default function CreatorManagePage() {
                             overflow: 'visible',
                         }}>
                             {/* 테이블 헤더 */}
-                            <div style={{
+                            <div className="manage-table-header" style={{
                                 display: 'grid',
                                 gridTemplateColumns: '40px 1fr 120px 100px 80px',
                                 padding: '12px 16px',
@@ -270,6 +270,7 @@ export default function CreatorManagePage() {
                                 return (
                                     <div
                                         key={m.id}
+                                        className="manage-table-row"
                                         style={{
                                             display: 'grid',
                                             gridTemplateColumns: '40px 1fr 120px 100px 80px',
@@ -282,7 +283,7 @@ export default function CreatorManagePage() {
                                         onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
                                     >
                                         {/* 점 3개 메뉴 */}
-                                        <div style={{ position: 'relative' }} ref={openMenu === m.id ? menuRef : null}>
+                                        <div className="manage-col-menu" style={{ position: 'relative' }} ref={openMenu === m.id ? menuRef : null}>
                                             <button
                                                 onClick={() => setOpenMenu(openMenu === m.id ? null : m.id)}
                                                 style={{
@@ -367,7 +368,8 @@ export default function CreatorManagePage() {
 
                                         {/* AI: 프로필 이미지 + 이름 + 소개 */}
                                         <div
-                                            style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
+                                            className="manage-col-ai"
+                                            style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', minWidth: 0 }}
                                             onClick={() => router.push(`/chat/${m.id}`)}
                                         >
                                             <div style={{
@@ -392,25 +394,29 @@ export default function CreatorManagePage() {
                                                     />
                                                 )}
                                             </div>
-                                            <div>
+                                            <div style={{ minWidth: 0 }}>
                                                 <div style={{
                                                     fontSize: 14, fontWeight: 600, color: '#18181b',
+                                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                                 }}>
                                                     {m.name}
                                                 </div>
-                                                <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
+                                                <div style={{
+                                                    fontSize: 12, color: '#9ca3af', marginTop: 2,
+                                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                }}>
                                                     {m.title}
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* 생성일 */}
-                                        <div style={{ fontSize: 12, color: '#6b7280' }}>
+                                        <div className="manage-col-date" style={{ fontSize: 12, color: '#6b7280' }}>
                                             {new Date(m.created_at).toLocaleDateString('ko-KR')}
                                         </div>
 
                                         {/* 상태 토글 */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <div className="manage-col-status" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                             <div
                                                 onClick={async () => {
                                                     const newVal = !m.is_active
@@ -455,7 +461,7 @@ export default function CreatorManagePage() {
                                         </div>
 
                                         {/* 관리 버튼 */}
-                                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                        <div className="manage-col-edit" style={{ display: 'flex', justifyContent: 'center' }}>
                                             <button
                                                 onClick={() => router.push(`/creator/edit/${m.id}`)}
                                                 style={{
@@ -480,6 +486,35 @@ export default function CreatorManagePage() {
                         .sidebar-content {
                             margin-left: 0 !important;
                             padding-bottom: 72px;
+                            padding-top: 48px;
+                        }
+                        .manage-table-header {
+                            display: none !important;
+                        }
+                        .manage-table-row {
+                            display: flex !important;
+                            flex-wrap: wrap !important;
+                            gap: 10px !important;
+                            padding: 14px 16px !important;
+                            border-bottom: 1px solid #f0f0f0 !important;
+                        }
+                        .manage-col-menu {
+                            order: 3;
+                        }
+                        .manage-col-ai {
+                            flex: 1 !important;
+                            min-width: 0 !important;
+                            order: 1;
+                        }
+                        .manage-col-status {
+                            order: 2;
+                            flex-shrink: 0;
+                        }
+                        .manage-col-date {
+                            display: none !important;
+                        }
+                        .manage-col-edit {
+                            display: none !important;
                         }
                     }
                     @media (max-width: 640px) {
