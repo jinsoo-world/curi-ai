@@ -2,19 +2,44 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState<string | null>(null)
     const [error, setError] = useState('')
+    const router = useRouter()
+
+    // 이미 약관 동의한 적 있는지 체크 (localStorage)
+    const [hasAgreedBefore, setHasAgreedBefore] = useState(false)
 
     // 약관 동의 state
     const [agreeAll, setAgreeAll] = useState(false)
     const [agreeAge, setAgreeAge] = useState(false)
     const [agreeTerms, setAgreeTerms] = useState(false)
     const [agreePrivacy, setAgreePrivacy] = useState(false)
+
+    useEffect(() => {
+        // 이미 약관 동의한 적 있으면 약관 UI 숨김
+        const agreed = localStorage.getItem('curi_terms_agreed')
+        if (agreed === 'true') {
+            setHasAgreedBefore(true)
+            setAgreeAll(true)
+            setAgreeAge(true)
+            setAgreeTerms(true)
+            setAgreePrivacy(true)
+        }
+
+        // 이미 로그인 상태면 리다이렉트
+        const supabase = createClient()
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (user) {
+                router.replace('/mentors')
+            }
+        })
+    }, [router])
 
     const allChecked = agreeAge && agreeTerms && agreePrivacy
 
@@ -52,6 +77,8 @@ export default function LoginPage() {
             setError('필수 약관에 모두 동의해주세요.')
             return
         }
+        // 약관 동의 기록 저장 (다음 로그인 때 건너뛰기)
+        localStorage.setItem('curi_terms_agreed', 'true')
         setIsLoading(provider)
         setError('')
         try {
@@ -163,7 +190,8 @@ export default function LoginPage() {
                     </div>
                 )}
 
-                {/* 약관 동의 */}
+                {/* 약관 동의 — 처음 동의한 적 없을 때만 표시 */}
+                {!hasAgreedBefore && (
                 <div style={{
                     background: '#f9fafb',
                     borderRadius: 16,
@@ -272,6 +300,7 @@ export default function LoginPage() {
                         </span>
                     </label>
                 </div>
+                )}
 
                 {/* Social Login */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
