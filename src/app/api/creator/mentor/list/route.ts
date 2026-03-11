@@ -71,25 +71,64 @@ export async function GET() {
         // 통계 계산
         let totalMessages = 0
         let totalUsers = 0
+        const mentorStats: Record<string, { messages: number; users: number; userList: { userId: string; displayName: string; messageCount: number }[] }> = {}
 
         if (mentorIds.length > 0) {
-            // 전체 메시지 수
-            const { count: msgCount } = await admin
-                .from('chat_messages')
-                .select('*', { count: 'exact', head: true })
-                .in('mentor_id', mentorIds)
-
-            totalMessages = msgCount || 0
-
-            // 대화한 사용자 수 (unique user_id)
+            // 세션 목록 (mentor_id, user_id, message_count 포함)
             const { data: sessions } = await admin
                 .from('chat_sessions')
-                .select('user_id')
+                .select('id, mentor_id, user_id, message_count')
                 .in('mentor_id', mentorIds)
+                .gt('message_count', 0)
 
-            if (sessions) {
-                const uniqueUsers = new Set(sessions.map(s => s.user_id))
-                totalUsers = uniqueUsers.size
+            if (sessions && sessions.length > 0) {
+                // 전체 메시지 수 합산
+                totalMessages = sessions.reduce((sum, s) => sum + (s.message_count || 0), 0)
+
+                // 전체 고유 사용자 수
+                const allUsers = new Set(sessions.map(s => s.user_id))
+                totalUsers = allUsers.size
+
+                // AI별 통계 집계
+                const userIdSet = new Set<string>()
+                for (const s of sessions) {
+                    if (!mentorStats[s.mentor_id]) {
+                        mentorStats[s.mentor_id] = { messages: 0, users: 0, userList: [] }
+                    }
+                    mentorStats[s.mentor_id].messages += (s.message_count || 0)
+                    userIdSet.add(s.user_id)
+                }
+
+                // AI별 고유 사용자 수 + 사용자별 메시지 수
+                for (const mentorId of Object.keys(mentorStats)) {
+                    const mentorSessions = sessions.filter(s => s.mentor_id === mentorId)
+                    const userMap = new Map<string, number>()
+                    for (const s of mentorSessions) {
+                        userMap.set(s.user_id, (userMap.get(s.user_id) || 0) + (s.message_count || 0))
+                    }
+                    mentorStats[mentorId].users = userMap.size
+                    mentorStats[mentorId].userList = Array.from(userMap.entries()).map(([userId, messageCount]) => ({
+                        userId, displayName: '', messageCount,
+                    }))
+                }
+
+                // 사용자 이름 일괄 조회
+                const allUserIds = [...new Set(sessions.map(s => s.user_id))]
+                if (allUserIds.length > 0) {
+                    const { data: users } = await admin
+                        .from('users')
+                        .select('id, display_name')
+                        .in('id', allUserIds)
+
+                    const nameMap = new Map((users || []).map(u => [u.id, u.display_name || '익명']))
+                    for (const ms of Object.values(mentorStats)) {
+                        for (const u of ms.userList) {
+                            u.displayName = nameMap.get(u.userId) || '익명'
+                        }
+                        // 메시지 수 내림차순 정렬
+                        ms.userList.sort((a, b) => b.messageCount - a.messageCount)
+                    }
+                }
             }
         }
 
@@ -100,7 +139,7 @@ export async function GET() {
             totalUsers,
         }
 
-        return NextResponse.json({ success: true, mentors: mentorList, stats, role: 'creator' })
+        return NextResponse.json({ success: true, mentors: mentorList, stats, mentorStats, role: 'creator' })
     } catch (error: unknown) {
         console.error('[Creator List API] Error:', error)
         const message = error instanceof Error ? error.message : '멘토 목록 조회 중 오류가 발생했습니다.'

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import AppSidebar from '@/components/AppSidebar'
 import { MENTOR_IMAGES } from '@/domains/mentor'
@@ -23,14 +23,28 @@ interface Stats {
     totalUsers: number
 }
 
+interface MentorUserStat {
+    userId: string
+    displayName: string
+    messageCount: number
+}
+
+interface MentorStatItem {
+    messages: number
+    users: number
+    userList: MentorUserStat[]
+}
+
 export default function CreatorManagePage() {
     const router = useRouter()
     const [mentors, setMentors] = useState<MentorItem[]>([])
     const [loading, setLoading] = useState(true)
     const [stats, setStats] = useState<Stats>({ total: 0, active: 0, totalMessages: 0, totalUsers: 0 })
+    const [mentorStats, setMentorStats] = useState<Record<string, MentorStatItem>>({})
     const [search, setSearch] = useState('')
     const [openMenu, setOpenMenu] = useState<string | null>(null)
     const [deleting, setDeleting] = useState<string | null>(null)
+    const [expandedMentor, setExpandedMentor] = useState<string | null>(null)
     const menuRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -59,6 +73,7 @@ export default function CreatorManagePage() {
             if (res.ok) {
                 setMentors(data.mentors || [])
                 if (data.stats) setStats(data.stats)
+                if (data.mentorStats) setMentorStats(data.mentorStats)
             }
         } catch {
             console.error('Failed to fetch mentors')
@@ -268,8 +283,8 @@ export default function CreatorManagePage() {
                                 const st = statusLabels[effectiveStatus] || statusLabels.draft
 
                                 return (
+                                    <React.Fragment key={m.id}>
                                     <div
-                                        key={m.id}
                                         className="manage-table-row"
                                         style={{
                                             display: 'grid',
@@ -407,6 +422,21 @@ export default function CreatorManagePage() {
                                                 }}>
                                                     {m.title}
                                                 </div>
+                                                {/* AI별 통계 뱃지 */}
+                                                {mentorStats[m.id] && mentorStats[m.id].messages > 0 && (
+                                                    <div
+                                                        onClick={(e) => { e.stopPropagation(); setExpandedMentor(expandedMentor === m.id ? null : m.id) }}
+                                                        style={{
+                                                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                                                            marginTop: 4, fontSize: 11, color: '#6366f1',
+                                                            background: '#eef2ff', padding: '2px 8px', borderRadius: 8,
+                                                            cursor: 'pointer', fontWeight: 500,
+                                                        }}
+                                                    >
+                                                        👤 {mentorStats[m.id].users}명 · 💬 {mentorStats[m.id].messages}개
+                                                        <span style={{ fontSize: 9, opacity: 0.6 }}>{expandedMentor === m.id ? '▲' : '▼'}</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
@@ -476,6 +506,27 @@ export default function CreatorManagePage() {
                                             >✏️ 수정</button>
                                         </div>
                                     </div>
+                                    {/* AI별 사용자 드롭다운 */}
+                                    {expandedMentor === m.id && mentorStats[m.id]?.userList?.length > 0 && (
+                                        <div style={{
+                                            padding: '10px 16px 10px 68px',
+                                            background: '#fafafa',
+                                            borderBottom: '1px solid #f0f0f0',
+                                            animation: 'fadeIn 0.2s ease',
+                                        }}>
+                                            <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 6, fontWeight: 600 }}>대화한 사용자</div>
+                                            {mentorStats[m.id].userList.map((u: MentorUserStat, i: number) => (
+                                                <div key={i} style={{
+                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                    padding: '4px 0', fontSize: 12, color: '#374151',
+                                                }}>
+                                                    <span>👤 {u.displayName}</span>
+                                                    <span style={{ color: '#6366f1', fontWeight: 600 }}>💬 {u.messageCount}회</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </React.Fragment>
                                 )
                             })}
                         </div>
