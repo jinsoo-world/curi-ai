@@ -101,7 +101,7 @@ export default function AppSidebar() {
         { type: 'divider' as const },
         { label: '미션 보상', href: '/missions', icon: '🍀' },
         { label: '스토어', href: '/store', icon: '🎁' },
-        { label: '멤버십', href: '/pricing', icon: '👑' },
+        // { label: '멤버십', href: '/pricing', icon: '👑' }, // 무료체험 기간 비공개
         { label: '마이페이지', href: '/profile', icon: '👤' },
     ]
 

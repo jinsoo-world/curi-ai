@@ -39,22 +39,9 @@ export default function PricingPage() {
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
     useEffect(() => {
-        const checkUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                setUserId(user.id)
-                const { data: profile } = await supabase
-                    .from('users')
-                    .select('subscription_tier')
-                    .eq('id', user.id)
-                    .single()
-                if (profile?.subscription_tier === 'premium') {
-                    setIsPremium(true)
-                }
-            }
-        }
-        checkUser()
-    }, [])
+        // 무료체험 기간 - 멤버십 페이지 비공개 처리
+        router.replace('/mentors')
+    }, [router])
 
     const handleSubscribe = async () => {
         if (!userId) {

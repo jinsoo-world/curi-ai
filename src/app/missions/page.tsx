@@ -108,8 +108,8 @@ export default function MissionsPage() {
         }
     }, [showCloverAnimation])
 
-    const inviteLink = `https://app-seven-delta-90.vercel.app/?ref=${referralCode || 'curi'}`
-    const shareLink = `https://app-seven-delta-90.vercel.app/`
+    const inviteLink = `https://www.curi-ai.com/?ref=${referralCode || 'curi'}`
+
 
     const handleCopyInviteLink = () => {
         navigator.clipboard.writeText(inviteLink).then(() => {
@@ -127,7 +127,7 @@ export default function MissionsPage() {
 
         // 공유 창 열기
         const shareText = '큐리 AI에서 나만의 AI 멘토를 만들어보세요! 🤖'
-        const shareUrl = shareLink
+        const shareUrl = inviteLink
 
         try {
             if (navigator.share) {
@@ -197,19 +197,6 @@ export default function MissionsPage() {
             completed: missionStatus.aiCreated >= 2,
             action: () => window.location.href = '/creator/create',
             actionLabel: 'AI 만들기',
-        },
-        {
-            id: 'share',
-            icon: '📤',
-            title: '친구에게 공유하기',
-            description: `하루 3번, 공유당 10클로버 (오늘 ${missionStatus.sharesToday}/3)`,
-            reward: 10,
-            rewardLabel: '🍀 +10/회',
-            progress: missionStatus.sharesToday,
-            goal: 3,
-            completed: missionStatus.sharesToday >= 3,
-            action: handleShare,
-            actionLabel: sharing ? '공유 중...' : '공유하기',
         },
         {
             id: 'invite-friend',
@@ -707,24 +694,7 @@ export default function MissionsPage() {
                             </button>
                         </div>
 
-                        {/* 카카오톡 공유 */}
-                        <button
-                            onClick={() => {
-                                window.open(
-                                    `https://sharer.kakao.com/talk/friends/picker/link?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent('나만의 AI를 만들어보세요! 🤖')}`,
-                                    '_blank'
-                                )
-                            }}
-                            style={{
-                                width: '100%', padding: '12px', borderRadius: 10,
-                                border: '1px solid #FEE500', background: '#FEE500',
-                                fontSize: 14, fontWeight: 600, color: '#3C1E1E',
-                                cursor: 'pointer', display: 'flex', alignItems: 'center',
-                                justifyContent: 'center', gap: 8,
-                            }}
-                        >
-                            💬 카카오톡으로 공유하기
-                        </button>
+
 
                         {/* 초대 현황 */}
                         {missionStatus.friendsInvited > 0 && (

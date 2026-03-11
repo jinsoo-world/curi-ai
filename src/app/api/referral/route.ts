@@ -39,14 +39,9 @@ export async function POST() {
             })
         }
 
-        // 새 코드 생성: UUID 앞 4자 + 랜덤 4자 (영대문자+숫자)
-        const prefix = user.id.replace(/-/g, '').slice(0, 4).toUpperCase()
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-        let suffix = ''
-        for (let i = 0; i < 4; i++) {
-            suffix += chars.charAt(Math.floor(Math.random() * chars.length))
-        }
-        const code = prefix + suffix
+        // UUID 기반 결정적 코드: UUID 앞 8자 (하이픈 제거, 대문자)
+        // 같은 유저는 항상 같은 코드 → 영구적이고 식별 가능
+        const code = user.id.replace(/-/g, '').slice(0, 8).toUpperCase()
 
         const { error } = await db
             .from('users')

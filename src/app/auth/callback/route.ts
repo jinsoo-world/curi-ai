@@ -43,18 +43,58 @@ export async function GET(request: Request) {
                     const googleName = user.user_metadata?.full_name || user.user_metadata?.name || null
                     const googleAvatar = user.user_metadata?.avatar_url || null
 
+                    // 초대 코드 확인 (미들웨어에서 쿠키에 저장됨)
+                    const { cookies } = await import('next/headers')
+                    const cookieStore = await cookies()
+                    const refCode = cookieStore.get('curi_ref')?.value || null
+
                     const { error: insertError } = await db.from('users').upsert({
                         id: user.id,
                         email: user.email,
                         display_name: googleName,
                         avatar_url: googleAvatar,
                         onboarding_completed: false,
+                        referred_by: refCode,
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString(),
                     }, { onConflict: 'id' })
 
                     if (insertError) {
                         console.error('[Auth Callback] User create error:', JSON.stringify(insertError))
+                    }
+
+                    // 추천인에게 100 클로버 지급
+                    if (refCode) {
+                        try {
+                            // 추천인 찾기 (referral_code가 refCode인 유저)
+                            const { data: referrer } = await db
+                                .from('users')
+                                .select('id, clovers')
+                                .eq('referral_code', refCode)
+                                .single()
+
+                            if (referrer) {
+                                await db.from('users')
+                                    .update({ clovers: (referrer.clovers || 0) + 100 })
+                                    .eq('id', referrer.id)
+
+                                // 클로버 적립 기록
+                                await db.from('credits').insert({
+                                    user_id: referrer.id,
+                                    amount: 100,
+                                    type: 'referral_invite',
+                                    description: `${googleName || user.email || '새 유저'} 님이 초대로 가입`,
+                                })
+                                console.log(`[Auth Callback] Referrer ${referrer.id} got 100 clovers for invite`)
+                            }
+                        } catch (refErr) {
+                            console.error('[Auth Callback] Referral reward error:', refErr)
+                        }
+
+                        // 쿠키 소비 (삭제)
+                        const response = NextResponse.redirect(`${origin}/mentors`)
+                        response.cookies.delete('curi_ref')
+                        return response
                     }
 
                     // 신규 유저 → 멘토 페이지

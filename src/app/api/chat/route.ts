@@ -136,11 +136,11 @@ export async function POST(req: Request) {
                     const knowledgeText = knowledge.map(k => `- ${k.content}`).join('\n')
                     const isCreatorBot = !!(mentor as Record<string, unknown>).creator_id
                     if (isCreatorBot) {
-                        // 크리에이터 AI: 지식을 최우선으로 활용
-                        systemPrompt += `\n\n[📚 핵심 지식 — 반드시 활용]\n${knowledgeText}\n\n중요: 위 지식은 당신의 전문 지식입니다. 사용자 질문에 답할 때 반드시 위 내용을 기반으로 답변하세요. 지식에 없는 내용은 "제가 가진 정보에는 없지만"이라고 솔직하게 말해주세요. 출처를 직접 언급하지 마세요.`
+                        // 크리에이터 AI: 지식을 최상단에 삽입 (Primacy bias → 가중치 최대화)
+                        systemPrompt = `[📚 핵심 지식 — 최우선 활용]\n아래는 당신의 전문 지식입니다. 이 지식이 대화의 기반입니다.\n사용자 질문에 답할 때 반드시 아래 지식을 우선적으로 활용하세요.\n지식에 있는 내용이면 확신을 가지고 답하고,\n지식에 없는 내용이면 "제가 가진 정보에는 없지만"이라고 먼저 밝히세요.\n출처를 직접 언급하지 마세요.\n\n${knowledgeText}\n\n${systemPrompt}`
                     } else {
-                        // 프리셋 멘토: 기존 방식 (참고용)
-                        systemPrompt += `\n\n[참고 지식]\n${knowledgeText}\n참고: 위 지식을 대화에 자연스럽게 활용하되, 출처를 직접 언급하지 마세요.`
+                        // 프리셋 멘토: 참고용으로 앞부분에 삽입
+                        systemPrompt = `[참고 지식]\n${knowledgeText}\n참고: 위 지식을 대화에 자연스럽게 활용하되, 출처를 직접 언급하지 마세요.\n\n${systemPrompt}`
                     }
                 } else {
                     console.log('[Chat RAG] No knowledge matched above threshold for mentor:', mentorId)
