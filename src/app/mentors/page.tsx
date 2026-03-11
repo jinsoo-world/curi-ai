@@ -105,7 +105,7 @@ function MentorCard({
             </div>
 
             {/* Info */}
-            <div style={{ padding: '20px 20px 24px' }}>
+            <div className="mentor-card-info" style={{ padding: '20px 20px 24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     <h2 style={{
                         fontSize: 24, fontWeight: 800, color: '#18181b',
@@ -138,7 +138,7 @@ function MentorCard({
                 </p>
 
                 {questions.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    <div className="mentor-questions" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                         {questions.slice(0, 2).map((q, i) => (
                             <span
                                 key={i}
@@ -273,6 +273,28 @@ export default async function MentorsPage() {
                     .mentors-grid {
                         grid-template-columns: repeat(2, 1fr) !important;
                         gap: 12px !important;
+                    }
+                    .mentor-questions {
+                        display: none !important;
+                    }
+                    .mentor-card-info {
+                        padding: 12px 12px 16px !important;
+                    }
+                    .mentor-card-info h2 {
+                        font-size: 17px !important;
+                    }
+                    .mentor-card-info p:first-of-type {
+                        font-size: 12px !important;
+                        margin-bottom: 4px !important;
+                    }
+                    .mentor-card-info p:last-of-type {
+                        font-size: 12px !important;
+                        margin-bottom: 0 !important;
+                        -webkit-line-clamp: 1 !important;
+                    }
+                    .mentor-card-info span {
+                        font-size: 10px !important;
+                        padding: 2px 8px !important;
                     }
                     .mentors-footer {
                         padding: 24px 20px 80px !important;
