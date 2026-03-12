@@ -451,6 +451,39 @@ export default function LoginPage() {
                         )}
                         Google로 시작하기
                     </button>
+
+                    {/* Kakao */}
+                    <button
+                        type="button"
+                        onClick={() => handleSocialLogin('kakao')}
+                        disabled={isLoading !== null || !allChecked}
+                        style={{
+                            width: '100%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+                            padding: '16px 24px', fontSize: 17, fontWeight: 600,
+                            borderRadius: 16,
+                            background: allChecked ? '#FEE500' : '#f3f4f6',
+                            color: allChecked ? '#191919' : '#9ca3af',
+                            border: 'none',
+                            boxShadow: allChecked ? '0 1px 3px rgba(0,0,0,0.04)' : 'none',
+                            cursor: allChecked ? 'pointer' : 'not-allowed',
+                            transition: 'all 200ms',
+                            opacity: isLoading !== null ? 0.5 : 1,
+                        }}
+                    >
+                        {isLoading === 'kakao' ? (
+                            <div style={{
+                                width: 20, height: 20, borderRadius: '50%',
+                                border: '2px solid #d1d5db', borderTopColor: '#191919',
+                                animation: 'spin 0.8s linear infinite',
+                            }} />
+                        ) : (
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                <path d="M10 1C4.93 1 0.833 4.213 0.833 8.167c0 2.544 1.697 4.78 4.25 6.04-.149.533-.96 3.427-.992 3.64 0 0-.02.165.088.228.107.063.234.014.234.014.309-.043 3.578-2.34 4.145-2.739.464.066.94.1 1.442.1 5.07 0 9.167-3.213 9.167-7.283C19.167 4.213 15.07 1 10 1z" fill="#191919"/>
+                            </svg>
+                        )}
+                        카카오로 시작하기
+                    </button>
                 </div>
 
                 {/* Divider */}

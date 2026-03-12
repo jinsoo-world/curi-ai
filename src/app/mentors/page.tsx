@@ -138,36 +138,12 @@ function MentorCard({
                 </div>
 
                 <p style={{
-                    fontSize: 16, color: '#6b7280', margin: '0 0 10px',
+                    fontSize: 16, color: '#6b7280', margin: 0,
                     fontWeight: 500,
                 }}>
                     {title}
                 </p>
 
-                <p style={{
-                    fontSize: 15, color: '#9ca3af', lineHeight: 1.6, margin: '0 0 16px',
-                    display: '-webkit-box', WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
-                }}>
-                    {description}
-                </p>
-
-                {questions.length > 0 && (
-                    <div className="mentor-questions" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                        {questions.slice(0, 2).map((q, i) => (
-                            <span
-                                key={i}
-                                style={{
-                                    fontSize: 14, color: '#16a34a', lineHeight: 1.4,
-                                    background: '#f0fdf4', borderRadius: 100,
-                                    padding: '6px 16px', border: '1px solid #dcfce7',
-                                }}
-                            >
-                                &ldquo;{q}&rdquo;
-                            </span>
-                        ))}
-                    </div>
-                )}
             </div>
         </article>
     )
@@ -213,27 +189,9 @@ export default async function MentorsPage() {
                             나눠볼까요?
                         </span>
                     </h1>
-                    <p style={{ fontSize: 17, color: '#9ca3af', marginTop: 12, marginBottom: 0 }}>
-                        AI가 24시간 함께합니다. 궁금한 것을 언제든 물어보세요.
+                    <p style={{ fontSize: 17, color: '#9ca3af', marginTop: 12 }}>
+                        나만의 AI와 24시간 대화하고, 직접 AI를 만들어보세요.
                     </p>
-
-                    {/* 서비스 설명 */}
-                    <div style={{
-                        marginTop: 20,
-                        padding: '16px 20px',
-                        background: '#fff',
-                        borderRadius: 14,
-                        border: '1px solid #e5e7eb',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 12,
-                    }}>
-                        <span style={{ fontSize: 24 }}>🤖</span>
-                        <div style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6 }}>
-                            <strong style={{ color: '#18181b' }}>큐리 AI</strong>는 콘텐츠·글쓰기·세일즈 전문가를 AI 멘토로 만날 수 있는 서비스입니다.
-                            아래에서 AI 멘토를 선택하고 바로 대화를 시작해보세요.
-                        </div>
-                    </div>
                 </section>
 
                 {/* ─── Notification Banner ─── */}

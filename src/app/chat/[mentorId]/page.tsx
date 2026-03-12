@@ -188,7 +188,7 @@ export default function ChatPage() {
                     const { messages: loaded } = await res.json()
                     if (loaded?.length) {
                         setMessages(loaded)
-                        setShowSuggestions(true)
+                        setShowSuggestions(false)
                     } else {
                         // 빈 세션 → 추천 질문 표시
                         setShowSuggestions(true)
@@ -212,7 +212,7 @@ export default function ChatPage() {
                         const { messages: loaded } = await msgRes.json()
                         if (loaded?.length) {
                             setMessages(loaded)
-                            setShowSuggestions(true)
+                            setShowSuggestions(false)
                         } else {
                             // 빈 세션 → 추천 질문 표시
                             setShowSuggestions(true)
@@ -695,15 +695,6 @@ export default function ChatPage() {
                             mentorEmoji={mentorEmoji}
                             isStreaming={isStreaming}
                         />
-
-                        {/* 대화 중 추천 질문 */}
-                        {!isStreaming && messages.length > 0 && showSuggestions && (
-                            <SuggestionCards
-                                suggestions={suggestions}
-                                onSelect={sendMessage}
-                                variant="inline"
-                            />
-                        )}
 
 
 
