@@ -16,6 +16,8 @@ export default function LoginPage() {
     const [hasAgreedBefore, setHasAgreedBefore] = useState(false)
     // 최근 사용한 로그인 방식
     const [lastProvider, setLastProvider] = useState<string | null>(null)
+    // 카카오톡 인앱 브라우저 감지
+    const [isInAppBrowser, setIsInAppBrowser] = useState(false)
 
     // 약관 동의 state
     const [agreeAll, setAgreeAll] = useState(false)
@@ -47,6 +49,12 @@ export default function LoginPage() {
                 router.replace('/mentors')
             }
         })
+
+        // 카카오톡/인앱 브라우저 감지
+        const ua = navigator.userAgent || ''
+        if (/KAKAOTALK|NAVER|Line|Instagram|FB_IAB|FBAN/i.test(ua)) {
+            setIsInAppBrowser(true)
+        }
     }, [router])
 
     const allChecked = agreeAge && agreeTerms && agreePrivacy
@@ -319,50 +327,71 @@ export default function LoginPage() {
                 {/* Social Login */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {/* Google */}
-                    <button
-                        type="button"
-                        onClick={() => handleSocialLogin('google')}
-                        disabled={isLoading !== null || !allChecked}
-                        style={{
-                            width: '100%',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-                            padding: '16px 24px', fontSize: 17, fontWeight: 600,
-                            borderRadius: 16,
-                            background: allChecked ? '#fff' : '#f3f4f6',
-                            color: allChecked ? '#1a1a2e' : '#9ca3af',
-                            border: `1.5px solid ${allChecked ? '#e5e7eb' : '#e5e7eb'}`,
-                            boxShadow: allChecked ? '0 1px 3px rgba(0,0,0,0.04)' : 'none',
-                            cursor: allChecked ? 'pointer' : 'not-allowed',
-                            transition: 'all 200ms',
-                            opacity: isLoading !== null ? 0.5 : 1,
-                        }}
-                    >
-                        {isLoading === 'google' ? (
+                    <div style={{ position: 'relative' }}>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (isInAppBrowser) {
+                                    // 인앱 브라우저에서는 외부 브라우저로 안내
+                                    const url = window.location.href
+                                    if (confirm('카카오톡 브라우저에서는 Google 로그인이 제한됩니다.\n\n외부 브라우저(Safari/Chrome)에서 여시거나,\n아래 카카오 로그인을 이용해주세요!')) {
+                                        // 안드로이드: intent로 외부 브라우저 열기
+                                        window.location.href = `intent://${url.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`
+                                    }
+                                    return
+                                }
+                                handleSocialLogin('google')
+                            }}
+                            disabled={isLoading !== null || !allChecked}
+                            style={{
+                                width: '100%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+                                padding: '16px 24px', fontSize: 17, fontWeight: 600,
+                                borderRadius: 16,
+                                background: allChecked ? '#fff' : '#f3f4f6',
+                                color: allChecked ? '#1a1a2e' : '#9ca3af',
+                                border: `1.5px solid ${allChecked ? '#e5e7eb' : '#e5e7eb'}`,
+                                boxShadow: allChecked ? '0 1px 3px rgba(0,0,0,0.04)' : 'none',
+                                cursor: allChecked ? 'pointer' : 'not-allowed',
+                                transition: 'all 200ms',
+                                opacity: isLoading !== null || isInAppBrowser ? 0.5 : 1,
+                            }}
+                        >
+                            {isLoading === 'google' ? (
+                                <div style={{
+                                    width: 20, height: 20, borderRadius: '50%',
+                                    border: '2px solid #d1d5db', borderTopColor: '#22c55e',
+                                    animation: 'spin 0.8s linear infinite',
+                                }} />
+                            ) : (
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                    <path d="M19.6 10.23c0-.68-.06-1.36-.17-2.02H10v3.83h5.38a4.6 4.6 0 01-2 3.02v2.5h3.24c1.89-1.74 2.98-4.3 2.98-7.33z" fill="#4285F4" />
+                                    <path d="M10 20c2.7 0 4.96-.9 6.62-2.44l-3.24-2.5c-.89.6-2.04.96-3.38.96-2.6 0-4.8-1.76-5.58-4.12H1.08v2.58A9.99 9.99 0 0010 20z" fill="#34A853" />
+                                    <path d="M4.42 11.9A6.01 6.01 0 014.1 10c0-.66.11-1.3.32-1.9V5.52H1.08A9.99 9.99 0 000 10c0 1.61.39 3.14 1.08 4.48l3.34-2.58z" fill="#FBBC05" />
+                                    <path d="M10 3.98c1.47 0 2.78.5 3.82 1.5l2.86-2.86A9.96 9.96 0 0010 0 9.99 9.99 0 001.08 5.52l3.34 2.58C5.2 5.74 7.4 3.98 10 3.98z" fill="#EA4335" />
+                                </svg>
+                            )}
+                            Google로 시작하기
+                            {lastProvider === 'google' && (
+                                <span style={{
+                                    background: '#1f2937', color: '#fff',
+                                    fontSize: 11, fontWeight: 700,
+                                    padding: '4px 10px', borderRadius: 20,
+                                    marginLeft: 4, whiteSpace: 'nowrap',
+                                }}>
+                                    최근 사용
+                                </span>
+                            )}
+                        </button>
+                        {isInAppBrowser && (
                             <div style={{
-                                width: 20, height: 20, borderRadius: '50%',
-                                border: '2px solid #d1d5db', borderTopColor: '#22c55e',
-                                animation: 'spin 0.8s linear infinite',
-                            }} />
-                        ) : (
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                                <path d="M19.6 10.23c0-.68-.06-1.36-.17-2.02H10v3.83h5.38a4.6 4.6 0 01-2 3.02v2.5h3.24c1.89-1.74 2.98-4.3 2.98-7.33z" fill="#4285F4" />
-                                <path d="M10 20c2.7 0 4.96-.9 6.62-2.44l-3.24-2.5c-.89.6-2.04.96-3.38.96-2.6 0-4.8-1.76-5.58-4.12H1.08v2.58A9.99 9.99 0 0010 20z" fill="#34A853" />
-                                <path d="M4.42 11.9A6.01 6.01 0 014.1 10c0-.66.11-1.3.32-1.9V5.52H1.08A9.99 9.99 0 000 10c0 1.61.39 3.14 1.08 4.48l3.34-2.58z" fill="#FBBC05" />
-                                <path d="M10 3.98c1.47 0 2.78.5 3.82 1.5l2.86-2.86A9.96 9.96 0 0010 0 9.99 9.99 0 001.08 5.52l3.34 2.58C5.2 5.74 7.4 3.98 10 3.98z" fill="#EA4335" />
-                            </svg>
-                        )}
-                        Google로 시작하기
-                        {lastProvider === 'google' && (
-                            <span style={{
-                                background: '#1f2937', color: '#fff',
-                                fontSize: 11, fontWeight: 700,
-                                padding: '4px 10px', borderRadius: 20,
-                                marginLeft: 4, whiteSpace: 'nowrap',
+                                fontSize: 12, color: '#ef4444', textAlign: 'center',
+                                marginTop: 4, fontWeight: 500,
                             }}>
-                                최근 사용
-                            </span>
+                                ⚠️ 카카오톡에서는 Google 로그인이 제한됩니다
+                            </div>
                         )}
-                    </button>
+                    </div>
 
                     {/* Kakao */}
                     <button

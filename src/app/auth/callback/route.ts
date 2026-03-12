@@ -94,13 +94,13 @@ export async function GET(request: Request) {
                         }
 
                         // 쿠키 소비 (삭제)
-                        const response = NextResponse.redirect(`${origin}/mentors`)
+                        const response = NextResponse.redirect(`${origin}/mentors?new_user=true`)
                         response.cookies.delete('curi_ref')
                         return response
                     }
 
-                    // 신규 유저 → 멘토 페이지
-                    return NextResponse.redirect(`${origin}/mentors`)
+                    // 신규 유저 → 멘토 페이지 (new_user 플래그로 모달 자동 팝업)
+                    return NextResponse.redirect(`${origin}/mentors?new_user=true`)
                 }
 
                 // 프로필 있지만 avatar_url이 없으면 Google 아바타 업데이트

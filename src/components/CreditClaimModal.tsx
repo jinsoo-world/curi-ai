@@ -89,7 +89,7 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
             const updateData: Record<string, unknown> = {
                 phone: phone.replace(/\D/g, ''),
                 gender,
-                marketing_agreed: marketingAgreed,
+                marketing_consent: marketingAgreed,
                 subscription_tier: 'free_trial',
             }
 
