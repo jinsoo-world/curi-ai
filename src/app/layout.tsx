@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Noto_Sans_KR } from 'next/font/google'
+import Script from 'next/script'
 import GoogleAnalytics from '@/components/GoogleAnalytics'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
@@ -50,12 +51,6 @@ export default function RootLayout({
           crossOrigin="anonymous"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
-        <script
-          src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"
-          integrity="sha384-DKYJZ8NLiK8MN4/C5P2dtSmLQ4KwPaoqAfyA/DfmEc1VDxu4yyC7wy6K1Hs90nk"
-          crossOrigin="anonymous"
-          async
-        />
       </head>
       <body>
         <GoogleAnalytics />
@@ -73,16 +68,27 @@ export default function RootLayout({
             `,
           }}
         />
-        <script
+        {/* 카카오 JS SDK — afterInteractive + onReady로 확실한 로드 & 초기화 */}
+        <Script
+          src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"
+          integrity="sha384-DKYJZ8NLiK8MN4/C5P2dtSmLQ4KwPaoqAfyA/DfmEc1VDxu4yyC7wy6K1Hs90nk"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
+        <Script
+          id="kakao-init"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              function initKakao() {
+              function _initKakao() {
                 if (window.Kakao && !window.Kakao.isInitialized()) {
                   window.Kakao.init('27c5c27a03c6f936db39d20090643b3c');
+                  console.log('[Kakao] SDK initialized');
                 }
               }
-              if (document.readyState === 'complete') { initKakao(); }
-              else { window.addEventListener('load', initKakao); }
+              // SDK가 이미 로드되었으면 바로 init, 아니면 2초 후 재시도
+              setTimeout(_initKakao, 500);
+              setTimeout(_initKakao, 2000);
             `,
           }}
         />
