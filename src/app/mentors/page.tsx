@@ -47,9 +47,9 @@ const fallbackMentors = [
 
 /* ─── Mentor Card (Web: wide, responsive) ─── */
 function MentorCard({
-    name, title, description, questions, imageSrc, index,
+    name, title, description, questions, imageSrc, index, keywords,
 }: {
-    name: string; title: string; description: string; questions: string[]; imageSrc: string; index: number
+    name: string; title: string; description: string; questions: string[]; imageSrc: string; index: number; keywords?: string[]
 }) {
     return (
         <article
@@ -106,6 +106,21 @@ function MentorCard({
 
             {/* Info */}
             <div className="mentor-card-info" style={{ padding: '20px 20px 24px' }}>
+                {/* 핵심 키워드 태그 */}
+                {keywords && keywords.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
+                        {keywords.slice(0, 3).map((kw, i) => (
+                            <span key={i} style={{
+                                fontSize: 12, fontWeight: 600,
+                                color: '#6b7280', background: '#f3f4f6',
+                                borderRadius: 6, padding: '3px 10px',
+                                letterSpacing: '-0.01em',
+                            }}>
+                                #{kw}
+                            </span>
+                        ))}
+                    </div>
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     <h2 style={{
                         fontSize: 24, fontWeight: 800, color: '#18181b',
@@ -198,9 +213,27 @@ export default async function MentorsPage() {
                             나눠볼까요?
                         </span>
                     </h1>
-                    <p style={{ fontSize: 17, color: '#9ca3af', marginTop: 12 }}>
+                    <p style={{ fontSize: 17, color: '#9ca3af', marginTop: 12, marginBottom: 0 }}>
                         AI가 24시간 함께합니다. 궁금한 것을 언제든 물어보세요.
                     </p>
+
+                    {/* 서비스 설명 */}
+                    <div style={{
+                        marginTop: 20,
+                        padding: '16px 20px',
+                        background: '#fff',
+                        borderRadius: 14,
+                        border: '1px solid #e5e7eb',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                    }}>
+                        <span style={{ fontSize: 24 }}>🤖</span>
+                        <div style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6 }}>
+                            <strong style={{ color: '#18181b' }}>큐리 AI</strong>는 콘텐츠·글쓰기·세일즈 전문가를 AI 멘토로 만날 수 있는 서비스입니다.
+                            아래에서 AI 멘토를 선택하고 바로 대화를 시작해보세요.
+                        </div>
+                    </div>
                 </section>
 
                 {/* ─── Notification Banner ─── */}
@@ -226,6 +259,7 @@ export default async function MentorsPage() {
                                             questions={mentor.sample_questions || []}
                                             imageSrc={mentor.avatar_url || MENTOR_IMAGES[mentor.name] || ''}
                                             index={index}
+                                            keywords={mentor.expertise}
                                         />
                                     </Link>
                                 ))

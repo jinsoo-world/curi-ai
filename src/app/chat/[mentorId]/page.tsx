@@ -188,7 +188,7 @@ export default function ChatPage() {
                     const { messages: loaded } = await res.json()
                     if (loaded?.length) {
                         setMessages(loaded)
-                        setShowSuggestions(false)
+                        setShowSuggestions(true)
                     } else {
                         // 빈 세션 → 추천 질문 표시
                         setShowSuggestions(true)
@@ -212,7 +212,7 @@ export default function ChatPage() {
                         const { messages: loaded } = await msgRes.json()
                         if (loaded?.length) {
                             setMessages(loaded)
-                            setShowSuggestions(false)
+                            setShowSuggestions(true)
                         } else {
                             // 빈 세션 → 추천 질문 표시
                             setShowSuggestions(true)
@@ -495,6 +495,8 @@ export default function ChatPage() {
                 setSessionId(session.id)
                 window.history.replaceState(null, '', `/chat/${mentorId}?session=${session.id}`)
                 loadSidebarSessions()
+                // 강제 re-render
+                setSuggestions([...mentor?.sample_questions || []])
             }
         } catch (e) {
             console.error('새 세션 생성 실패:', e)

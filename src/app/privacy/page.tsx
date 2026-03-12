@@ -50,12 +50,14 @@ export default function PrivacyPage() {
                         fontSize: 14, color: '#9ca3af', textDecoration: 'none',
                     }}>← 뒤로가기</a>
                     <a href="/mentors" style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
                         fontSize: 20, fontWeight: 800, letterSpacing: '-0.04em',
                         background: 'linear-gradient(135deg, #16a34a, #22c55e)',
                         WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                         textDecoration: 'none',
                     }}>
-                        🤖 큐리 AI
+                        <img src="/logo.png" alt="큐리 AI" style={{ width: 28, height: 28, borderRadius: 6 }} />
+                        큐리 AI
                     </a>
                 </div>
             </header>
@@ -266,7 +268,7 @@ export default function PrivacyPage() {
                                 </tr>
                                 <tr>
                                     <td style={tdStyle}>Google LLC</td>
-                                    <td style={tdStyle}>AI 서비스 제공</td>
+                                    <td style={tdStyle}>AI 서비스 제공, 소셜 로그인</td>
                                 </tr>
                                 <tr>
                                     <td style={tdStyle}>(주)비바리퍼블리카 (토스페이먼츠)</td>

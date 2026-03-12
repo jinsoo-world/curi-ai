@@ -477,7 +477,7 @@ export default function AppSidebar() {
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
-                        width: 48, height: 48,
+                        width: 50, height: 50,
                         borderRadius: '50%',
                         background: '#FEE500',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -501,7 +501,7 @@ export default function AppSidebar() {
                 <Link
                     href="/creator/create"
                     style={{
-                        width: 52, height: 52,
+                        width: 50, height: 50,
                         borderRadius: '50%',
                         background: 'linear-gradient(135deg, #22c55e, #16a34a)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
