@@ -21,6 +21,21 @@ export default function LoginPage() {
     const [agreeTerms, setAgreeTerms] = useState(false)
     const [agreePrivacy, setAgreePrivacy] = useState(false)
 
+    // 이메일 회원가입 state
+    const [showEmailSignup, setShowEmailSignup] = useState(false)
+    const [emailForm, setEmailForm] = useState({
+        email: '',
+        password: '',
+        passwordConfirm: '',
+        display_name: '',
+        phone: '',
+        gender: '',
+        birthday: '',
+        birth_year: '',
+    })
+    const [emailError, setEmailError] = useState('')
+    const [emailSuccess, setEmailSuccess] = useState('')
+
     useEffect(() => {
         // 이미 약관 동의한 적 있으면 약관 UI 숨김
         const agreed = localStorage.getItem('curi_terms_agreed')
@@ -98,6 +113,103 @@ export default function LoginPage() {
             setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.')
             setIsLoading(null)
         }
+    }
+
+    // 이메일 회원가입 핸들러
+    const handleEmailSignup = async () => {
+        setEmailError('')
+        setEmailSuccess('')
+
+        if (!allChecked) {
+            setEmailError('필수 약관에 모두 동의해주세요.')
+            return
+        }
+        if (!emailForm.display_name.trim()) {
+            setEmailError('이름을 입력해주세요.')
+            return
+        }
+        if (!emailForm.email.trim()) {
+            setEmailError('이메일을 입력해주세요.')
+            return
+        }
+        if (!emailForm.password || emailForm.password.length < 6) {
+            setEmailError('비밀번호는 6자 이상이어야 합니다.')
+            return
+        }
+        if (emailForm.password !== emailForm.passwordConfirm) {
+            setEmailError('비밀번호가 일치하지 않습니다.')
+            return
+        }
+
+        setIsLoading('email')
+        try {
+            const { data, error } = await supabase.auth.signUp({
+                email: emailForm.email,
+                password: emailForm.password,
+                options: {
+                    data: {
+                        full_name: emailForm.display_name,
+                    },
+                    emailRedirectTo: `${window.location.origin}/auth/callback`,
+                },
+            })
+
+            if (error) throw error
+
+            // 약관 동의 기록
+            localStorage.setItem('curi_terms_agreed', 'true')
+
+            if (data.user && !data.user.identities?.length) {
+                setEmailError('이미 가입된 이메일입니다.')
+                setIsLoading(null)
+                return
+            }
+
+            // 프로필 정보 저장 시도 (로그인 세션이 있을 경우)
+            if (data.session) {
+                try {
+                    await fetch('/api/profile', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            display_name: emailForm.display_name,
+                            phone: emailForm.phone || null,
+                            gender: emailForm.gender || null,
+                            birth_year: emailForm.birth_year || null,
+                        }),
+                    })
+                } catch (e) {
+                    console.error('Profile save error:', e)
+                }
+                router.push('/mentors')
+            } else {
+                setEmailSuccess('가입 확인 이메일을 발송했습니다. 이메일을 확인해주세요!')
+            }
+        } catch (err: any) {
+            console.error('Email signup error:', err)
+            setEmailError(err.message || '회원가입 중 오류가 발생했습니다.')
+        } finally {
+            setIsLoading(null)
+        }
+    }
+
+    // 생년 범위 (1940 ~ 현재)
+    const currentYear = new Date().getFullYear()
+    const yearOptions = Array.from({ length: currentYear - 1940 + 1 }, (_, i) => currentYear - i)
+
+    // 인풋 공통 스타일
+    const inputStyle = {
+        width: '100%', padding: '12px 14px',
+        border: '1.5px solid #e5e7eb', borderRadius: 12,
+        fontSize: 15, background: '#fafafa',
+        boxSizing: 'border-box' as const,
+        outline: 'none',
+        transition: 'border-color 200ms',
+    }
+
+    const labelStyle = {
+        fontSize: 13, fontWeight: 600 as const, color: '#4b5563',
+        display: 'block' as const, marginBottom: 6,
     }
 
     return (
@@ -350,12 +462,224 @@ export default function LoginPage() {
                     <div style={{ flex: 1, height: 1, background: '#f0f0f0' }} />
                 </div>
 
+                {/* 이메일 회원가입 토글 버튼 */}
+                <button
+                    type="button"
+                    onClick={() => setShowEmailSignup(!showEmailSignup)}
+                    style={{
+                        width: '100%', padding: '14px',
+                        background: 'none', border: '1.5px solid #e5e7eb',
+                        borderRadius: 16, fontSize: 15, fontWeight: 600,
+                        color: '#6b7280', cursor: 'pointer',
+                        transition: 'all 200ms',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    }}
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="4" width="20" height="16" rx="2" />
+                        <path d="M22 7l-10 7L2 7" />
+                    </svg>
+                    이메일로 회원가입
+                    <span style={{
+                        fontSize: 12, transition: 'transform 200ms',
+                        transform: showEmailSignup ? 'rotate(180deg)' : 'rotate(0)',
+                    }}>▼</span>
+                </button>
+
+                {/* 이메일 회원가입 폼 */}
+                {showEmailSignup && (
+                    <div style={{
+                        marginTop: 16,
+                        animation: 'fadeIn 0.3s ease',
+                    }}>
+                        {/* 에러/성공 메시지 */}
+                        {emailError && (
+                            <div style={{
+                                padding: '10px 14px', marginBottom: 12,
+                                background: '#fef2f2', color: '#991b1b',
+                                borderRadius: 10, fontSize: 13,
+                            }}>
+                                {emailError}
+                            </div>
+                        )}
+                        {emailSuccess && (
+                            <div style={{
+                                padding: '10px 14px', marginBottom: 12,
+                                background: '#f0fdf4', color: '#166534',
+                                borderRadius: 10, fontSize: 13,
+                            }}>
+                                {emailSuccess}
+                            </div>
+                        )}
+
+                        {/* 필수 회원정보 */}
+                        <div style={{
+                            background: '#16a34a', color: '#fff',
+                            padding: '8px 14px', borderRadius: '10px 10px 0 0',
+                            fontSize: 13, fontWeight: 600,
+                        }}>
+                            필수 회원정보
+                        </div>
+                        <div style={{
+                            border: '1px solid #e5e7eb', borderTop: 'none',
+                            borderRadius: '0 0 10px 10px',
+                            padding: '16px 14px',
+                            marginBottom: 12,
+                        }}>
+                            <div style={{ marginBottom: 12 }}>
+                                <label style={labelStyle}>
+                                    이름 <span style={{ color: '#ef4444' }}>*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={emailForm.display_name}
+                                    onChange={(e) => setEmailForm({ ...emailForm, display_name: e.target.value })}
+                                    placeholder="이름을 입력해주세요"
+                                    style={inputStyle}
+                                />
+                            </div>
+                            <div style={{ marginBottom: 12 }}>
+                                <label style={labelStyle}>
+                                    이메일 <span style={{ color: '#ef4444' }}>*</span>
+                                </label>
+                                <input
+                                    type="email"
+                                    value={emailForm.email}
+                                    onChange={(e) => setEmailForm({ ...emailForm, email: e.target.value })}
+                                    placeholder="example@email.com"
+                                    style={inputStyle}
+                                />
+                            </div>
+                            <div style={{ marginBottom: 12 }}>
+                                <label style={labelStyle}>
+                                    비밀번호 <span style={{ color: '#ef4444' }}>*</span>
+                                </label>
+                                <input
+                                    type="password"
+                                    value={emailForm.password}
+                                    onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
+                                    placeholder="6자 이상"
+                                    style={inputStyle}
+                                />
+                            </div>
+                            <div style={{ marginBottom: 12 }}>
+                                <label style={labelStyle}>
+                                    비밀번호 확인 <span style={{ color: '#ef4444' }}>*</span>
+                                </label>
+                                <input
+                                    type="password"
+                                    value={emailForm.passwordConfirm}
+                                    onChange={(e) => setEmailForm({ ...emailForm, passwordConfirm: e.target.value })}
+                                    placeholder="비밀번호를 다시 입력해주세요"
+                                    style={inputStyle}
+                                />
+                            </div>
+                            <div>
+                                <label style={labelStyle}>
+                                    연락처 <span style={{ color: '#ef4444' }}>*</span>
+                                </label>
+                                <input
+                                    type="tel"
+                                    value={emailForm.phone}
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 11)
+                                        setEmailForm({ ...emailForm, phone: val })
+                                    }}
+                                    placeholder="01012345678"
+                                    style={inputStyle}
+                                />
+                            </div>
+                            <div style={{ marginBottom: 12 }}>
+                                <label style={labelStyle}>
+                                    성별 <span style={{ color: '#ef4444' }}>*</span>
+                                </label>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    {[
+                                        { id: 'female', label: '여성' },
+                                        { id: 'male', label: '남성' },
+                                        { id: 'other', label: '기타' },
+                                    ].map((opt) => (
+                                        <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() => setEmailForm({ ...emailForm, gender: emailForm.gender === opt.id ? '' : opt.id })}
+                                            style={{
+                                                flex: 1, padding: '10px 0',
+                                                borderRadius: 10, fontSize: 14, fontWeight: 500,
+                                                border: emailForm.gender === opt.id ? '2px solid #22c55e' : '1.5px solid #e5e7eb',
+                                                background: emailForm.gender === opt.id ? '#f0fdf4' : '#fff',
+                                                color: emailForm.gender === opt.id ? '#15803d' : '#6b7280',
+                                                cursor: 'pointer', transition: 'all 200ms',
+                                            }}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div style={{ marginBottom: 12 }}>
+                                <label style={labelStyle}>
+                                    생일 <span style={{ color: '#ef4444' }}>*</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    value={emailForm.birthday}
+                                    onChange={(e) => setEmailForm({ ...emailForm, birthday: e.target.value })}
+                                    style={inputStyle}
+                                />
+                            </div>
+                            <div>
+                                <label style={labelStyle}>
+                                    출생 연도 <span style={{ color: '#ef4444' }}>*</span>
+                                </label>
+                                <select
+                                    value={emailForm.birth_year}
+                                    onChange={(e) => setEmailForm({ ...emailForm, birth_year: e.target.value })}
+                                    style={{
+                                        ...inputStyle,
+                                        color: emailForm.birth_year ? '#18181b' : '#9ca3af',
+                                        appearance: 'none' as const,
+                                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                                        backgroundRepeat: 'no-repeat',
+                                        backgroundPosition: 'right 12px center',
+                                    }}
+                                >
+                                    <option value="">선택하세요</option>
+                                    {yearOptions.map((y) => (
+                                        <option key={y} value={y}>{y}년</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* 가입 버튼 */}
+                        <button
+                            type="button"
+                            onClick={handleEmailSignup}
+                            disabled={isLoading === 'email' || !allChecked}
+                            style={{
+                                width: '100%', padding: '14px',
+                                borderRadius: 14, border: 'none',
+                                fontSize: 16, fontWeight: 700,
+                                color: '#fff',
+                                background: allChecked ? 'linear-gradient(135deg, #22c55e, #16a34a)' : '#d1d5db',
+                                boxShadow: allChecked ? '0 4px 14px rgba(34,197,94,0.3)' : 'none',
+                                cursor: allChecked ? 'pointer' : 'not-allowed',
+                                transition: 'all 200ms',
+                                opacity: isLoading === 'email' ? 0.6 : 1,
+                            }}
+                        >
+                            {isLoading === 'email' ? '가입 중...' : '회원가입'}
+                        </button>
+                    </div>
+                )}
+
                 {/* Skip */}
                 <Link
                     href="/mentors"
                     style={{
                         display: 'block', width: '100%',
-                        padding: 12, fontSize: 15,
+                        padding: 12, fontSize: 15, marginTop: showEmailSignup ? 8 : 0,
                         color: '#9ca3af', textAlign: 'center',
                         textDecoration: 'none', transition: 'color 200ms',
                     }}
@@ -363,6 +687,49 @@ export default function LoginPage() {
                     먼저 둘러볼게요 →
                 </Link>
             </div>
+
+            {/* 사업자 정보 푸터 */}
+            <footer style={{
+                position: 'relative', zIndex: 10,
+                width: '100%', maxWidth: 400,
+                marginTop: 32,
+                padding: '24px 0 16px',
+                borderTop: '1px solid #e5e7eb',
+            }}>
+                <div style={{
+                    fontSize: 12, color: '#9ca3af', lineHeight: 2,
+                    letterSpacing: '-0.01em',
+                }}>
+                    <div style={{ fontWeight: 600, color: '#6b7280', marginBottom: 4 }}>
+                        미션드리븐 (대표 : 김진수)
+                    </div>
+                    <div>사업자등록번호 : 277-88-02697</div>
+                    <div>통신판매번호 : 2023-서울마포-2003</div>
+                    <div>유선번호 : 1533-0701</div>
+                    <div>이메일 : curious@mission-driven.kr</div>
+                    <div style={{ wordBreak: 'keep-all' }}>
+                        사무실 : 서울특별시 마포구 신촌로2길 19 플랫폼D 서울디자인창업센터 4층
+                    </div>
+                </div>
+
+                <div style={{
+                    display: 'flex', gap: 12, marginTop: 14,
+                    fontSize: 12,
+                }}>
+                    <Link href="/privacy" style={{ color: '#6b7280', textDecoration: 'underline' }}>
+                        개인정보처리방침
+                    </Link>
+                    <Link href="/terms" style={{ color: '#6b7280', textDecoration: 'underline' }}>
+                        서비스이용약관
+                    </Link>
+                </div>
+
+                <div style={{
+                    fontSize: 11, color: '#d1d5db', marginTop: 12,
+                }}>
+                    © 미션드리븐 ALL RIGHTS RESERVED.
+                </div>
+            </footer>
 
             {/* Animation keyframes */}
             <style>{`
@@ -373,7 +740,8 @@ export default function LoginPage() {
                 @keyframes spin {
                     to { transform: rotate(360deg); }
                 }
-            `}</style>
+            `}
+            </style>
         </main>
     )
 }
