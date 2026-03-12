@@ -392,6 +392,7 @@ export default function ProfilePage() {
                                                         {displayName[0]?.toUpperCase() || '?'}
                                                     </div>
                                                 )}
+                                                {/* 프로필 사진 변경 아이콘 */}
                                                 <div style={{
                                                     position: 'absolute', bottom: -2, right: -2,
                                                     width: 24, height: 24, borderRadius: '50%',
@@ -400,6 +401,29 @@ export default function ProfilePage() {
                                                     fontSize: 12,
                                                 }}>
                                                     {uploadingPhoto ? '⏳' : '📷'}
+                                                </div>
+                                                {/* 로그인 방식 뱃지 (Google/Kakao) */}
+                                                <div style={{
+                                                    position: 'absolute', bottom: -2, left: -2,
+                                                    width: 24, height: 24, borderRadius: '50%',
+                                                    background: user?.app_metadata?.provider === 'kakao' ? '#FEE500' : '#fff',
+                                                    border: '2px solid #fff',
+                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    overflow: 'hidden',
+                                                }}>
+                                                    {user?.app_metadata?.provider === 'kakao' ? (
+                                                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                                                            <path d="M10 1C4.93 1 0.833 4.213 0.833 8.167c0 2.544 1.697 4.78 4.25 6.04-.149.533-.96 3.427-.992 3.64 0 0-.02.165.088.228.107.063.234.014.234.014.309-.043 3.578-2.34 4.145-2.739.464.066.94.1 1.442.1 5.07 0 9.167-3.213 9.167-7.283C19.167 4.213 15.07 1 10 1z" fill="#191919"/>
+                                                        </svg>
+                                                    ) : (
+                                                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                                                            <path d="M19.6 10.23c0-.68-.06-1.36-.17-2.02H10v3.83h5.38a4.6 4.6 0 01-2 3.02v2.5h3.24c1.89-1.74 2.98-4.3 2.98-7.33z" fill="#4285F4" />
+                                                            <path d="M10 20c2.7 0 4.96-.9 6.62-2.44l-3.24-2.5c-.89.6-2.04.96-3.38.96-2.6 0-4.8-1.76-5.58-4.12H1.08v2.58A9.99 9.99 0 0010 20z" fill="#34A853" />
+                                                            <path d="M4.42 11.9A6.01 6.01 0 014.1 10c0-.66.11-1.3.32-1.9V5.52H1.08A9.99 9.99 0 000 10c0 1.61.39 3.14 1.08 4.48l3.34-2.58z" fill="#FBBC05" />
+                                                            <path d="M10 3.98c1.47 0 2.78.5 3.82 1.5l2.86-2.86A9.96 9.96 0 0010 0 9.99 9.99 0 001.08 5.52l3.34 2.58C5.2 5.74 7.4 3.98 10 3.98z" fill="#EA4335" />
+                                                        </svg>
+                                                    )}
                                                 </div>
                                             </label>
                                         </div>
