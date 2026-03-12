@@ -39,9 +39,10 @@ export async function GET(request: Request) {
                 }
 
                 if (!profile) {
-                    // 첫 로그인: Google 프로필로 users 레코드 생성
-                    const googleName = user.user_metadata?.full_name || user.user_metadata?.name || null
-                    const googleAvatar = user.user_metadata?.avatar_url || null
+                    // 첫 로그인: OAuth 프로필로 users 레코드 생성
+                    const provider = user.app_metadata?.provider || 'unknown'
+                    const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.nickname || null
+                    const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || user.user_metadata?.profile_image_url || null
 
                     // 초대 코드 확인 (미들웨어에서 쿠키에 저장됨)
                     const { cookies } = await import('next/headers')
@@ -51,8 +52,9 @@ export async function GET(request: Request) {
                     const { error: insertError } = await db.from('users').upsert({
                         id: user.id,
                         email: user.email,
-                        display_name: googleName,
-                        avatar_url: googleAvatar,
+                        display_name: displayName,
+                        avatar_url: avatarUrl,
+                        auth_provider: provider,
                         onboarding_completed: false,
                         referred_by: refCode,
                         created_at: new Date().toISOString(),
@@ -83,7 +85,7 @@ export async function GET(request: Request) {
                                     user_id: referrer.id,
                                     amount: 100,
                                     type: 'referral_invite',
-                                    description: `${googleName || user.email || '새 유저'} 님이 초대로 가입`,
+                                    description: `${displayName || user.email || '새 유저'} 님이 초대로 가입`,
                                 })
                                 console.log(`[Auth Callback] Referrer ${referrer.id} got 100 clovers for invite`)
                             }

@@ -14,6 +14,8 @@ export default function LoginPage() {
 
     // 이미 약관 동의한 적 있는지 체크 (localStorage)
     const [hasAgreedBefore, setHasAgreedBefore] = useState(false)
+    // 최근 사용한 로그인 방식
+    const [lastProvider, setLastProvider] = useState<string | null>(null)
 
     // 약관 동의 state
     const [agreeAll, setAgreeAll] = useState(false)
@@ -46,6 +48,10 @@ export default function LoginPage() {
             setAgreeTerms(true)
             setAgreePrivacy(true)
         }
+
+        // 최근 사용한 로그인 방식 확인
+        const saved = localStorage.getItem('curi_last_provider')
+        if (saved) setLastProvider(saved)
 
         // 이미 로그인 상태면 리다이렉트
         const supabase = createClient()
@@ -94,6 +100,7 @@ export default function LoginPage() {
         }
         // 약관 동의 기록 저장 (다음 로그인 때 건너뛰기)
         localStorage.setItem('curi_terms_agreed', 'true')
+        localStorage.setItem('curi_last_provider', provider)
         setIsLoading(provider)
         setError('')
         try {
@@ -450,6 +457,16 @@ export default function LoginPage() {
                             </svg>
                         )}
                         Google로 시작하기
+                        {lastProvider === 'google' && (
+                            <span style={{
+                                background: '#1f2937', color: '#fff',
+                                fontSize: 11, fontWeight: 700,
+                                padding: '4px 10px', borderRadius: 20,
+                                marginLeft: 4, whiteSpace: 'nowrap',
+                            }}>
+                                최근 사용
+                            </span>
+                        )}
                     </button>
 
                     {/* Kakao */}
@@ -483,6 +500,16 @@ export default function LoginPage() {
                             </svg>
                         )}
                         카카오로 시작하기
+                        {lastProvider === 'kakao' && (
+                            <span style={{
+                                background: '#1f2937', color: '#fff',
+                                fontSize: 11, fontWeight: 700,
+                                padding: '4px 10px', borderRadius: 20,
+                                marginLeft: 4, whiteSpace: 'nowrap',
+                            }}>
+                                최근 사용
+                            </span>
+                        )}
                     </button>
                 </div>
 
