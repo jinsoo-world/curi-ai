@@ -78,8 +78,24 @@ export default function MentorHeader({
     const shareText = '궁금한 것을 언제든 물어보세요.'
 
     const handleKakaoShare = () => {
-        const kakaoShareUrl = `https://sharer.kakao.com/talk/friends/picker/link?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`${shareTitle}\n${shareText}`)}`
-        window.open(kakaoShareUrl, '_blank', 'width=500,height=700')
+        const w = window as any
+        if (w.Kakao && w.Kakao.isInitialized()) {
+            w.Kakao.Share.sendDefault({
+                objectType: 'feed',
+                content: {
+                    title: shareTitle,
+                    description: shareText,
+                    imageUrl: 'https://www.curi-ai.com/icons/icon-512x512.png',
+                    link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
+                },
+                buttons: [
+                    { title: '대화하기', link: { mobileWebUrl: shareUrl, webUrl: shareUrl } },
+                ],
+            })
+        } else {
+            // SDK 로드 실패 시 fallback
+            alert('카카오 공유를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
+        }
         setShowShareMenu(false)
     }
 

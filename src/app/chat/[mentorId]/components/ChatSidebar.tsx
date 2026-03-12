@@ -342,43 +342,46 @@ export default function ChatSidebar({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '18px 18px 14px',
-                borderBottom: '1px solid #f1f5f9',
+                padding: '16px 16px 14px',
+                borderBottom: '1px solid #f0f0f0',
             }}>
                 <h3 style={{
                     margin: 0,
-                    fontSize: 17,
+                    fontSize: 16,
                     fontWeight: 700,
                     color: '#1e293b',
                     letterSpacing: '-0.01em',
                 }}>
-                    대화
+                    대화내역
                 </h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <button
-                        onClick={onNewChat}
-                        title="새 대화"
-                        style={{
-                            width: 36, height: 36,
-                            borderRadius: 10,
-                            background: '#f0fdf4', border: 'none',
-                            color: '#22c55e', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#dcfce7' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '#f0fdf4' }}
-                    >
-                        <PlusIcon />
-                    </button>
-                </div>
+                <button
+                    onClick={onClose}
+                    title="사이드바 닫기"
+                    aria-label="사이드바 닫기"
+                    style={{
+                        width: 36, height: 36,
+                        borderRadius: 10,
+                        background: 'none', border: 'none',
+                        color: '#64748b', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+                >
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <line x1="3" y1="5" x2="17" y2="5" />
+                        <line x1="3" y1="10" x2="17" y2="10" />
+                        <line x1="3" y1="15" x2="17" y2="15" />
+                    </svg>
+                </button>
             </div>
 
             {/* 세션 목록 */}
             <div style={{
                 flex: 1,
                 overflowY: 'auto',
-                padding: '8px 14px',
+                padding: '10px 12px',
             }}>
                 {sessions.length === 0 ? (
                     <div style={{
@@ -445,22 +448,23 @@ export default function ChatSidebar({
 
             {/* 하단 멘토 정보 + AI 뱃지 */}
             <div style={{
-                padding: '14px 18px',
-                borderTop: '1px solid #f1f5f9',
+                padding: '12px 16px',
+                borderTop: '1px solid #f0f0f0',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
+                background: '#fafafa',
             }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#374151' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
                     {mentorName}
                 </span>
                 <span style={{
-                    fontSize: 11, fontWeight: 700,
+                    fontSize: 10, fontWeight: 700,
                     background: 'linear-gradient(135deg, #22c55e, #16a34a)',
                     color: '#fff',
-                    padding: '2px 8px',
-                    borderRadius: 6,
+                    padding: '2px 7px',
+                    borderRadius: 5,
                     letterSpacing: '0.03em',
                 }}>AI</span>
             </div>
