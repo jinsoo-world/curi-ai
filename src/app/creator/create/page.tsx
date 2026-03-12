@@ -468,7 +468,7 @@ export default function CreatorCreatePage() {
                                         marginBottom: 28,
                                     }}>
                                         AI를 만들려면 먼저 로그인해주세요.<br />
-                                        구글 계정으로 바로 시작할 수 있습니다.
+                                        간편하게 로그인하고 시작할 수 있습니다.
                                     </p>
                                     <Link
                                         href="/login"

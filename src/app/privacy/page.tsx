@@ -262,31 +262,19 @@ export default function PrivacyPage() {
                             <tbody>
                                 <tr>
                                     <td style={tdStyle}>Supabase Inc.</td>
-                                    <td style={tdStyle}>인증, 데이터 저장, 파일 스토리지</td>
+                                    <td style={tdStyle}>회원 인증, 데이터 저장</td>
                                 </tr>
                                 <tr>
-                                    <td style={tdStyle}>Google LLC (Gemini API)</td>
-                                    <td style={tdStyle}>AI 대화 처리, 임베딩 생성</td>
-                                </tr>
-                                <tr>
-                                    <td style={tdStyle}>Upstage AI, Inc.</td>
-                                    <td style={tdStyle}>문서 OCR 파싱 (HWP/PDF)</td>
-                                </tr>
-                                <tr>
-                                    <td style={tdStyle}>Vercel Inc.</td>
-                                    <td style={tdStyle}>서비스 호스팅, 웹 분석</td>
+                                    <td style={tdStyle}>Google LLC</td>
+                                    <td style={tdStyle}>AI 서비스 제공</td>
                                 </tr>
                                 <tr>
                                     <td style={tdStyle}>(주)비바리퍼블리카 (토스페이먼츠)</td>
                                     <td style={tdStyle}>결제 처리</td>
                                 </tr>
                                 <tr>
-                                    <td style={tdStyle}>Inngest Inc.</td>
-                                    <td style={tdStyle}>비동기 문서 처리 큐</td>
-                                </tr>
-                                <tr>
                                     <td style={tdStyle}>(주)카카오</td>
-                                    <td style={tdStyle}>소셜 로그인, 카카오톡 공유</td>
+                                    <td style={tdStyle}>소셜 로그인</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -419,7 +407,7 @@ export default function PrivacyPage() {
                                 <tbody>
                                     <tr>
                                         <td style={{ ...tdStyle, fontWeight: 600, width: 120, border: 'none' }}>성명</td>
-                                        <td style={{ ...tdStyle, border: 'none' }}>열정진</td>
+                                        <td style={{ ...tdStyle, border: 'none' }}>김진수</td>
                                     </tr>
                                     <tr>
                                         <td style={{ ...tdStyle, fontWeight: 600, border: 'none' }}>직책</td>
