@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 interface MentorHeaderProps {
     mentor: {
@@ -45,6 +46,17 @@ const ShareIcon = () => (
         <polyline points="5.5,4.5 8,2 10.5,4.5" />
     </svg>
 )
+const KakaoIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M9 1.5C4.86 1.5 1.5 4.14 1.5 7.38c0 2.08 1.38 3.9 3.45 4.94-.15.56-.55 2.03-.63 2.34-.1.39.14.38.3.28.12-.08 1.94-1.32 2.73-1.86.53.08 1.08.12 1.65.12 4.14 0 7.5-2.64 7.5-5.88S13.14 1.5 9 1.5z" fill="#3C1E1E"/>
+    </svg>
+)
+const LinkIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6.5 8.5a3 3 0 004.24.35l2-2a3 3 0 00-4.24-4.24L7.25 3.86" />
+        <path d="M9.5 7.5a3 3 0 00-4.24-.35l-2 2a3 3 0 004.24 4.24L8.75 12.14" />
+    </svg>
+)
 
 export default function MentorHeader({
     mentor,
@@ -56,6 +68,45 @@ export default function MentorHeader({
     onToggleSidebar,
 }: MentorHeaderProps) {
     const router = useRouter()
+    const [showShareMenu, setShowShareMenu] = useState(false)
+    const [copied, setCopied] = useState(false)
+
+    const shareUrl = typeof window !== 'undefined'
+        ? `${window.location.origin}/chat/${mentor.id}`
+        : `https://www.curi-ai.com/chat/${mentor.id}`
+    const shareTitle = `${mentor.name} AI ㅣ ${mentor.title}`
+    const shareText = '궁금한 것을 언제든 물어보세요.'
+
+    const handleKakaoShare = () => {
+        const kakaoShareUrl = `https://sharer.kakao.com/talk/friends/picker/link?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`${shareTitle}\n${shareText}`)}`
+        window.open(kakaoShareUrl, '_blank', 'width=500,height=700')
+        setShowShareMenu(false)
+    }
+
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(shareUrl)
+            setCopied(true)
+            setTimeout(() => {
+                setCopied(false)
+                setShowShareMenu(false)
+            }, 1500)
+        } catch {
+            // fallback
+            const input = document.createElement('input')
+            input.value = shareUrl
+            document.body.appendChild(input)
+            input.select()
+            document.execCommand('copy')
+            document.body.removeChild(input)
+            setCopied(true)
+            setTimeout(() => {
+                setCopied(false)
+                setShowShareMenu(false)
+            }, 1500)
+        }
+    }
+
 
     return (
         <header style={{
@@ -99,7 +150,6 @@ export default function MentorHeader({
                 )}
                 <button
                     onClick={() => {
-                        // 히스토리가 있으면 뒤로, 없으면 멘토 목록으로
                         if (window.history.length > 1) {
                             router.back()
                         } else {
@@ -249,45 +299,157 @@ export default function MentorHeader({
                     새 대화
                 </button>
 
-                {/* Share */}
+                {/* 공유하기 버튼 */}
                 <button
-                    onClick={async () => {
-                        const url = `${window.location.origin}/chat/${mentor.id}`
-                        const shareData = {
-                            title: `${mentor.name} AI ㅣ ${mentor.title}`,
-                            text: '궁금한 것을 언제든 물어보세요.',
-                            url,
-                        }
-                        try {
-                            if (navigator.share) {
-                                await navigator.share(shareData)
-                            } else {
-                                await navigator.clipboard.writeText(url)
-                                alert('링크가 복사되었습니다!')
-                            }
-                        } catch {}
-                    }}
+                    onClick={() => setShowShareMenu(true)}
                     aria-label="공유하기"
                     title="공유하기"
                     style={{
                         background: 'transparent',
                         border: 'none',
                         borderRadius: 10,
-                        padding: '7px 10px',
+                        padding: '7px 12px',
                         fontSize: 14,
                         color: '#64748b',
                         cursor: 'pointer',
                         fontWeight: 500,
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 4,
+                        gap: 5,
                         transition: 'background 0.15s',
                     }}
                     onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9' }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                 >
                     <ShareIcon />
+                    공유하기
                 </button>
+
+                {/* 공유 모달 */}
+                {showShareMenu && (
+                    <>
+                        {/* 배경 오버레이 */}
+                        <div
+                            onClick={() => setShowShareMenu(false)}
+                            style={{
+                                position: 'fixed',
+                                inset: 0,
+                                background: 'rgba(0,0,0,0.4)',
+                                zIndex: 1000,
+                                animation: 'shareOverlayIn 0.2s ease',
+                            }}
+                        />
+                        {/* 모달 */}
+                        <div style={{
+                            position: 'fixed',
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            background: '#fff',
+                            borderRadius: 20,
+                            padding: '28px 24px 24px',
+                            width: 'min(360px, calc(100vw - 48px))',
+                            zIndex: 1001,
+                            animation: 'shareModalIn 0.2s ease',
+                        }}>
+                            <style>{`
+                                @keyframes shareOverlayIn {
+                                    from { opacity: 0; }
+                                    to { opacity: 1; }
+                                }
+                                @keyframes shareModalIn {
+                                    from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+                                    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                                }
+                            `}</style>
+
+                            {/* 모달 헤더 */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                marginBottom: 24,
+                            }}>
+                                <h3 style={{
+                                    margin: 0,
+                                    fontSize: 18,
+                                    fontWeight: 700,
+                                    color: '#18181b',
+                                }}>공유하기</h3>
+                                <button
+                                    onClick={() => setShowShareMenu(false)}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        padding: 4,
+                                        color: '#9ca3af',
+                                        fontSize: 20,
+                                        lineHeight: 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            {/* 링크 복사하기 */}
+                            <button
+                                onClick={handleCopyLink}
+                                style={{
+                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 10,
+                                    padding: '14px 16px',
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: 12,
+                                    background: '#fff',
+                                    cursor: 'pointer',
+                                    fontSize: 15,
+                                    fontWeight: 600,
+                                    color: copied ? '#16a34a' : '#374151',
+                                    transition: 'background 0.15s, border-color 0.15s',
+                                    marginBottom: 10,
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#f9fafb'; e.currentTarget.style.borderColor = '#d1d5db' }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#e5e7eb' }}
+                            >
+                                <LinkIcon />
+                                {copied ? '✓ 복사됨!' : '링크 복사하기'}
+                            </button>
+
+                            {/* 카카오 공유하기 */}
+                            <button
+                                onClick={handleKakaoShare}
+                                style={{
+                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 10,
+                                    padding: '14px 16px',
+                                    border: 'none',
+                                    borderRadius: 12,
+                                    background: '#FEE500',
+                                    cursor: 'pointer',
+                                    fontSize: 15,
+                                    fontWeight: 600,
+                                    color: '#3C1E1E',
+                                    transition: 'background 0.15s',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#fdd800' }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#FEE500' }}
+                            >
+                                <KakaoIcon />
+                                카카오 공유하기
+                            </button>
+                        </div>
+                    </>
+                )}
             </div>
         </header>
     )

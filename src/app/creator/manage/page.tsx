@@ -45,6 +45,8 @@ export default function CreatorManagePage() {
     const [openMenu, setOpenMenu] = useState<string | null>(null)
     const [deleting, setDeleting] = useState<string | null>(null)
     const [expandedMentor, setExpandedMentor] = useState<string | null>(null)
+    const [shareModal, setShareModal] = useState<{ id: string; name: string; title: string } | null>(null)
+    const [copied, setCopied] = useState(false)
     const menuRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -327,6 +329,7 @@ export default function CreatorManagePage() {
                                                         { icon: '✏️', label: '편집', action: () => router.push(`/creator/edit/${m.id}`) },
                                                         { icon: '📋', label: '복사', action: () => { navigator.clipboard.writeText(`${window.location.origin}/chat/${m.id}`); setOpenMenu(null) } },
                                                         { icon: '🌐', label: '배포', action: () => { window.open(`/chat/${m.id}`, '_blank'); setOpenMenu(null) } },
+                                                        { icon: '🔗', label: '공유하기', action: () => { setShareModal({ id: m.id, name: m.name, title: m.title }); setOpenMenu(null) } },
                                                         { icon: '🔄', label: '소유권 이전', action: () => { alert('준비 중인 기능입니다'); setOpenMenu(null) } },
                                                         { icon: '👤', label: '사용자 초대', action: () => { navigator.clipboard.writeText(`${window.location.origin}/chat/${m.id}`); alert('링크가 복사되었습니다'); setOpenMenu(null) } },
                                                         { icon: '📊', label: '분석', action: () => { alert('준비 중인 기능입니다'); setOpenMenu(null) } },
@@ -530,6 +533,87 @@ export default function CreatorManagePage() {
                                 )
                             })}
                         </div>
+                    )}
+
+                    {/* 공유 모달 */}
+                    {shareModal && (
+                        <>
+                            <div
+                                onClick={() => { setShareModal(null); setCopied(false) }}
+                                style={{
+                                    position: 'fixed', inset: 0,
+                                    background: 'rgba(0,0,0,0.4)', zIndex: 1000,
+                                    animation: 'shareOverlayIn 0.2s ease',
+                                }}
+                            />
+                            <div style={{
+                                position: 'fixed', left: '50%', top: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                background: '#fff', borderRadius: 20,
+                                padding: '28px 24px 24px',
+                                width: 'min(360px, calc(100vw - 48px))',
+                                zIndex: 1001,
+                                animation: 'shareModalIn 0.2s ease',
+                            }}>
+                                <style>{`
+                                    @keyframes shareOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+                                    @keyframes shareModalIn { from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+                                `}</style>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+                                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#18181b' }}>공유하기</h3>
+                                    <button
+                                        onClick={() => { setShareModal(null); setCopied(false) }}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#9ca3af', fontSize: 20, lineHeight: 1 }}
+                                    >✕</button>
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        const url = `${window.location.origin}/chat/${shareModal.id}`
+                                        try { await navigator.clipboard.writeText(url) } catch {
+                                            const input = document.createElement('input'); input.value = url;
+                                            document.body.appendChild(input); input.select(); document.execCommand('copy'); document.body.removeChild(input)
+                                        }
+                                        setCopied(true); setTimeout(() => { setCopied(false); setShareModal(null) }, 1500)
+                                    }}
+                                    style={{
+                                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                                        padding: '14px 16px', border: '1px solid #e5e7eb', borderRadius: 12,
+                                        background: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 600,
+                                        color: copied ? '#16a34a' : '#374151', marginBottom: 10,
+                                        transition: 'background 0.15s',
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = '#f9fafb' }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = '#fff' }}
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M6.5 8.5a3 3 0 004.24.35l2-2a3 3 0 00-4.24-4.24L7.25 3.86" />
+                                        <path d="M9.5 7.5a3 3 0 00-4.24-.35l-2 2a3 3 0 004.24 4.24L8.75 12.14" />
+                                    </svg>
+                                    {copied ? '✓ 복사됨!' : '링크 복사하기'}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        const url = `${window.location.origin}/chat/${shareModal.id}`
+                                        const text = `${shareModal.name} AI ㅣ ${shareModal.title}\n궁금한 것을 언제든 물어보세요.`
+                                        window.open(`https://sharer.kakao.com/talk/friends/picker/link?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank', 'width=500,height=700')
+                                        setShareModal(null)
+                                    }}
+                                    style={{
+                                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                                        padding: '14px 16px', border: 'none', borderRadius: 12,
+                                        background: '#FEE500', cursor: 'pointer', fontSize: 15, fontWeight: 600,
+                                        color: '#3C1E1E', transition: 'background 0.15s',
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = '#fdd800' }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = '#FEE500' }}
+                                >
+                                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                                        <path d="M9 1.5C4.86 1.5 1.5 4.14 1.5 7.38c0 2.08 1.38 3.9 3.45 4.94-.15.56-.55 2.03-.63 2.34-.1.39.14.38.3.28.12-.08 1.94-1.32 2.73-1.86.53.08 1.08.12 1.65.12 4.14 0 7.5-2.64 7.5-5.88S13.14 1.5 9 1.5z" fill="#3C1E1E"/>
+                                    </svg>
+                                    카카오 공유하기
+                                </button>
+                            </div>
+                        </>
                     )}
                 </div>
                 <style>{`
