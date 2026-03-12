@@ -95,6 +95,10 @@ export default function LoginPage() {
                 provider,
                 options: {
                     redirectTo: `${window.location.origin}/auth/callback`,
+                    scopes:
+                        provider === 'kakao'
+                            ? 'account_email profile_nickname profile_image name gender birthday birthyear phone_number'
+                            : undefined,
                     queryParams:
                         provider === 'kakao'
                             ? { prompt: 'login' }
