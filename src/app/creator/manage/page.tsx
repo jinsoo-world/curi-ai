@@ -593,27 +593,7 @@ export default function CreatorManagePage() {
                                 </button>
                                 <button
                                     onClick={() => {
-                                        const url = `${window.location.origin}/chat/${shareModal.id}`
-                                        const w = window as any
-                                        if (w.Kakao && !w.Kakao.isInitialized()) {
-                                            w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
-                                        }
-                                        if (w.Kakao && w.Kakao.isInitialized()) {
-                                            w.Kakao.Share.sendDefault({
-                                                objectType: 'feed',
-                                                content: {
-                                                    title: `${shareModal.name} AI ㅣ ${shareModal.title}`,
-                                                    description: '궁금한 것을 언제든 물어보세요.',
-                                                    imageUrl: 'https://www.curi-ai.com/icons/icon-512x512.png',
-                                                    link: { mobileWebUrl: url, webUrl: url },
-                                                },
-                                                buttons: [
-                                                    { title: '대화하기', link: { mobileWebUrl: url, webUrl: url } },
-                                                ],
-                                            })
-                                        } else {
-                                            alert('카카오 공유를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
-                                        }
+                                        alert('카카오 공유 기능은 준비중입니다. 링크 복사를 이용해주세요!')
                                         setShareModal(null)
                                     }}
                                     style={{
