@@ -371,22 +371,6 @@ export default function ChatSidebar({
                     >
                         <PlusIcon />
                     </button>
-                    {/* 모바일 오버레이에서만 X 닫기 버튼 */}
-                    <button
-                        onClick={onClose}
-                        className="sidebar-mobile-close"
-                        title="닫기"
-                        style={{
-                            width: 36, height: 36,
-                            borderRadius: 10,
-                            background: 'none', border: 'none',
-                            color: '#94a3b8', cursor: 'pointer',
-                            display: 'none',
-                            alignItems: 'center', justifyContent: 'center',
-                        }}
-                    >
-                        <CloseIcon />
-                    </button>
                 </div>
             </div>
 
@@ -485,41 +469,24 @@ export default function ChatSidebar({
 
     return (
         <>
-            {/* 모든 화면: 오버레이 사이드바 (Gemini 스타일) */}
-            {isOpen && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        inset: 0,
-                        zIndex: 200,
-                    }}
-                >
-                    <div
-                        style={{
-                            position: 'absolute',
-                            inset: 0,
-                            background: 'rgba(0,0,0,0.25)',
-                            backdropFilter: 'blur(2px)',
-                        }}
-                        onClick={onClose}
-                    />
-                    <div style={{
-                        position: 'absolute',
-                        left: 0, top: 0, bottom: 0,
-                        width: 'min(320px, 85vw)',
-                        animation: 'sidebarSlideIn 0.2s ease',
-                        boxShadow: '4px 0 24px rgba(0,0,0,0.1)',
-                    }}>
-                        {sidebarContent}
-                    </div>
+            {/* 푸시 사이드바 — 열리면 채팅을 오른쪽으로 밀어냄 */}
+            <div style={{
+                width: isOpen ? 'min(320px, 85vw)' : 0,
+                minWidth: 0,
+                overflow: 'hidden',
+                transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                flexShrink: 0,
+                height: '100dvh',
+            }}>
+                <div style={{
+                    width: 'min(320px, 85vw)',
+                    height: '100%',
+                }}>
+                    {sidebarContent}
                 </div>
-            )}
+            </div>
 
             <style>{`
-                @keyframes sidebarSlideIn {
-                    from { transform: translateX(-100%); }
-                    to { transform: translateX(0); }
-                }
                 @keyframes menuFadeIn {
                     from { opacity: 0; transform: translateY(-4px); }
                     to { opacity: 1; transform: translateY(0); }
@@ -529,3 +496,4 @@ export default function ChatSidebar({
         </>
     )
 }
+

@@ -566,7 +566,9 @@ export default function ChatPage() {
             />
 
             {/* 메인 채팅 영역 */}
-            <div style={{
+            <div
+                onClick={() => { if (isSidebarOpen) setIsSidebarOpen(false) }}
+                style={{
                 display: 'flex',
                 flexDirection: 'column',
                 flex: 1,
