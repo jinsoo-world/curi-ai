@@ -696,38 +696,38 @@ export default function LoginPage() {
                 padding: '24px 0 16px',
                 borderTop: '1px solid #e5e7eb',
             }}>
+                {/* 사업자 정보 */}
                 <div style={{
-                    fontSize: 12, color: '#9ca3af', lineHeight: 2,
+                    fontSize: 12, color: '#9ca3af', lineHeight: 1.9,
                     letterSpacing: '-0.01em',
                 }}>
-                    <div style={{ fontWeight: 600, color: '#6b7280', marginBottom: 4 }}>
-                        미션드리븐 (대표 : 김진수)
-                    </div>
-                    <div>사업자등록번호 : 277-88-02697</div>
-                    <div>통신판매번호 : 2023-서울마포-2003</div>
+                    <div>미션드리븐 (대표 : 김진수) ㅣ curious@mission-driven.kr</div>
+                    <div>사업자등록번호 : 277-88-02697 ㅣ 통신판매번호 : 2023-서울마포-2003</div>
                     <div>유선번호 : 1533-0701</div>
-                    <div>이메일 : curious@mission-driven.kr</div>
                     <div style={{ wordBreak: 'keep-all' }}>
                         사무실 : 서울특별시 마포구 신촌로2길 19 플랫폼D 서울디자인창업센터 4층
                     </div>
                 </div>
 
+                {/* 정책 링크 */}
                 <div style={{
-                    display: 'flex', gap: 12, marginTop: 14,
+                    display: 'flex', gap: 4, marginTop: 14,
                     fontSize: 12,
                 }}>
-                    <Link href="/privacy" style={{ color: '#6b7280', textDecoration: 'underline' }}>
+                    <Link href="/privacy" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
                         개인정보처리방침
                     </Link>
-                    <Link href="/terms" style={{ color: '#6b7280', textDecoration: 'underline' }}>
+                    <span style={{ color: '#d1d5db' }}>ㅣ</span>
+                    <Link href="/terms" style={{ color: '#6b7280', textDecoration: 'none' }}>
                         서비스이용약관
                     </Link>
                 </div>
 
+                {/* 카피라이트 */}
                 <div style={{
                     fontSize: 11, color: '#d1d5db', marginTop: 12,
                 }}>
-                    © 미션드리븐 ALL RIGHTS RESERVED.
+                    Copyright © 미션드리븐 All rights reserved.
                 </div>
             </footer>
 

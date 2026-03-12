@@ -245,12 +245,50 @@ export default async function MentorsPage() {
 
                 {/* ─── Footer ─── */}
                 <footer className="mentors-footer" style={{
-                    borderTop: '1px solid #f0f0f0',
-                    padding: '24px 40px 80px',
-                    textAlign: 'center',
-                    fontSize: 14, color: '#d1d5db',
+                    borderTop: '1px solid #e5e7eb',
+                    background: '#f9fafb',
+                    padding: '36px 40px 100px',
                 }}>
-                    © 2026 큐리 AI — 나를 아는 멘토
+                    <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+                        {/* 로고 + 회사명 */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+                            <img src="/logo.png" alt="큐리 AI" style={{ width: 28, height: 28, borderRadius: 6 }} />
+                            <span style={{ fontSize: 15, fontWeight: 700, color: '#374151' }}>큐리 AI</span>
+                        </div>
+
+                        {/* 사업자 정보 */}
+                        <div style={{
+                            fontSize: 12, color: '#9ca3af', lineHeight: 1.9,
+                            letterSpacing: '-0.01em',
+                        }}>
+                            <div>미션드리븐 (대표 : 김진수) ㅣ curious@mission-driven.kr</div>
+                            <div>사업자등록번호 : 277-88-02697 ㅣ 통신판매번호 : 2023-서울마포-2003</div>
+                            <div>유선번호 : 1533-0701</div>
+                            <div>사무실 : 서울특별시 마포구 신촌로2길 19 플랫폼D 서울디자인창업센터 4층</div>
+                        </div>
+
+                        {/* 정책 링크 */}
+                        <div style={{
+                            display: 'flex', gap: 4, marginTop: 20,
+                            fontSize: 12, color: '#9ca3af',
+                            flexWrap: 'wrap',
+                        }}>
+                            <Link href="/privacy" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
+                                개인정보처리방침
+                            </Link>
+                            <span style={{ color: '#d1d5db' }}>ㅣ</span>
+                            <Link href="/terms" style={{ color: '#6b7280', textDecoration: 'none' }}>
+                                서비스이용약관
+                            </Link>
+                        </div>
+
+                        {/* 카피라이트 */}
+                        <div style={{
+                            fontSize: 11, color: '#d1d5db', marginTop: 16,
+                        }}>
+                            Copyright © 미션드리븐 All rights reserved.
+                        </div>
+                    </div>
                 </footer>
             </div>
 
