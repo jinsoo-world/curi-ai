@@ -585,6 +585,7 @@ export default function ChatPage() {
                     onNewChat={handleNewChat}
                     onCall={ELEVENLABS_AGENT_IDS[mentor.name] ? () => setIsCallOpen(true) : undefined}
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                    isSidebarOpen={isSidebarOpen}
                 />
 
                 {/* Messages Area */}

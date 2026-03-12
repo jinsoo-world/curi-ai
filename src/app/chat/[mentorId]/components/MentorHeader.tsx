@@ -20,6 +20,8 @@ interface MentorHeaderProps {
     onCall?: () => void
     /** 사이드바 토글 (모바일) */
     onToggleSidebar?: () => void
+    /** 사이드바 열림 상태 (열렸으면 헤더 햄버거 숨김) */
+    isSidebarOpen?: boolean
 }
 
 /* ── SVG 아이콘 ── */
@@ -66,6 +68,7 @@ export default function MentorHeader({
     onNewChat,
     onCall,
     onToggleSidebar,
+    isSidebarOpen,
 }: MentorHeaderProps) {
     const router = useRouter()
     const [showShareMenu, setShowShareMenu] = useState(false)
@@ -79,6 +82,10 @@ export default function MentorHeader({
 
     const handleKakaoShare = () => {
         const w = window as any
+        // SDK 로드됐지만 미초기화 시 lazy init
+        if (w.Kakao && !w.Kakao.isInitialized()) {
+            w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
+        }
         if (w.Kakao && w.Kakao.isInitialized()) {
             w.Kakao.Share.sendDefault({
                 objectType: 'feed',
@@ -93,8 +100,8 @@ export default function MentorHeader({
                 ],
             })
         } else {
-            // SDK 로드 실패 시 fallback
-            alert('카카오 공유를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
+            // SDK 자체가 아직 로드 안 됨 — URL fallback
+            window.open(`https://story.kakao.com/share?url=${encodeURIComponent(shareUrl)}`, '_blank')
         }
         setShowShareMenu(false)
     }
@@ -138,7 +145,7 @@ export default function MentorHeader({
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 {/* 모바일 사이드바 토글 */}
-                {onToggleSidebar && (
+                {onToggleSidebar && !isSidebarOpen && (
                     <button
                         onClick={onToggleSidebar}
                         className="sidebar-toggle-btn"

@@ -141,6 +141,9 @@ export default function MissionsPage() {
             } else {
                 // 데스크톱: 카카오 SDK로 공유
                 const w = window as any
+                if (w.Kakao && !w.Kakao.isInitialized()) {
+                    w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
+                }
                 if (w.Kakao && w.Kakao.isInitialized()) {
                     w.Kakao.Share.sendDefault({
                         objectType: 'feed',
