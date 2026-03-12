@@ -14,6 +14,7 @@ interface MentorItem {
     is_active: boolean
     created_at: string
     avatar_url: string | null
+    creator_name?: string
 }
 
 interface Stats {
@@ -262,7 +263,7 @@ export default function CreatorManagePage() {
                             {/* 테이블 헤더 */}
                             <div className="manage-table-header" style={{
                                 display: 'grid',
-                                gridTemplateColumns: '40px 1fr 120px 100px 80px',
+                                gridTemplateColumns: '40px 1fr 100px 120px 100px 80px',
                                 padding: '12px 16px',
                                 background: '#fafafa',
                                 borderBottom: '1px solid #f0f0f0',
@@ -274,6 +275,7 @@ export default function CreatorManagePage() {
                             }}>
                                 <div></div>
                                 <div>AI</div>
+                                <div>소유자</div>
                                 <div>생성일</div>
                                 <div>상태</div>
                                 <div style={{ textAlign: 'center' }}>관리</div>
@@ -290,7 +292,7 @@ export default function CreatorManagePage() {
                                         className="manage-table-row"
                                         style={{
                                             display: 'grid',
-                                            gridTemplateColumns: '40px 1fr 120px 100px 80px',
+                                            gridTemplateColumns: '40px 1fr 100px 120px 100px 80px',
                                             padding: '14px 16px',
                                             borderBottom: '1px solid #f5f5f5',
                                             alignItems: 'center',
@@ -441,6 +443,18 @@ export default function CreatorManagePage() {
                                                     </div>
                                                 )}
                                             </div>
+                                        </div>
+
+                                        {/* 소유자 */}
+                                        <div className="manage-col-owner" style={{ fontSize: 12, color: '#6b7280' }}>
+                                            <span style={{
+                                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                                background: '#f0fdf4', color: '#15803d',
+                                                padding: '2px 8px', borderRadius: 6,
+                                                fontSize: 11, fontWeight: 500,
+                                            }}>
+                                                👤 {m.creator_name || '알 수 없음'}
+                                            </span>
                                         </div>
 
                                         {/* 생성일 */}
@@ -666,6 +680,9 @@ export default function CreatorManagePage() {
                             flex-shrink: 0;
                         }
                         .manage-col-date {
+                            display: none !important;
+                        }
+                        .manage-col-owner {
                             display: none !important;
                         }
                         .manage-col-edit {

@@ -49,6 +49,12 @@ export async function GET(request: Request) {
                     const cookieStore = await cookies()
                     const refCode = cookieStore.get('curi_ref')?.value || null
 
+                    // Kakao 추가 정보 추출 (phone, gender 등)
+                    const kakaoPhone = user.user_metadata?.phone_number
+                        ? user.user_metadata.phone_number.replace(/[^0-9]/g, '').replace(/^82/, '0')
+                        : null
+                    const kakaoGender = user.user_metadata?.gender || null  // 'male' | 'female'
+
                     const { error: insertError } = await db.from('users').upsert({
                         id: user.id,
                         email: user.email,
@@ -57,6 +63,8 @@ export async function GET(request: Request) {
                         auth_provider: provider,
                         onboarding_completed: false,
                         referred_by: refCode,
+                        ...(kakaoPhone ? { phone: kakaoPhone } : {}),
+                        ...(kakaoGender ? { gender: kakaoGender === 'male' ? '남성' : kakaoGender === 'female' ? '여성' : null } : {}),
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString(),
                     }, { onConflict: 'id' })

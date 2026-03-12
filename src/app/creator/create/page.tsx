@@ -298,7 +298,12 @@ export default function CreatorCreatePage() {
                     method: 'POST',
                     body: formData,
                 })
-                const data = await res.json()
+                let data
+                try {
+                    data = await res.json()
+                } catch {
+                    throw new Error(`파일 업로드 실패 (${res.status}): 서버 응답을 처리할 수 없습니다.`)
+                }
                 if (!res.ok) throw new Error(data.error)
 
                 const sourceId = data.source.id
@@ -353,9 +358,50 @@ export default function CreatorCreatePage() {
     async function handlePreviewSend(msg?: string) {
         const text = msg || previewInput.trim()
         if (!text || previewLoading) return
-        if (!mentorIdForUpload) {
-            setError('미리보기를 사용하려면 먼저 AI 이름과 소개를 입력 후 파일을 첨부하거나 지식을 입력해주세요.')
-            return
+
+        // 미리보기 시 draft 멘토가 없으면 자동 생성
+        let mid = mentorIdForUpload
+        if (!mid) {
+            if (!name.trim() || !title.trim()) {
+                setError('미리보기를 사용하려면 먼저 AI 이름과 소개를 입력해주세요.')
+                return
+            }
+            try {
+                const draftRes = await fetch('/api/creator/mentor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        step: 1,
+                        name: name.trim(),
+                        title: title.trim(),
+                        description: '',
+                        expertise: [],
+                    }),
+                })
+                const draftData = await draftRes.json()
+                if (!draftRes.ok) throw new Error(draftData.error)
+                mid = draftData.mentor.id
+                setMentorIdForUpload(mid)
+
+                // 프롬프트 설정도 바로 반영
+                if (systemPrompt.trim()) {
+                    await fetch('/api/creator/mentor', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            step: 2,
+                            mentorId: mid,
+                            mentorName: name,
+                            systemPrompt: systemPrompt.trim(),
+                            greetingMessage: greetingMessage.trim() || `안녕하세요! ${name}입니다 😊 무엇이 궁금하세요?`,
+                            sampleQuestions: sampleQuestions.split('\n').map(s => s.trim()).filter(Boolean),
+                        }),
+                    })
+                }
+            } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : 'Draft 멘토 생성에 실패했습니다.')
+                return
+            }
         }
 
         const newMessages = [...previewMessages, { role: 'user' as const, content: text }]
@@ -369,7 +415,7 @@ export default function CreatorCreatePage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     messages: newMessages.map(m => ({ role: m.role, content: m.content })),
-                    mentorId: mentorIdForUpload,
+                    mentorId: mid,
                 }),
             })
 

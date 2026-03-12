@@ -173,7 +173,8 @@ export default function MentorHeader({
                 )}
                 <button
                     onClick={() => {
-                        if (window.history.length > 1) {
+                        // 직접 URL 진입 시 (카카오톡 링크 등) back()하면 빈 페이지 → /mentors로 안전하게 이동
+                        if (document.referrer && document.referrer.includes(window.location.origin)) {
                             router.back()
                         } else {
                             router.push('/mentors')

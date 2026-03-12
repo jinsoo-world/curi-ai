@@ -1,4 +1,4 @@
-export const revalidate = 300 // 5분마다 재생성 (ISR)
+export const revalidate = 30 // 30초마다 재생성 (ISR) — 멘토 변경사항 빠르게 반영
 
 import type { Metadata } from 'next'
 import Link from 'next/link'

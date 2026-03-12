@@ -68,6 +68,35 @@ export async function GET() {
         const mentorList = mentors || []
         const mentorIds = mentorList.map(m => m.id)
 
+        // 크리에이터 이름 조회
+        const creatorIds = [...new Set(mentorList.map(m => m.creator_id).filter(Boolean))]
+        const creatorNameMap = new Map<string, string>()
+        if (creatorIds.length > 0) {
+            const { data: creators } = await admin
+                .from('creator_profiles')
+                .select('id, user_id, display_name')
+                .in('id', creatorIds)
+
+            if (creators && creators.length > 0) {
+                const creatorUserIds = creators.map(c => c.user_id).filter(Boolean)
+                const { data: creatorUsers } = await admin
+                    .from('users')
+                    .select('id, display_name, email')
+                    .in('id', creatorUserIds)
+
+                const userNameMap = new Map((creatorUsers || []).map(u => [u.id, u.display_name || u.email?.split('@')[0] || '알 수 없음']))
+                for (const c of creators) {
+                    creatorNameMap.set(c.id, c.display_name || userNameMap.get(c.user_id) || '알 수 없음')
+                }
+            }
+        }
+
+        // 멘토에 크리에이터 이름 추가
+        const mentorListWithCreator = mentorList.map(m => ({
+            ...m,
+            creator_name: creatorNameMap.get(m.creator_id) || '알 수 없음',
+        }))
+
         // 통계 계산
         let totalMessages = 0
         let totalUsers = 0
@@ -139,7 +168,7 @@ export async function GET() {
             totalUsers,
         }
 
-        return NextResponse.json({ success: true, mentors: mentorList, stats, mentorStats, role: 'creator' })
+        return NextResponse.json({ success: true, mentors: mentorListWithCreator, stats, mentorStats, role: 'creator' })
     } catch (error: unknown) {
         console.error('[Creator List API] Error:', error)
         const message = error instanceof Error ? error.message : '멘토 목록 조회 중 오류가 발생했습니다.'

@@ -20,52 +20,57 @@ export default function AppSidebar() {
     const [user, setUser] = useState<any>(null)
 
     const fetchProfile = async (skipCache = false) => {
-        // sessionStorage 캐시 체크 (페이지 이동 시 API 호출 스킵)
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        // sessionStorage 캐시 체크 (유저 ID가 같을 때만 사용)
         if (!skipCache) {
             try {
                 const cached = sessionStorage.getItem('sidebar_profile')
                 if (cached) {
                     const { profile: cachedProfile, user: cachedUser } = JSON.parse(cached)
-                    setProfile(cachedProfile)
-                    setUser(cachedUser)
-                    return
+                    // 캐시된 유저 ID와 현재 유저 ID가 같을 때만 캐시 사용
+                    if (cachedUser?.id === user.id) {
+                        setProfile(cachedProfile)
+                        setUser(cachedUser)
+                        return
+                    }
+                    // 다른 유저 → 캐시 삭제
+                    sessionStorage.removeItem('sidebar_profile')
                 }
             } catch {}
         }
 
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-            setUser(user)
-            try {
-                const res = await fetch('/api/profile')
-                const data = await res.json()
-                const p = data.profile ? {
-                    display_name: data.profile.display_name,
-                    avatar_url: data.profile.avatar_url,
-                    email: user.email || null,
-                    role: data.profile.role,
-                    subscription_tier: data.profile.subscription_tier,
-                } : {
-                    display_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
-                    avatar_url: user.user_metadata?.avatar_url || null,
-                    email: user.email || null,
-                    role: 'user',
-                    subscription_tier: null,
-                }
-                setProfile(p)
-                // 캐시 저장
-                try { sessionStorage.setItem('sidebar_profile', JSON.stringify({ profile: p, user: { id: user.id, email: user.email } })) } catch {}
-            } catch {
-                const p = {
-                    display_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
-                    avatar_url: user.user_metadata?.avatar_url || null,
-                    email: user.email || null,
-                    role: 'user',
-                    subscription_tier: null,
-                }
-                setProfile(p)
+        setUser(user)
+        try {
+            const res = await fetch('/api/profile')
+            const data = await res.json()
+            const p = data.profile ? {
+                display_name: data.profile.display_name,
+                avatar_url: data.profile.avatar_url,
+                email: user.email || null,
+                role: data.profile.role,
+                subscription_tier: data.profile.subscription_tier,
+            } : {
+                display_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+                avatar_url: user.user_metadata?.avatar_url || null,
+                email: user.email || null,
+                role: 'user',
+                subscription_tier: null,
             }
+            setProfile(p)
+            // 캐시 저장 (유저 ID 포함)
+            try { sessionStorage.setItem('sidebar_profile', JSON.stringify({ profile: p, user: { id: user.id, email: user.email } })) } catch {}
+        } catch {
+            const p = {
+                display_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+                avatar_url: user.user_metadata?.avatar_url || null,
+                email: user.email || null,
+                role: 'user',
+                subscription_tier: null,
+            }
+            setProfile(p)
         }
     }
 
