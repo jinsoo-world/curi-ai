@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 
 interface MentorHeaderProps {
     mentor: {
+        id: string
         name: string
         slug: string
         title: string
@@ -35,6 +36,13 @@ const PlusIcon = () => (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <line x1="8" y1="3" x2="8" y2="13" />
         <line x1="3" y1="8" x2="13" y2="8" />
+    </svg>
+)
+const ShareIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 8V13H12V8" />
+        <polyline points="8,2 8,10" />
+        <polyline points="5.5,4.5 8,2 10.5,4.5" />
     </svg>
 )
 
@@ -239,6 +247,46 @@ export default function MentorHeader({
                 >
                     <PlusIcon />
                     새 대화
+                </button>
+
+                {/* Share */}
+                <button
+                    onClick={async () => {
+                        const url = `${window.location.origin}/chat/${mentor.id}`
+                        const shareData = {
+                            title: `${mentor.name} AI ㅣ ${mentor.title}`,
+                            text: '궁금한 것을 언제든 물어보세요.',
+                            url,
+                        }
+                        try {
+                            if (navigator.share) {
+                                await navigator.share(shareData)
+                            } else {
+                                await navigator.clipboard.writeText(url)
+                                alert('링크가 복사되었습니다!')
+                            }
+                        } catch {}
+                    }}
+                    aria-label="공유하기"
+                    title="공유하기"
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        borderRadius: 10,
+                        padding: '7px 10px',
+                        fontSize: 14,
+                        color: '#64748b',
+                        cursor: 'pointer',
+                        fontWeight: 500,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                >
+                    <ShareIcon />
                 </button>
             </div>
         </header>
