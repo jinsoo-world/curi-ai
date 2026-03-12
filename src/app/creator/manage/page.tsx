@@ -593,7 +593,29 @@ export default function CreatorManagePage() {
                                 </button>
                                 <button
                                     onClick={() => {
-                                        alert('카카오 공유 기능은 준비중입니다. 링크 복사를 이용해주세요!')
+                                        const url = `${window.location.origin}/chat/${shareModal.id}`
+                                        const w = window as any
+                                        if (w.Kakao && !w.Kakao.isInitialized()) {
+                                            w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
+                                        }
+                                        if (w.Kakao && w.Kakao.isInitialized()) {
+                                            w.Kakao.Share.sendDefault({
+                                                objectType: 'feed',
+                                                content: {
+                                                    title: `${shareModal.name} AI ㅣ ${shareModal.title}`,
+                                                    description: '궁금한 것을 언제든 물어보세요.',
+                                                    imageUrl: 'https://www.curi-ai.com/icons/icon-512x512.png',
+                                                    link: { mobileWebUrl: url, webUrl: url },
+                                                },
+                                                buttons: [
+                                                    { title: '대화하기', link: { mobileWebUrl: url, webUrl: url } },
+                                                ],
+                                            })
+                                        } else {
+                                            navigator.clipboard.writeText(url).then(() => {
+                                                alert('링크가 복사되었습니다. 카카오톡에 붙여넣기 해주세요!')
+                                            })
+                                        }
                                         setShareModal(null)
                                     }}
                                     style={{

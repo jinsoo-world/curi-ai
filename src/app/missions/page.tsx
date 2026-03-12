@@ -139,9 +139,28 @@ export default function MissionsPage() {
                 // Web Share API는 공유 완료 시 resolve → 바로 적립
                 await confirmShare()
             } else {
-                // 데스크톱: 카카오 공유 준비중 → 링크 복사 안내
-                await navigator.clipboard.writeText(shareUrl)
-                alert('카카오 공유 기능은 준비중입니다. 링크가 복사되었으니 카카오톡에 붙여넣기 해주세요!')
+                // 데스크톱: 카카오 SDK로 공유
+                const w = window as any
+                if (w.Kakao && !w.Kakao.isInitialized()) {
+                    w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
+                }
+                if (w.Kakao && w.Kakao.isInitialized()) {
+                    w.Kakao.Share.sendDefault({
+                        objectType: 'feed',
+                        content: {
+                            title: '큐리 AI',
+                            description: shareText,
+                            imageUrl: 'https://www.curi-ai.com/icons/icon-512x512.png',
+                            link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
+                        },
+                        buttons: [
+                            { title: '시작하기', link: { mobileWebUrl: shareUrl, webUrl: shareUrl } },
+                        ],
+                    })
+                } else {
+                    await navigator.clipboard.writeText(shareUrl)
+                    alert('링크가 복사되었습니다. 카카오톡에 붙여넣기 해주세요!')
+                }
                 setShowShareConfirm(true)
             }
         } catch (err) {
