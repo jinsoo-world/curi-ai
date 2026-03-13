@@ -229,8 +229,14 @@ export default function CloverHunt() {
                     setShowConfetti(true)
                     setTimeout(() => setShowConfetti(false), 3500)
                 }
+            } else {
+                console.error('Clover hunt claim failed:', data.error, data.details)
+                setEarnedAmount(0)
             }
-        } catch { /* ignore */ }
+        } catch (err) {
+            console.error('Clover hunt fetch error:', err)
+            setEarnedAmount(0)
+        }
 
         setTimeout(() => {
             setVisible(false)

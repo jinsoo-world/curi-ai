@@ -99,12 +99,21 @@ export async function POST(request: Request) {
                 ? `🍀 네잎클로버 발견! 올클리어 보너스! (${newCount}/${dailyLimit})`
                 : `🍀 네잎클로버 발견! (${newCount}/${dailyLimit})`
 
-        await supabaseAdmin.from('credits').insert({
+        const { error: insertError } = await supabaseAdmin.from('credits').insert({
             user_id: user.id,
             amount: totalReward,
             type: 'clover_hunt',
             description,
         })
+
+        if (insertError) {
+            console.error('Clover hunt insert error:', insertError)
+            return NextResponse.json({
+                ok: false,
+                error: `DB insert failed: ${insertError.message}`,
+                details: insertError,
+            }, { status: 500 })
+        }
 
         const { data: balanceData } = await supabaseAdmin
             .from('credits')
@@ -114,7 +123,10 @@ export async function POST(request: Request) {
             (s: number, r: { amount: number }) => s + r.amount, 0
         )
 
-        await supabaseAdmin.from('users').update({ clovers: newBalance }).eq('id', user.id)
+        const { error: updateError } = await supabaseAdmin.from('users').update({ clovers: newBalance }).eq('id', user.id)
+        if (updateError) {
+            console.error('Clover hunt users update error:', updateError)
+        }
 
         return NextResponse.json({
             ok: true,
