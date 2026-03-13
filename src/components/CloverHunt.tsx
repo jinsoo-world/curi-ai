@@ -19,6 +19,7 @@ const DISPLAY_DURATION = 8000
 const COOLDOWN_MS = 15000
 const EXTENDED_THRESHOLD = 600
 const IDLE_BONUS_CHANCE = 0.10
+const MAX_PER_PAGE = 2             // 각 페이지에서 최대 2개
 
 function playSound(type: 'appear' | 'claim' | 'golden' | 'allclear') {
     try {
@@ -77,6 +78,7 @@ export default function CloverHunt() {
     const pathname = usePathname()
     const sessionStart = useRef(Date.now())
     const lastAppear = useRef(0)
+    const pageAppearCount = useRef(0)  // 현재 페이지 출현 수
 
     const [visible, setVisible] = useState(false)
     const [position, setPosition] = useState({ top: 50, left: 50 })
@@ -130,6 +132,7 @@ export default function CloverHunt() {
     useEffect(() => {
         const idleTimer = setInterval(() => {
             if (visible || todayCount >= dailyLimit) return
+            if (pageAppearCount.current >= MAX_PER_PAGE) return
             if (Date.now() - lastAppear.current < COOLDOWN_MS) return
             if (Math.random() < IDLE_BONUS_CHANCE) spawnClover()
         }, 60000)
@@ -140,7 +143,10 @@ export default function CloverHunt() {
     // 클로버 스폰
     const spawnClover = useCallback(() => {
         if (todayCount >= dailyLimit) return
+        if (pageAppearCount.current >= MAX_PER_PAGE) return
         if (Date.now() - lastAppear.current < COOLDOWN_MS) return
+
+        pageAppearCount.current += 1
 
         const top = 20 + Math.random() * 55
         const left = 10 + Math.random() * 75
@@ -167,8 +173,9 @@ export default function CloverHunt() {
         }, DISPLAY_DURATION)
     }, [todayCount, dailyLimit])
 
-    // 페이지 이동 시 출현 체크
+    // 페이지 이동 시 카운터 리셋 + 출현 체크
     useEffect(() => {
+        pageAppearCount.current = 0  // 페이지 바뀌면 리셋
         if (visible) return
         if (pathname.startsWith('/admin')) return
         if (Math.random() > APPEAR_CHANCE) return
