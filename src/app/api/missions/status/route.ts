@@ -94,7 +94,7 @@ export async function GET() {
             const [shareResult, historyResult, cloverHuntResult] = await Promise.all([
                 supabaseAdmin.from('credits').select('id').eq('user_id', user.id).eq('type', 'mission_share').gte('created_at', today.toISOString()),
                 supabaseAdmin.from('credits').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
-                supabaseAdmin.from('credits').select('id').eq('user_id', user.id).eq('type', 'clover_hunt').gte('created_at', today.toISOString()),
+                supabaseAdmin.from('credit_transactions').select('id').eq('user_id', user.id).eq('type', 'clover_hunt').gte('created_at', today.toISOString()),
             ])
 
             return {

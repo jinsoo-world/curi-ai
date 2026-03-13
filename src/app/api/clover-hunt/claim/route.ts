@@ -12,24 +12,21 @@ const supabaseAdmin = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const FIRST_DAY_LIMIT = 5         // 첫 가입일
-const BASE_DAILY_LIMIT = 3        // 이후
-const EXTENDED_DAILY_LIMIT = 5    // 10분 이상 체류 시
+const FIRST_DAY_LIMIT = 5
+const BASE_DAILY_LIMIT = 3
+const EXTENDED_DAILY_LIMIT = 5
 const EXTENDED_THRESHOLD_SECONDS = 600
 const GOLDEN_CHANCE = 0.05
 const ALL_CLEAR_BONUS = 20
 
-/** 7~15 사이 랜덤 보상 (평균 ≈ 10) */
 function getRandomReward(): number {
     return Math.floor(Math.random() * 9) + 7
 }
 
-/** 황금 클로버 잭팟: 50 or 100 */
 function getGoldenReward(): number {
     return Math.random() < 0.5 ? 50 : 100
 }
 
-/** 오늘이 가입일인지 체크 */
 function isFirstDay(createdAt: string): boolean {
     const signupDate = new Date(createdAt)
     const today = new Date()
@@ -51,19 +48,27 @@ export async function POST(request: Request) {
             sessionDuration = body.sessionDuration || 0
         } catch { /* body 파싱 실패해도 진행 */ }
 
+        // 오늘 클로버 헌트 횟수 확인 (credit_transactions 테이블 사용)
         const today = new Date()
         today.setHours(0, 0, 0, 0)
 
-        const { data: todayClovers } = await supabaseAdmin
-            .from('credits')
+        const { data: todayClovers, error: queryError } = await supabaseAdmin
+            .from('credit_transactions')
             .select('id')
             .eq('user_id', user.id)
             .eq('type', 'clover_hunt')
             .gte('created_at', today.toISOString())
 
+        if (queryError) {
+            console.error('Clover hunt query error:', queryError)
+            return NextResponse.json({
+                ok: false,
+                error: `DB query failed: ${queryError.message}`,
+            }, { status: 500 })
+        }
+
         const todayCount = todayClovers?.length || 0
 
-        // 일일 한도: 첫 가입일 5개, 이후 3개 (10분 체류 시 5개로 확장)
         const firstDay = isFirstDay(user.created_at)
         let dailyLimit: number
         if (firstDay) {
@@ -99,33 +104,46 @@ export async function POST(request: Request) {
                 ? `🍀 네잎클로버 발견! 올클리어 보너스! (${newCount}/${dailyLimit})`
                 : `🍀 네잎클로버 발견! (${newCount}/${dailyLimit})`
 
-        const { error: insertError } = await supabaseAdmin.from('credits').insert({
-            user_id: user.id,
-            amount: totalReward,
-            type: 'clover_hunt',
-            description,
-        })
+        // 현재 잔액 조회
+        const { data: userData } = await supabaseAdmin
+            .from('users')
+            .select('clovers, credit_balance')
+            .eq('id', user.id)
+            .single()
+
+        const currentBalance = userData?.credit_balance || userData?.clovers || 0
+        const newBalance = currentBalance + totalReward
+
+        // credit_transactions에 기록 (balance_after 필수!)
+        const { error: insertError } = await supabaseAdmin
+            .from('credit_transactions')
+            .insert({
+                user_id: user.id,
+                amount: totalReward,
+                balance_after: newBalance,
+                type: 'clover_hunt',
+                description,
+            })
 
         if (insertError) {
             console.error('Clover hunt insert error:', insertError)
             return NextResponse.json({
                 ok: false,
                 error: `DB insert failed: ${insertError.message}`,
-                details: insertError,
             }, { status: 500 })
         }
 
-        const { data: balanceData } = await supabaseAdmin
-            .from('credits')
-            .select('amount')
-            .eq('user_id', user.id)
-        const newBalance = (balanceData || []).reduce(
-            (s: number, r: { amount: number }) => s + r.amount, 0
-        )
+        // users 테이블 잔액 업데이트
+        const { error: updateError } = await supabaseAdmin
+            .from('users')
+            .update({
+                clovers: newBalance,
+                credit_balance: newBalance,
+            })
+            .eq('id', user.id)
 
-        const { error: updateError } = await supabaseAdmin.from('users').update({ clovers: newBalance }).eq('id', user.id)
         if (updateError) {
-            console.error('Clover hunt users update error:', updateError)
+            console.error('Clover hunt user update error:', updateError)
         }
 
         return NextResponse.json({
@@ -160,7 +178,7 @@ export async function GET() {
         today.setHours(0, 0, 0, 0)
 
         const { data: todayClovers } = await supabaseAdmin
-            .from('credits')
+            .from('credit_transactions')
             .select('id')
             .eq('user_id', user.id)
             .eq('type', 'clover_hunt')
