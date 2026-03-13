@@ -256,7 +256,7 @@ export default function MentorHeader({
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 {isStreaming && (
-                    <div style={{
+                    <div className="header-streaming-badge" style={{
                         fontSize: 13,
                         color: '#22c55e',
                         fontWeight: 500,
@@ -271,7 +271,7 @@ export default function MentorHeader({
                             background: '#22c55e',
                             animation: 'pulseSoft 1.5s ease-in-out infinite',
                         }} />
-                        답변 중
+                        <span className="header-text-label">답변 중</span>
                     </div>
                 )}
 
@@ -320,7 +320,7 @@ export default function MentorHeader({
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                 >
                     <PlusIcon />
-                    새 대화
+                    <span className="header-text-label">새 대화</span>
                 </button>
 
                 {/* 공유하기 버튼 */}
@@ -346,7 +346,7 @@ export default function MentorHeader({
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                 >
                     <ShareIcon />
-                    공유하기
+                    <span className="header-text-label">공유하기</span>
                 </button>
 
                 {/* 공유 모달 */}
@@ -475,6 +475,14 @@ export default function MentorHeader({
                     </>
                 )}
             </div>
+            {/* 모바일에서 헤더 텍스트 숨김 — 아이콘만 표시 */}
+            <style>{`
+                @media (max-width: 640px) {
+                    .header-text-label {
+                        display: none !important;
+                    }
+                }
+            `}</style>
         </header>
     )
 }

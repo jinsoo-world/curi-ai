@@ -820,8 +820,9 @@ export default function CreatorEditPage() {
                                     }}
                                     onMouseUp={() => debounceSavePremium({ monthlyPrice })}
                                     onTouchEnd={() => debounceSavePremium({ monthlyPrice })}
+                                    className="premium-range-slider"
                                     style={{
-                                        flex: 1, height: 6, cursor: 'pointer',
+                                        flex: 1, cursor: 'pointer',
                                         accentColor: '#22c55e',
                                     }}
                                 />
@@ -1482,6 +1483,49 @@ export default function CreatorEditPage() {
                     .creator-form-col {
                         max-width: 100% !important;
                         height: auto !important;
+                    }
+                }
+                /* 구독료 슬라이더 — 모바일 터치 영역 확대 */
+                .premium-range-slider {
+                    -webkit-appearance: none;
+                    appearance: none;
+                    height: 8px;
+                    border-radius: 4px;
+                    background: linear-gradient(to right, #22c55e, #16a34a);
+                    outline: none;
+                }
+                .premium-range-slider::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    appearance: none;
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 50%;
+                    background: #22c55e;
+                    cursor: pointer;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+                    border: 3px solid #fff;
+                }
+                .premium-range-slider::-moz-range-thumb {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 50%;
+                    background: #22c55e;
+                    cursor: pointer;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+                    border: 3px solid #fff;
+                }
+                @media (max-width: 768px) {
+                    .premium-range-slider {
+                        height: 12px;
+                        border-radius: 6px;
+                    }
+                    .premium-range-slider::-webkit-slider-thumb {
+                        width: 36px;
+                        height: 36px;
+                    }
+                    .premium-range-slider::-moz-range-thumb {
+                        width: 36px;
+                        height: 36px;
                     }
                 }
             `}</style>

@@ -305,6 +305,26 @@ export default function ChatPage() {
         }
     }, [loadSidebarSessions])
 
+    // ───── 세션 삭제 (사이드바 → 상태 동기화) ─────
+    const handleDeleteSession = useCallback(async (sid: string) => {
+        try {
+            const res = await fetch(`/api/sessions/${sid}`, { method: 'DELETE' })
+            const data = await res.json()
+            if (data.ok) {
+                // 클라이언트 상태에서 제거 (리로드 없이)
+                setSidebarSessions(prev => prev.filter(s => s.id !== sid))
+                // 현재 보고있는 세션이면 새 대화 시작
+                if (sid === sessionId) {
+                    handleNewChat()
+                }
+            } else {
+                alert(data.error || '삭제 실패')
+            }
+        } catch {
+            alert('삭제 중 오류가 발생했습니다.')
+        }
+    }, [sessionId])
+
     // ───── 세션 선택 ─────
     const handleSelectSession = useCallback(async (sid: string) => {
         if (sid === sessionId) return
@@ -565,6 +585,7 @@ export default function ChatPage() {
                 onSelectSession={handleSelectSession}
                 onNewChat={handleNewChat}
                 onUpdateSession={handleUpdateSession}
+                onDeleteSession={handleDeleteSession}
             />
 
             {/* 메인 채팅 영역 */}

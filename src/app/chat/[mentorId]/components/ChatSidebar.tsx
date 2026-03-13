@@ -20,6 +20,7 @@ interface ChatSidebarProps {
     onSelectSession: (sessionId: string) => void
     onNewChat: () => void
     onUpdateSession: (sessionId: string, updates: { title?: string; is_pinned?: boolean }) => void
+    onDeleteSession: (sessionId: string) => void
 }
 
 /* ── SVG 아이콘 ── */
@@ -87,11 +88,13 @@ function SessionItem({
     isActive,
     onSelect,
     onUpdate,
+    onDelete,
 }: {
     session: SidebarSession
     isActive: boolean
     onSelect: () => void
     onUpdate: (updates: { title?: string; is_pinned?: boolean }) => void
+    onDelete: () => void
 }) {
     const [menuOpen, setMenuOpen] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
@@ -283,17 +286,7 @@ function SessionItem({
                                     e.stopPropagation()
                                     setMenuOpen(false)
                                     if (!confirm('이 대화를 삭제하시겠습니까?')) return
-                                    try {
-                                        const res = await fetch(`/api/sessions/${session.id}`, { method: 'DELETE' })
-                                        const data = await res.json()
-                                        if (data.ok) {
-                                            window.location.reload()
-                                        } else {
-                                            alert(data.error || '삭제 실패')
-                                        }
-                                    } catch {
-                                        alert('삭제 중 오류가 발생했습니다.')
-                                    }
+                                    onDelete()
                                 }}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: 8,
@@ -325,6 +318,7 @@ export default function ChatSidebar({
     onSelectSession,
     onNewChat,
     onUpdateSession,
+    onDeleteSession,
 }: ChatSidebarProps) {
     const pinned = sessions.filter(s => s.is_pinned)
     const unpinned = sessions.filter(s => !s.is_pinned)
@@ -413,6 +407,7 @@ export default function ChatSidebar({
                                         isActive={s.id === currentSessionId}
                                         onSelect={() => onSelectSession(s.id)}
                                         onUpdate={(updates) => onUpdateSession(s.id, updates)}
+                                        onDelete={() => onDeleteSession(s.id)}
                                     />
                                 ))}
                             </>
@@ -438,6 +433,7 @@ export default function ChatSidebar({
                                         isActive={s.id === currentSessionId}
                                         onSelect={() => onSelectSession(s.id)}
                                         onUpdate={(updates) => onUpdateSession(s.id, updates)}
+                                        onDelete={() => onDeleteSession(s.id)}
                                     />
                                 ))}
                             </>
