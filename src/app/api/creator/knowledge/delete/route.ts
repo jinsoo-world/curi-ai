@@ -31,9 +31,10 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: '파일을 찾을 수 없습니다.' }, { status: 404 })
         }
 
-        // 2) Storage에서 파일 삭제
-        if (source.file_path) {
-            await admin.storage.from('knowledge-files').remove([source.file_path])
+        // 2) Storage에서 파일 삭제 (upload API가 original_url에 Storage path를 저장)
+        const storagePath = source.file_path || source.original_url
+        if (storagePath && !storagePath.startsWith('http')) {
+            await admin.storage.from('knowledge-files').remove([storagePath])
         }
 
         // 3) knowledge_chunks 삭제
