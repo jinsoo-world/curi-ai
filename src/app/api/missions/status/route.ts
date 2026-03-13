@@ -88,6 +88,11 @@ export async function GET() {
                     supabaseAdmin.from('credit_transactions')
                         .select('*')
                         .eq('user_id', user.id)
+                        .in('type', [
+                            'clover_hunt', 'mission_share', 'referral_invite',
+                            'mission_create_ai_1', 'mission_create_ai_2',
+                            'mission_ask_10', 'mission_invite', 'mission_profile_update',
+                        ])
                         .order('created_at', { ascending: false })
                         .limit(20),
                     supabaseAdmin.from('credit_transactions')
@@ -107,7 +112,7 @@ export async function GET() {
 
         const profileUpdated = !!(profile?.phone || profile?.gender)
         let { sharesToday, creditHistory, cloverHuntToday } = creditsData
-        let finalClovers = profile?.credit_balance || profile?.clovers || 0
+        let finalClovers = profile?.clovers || 0
 
         // ── 자동 미션 적립 (credit_transactions 테이블) ──
         const existingTypes = creditHistory.map((c: { type: string }) => c.type)

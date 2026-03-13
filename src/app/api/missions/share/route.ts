@@ -40,11 +40,11 @@ export async function POST() {
         // 현재 잔액 조회
         const { data: userData } = await supabaseAdmin
             .from('users')
-            .select('clovers, credit_balance')
+            .select('clovers')
             .eq('id', user.id)
             .single()
 
-        const currentBalance = userData?.credit_balance || userData?.clovers || 0
+        const currentBalance = userData?.clovers || 0
         const newBalance = currentBalance + 10
 
         // 10 클로버 적립
@@ -57,10 +57,7 @@ export async function POST() {
         })
 
         // users 잔액 동기화
-        await supabaseAdmin.from('users').update({
-            clovers: newBalance,
-            credit_balance: newBalance,
-        }).eq('id', user.id)
+        await supabaseAdmin.from('users').update({ clovers: newBalance }).eq('id', user.id)
 
         return NextResponse.json({
             ok: true,

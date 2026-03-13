@@ -107,11 +107,11 @@ export async function POST(request: Request) {
         // 현재 잔액 조회
         const { data: userData } = await supabaseAdmin
             .from('users')
-            .select('clovers, credit_balance')
+            .select('clovers')
             .eq('id', user.id)
             .single()
 
-        const currentBalance = userData?.credit_balance || userData?.clovers || 0
+        const currentBalance = userData?.clovers || 0
         const newBalance = currentBalance + totalReward
 
         // credit_transactions에 기록 (balance_after 필수!)
@@ -136,10 +136,7 @@ export async function POST(request: Request) {
         // users 테이블 잔액 업데이트
         const { error: updateError } = await supabaseAdmin
             .from('users')
-            .update({
-                clovers: newBalance,
-                credit_balance: newBalance,
-            })
+            .update({ clovers: newBalance })
             .eq('id', user.id)
 
         if (updateError) {
