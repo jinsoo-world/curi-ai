@@ -86,19 +86,21 @@ export async function GET() {
 
         // credits 관련 쿼리 (creditsTableExists 결과 사용)
         const creditsPromise = (async () => {
-            if (!creditsTableExists) return { sharesToday: 0, creditHistory: [] as any[] }
+            if (!creditsTableExists) return { sharesToday: 0, creditHistory: [] as any[], cloverHuntToday: 0 }
 
             const today = new Date()
             today.setHours(0, 0, 0, 0)
 
-            const [shareResult, historyResult] = await Promise.all([
+            const [shareResult, historyResult, cloverHuntResult] = await Promise.all([
                 supabaseAdmin.from('credits').select('id').eq('user_id', user.id).eq('type', 'mission_share').gte('created_at', today.toISOString()),
                 supabaseAdmin.from('credits').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
+                supabaseAdmin.from('credits').select('id').eq('user_id', user.id).eq('type', 'clover_hunt').gte('created_at', today.toISOString()),
             ])
 
             return {
                 sharesToday: shareResult.data?.length || 0,
                 creditHistory: historyResult.data || [],
+                cloverHuntToday: cloverHuntResult.data?.length || 0,
             }
         })()
         secondaryQueries.push(creditsPromise)
@@ -107,7 +109,7 @@ export async function GET() {
         const [aiCreated, questionsAsked, friendsInvited, creditsData] = await Promise.all(secondaryQueries)
 
         const profileUpdated = !!(profile?.phone || profile?.gender)
-        let { sharesToday, creditHistory } = creditsData
+        let { sharesToday, creditHistory, cloverHuntToday } = creditsData
         let finalClovers = profile?.clovers || 0
 
         if (creditsTableExists) {
@@ -203,6 +205,7 @@ export async function GET() {
             sharesToday,
             creditHistory,
             profileUpdated,
+            cloverHuntToday,
         })
     } catch (err: unknown) {
         console.error('Mission status error:', err)

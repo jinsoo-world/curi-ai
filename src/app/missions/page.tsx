@@ -31,6 +31,7 @@ export default function MissionsPage() {
         friendClovers: 0,
         sharesToday: 0,
         profileUpdated: false,
+        cloverHuntToday: 0,
     })
     const [copied, setCopied] = useState(false)
     const [showInviteModal, setShowInviteModal] = useState(false)
@@ -67,6 +68,7 @@ export default function MissionsPage() {
                             friendClovers: (data.friendsInvited || 0) * 100,
                             sharesToday: data.sharesToday || 0,
                             profileUpdated: data.profileUpdated || false,
+                            cloverHuntToday: data.cloverHuntToday || 0,
                         })
                         setClovers(data.clovers || 0)
                         setCreditHistory(data.creditHistory || [])
@@ -352,6 +354,49 @@ export default function MissionsPage() {
                                     <div style={{ fontSize: 14, fontWeight: 600, color: '#16a34a' }}>
                                         +{creditHistory.filter((c: any) => c.amount > 0).reduce((s: number, c: any) => s + c.amount, 0)}
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* 🍀 오늘의 네잎클로버 카드 */}
+                            <div style={{
+                                background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)',
+                                borderRadius: 16,
+                                border: '1.5px solid #a7f3d0',
+                                padding: '20px 24px',
+                                marginBottom: 20,
+                                animation: 'fadeIn 0.3s ease',
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <span style={{ fontSize: 28 }}>🍀</span>
+                                        <div>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: '#15803d' }}>오늘의 네잎클로버</div>
+                                            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>큐리 곳곳에 숨겨진 클로버를 찾아보세요!</div>
+                                        </div>
+                                    </div>
+                                    <div style={{
+                                        fontSize: 14, fontWeight: 700,
+                                        color: missionStatus.cloverHuntToday >= 3 ? '#16a34a' : '#374151',
+                                    }}>
+                                        {missionStatus.cloverHuntToday}/3
+                                    </div>
+                                </div>
+                                {/* 프로그레스 바 */}
+                                <div style={{
+                                    height: 8, borderRadius: 4,
+                                    background: 'rgba(0,0,0,0.06)',
+                                    overflow: 'hidden',
+                                }}>
+                                    <div style={{
+                                        height: '100%', borderRadius: 4,
+                                        background: 'linear-gradient(90deg, #22c55e, #16a34a)',
+                                        width: `${Math.min((missionStatus.cloverHuntToday / 3) * 100, 100)}%`,
+                                        transition: 'width 0.5s ease',
+                                    }} />
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11, color: '#9ca3af' }}>
+                                    <span>발견당 🍀 +10 클로버</span>
+                                    <span>10분 체류 시 5개까지!</span>
                                 </div>
                             </div>
 

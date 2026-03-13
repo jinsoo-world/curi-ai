@@ -4,6 +4,7 @@ import Script from 'next/script'
 import GoogleAnalytics from '@/components/GoogleAnalytics'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import CloverHunt from '@/components/CloverHunt'
 import './globals.css'
 
 const notoSansKr = Noto_Sans_KR({
@@ -57,6 +58,7 @@ export default function RootLayout({
         <Analytics />
         <SpeedInsights />
         {children}
+        <CloverHunt />
         <script
           dangerouslySetInnerHTML={{
             __html: `
