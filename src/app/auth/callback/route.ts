@@ -89,9 +89,10 @@ export async function GET(request: Request) {
                                     .eq('id', referrer.id)
 
                                 // 클로버 적립 기록
-                                await db.from('credits').insert({
+                                await db.from('credit_transactions').insert({
                                     user_id: referrer.id,
                                     amount: 100,
+                                    balance_after: (referrer.clovers || 0) + 100,
                                     type: 'referral_invite',
                                     description: `${displayName || user.email || '새 유저'} 님이 초대로 가입`,
                                 })

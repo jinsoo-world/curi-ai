@@ -21,7 +21,7 @@ export async function POST() {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
         const { data: todayShares } = await supabaseAdmin
-            .from('credits')
+            .from('credit_transactions')
             .select('id')
             .eq('user_id', user.id)
             .eq('type', 'mission_share')
@@ -37,23 +37,30 @@ export async function POST() {
             })
         }
 
+        // 현재 잔액 조회
+        const { data: userData } = await supabaseAdmin
+            .from('users')
+            .select('clovers, credit_balance')
+            .eq('id', user.id)
+            .single()
+
+        const currentBalance = userData?.credit_balance || userData?.clovers || 0
+        const newBalance = currentBalance + 10
+
         // 10 클로버 적립
-        await supabaseAdmin.from('credits').insert({
+        await supabaseAdmin.from('credit_transactions').insert({
             user_id: user.id,
             amount: 10,
+            balance_after: newBalance,
             type: 'mission_share',
             description: `친구에게 공유하기 (${sharesToday + 1}/3)`,
         })
 
-        // 최신 잔액 계산
-        const { data: balanceData } = await supabaseAdmin
-            .from('credits')
-            .select('amount')
-            .eq('user_id', user.id)
-        const newBalance = (balanceData || []).reduce((s: number, r: { amount: number }) => s + r.amount, 0)
-
-        // users.clovers 동기화
-        await supabaseAdmin.from('users').update({ clovers: newBalance }).eq('id', user.id)
+        // users 잔액 동기화
+        await supabaseAdmin.from('users').update({
+            clovers: newBalance,
+            credit_balance: newBalance,
+        }).eq('id', user.id)
 
         return NextResponse.json({
             ok: true,
