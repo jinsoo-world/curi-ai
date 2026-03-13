@@ -393,6 +393,12 @@ export default function ChatPage() {
         const assistantId = `assistant-${now}`
         const baseMessages: ChatMessage[] = [...messages, userMessage]
 
+        // 🍀 2번째 질문마다 클로버 트리거
+        const userMsgCount = baseMessages.filter(m => m.role === 'user').length
+        if (userMsgCount > 0 && userMsgCount % 2 === 0) {
+            window.dispatchEvent(new CustomEvent('clover-chat-trigger'))
+        }
+
         // 빈 어시스턴트 메시지 추가 (타이핑 인디케이터 표시)
         setMessages([...baseMessages, { id: assistantId, role: 'assistant', content: '', createdAt: new Date().toISOString() }])
         setInput('')

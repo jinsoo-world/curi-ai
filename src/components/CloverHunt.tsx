@@ -6,19 +6,20 @@ import { usePathname } from 'next/navigation'
 /**
  * 🍀 CloverHunt — 네잎클로버 보물찾기 글로벌 컴포넌트
  *
- * 🎰 가변 보상: 7~15 랜덤, 황금 클로버 5% (50-100 잭팟)
- * ⏳ 긴장감 타이머: 1~5초 둥둥, 6~8초 빨갛게 깜빡 + 진동
- * 📱 타격감: 햅틱 진동 + 등장/획득 사운드
- * 🏆 올클리어: 일일 한도 채우면 폭죽(Confetti) + 보너스 +20
+ * 트리거 조건:
+ * 1. 페이지 이동 시 30% 확률
+ * 2. 채팅에서 2번째 질문마다 (window 'clover-chat-trigger' 이벤트)
+ * 3. 1분 이상 idle 시 10% 깜짝 출현
+ *
+ * 🎰 가변 보상 / ✨ 황금 클로버 / ⏳ 긴장감 / 📱 타격감 / 🏆 올클리어
  */
 
-const APPEAR_CHANCE = 0.30       // 30% 출현 확률
-const DISPLAY_DURATION = 8000    // 8초 유지
-const COOLDOWN_MS = 15000        // 최소 15초 쿨다운
-const EXTENDED_THRESHOLD = 600   // 10분 (초)
-const IDLE_BONUS_CHANCE = 0.10   // 1분 이상 머물 때 10% 깜짝 출현
+const APPEAR_CHANCE = 0.30
+const DISPLAY_DURATION = 8000
+const COOLDOWN_MS = 15000
+const EXTENDED_THRESHOLD = 600
+const IDLE_BONUS_CHANCE = 0.10
 
-// 사운드 생성 유틸
 function playSound(type: 'appear' | 'claim' | 'golden' | 'allclear') {
     try {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
@@ -28,7 +29,6 @@ function playSound(type: 'appear' | 'claim' | 'golden' | 'allclear') {
         gain.connect(ctx.destination)
 
         if (type === 'appear') {
-            // 샤라랑~ 신비로운 등장음
             osc.type = 'sine'
             osc.frequency.setValueAtTime(600, ctx.currentTime)
             osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.15)
@@ -37,7 +37,6 @@ function playSound(type: 'appear' | 'claim' | 'golden' | 'allclear') {
             gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4)
             osc.start(); osc.stop(ctx.currentTime + 0.4)
         } else if (type === 'claim') {
-            // 코인 획득! 경쾌한 따링~
             osc.type = 'square'
             osc.frequency.setValueAtTime(880, ctx.currentTime)
             osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.08)
@@ -46,7 +45,6 @@ function playSound(type: 'appear' | 'claim' | 'golden' | 'allclear') {
             gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35)
             osc.start(); osc.stop(ctx.currentTime + 0.35)
         } else if (type === 'golden') {
-            // 잭팟! 화려한 팡파르
             osc.type = 'square'
             osc.frequency.setValueAtTime(523, ctx.currentTime)
             osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1)
@@ -56,7 +54,6 @@ function playSound(type: 'appear' | 'claim' | 'golden' | 'allclear') {
             gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5)
             osc.start(); osc.stop(ctx.currentTime + 0.5)
         } else if (type === 'allclear') {
-            // 올클리어! 승리 팡파르
             osc.type = 'triangle'
             osc.frequency.setValueAtTime(523, ctx.currentTime)
             osc.frequency.setValueAtTime(659, ctx.currentTime + 0.12)
@@ -70,7 +67,6 @@ function playSound(type: 'appear' | 'claim' | 'golden' | 'allclear') {
     } catch { /* 사운드 미지원 무시 */ }
 }
 
-// 햅틱 진동
 function triggerHaptic(pattern: number[] = [30, 50, 30]) {
     try {
         if ('vibrate' in navigator) navigator.vibrate(pattern)
@@ -89,13 +85,10 @@ export default function CloverHunt() {
     const [dailyLimit, setDailyLimit] = useState(3)
     const [totalClovers, setTotalClovers] = useState(0)
 
-    // 🎰 가변 보상 + 황금 클로버
     const [isGolden, setIsGolden] = useState(false)
     const [earnedAmount, setEarnedAmount] = useState(0)
     const [bonusAmount, setBonusAmount] = useState(0)
     const [isAllClear, setIsAllClear] = useState(false)
-
-    // 🏆 Confetti
     const [showConfetti, setShowConfetti] = useState(false)
 
     const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -113,9 +106,11 @@ export default function CloverHunt() {
             if (data.ok) {
                 setTodayCount(data.todayCount)
                 setDailyLimit(
-                    getSessionDuration() >= EXTENDED_THRESHOLD
-                        ? data.extendedDailyLimit
-                        : data.baseDailyLimit
+                    data.firstDay
+                        ? data.baseDailyLimit  // 첫날은 5
+                        : getSessionDuration() >= EXTENDED_THRESHOLD
+                            ? data.extendedDailyLimit
+                            : data.baseDailyLimit
                 )
             }
         } catch { /* ignore */ }
@@ -137,31 +132,31 @@ export default function CloverHunt() {
             if (visible || todayCount >= dailyLimit) return
             if (Date.now() - lastAppear.current < COOLDOWN_MS) return
             if (Math.random() < IDLE_BONUS_CHANCE) spawnClover()
-        }, 60000) // 1분마다 체크
+        }, 60000)
         return () => clearInterval(idleTimer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [visible, todayCount, dailyLimit])
 
     // 클로버 스폰
     const spawnClover = useCallback(() => {
+        if (todayCount >= dailyLimit) return
+        if (Date.now() - lastAppear.current < COOLDOWN_MS) return
+
         const top = 20 + Math.random() * 55
         const left = 10 + Math.random() * 75
-        const golden = Math.random() < 0.05 // 5% 황금
+        const golden = Math.random() < 0.05
         setPosition({ top, left })
         setIsGolden(golden)
         setPhase('appear')
         setVisible(true)
         lastAppear.current = Date.now()
 
-        // 등장 사운드
         playSound(golden ? 'golden' : 'appear')
 
-        // ⏳ 5초 후 긴박 페이즈
         urgentTimerRef.current = setTimeout(() => {
             setPhase('urgent')
         }, 5000)
 
-        // 8초 후 소멸
         timerRef.current = setTimeout(() => {
             setPhase('missed')
             setTimeout(() => {
@@ -170,19 +165,26 @@ export default function CloverHunt() {
                 setIsGolden(false)
             }, 800)
         }, DISPLAY_DURATION)
-    }, [])
+    }, [todayCount, dailyLimit])
 
     // 페이지 이동 시 출현 체크
     useEffect(() => {
-        if (Date.now() - lastAppear.current < COOLDOWN_MS) return
-        if (todayCount >= dailyLimit) return
         if (visible) return
         if (pathname.startsWith('/admin')) return
         if (Math.random() > APPEAR_CHANCE) return
-
         spawnClover()
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pathname])
+
+    // 🎯 채팅 트리거 이벤트 리스너 (2번째 질문마다 등장)
+    useEffect(() => {
+        const handleChatTrigger = () => {
+            if (visible) return
+            spawnClover()
+        }
+        window.addEventListener('clover-chat-trigger', handleChatTrigger)
+        return () => window.removeEventListener('clover-chat-trigger', handleChatTrigger)
+    }, [visible, spawnClover])
 
     // 🍀 클릭!
     const handleClaim = useCallback(async () => {
@@ -193,7 +195,6 @@ export default function CloverHunt() {
 
         setPhase('claimed')
 
-        // 📱 햅틱 + 사운드
         triggerHaptic(isGolden ? [50, 30, 50, 30, 80] : [30, 50, 30])
 
         try {
@@ -212,16 +213,10 @@ export default function CloverHunt() {
                 setIsAllClear(data.isAllClear)
                 setIsGolden(data.isGolden)
 
-                // 사운드
-                if (data.isGolden) {
-                    playSound('golden')
-                } else if (data.isAllClear) {
-                    playSound('allclear')
-                } else {
-                    playSound('claim')
-                }
+                if (data.isGolden) playSound('golden')
+                else if (data.isAllClear) playSound('allclear')
+                else playSound('claim')
 
-                // 🏆 올클리어 → Confetti
                 if (data.isAllClear) {
                     triggerHaptic([50, 30, 50, 30, 80, 30, 100])
                     setShowConfetti(true)
@@ -230,7 +225,6 @@ export default function CloverHunt() {
             }
         } catch { /* ignore */ }
 
-        // 축하 후 숨기기
         setTimeout(() => {
             setVisible(false)
             setPhase('idle')
@@ -245,7 +239,7 @@ export default function CloverHunt() {
 
     return (
         <>
-            {/* 🏆 올클리어 Confetti */}
+            {/* 🏆 Confetti */}
             {showConfetti && (
                 <div style={{
                     position: 'fixed', inset: 0, zIndex: 10000,
@@ -273,7 +267,6 @@ export default function CloverHunt() {
 
             {visible && (
                 <>
-                    {/* 클로버 본체 */}
                     <div
                         onClick={handleClaim}
                         style={{
@@ -286,7 +279,6 @@ export default function CloverHunt() {
                             transform: 'translate(-50%, -50%)',
                         }}
                     >
-                        {/* 황금 글로우 */}
                         {isGolden && (phase === 'appear' || phase === 'urgent') && (
                             <div style={{
                                 position: 'absolute',
@@ -299,7 +291,6 @@ export default function CloverHunt() {
                             }} />
                         )}
 
-                        {/* 클로버 이모지 */}
                         <div
                             className={
                                 phase === 'appear' ? 'clover-wiggle' :
@@ -320,7 +311,6 @@ export default function CloverHunt() {
                             {isGolden ? '🌟' : '🍀'}
                         </div>
 
-                        {/* 힌트 텍스트 */}
                         {(phase === 'appear' || phase === 'urgent') && (
                             <div style={{
                                 position: 'absolute',
@@ -341,7 +331,6 @@ export default function CloverHunt() {
                             </div>
                         )}
 
-                        {/* 획득 텍스트 */}
                         {phase === 'claimed' && (
                             <div style={{
                                 position: 'absolute',
@@ -361,7 +350,6 @@ export default function CloverHunt() {
                             </div>
                         )}
 
-                        {/* 놓침 */}
                         {phase === 'missed' && (
                             <div style={{
                                 position: 'absolute',
@@ -369,8 +357,7 @@ export default function CloverHunt() {
                                 transform: 'translateX(-50%)',
                                 marginTop: 4,
                                 fontSize: 12, color: '#9ca3af',
-                                whiteSpace: 'nowrap',
-                                fontWeight: 600,
+                                whiteSpace: 'nowrap', fontWeight: 600,
                                 animation: 'cloverEarnFloat 1s ease-out forwards',
                             }}>
                                 앗, 놓쳤다...
@@ -378,7 +365,6 @@ export default function CloverHunt() {
                         )}
                     </div>
 
-                    {/* 획득 토스트 */}
                     {phase === 'claimed' && (
                         <div style={{
                             position: 'fixed',
@@ -424,7 +410,6 @@ export default function CloverHunt() {
                 </>
             )}
 
-            {/* CSS */}
             <style>{`
                 @keyframes cloverWiggle {
                     0%, 100% { transform: rotate(0deg) scale(1); }
@@ -435,7 +420,6 @@ export default function CloverHunt() {
                     75% { transform: rotate(-4deg) scale(1.08); }
                 }
                 .clover-wiggle { animation: cloverWiggle 2s ease-in-out infinite; }
-
                 @keyframes cloverUrgent {
                     0%, 100% { transform: scale(1) rotate(0); }
                     10% { transform: scale(1.15) rotate(-8deg); }
@@ -452,14 +436,12 @@ export default function CloverHunt() {
                     animation: cloverUrgent 0.5s ease-in-out infinite;
                     filter: drop-shadow(0 0 8px rgba(239,68,68,0.5)) !important;
                 }
-
                 @keyframes cloverBurst {
                     0% { transform: scale(1); opacity: 1; }
                     30% { transform: scale(1.8); opacity: 1; }
                     100% { transform: scale(2.5); opacity: 0; }
                 }
                 .clover-burst { animation: cloverBurst 0.8s ease-out forwards; }
-
                 @keyframes cloverFadeout {
                     0% { transform: scale(1) rotate(0); opacity: 1; }
                     30% { transform: scale(0.9) rotate(15deg); opacity: 0.6; }
@@ -467,7 +449,6 @@ export default function CloverHunt() {
                     100% { transform: scale(0.2) rotate(30deg); opacity: 0; }
                 }
                 .clover-fadeout { animation: cloverFadeout 0.8s ease-in forwards; }
-
                 @keyframes cloverEarnFloat {
                     0% { transform: translateX(-50%) translateY(0); opacity: 1; }
                     100% { transform: translateX(-50%) translateY(-60px); opacity: 0; }

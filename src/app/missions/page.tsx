@@ -371,7 +371,7 @@ export default function MissionsPage() {
                                         <span style={{ fontSize: 28 }}>🍀</span>
                                         <div>
                                             <div style={{ fontSize: 16, fontWeight: 700, color: '#15803d' }}>오늘의 네잎클로버</div>
-                                            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>큐리 곳곳에 숨겨진 클로버를 찾아보세요!</div>
+                                            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>행운을 가져다주는 네잎클로버를 찾아보세요!</div>
                                         </div>
                                     </div>
                                     <div style={{
