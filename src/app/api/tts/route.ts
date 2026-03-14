@@ -159,37 +159,33 @@ export async function POST(request: NextRequest) {
             voiceDesign += ' ' + EMOTION_MODIFIERS[detectedEmotion]
         }
 
-        // Replicate Qwen3-TTS 호출 — 음성 샘플이 있으면 clone 모드
+        // 🚀 MiniMax Speech-02-Turbo — Cold Start 없음, 120ms 지연
         let replicateInput: Record<string, any>
 
         if (voiceSampleUrl) {
-            // 🎙️ Voice Clone 모드 — 업로드된 음성 샘플로 목소리 복제 (HEAD 체크 생략 → 속도 최적화)
-            console.log('[TTS] Voice Clone 모드 — voiceSampleUrl:', voiceSampleUrl)
+            // 🎙️ Voice Clone 모드 — 업로드된 음성 샘플로 목소리 복제
+            console.log('[TTS] MiniMax Voice Clone 모드 — voiceSampleUrl:', voiceSampleUrl)
 
             replicateInput = {
                 text: trimmedText,
-                mode: 'voice_clone',
                 reference_audio: voiceSampleUrl,
-                language: lang,
             }
         } else {
-            // 🎨 Voice Design 모드 — 텍스트 설명으로 음성 생성 (감정 반영)
+            // 🎨 기본 음성 모드 — 프리셋 음성 사용
             replicateInput = {
                 text: trimmedText,
-                mode: 'voice_design',
-                voice_description: voiceDesign,
-                language: lang,
+                voice_id: 'Wise_Woman', // 기본 한국어 호환 음성
             }
         }
 
-        console.log('[TTS] Replicate input:', JSON.stringify(replicateInput, null, 2))
+        console.log('[TTS] MiniMax input:', JSON.stringify(replicateInput, null, 2))
 
-        // Replicate API 직접 호출 (SDK 대신 fetch — Vercel 타임아웃 방지)
+        // Replicate API — MiniMax Speech-02-Turbo (공식 모델, Always-on)
         const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN
         let output: any
 
         const callReplicate = async (input: Record<string, any>): Promise<any> => {
-            const res = await fetch('https://api.replicate.com/v1/models/qwen/qwen3-tts/predictions', {
+            const res = await fetch('https://api.replicate.com/v1/models/minimax/speech-02-turbo/predictions', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${REPLICATE_TOKEN}`,
@@ -199,12 +195,12 @@ export async function POST(request: NextRequest) {
                 body: JSON.stringify({ input }),
             })
             const data = await res.json()
-            console.log('[TTS] Replicate response:', JSON.stringify({ status: data.status, error: data.error, outputType: typeof data.output }, null, 2))
+            console.log('[TTS] MiniMax response:', JSON.stringify({ status: data.status, error: data.error, outputType: typeof data.output }, null, 2))
 
             if (data.status === 'succeeded' && data.output) {
                 return data.output
             }
-            throw new Error(data.error || `Replicate 실패 (status: ${data.status})`)
+            throw new Error(data.error || `MiniMax 실패 (status: ${data.status})`)
         }
 
         try {
@@ -214,10 +210,10 @@ export async function POST(request: NextRequest) {
             const errMsg = err1?.message || ''
             console.error('[TTS] 첫 시도 실패:', errMsg)
 
-            // 429 rate limit → 10초 대기 후 재시도
+            // 429 rate limit → 3초 대기 후 재시도
             if (errMsg.includes('429') || errMsg.includes('throttled')) {
-                console.log('[TTS] Rate limit → 10초 대기 후 재시도...')
-                await new Promise(r => setTimeout(r, 10000))
+                console.log('[TTS] Rate limit → 3초 대기 후 재시도...')
+                await new Promise(r => setTimeout(r, 3000))
                 try {
                     output = await callReplicate(replicateInput)
                 } catch (err2: any) {
@@ -225,15 +221,10 @@ export async function POST(request: NextRequest) {
                 }
             }
 
-            // voice clone 실패 시 → 에러만 로그 (다른 목소리로 폴백하지 않음)
-            if (!output && voiceSampleUrl) {
-                console.error('[TTS] Voice Clone 실패 — 폴백 없이 에러 반환')
-            }
-
             if (!output) {
                 let userMsg = '음성 생성에 실패했습니다. 잠시 후 다시 시도해주세요.'
                 if (errMsg.includes('429') || errMsg.includes('throttled')) {
-                    userMsg = '요청이 너무 많습니다. 10초 후 다시 시도해주세요.'
+                    userMsg = '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.'
                 } else if (errMsg.includes('401') || errMsg.includes('Unauthenticated')) {
                     userMsg = 'API 인증 오류입니다. 관리자에게 문의해주세요.'
                 }
