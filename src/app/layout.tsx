@@ -61,7 +61,7 @@ export const metadata: Metadata = {
   verification: {
     // 서치콘솔 등록 후 아래 값 추가:
     // google: 'YOUR_GOOGLE_VERIFICATION_CODE',
-    // other: { 'naver-site-verification': 'YOUR_NAVER_CODE' },
+    other: { 'naver-site-verification': '136635b51e3cb265e16736e70145dcc1f729ec3c' },
   },
 }
 
