@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { MENTOR_IMAGES } from '@/domains/mentor/constants'
 
 export default function CreatorEditPage() {
     const router = useRouter()
@@ -197,6 +198,9 @@ export default function CreatorEditPage() {
             if (m.avatar_url) {
                 setCurrentAvatarUrl(m.avatar_url)
                 setAvatarPreview(m.avatar_url)
+            } else if (MENTOR_IMAGES[m.name]) {
+                // DB에 avatar_url이 없는 기본 멘토 → 하드코딩 이미지 폴백
+                setAvatarPreview(MENTOR_IMAGES[m.name])
             }
             if (m.voice_sample_url) {
                 setVoiceSampleUrl(m.voice_sample_url)
