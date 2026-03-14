@@ -96,6 +96,7 @@ export default function CreatorEditPage() {
                 try {
                     // 🔧 webm → wav 변환 (MiniMax voice-cloning 호환)
                     if (needsConversion(file)) {
+                        setToast({ type: 'success', message: '🔄 음성 최적화 중...' })
                         file = await convertWebmToWav(file)
                     }
                     const formData = new FormData()
@@ -121,7 +122,7 @@ export default function CreatorEditPage() {
             setRecordingSeconds(0)
             recordingTimerRef.current = setInterval(() => {
                 setRecordingSeconds(s => {
-                    if (s >= 29) { stopRecording(); return 30 }
+                    if (s >= 19) { stopRecording(); return 20 }
                     return s + 1
                 })
             }, 1000)
@@ -968,6 +969,7 @@ export default function CreatorEditPage() {
                                             try {
                                                 // 🔧 webm/ogg → wav 변환 (MiniMax voice-cloning 호환)
                                                 if (needsConversion(file)) {
+                                                    setToast({ type: 'success', message: '🔄 음성 최적화 중...' })
                                                     file = await convertWebmToWav(file)
                                                 }
                                                 const formData = new FormData()

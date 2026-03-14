@@ -87,7 +87,9 @@ export async function convertWebmToWav(file: File): Promise<File> {
     console.log(`[AudioConvert] ${ext} → wav 변환 시작 (${(file.size / 1024).toFixed(1)}KB)`)
 
     const arrayBuffer = await file.arrayBuffer()
-    const audioCtx = new AudioContext({ sampleRate: 16000 })
+    const AudioCtx = (globalThis as any).AudioContext || (globalThis as any).webkitAudioContext
+    if (!AudioCtx) throw new Error('AudioContext 미지원 브라우저')
+    const audioCtx = new AudioCtx({ sampleRate: 16000 })
 
     try {
         const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
