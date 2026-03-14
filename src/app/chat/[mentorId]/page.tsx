@@ -999,6 +999,10 @@ export default function ChatPage() {
                         voiceId={mentor.voice_id}
                         userName={userName}
                         onStreamMessage={async (text: string, onSentence: (s: string) => void, signal: AbortSignal) => {
+                            // 📝 사용자 발화를 채팅에 추가
+                            const userMsg: ChatMessage = { id: `voice-user-${Date.now()}`, role: 'user', content: text, createdAt: new Date().toISOString() }
+                            setMessages(prev => [...prev, userMsg])
+
                             // 🚀 실시간 스트리밍 파이프라인: LLM SSE → 문장 감지 즉시 콜백
                             const chatMessages = [
                                 { role: 'system', content: `[음성 통화 모드] 지금은 전화 통화 중입니다. 반드시 다음 규칙을 따르세요:
@@ -1107,6 +1111,12 @@ export default function ChatPage() {
                             if (sentenceBuffer.trim().length >= 2) {
                                 console.log('[Stream] 🔚 flush:', sentenceBuffer.trim())
                                 onSentence(sentenceBuffer.trim())
+                            }
+
+                            // 📝 AI 응답을 채팅에 추가
+                            if (fullResponse.trim()) {
+                                const assistantMsg: ChatMessage = { id: `voice-ai-${Date.now()}`, role: 'assistant', content: fullResponse, createdAt: new Date().toISOString() }
+                                setMessages(prev => [...prev, assistantMsg])
                             }
 
                             return fullResponse
