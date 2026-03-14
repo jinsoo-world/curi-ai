@@ -145,6 +145,8 @@ export default function CreatorEditPage() {
         }
     }, [])
 
+    const canStopRecording = recordingSeconds >= 15
+
     // ── 미리보기 채팅 ──
     const [previewMessages, setPreviewMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
     const [previewInput, setPreviewInput] = useState('')
@@ -869,7 +871,7 @@ export default function CreatorEditPage() {
                     {/* ── 🎙️ 내 목소리 학습 ── */}
                     <div style={styles.card}>
                         <label style={{ ...styles.label, marginBottom: 4, fontSize: 15 }}>🎙️ 내 목소리 학습</label>
-                        <p style={styles.hint}>3초 이상의 음성 파일을 업로드하면 AI가 목소리를 학습합니다</p>
+                        <p style={styles.hint}>15초 이상의 음성 파일을 업로드하면 AI가 목소리를 학습합니다</p>
 
                         {!voiceSampleFile && !voiceSampleUrl ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -904,13 +906,15 @@ export default function CreatorEditPage() {
                                             background: '#fef2f2',
                                             animation: 'voicePulse 1.5s ease-in-out infinite',
                                         }}
-                                        onClick={stopRecording}
+                                        onClick={() => { if (canStopRecording) stopRecording() }}
                                     >
                                         <div style={{ fontSize: 32, marginBottom: 6 }}>⏺️</div>
                                         <div style={{ fontSize: 16, fontWeight: 700, color: '#ef4444' }}>
                                             녹음 중... {recordingSeconds}초
                                         </div>
-                                        <div style={{ fontSize: 12, color: '#f87171', marginTop: 4 }}>클릭하면 녹음 종료</div>
+                                        <div style={{ fontSize: 12, color: canStopRecording ? '#f87171' : '#9ca3af', marginTop: 4 }}>
+                                            {canStopRecording ? '클릭하면 녹음 종료' : `최소 15초 녹음 필요 (${15 - recordingSeconds}초 남음)`}
+                                        </div>
                                         {/* 파형 애니메이션 */}
                                         <div style={{ display: 'flex', justifyContent: 'center', gap: 3, marginTop: 12 }}>
                                             {[0, 1, 2, 3, 4, 5, 6].map(i => (
