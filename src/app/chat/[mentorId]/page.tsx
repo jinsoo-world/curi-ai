@@ -15,6 +15,7 @@ interface MentorData {
     slug: string
     title: string
     avatar_url: string | null
+    voice_sample_url: string | null
     greeting_message: string
     sample_questions: string[]
     system_prompt: string
@@ -985,6 +986,7 @@ export default function ChatPage() {
                         mentorName={mentor.name}
                         mentorEmoji={mentorEmoji}
                         mentorImage={mentorImage}
+                        voiceSampleUrl={mentor.voice_sample_url}
                         onSendMessage={async (text: string) => {
                             // 음성 통화에서의 AI 답변 — 채팅 히스토리에도 추가
                             const res = await fetch('/api/chat', {

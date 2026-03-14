@@ -8,6 +8,7 @@ interface VoiceCallOverlayProps {
     mentorName: string
     mentorEmoji: string
     mentorImage?: string
+    voiceSampleUrl?: string | null
     onSendMessage: (text: string) => Promise<string>
 }
 
@@ -17,7 +18,7 @@ interface SpeechRecognitionEvent {
 }
 
 export default function VoiceCallOverlay({
-    isOpen, onClose, mentorName, mentorEmoji, mentorImage, onSendMessage,
+    isOpen, onClose, mentorName, mentorEmoji, mentorImage, voiceSampleUrl, onSendMessage,
 }: VoiceCallOverlayProps) {
     const [phase, setPhase] = useState<'connecting' | 'listening' | 'thinking' | 'speaking' | 'idle'>('idle')
     const [transcript, setTranscript] = useState('')
@@ -168,7 +169,11 @@ export default function VoiceCallOverlay({
             const ttsRes = await fetch('/api/tts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: response.slice(0, 500), mentorName }),
+                body: JSON.stringify({
+                    text: response.slice(0, 500),
+                    mentorName,
+                    voiceSampleUrl: voiceSampleUrl || undefined,
+                }),
             })
 
             if (ttsRes.ok) {
@@ -371,9 +376,8 @@ export default function VoiceCallOverlay({
                     }}
                     title="통화 종료"
                 >
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M23 16.92a13 13 0 01-22 0" />
-                        <path d="M1 16.92l3-1.05a2 2 0 012.18.64l1.46 1.85a2 2 0 001.85.74 10.05 10.05 0 005-5 2 2 0 00.74-1.85l1.05-3a2 2 0 01.64-2.18L20 3.54" />
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="#ef4444" stroke="none">
+                        <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 010-1.36C3.42 8.63 7.48 7 12 7s8.58 1.63 11.71 4.72c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28a11.27 11.27 0 00-2.67-1.85.996.996 0 01-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
                     </svg>
                 </button>
             </div>
