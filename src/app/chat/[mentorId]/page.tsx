@@ -1048,14 +1048,39 @@ export default function ChatPage() {
                                                 fullResponse += chunk
                                                 sentenceBuffer += chunk
 
-                                                // ⚡ 문장 완성 감지: .?!。？！ → 즉시 콜백!
-                                                const sentenceMatch = sentenceBuffer.match(/^([\s\S]*?[.!?。？！])\s*/)
-                                                if (sentenceMatch) {
-                                                    const completeSentence = sentenceMatch[1].trim()
+                                                // ⚡ 한국어 문장 감지 — 3단계 전략
+                                                // 1순위: 마침표/물음표/느낌표
+                                                // 2순위: 한국어 종결어미(요/다/죠/네/까/지) + 공백/쉼표
+                                                // 3순위: 40자 이상이면 쉼표(,)에서 분할
+                                                let cutIndex = -1
+
+                                                // 1순위: .?!。？！
+                                                const punctMatch = sentenceBuffer.match(/[.!?。？！]/)
+                                                if (punctMatch && punctMatch.index !== undefined) {
+                                                    cutIndex = punctMatch.index + 1
+                                                }
+
+                                                // 2순위: 한국어 종결어미 + 공백/쉼표 (15자 이상일 때만)
+                                                if (cutIndex === -1 && sentenceBuffer.length >= 15) {
+                                                    const koEndMatch = sentenceBuffer.match(/[요다죠네까지세][,\s]/)
+                                                    if (koEndMatch && koEndMatch.index !== undefined) {
+                                                        cutIndex = koEndMatch.index + 1
+                                                    }
+                                                }
+
+                                                // 3순위: 40자 이상이면 쉼표에서 분할
+                                                if (cutIndex === -1 && sentenceBuffer.length >= 40) {
+                                                    const commaIdx = sentenceBuffer.indexOf(',')
+                                                    if (commaIdx > 10) cutIndex = commaIdx + 1
+                                                }
+
+                                                if (cutIndex > 0) {
+                                                    const completeSentence = sentenceBuffer.slice(0, cutIndex).trim()
+                                                    sentenceBuffer = sentenceBuffer.slice(cutIndex).trimStart()
                                                     if (completeSentence.length >= 2) {
+                                                        console.log('[Stream] 🎯 문장 전송:', completeSentence)
                                                         onSentence(completeSentence)
                                                     }
-                                                    sentenceBuffer = sentenceBuffer.slice(sentenceMatch[0].length)
                                                 }
                                             }
                                             if (json.fullResponse) {
@@ -1066,8 +1091,9 @@ export default function ChatPage() {
                                 }
                             }
 
-                            // ⚡ 버퍼 flush: 마침표 없이 끝난 마지막 문장 강제 전송
+                            // ⚡ 버퍼 flush: 마지막 남은 텍스트 강제 전송
                             if (sentenceBuffer.trim().length >= 2) {
+                                console.log('[Stream] 🔚 버퍼 flush:', sentenceBuffer.trim())
                                 onSentence(sentenceBuffer.trim())
                             }
 

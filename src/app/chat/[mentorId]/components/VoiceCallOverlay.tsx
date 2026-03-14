@@ -35,27 +35,23 @@ export default function VoiceCallOverlay({
     const abortRef = useRef<AbortController | null>(null)
     const prefetchedGreetingRef = useRef<string | null>(null)
 
-    // 🔊 Ordered Slot 큐 — race condition 방어 ⭐
-    const slotMapRef = useRef<Map<number, string | null>>(new Map()) // slot index → audioUrl (null = 아직 대기)
-    const nextPlayIndexRef = useRef(0) // 다음 재생할 슬롯 인덱스
-    const totalSlotsRef = useRef(0) // 총 발행된 슬롯 수
+    // 🔊 Ordered Slot 큐 — race condition 방어
+    const slotMapRef = useRef<Map<number, string | null>>(new Map())
+    const nextPlayIndexRef = useRef(0)
+    const totalSlotsRef = useRef(0)
     const isPlayingRef = useRef(false)
-    const streamDoneRef = useRef(false) // 스트림 종료 여부
+    const streamDoneRef = useRef(false)
 
     const safeVoiceId = voiceId || undefined
 
-    // ────────────────────────────────────────────────────────────
-    // 🔊 Ordered Slot 큐 매니저
-    // ────────────────────────────────────────────────────────────
+    // ── 🔊 Ordered Slot 큐 매니저 ──
     const tryPlayNext = useCallback(() => {
         if (isPlayingRef.current) return
-
         const nextIdx = nextPlayIndexRef.current
         const audioUrl = slotMapRef.current.get(nextIdx)
 
-        // 아직 이 슬롯 TTS 안 왔으면 대기
         if (audioUrl === undefined || audioUrl === null) {
-            // 스트림 끝났고 모든 슬롯 재생 완료면 → 듣기
+            console.log(`[VoiceCall] 큐 대기 [${nextIdx}], streamDone:${streamDoneRef.current}, total:${totalSlotsRef.current}`)
             if (streamDoneRef.current && nextIdx >= totalSlotsRef.current) {
                 setPhase('listening')
                 startListening()
@@ -63,25 +59,18 @@ export default function VoiceCallOverlay({
             return
         }
 
-        // 이 슬롯 재생
         isPlayingRef.current = true
         nextPlayIndexRef.current = nextIdx + 1
-        slotMapRef.current.delete(nextIdx) // 메모리 정리
+        slotMapRef.current.delete(nextIdx)
 
         const audio = new Audio(audioUrl)
         audioRef.current = audio
+        audio.onended = () => { isPlayingRef.current = false; audioRef.current = null; tryPlayNext() }
+        audio.onerror = () => { isPlayingRef.current = false; audioRef.current = null; tryPlayNext() }
 
-        audio.onended = () => {
-            isPlayingRef.current = false
-            audioRef.current = null
-            tryPlayNext()
-        }
-        audio.onerror = () => {
-            isPlayingRef.current = false
-            audioRef.current = null
-            tryPlayNext()
-        }
-        audio.play().catch(() => {
+        console.log(`[VoiceCall] ▶️ 재생 [${nextIdx}]:`, audioUrl.slice(0, 60))
+        audio.play().catch((e) => {
+            console.error('[VoiceCall] ❌ play 실패:', e)
             isPlayingRef.current = false
             tryPlayNext()
         })
@@ -100,13 +89,10 @@ export default function VoiceCallOverlay({
         }
     }, [])
 
-    // ────────────────────────────────────────────────────────────
-    // ⚡ Fire-and-forget TTS — 슬롯 인덱스 기반 순서 보장
-    // ────────────────────────────────────────────────────────────
+    // ── ⚡ Fire-and-forget TTS ──
     const fireTts = useCallback((sentence: string, slotIndex: number, controller: AbortController) => {
-        // 슬롯 예약 (null = 대기 중)
         slotMapRef.current.set(slotIndex, null)
-        console.log(`[VoiceCall] 🚀 TTS fire [${slotIndex}]: "${sentence.slice(0, 30)}..."`)
+        console.log(`[VoiceCall] 🚀 TTS fire [${slotIndex}]: "${sentence.slice(0, 40)}..."`)
 
         fetch('/api/tts', {
             method: 'POST',
@@ -118,26 +104,25 @@ export default function VoiceCallOverlay({
         .then(data => {
             if (controller.signal.aborted) return
             if (data?.audioUrl) {
+                console.log(`[VoiceCall] ✅ TTS 완료 [${slotIndex}]:`, data.audioUrl.slice(0, 50))
                 slotMapRef.current.set(slotIndex, data.audioUrl)
-                tryPlayNext() // 이 슬롯이 순서대로면 즉시 재생
+                tryPlayNext()
             } else {
-                // TTS 실패 → 이 슬롯 건너뛰기
+                console.error(`[VoiceCall] ❌ TTS 실패 [${slotIndex}]: audioUrl 없음, data:`, data)
                 slotMapRef.current.delete(slotIndex)
                 nextPlayIndexRef.current = Math.max(nextPlayIndexRef.current, slotIndex + 1)
                 tryPlayNext()
             }
         })
         .catch((e) => {
-            if (e?.name !== 'AbortError') console.error('[VoiceCall] TTS 실패:', e)
+            if (e?.name !== 'AbortError') console.error('[VoiceCall] TTS fetch 에러:', e)
             slotMapRef.current.delete(slotIndex)
             nextPlayIndexRef.current = Math.max(nextPlayIndexRef.current, slotIndex + 1)
             tryPlayNext()
         })
     }, [mentorName, safeVoiceId, tryPlayNext])
 
-    // ────────────────────────────────────────────────────────────
-    // 📞 프리패칭
-    // ────────────────────────────────────────────────────────────
+    // ── 📞 인사말 프리패칭 ──
     useEffect(() => {
         if (!isOpen) return
         prefetchedGreetingRef.current = null
@@ -209,20 +194,31 @@ export default function VoiceCallOverlay({
             try {
                 const r = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: '아직 계세요? 궁금한 게 있으면 편하게 말씀해 주세요!', mentorName, voiceId: safeVoiceId }) })
-                if (r.ok) { const { audioUrl } = await r.json(); if (audioUrl) { resetSlotQueue(); slotMapRef.current.set(0, audioUrl); totalSlotsRef.current = 1; streamDoneRef.current = true; tryPlayNext(); return } }
-            } catch {}
+                if (r.ok) {
+                    const { audioUrl } = await r.json()
+                    if (audioUrl) {
+                        resetSlotQueue()
+                        slotMapRef.current.set(0, audioUrl)
+                        totalSlotsRef.current = 1
+                        streamDoneRef.current = true
+                        tryPlayNext()
+                        return
+                    }
+                }
+            } catch { /* ignore */ }
             setPhase('listening'); startListening()
         }, 15000)
     }, [mentorName, safeVoiceId, tryPlayNext, resetSlotQueue])
 
+    // ── 🛑 끼어들기 — 3중 abort ──
     const interruptSpeaking = useCallback(() => {
-        console.log('[VoiceCall] 🛑 끼어들기!')
-        abortRef.current?.abort(); abortRef.current = null; resetSlotQueue(); setPhase('listening')
+        console.log('[VoiceCall] 🛑 끼어들기! abort 체인 시작')
+        abortRef.current?.abort(); abortRef.current = null
+        resetSlotQueue()
+        setPhase('listening')
     }, [resetSlotQueue])
 
-    // ────────────────────────────────────────────────────────────
-    // 👂 음성 인식
-    // ────────────────────────────────────────────────────────────
+    // ── 👂 음성 인식 ──
     const startListening = useCallback(() => {
         const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
         if (!SR) { setError('이 브라우저에서 음성 인식을 지원하지 않아요'); return }
@@ -245,14 +241,15 @@ export default function VoiceCallOverlay({
                 silenceTimerRef.current = setTimeout(() => { recognition.stop(); handleSendAndSpeak(finalText) }, 500)
             }
         }
-        recognition.onerror = (e: any) => { if (e.error === 'no-speech') setTimeout(() => startListening(), 500); else if (e.error === 'not-allowed') { setError('마이크 권한이 필요해요'); setPhase('idle') } }
+        recognition.onerror = (e: any) => {
+            if (e.error === 'no-speech') setTimeout(() => startListening(), 500)
+            else if (e.error === 'not-allowed') { setError('마이크 권한이 필요해요'); setPhase('idle') }
+        }
         recognition.onend = () => {}
         try { recognition.start(); recognitionRef.current = recognition } catch { setError('음성 인식 시작 실패'); setPhase('idle') }
     }, [phase, startIdleTimer])
 
-    // ────────────────────────────────────────────────────────────
-    // 🛑 끼어들기 감지 — isFinal + 2글자 (노이즈 필터)
-    // ────────────────────────────────────────────────────────────
+    // ── 🛑 끼어들기 감지 — isFinal + 2글자 (노이즈 필터) ──
     const startInterruptionDetection = useCallback(() => {
         const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
         if (!SR) return
@@ -270,12 +267,10 @@ export default function VoiceCallOverlay({
             }
         }
         recognition.onerror = () => {}; recognition.onend = () => {}
-        try { recognition.start(); recognitionRef.current = recognition } catch {}
+        try { recognition.start(); recognitionRef.current = recognition } catch { /* ignore */ }
     }, [interruptSpeaking, startListening])
 
-    // ────────────────────────────────────────────────────────────
-    // 🗣️ 실시간 스트리밍 → 문장 콜백 → fire-and-forget TTS → ordered slot 큐
-    // ────────────────────────────────────────────────────────────
+    // ── 🗣️ 실시간 스트리밍 → 문장 콜백 → fire-and-forget TTS → ordered slot 큐 ──
     const handleSendAndSpeak = useCallback(async (text: string) => {
         if (!text.trim()) { startListening(); return }
         abortRef.current?.abort()
@@ -303,13 +298,11 @@ export default function VoiceCallOverlay({
 
             await onStreamMessage(text, onSentence, controller.signal)
 
-            // 스트림 끝 → streamDone 표시
             if (!controller.signal.aborted) {
                 streamDoneRef.current = true
                 totalSlotsRef.current = sentenceIndex
-                // 문장이 하나도 없었으면 듣기로
                 if (sentenceIndex === 0) { setPhase('listening'); startListening() }
-                else tryPlayNext() // 혹시 이미 다 왔으면 마지막 재생 트리거
+                else tryPlayNext()
             }
         } catch (err: any) {
             if (err?.name === 'AbortError') return
