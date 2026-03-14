@@ -997,9 +997,14 @@ export default function ChatPage() {
                         voiceSampleUrl={mentor.voice_sample_url}
                         userName={userName}
                         onSendMessage={async (text: string) => {
-                            // 음성 통화에서의 AI 답변 — 짧게!
+                            // 음성 통화에서의 AI 답변 — 자연스러운 대화체!
                             const chatMessages = [
-                                { role: 'system', content: '[음성 통화 모드] 지금은 전화 통화 중입니다. 반드시 1~2문장으로만 짧고 핵심적으로 답하세요. 이모지나 특수문자를 사용하지 마세요.' },
+                                { role: 'system', content: `[음성 통화 모드] 지금은 전화 통화 중입니다. 반드시 다음 규칙을 따르세요:
+1. 대답을 시작할 때 "아~", "음...", "네!", "아하", "오~", "맞아요!" 같은 자연스러운 추임새를 무조건 넣어줘.
+2. 절대 두 문장 이상 길게 말하지 마. 한 문장 말하고 상대방의 대답을 유도해.
+3. 이모지, 마크다운, 특수문자 절대 금지. 순수 텍스트만.
+4. 문어체 금지. "~입니다", "~하겠습니다" 대신 "~해요", "~이에요" 같은 구어체만 써.
+5. 상대방에게 질문을 던져서 대화를 이어가.` },
                                 ...messages.slice(-MAX_CONTEXT_MESSAGES).map((m: { role: string; content: string }) => ({
                                     role: m.role,
                                     content: m.content,

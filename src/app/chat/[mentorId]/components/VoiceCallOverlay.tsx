@@ -60,9 +60,10 @@ export default function VoiceCallOverlay({
         .catch(() => {})
     }, [userName, mentorName, voiceSampleUrl])
 
-    // 전화 연결 시 캐싱된 인사말 즉시 재생
+    // 전화 연결 시 캐싱된 인사말 즉시 재생 (캐시 MISS → 브라우저 TTS 폴백)
     const playGreeting = useCallback(async () => {
         setPhase('speaking')
+        const displayName = userName || '고객'
 
         if (greetingAudioUrlRef.current) {
             // ⚡ 캐시 HIT → 즉시 재생 (0초 지연)
@@ -72,11 +73,16 @@ export default function VoiceCallOverlay({
             audio.onerror = () => { setPhase('listening'); startListening() }
             await audio.play()
         } else {
-            // 캐시 MISS → 바로 듣기 모드 (인사말 스킵)
-            setPhase('listening')
-            startListening()
+            // 캐시 MISS → 브라우저 TTS로 즉시 폴백 ("여보세요?")
+            const synth = window.speechSynthesis
+            synth.cancel()
+            const u = new SpeechSynthesisUtterance(`여보세요? ${displayName}님, ${mentorName}입니다!`)
+            u.lang = 'ko-KR'; u.rate = 1.0
+            u.onend = () => { setPhase('listening'); startListening() }
+            u.onerror = () => { setPhase('listening'); startListening() }
+            synth.speak(u)
         }
-    }, [])
+    }, [userName, mentorName])
 
     useEffect(() => {
         if (isOpen) {
@@ -152,6 +158,18 @@ export default function VoiceCallOverlay({
         }, 15000)
     }, [mentorName, voiceSampleUrl])
 
+    // 🛑 끼어들기 (Interruption) — AI 말하는 중 사용자 음성 감지 시 TTS 즉시 중지
+    const interruptSpeaking = useCallback(() => {
+        console.log('[VoiceCall] 🛑 끼어들기! TTS 즉시 중지')
+        if (audioRef.current) {
+            audioRef.current.pause()
+            audioRef.current.src = ''
+            audioRef.current = null
+        }
+        window.speechSynthesis?.cancel()
+        setPhase('listening')
+    }, [])
+
     const startListening = useCallback(() => {
         const SpeechRecognition =
             (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -191,7 +209,7 @@ export default function VoiceCallOverlay({
                 silenceTimerRef.current = setTimeout(() => {
                     recognition.stop()
                     handleSendAndSpeak(finalText)
-                }, 2500)
+                }, 1800) // 1.8초 — 더 빠른 응답
             }
         }
 
@@ -216,6 +234,34 @@ export default function VoiceCallOverlay({
             setPhase('idle')
         }
     }, [phase, startIdleTimer])
+
+    // 🛑 speaking 중에도 음성 인식 유지 → 끼어들기 감지
+    const startInterruptionDetection = useCallback(() => {
+        const SpeechRecognition =
+            (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+        if (!SpeechRecognition) return
+
+        const recognition = new SpeechRecognition()
+        recognition.lang = 'ko-KR'
+        recognition.continuous = true
+        recognition.interimResults = true
+
+        recognition.onresult = () => {
+            // 사용자 음성 감지 → AI TTS 즉시 중지
+            interruptSpeaking()
+            recognition.stop()
+            // 새로운 listening 세션 시작
+            setTimeout(() => startListening(), 100)
+        }
+
+        recognition.onerror = () => { /* 무시 — speaking 중 보조 감지 */ }
+        recognition.onend = () => { /* 자동 종료 허용 */ }
+
+        try {
+            recognition.start()
+            recognitionRef.current = recognition
+        } catch { /* 무시 */ }
+    }, [interruptSpeaking, startListening])
 
     // 첫 문장만 추출 (TTS 속도 최적화)
     const extractFirstSentences = (text: string, maxLen: number) => {
@@ -256,6 +302,9 @@ export default function VoiceCallOverlay({
             }
 
             setPhase('speaking')
+
+            // 🛑 끼어들기 감지 시작 (AI가 말하는 동안 사용자 음성 감지)
+            startInterruptionDetection()
 
             // 2) Replicate Voice Clone TTS — 첫 문장만 (80자) → 생성 시간 최소화
             const ttsText = extractFirstSentences(response, 80)
