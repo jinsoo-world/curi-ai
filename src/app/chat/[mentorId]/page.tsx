@@ -118,18 +118,22 @@ export default function ChatPage() {
     const [autoTTS, setAutoTTS] = useState(false)
     const [voiceCallOpen, setVoiceCallOpen] = useState(false)
 
-    // 프로필에서 autoTTS 설정 로드
+    const [userName, setUserName] = useState('')
+
+    // 프로필에서 autoTTS 설정 + 유저 이름 로드
     useEffect(() => {
-        async function loadAutoTTS() {
+        async function loadProfile() {
             try {
                 const res = await fetch('/api/profile')
                 if (res.ok) {
                     const data = await res.json()
                     if (data?.profile?.auto_tts) setAutoTTS(true)
+                    const name = data?.profile?.google_name || data?.profile?.name || ''
+                    if (name) setUserName(name)
                 }
             } catch { /* 게스트는 무시 */ }
         }
-        loadAutoTTS()
+        loadProfile()
     }, [])
 
     const toggleAutoTTS = useCallback(async () => {
@@ -991,6 +995,7 @@ export default function ChatPage() {
                         mentorEmoji={mentorEmoji}
                         mentorImage={mentorImage}
                         voiceSampleUrl={mentor.voice_sample_url}
+                        userName={userName}
                         onSendMessage={async (text: string) => {
                             // 음성 통화에서의 AI 답변 — 짧게!
                             const chatMessages = [

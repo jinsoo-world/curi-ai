@@ -9,6 +9,7 @@ interface VoiceCallOverlayProps {
     mentorEmoji: string
     mentorImage?: string
     voiceSampleUrl?: string | null
+    userName?: string
     onSendMessage: (text: string) => Promise<string>
 }
 
@@ -18,7 +19,7 @@ interface SpeechRecognitionEvent {
 }
 
 export default function VoiceCallOverlay({
-    isOpen, onClose, mentorName, mentorEmoji, mentorImage, voiceSampleUrl, onSendMessage,
+    isOpen, onClose, mentorName, mentorEmoji, mentorImage, voiceSampleUrl, userName, onSendMessage,
 }: VoiceCallOverlayProps) {
     const [phase, setPhase] = useState<'connecting' | 'listening' | 'thinking' | 'speaking' | 'idle'>('idle')
     const [transcript, setTranscript] = useState('')
@@ -31,12 +32,48 @@ export default function VoiceCallOverlay({
     const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+    // 🔥 전화 연결 시 인사말 + TTS warm-up
+    const playGreetingAndWarmUp = useCallback(async () => {
+        setPhase('speaking')
+        const displayName = userName || '고객'
+        const greetingText = `안녕하세요 ${displayName}님, ${mentorName}입니다. 반갑습니다!`
+
+        // 1) 브라우저 TTS로 즉시 인사 (0초 지연)
+        const synth = window.speechSynthesis
+        synth.cancel()
+        const utterance = new SpeechSynthesisUtterance(greetingText)
+        utterance.lang = 'ko-KR'
+        utterance.rate = 1.0
+
+        const voices = synth.getVoices()
+        const koVoice = voices.find(v => v.lang === 'ko-KR') || voices.find(v => v.lang.startsWith('ko'))
+        if (koVoice) utterance.voice = koVoice
+
+        utterance.onend = () => { setPhase('listening'); startListening() }
+        utterance.onerror = () => { setPhase('listening'); startListening() }
+        synth.speak(utterance)
+
+        // 2) 백그라운드에서 TTS warm-up ping (cold start 방지)
+        if (voiceSampleUrl) {
+            fetch('/api/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: '안녕',
+                    mentorName,
+                    voiceSampleUrl,
+                }),
+            }).catch(() => {}) // 결과 무시 — 모델을 따뜻하게 유지하는 것이 목적
+        }
+    }, [userName, mentorName, voiceSampleUrl])
+
     useEffect(() => {
         if (isOpen) {
             setCallDuration(0)
             setPhase('connecting')
             timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000)
-            setTimeout(() => startListening(), 800)
+            // 인사말로 시작 (startListening 대신)
+            setTimeout(() => playGreetingAndWarmUp(), 500)
         } else {
             if (timerRef.current) clearInterval(timerRef.current)
             stopAll()
