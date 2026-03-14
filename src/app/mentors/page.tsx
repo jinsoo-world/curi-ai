@@ -48,9 +48,9 @@ const fallbackMentors = [
 
 /* ─── Mentor Card (Web: wide, responsive) ─── */
 function MentorCard({
-    name, title, description, questions, imageSrc, index, keywords, voiceSampleUrl,
+    name, title, description, questions, imageSrc, index, keywords, voiceSampleUrl, voiceId,
 }: {
-    name: string; title: string; description: string; questions: string[]; imageSrc: string; index: number; keywords?: string[]; voiceSampleUrl?: string | null
+    name: string; title: string; description: string; questions: string[]; imageSrc: string; index: number; keywords?: string[]; voiceSampleUrl?: string | null; voiceId?: string | null
 }) {
     return (
         <article
@@ -148,7 +148,7 @@ function MentorCard({
                 {/* 🎵 보이스 프리뷰 — voice_sample_url 있는 멘토만 */}
                 {voiceSampleUrl && (
                 <div style={{ marginTop: 12 }}>
-                    <VoicePreviewButton mentorName={name} />
+                    <VoicePreviewButton mentorName={name} voiceId={voiceId} />
                 </div>
                 )}
 
@@ -227,6 +227,7 @@ export default async function MentorsPage() {
                                             index={index}
                                             keywords={mentor.expertise}
                                             voiceSampleUrl={mentor.voice_sample_url}
+                                            voiceId={(mentor as any).voice_id}
                                         />
                                     </Link>
                                 ))

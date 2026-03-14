@@ -998,8 +998,8 @@ export default function ChatPage() {
                         voiceSampleUrl={mentor.voice_sample_url}
                         voiceId={mentor.voice_id}
                         userName={userName}
-                        onSendMessage={async (text: string) => {
-                            // 음성 통화에서의 AI 답변 — 자연스러운 대화체!
+                        onStreamMessage={async (text: string, onSentence: (s: string) => void, signal: AbortSignal) => {
+                            // 🚀 실시간 스트리밍 파이프라인: LLM SSE → 문장 감지 즉시 콜백
                             const chatMessages = [
                                 { role: 'system', content: `[음성 통화 모드] 지금은 전화 통화 중입니다. 반드시 다음 규칙을 따르세요:
 1. 대답을 시작할 때 "아~", "음...", "네!", "아하", "오~", "맞아요!" 같은 자연스러운 추임새를 무조건 넣어줘.
@@ -1021,34 +1021,56 @@ export default function ChatPage() {
                                     sessionId,
                                     messages: chatMessages,
                                 }),
+                                signal, // ⚡ 끼어들기 시 LLM 스트림 즉시 중단
                             })
                             if (!res.ok) throw new Error('AI 답변 실패')
                             const reader = res.body?.getReader()
                             if (!reader) throw new Error('스트림 없음')
 
                             let fullResponse = ''
+                            let sentenceBuffer = '' // ⚡ 실시간 문장 버퍼
                             const decoder = new TextDecoder()
-                            let buffer = ''
+                            let sseBuffer = ''
+
                             while (true) {
                                 const { done, value } = await reader.read()
                                 if (done) break
-                                buffer += decoder.decode(value, { stream: true })
-                                // SSE 파싱: "data: {...}\n\n"
-                                const lines = buffer.split('\n')
-                                buffer = lines.pop() || ''
+                                sseBuffer += decoder.decode(value, { stream: true })
+                                const lines = sseBuffer.split('\n')
+                                sseBuffer = lines.pop() || ''
+
                                 for (const line of lines) {
                                     if (line.startsWith('data: ')) {
                                         try {
                                             const json = JSON.parse(line.slice(6))
+                                            const chunk = json.text || ''
+                                            if (chunk) {
+                                                fullResponse += chunk
+                                                sentenceBuffer += chunk
+
+                                                // ⚡ 문장 완성 감지: .?!。？！ → 즉시 콜백!
+                                                const sentenceMatch = sentenceBuffer.match(/^([\s\S]*?[.!?。？！])\s*/)
+                                                if (sentenceMatch) {
+                                                    const completeSentence = sentenceMatch[1].trim()
+                                                    if (completeSentence.length >= 2) {
+                                                        onSentence(completeSentence)
+                                                    }
+                                                    sentenceBuffer = sentenceBuffer.slice(sentenceMatch[0].length)
+                                                }
+                                            }
                                             if (json.fullResponse) {
                                                 fullResponse = json.fullResponse
-                                            } else if (json.text) {
-                                                fullResponse += json.text
                                             }
                                         } catch { /* skip */ }
                                     }
                                 }
                             }
+
+                            // ⚡ 버퍼 flush: 마침표 없이 끝난 마지막 문장 강제 전송
+                            if (sentenceBuffer.trim().length >= 2) {
+                                onSentence(sentenceBuffer.trim())
+                            }
+
                             return fullResponse
                         }}
                     />

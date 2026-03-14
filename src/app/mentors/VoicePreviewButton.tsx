@@ -13,7 +13,7 @@ const PREVIEW_LINES: Record<string, string> = {
 
 const DEFAULT_LINE = '안녕하세요, 큐리 AI 멘토입니다. 무엇이든 물어보세요!'
 
-export default function VoicePreviewButton({ mentorName }: { mentorName: string }) {
+export default function VoicePreviewButton({ mentorName, voiceId }: { mentorName: string; voiceId?: string | null }) {
     // 🎵 음성 미리듣기가 지원되는 기본 멘토만 표시
     if (!PREVIEW_LINES[mentorName]) return null
 
@@ -46,6 +46,7 @@ export default function VoicePreviewButton({ mentorName }: { mentorName: string 
                     body: JSON.stringify({
                         text: PREVIEW_LINES[mentorName] || DEFAULT_LINE,
                         mentorName,
+                        voiceId: voiceId || undefined,
                     }),
                 })
 
