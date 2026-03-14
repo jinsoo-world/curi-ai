@@ -12,4 +12,5 @@ export interface MentorCardData {
     expertise: string[]
     greeting_message: string
     sample_questions: string[]
+    voice_sample_url?: string | null
 }

@@ -718,80 +718,185 @@ export default function ChatPage() {
                         flexDirection: 'column',
                         gap: 28,
                     }}>
-                        {/* 제미나이 스타일 Welcome */}
+                        {/* 🎯 Lenny 스타일 Welcome */}
                         {messages.length === 0 && (
                             <div style={{
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                padding: '60px 20px 32px',
+                                padding: '48px 20px 32px',
                             }}>
-                                {mentorImage ? (
+                                {/* 아바타 + 온라인 표시 */}
+                                <div style={{ position: 'relative', marginBottom: 16 }}>
                                     <img
-                                        src={mentorImage}
+                                        src={mentorImage || '/logo.png'}
                                         alt={mentor.name}
                                         style={{
-                                            width: 72,
-                                            height: 72,
+                                            width: 96,
+                                            height: 96,
                                             borderRadius: '50%',
                                             objectFit: 'cover',
-                                            marginBottom: 20,
-                                            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+                                            border: '3px solid #fff',
+                                            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
                                         }}
                                     />
-                                ) : (
-                                    <img
-                                        src="/logo.png"
-                                        alt="큐리 AI"
-                                        style={{
-                                            width: 72,
-                                            height: 72,
-                                            borderRadius: '50%',
-                                            objectFit: 'cover',
-                                            marginBottom: 20,
-                                            boxShadow: '0 2px 12px rgba(34,197,94,0.15)',
-                                        }}
-                                    />
-                                )}
+                                    {/* 온라인 녹색 점 */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        bottom: 4,
+                                        right: 4,
+                                        width: 18,
+                                        height: 18,
+                                        borderRadius: '50%',
+                                        background: '#22c55e',
+                                        border: '3px solid #fff',
+                                    }} />
+                                </div>
 
-                                {/* 제미나이 스타일 큰 인사 */}
+                                {/* 이름 + AI 배지 */}
                                 <h2 style={{
                                     margin: 0,
-                                    fontSize: 26,
-                                    fontWeight: 700,
-                                    color: '#1e293b',
-                                    marginBottom: 6,
+                                    fontSize: 28,
+                                    fontWeight: 800,
+                                    color: '#18181b',
+                                    marginBottom: 4,
                                     letterSpacing: '-0.02em',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 8,
                                 }}>
-                                    {mentor.name} AI
+                                    {mentor.name}
+                                    <span style={{
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        color: '#22c55e',
+                                        background: '#f0fdf4',
+                                        borderRadius: 100,
+                                        padding: '3px 10px',
+                                    }}>AI</span>
                                 </h2>
                                 <p style={{
                                     margin: 0,
-                                    fontSize: 15,
-                                    color: '#94a3b8',
-                                    marginBottom: 20,
+                                    fontSize: 14,
+                                    color: '#6b7280',
+                                    marginBottom: 24,
                                 }}>
                                     {mentor.title}
                                 </p>
 
-                                {/* 인사 메시지 — 버블 없이 깔끔하게 */}
-                                <p style={{
-                                    margin: 0,
-                                    fontSize: 15,
-                                    color: '#475569',
-                                    lineHeight: 1.8,
-                                    textAlign: 'center',
-                                    maxWidth: 480,
+                                {/* 💬 Chat / 📞 Call 버튼 */}
+                                <div style={{
+                                    display: 'flex',
+                                    gap: 12,
+                                    marginBottom: 36,
                                 }}>
-                                    {mentor.greeting_message}
-                                </p>
+                                    <button
+                                        onClick={() => {
+                                            document.querySelector<HTMLTextAreaElement>('textarea')?.focus()
+                                        }}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 8,
+                                            padding: '10px 24px',
+                                            borderRadius: 100,
+                                            border: 'none',
+                                            background: '#22c55e',
+                                            color: '#fff',
+                                            fontSize: 15,
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            boxShadow: '0 2px 8px rgba(34,197,94,0.25)',
+                                        }}
+                                        onMouseEnter={e => {
+                                            e.currentTarget.style.transform = 'scale(1.04)'
+                                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(34,197,94,0.35)'
+                                        }}
+                                        onMouseLeave={e => {
+                                            e.currentTarget.style.transform = 'scale(1)'
+                                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(34,197,94,0.25)'
+                                        }}
+                                    >
+                                        💬 Chat
+                                    </button>
+                                    <button
+                                        onClick={() => setVoiceCallOpen(true)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 8,
+                                            padding: '10px 24px',
+                                            borderRadius: 100,
+                                            border: 'none',
+                                            background: '#16a34a',
+                                            color: '#fff',
+                                            fontSize: 15,
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            boxShadow: '0 2px 8px rgba(22,163,74,0.25)',
+                                        }}
+                                        onMouseEnter={e => {
+                                            e.currentTarget.style.transform = 'scale(1.04)'
+                                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(22,163,74,0.35)'
+                                        }}
+                                        onMouseLeave={e => {
+                                            e.currentTarget.style.transform = 'scale(1)'
+                                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(22,163,74,0.25)'
+                                        }}
+                                    >
+                                        📞 Call
+                                    </button>
+                                </div>
 
-                                {showSuggestions && (
-                                    <SuggestionCards
-                                        suggestions={suggestions}
-                                        onSelect={sendMessage}
-                                        variant="welcome"
-                                    />
+                                {/* 추천 질문 — Lenny 스타일 리스트 */}
+                                {showSuggestions && suggestions.length > 0 && (
+                                    <div style={{ width: '100%', maxWidth: 520 }}>
+                                        <h3 style={{
+                                            fontSize: 16,
+                                            fontWeight: 700,
+                                            color: '#1e293b',
+                                            margin: '0 0 14px 0',
+                                        }}>
+                                            추천 질문
+                                        </h3>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                            {suggestions.map((q, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => sendMessage(q)}
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 12,
+                                                        padding: '14px 18px',
+                                                        borderRadius: 14,
+                                                        border: '1px solid #e5e7eb',
+                                                        background: '#fff',
+                                                        color: '#374151',
+                                                        fontSize: 14,
+                                                        fontWeight: 500,
+                                                        cursor: 'pointer',
+                                                        textAlign: 'left',
+                                                        transition: 'all 0.2s',
+                                                        lineHeight: 1.5,
+                                                    }}
+                                                    onMouseEnter={e => {
+                                                        e.currentTarget.style.borderColor = '#22c55e'
+                                                        e.currentTarget.style.background = '#f0fdf4'
+                                                    }}
+                                                    onMouseLeave={e => {
+                                                        e.currentTarget.style.borderColor = '#e5e7eb'
+                                                        e.currentTarget.style.background = '#fff'
+                                                    }}
+                                                >
+                                                    <span style={{ fontSize: 16, opacity: 0.5, flexShrink: 0 }}>✦</span>
+                                                    {q}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                         )}
