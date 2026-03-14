@@ -1090,12 +1090,20 @@ export default function CreatorEditPage() {
                                             />
                                         </label>
                                         <button
-                                            onClick={() => {
+                                            onClick={async () => {
                                                 setVoiceSampleFile(null)
                                                 setVoiceSamplePreviewUrl(null)
                                                 setVoiceSampleUrl(null)
                                                 setVoiceTestAudioUrl(null)
                                                 setClonedVoiceId(null)
+                                                // 🔒 DB에서도 voice_id 초기화 → 재녹음 시 새 clone
+                                                try {
+                                                    await fetch(`/api/mentors/${params?.id}`, {
+                                                        method: 'PATCH',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ voice_id: null, voice_sample_url: null }),
+                                                    })
+                                                } catch { /* silent */ }
                                             }}
                                             style={{
                                                 padding: '5px 10px', borderRadius: 8,
