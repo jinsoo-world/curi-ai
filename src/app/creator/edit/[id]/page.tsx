@@ -1012,19 +1012,69 @@ export default function CreatorEditPage() {
                                             </div>
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={() => {
-                                            setVoiceSampleFile(null)
-                                            setVoiceSamplePreviewUrl(null)
-                                            setVoiceSampleUrl(null)
-                                            setVoiceTestAudioUrl(null)
-                                        }}
-                                        style={{
-                                            padding: '5px 12px', borderRadius: 8,
+                                    <div style={{ display: 'flex', gap: 6 }}>
+                                        <button
+                                            onClick={() => {
+                                                setVoiceSampleFile(null)
+                                                setVoiceSamplePreviewUrl(null)
+                                                setVoiceSampleUrl(null)
+                                                setVoiceTestAudioUrl(null)
+                                                setTimeout(() => startRecording(), 100)
+                                            }}
+                                            style={{
+                                                padding: '5px 10px', borderRadius: 8,
+                                                border: '1px solid #bbf7d0', background: '#f0fdf4',
+                                                color: '#16a34a', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                                            }}
+                                        >🎙️ 다시 녹음</button>
+                                        <label style={{
+                                            padding: '5px 10px', borderRadius: 8,
                                             border: '1px solid #e5e7eb', background: '#fff',
-                                            color: '#9ca3af', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                                        }}
-                                    >🗑️ 삭제</button>
+                                            color: '#6b7280', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center',
+                                        }}>
+                                            📁 파일 교체
+                                            <input
+                                                type="file"
+                                                accept=".mp3,.wav,.m4a,.ogg,.webm"
+                                                style={{ display: 'none' }}
+                                                onChange={async (e) => {
+                                                    const file = e.target.files?.[0]
+                                                    if (!file) return
+                                                    setVoiceSampleFile(file)
+                                                    setVoiceSamplePreviewUrl(URL.createObjectURL(file))
+                                                    setVoiceSampleUploading(true)
+                                                    try {
+                                                        const formData = new FormData()
+                                                        formData.append('file', file)
+                                                        formData.append('mentorId', mentorId || 'temp')
+                                                        const res = await fetch('/api/tts/upload-voice', { method: 'POST', body: formData })
+                                                        if (res.ok) {
+                                                            const data = await res.json()
+                                                            setVoiceSampleUrl(data.url)
+                                                            setToast({ type: 'success', message: '✅ 파일 교체 완료!' })
+                                                            setTimeout(() => setToast(null), 3000)
+                                                        }
+                                                    } catch { /* ignore */ } finally {
+                                                        setVoiceSampleUploading(false)
+                                                    }
+                                                }}
+                                            />
+                                        </label>
+                                        <button
+                                            onClick={() => {
+                                                setVoiceSampleFile(null)
+                                                setVoiceSamplePreviewUrl(null)
+                                                setVoiceSampleUrl(null)
+                                                setVoiceTestAudioUrl(null)
+                                            }}
+                                            style={{
+                                                padding: '5px 10px', borderRadius: 8,
+                                                border: '1px solid #e5e7eb', background: '#fff',
+                                                color: '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                                            }}
+                                        >🗑️ 삭제</button>
+                                    </div>
                                 </div>
 
                                 {/* 미리듣기 */}
