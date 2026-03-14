@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 // Vercel Serverless 함수 타임아웃 (60초 — TTS 생성에 충분한 시간)
 export const maxDuration = 60
 
+// voice_id 캐시 — 같은 멘토의 voice clone 결과를 재사용 (Vercel cold start마다 초기화)
+const voiceIdCache = new Map<string, string>()
+
 
 // 멘토별 기본 음성 디자인 프롬프트 — 🇰🇷 한국어 톤 특화 (기본 멘토 폴백)
 const MENTOR_VOICE_DESIGNS: Record<string, string> = {
@@ -159,32 +162,59 @@ export async function POST(request: NextRequest) {
             voiceDesign += ' ' + EMOTION_MODIFIERS[detectedEmotion]
         }
 
-        // 🚀 MiniMax Speech-02-Turbo — Cold Start 없음, 120ms 지연
-        let replicateInput: Record<string, any>
+        // 🚀 MiniMax Speech-02-Turbo — 2단계 Voice Clone 프로세스
+        const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN
 
-        if (voiceSampleUrl) {
-            // 🎙️ Voice Clone 모드 — 업로드된 음성 샘플로 목소리 복제
-            console.log('[TTS] MiniMax Voice Clone 모드 — voiceSampleUrl:', voiceSampleUrl)
+        // voice_id 캐시 (같은 멘토면 재사용 → 속도 향상)
+        const cacheKey = voiceSampleUrl || 'default'
+        let voiceId: string | null = voiceIdCache.get(cacheKey) || null
 
-            replicateInput = {
-                text: trimmedText,
-                reference_audio: voiceSampleUrl,
-            }
-        } else {
-            // 🎨 기본 음성 모드 — 프리셋 음성 사용
-            replicateInput = {
-                text: trimmedText,
-                voice_id: 'Wise_Woman', // 기본 한국어 호환 음성
+        // 1단계: Voice Cloning — reference_audio → voice_id
+        if (voiceSampleUrl && !voiceId) {
+            console.log('[TTS] 1단계: Voice Cloning 시작 — voiceSampleUrl:', voiceSampleUrl)
+            try {
+                const cloneRes = await fetch('https://api.replicate.com/v1/models/minimax/voice-cloning/predictions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${REPLICATE_TOKEN}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'wait',
+                    },
+                    body: JSON.stringify({
+                        input: { audio: voiceSampleUrl },
+                    }),
+                })
+                const cloneData = await cloneRes.json()
+                console.log('[TTS] Voice Clone 결과:', JSON.stringify({ status: cloneData.status, output: cloneData.output }, null, 2))
+
+                if (cloneData.status === 'succeeded' && cloneData.output) {
+                    // output이 voice_id string이거나 object
+                    voiceId = typeof cloneData.output === 'string'
+                        ? cloneData.output
+                        : (cloneData.output as any).voice_id || (cloneData.output as any).id || null
+                    if (voiceId) {
+                        voiceIdCache.set(cacheKey, voiceId)
+                        console.log('[TTS] Voice ID 캐시 저장:', voiceId)
+                    }
+                }
+            } catch (cloneErr) {
+                console.error('[TTS] Voice Clone 실패:', cloneErr)
             }
         }
 
-        console.log('[TTS] MiniMax input:', JSON.stringify(replicateInput, null, 2))
+        // 2단계: Speech-02-Turbo TTS — voice_id 또는 기본 음성
+        let replicateInput: Record<string, any> = { text: trimmedText }
+        if (voiceId) {
+            replicateInput.voice_id = voiceId
+            console.log('[TTS] 2단계: 클론된 voice_id 사용:', voiceId)
+        } else {
+            replicateInput.voice_id = 'Wise_Woman'
+            console.log('[TTS] 2단계: 기본 음성 사용 (Wise_Woman)')
+        }
 
-        // Replicate API — MiniMax Speech-02-Turbo (공식 모델, Always-on)
-        const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN
         let output: any
 
-        const callReplicate = async (input: Record<string, any>): Promise<any> => {
+        const callTTS = async (input: Record<string, any>): Promise<any> => {
             const res = await fetch('https://api.replicate.com/v1/models/minimax/speech-02-turbo/predictions', {
                 method: 'POST',
                 headers: {
@@ -195,16 +225,16 @@ export async function POST(request: NextRequest) {
                 body: JSON.stringify({ input }),
             })
             const data = await res.json()
-            console.log('[TTS] MiniMax response:', JSON.stringify({ status: data.status, error: data.error, outputType: typeof data.output }, null, 2))
+            console.log('[TTS] MiniMax TTS response:', JSON.stringify({ status: data.status, error: data.error }, null, 2))
 
             if (data.status === 'succeeded' && data.output) {
                 return data.output
             }
-            throw new Error(data.error || `MiniMax 실패 (status: ${data.status})`)
+            throw new Error(data.error || `MiniMax TTS 실패 (status: ${data.status})`)
         }
 
         try {
-            output = await callReplicate(replicateInput)
+            output = await callTTS(replicateInput)
             console.log('[TTS] 성공:', typeof output)
         } catch (err1: any) {
             const errMsg = err1?.message || ''
@@ -212,10 +242,9 @@ export async function POST(request: NextRequest) {
 
             // 429 rate limit → 3초 대기 후 재시도
             if (errMsg.includes('429') || errMsg.includes('throttled')) {
-                console.log('[TTS] Rate limit → 3초 대기 후 재시도...')
                 await new Promise(r => setTimeout(r, 3000))
                 try {
-                    output = await callReplicate(replicateInput)
+                    output = await callTTS(replicateInput)
                 } catch (err2: any) {
                     console.error('[TTS] 재시도 실패:', err2?.message)
                 }
