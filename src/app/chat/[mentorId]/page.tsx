@@ -818,7 +818,7 @@ export default function ChatPage() {
                                             e.currentTarget.style.boxShadow = '0 2px 8px rgba(34,197,94,0.25)'
                                         }}
                                     >
-                                        💬 Chat
+                                        💬 대화하기
                                     </button>
                                     <button
                                         onClick={() => setVoiceCallOpen(true)}
@@ -846,7 +846,7 @@ export default function ChatPage() {
                                             e.currentTarget.style.boxShadow = '0 2px 8px rgba(22,163,74,0.25)'
                                         }}
                                     >
-                                        📞 Call
+                                        📞 전화하기
                                     </button>
                                 </div>
 
@@ -859,7 +859,7 @@ export default function ChatPage() {
                                             color: '#1e293b',
                                             margin: '0 0 14px 0',
                                         }}>
-                                            추천 질문
+                                            이런 걸 물어보세요
                                         </h3>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                             {suggestions.map((q, i) => (
