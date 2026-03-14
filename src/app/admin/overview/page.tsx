@@ -17,6 +17,8 @@ interface OverviewData {
         weeklyGrowth: string
         userGrowth: string
         avgMessagesPerSession: string
+        marketingConsentCount: number
+        marketingConsentRate: string
     }
     dailyStats: Array<{
         date: string
@@ -358,6 +360,7 @@ export default function OverviewPage() {
                 <StatCard icon="⚡" label="세션당 평균" value={`${o.avgMessagesPerSession}회`} color="#ea580c" sub="메시지" />
                 <StatCard icon="🟢" label="오늘 활성" value={o.activeSessions} color="#16a34a" sub="세션" />
                 <StatCard icon="🕐" label="피크 시간" value={`${peakHour}시`} color="#a855f7" sub={`${peakMessages}개 메시지`} />
+                <StatCard icon="📣" label="마수동 동의율" value={`${o.marketingConsentRate}%`} color="#059669" sub={`${o.marketingConsentCount}명 동의`} />
             </div>
 
             {/* === 차트 그리드 (2열) === */}

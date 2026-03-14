@@ -12,6 +12,8 @@ interface UserProfile {
     email: string | null
     role: string | null
     subscription_tier: string | null
+    phone: string | null
+    gender: string | null
 }
 
 export default function AppSidebar() {
@@ -52,12 +54,16 @@ export default function AppSidebar() {
                 email: user.email || null,
                 role: data.profile.role,
                 subscription_tier: data.profile.subscription_tier,
+                phone: data.profile.phone || null,
+                gender: data.profile.gender || null,
             } : {
                 display_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
                 avatar_url: user.user_metadata?.avatar_url || null,
                 email: user.email || null,
                 role: 'user',
                 subscription_tier: null,
+                phone: null,
+                gender: null,
             }
             setProfile(p)
             // 캐시 저장 (유저 ID 포함)
@@ -69,6 +75,8 @@ export default function AppSidebar() {
                 email: user.email || null,
                 role: 'user',
                 subscription_tier: null,
+                phone: null,
+                gender: null,
             }
             setProfile(p)
         }
@@ -217,6 +225,32 @@ export default function AppSidebar() {
                         </>
                     )}
                 </nav>
+
+                {/* 프로필 완성 유도 배너 */}
+                {profile && user && (!profile.phone || !profile.gender) && (
+                    <Link
+                        href="/profile"
+                        style={{
+                            display: 'block',
+                            margin: '0 12px 8px',
+                            padding: '10px 14px',
+                            borderRadius: 12,
+                            background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+                            border: '1px solid #bbf7d0',
+                            textDecoration: 'none',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: '#15803d',
+                            textAlign: 'center',
+                            lineHeight: 1.4,
+                            transition: 'transform 150ms, box-shadow 150ms',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(34,197,94,0.2)' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}
+                    >
+                        🍀 프로필 완성하고 클로버 30개 받기!
+                    </Link>
+                )}
 
                 {/* Bottom — User profile + badge */}
                 <div style={{ padding: '12px', borderTop: '1px solid #f0f0f0' }}>

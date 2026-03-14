@@ -136,6 +136,12 @@ export async function GET() {
             authProviders[p] = (authProviders[p] || 0) + 1
         })
 
+        // === 마케팅 수신 동의 통계 ===
+        const { count: marketingConsentCount } = await supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true })
+            .eq('marketing_consent', true)
+
         // === 성장률 계산 ===
         const weeklyGrowth = lastWau > 0 ? (((wau - lastWau) / lastWau) * 100).toFixed(1) : '—'
         const userGrowth = (newUsersLastWeek || 0) > 0
@@ -157,6 +163,10 @@ export async function GET() {
                 weeklyGrowth,
                 userGrowth,
                 avgMessagesPerSession,
+                marketingConsentCount: marketingConsentCount || 0,
+                marketingConsentRate: (totalUsers || 0) > 0
+                    ? (((marketingConsentCount || 0) / (totalUsers || 1)) * 100).toFixed(1)
+                    : '0',
             },
             dailyStats: dailyStats || [],
             signupTrend,

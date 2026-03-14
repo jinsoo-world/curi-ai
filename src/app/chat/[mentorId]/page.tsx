@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { MentorHeader, ChatMessages, ChatInput, SuggestionCards, ElevenLabsWidget } from './components'
 import ChatSidebar from './components/ChatSidebar'
+import MarketingConsentPopup from '@/components/MarketingConsentPopup'
 import type { ChatMessage } from './components'
 
 interface MentorData {
@@ -111,6 +112,8 @@ export default function ChatPage() {
     const [isCallOpen, setIsCallOpen] = useState(false)
     const [sidebarSessions, setSidebarSessions] = useState<any[]>([])
     const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+    const [showMarketingPopup, setShowMarketingPopup] = useState(false)
+    const [marketingChecked, setMarketingChecked] = useState(false)
 
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -503,6 +506,56 @@ export default function ChatPage() {
         }
     }, [isStreaming, lastSentAt, messages, mentorId, sessionId, fetchSuggestions])
 
+    // ───── 마수동 2차 터치: 대화 3회 후 미동의 유저에게 팝업 ─────
+    useEffect(() => {
+        if (marketingChecked) return
+        const userMsgCount = messages.filter(m => m.role === 'user').length
+        if (userMsgCount < 3) return
+
+        // 이미 팝업 dismissed 했으면 재표시 안 함
+        if (typeof window !== 'undefined' && localStorage.getItem('marketing_popup_dismissed')) return
+
+        async function checkMarketingConsent() {
+            try {
+                const res = await fetch('/api/auth/me')
+                const data = await res.json()
+                if (!data?.user) return // 게스트는 스킵
+
+                const profileRes = await fetch('/api/profile')
+                const profileData = await profileRes.json()
+                const consent = profileData?.profile?.marketing_consent ?? profileData?.marketing_consent
+                if (!consent) {
+                    setShowMarketingPopup(true)
+                }
+            } catch { /* skip */ }
+            setMarketingChecked(true)
+        }
+        checkMarketingConsent()
+    }, [messages, marketingChecked])
+
+    const handleMarketingAccept = async () => {
+        setShowMarketingPopup(false)
+        try {
+            // 1. DB에 marketing_consent 업데이트
+            await fetch('/api/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ marketing_consent: true }),
+            })
+            // 2. 클로버 보너스 지급
+            await fetch('/api/credits/marketing-bonus', { method: 'POST' })
+        } catch (e) {
+            console.error('Marketing consent update error:', e)
+        }
+    }
+
+    const handleMarketingDismiss = () => {
+        setShowMarketingPopup(false)
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('marketing_popup_dismissed', 'true')
+        }
+    }
+
 
 
     const handleNewChat = useCallback(async () => {
@@ -755,6 +808,14 @@ export default function ChatPage() {
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
                 @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
             `}</style>
+
+                {/* 마케팅 수신 동의 2차 터치 팝업 */}
+                {showMarketingPopup && (
+                    <MarketingConsentPopup
+                        onAccept={handleMarketingAccept}
+                        onDismiss={handleMarketingDismiss}
+                    />
+                )}
             </div>{/* flex: 메인 채팅 영역 끝 */}
         </div>
     )

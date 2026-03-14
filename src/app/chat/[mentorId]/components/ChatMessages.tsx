@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -20,6 +20,108 @@ interface ChatMessagesProps {
     mentorImage: string | undefined
     mentorEmoji: string
     isStreaming: boolean
+}
+
+/* ── 스피커 아이콘 ── */
+const SpeakerIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8 3L4.5 5.5H2v5h2.5L8 13V3z" />
+        <path d="M11 5.5a3.5 3.5 0 010 5" />
+        <path d="M13 3.5a6.5 6.5 0 010 9" />
+    </svg>
+)
+const StopIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <rect x="3" y="3" width="10" height="10" rx="2" />
+    </svg>
+)
+const SpinnerIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="8" cy="8" r="6" opacity="0.25" />
+        <path d="M14 8a6 6 0 01-6 6" strokeLinecap="round">
+            <animateTransform attributeName="transform" type="rotate" from="0 8 8" to="360 8 8" dur="0.8s" repeatCount="indefinite" />
+        </path>
+    </svg>
+)
+
+/** TTS 음성 재생 버튼 */
+function TTSButton({ message, mentorName }: { message: ChatMessage; mentorName: string }) {
+    const [status, setStatus] = useState<'idle' | 'loading' | 'playing'>('idle')
+    const audioRef = useRef<HTMLAudioElement | null>(null)
+    const cacheRef = useRef<Map<string, string>>(new Map())
+
+    const handleTTS = useCallback(async () => {
+        // 재생 중이면 정지
+        if (status === 'playing' && audioRef.current) {
+            audioRef.current.pause()
+            audioRef.current.currentTime = 0
+            setStatus('idle')
+            return
+        }
+
+        // 로딩 중이면 무시
+        if (status === 'loading') return
+
+        setStatus('loading')
+
+        try {
+            // 캐시 확인
+            let audioUrl = cacheRef.current.get(message.id)
+
+            if (!audioUrl) {
+                const res = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: message.content.slice(0, 500),
+                        mentorName,
+                    }),
+                })
+
+                if (!res.ok) {
+                    const err = await res.json()
+                    throw new Error(err.error || '음성 생성 실패')
+                }
+
+                const data = await res.json()
+                audioUrl = data.audioUrl
+                if (audioUrl) cacheRef.current.set(message.id, audioUrl)
+            }
+
+            if (!audioUrl) throw new Error('음성 URL 없음')
+
+            // 오디오 재생
+            const audio = new Audio(audioUrl)
+            audioRef.current = audio
+            audio.onended = () => setStatus('idle')
+            audio.onerror = () => setStatus('idle')
+            await audio.play()
+            setStatus('playing')
+        } catch (err) {
+            console.error('[TTS Error]', err)
+            setStatus('idle')
+        }
+    }, [status, message.id, message.content, mentorName])
+
+    return (
+        <button
+            onClick={handleTTS}
+            disabled={status === 'loading'}
+            style={{
+                background: 'none', border: 'none', cursor: status === 'loading' ? 'wait' : 'pointer',
+                padding: '6px 8px', borderRadius: 8,
+                color: status === 'playing' ? '#22c55e' : status === 'loading' ? '#cbd5e1' : '#94a3b8',
+                display: 'flex', alignItems: 'center',
+                transition: 'color 0.15s, background 0.15s',
+            }}
+            onMouseEnter={e => { if (status !== 'loading') e.currentTarget.style.background = '#f1f5f9' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+            title={status === 'playing' ? '정지' : status === 'loading' ? '음성 생성 중...' : '음성으로 듣기'}
+            aria-label="음성 재생"
+        >
+            {status === 'loading' ? <SpinnerIcon /> : status === 'playing' ? <StopIcon /> : <SpeakerIcon />}
+        </button>
+    )
 }
 
 /* ── SVG 아이콘 ── */
@@ -45,8 +147,8 @@ const ThumbDownIcon = ({ filled }: { filled: boolean }) => (
     </svg>
 )
 
-/** 복사/좋아요/아쉬워요 액션 아이콘 — 제미나이 스타일 작은 아이콘 */
-function MessageActions({ message }: { message: ChatMessage }) {
+/** 복사/음성재생/좋아요/아쉬워요 액션 아이콘 — 제미나이 스타일 작은 아이콘 */
+function MessageActions({ message, mentorName }: { message: ChatMessage; mentorName?: string }) {
     const [copied, setCopied] = useState(false)
     const [feedback, setFeedback] = useState<'like' | 'dislike' | null>(null)
     const isAssistant = message.role === 'assistant'
@@ -109,6 +211,7 @@ function MessageActions({ message }: { message: ChatMessage }) {
             </button>
             {isAssistant && (
                 <>
+                    <TTSButton message={message} mentorName={mentorName || ''} />
                     <button
                         onClick={() => handleFeedback('like')}
                         style={{
@@ -463,7 +566,7 @@ export default function ChatMessages({
 
                                 {/* 액션 아이콘 — hover 시 표시 */}
                                 {msg.content && !isEmptyAssistant && (
-                                    <MessageActions message={msg} />
+                                    <MessageActions message={msg} mentorName={mentor.name} />
                                 )}
                             </div>
                         </div>

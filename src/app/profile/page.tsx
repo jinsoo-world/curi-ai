@@ -490,12 +490,21 @@ export default function ProfilePage() {
                                             </div>
                                         </div>
 
-                                        {/* 마케팅 수신 동의 */}
+                                        {/* 광고성 정보 수신 동의 */}
                                         <div>
-                                            <div style={labelStyle}>마케팅 수신 동의</div>
+                                            <div style={labelStyle}>광고성 정보 수신 동의</div>
                                             <div style={{ fontSize: 15, color: profile?.marketing_consent ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
-                                                {profile?.marketing_consent ? '✅ 동의함' : '❌ 미동의'}
+                                                {profile?.marketing_consent ? '✅ 동의함 (SMS · 이메일 · 앱 푸시)' : '❌ 미동의'}
                                             </div>
+                                            {!profile?.marketing_consent && (
+                                                <div style={{
+                                                    marginTop: 8, padding: '10px 14px', borderRadius: 10,
+                                                    background: '#f0fdf4', border: '1px solid #dcfce7',
+                                                    fontSize: 13, color: '#16a34a', lineHeight: 1.5,
+                                                }}>
+                                                    🍀 편집에서 수신 동의하면 클로버 10개를 받을 수 있어요!
+                                                </div>
+                                            )}
                                         </div>
                                     </>
                                 )}
@@ -581,9 +590,9 @@ export default function ProfilePage() {
                                             />
                                         </div>
 
-                                        {/* 마케팅 수신 동의 */}
+                                        {/* 광고성 정보 수신 동의 */}
                                         <div style={{ marginBottom: 24 }}>
-                                            <div style={labelStyle}>마케팅 수신 동의</div>
+                                            <div style={labelStyle}>광고성 정보 수신 동의</div>
                                             <button
                                                 onClick={() => setEditMarketingConsent(!editMarketingConsent)}
                                                 style={{
@@ -611,12 +620,30 @@ export default function ProfilePage() {
                                                     }} />
                                                 </div>
                                                 <span style={{ fontWeight: 500 }}>
-                                                    {editMarketingConsent ? '마케팅 수신에 동의합니다' : '마케팅 수신에 동의하지 않습니다'}
+                                                    {editMarketingConsent ? '광고성 정보 수신에 동의합니다' : '광고성 정보 수신에 동의하지 않습니다'}
                                                 </span>
                                             </button>
                                             <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 6, lineHeight: 1.5 }}>
-                                                이벤트, 할인, 새 기능 소식을 받을 수 있습니다.
+                                                SMS · 이메일 · 앱 푸시 | 수신 거부 시 즉시 처리됩니다.
                                             </div>
+                                            {!editMarketingConsent && profile?.marketing_consent && (
+                                                <div style={{
+                                                    marginTop: 8, padding: '10px 14px', borderRadius: 10,
+                                                    background: '#fef3c7', border: '1px solid #fde68a',
+                                                    fontSize: 12, color: '#92400e', lineHeight: 1.5,
+                                                }}>
+                                                    ⚠️ 수신 거부 시 즉시 효력이 발생하며, 더 이상 광고성 정보를 받지 않습니다.
+                                                </div>
+                                            )}
+                                            {editMarketingConsent && !profile?.marketing_consent && (
+                                                <div style={{
+                                                    marginTop: 8, padding: '10px 14px', borderRadius: 10,
+                                                    background: '#f0fdf4', border: '1px solid #dcfce7',
+                                                    fontSize: 12, color: '#16a34a', lineHeight: 1.5, fontWeight: 600,
+                                                }}>
+                                                    🍀 동의 시 클로버 10개가 지급됩니다!
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* 저장/취소 버튼 */}
