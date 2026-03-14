@@ -173,8 +173,8 @@ export async function POST(request: NextRequest) {
 
             replicateInput = {
                 text: trimmedText,
-                mode: 'clone',
-                voice_audio: voiceSampleUrl,
+                mode: 'voice_clone',
+                reference_audio: voiceSampleUrl,
                 language: lang,
             }
         } else {

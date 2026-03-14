@@ -1037,7 +1037,9 @@ export default function CreatorEditPage() {
                                     <button
                                         onClick={async () => {
                                             setVoiceTestLoading(true)
+                                            setError('')
                                             try {
+                                                console.log('[Voice Test] 요청 시작:', { voiceSampleUrl, name, greetingMessage })
                                                 const res = await fetch('/api/tts', {
                                                     method: 'POST',
                                                     headers: { 'Content-Type': 'application/json' },
@@ -1047,15 +1049,22 @@ export default function CreatorEditPage() {
                                                         voiceSampleUrl: voiceSampleUrl,
                                                     }),
                                                 })
-                                                if (res.ok) {
-                                                    const data = await res.json()
+                                                const data = await res.json()
+                                                console.log('[Voice Test] 응답:', res.status, data)
+                                                if (res.ok && data.audioUrl) {
                                                     setVoiceTestAudioUrl(data.audioUrl)
+                                                    setToast({ type: 'success', message: '🔊 음성 생성 완료!' })
+                                                    setTimeout(() => setToast(null), 3000)
                                                 } else {
-                                                    const errData = await res.json().catch(() => ({}))
-                                                    setError(errData.error || '테스트 음성 생성에 실패했습니다.')
+                                                    const errMsg = data.error || '음성 생성 실패'
+                                                    console.error('[Voice Test] 실패:', errMsg)
+                                                    setToast({ type: 'error', message: `❌ ${errMsg}` })
+                                                    setTimeout(() => setToast(null), 5000)
                                                 }
-                                            } catch {
-                                                setError('테스트 음성 생성에 실패했습니다.')
+                                            } catch (err: any) {
+                                                console.error('[Voice Test] 예외:', err)
+                                                setToast({ type: 'error', message: `❌ 네트워크 오류: ${err?.message || '알 수 없는 오류'}` })
+                                                setTimeout(() => setToast(null), 5000)
                                             } finally {
                                                 setVoiceTestLoading(false)
                                             }
