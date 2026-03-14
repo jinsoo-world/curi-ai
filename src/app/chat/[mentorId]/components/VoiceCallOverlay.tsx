@@ -31,49 +31,60 @@ export default function VoiceCallOverlay({
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const greetingAudioUrlRef = useRef<string | null>(null)
 
-    // 🔥 전화 연결 시 인사말 — 학습된 목소리(MiniMax voice clone)로 인사
-    const playGreetingAndWarmUp = useCallback(async () => {
-        setPhase('speaking')
+    // 🔥 컴포넌트 마운트 시 인사말 오디오를 미리 생성 (캐싱)
+    useEffect(() => {
         const displayName = userName || '고객'
         const greetingText = `안녕하세요 ${displayName}님, ${mentorName}입니다. 반갑습니다!`
 
-        try {
-            const ttsRes = await fetch('/api/tts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    text: greetingText,
-                    mentorName,
-                    voiceSampleUrl: voiceSampleUrl || undefined,
-                }),
-            })
-            if (ttsRes.ok) {
-                const { audioUrl } = await ttsRes.json()
-                if (audioUrl) {
-                    const audio = new Audio(audioUrl)
-                    audioRef.current = audio
-                    audio.onended = () => { setPhase('listening'); startListening() }
-                    audio.onerror = () => { setPhase('listening'); startListening() }
-                    await audio.play()
-                    return
-                }
+        fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                text: greetingText,
+                mentorName,
+                voiceSampleUrl: voiceSampleUrl || undefined,
+            }),
+        })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+            if (data?.audioUrl) {
+                greetingAudioUrlRef.current = data.audioUrl
+                // 미리 로드
+                const preload = new Audio(data.audioUrl)
+                preload.preload = 'auto'
+                console.log('[VoiceCall] 인사말 캐싱 완료!')
             }
-        } catch (err) {
-            console.error('[VoiceCall] 인사말 TTS 실패:', err)
-        }
-        // TTS 실패 시 바로 듣기 모드
-        setPhase('listening')
-        startListening()
+        })
+        .catch(() => {})
     }, [userName, mentorName, voiceSampleUrl])
+
+    // 전화 연결 시 캐싱된 인사말 즉시 재생
+    const playGreeting = useCallback(async () => {
+        setPhase('speaking')
+
+        if (greetingAudioUrlRef.current) {
+            // ⚡ 캐시 HIT → 즉시 재생 (0초 지연)
+            const audio = new Audio(greetingAudioUrlRef.current)
+            audioRef.current = audio
+            audio.onended = () => { setPhase('listening'); startListening() }
+            audio.onerror = () => { setPhase('listening'); startListening() }
+            await audio.play()
+        } else {
+            // 캐시 MISS → 바로 듣기 모드 (인사말 스킵)
+            setPhase('listening')
+            startListening()
+        }
+    }, [])
 
     useEffect(() => {
         if (isOpen) {
             setCallDuration(0)
             setPhase('connecting')
             timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000)
-            // 인사말로 시작 (startListening 대신)
-            setTimeout(() => playGreetingAndWarmUp(), 500)
+            // 캐싱된 인사말 즉시 재생
+            setTimeout(() => playGreeting(), 300)
         } else {
             if (timerRef.current) clearInterval(timerRef.current)
             stopAll()
