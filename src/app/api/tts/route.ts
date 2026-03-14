@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import Replicate from 'replicate'
 
-function getReplicate() {
-    const token = process.env.REPLICATE_API_TOKEN
-    if (!token) {
-        console.error('[TTS] ❌ REPLICATE_API_TOKEN 환경변수가 없습니다!')
-    } else {
-        console.log('[TTS] ✅ REPLICATE_API_TOKEN 로드됨 (길이:', token.length, ')')
-    }
-    return new Replicate({ auth: token })
-}
+// Vercel Serverless 함수 타임아웃 (60초 — TTS 생성에 충분한 시간)
+export const maxDuration = 60
+
 
 // 멘토별 기본 음성 디자인 프롬프트 — 🇰🇷 한국어 톤 특화 (기본 멘토 폴백)
 const MENTOR_VOICE_DESIGNS: Record<string, string> = {
@@ -206,64 +199,70 @@ export async function POST(request: NextRequest) {
 
         console.log('[TTS] Replicate input:', JSON.stringify(replicateInput, null, 2))
 
-        const replicate = getReplicate()
+        // Replicate API 직접 호출 (SDK 대신 fetch — Vercel 타임아웃 방지)
+        const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN
         let output: any
 
-        // 429 rate limit 시 자동 재시도 (최대 2회)
-        for (let attempt = 0; attempt < 2; attempt++) {
-            try {
-                output = await replicate.run('qwen/qwen3-tts', {
-                    input: replicateInput,
-                })
-                console.log('[TTS] Replicate output type:', typeof output, output)
-                break // 성공하면 루프 종료
-            } catch (replicateErr: any) {
-                const errMsg = replicateErr?.message || ''
-                console.error(`[TTS] Replicate 실행 실패 (시도 ${attempt + 1}/2):`, errMsg)
+        const callReplicate = async (input: Record<string, any>): Promise<any> => {
+            const res = await fetch('https://api.replicate.com/v1/models/qwen/qwen3-tts/predictions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${REPLICATE_TOKEN}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'wait',
+                },
+                body: JSON.stringify({ input }),
+            })
+            const data = await res.json()
+            console.log('[TTS] Replicate response:', JSON.stringify({ status: data.status, error: data.error, outputType: typeof data.output }, null, 2))
 
-                if ((errMsg.includes('429') || errMsg.includes('throttled')) && attempt === 0) {
-                    // 첫 시도 429 → 10초 대기 후 재시도
-                    console.log('[TTS] Rate limit → 10초 대기 후 재시도...')
-                    await new Promise(r => setTimeout(r, 10000))
-                    continue
-                }
+            if (data.status === 'succeeded' && data.output) {
+                return data.output
+            }
+            throw new Error(data.error || `Replicate 실패 (status: ${data.status})`)
+        }
 
-                // voice clone 모드에서 실패 시 → voice_design 모드로 폴백
-                if (voiceSampleUrl) {
-                    console.log('[TTS] Clone 실패 → Voice Design 모드로 폴백')
-                    try {
-                        output = await replicate.run('qwen/qwen3-tts', {
-                            input: {
-                                text: trimmedText,
-                                mode: 'voice_design',
-                                voice_description: voiceDesign,
-                                language: lang,
-                            },
-                        })
-                        console.log('[TTS] 폴백 성공:', typeof output)
-                        break
-                    } catch (fallbackErr: any) {
-                        console.error('[TTS] 폴백도 실패:', fallbackErr?.message)
-                        return NextResponse.json(
-                            { error: '음성 생성에 실패했습니다. 잠시 후 다시 시도해주세요.' },
-                            { status: 500 }
-                        )
-                    }
-                } else {
-                    // 에러 메시지를 유저 친화적으로 변환
-                    let userMsg = '음성 생성에 실패했습니다. 잠시 후 다시 시도해주세요.'
-                    if (errMsg.includes('429') || errMsg.includes('Too Many Requests') || errMsg.includes('throttled')) {
-                        userMsg = '요청이 너무 많습니다. 10초 후 다시 시도해주세요.'
-                    } else if (errMsg.includes('401') || errMsg.includes('Unauthenticated')) {
-                        userMsg = 'API 인증 오류입니다. 관리자에게 문의해주세요.'
-                    } else if (errMsg.includes('422') || errMsg.includes('Unprocessable')) {
-                        userMsg = '음성 파일 형식이 맞지 않습니다. 다른 파일로 시도해주세요.'
-                    }
-                    return NextResponse.json(
-                        { error: userMsg },
-                        { status: 500 }
-                    )
+        try {
+            output = await callReplicate(replicateInput)
+            console.log('[TTS] 성공:', typeof output)
+        } catch (err1: any) {
+            const errMsg = err1?.message || ''
+            console.error('[TTS] 첫 시도 실패:', errMsg)
+
+            // 429 rate limit → 10초 대기 후 재시도
+            if (errMsg.includes('429') || errMsg.includes('throttled')) {
+                console.log('[TTS] Rate limit → 10초 대기 후 재시도...')
+                await new Promise(r => setTimeout(r, 10000))
+                try {
+                    output = await callReplicate(replicateInput)
+                } catch (err2: any) {
+                    console.error('[TTS] 재시도 실패:', err2?.message)
                 }
+            }
+
+            // voice clone 실패 시 → voice_design 폴백
+            if (!output && voiceSampleUrl) {
+                console.log('[TTS] Clone 실패 → Voice Design 모드로 폴백')
+                try {
+                    output = await callReplicate({
+                        text: trimmedText,
+                        mode: 'voice_design',
+                        voice_description: voiceDesign,
+                        language: lang,
+                    })
+                } catch (fallbackErr: any) {
+                    console.error('[TTS] 폴백도 실패:', fallbackErr?.message)
+                }
+            }
+
+            if (!output) {
+                let userMsg = '음성 생성에 실패했습니다. 잠시 후 다시 시도해주세요.'
+                if (errMsg.includes('429') || errMsg.includes('throttled')) {
+                    userMsg = '요청이 너무 많습니다. 10초 후 다시 시도해주세요.'
+                } else if (errMsg.includes('401') || errMsg.includes('Unauthenticated')) {
+                    userMsg = 'API 인증 오류입니다. 관리자에게 문의해주세요.'
+                }
+                return NextResponse.json({ error: userMsg }, { status: 500 })
             }
         }
 
