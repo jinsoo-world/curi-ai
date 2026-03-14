@@ -150,6 +150,23 @@ export async function POST(request: NextRequest) {
 
         if (voiceSampleUrl) {
             // 🎙️ Voice Clone 모드 — 업로드된 음성 샘플로 목소리 복제
+            console.log('[TTS] Voice Clone 모드 — voiceSampleUrl:', voiceSampleUrl)
+
+            // voiceSampleUrl이 접근 가능한지 확인
+            try {
+                const checkRes = await fetch(voiceSampleUrl, { method: 'HEAD' })
+                console.log('[TTS] Voice sample URL check:', checkRes.status, checkRes.statusText)
+                if (!checkRes.ok) {
+                    console.error('[TTS] Voice sample URL 접근 불가:', checkRes.status)
+                    return NextResponse.json(
+                        { error: `음성 샘플 파일에 접근할 수 없습니다. (${checkRes.status}) 버킷이 Public인지 확인하세요.` },
+                        { status: 400 }
+                    )
+                }
+            } catch (urlErr) {
+                console.error('[TTS] Voice sample URL 접근 오류:', urlErr)
+            }
+
             replicateInput = {
                 text: trimmedText,
                 mode: 'clone',
@@ -166,9 +183,13 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        console.log('[TTS] Replicate input:', JSON.stringify(replicateInput, null, 2))
+
         const output = await replicate.run('qwen/qwen3-tts', {
             input: replicateInput,
         })
+
+        console.log('[TTS] Replicate output type:', typeof output, output)
 
         // output은 보통 URL string 또는 ReadableStream
         let audioUrl: string
