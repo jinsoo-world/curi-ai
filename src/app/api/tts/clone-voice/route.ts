@@ -5,7 +5,6 @@ export const maxDuration = 60
 
 export async function POST(request: NextRequest) {
     try {
-        // 인증 확인
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) {
@@ -17,50 +16,43 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: '음성 샘플 URL이 필요합니다.' }, { status: 400 })
         }
 
-        const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN
-        if (!REPLICATE_TOKEN) {
-            return NextResponse.json({ error: 'Replicate API 토큰 없음' }, { status: 500 })
+        const ELEVENLABS_KEY = process.env.ELEVENLABS_API_KEY
+        if (!ELEVENLABS_KEY) {
+            return NextResponse.json({ error: 'ElevenLabs API 키 없음' }, { status: 500 })
         }
 
-        console.log('[Clone Voice] 시작:', voiceSampleUrl)
+        console.log('[Clone Voice] ElevenLabs Add Voice 시작:', voiceSampleUrl)
 
-        const cloneRes = await fetch('https://api.replicate.com/v1/models/minimax/voice-cloning/predictions', {
+        // 1. 음성 파일 다운로드
+        const audioRes = await fetch(voiceSampleUrl)
+        if (!audioRes.ok) {
+            return NextResponse.json({ error: '음성 파일 다운로드 실패' }, { status: 500 })
+        }
+        const audioBuffer = await audioRes.arrayBuffer()
+        const contentType = audioRes.headers.get('content-type') || 'audio/mpeg'
+
+        // 2. ElevenLabs Add Voice
+        const elForm = new FormData()
+        elForm.append('name', `curi-clone-${Date.now()}`)
+        elForm.append('description', 'Voice clone from Curi AI')
+        const blob = new Blob([audioBuffer], { type: contentType })
+        elForm.append('files', blob, `voice.${contentType.includes('wav') ? 'wav' : 'mp3'}`)
+
+        const elRes = await fetch('https://api.elevenlabs.io/v1/voices/add', {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${REPLICATE_TOKEN}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'wait',
-            },
-            body: JSON.stringify({
-                input: { voice_file: voiceSampleUrl },
-            }),
+            headers: { 'xi-api-key': ELEVENLABS_KEY },
+            body: elForm,
         })
 
-        const cloneData = await cloneRes.json()
-        console.log('[Clone Voice] 응답:', JSON.stringify({
-            status: cloneData.status,
-            output: cloneData.output,
-            error: cloneData.error,
-        }))
+        const elData = await elRes.json()
+        console.log('[Clone Voice] ElevenLabs 응답:', JSON.stringify({ status: elRes.status, voice_id: elData.voice_id }))
 
-        if (cloneData.status === 'succeeded' && cloneData.output) {
-            // output 구조: { voice_id: "...", model: "...", preview: "..." } 또는 string
-            let voiceId: string | null = null
-
-            if (typeof cloneData.output === 'string') {
-                voiceId = cloneData.output
-            } else if (typeof cloneData.output === 'object') {
-                voiceId = cloneData.output.voice_id || cloneData.output.id || null
-            }
-
-            if (voiceId) {
-                console.log('[Clone Voice] ✅ 성공! voice_id:', voiceId)
-                return NextResponse.json({ voiceId, preview: cloneData.output?.preview || null })
-            }
+        if (elRes.ok && elData.voice_id) {
+            console.log('[Clone Voice] ✅ 성공! voice_id:', elData.voice_id)
+            return NextResponse.json({ voiceId: elData.voice_id })
         }
 
-        // 실패
-        const errMsg = cloneData.error || `Clone 실패 (status: ${cloneData.status})`
+        const errMsg = elData.detail?.message || elData.detail || 'Voice clone 실패'
         console.error('[Clone Voice] ❌ 실패:', errMsg)
         return NextResponse.json({ error: errMsg }, { status: 500 })
 
