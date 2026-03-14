@@ -87,13 +87,29 @@ const EMOTION_MODIFIERS: Record<string, string> = {
     encouraging: 'Speak in an inspiring and encouraging way, boosting confidence and motivation.',
 }
 
-// 🌏 언어 감지
+// 🌏 언어 감지 — Replicate API 스펙에 맞는 형식으로 반환
 function detectLanguage(text: string): string {
     const koreanChars = (text.match(/[\uac00-\ud7a3]/g) || []).length
     const englishChars = (text.match(/[a-zA-Z]/g) || []).length
     const total = koreanChars + englishChars
-    if (total === 0) return 'ko'
-    return englishChars / total > 0.6 ? 'en' : 'ko'
+    if (total === 0) return 'Korean'
+    return englishChars / total > 0.6 ? 'English' : 'Korean'
+}
+
+// 언어 코드 매핑 (ko/en/ja 등 → Replicate API 형식)
+const LANGUAGE_MAP: Record<string, string> = {
+    'ko': 'Korean', 'kr': 'Korean', 'korean': 'Korean',
+    'en': 'English', 'english': 'English',
+    'ja': 'Japanese', 'jp': 'Japanese', 'japanese': 'Japanese',
+    'zh': 'Chinese', 'cn': 'Chinese', 'chinese': 'Chinese',
+    'fr': 'French', 'french': 'French',
+    'de': 'German', 'german': 'German',
+    'es': 'Spanish', 'spanish': 'Spanish',
+    'pt': 'Portuguese', 'portuguese': 'Portuguese',
+    'ru': 'Russian', 'russian': 'Russian',
+}
+function normalizeLanguage(lang: string): string {
+    return LANGUAGE_MAP[lang.toLowerCase()] || lang
 }
 
 // 😊 감정 감지
@@ -132,7 +148,8 @@ export async function POST(request: NextRequest) {
         const trimmedText = text.slice(0, 500)
 
         // 🌏 언어 자동 감지 — 명시적으로 지정되지 않으면 텍스트 분석
-        const lang = language || detectLanguage(trimmedText)
+        const rawLang = language || detectLanguage(trimmedText)
+        const lang = normalizeLanguage(rawLang)
 
         // 😊 감정 분석 — 명시적 감정이 없으면 자동 감지
         const detectedEmotion = emotion || detectEmotion(trimmedText)
