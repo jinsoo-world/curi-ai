@@ -82,6 +82,8 @@ export default function VoiceCallOverlay({
         totalSlotsRef.current = 0
         isPlayingRef.current = false
         streamDoneRef.current = false
+        ttsQueueRef.current = []
+        isTtsProcessingRef.current = false
         if (audioRef.current) {
             audioRef.current.pause()
             audioRef.current.src = ''
@@ -90,37 +92,74 @@ export default function VoiceCallOverlay({
     }, [])
 
     // ── ⚡ Fire-and-forget TTS ──
-    const fireTts = useCallback((sentence: string, slotIndex: number, controller: AbortController) => {
-        slotMapRef.current.set(slotIndex, null)
-        console.log(`[VoiceCall] 🚀 TTS fire [${slotIndex}]: "${sentence.slice(0, 40)}..."`)
+    // ── ⚡ 순차 TTS 큐 — 한 번에 1개만 호출 (429 방지) ──
+    const ttsQueueRef = useRef<{ sentence: string; slotIndex: number }[]>([])
+    const isTtsProcessingRef = useRef(false)
 
-        fetch('/api/tts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: sentence, mentorName, voiceId: safeVoiceId }),
-            signal: controller.signal,
-        })
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-            if (controller.signal.aborted) return
-            if (data?.audioUrl) {
-                console.log(`[VoiceCall] ✅ TTS 완료 [${slotIndex}]:`, data.audioUrl.slice(0, 50))
-                slotMapRef.current.set(slotIndex, data.audioUrl)
-                tryPlayNext()
-            } else {
-                console.error(`[VoiceCall] ❌ TTS 실패 [${slotIndex}]: audioUrl 없음, data:`, data)
+    const processTtsQueue = useCallback(async (controller: AbortController) => {
+        if (isTtsProcessingRef.current) return
+        isTtsProcessingRef.current = true
+
+        while (ttsQueueRef.current.length > 0) {
+            if (controller.signal.aborted) break
+            const item = ttsQueueRef.current.shift()!
+            const { sentence, slotIndex } = item
+
+            console.log(`[VoiceCall] 🚀 TTS [${slotIndex}]: "${sentence.slice(0, 40)}..."`)
+
+            try {
+                const res = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: sentence, mentorName, voiceId: safeVoiceId }),
+                    signal: controller.signal,
+                })
+
+                if (controller.signal.aborted) break
+
+                if (res.ok) {
+                    const data = await res.json()
+                    if (data?.audioUrl) {
+                        console.log(`[VoiceCall] ✅ TTS 완료 [${slotIndex}]`)
+                        slotMapRef.current.set(slotIndex, data.audioUrl)
+                        tryPlayNext()
+                    } else {
+                        console.error(`[VoiceCall] ❌ TTS 실패 [${slotIndex}]: audioUrl 없음`)
+                        slotMapRef.current.delete(slotIndex)
+                        nextPlayIndexRef.current = Math.max(nextPlayIndexRef.current, slotIndex + 1)
+                        tryPlayNext()
+                    }
+                } else if (res.status === 429) {
+                    // Rate limit → 3초 대기 후 다시 큐에 넣고 재시도
+                    console.warn(`[VoiceCall] ⏳ 429 Rate limit → 3초 대기 후 재시도`)
+                    ttsQueueRef.current.unshift(item)
+                    await new Promise(r => setTimeout(r, 3000))
+                } else {
+                    console.error(`[VoiceCall] ❌ TTS HTTP ${res.status}`)
+                    slotMapRef.current.delete(slotIndex)
+                    nextPlayIndexRef.current = Math.max(nextPlayIndexRef.current, slotIndex + 1)
+                    tryPlayNext()
+                }
+            } catch (e: any) {
+                if (e?.name === 'AbortError') break
+                console.error('[VoiceCall] TTS fetch 에러:', e)
                 slotMapRef.current.delete(slotIndex)
                 nextPlayIndexRef.current = Math.max(nextPlayIndexRef.current, slotIndex + 1)
                 tryPlayNext()
             }
-        })
-        .catch((e) => {
-            if (e?.name !== 'AbortError') console.error('[VoiceCall] TTS fetch 에러:', e)
-            slotMapRef.current.delete(slotIndex)
-            nextPlayIndexRef.current = Math.max(nextPlayIndexRef.current, slotIndex + 1)
-            tryPlayNext()
-        })
+        }
+
+        isTtsProcessingRef.current = false
+
+        // 큐 다 처리되고 스트림도 끝났으면 → 재생 완료 체크
+        if (streamDoneRef.current) tryPlayNext()
     }, [mentorName, safeVoiceId, tryPlayNext])
+
+    const enqueueTts = useCallback((sentence: string, slotIndex: number, controller: AbortController) => {
+        slotMapRef.current.set(slotIndex, null) // 슬롯 예약
+        ttsQueueRef.current.push({ sentence, slotIndex })
+        processTtsQueue(controller) // 이미 실행 중이면 무시됨
+    }, [processTtsQueue])
 
     // ── 📞 인사말 프리패칭 ──
     useEffect(() => {
@@ -293,7 +332,7 @@ export default function VoiceCallOverlay({
                 }
                 const idx = sentenceIndex++
                 totalSlotsRef.current = sentenceIndex
-                fireTts(sentence, idx, controller)
+                enqueueTts(sentence, idx, controller)
             }
 
             await onStreamMessage(text, onSentence, controller.signal)
@@ -310,7 +349,7 @@ export default function VoiceCallOverlay({
             setError('대화 중 오류가 발생했어요')
             setTimeout(() => { setError(null); setPhase('listening'); startListening() }, 2000)
         }
-    }, [onStreamMessage, startListening, startInterruptionDetection, fireTts, resetSlotQueue, tryPlayNext])
+    }, [onStreamMessage, startListening, startInterruptionDetection, enqueueTts, resetSlotQueue, tryPlayNext])
 
     const handleHangup = useCallback(() => { stopAll(); onClose() }, [stopAll, onClose])
 
