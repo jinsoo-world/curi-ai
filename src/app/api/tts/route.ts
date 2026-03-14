@@ -191,49 +191,62 @@ export async function POST(request: NextRequest) {
 
         const replicate = getReplicate()
         let output: any
-        try {
-            output = await replicate.run('qwen/qwen3-tts', {
-                input: replicateInput,
-            })
-            console.log('[TTS] Replicate output type:', typeof output, output)
-        } catch (replicateErr: any) {
-            console.error('[TTS] Replicate 실행 실패:', replicateErr?.message || replicateErr)
 
-            // voice clone 모드에서 실패 시 → voice_design 모드로 폴백
-            if (voiceSampleUrl) {
-                console.log('[TTS] Clone 실패 → Voice Design 모드로 폴백')
-                try {
-                    output = await replicate.run('qwen/qwen3-tts', {
-                        input: {
-                            text: trimmedText,
-                            mode: 'voice_design',
-                            voice_description: voiceDesign,
-                            language: lang,
-                        },
-                    })
-                    console.log('[TTS] 폴백 성공:', typeof output)
-                } catch (fallbackErr: any) {
-                    console.error('[TTS] 폴백도 실패:', fallbackErr?.message)
+        // 429 rate limit 시 자동 재시도 (최대 2회)
+        for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+                output = await replicate.run('qwen/qwen3-tts', {
+                    input: replicateInput,
+                })
+                console.log('[TTS] Replicate output type:', typeof output, output)
+                break // 성공하면 루프 종료
+            } catch (replicateErr: any) {
+                const errMsg = replicateErr?.message || ''
+                console.error(`[TTS] Replicate 실행 실패 (시도 ${attempt + 1}/2):`, errMsg)
+
+                if ((errMsg.includes('429') || errMsg.includes('throttled')) && attempt === 0) {
+                    // 첫 시도 429 → 10초 대기 후 재시도
+                    console.log('[TTS] Rate limit → 10초 대기 후 재시도...')
+                    await new Promise(r => setTimeout(r, 10000))
+                    continue
+                }
+
+                // voice clone 모드에서 실패 시 → voice_design 모드로 폴백
+                if (voiceSampleUrl) {
+                    console.log('[TTS] Clone 실패 → Voice Design 모드로 폴백')
+                    try {
+                        output = await replicate.run('qwen/qwen3-tts', {
+                            input: {
+                                text: trimmedText,
+                                mode: 'voice_design',
+                                voice_description: voiceDesign,
+                                language: lang,
+                            },
+                        })
+                        console.log('[TTS] 폴백 성공:', typeof output)
+                        break
+                    } catch (fallbackErr: any) {
+                        console.error('[TTS] 폴백도 실패:', fallbackErr?.message)
+                        return NextResponse.json(
+                            { error: '음성 생성에 실패했습니다. 잠시 후 다시 시도해주세요.' },
+                            { status: 500 }
+                        )
+                    }
+                } else {
+                    // 에러 메시지를 유저 친화적으로 변환
+                    let userMsg = '음성 생성에 실패했습니다. 잠시 후 다시 시도해주세요.'
+                    if (errMsg.includes('429') || errMsg.includes('Too Many Requests') || errMsg.includes('throttled')) {
+                        userMsg = '요청이 너무 많습니다. 10초 후 다시 시도해주세요.'
+                    } else if (errMsg.includes('401') || errMsg.includes('Unauthenticated')) {
+                        userMsg = 'API 인증 오류입니다. 관리자에게 문의해주세요.'
+                    } else if (errMsg.includes('422') || errMsg.includes('Unprocessable')) {
+                        userMsg = '음성 파일 형식이 맞지 않습니다. 다른 파일로 시도해주세요.'
+                    }
                     return NextResponse.json(
-                        { error: `음성 생성 실패: ${fallbackErr?.message || '알 수 없는 오류'}` },
+                        { error: userMsg },
                         { status: 500 }
                     )
                 }
-            } else {
-                // 에러 메시지를 유저 친화적으로 변환
-                const rawMsg = replicateErr?.message || ''
-                let userMsg = '음성 생성에 실패했습니다. 잠시 후 다시 시도해주세요.'
-                if (rawMsg.includes('429') || rawMsg.includes('Too Many Requests') || rawMsg.includes('throttled')) {
-                    userMsg = '요청이 너무 많습니다. 10초 후 다시 시도해주세요.'
-                } else if (rawMsg.includes('401') || rawMsg.includes('Unauthenticated')) {
-                    userMsg = 'API 인증 오류입니다. 관리자에게 문의해주세요.'
-                } else if (rawMsg.includes('422') || rawMsg.includes('Unprocessable')) {
-                    userMsg = '음성 파일 형식이 맞지 않습니다. 다른 파일로 시도해주세요.'
-                }
-                return NextResponse.json(
-                    { error: userMsg },
-                    { status: 500 }
-                )
             }
         }
 
