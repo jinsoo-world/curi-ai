@@ -4,6 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30 // 파일 업로드 + Storage 전송에 충분한 시간
+
+// ⚠️ Vercel 기본 body 제한은 4.5MB → 10MB로 확장 (파일 업로드용)
+export const fetchCache = 'force-no-store'
 
 const ALLOWED_TYPES = [
     'application/pdf',

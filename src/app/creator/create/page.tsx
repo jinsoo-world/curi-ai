@@ -245,11 +245,21 @@ export default function CreatorCreatePage() {
             return
         }
 
+        // 개별 파일 크기 검증 (10MB)
+        const MAX_SINGLE = 10 * 1024 * 1024
+        const tooBig = newFilesArr.find(f => f.size > MAX_SINGLE)
+        if (tooBig) {
+            const sizeMB = (tooBig.size / 1024 / 1024).toFixed(1)
+            setError(`"${tooBig.name}" 파일이 너무 큽니다 (${sizeMB}MB). 파일 1개당 최대 10MB까지 업로드할 수 있어요.`)
+            return
+        }
+
         // 합산 용량 검증 (50MB)
         const existingSize = uploadedFiles.reduce((sum, f) => sum + f.fileSize, 0)
         const newSize = newFilesArr.reduce((sum, f) => sum + f.size, 0)
         if (existingSize + newSize > 50 * 1024 * 1024) {
-            setError('모든 파일 합산 50MB를 초과할 수 없습니다.')
+            const totalMB = ((existingSize + newSize) / 1024 / 1024).toFixed(1)
+            setError(`모든 파일 합산 ${totalMB}MB로 50MB를 초과합니다. 일부 파일을 삭제 후 다시 시도해주세요.`)
             return
         }
 
@@ -282,46 +292,56 @@ export default function CreatorCreatePage() {
                 setMentorIdForUpload(mid)
             }
 
-            const allowedTypes = [
-                'application/pdf', 'text/plain', 'text/markdown',
-                'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            ]
-            // HWP/HWPX는 MIME 타입이 없으므로 확장자로 체크
             const allowedExtensions = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx', 'ppt', 'pptx']
 
             for (const file of newFilesArr) {
                 const ext = file.name.split('.').pop()?.toLowerCase() || ''
-                if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(ext)) {
+                if (!allowedExtensions.includes(ext)) {
                     setError(`지원하지 않는 형식: ${file.name}`)
                     continue
                 }
 
-                const formData = new FormData()
-                formData.append('file', file)
-                formData.append('mentorId', mid!)
-
-                const res = await fetch('/api/creator/knowledge/upload', {
+                // 1) 서버에서 Signed Upload URL 받기 (파일 자체는 전송 안 함)
+                const urlRes = await fetch('/api/creator/knowledge/upload-url', {
                     method: 'POST',
-                    body: formData,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mentorId: mid,
+                        fileName: file.name,
+                        fileSize: file.size,
+                        fileType: file.type,
+                    }),
                 })
-                let data
+                let urlData
                 try {
-                    data = await res.json()
+                    urlData = await urlRes.json()
                 } catch {
-                    throw new Error(`파일 업로드 실패 (${res.status}): 서버 응답을 처리할 수 없습니다.`)
+                    throw new Error(`업로드 준비 실패 (${urlRes.status}): 서버 응답을 처리할 수 없습니다.`)
                 }
-                if (!res.ok) throw new Error(data.error)
+                if (!urlRes.ok) throw new Error(urlData.error)
 
-                const sourceId = data.source.id
+                const sourceId = urlData.source.id
+
+                // 2) 클라이언트에서 직접 Supabase Storage에 업로드 (Vercel body limit 우회)
+                const uploadRes = await fetch(urlData.signedUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': file.type || 'application/octet-stream' },
+                    body: file,
+                })
+
+                if (!uploadRes.ok) {
+                    // Storage 업로드 실패 시 DB 레코드 정리 시도
+                    throw new Error(`파일 업로드 실패: ${file.name}`)
+                }
+
                 setUploadedFiles(prev => [...prev, {
                     id: sourceId,
-                    fileName: data.source.fileName,
-                    fileSize: data.source.fileSize,
+                    fileName: urlData.source.fileName,
+                    fileSize: urlData.source.fileSize,
                     status: 'processing' as const,
                 }])
 
-                // 파일 텍스트 추출 + 임베딩 트리거 (모든 파일)
+                // 3) 파일 텍스트 추출 + 임베딩 트리거 (모든 파일)
                 fetch('/api/creator/knowledge/process', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

@@ -34,7 +34,7 @@ interface OverviewData {
 }
 
 // ========================================
-// 재사용 컴포넌트
+// 재사용 컴포넌트 (화이트 테마)
 // ========================================
 
 function StatCard({ label, value, sub, color, trend, icon }: {
@@ -46,20 +46,20 @@ function StatCard({ label, value, sub, color, trend, icon }: {
     icon?: string
 }) {
     const isPositive = trend && !trend.startsWith('-') && trend !== '—'
-    const trendColor = trend === '—' ? 'rgba(255,255,255,0.3)' : isPositive ? '#34d399' : '#f87171'
+    const trendColor = trend === '—' ? '#94a3b8' : isPositive ? '#16a34a' : '#dc2626'
 
     return (
         <div style={{
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
-            border: '1px solid rgba(255,255,255,0.06)',
+            background: '#fff',
+            border: '1px solid #e5e7eb',
             borderRadius: 16,
             padding: '20px 24px',
             flex: '1 1 200px',
             minWidth: 170,
             position: 'relative',
             overflow: 'hidden',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
         }}>
-            {/* 배경 아이콘 */}
             {icon && (
                 <div style={{
                     position: 'absolute',
@@ -69,7 +69,7 @@ function StatCard({ label, value, sub, color, trend, icon }: {
                     opacity: 0.15,
                 }}>{icon}</div>
             )}
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 6, fontWeight: 600, letterSpacing: 0.3 }}>
+            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6, fontWeight: 600, letterSpacing: 0.3 }}>
                 {label}
             </div>
             <div style={{ fontSize: 28, fontWeight: 800, color, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
@@ -81,14 +81,14 @@ function StatCard({ label, value, sub, color, trend, icon }: {
                         fontSize: 11,
                         fontWeight: 700,
                         color: trendColor,
-                        background: isPositive ? 'rgba(52,211,153,0.1)' : 'rgba(248,113,113,0.1)',
+                        background: isPositive ? '#dcfce7' : '#fee2e2',
                         padding: '2px 6px',
                         borderRadius: 6,
                     }}>
                         {isPositive ? '↑' : '↓'} {trend}%
                     </span>
                 )}
-                {sub && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{sub}</span>}
+                {sub && <span style={{ fontSize: 11, color: '#94a3b8' }}>{sub}</span>}
             </div>
         </div>
     )
@@ -100,7 +100,7 @@ function AreaChart({ data, dataKey, color, height = 120 }: {
     color: string
     height?: number
 }) {
-    if (!data.length) return <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, padding: 20 }}>데이터 없음</div>
+    if (!data.length) return <div style={{ color: '#94a3b8', fontSize: 13, padding: 20 }}>데이터 없음</div>
     const values = data.map(d => Number(d[dataKey]) || 0)
     const max = Math.max(...values, 1)
     const width = 500
@@ -113,20 +113,19 @@ function AreaChart({ data, dataKey, color, height = 120 }: {
             <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height }} preserveAspectRatio="none">
                 <defs>
                     <linearGradient id={`grad-${dataKey}-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+                        <stop offset="0%" stopColor={color} stopOpacity="0.2" />
                         <stop offset="100%" stopColor={color} stopOpacity="0" />
                     </linearGradient>
                 </defs>
                 <polygon points={areaPoints} fill={`url(#grad-${dataKey}-${color.replace('#', '')})`} />
                 <polyline points={points} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
                 {values.map((v, i) => (
-                    <circle key={i} cx={i * stepX} cy={height - (v / max) * (height - 20) - 10} r="3" fill={color} stroke="#0a0a0f" strokeWidth="1.5" />
+                    <circle key={i} cx={i * stepX} cy={height - (v / max) * (height - 20) - 10} r="3" fill={color} stroke="#fff" strokeWidth="1.5" />
                 ))}
             </svg>
-            {/* X축 라벨 */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, padding: '0 2px' }}>
                 {data.length > 1 && [0, Math.floor(data.length / 2), data.length - 1].map(i => (
-                    <span key={i} style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>
+                    <span key={i} style={{ fontSize: 10, color: '#94a3b8' }}>
                         {String(data[i]?.date || '').slice(5)}
                     </span>
                 ))}
@@ -151,9 +150,9 @@ function BarChart({ data, height = 120, color }: {
                 const x = i * (width / data.length) + 1
                 return (
                     <g key={i}>
-                        <rect x={x} y={height - barH} width={barW} height={barH} rx={3} fill={color} opacity={v > 0 ? 0.7 : 0.15} />
+                        <rect x={x} y={height - barH} width={barW} height={barH} rx={3} fill={color} opacity={v > 0 ? 0.7 : 0.1} />
                         {i % 3 === 0 && (
-                            <text x={x + barW / 2} y={height + 14} textAnchor="middle" fill="rgba(255,255,255,0.25)" fontSize="9">
+                            <text x={x + barW / 2} y={height + 14} textAnchor="middle" fill="#94a3b8" fontSize="9">
                                 {i}시
                             </text>
                         )}
@@ -176,7 +175,7 @@ function DonutChart({ data, colors }: {
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
             <svg width="100" height="100" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="12" />
+                <circle cx="50" cy="50" r={r} fill="none" stroke="#f1f5f9" strokeWidth="12" />
                 {data.map((d, i) => {
                     const pct = d.value / total
                     const dashLength = pct * circumference
@@ -194,7 +193,7 @@ function DonutChart({ data, colors }: {
                     offset += dashLength
                     return el
                 })}
-                <text x="50" y="50" textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize="14" fontWeight="700">
+                <text x="50" y="50" textAnchor="middle" dominantBaseline="central" fill="#1e293b" fontSize="14" fontWeight="700">
                     {total.toLocaleString()}
                 </text>
             </svg>
@@ -202,9 +201,9 @@ function DonutChart({ data, colors }: {
                 {data.map((d, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ width: 8, height: 8, borderRadius: '50%', background: colors[i % colors.length], flexShrink: 0 }} />
-                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
-                            {d.label} <b style={{ color: '#fff' }}>{d.value.toLocaleString()}</b>
-                            <span style={{ color: 'rgba(255,255,255,0.3)', marginLeft: 4 }}>
+                        <span style={{ fontSize: 12, color: '#64748b' }}>
+                            {d.label} <b style={{ color: '#1e293b' }}>{d.value.toLocaleString()}</b>
+                            <span style={{ color: '#94a3b8', marginLeft: 4 }}>
                                 ({((d.value / total) * 100).toFixed(0)}%)
                             </span>
                         </span>
@@ -218,12 +217,13 @@ function DonutChart({ data, colors }: {
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
     return (
         <div style={{
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
-            border: '1px solid rgba(255,255,255,0.06)',
+            background: '#fff',
+            border: '1px solid #e5e7eb',
             borderRadius: 16,
             padding: 24,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
         }}>
-            <h3 style={{ fontSize: 13, fontWeight: 600, margin: '0 0 16px', color: 'rgba(255,255,255,0.6)', letterSpacing: 0.3 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 600, margin: '0 0 16px', color: '#64748b', letterSpacing: 0.3 }}>
                 {title}
             </h3>
             {children}
@@ -269,12 +269,12 @@ export default function OverviewPage() {
                 }}>
                     <div style={{
                         width: 48, height: 48, borderRadius: '50%',
-                        border: '3px solid rgba(99,102,241,0.3)',
+                        border: '3px solid #e0e7ff',
                         borderTopColor: '#6366f1',
                         animation: 'spin 1s linear infinite',
                     }} />
                     <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-                    <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>대시보드 데이터 로딩 중...</span>
+                    <span style={{ color: '#64748b', fontSize: 14 }}>대시보드 데이터 로딩 중...</span>
                 </div>
             </div>
         )
@@ -284,8 +284,8 @@ export default function OverviewPage() {
         return (
             <div style={{ padding: 40, textAlign: 'center' }}>
                 <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
-                <h2 style={{ color: '#f87171', margin: '0 0 8px' }}>데이터 로딩 실패</h2>
-                <p style={{ color: 'rgba(255,255,255,0.4)', margin: '0 0 16px' }}>{error}</p>
+                <h2 style={{ color: '#dc2626', margin: '0 0 8px' }}>데이터 로딩 실패</h2>
+                <p style={{ color: '#94a3b8', margin: '0 0 16px' }}>{error}</p>
                 <button onClick={fetchData} style={{
                     padding: '10px 24px', borderRadius: 12, border: 'none',
                     background: '#6366f1', color: '#fff', fontSize: 14, cursor: 'pointer',
@@ -320,15 +320,15 @@ export default function OverviewPage() {
             {/* 헤더 */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
                 <div>
-                    <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, letterSpacing: -0.5 }}>
+                    <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, letterSpacing: -0.5, color: '#1e293b' }}>
                         📊 Dashboard Overview
                     </h1>
-                    <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, margin: '6px 0 0' }}>
+                    <p style={{ color: '#94a3b8', fontSize: 13, margin: '6px 0 0' }}>
                         {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
                     </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>
+                    <span style={{ fontSize: 11, color: '#94a3b8' }}>
                         마지막 갱신: {lastRefresh.toLocaleTimeString('ko-KR')}
                     </span>
                     <button
@@ -336,10 +336,11 @@ export default function OverviewPage() {
                         disabled={loading}
                         style={{
                             padding: '8px 16px', borderRadius: 10,
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            background: 'rgba(255,255,255,0.03)',
-                            color: '#fff', fontSize: 13, cursor: 'pointer',
+                            border: '1px solid #e5e7eb',
+                            background: '#fff',
+                            color: '#1e293b', fontSize: 13, cursor: 'pointer',
                             opacity: loading ? 0.5 : 1,
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                         }}
                     >
                         🔄 새로고침
@@ -349,32 +350,32 @@ export default function OverviewPage() {
 
             {/* === 핵심 지표 그리드 === */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))', gap: 12, marginBottom: 28 }}>
-                <StatCard icon="👥" label="총 유저" value={o.totalUsers} color="#60a5fa" trend={o.userGrowth} sub="vs 지난주" />
-                <StatCard icon="🆕" label="오늘 신규 가입" value={o.newUsersToday} color="#34d399" sub={`어제: ${o.newUsersYesterday}`} />
-                <StatCard icon="📱" label="WAU" value={o.wau} color="#a78bfa" trend={o.weeklyGrowth} sub="주간 활성 유저" />
-                <StatCard icon="💬" label="총 대화 세션" value={o.totalSessions} color="#fbbf24" />
-                <StatCard icon="📝" label="총 메시지" value={o.totalMessages} color="#f472b6" sub={`오늘: ${o.todayMessages.toLocaleString()}`} />
-                <StatCard icon="⚡" label="세션당 평균" value={`${o.avgMessagesPerSession}회`} color="#fb923c" sub="메시지" />
-                <StatCard icon="🟢" label="오늘 활성" value={o.activeSessions} color="#4ade80" sub="세션" />
-                <StatCard icon="🕐" label="피크 시간" value={`${peakHour}시`} color="#e879f9" sub={`${peakMessages}개 메시지`} />
+                <StatCard icon="👥" label="총 유저" value={o.totalUsers} color="#3b82f6" trend={o.userGrowth} sub="vs 지난주" />
+                <StatCard icon="🆕" label="오늘 신규 가입" value={o.newUsersToday} color="#16a34a" sub={`어제: ${o.newUsersYesterday}`} />
+                <StatCard icon="📱" label="WAU" value={o.wau} color="#7c3aed" trend={o.weeklyGrowth} sub="주간 활성 유저" />
+                <StatCard icon="💬" label="총 대화 세션" value={o.totalSessions} color="#d97706" />
+                <StatCard icon="📝" label="총 메시지" value={o.totalMessages} color="#db2777" sub={`오늘: ${o.todayMessages.toLocaleString()}`} />
+                <StatCard icon="⚡" label="세션당 평균" value={`${o.avgMessagesPerSession}회`} color="#ea580c" sub="메시지" />
+                <StatCard icon="🟢" label="오늘 활성" value={o.activeSessions} color="#16a34a" sub="세션" />
+                <StatCard icon="🕐" label="피크 시간" value={`${peakHour}시`} color="#a855f7" sub={`${peakMessages}개 메시지`} />
             </div>
 
             {/* === 차트 그리드 (2열) === */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <ChartCard title="📈 일별 활성 유저 추이 (30일)">
-                    <AreaChart data={data.dailyStats} dataKey="active_users" color="#60a5fa" height={130} />
+                    <AreaChart data={data.dailyStats} dataKey="active_users" color="#3b82f6" height={130} />
                 </ChartCard>
                 <ChartCard title="💬 일별 메시지 수 추이 (30일)">
-                    <AreaChart data={data.dailyStats} dataKey="total_messages" color="#a78bfa" height={130} />
+                    <AreaChart data={data.dailyStats} dataKey="total_messages" color="#7c3aed" height={130} />
                 </ChartCard>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <ChartCard title="🆕 일별 신규 가입 추이 (30일)">
-                    <AreaChart data={data.signupTrend} dataKey="count" color="#34d399" height={110} />
+                    <AreaChart data={data.signupTrend} dataKey="count" color="#16a34a" height={110} />
                 </ChartCard>
                 <ChartCard title="🕐 시간대별 메시지 분포 (이번 주)">
-                    <BarChart data={data.hourlyDistribution} color="#f59e0b" height={110} />
+                    <BarChart data={data.hourlyDistribution} color="#d97706" height={110} />
                 </ChartCard>
             </div>
 
@@ -382,13 +383,13 @@ export default function OverviewPage() {
                 <ChartCard title="🤖 멘토별 대화 점유율">
                     {mentorDonut.length > 0 ?
                         <DonutChart data={mentorDonut} colors={mentorColors} /> :
-                        <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>데이터 없음</div>
+                        <div style={{ color: '#94a3b8', fontSize: 13 }}>데이터 없음</div>
                     }
                 </ChartCard>
                 <ChartCard title="🔐 가입 경로 분포">
                     {authDonut.length > 0 ?
                         <DonutChart data={authDonut} colors={authColors} /> :
-                        <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>데이터 없음</div>
+                        <div style={{ color: '#94a3b8', fontSize: 13 }}>데이터 없음</div>
                     }
                 </ChartCard>
             </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 
 interface Message {
@@ -52,7 +52,6 @@ interface UserResponse {
 
 export default function UserDetailPage() {
     const { userId } = useParams<{ userId: string }>()
-    const router = useRouter()
     const [data, setData] = useState<UserResponse | null>(null)
     const [loading, setLoading] = useState(true)
     const [expandedSession, setExpandedSession] = useState<string | null>(null)
@@ -114,14 +113,14 @@ export default function UserDetailPage() {
     if (loading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>로딩 중...</div>
+                <div style={{ color: '#94a3b8', fontSize: 14 }}>로딩 중...</div>
             </div>
         )
     }
 
     if (!data) {
         return (
-            <div style={{ textAlign: 'center', padding: 60, color: 'rgba(255,255,255,0.4)' }}>
+            <div style={{ textAlign: 'center', padding: 60, color: '#94a3b8' }}>
                 유저를 찾을 수 없습니다
                 <br /><br />
                 <Link href="/admin/users" style={{ color: '#6366f1', textDecoration: 'none' }}>← 유저 목록으로</Link>
@@ -138,42 +137,47 @@ export default function UserDetailPage() {
                 href="/admin/users"
                 style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6,
-                    color: 'rgba(255,255,255,0.4)', fontSize: 13, textDecoration: 'none',
+                    color: '#94a3b8', fontSize: 13, textDecoration: 'none',
                     marginBottom: 20, transition: 'color 0.2s',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
+                onMouseEnter={e => (e.currentTarget.style.color = '#4f46e5')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}
             >
                 ← 유저 목록
             </Link>
 
             {/* 유저 프로필 카드 */}
             <div style={{
-                background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.06))',
-                border: '1px solid rgba(99,102,241,0.15)',
+                background: '#fff',
+                border: '1px solid #e5e7eb',
                 borderRadius: 20, padding: 28, marginBottom: 24,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-                    <div style={{
-                        width: 56, height: 56, borderRadius: '50%',
-                        background: `hsl(${user.id.charCodeAt(0) * 7 % 360}, 50%, 30%)`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 22, fontWeight: 700, flexShrink: 0,
-                        border: '2px solid rgba(255,255,255,0.1)',
-                    }}>
-                        {(user.display_name || user.email || '?')[0]?.toUpperCase()}
-                    </div>
+                    {user.avatar_url ? (
+                        <img src={user.avatar_url} alt=""
+                            style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    ) : (
+                        <div style={{
+                            width: 56, height: 56, borderRadius: '50%',
+                            background: `hsl(${user.id.charCodeAt(0) * 7 % 360}, 45%, 65%)`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 22, fontWeight: 700, flexShrink: 0, color: '#fff',
+                        }}>
+                            {(user.display_name || user.email || '?')[0]?.toUpperCase()}
+                        </div>
+                    )}
                     <div style={{ flex: 1 }}>
-                        <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>
+                        <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: '#1e293b' }}>
                             {user.display_name || '이름 없음'}
                         </h1>
-                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>
+                        <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 4 }}>
                             {user.email} · {user.membership_tier === 'free' ? '무료' : user.membership_tier} · 가입일 {new Date(user.created_at).toLocaleDateString('ko-KR')}
                         </div>
                         {user.concern && (
                             <div style={{
-                                marginTop: 10, fontSize: 13, color: 'rgba(255,255,255,0.6)',
-                                background: 'rgba(255,255,255,0.04)', padding: '8px 14px',
+                                marginTop: 10, fontSize: 13, color: '#64748b',
+                                background: '#f8fafc', padding: '8px 14px',
                                 borderRadius: 10, borderLeft: '3px solid #6366f1',
                             }}>
                                 💬 고민: {user.concern}
@@ -195,15 +199,15 @@ export default function UserDetailPage() {
                         { label: '클로버', value: user.clovers || 0, icon: '🍀' },
                     ].map((s, i) => (
                         <div key={i} style={{
-                            background: 'rgba(0,0,0,0.2)', borderRadius: 12,
+                            background: '#f8fafc', borderRadius: 12,
                             padding: '14px 16px', textAlign: 'center',
                         }}>
-                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 4 }}>
+                            <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>
                                 {s.icon} {s.label}
                             </div>
                             <div style={{
                                 fontSize: typeof s.value === 'number' ? 22 : 13,
-                                fontWeight: 700,
+                                fontWeight: 700, color: '#1e293b',
                                 fontVariantNumeric: 'tabular-nums',
                             }}>
                                 {typeof s.value === 'number' ? s.value.toLocaleString() : s.value}
@@ -219,18 +223,18 @@ export default function UserDetailPage() {
                 }}>
                     {[
                         { label: '휴대폰', value: user.phone || '—', icon: '📱' },
-                        { label: '성별', value: user.gender === '남' ? '🙍‍♂️ 남' : user.gender === '여' ? '🙍‍♀️ 여' : '—' },
-                        { label: '마케팅', value: user.marketing_consent ? '✅ 동의' : '❌ 미동의' },
+                        { label: '성별', value: user.gender === '남' ? '🙍‍♂️ 남' : user.gender === '여' ? '🙍‍♀️ 여' : '—', icon: '' },
+                        { label: '마케팅', value: user.marketing_consent ? '✅ 동의' : '❌ 미동의', icon: '' },
                         { label: '초대코드', value: user.referral_code || '—', icon: '🔗' },
                     ].map((s, i) => (
                         <div key={i} style={{
-                            background: 'rgba(0,0,0,0.15)', borderRadius: 10,
+                            background: '#f1f5f9', borderRadius: 10,
                             padding: '10px 14px', textAlign: 'center',
                         }}>
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 3 }}>
-                                {(s as any).icon || ''} {s.label}
+                            <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 3 }}>
+                                {s.icon} {s.label}
                             </div>
-                            <div style={{ fontSize: 13, fontWeight: 600 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>
                                 {s.value}
                             </div>
                         </div>
@@ -239,16 +243,16 @@ export default function UserDetailPage() {
             </div>
 
             {/* 세션 목록 */}
-            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14, color: '#1e293b' }}>
                 📋 대화 세션 ({sessions.length})
             </h2>
 
             {sessions.length === 0 ? (
                 <div style={{
                     textAlign: 'center', padding: 40,
-                    color: 'rgba(255,255,255,0.3)', fontSize: 13,
-                    background: 'rgba(255,255,255,0.02)',
-                    borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)',
+                    color: '#94a3b8', fontSize: 13,
+                    background: '#fff',
+                    borderRadius: 16, border: '1px solid #e5e7eb',
                 }}>
                     아직 대화 기록이 없습니다
                 </div>
@@ -256,18 +260,19 @@ export default function UserDetailPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {sessions.map((session) => {
                         const isExpanded = expandedSession === session.id
-                        const mentor = session.mentors as any
+                        const mentor = session.mentors as { id: string; name: string; slug: string; avatar_url: string | null } | null
                         const sessionMessages = messages[session.id]
 
                         return (
                             <div key={session.id} style={{
                                 background: session.deleted_at
-                                    ? 'rgba(239,68,68,0.06)'
-                                    : isExpanded ? 'rgba(99,102,241,0.04)' : 'rgba(255,255,255,0.02)',
-                                border: `1px solid ${session.deleted_at ? 'rgba(239,68,68,0.15)' : isExpanded ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                                    ? '#fef2f2'
+                                    : isExpanded ? '#f8f7ff' : '#fff',
+                                border: `1px solid ${session.deleted_at ? '#fecaca' : isExpanded ? '#c7d2fe' : '#e5e7eb'}`,
                                 borderRadius: 16, overflow: 'hidden',
                                 transition: 'all 0.2s',
-                                opacity: session.deleted_at ? 0.6 : 1,
+                                opacity: session.deleted_at ? 0.7 : 1,
+                                boxShadow: isExpanded ? '0 4px 12px rgba(99,102,241,0.08)' : '0 1px 3px rgba(0,0,0,0.04)',
                             }}>
                                 {/* 세션 헤더 */}
                                 <button
@@ -275,14 +280,14 @@ export default function UserDetailPage() {
                                     style={{
                                         width: '100%', padding: '16px 20px',
                                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                        background: 'none', border: 'none', color: '#fff',
+                                        background: 'none', border: 'none', color: '#1e293b',
                                         cursor: 'pointer', textAlign: 'left',
                                     }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
                                         <div style={{
                                             width: 36, height: 36, borderRadius: 10,
-                                            background: mentor ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.06)',
+                                            background: mentor ? '#f0f0ff' : '#f8fafc',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: 16, flexShrink: 0,
                                         }}>
@@ -290,17 +295,18 @@ export default function UserDetailPage() {
                                         </div>
                                         <div style={{ minWidth: 0, flex: 1 }}>
                                             <div style={{
-                                                fontSize: 14, fontWeight: 600,
+                                                fontSize: 14, fontWeight: 600, color: '#1e293b',
                                                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                             }}>
                                                 {session.title || `${mentor?.name || '멘토'} 대화`}
                                             </div>
-                                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                                <span>{mentor?.name || '알 수 없음'} · {session.message_count || 0}개 메시지 · {formatRelative(session.last_message_at || session.created_at)}</span>
+                                            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                <span style={{ fontWeight: 600, color: '#6366f1' }}>{mentor?.name || '알 수 없음'}</span>
+                                                <span>· {session.message_count || 0}개 메시지 · {formatRelative(session.last_message_at || session.created_at)}</span>
                                                 {session.deleted_at && (
                                                     <span style={{
-                                                        fontSize: 10, color: '#ef4444',
-                                                        background: 'rgba(239,68,68,0.12)',
+                                                        fontSize: 10, color: '#dc2626',
+                                                        background: '#fee2e2',
                                                         padding: '2px 6px', borderRadius: 6, fontWeight: 600,
                                                     }}>
                                                         🗑 삭제됨 ({formatRelative(session.deleted_at)})
@@ -310,7 +316,7 @@ export default function UserDetailPage() {
                                         </div>
                                     </div>
                                     <span style={{
-                                        fontSize: 16, color: 'rgba(255,255,255,0.3)',
+                                        fontSize: 16, color: '#94a3b8',
                                         transform: isExpanded ? 'rotate(180deg)' : 'rotate(0)',
                                         transition: 'transform 0.2s',
                                         flexShrink: 0, marginLeft: 12,
@@ -319,19 +325,20 @@ export default function UserDetailPage() {
                                     </span>
                                 </button>
 
-                                {/* 메시지 목록 (확장 시) */}
+                                {/* 메시지 목록 (확장 시) — 유저 화면처럼 보이도록 */}
                                 {isExpanded && (
                                     <div style={{
-                                        borderTop: '1px solid rgba(255,255,255,0.06)',
+                                        borderTop: '1px solid #e5e7eb',
                                         padding: '16px 20px',
                                         maxHeight: 600, overflowY: 'auto',
+                                        background: '#f8f9fb',
                                     }}>
                                         {loadingMessages === session.id ? (
-                                            <div style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
+                                            <div style={{ textAlign: 'center', padding: 20, color: '#94a3b8', fontSize: 13 }}>
                                                 메시지 로딩 중...
                                             </div>
                                         ) : !sessionMessages?.length ? (
-                                            <div style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>
+                                            <div style={{ textAlign: 'center', padding: 20, color: '#94a3b8', fontSize: 13 }}>
                                                 메시지 없음
                                             </div>
                                         ) : (
@@ -348,16 +355,16 @@ export default function UserDetailPage() {
                                                                 display: 'flex', alignItems: 'center', gap: 6,
                                                                 marginBottom: 4,
                                                             }}>
-                                                                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+                                                                <span style={{ fontSize: 11, color: '#94a3b8' }}>
                                                                     {isUser ? `👤 ${user.display_name || '유저'}` : `🤖 ${mentor?.name || 'AI'}`}
                                                                 </span>
-                                                                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>
+                                                                <span style={{ fontSize: 10, color: '#cbd5e1' }}>
                                                                     {formatTime(msg.created_at)}
                                                                 </span>
                                                                 {msg.input_method === 'stt' && (
                                                                     <span style={{
-                                                                        fontSize: 9, color: '#f59e0b',
-                                                                        background: 'rgba(245,158,11,0.1)',
+                                                                        fontSize: 9, color: '#d97706',
+                                                                        background: '#fef3c7',
                                                                         padding: '2px 6px', borderRadius: 8,
                                                                     }}>
                                                                         🎤 음성
@@ -370,11 +377,13 @@ export default function UserDetailPage() {
                                                                 borderRadius: isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
                                                                 background: isUser
                                                                     ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
-                                                                    : 'rgba(255,255,255,0.06)',
-                                                                color: '#fff',
+                                                                    : '#fff',
+                                                                color: isUser ? '#fff' : '#1e293b',
                                                                 fontSize: 13, lineHeight: 1.6,
                                                                 wordBreak: 'break-word',
                                                                 whiteSpace: 'pre-wrap',
+                                                                border: isUser ? 'none' : '1px solid #e5e7eb',
+                                                                boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                                                             }}>
                                                                 {msg.content}
                                                             </div>

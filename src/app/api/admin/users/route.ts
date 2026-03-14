@@ -17,10 +17,10 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * pageSize
 
     try {
-        // 유저 기본 정보 조회 (users 테이블 - auth_provider 없음)
+        // 유저 기본 정보 조회 (users 테이블)
         let query = supabase
             .from('users')
-            .select('id, email, display_name, avatar_url, membership_tier, created_at, phone, gender, marketing_agreed, subscription_tier', { count: 'exact' })
+            .select('id, email, display_name, avatar_url, membership_tier, created_at, phone, gender, marketing_agreed, subscription_tier, clovers', { count: 'exact' })
             .order('created_at', { ascending: false })
             .range(offset, offset + pageSize - 1)
 
@@ -31,6 +31,19 @@ export async function GET(request: NextRequest) {
         const { data: rawUsers, count: totalCount, error } = await query
 
         if (error) throw error
+
+        // Supabase Auth Admin API로 실제 provider 조회
+        const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({
+            page: page,
+            perPage: 1000,
+        })
+
+        // auth user id → provider 매핑
+        const providerMap = new Map<string, string>()
+        authUsers?.forEach(u => {
+            const provider = u.app_metadata?.provider || u.app_metadata?.providers?.[0] || 'unknown'
+            providerMap.set(u.id, provider)
+        })
 
         // 유저별 세션/메시지 통계 추가
         const enrichedUsers = await Promise.all(
@@ -73,6 +86,9 @@ export async function GET(request: NextRequest) {
                     userSegment = 'light'
                 }
 
+                // 실제 auth provider 조회
+                const authProvider = providerMap.get(user.id) || 'unknown'
+
                 return {
                     id: user.id,
                     email: user.email,
@@ -80,7 +96,7 @@ export async function GET(request: NextRequest) {
                     avatar_url: user.avatar_url,
                     membership_tier: user.membership_tier,
                     created_at: user.created_at,
-                    auth_provider: 'google',
+                    auth_provider: authProvider,
                     total_sessions: totalSessions,
                     total_messages: totalMessages,
                     last_active_at: lastActive,
@@ -90,6 +106,7 @@ export async function GET(request: NextRequest) {
                     marketing_agreed: (user as Record<string, unknown>).marketing_agreed ?? null,
                     subscription_tier: (user as Record<string, unknown>).subscription_tier || null,
                     created_ai_count: aiCount || 0,
+                    clovers: (user as Record<string, unknown>).clovers || 0,
                 }
             })
         )

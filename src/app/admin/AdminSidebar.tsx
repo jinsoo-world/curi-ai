@@ -16,8 +16,8 @@ export default function AdminSidebar() {
     return (
         <aside style={{
             width: 240,
-            background: 'linear-gradient(180deg, #111118 0%, #0d0d14 100%)',
-            borderRight: '1px solid rgba(255,255,255,0.06)',
+            background: '#fff',
+            borderRight: '1px solid #e5e7eb',
             padding: '24px 0',
             display: 'flex',
             flexDirection: 'column',
@@ -31,7 +31,7 @@ export default function AdminSidebar() {
                 <h1 style={{
                     fontSize: 18,
                     fontWeight: 700,
-                    color: '#fff',
+                    color: '#1a1a2e',
                     margin: 0,
                     display: 'flex',
                     alignItems: 'center',
@@ -60,12 +60,12 @@ export default function AdminSidebar() {
                             style={{
                                 display: 'block',
                                 padding: '12px 20px',
-                                color: isActive ? '#fff' : 'rgba(255,255,255,0.5)',
+                                color: isActive ? '#4f46e5' : '#64748b',
                                 textDecoration: 'none',
                                 fontSize: 14,
                                 fontWeight: isActive ? 700 : 500,
                                 borderLeft: isActive ? '3px solid #6366f1' : '3px solid transparent',
-                                background: isActive ? 'rgba(99,102,241,0.08)' : 'transparent',
+                                background: isActive ? '#f0f0ff' : 'transparent',
                                 transition: 'all 0.15s ease',
                             }}
                         >
@@ -74,11 +74,11 @@ export default function AdminSidebar() {
                     )
                 })}
             </nav>
-            <div style={{ padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ padding: '16px 20px', borderTop: '1px solid #e5e7eb' }}>
                 <Link
                     href="/mentors"
                     style={{
-                        color: 'rgba(255,255,255,0.4)',
+                        color: '#94a3b8',
                         fontSize: 12,
                         textDecoration: 'none',
                     }}

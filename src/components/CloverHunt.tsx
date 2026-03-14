@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 /**
  * 🍀 CloverHunt — 네잎클로버 보물찾기 글로벌 컴포넌트
@@ -14,9 +15,9 @@ import { usePathname } from 'next/navigation'
  * 🎰 가변 보상 / ✨ 황금 클로버 / ⏳ 긴장감 / 📱 타격감 / 🏆 올클리어
  */
 
-const APPEAR_CHANCE = 0.30
+const APPEAR_CHANCE = 0.15           // 페이지 이동 시 출현 확률 (30% → 15%)
 const DISPLAY_DURATION = 8000
-const COOLDOWN_MS = 15000
+const COOLDOWN_MS = 90000            // 클로버 간 쿨다운 (15초 → 90초)
 const EXTENDED_THRESHOLD = 600
 const IDLE_BONUS_CHANCE = 0.10
 const MAX_PER_PAGE = 2             // 각 페이지에서 최대 2개
@@ -79,6 +80,7 @@ export default function CloverHunt() {
     const sessionStart = useRef(Date.now())
     const lastAppear = useRef(0)
     const pageAppearCount = useRef(0)  // 현재 페이지 출현 수
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null) // null = 로딩 중
 
     const [visible, setVisible] = useState(false)
     const [position, setPosition] = useState({ top: 50, left: 50 })
@@ -118,7 +120,14 @@ export default function CloverHunt() {
         } catch { /* ignore */ }
     }, [getSessionDuration])
 
-    useEffect(() => { loadStatus() }, [loadStatus])
+    // 로그인 여부 확인 (비회원이면 클로버 노출 안 함)
+    useEffect(() => {
+        const supabase = createClient()
+        supabase.auth.getUser().then(({ data }) => {
+            setIsLoggedIn(!!data.user)
+            if (data.user) loadStatus()
+        })
+    }, [loadStatus])
 
     // 10분 경과 시 한도 확장
     useEffect(() => {
@@ -248,6 +257,8 @@ export default function CloverHunt() {
         }, 2800)
     }, [phase, isGolden, getSessionDuration])
 
+    // 비회원이면 렌더링하지 않음
+    if (!isLoggedIn) return null
     if (!visible && !showConfetti) return null
 
     return (

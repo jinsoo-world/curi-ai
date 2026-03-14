@@ -46,7 +46,7 @@ export default function ConversationsPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
                 <div style={{
                     width: 48, height: 48, borderRadius: '50%',
-                    border: '3px solid rgba(168,85,247,0.3)',
+                    border: '3px solid #ede9fe',
                     borderTopColor: '#a855f7',
                     animation: 'spin 1s linear infinite',
                 }} />
@@ -86,14 +86,14 @@ export default function ConversationsPage() {
         <div>
             {/* 헤더 */}
             <div style={{ marginBottom: 24 }}>
-                <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0 }}>💬 대화 분석</h1>
-                <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, margin: '6px 0 0' }}>
+                <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, color: '#1e293b' }}>💬 대화 분석</h1>
+                <p style={{ color: '#94a3b8', fontSize: 13, margin: '6px 0 0' }}>
                     세션 · 메시지 · 입력방식 분석
                 </p>
             </div>
 
             {/* 탭 */}
-            <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'rgba(255,255,255,0.02)', borderRadius: 12, padding: 4 }}>
+            <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: '#fff', borderRadius: 12, padding: 4, border: '1px solid #e5e7eb' }}>
                 {[
                     { key: 'overview' as const, label: '📊 차트 분석' },
                     { key: 'sessions' as const, label: '📋 최근 세션' },
@@ -104,8 +104,8 @@ export default function ConversationsPage() {
                         style={{
                             flex: 1, padding: '10px 0', borderRadius: 10,
                             border: 'none',
-                            background: tab === t.key ? 'rgba(168,85,247,0.15)' : 'transparent',
-                            color: tab === t.key ? '#a855f7' : 'rgba(255,255,255,0.4)',
+                            background: tab === t.key ? '#f0f0ff' : 'transparent',
+                            color: tab === t.key ? '#6366f1' : '#94a3b8',
                             fontSize: 14, fontWeight: 600, cursor: 'pointer',
                         }}
                     >{t.label}</button>
@@ -117,19 +117,20 @@ export default function ConversationsPage() {
                     {/* 요약 카드 */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
                         {[
-                            { label: '주간 세션', value: totalSessionsWeek, icon: '📱', color: '#60a5fa' },
-                            { label: '주간 메시지', value: totalMsgsWeek, icon: '💬', color: '#a78bfa' },
-                            { label: '세션당 평균', value: avgMsgPerSession, icon: '📊', color: '#f59e0b' },
-                            { label: 'STT 사용률', value: `${sttRatio}%`, icon: '🎤', color: '#34d399' },
+                            { label: '주간 세션', value: totalSessionsWeek, icon: '📱', color: '#3b82f6' },
+                            { label: '주간 메시지', value: totalMsgsWeek, icon: '💬', color: '#7c3aed' },
+                            { label: '세션당 평균', value: avgMsgPerSession, icon: '📊', color: '#d97706' },
+                            { label: 'STT 사용률', value: `${sttRatio}%`, icon: '🎤', color: '#16a34a' },
                         ].map((c, i) => (
                             <div key={i} style={{
-                                background: 'rgba(255,255,255,0.03)',
-                                border: '1px solid rgba(255,255,255,0.06)',
+                                background: '#fff',
+                                border: '1px solid #e5e7eb',
                                 borderRadius: 14, padding: '16px 20px',
                                 position: 'relative', overflow: 'hidden',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                             }}>
                                 <span style={{ position: 'absolute', top: 12, right: 14, fontSize: 24, opacity: 0.12 }}>{c.icon}</span>
-                                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600, marginBottom: 4 }}>{c.label}</div>
+                                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, marginBottom: 4 }}>{c.label}</div>
                                 <div style={{ fontSize: 24, fontWeight: 800, color: c.color, fontVariantNumeric: 'tabular-nums' }}>
                                     {typeof c.value === 'number' ? c.value.toLocaleString() : c.value}
                                 </div>
@@ -139,11 +140,12 @@ export default function ConversationsPage() {
 
                     {/* 일별 메시지 추이 */}
                     <div style={{
-                        background: 'rgba(255,255,255,0.02)',
-                        border: '1px solid rgba(255,255,255,0.06)',
+                        background: '#fff',
+                        border: '1px solid #e5e7eb',
                         borderRadius: 16, padding: 24, marginBottom: 16,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                     }}>
-                        <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 16px', color: 'rgba(255,255,255,0.6)' }}>
+                        <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 16px', color: '#64748b' }}>
                             📈 일별 메시지 추이
                         </h3>
                         {stats.length > 0 ? (
@@ -153,8 +155,8 @@ export default function ConversationsPage() {
                                     {[0.25, 0.5, 0.75, 1].map((pct, i) => (
                                         <g key={i}>
                                             <line x1="0" y1={barH - pct * barH} x2={barWidth} y2={barH - pct * barH}
-                                                stroke="rgba(255,255,255,0.04)" strokeDasharray="4" />
-                                            <text x="2" y={barH - pct * barH - 3} fill="rgba(255,255,255,0.15)" fontSize="8">
+                                                stroke="#f1f5f9" strokeDasharray="4" />
+                                            <text x="2" y={barH - pct * barH - 3} fill="#cbd5e1" fontSize="8">
                                                 {Math.round(chartMax * pct)}
                                             </text>
                                         </g>
@@ -168,11 +170,11 @@ export default function ConversationsPage() {
                                         return (
                                             <g key={i}>
                                                 <rect x={x} y={barH - userH - assistH} width={w / 2 - 1} height={assistH} rx={3}
-                                                    fill="#6366f1" opacity={0.6} />
+                                                    fill="#6366f1" opacity={0.7} />
                                                 <rect x={x + w / 2} y={barH - userH} width={w / 2 - 1} height={userH} rx={3}
                                                     fill="#a78bfa" opacity={0.8} />
                                                 {i % 3 === 0 && (
-                                                    <text x={x + w / 2} y={barH + 14} textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="9">
+                                                    <text x={x + w / 2} y={barH + 14} textAnchor="middle" fill="#94a3b8" fontSize="9">
                                                         {d.date.slice(5)}
                                                     </text>
                                                 )}
@@ -181,27 +183,28 @@ export default function ConversationsPage() {
                                     })}
                                 </svg>
                                 <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#64748b' }}>
                                         <span style={{ width: 10, height: 10, borderRadius: 3, background: '#a78bfa' }} /> 유저 메시지
                                     </span>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#64748b' }}>
                                         <span style={{ width: 10, height: 10, borderRadius: 3, background: '#6366f1' }} /> AI 응답
                                     </span>
                                 </div>
                             </div>
                         ) : (
-                            <div style={{ padding: 30, textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>데이터 없음</div>
+                            <div style={{ padding: 30, textAlign: 'center', color: '#94a3b8' }}>데이터 없음</div>
                         )}
                     </div>
 
                     {/* 입력방식 + 일별 세션 */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                         <div style={{
-                            background: 'rgba(255,255,255,0.02)',
-                            border: '1px solid rgba(255,255,255,0.06)',
+                            background: '#fff',
+                            border: '1px solid #e5e7eb',
                             borderRadius: 16, padding: 24,
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                         }}>
-                            <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 16px', color: 'rgba(255,255,255,0.6)' }}>
+                            <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 16px', color: '#64748b' }}>
                                 🎤 입력 방식 비율
                             </h3>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
@@ -213,11 +216,11 @@ export default function ConversationsPage() {
                                         const c = 2 * Math.PI * r
                                         return (
                                             <>
-                                                <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="12" />
-                                                <circle cx="50" cy="50" r={r} fill="none" stroke="#60a5fa" strokeWidth="12"
+                                                <circle cx="50" cy="50" r={r} fill="none" stroke="#f1f5f9" strokeWidth="12" />
+                                                <circle cx="50" cy="50" r={r} fill="none" stroke="#3b82f6" strokeWidth="12"
                                                     strokeDasharray={`${textPct * c} ${(1 - textPct) * c}`}
                                                     strokeDashoffset={-c / 4} strokeLinecap="round" />
-                                                <circle cx="50" cy="50" r={r} fill="none" stroke="#34d399" strokeWidth="12"
+                                                <circle cx="50" cy="50" r={r} fill="none" stroke="#16a34a" strokeWidth="12"
                                                     strokeDasharray={`${(1 - textPct) * c} ${textPct * c}`}
                                                     strokeDashoffset={-c / 4 - textPct * c} strokeLinecap="round" />
                                             </>
@@ -226,15 +229,15 @@ export default function ConversationsPage() {
                                 </svg>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#60a5fa' }} />
-                                        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
-                                            텍스트 <b style={{ color: '#fff' }}>{data.inputRatio?.text?.toLocaleString() || 0}</b>
+                                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6' }} />
+                                        <span style={{ fontSize: 13, color: '#64748b' }}>
+                                            텍스트 <b style={{ color: '#1e293b' }}>{data.inputRatio?.text?.toLocaleString() || 0}</b>
                                         </span>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399' }} />
-                                        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
-                                            음성(STT) <b style={{ color: '#fff' }}>{data.inputRatio?.stt?.toLocaleString() || 0}</b>
+                                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a' }} />
+                                        <span style={{ fontSize: 13, color: '#64748b' }}>
+                                            음성(STT) <b style={{ color: '#1e293b' }}>{data.inputRatio?.stt?.toLocaleString() || 0}</b>
                                         </span>
                                     </div>
                                 </div>
@@ -242,11 +245,12 @@ export default function ConversationsPage() {
                         </div>
 
                         <div style={{
-                            background: 'rgba(255,255,255,0.02)',
-                            border: '1px solid rgba(255,255,255,0.06)',
+                            background: '#fff',
+                            border: '1px solid #e5e7eb',
                             borderRadius: 16, padding: 24,
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                         }}>
-                            <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 16px', color: 'rgba(255,255,255,0.6)' }}>
+                            <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 16px', color: '#64748b' }}>
                                 📅 일별 활성 유저
                             </h3>
                             {stats.length > 0 ? (
@@ -262,18 +266,18 @@ export default function ConversationsPage() {
                                             <>
                                                 <defs>
                                                     <linearGradient id="auGrad" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.2" />
-                                                        <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
+                                                        <stop offset="0%" stopColor="#d97706" stopOpacity="0.2" />
+                                                        <stop offset="100%" stopColor="#d97706" stopOpacity="0" />
                                                     </linearGradient>
                                                 </defs>
                                                 <polygon points={`0,100 ${pts} ${barWidth},100`} fill="url(#auGrad)" />
-                                                <polyline points={pts} fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinejoin="round" />
+                                                <polyline points={pts} fill="none" stroke="#d97706" strokeWidth="2" strokeLinejoin="round" />
                                             </>
                                         )
                                     })()}
                                 </svg>
                             ) : (
-                                <div style={{ padding: 30, textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>데이터 없음</div>
+                                <div style={{ padding: 30, textAlign: 'center', color: '#94a3b8' }}>데이터 없음</div>
                             )}
                         </div>
                     </div>
@@ -281,17 +285,18 @@ export default function ConversationsPage() {
             ) : (
                 /* 최근 세션 테이블 */
                 <div style={{
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid rgba(255,255,255,0.06)',
+                    background: '#fff',
+                    border: '1px solid #e5e7eb',
                     borderRadius: 16, overflow: 'hidden',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
-                            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                            <tr style={{ borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
                                 {['유저', '멘토', '메시지', '입력방식', '시작', '마지막'].map(h => (
                                     <th key={h} style={{
                                         padding: '12px 16px', textAlign: 'left', fontSize: 11,
-                                        fontWeight: 700, color: 'rgba(255,255,255,0.35)',
+                                        fontWeight: 700, color: '#64748b',
                                         letterSpacing: 0.5, textTransform: 'uppercase',
                                     }}>{h}</th>
                                 ))}
@@ -299,35 +304,35 @@ export default function ConversationsPage() {
                         </thead>
                         <tbody>
                             {recent.length === 0 ? (
-                                <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>세션 없음</td></tr>
+                                <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>세션 없음</td></tr>
                             ) : recent.map((s, i) => (
                                 <tr key={s.id} style={{
-                                    borderBottom: '1px solid rgba(255,255,255,0.03)',
-                                    background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+                                    borderBottom: '1px solid #f1f5f9',
+                                    background: i % 2 === 0 ? '#fff' : '#fafbfc',
                                 }}>
                                     <td style={{ padding: '12px 16px' }}>
-                                        <div style={{ fontSize: 13, fontWeight: 600 }}>{s.user_name || '게스트'}</div>
-                                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{s.user_email || '—'}</div>
+                                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>{s.user_name || '게스트'}</div>
+                                        <div style={{ fontSize: 11, color: '#94a3b8' }}>{s.user_email || '—'}</div>
                                     </td>
                                     <td style={{ padding: '12px 16px' }}>
                                         <span style={{
-                                            fontSize: 12, fontWeight: 600, color: '#a78bfa',
-                                            background: 'rgba(167,139,250,0.1)', padding: '3px 10px', borderRadius: 8,
+                                            fontSize: 12, fontWeight: 600, color: '#6366f1',
+                                            background: '#f0f0ff', padding: '3px 10px', borderRadius: 8,
                                         }}>{s.mentor_name}</span>
                                     </td>
-                                    <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                                    <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: '#1e293b' }}>
                                         {s.message_count}
                                     </td>
                                     <td style={{ padding: '12px 16px', fontSize: 12 }}>
                                         {s.input_method === 'stt' ?
-                                            <span style={{ color: '#34d399' }}>🎤 음성</span> :
-                                            <span style={{ color: '#60a5fa' }}>⌨️ 텍스트</span>
+                                            <span style={{ color: '#16a34a' }}>🎤 음성</span> :
+                                            <span style={{ color: '#3b82f6' }}>⌨️ 텍스트</span>
                                         }
                                     </td>
-                                    <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                                    <td style={{ padding: '12px 16px', fontSize: 12, color: '#64748b' }}>
                                         {formatRelative(s.created_at)}
                                     </td>
-                                    <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                                    <td style={{ padding: '12px 16px', fontSize: 12, color: '#64748b' }}>
                                         {formatRelative(s.last_message_at)}
                                     </td>
                                 </tr>

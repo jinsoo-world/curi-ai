@@ -19,6 +19,7 @@ interface UserData {
     marketing_agreed?: boolean | null
     subscription_tier?: string | null
     created_ai_count?: number
+    clovers?: number
 }
 
 interface UsersResponse {
@@ -30,12 +31,19 @@ interface UsersResponse {
 }
 
 const SEGMENT_CONFIG: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
-    all: { label: '전체', emoji: '👥', color: '#fff', bg: 'rgba(255,255,255,0.06)' },
-    new: { label: '신규', emoji: '🆕', color: '#34d399', bg: 'rgba(52,211,153,0.12)' },
-    light: { label: '라이트', emoji: '💡', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
-    heavy: { label: '헤비', emoji: '🔥', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-    dormant: { label: '휴면', emoji: '😴', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
-    churned: { label: '이탈', emoji: '💔', color: '#f87171', bg: 'rgba(248,113,113,0.12)' },
+    all: { label: '전체', emoji: '👥', color: '#64748b', bg: '#f1f5f9' },
+    new: { label: '신규', emoji: '🆕', color: '#16a34a', bg: '#dcfce7' },
+    light: { label: '라이트', emoji: '💡', color: '#2563eb', bg: '#dbeafe' },
+    heavy: { label: '헤비', emoji: '🔥', color: '#d97706', bg: '#fef3c7' },
+    dormant: { label: '휴면', emoji: '😴', color: '#7c3aed', bg: '#ede9fe' },
+    churned: { label: '이탈', emoji: '💔', color: '#dc2626', bg: '#fee2e2' },
+}
+
+const PROVIDER_CONFIG: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
+    google: { label: 'Google', emoji: '🔵', color: '#1d4ed8', bg: '#dbeafe' },
+    kakao: { label: '카카오', emoji: '🟡', color: '#92400e', bg: '#fef3c7' },
+    anonymous: { label: '게스트', emoji: '👤', color: '#64748b', bg: '#f1f5f9' },
+    unknown: { label: '알 수 없음', emoji: '❓', color: '#94a3b8', bg: '#f1f5f9' },
 }
 
 export default function UsersPage() {
@@ -79,22 +87,44 @@ export default function UsersPage() {
         setPage(1)
     }
 
-    const formatDate = (d: string) => {
+    const formatRelativeTime = (d: string | undefined | null) => {
         if (!d) return '—'
         const date = new Date(d)
         const now = new Date()
-        const diffH = Math.floor((now.getTime() - date.getTime()) / 3600000)
-        if (diffH < 1) return '방금 전'
+        const diffMin = Math.floor((now.getTime() - date.getTime()) / 60000)
+        if (diffMin < 1) return '방금 전'
+        if (diffMin < 60) return `${diffMin}분 전`
+        const diffH = Math.floor(diffMin / 60)
         if (diffH < 24) return `${diffH}시간 전`
-        if (diffH < 48) return '어제'
+        const diffD = Math.floor(diffH / 24)
+        if (diffD < 7) return `${diffD}일 전`
+        if (diffD < 30) return `${Math.floor(diffD / 7)}주 전`
         return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
     }
 
+    const formatDate = (d: string) => {
+        if (!d) return '—'
+        return new Date(d).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+    }
+
     const getSegmentBadge = (seg?: string) => {
-        const cfg = SEGMENT_CONFIG[seg || ''] || { label: seg || '—', color: '#fff', bg: 'rgba(255,255,255,0.06)', emoji: '' }
+        const cfg = SEGMENT_CONFIG[seg || ''] || { label: seg || '—', color: '#64748b', bg: '#f1f5f9', emoji: '' }
         return (
             <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
+                fontSize: 11, fontWeight: 600, color: cfg.color,
+                background: cfg.bg, padding: '3px 10px', borderRadius: 20,
+            }}>
+                {cfg.emoji} {cfg.label}
+            </span>
+        )
+    }
+
+    const getProviderBadge = (provider: string) => {
+        const cfg = PROVIDER_CONFIG[provider] || PROVIDER_CONFIG['unknown']
+        return (
+            <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 3,
                 fontSize: 11, fontWeight: 600, color: cfg.color,
                 background: cfg.bg, padding: '3px 10px', borderRadius: 20,
             }}>
@@ -107,8 +137,8 @@ export default function UsersPage() {
         <div>
             {/* 헤더 */}
             <div style={{ marginBottom: 24 }}>
-                <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0 }}>👥 유저 관리</h1>
-                <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, margin: '6px 0 0' }}>
+                <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, color: '#1e293b' }}>👥 유저 관리</h1>
+                <p style={{ color: '#94a3b8', fontSize: 13, margin: '6px 0 0' }}>
                     전체 {data?.totalCount?.toLocaleString() || 0}명 · 세그먼트별 분석
                 </p>
             </div>
@@ -116,8 +146,9 @@ export default function UsersPage() {
             {/* 세그먼트 필터 바 */}
             <div style={{
                 display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20,
-                background: 'rgba(255,255,255,0.02)', borderRadius: 14, padding: 6,
-                border: '1px solid rgba(255,255,255,0.04)',
+                background: '#fff', borderRadius: 14, padding: 6,
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
             }}>
                 {Object.entries(SEGMENT_CONFIG).map(([key, cfg]) => (
                     <button
@@ -127,7 +158,7 @@ export default function UsersPage() {
                             padding: '8px 16px', borderRadius: 10,
                             border: segment === key ? `1px solid ${cfg.color}40` : '1px solid transparent',
                             background: segment === key ? cfg.bg : 'transparent',
-                            color: segment === key ? cfg.color : 'rgba(255,255,255,0.4)',
+                            color: segment === key ? cfg.color : '#94a3b8',
                             fontSize: 13, fontWeight: 600, cursor: 'pointer',
                             transition: 'all 0.2s',
                         }}
@@ -150,28 +181,31 @@ export default function UsersPage() {
                     onChange={e => { setSearch(e.target.value); setPage(1) }}
                     style={{
                         width: '100%', maxWidth: 400, padding: '10px 16px',
-                        borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)',
-                        background: 'rgba(255,255,255,0.03)',
-                        color: '#fff', fontSize: 14, outline: 'none',
+                        borderRadius: 12, border: '1px solid #e5e7eb',
+                        background: '#fff',
+                        color: '#1e293b', fontSize: 14, outline: 'none',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                     }}
                 />
             </div>
 
             {/* 유저 테이블 */}
             <div style={{
-                background: 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: '#fff',
+                border: '1px solid #e5e7eb',
                 borderRadius: 16, overflow: 'hidden',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
             }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        <tr style={{ borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
                             {[
                                 { key: 'display_name', label: '유저' },
+                                { key: 'auth_provider', label: '가입경로' },
                                 { key: 'segment', label: '세그먼트' },
                                 { key: 'phone', label: '전화번호' },
-                                { key: 'gender', label: '성별' },
                                 { key: 'subscription_tier', label: '체험권' },
+                                { key: 'clovers', label: '🍀 클로버' },
                                 { key: 'created_ai_count', label: '만든AI' },
                                 { key: 'total_sessions', label: '세션' },
                                 { key: 'total_messages', label: '메시지' },
@@ -183,11 +217,12 @@ export default function UsersPage() {
                                     key={col.key}
                                     onClick={() => toggleSort(col.key)}
                                     style={{
-                                        padding: '12px 16px',
+                                        padding: '12px 14px',
                                         textAlign: 'left', fontSize: 11, fontWeight: 700,
-                                        color: sortBy === col.key ? '#60a5fa' : 'rgba(255,255,255,0.35)',
+                                        color: sortBy === col.key ? '#4f46e5' : '#64748b',
                                         cursor: 'pointer', userSelect: 'none',
                                         letterSpacing: 0.5, textTransform: 'uppercase',
+                                        whiteSpace: 'nowrap',
                                     }}
                                 >
                                     {col.label}
@@ -198,27 +233,27 @@ export default function UsersPage() {
                     </thead>
                     <tbody>
                         {loading && !data ? (
-                            <tr><td colSpan={11} style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>로딩 중...</td></tr>
+                            <tr><td colSpan={12} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>로딩 중...</td></tr>
                         ) : !data?.users?.length ? (
-                            <tr><td colSpan={11} style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>유저 없음</td></tr>
+                            <tr><td colSpan={12} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>유저 없음</td></tr>
                         ) : data.users.map((user, i) => (
                             <tr
                                 key={user.id}
                                 onClick={() => router.push(`/admin/users/${user.id}`)}
                                 style={{
-                                    borderBottom: '1px solid rgba(255,255,255,0.03)',
-                                    background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+                                    borderBottom: '1px solid #f1f5f9',
+                                    background: i % 2 === 0 ? '#fff' : '#fafbfc',
                                     transition: 'background 0.2s',
                                     cursor: 'pointer',
                                 }}
-                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.06)')}
-                                onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)')}
+                                onMouseEnter={e => (e.currentTarget.style.background = '#f0f0ff')}
+                                onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#fafbfc')}
                             >
-                                <td style={{ padding: '12px 16px' }}>
+                                <td style={{ padding: '12px 14px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                        {(user as any).avatar_url ? (
+                                        {user.avatar_url ? (
                                             <img
-                                                src={(user as any).avatar_url}
+                                                src={user.avatar_url}
                                                 alt=""
                                                 style={{
                                                     width: 32, height: 32, borderRadius: '50%',
@@ -228,39 +263,34 @@ export default function UsersPage() {
                                         ) : (
                                             <div style={{
                                                 width: 32, height: 32, borderRadius: '50%',
-                                                background: `hsl(${user.id.charCodeAt(0) * 7 % 360}, 50%, 30%)`,
+                                                background: `hsl(${user.id.charCodeAt(0) * 7 % 360}, 45%, 65%)`,
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontSize: 14, fontWeight: 700, flexShrink: 0,
+                                                fontSize: 14, fontWeight: 700, flexShrink: 0, color: '#fff',
                                             }}>
                                                 {(user.display_name || user.email || '?')[0]?.toUpperCase()}
                                             </div>
                                         )}
                                         <div>
-                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
+                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>
                                                 {user.display_name || '이름 없음'}
                                             </div>
-                                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+                                            <div style={{ fontSize: 11, color: '#94a3b8' }}>
                                                 {user.email || '—'}
-                                            </div>
-                                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.15)', fontFamily: 'monospace' }}>
-                                                {user.id.slice(0, 8)}
                                             </div>
                                         </div>
                                     </div>
                                 </td>
-                                <td style={{ padding: '12px 16px' }}>{getSegmentBadge(user.segment)}</td>
-                                <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.5)', fontVariantNumeric: 'tabular-nums' }}>
+                                <td style={{ padding: '12px 14px' }}>{getProviderBadge(user.auth_provider)}</td>
+                                <td style={{ padding: '12px 14px' }}>{getSegmentBadge(user.segment)}</td>
+                                <td style={{ padding: '12px 14px', fontSize: 12, color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
                                     {user.phone ? user.phone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3') : '—'}
                                 </td>
-                                <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
-                                    {user.gender === 'male' ? '👨 남' : user.gender === 'female' ? '👩 여' : '—'}
-                                </td>
-                                <td style={{ padding: '12px 16px' }}>
+                                <td style={{ padding: '12px 14px' }}>
                                     {user.subscription_tier === 'free_trial' ? (
                                         <span style={{
                                             fontSize: 11, fontWeight: 600,
                                             padding: '3px 10px', borderRadius: 20,
-                                            background: 'rgba(34,197,94,0.15)', color: '#4ade80',
+                                            background: '#dcfce7', color: '#16a34a',
                                         }}>
                                             🎁 체험중
                                         </span>
@@ -268,36 +298,37 @@ export default function UsersPage() {
                                         <span style={{
                                             fontSize: 11, fontWeight: 600,
                                             padding: '3px 10px', borderRadius: 20,
-                                            background: 'rgba(139,92,246,0.15)', color: '#a78bfa',
+                                            background: '#ede9fe', color: '#7c3aed',
                                         }}>
                                             ✨ 프리미엄
                                         </span>
                                     ) : (
-                                        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>—</span>
+                                        <span style={{ fontSize: 11, color: '#cbd5e1' }}>—</span>
                                     )}
                                 </td>
-                                <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>
-                                    {(user as any).created_ai_count || 0}
+                                <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', textAlign: 'center', color: '#16a34a' }}>
+                                    {(user.clovers || 0).toLocaleString()}
                                 </td>
-                                <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                                <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', textAlign: 'center', color: '#1e293b' }}>
+                                    {(user as UserData).created_ai_count || 0}
+                                </td>
+                                <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: '#1e293b' }}>
                                     {user.total_sessions?.toLocaleString() || 0}
                                 </td>
-                                <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                                <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: '#1e293b' }}>
                                     {user.total_messages?.toLocaleString() || 0}
                                 </td>
-                                <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
-                                    {new Date(user.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                                <td style={{ padding: '12px 14px', fontSize: 12, color: '#64748b' }}>
+                                    {formatDate(user.created_at)}
                                 </td>
-                                <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
-                                    {user.last_active_at
-                                        ? new Date(user.last_active_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
-                                        : '—'}
+                                <td style={{ padding: '12px 14px', fontSize: 12, color: user.last_active_at ? '#1e293b' : '#cbd5e1', fontWeight: user.last_active_at ? 500 : 400 }}>
+                                    {formatRelativeTime(user.last_active_at)}
                                 </td>
-                                <td style={{ padding: '12px 16px', fontSize: 12, textAlign: 'center' }}>
+                                <td style={{ padding: '12px 14px', fontSize: 12, textAlign: 'center' }}>
                                     {user.marketing_agreed ? (
-                                        <span style={{ color: '#4ade80' }}>✅</span>
+                                        <span style={{ color: '#16a34a' }}>✅</span>
                                     ) : (
-                                        <span style={{ color: 'rgba(255,255,255,0.2)' }}>—</span>
+                                        <span style={{ color: '#cbd5e1' }}>—</span>
                                     )}
                                 </td>
                             </tr>
@@ -314,13 +345,14 @@ export default function UsersPage() {
                         disabled={page === 1}
                         style={{
                             padding: '8px 14px', borderRadius: 10,
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            background: 'rgba(255,255,255,0.03)',
-                            color: page === 1 ? 'rgba(255,255,255,0.15)' : '#fff',
+                            border: '1px solid #e5e7eb',
+                            background: '#fff',
+                            color: page === 1 ? '#cbd5e1' : '#1e293b',
                             fontSize: 13, cursor: page === 1 ? 'default' : 'pointer',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                         }}
                     > ← 이전</button>
-                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', padding: '0 12px' }}>
+                    <span style={{ fontSize: 13, color: '#64748b', padding: '0 12px' }}>
                         {page} / {totalPages}
                     </span>
                     <button
@@ -328,10 +360,11 @@ export default function UsersPage() {
                         disabled={page === totalPages}
                         style={{
                             padding: '8px 14px', borderRadius: 10,
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            background: 'rgba(255,255,255,0.03)',
-                            color: page === totalPages ? 'rgba(255,255,255,0.15)' : '#fff',
+                            border: '1px solid #e5e7eb',
+                            background: '#fff',
+                            color: page === totalPages ? '#cbd5e1' : '#1e293b',
                             fontSize: 13, cursor: page === totalPages ? 'default' : 'pointer',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                         }}
                     >다음 →</button>
                 </div>

@@ -9,13 +9,13 @@ export default async function AdminLayout({
     await requireAdmin()
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', background: '#0a0a0f' }}>
+        <div style={{ display: 'flex', minHeight: '100vh', background: '#f5f6f8' }}>
             <AdminSidebar />
             <main style={{
                 flex: 1,
                 marginLeft: 240,
                 padding: '32px 40px',
-                color: '#fff',
+                color: '#1a1a2e',
                 minWidth: 0,
             }}>
                 {children}
