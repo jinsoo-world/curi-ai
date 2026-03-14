@@ -1028,7 +1028,8 @@ export default function ChatPage() {
                             if (!reader) throw new Error('스트림 없음')
 
                             let fullResponse = ''
-                            let sentenceBuffer = '' // ⚡ 실시간 문장 버퍼
+                            let sentenceBuffer = ''
+                            let isFirstSentence = true // ⚡ 동적 청킹: 첫 문장 즉시 발사
                             const decoder = new TextDecoder()
                             let sseBuffer = ''
 
@@ -1048,10 +1049,7 @@ export default function ChatPage() {
                                                 fullResponse += chunk
                                                 sentenceBuffer += chunk
 
-                                                // ⚡ 한국어 문장 감지 — 3단계 전략
-                                                // 1순위: 마침표/물음표/느낌표
-                                                // 2순위: 한국어 종결어미(요/다/죠/네/까/지) + 공백/쉼표
-                                                // 3순위: 40자 이상이면 쉼표(,)에서 분할
+                                                // ⚡ 한국어 문장 감지 — 3단계
                                                 let cutIndex = -1
 
                                                 // 1순위: .?!。？！
@@ -1060,7 +1058,7 @@ export default function ChatPage() {
                                                     cutIndex = punctMatch.index + 1
                                                 }
 
-                                                // 2순위: 한국어 종결어미 + 공백/쉼표 (15자 이상일 때만)
+                                                // 2순위: 한국어 종결어미 + 공백/쉼표 (15자 이상)
                                                 if (cutIndex === -1 && sentenceBuffer.length >= 15) {
                                                     const koEndMatch = sentenceBuffer.match(/[요다죠네까지세][,\s]/)
                                                     if (koEndMatch && koEndMatch.index !== undefined) {
@@ -1068,7 +1066,7 @@ export default function ChatPage() {
                                                     }
                                                 }
 
-                                                // 3순위: 40자 이상이면 쉼표에서 분할
+                                                // 3순위: 40자 이상이면 쉼표
                                                 if (cutIndex === -1 && sentenceBuffer.length >= 40) {
                                                     const commaIdx = sentenceBuffer.indexOf(',')
                                                     if (commaIdx > 10) cutIndex = commaIdx + 1
@@ -1078,13 +1076,23 @@ export default function ChatPage() {
                                                     const completeSentence = sentenceBuffer.slice(0, cutIndex).trim()
                                                     const remainder = sentenceBuffer.slice(cutIndex).trimStart()
 
-                                                    // ⚡ 스마트 청킹: 15자 미만이면 전송하지 말고 다음 문장과 합침
-                                                    if (completeSentence.length >= 15) {
-                                                        sentenceBuffer = remainder
-                                                        console.log('[Stream] 🎯 문장 전송:', completeSentence)
-                                                        onSentence(completeSentence)
+                                                    if (isFirstSentence) {
+                                                        // ⚡ 첫 문장: 길이 무관 즉시 발사!
+                                                        if (completeSentence.length >= 2) {
+                                                            sentenceBuffer = remainder
+                                                            isFirstSentence = false
+                                                            console.log('[Stream] 🚀 첫 문장 즉시:', completeSentence)
+                                                            onSentence(completeSentence)
+                                                        }
+                                                    } else {
+                                                        // ⚡ 두 번째부터: 15자 이상만 전송 (API 호출 절감)
+                                                        if (completeSentence.length >= 15) {
+                                                            sentenceBuffer = remainder
+                                                            console.log('[Stream] 🎯 문장 전송:', completeSentence)
+                                                            onSentence(completeSentence)
+                                                        }
+                                                        // 15자 미만이면 버퍼 유지 → 다음과 합침
                                                     }
-                                                    // 15자 미만이면 sentenceBuffer 그대로 유지 → 다음 청크와 합쳐짐
                                                 }
                                             }
                                             if (json.fullResponse) {
@@ -1095,9 +1103,9 @@ export default function ChatPage() {
                                 }
                             }
 
-                            // ⚡ 버퍼 flush: 마지막 남은 텍스트 강제 전송
+                            // ⚡ 마지막 flush: 길이 무관, 남은 텍스트 전부 전송
                             if (sentenceBuffer.trim().length >= 2) {
-                                console.log('[Stream] 🔚 버퍼 flush:', sentenceBuffer.trim())
+                                console.log('[Stream] 🔚 flush:', sentenceBuffer.trim())
                                 onSentence(sentenceBuffer.trim())
                             }
 
