@@ -31,65 +31,39 @@ export default function VoiceCallOverlay({
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-    const greetingAudioUrlRef = useRef<string | null>(null)
+    // 🛑 AbortController — 끼어들기 시 LLM+TTS 요청 완전 취소
+    const abortRef = useRef<AbortController | null>(null)
 
-    // 🔥 컴포넌트 마운트 시 인사말 오디오를 미리 생성 (캐싱)
-    useEffect(() => {
-        const displayName = userName || '고객'
-        const greetingText = `안녕하세요 ${displayName}님, ${mentorName}입니다. 반갑습니다!`
-
-        fetch('/api/tts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                text: greetingText,
-                mentorName,
-                voiceSampleUrl: voiceSampleUrl || undefined,
-            }),
-        })
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-            if (data?.audioUrl) {
-                greetingAudioUrlRef.current = data.audioUrl
-                // 미리 로드
-                const preload = new Audio(data.audioUrl)
-                preload.preload = 'auto'
-                console.log('[VoiceCall] 인사말 캐싱 완료!')
-            }
-        })
-        .catch(() => {})
-    }, [userName, mentorName, voiceSampleUrl])
-
-    // 전화 연결 시 캐싱된 인사말 즉시 재생 (캐시 MISS → 브라우저 TTS 폴백)
+    // ────────────────────────────────────────────────────────────
+    // 📞 1. Pre-greeting: 로컬 greeting.mp3 즉시 재생 (API 없음, 0.1초)
+    // ────────────────────────────────────────────────────────────
     const playGreeting = useCallback(async () => {
         setPhase('speaking')
-        const displayName = userName || '고객'
-
-        if (greetingAudioUrlRef.current) {
-            // ⚡ 캐시 HIT → 즉시 재생 (0초 지연)
-            const audio = new Audio(greetingAudioUrlRef.current)
+        try {
+            const audio = new Audio('/audio/greeting.mp3')
             audioRef.current = audio
             audio.onended = () => { setPhase('listening'); startListening() }
-            audio.onerror = () => { setPhase('listening'); startListening() }
+            audio.onerror = () => {
+                // greeting.mp3 없으면 바로 듣기 모드
+                console.warn('[VoiceCall] greeting.mp3 로드 실패 → 바로 듣기 시작')
+                setPhase('listening')
+                startListening()
+            }
             await audio.play()
-        } else {
-            // 캐시 MISS → 브라우저 TTS로 즉시 폴백 ("여보세요?")
-            const synth = window.speechSynthesis
-            synth.cancel()
-            const u = new SpeechSynthesisUtterance(`여보세요? ${displayName}님, ${mentorName}입니다!`)
-            u.lang = 'ko-KR'; u.rate = 1.0
-            u.onend = () => { setPhase('listening'); startListening() }
-            u.onerror = () => { setPhase('listening'); startListening() }
-            synth.speak(u)
+        } catch {
+            setPhase('listening')
+            startListening()
         }
-    }, [userName, mentorName])
+    }, [])
 
+    // ────────────────────────────────────────────────────────────
+    // 🔄 Lifecycle: 연결/해제
+    // ────────────────────────────────────────────────────────────
     useEffect(() => {
         if (isOpen) {
             setCallDuration(0)
             setPhase('connecting')
             timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000)
-            // 캐싱된 인사말 즉시 재생
             setTimeout(() => playGreeting(), 300)
         } else {
             if (timerRef.current) clearInterval(timerRef.current)
@@ -97,9 +71,8 @@ export default function VoiceCallOverlay({
         }
         return () => {
             if (timerRef.current) clearInterval(timerRef.current)
-            // 페이지 이탈 시 오디오 완전 정지
+            abortRef.current?.abort()
             recognitionRef.current?.stop()
-            window.speechSynthesis?.cancel()
             if (audioRef.current) {
                 audioRef.current.pause()
                 audioRef.current.src = ''
@@ -116,20 +89,29 @@ export default function VoiceCallOverlay({
         return `${min}:${sec}`
     }
 
+    // ────────────────────────────────────────────────────────────
+    // 🛑 stopAll + AbortController
+    // ────────────────────────────────────────────────────────────
     const stopAll = useCallback(() => {
+        abortRef.current?.abort()
+        abortRef.current = null
         recognitionRef.current?.stop()
-        audioRef.current?.pause()
-        window.speechSynthesis?.cancel()
+        if (audioRef.current) {
+            audioRef.current.pause()
+            audioRef.current.src = ''
+            audioRef.current = null
+        }
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
         if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
         setPhase('idle')
     }, [])
 
-    // 🎙️ 장시간 침묵 자동 대사
+    // ────────────────────────────────────────────────────────────
+    // 🎙️ 장시간 침묵 → 멘토가 먼저 말 걸기 (학습된 목소리)
+    // ────────────────────────────────────────────────────────────
     const startIdleTimer = useCallback(() => {
         if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
         idleTimerRef.current = setTimeout(async () => {
-            // 15초 침묵 → 멘토가 먼저 말 걸기 (학습된 목소리)
             setPhase('speaking')
             try {
                 const ttsRes = await fetch('/api/tts', {
@@ -158,18 +140,26 @@ export default function VoiceCallOverlay({
         }, 15000)
     }, [mentorName, voiceSampleUrl])
 
-    // 🛑 끼어들기 (Interruption) — AI 말하는 중 사용자 음성 감지 시 TTS 즉시 중지
+    // ────────────────────────────────────────────────────────────
+    // 🛑 끼어들기: AbortController로 LLM+TTS 완전 취소
+    // ────────────────────────────────────────────────────────────
     const interruptSpeaking = useCallback(() => {
-        console.log('[VoiceCall] 🛑 끼어들기! TTS 즉시 중지')
+        console.log('[VoiceCall] 🛑 끼어들기! LLM+TTS 완전 취소')
+        // 진행 중인 LLM/TTS fetch 취소
+        abortRef.current?.abort()
+        abortRef.current = null
+        // 재생 중인 오디오 중지
         if (audioRef.current) {
             audioRef.current.pause()
             audioRef.current.src = ''
             audioRef.current = null
         }
-        window.speechSynthesis?.cancel()
         setPhase('listening')
     }, [])
 
+    // ────────────────────────────────────────────────────────────
+    // 👂 음성 인식 (listening 모드)
+    // ────────────────────────────────────────────────────────────
     const startListening = useCallback(() => {
         const SpeechRecognition =
             (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -204,12 +194,13 @@ export default function VoiceCallOverlay({
             }
             setTranscript(finalText + interim)
 
+            // ⚡ 500ms 침묵 감지 → 즉시 전송 (사람 대화 리듬)
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
             if (finalText) {
                 silenceTimerRef.current = setTimeout(() => {
                     recognition.stop()
                     handleSendAndSpeak(finalText)
-                }, 1800) // 1.8초 — 더 빠른 응답
+                }, 500)
             }
         }
 
@@ -235,7 +226,9 @@ export default function VoiceCallOverlay({
         }
     }, [phase, startIdleTimer])
 
-    // 🛑 speaking 중에도 음성 인식 유지 → 끼어들기 감지
+    // ────────────────────────────────────────────────────────────
+    // 🛑 speaking 중 끼어들기 감지 (보조 음성 인식)
+    // ────────────────────────────────────────────────────────────
     const startInterruptionDetection = useCallback(() => {
         const SpeechRecognition =
             (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -247,14 +240,12 @@ export default function VoiceCallOverlay({
         recognition.interimResults = true
 
         recognition.onresult = () => {
-            // 사용자 음성 감지 → AI TTS 즉시 중지
             interruptSpeaking()
             recognition.stop()
-            // 새로운 listening 세션 시작
             setTimeout(() => startListening(), 100)
         }
 
-        recognition.onerror = () => { /* 무시 — speaking 중 보조 감지 */ }
+        recognition.onerror = () => { /* 무시 */ }
         recognition.onend = () => { /* 자동 종료 허용 */ }
 
         try {
@@ -263,9 +254,10 @@ export default function VoiceCallOverlay({
         } catch { /* 무시 */ }
     }, [interruptSpeaking, startListening])
 
-    // 첫 문장만 추출 (TTS 속도 최적화)
+    // ────────────────────────────────────────────────────────────
+    // 첫 문장 추출 (TTS 텍스트 80자 제한)
+    // ────────────────────────────────────────────────────────────
     const extractFirstSentences = (text: string, maxLen: number) => {
-        // 마침표/물음표/느낌표로 끝나는 첫 1~2문장
         const sentences = text.match(/[^.!?。？！]+[.!?。？！]+/g)
         if (sentences) {
             let result = ''
@@ -278,8 +270,16 @@ export default function VoiceCallOverlay({
         return text.slice(0, maxLen)
     }
 
+    // ────────────────────────────────────────────────────────────
+    // 🗣️ AI 답변 → TTS 재생 (AbortController 적용)
+    // ────────────────────────────────────────────────────────────
     const handleSendAndSpeak = useCallback(async (text: string) => {
         if (!text.trim()) { startListening(); return }
+
+        // 이전 요청 취소
+        abortRef.current?.abort()
+        const controller = new AbortController()
+        abortRef.current = controller
 
         setPhase('thinking')
 
@@ -288,25 +288,24 @@ export default function VoiceCallOverlay({
             let response: string
             try {
                 response = await onSendMessage(text)
+                if (controller.signal.aborted) return
             } catch (chatErr) {
+                if (controller.signal.aborted) return
                 console.error('[VoiceCall] Chat API 실패:', chatErr)
                 setError('AI 답변을 가져올 수 없어요')
                 setTimeout(() => { setError(null); setPhase('listening'); startListening() }, 3000)
                 return
             }
 
-            if (!response?.trim()) {
-                setPhase('listening')
-                startListening()
+            if (!response?.trim() || controller.signal.aborted) {
+                if (!controller.signal.aborted) { setPhase('listening'); startListening() }
                 return
             }
 
             setPhase('speaking')
-
-            // 🛑 끼어들기 감지 시작 (AI가 말하는 동안 사용자 음성 감지)
             startInterruptionDetection()
 
-            // 2) Replicate Voice Clone TTS — 첫 문장만 (80자) → 생성 시간 최소화
+            // 2) MiniMax Voice Clone TTS — 첫 문장 80자
             const ttsText = extractFirstSentences(response, 80)
 
             try {
@@ -318,11 +317,14 @@ export default function VoiceCallOverlay({
                         mentorName,
                         voiceSampleUrl: voiceSampleUrl || undefined,
                     }),
+                    signal: controller.signal,
                 })
+
+                if (controller.signal.aborted) return
 
                 if (ttsRes.ok) {
                     const { audioUrl } = await ttsRes.json()
-                    if (audioUrl) {
+                    if (audioUrl && !controller.signal.aborted) {
                         const audio = new Audio(audioUrl)
                         audioRef.current = audio
                         audio.onended = () => { setPhase('listening'); startListening() }
@@ -333,18 +335,21 @@ export default function VoiceCallOverlay({
                 } else {
                     console.error('[VoiceCall] TTS 실패:', ttsRes.status)
                 }
-            } catch (ttsErr) {
+            } catch (ttsErr: any) {
+                if (ttsErr?.name === 'AbortError') return
                 console.error('[VoiceCall] TTS 에러:', ttsErr)
             }
 
-            // TTS 실패 시 잠시 후 다시 듣기
-            setTimeout(() => { setPhase('listening'); startListening() }, 1500)
-        } catch (err) {
+            if (!controller.signal.aborted) {
+                setTimeout(() => { setPhase('listening'); startListening() }, 1500)
+            }
+        } catch (err: any) {
+            if (err?.name === 'AbortError') return
             console.error('[VoiceCall] 전체 에러:', err)
             setError('대화 중 오류가 발생했어요')
             setTimeout(() => { setError(null); setPhase('listening'); startListening() }, 2000)
         }
-    }, [onSendMessage, mentorName, voiceSampleUrl, startListening])
+    }, [onSendMessage, mentorName, voiceSampleUrl, startListening, startInterruptionDetection])
 
     const handleHangup = useCallback(() => {
         stopAll()
@@ -353,7 +358,9 @@ export default function VoiceCallOverlay({
 
     if (!isOpen) return null
 
-    // LennyBot 스타일 — 깔끔한 화이트 배경, 큰 원형 아바타
+    // ────────────────────────────────────────────────────────────
+    // 🎨 UI — LennyBot 스타일
+    // ────────────────────────────────────────────────────────────
     const ringColor =
         phase === 'speaking' ? 'rgba(249,115,22,0.2)'
         : phase === 'listening' ? 'rgba(59,130,246,0.15)'
@@ -367,185 +374,121 @@ export default function VoiceCallOverlay({
         : phase === 'speaking' ? '말하는 중'
         : ''
 
-    const statusColor =
-        phase === 'speaking' ? '#f97316'
-        : phase === 'listening' ? '#3b82f6'
-        : phase === 'thinking' ? '#f59e0b'
-        : '#9ca3af'
+    const statusDots =
+        phase === 'listening' ? (
+            <span style={{ display: 'inline-flex', gap: 3, marginLeft: 6 }}>
+                {[0, 1, 2].map(i => (
+                    <span key={i} style={{
+                        width: 6, height: 6, borderRadius: '50%', backgroundColor: '#3b82f6',
+                        animation: `voicePulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+                    }} />
+                ))}
+            </span>
+        ) : phase === 'speaking' ? (
+            <span style={{ display: 'inline-flex', gap: 2, marginLeft: 6, alignItems: 'center' }}>
+                {[0, 1, 2].map(i => (
+                    <span key={i} style={{
+                        width: 4, height: 14 + i * 4, borderRadius: 2, backgroundColor: '#f97316',
+                        animation: `voiceWave 0.8s ease-in-out ${i * 0.15}s infinite alternate`,
+                    }} />
+                ))}
+            </span>
+        ) : phase === 'thinking' ? (
+            <span style={{ display: 'inline-flex', gap: 3, marginLeft: 6 }}>
+                {[0, 1, 2].map(i => (
+                    <span key={i} style={{
+                        width: 6, height: 6, borderRadius: '50%', backgroundColor: '#fbbf24',
+                        animation: `voicePulse 1s ease-in-out ${i * 0.3}s infinite`,
+                    }} />
+                ))}
+            </span>
+        ) : null
 
     return (
         <div style={{
             position: 'fixed', inset: 0, zIndex: 9999,
-            background: '#fafafa',
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            justifyContent: 'center',
-            animation: 'vcFadeIn 0.3s ease',
+            background: '#F9FAFB',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         }}>
-            {/* 아바타 — 큰 원형 + 상태 링 */}
+            <style>{`
+                @keyframes voicePulse { 0%,100%{opacity:.3;transform:scale(.8)} 50%{opacity:1;transform:scale(1.2)} }
+                @keyframes voiceWave { 0%{transform:scaleY(.5)} 100%{transform:scaleY(1.3)} }
+                @keyframes ringPulse { 0%{box-shadow:0 0 0 0 rgba(249,115,22,.3)} 100%{box-shadow:0 0 0 20px rgba(249,115,22,0)} }
+            `}</style>
+
+            {/* 아바타 */}
             <div style={{
-                width: 200, height: 200, borderRadius: '50%',
-                background: ringColor,
+                width: 180, height: 180, borderRadius: '50%',
+                border: `6px solid ${ringColor}`,
+                overflow: 'hidden',
+                animation: phase === 'speaking' ? 'ringPulse 1.5s ease-in-out infinite' : 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'background 0.5s ease',
-                animation: phase === 'speaking' ? 'vcPulse 2s ease-in-out infinite' : 'none',
+                backgroundColor: '#fff',
             }}>
-                <div style={{
-                    width: 170, height: 170, borderRadius: '50%',
-                    background: '#fff',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                    overflow: 'hidden',
-                }}>
-                    {mentorImage ? (
-                        <img src={mentorImage} alt={mentorName}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                        <span style={{ fontSize: 72 }}>{mentorEmoji}</span>
-                    )}
-                </div>
+                {mentorImage ? (
+                    <img src={mentorImage} alt={mentorName}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                    <span style={{ fontSize: 64 }}>{mentorEmoji}</span>
+                )}
             </div>
 
-            {/* 멘토 이름 */}
-            <div style={{
-                color: '#18181b', fontSize: 28, fontWeight: 700,
-                marginTop: 28, letterSpacing: '-0.02em',
-            }}>
+            {/* 이름 */}
+            <h2 style={{ fontSize: 24, fontWeight: 700, color: '#111', margin: '20px 0 8px' }}>
                 {mentorName}
-            </div>
+            </h2>
 
-            {/* 상태 표시 — LennyBot 스타일 배지 */}
+            {/* 상태 */}
             <div style={{
-                marginTop: 12, display: 'flex', alignItems: 'center', gap: 6,
+                display: 'flex', alignItems: 'center',
                 padding: '6px 16px', borderRadius: 20,
-                background: phase === 'speaking' ? 'rgba(249,115,22,0.08)' : 'rgba(0,0,0,0.03)',
-                color: statusColor,
-                fontSize: 14, fontWeight: 500,
-                transition: 'all 0.3s ease',
+                background: phase === 'speaking' ? 'rgba(249,115,22,0.08)' : 'rgba(0,0,0,0.04)',
+                color: phase === 'speaking' ? '#f97316' : '#666', fontSize: 14, fontWeight: 500,
             }}>
-                {statusText}
-                {(phase === 'speaking' || phase === 'listening') && (
-                    <span style={{ display: 'flex', gap: 2 }}>
-                        {[0, 1, 2].map(i => (
-                            <span key={i} style={{
-                                width: 4, height: phase === 'speaking' ? 12 : 4,
-                                borderRadius: 2,
-                                background: statusColor,
-                                animation: phase === 'speaking'
-                                    ? `vcBar 0.6s ease ${i * 0.15}s infinite alternate`
-                                    : `vcDot 1s ease ${i * 0.3}s infinite`,
-                            }} />
-                        ))}
-                    </span>
-                )}
-                {phase === 'thinking' && (
-                    <span style={{ display: 'flex', gap: 3 }}>
-                        {[0, 1, 2].map(i => (
-                            <span key={i} style={{
-                                width: 5, height: 5, borderRadius: '50%',
-                                background: statusColor,
-                                animation: `vcDot 1s ease ${i * 0.2}s infinite`,
-                            }} />
-                        ))}
-                    </span>
-                )}
+                {statusText} {statusDots}
             </div>
 
-            {/* 통화 시간 */}
-            <div style={{
-                color: '#d4d4d8', fontSize: 13, marginTop: 8,
-                fontFeatureSettings: '"tnum"',
-            }}>
-                {formatDuration(callDuration)}
-            </div>
+            {/* 타이머 */}
+            <p style={{ color: '#aaa', fontSize: 14, marginTop: 8 }}>{formatDuration(callDuration)}</p>
 
-            {/* 현재 인식 중인 텍스트 */}
-            {transcript && phase === 'listening' && (
+            {/* 인식 텍스트 */}
+            {transcript && (
                 <div style={{
-                    marginTop: 24, maxWidth: 300, textAlign: 'center',
-                    color: '#6b7280', fontSize: 15, lineHeight: 1.6,
-                    padding: '10px 20px', borderRadius: 16,
-                    background: '#f4f4f5',
+                    margin: '20px 24px 0', padding: '12px 16px', borderRadius: 12,
+                    background: '#fff', border: '1px solid #e5e7eb',
+                    maxWidth: 300, fontSize: 14, color: '#374151', textAlign: 'center',
+                    maxHeight: 80, overflow: 'hidden',
                 }}>
-                    &quot;{transcript}&quot;
+                    {transcript}
                 </div>
             )}
 
+            {/* 에러 */}
             {error && (
                 <div style={{
-                    marginTop: 16, color: '#ef4444', fontSize: 13,
-                    padding: '8px 16px', borderRadius: 12,
-                    background: '#fef2f2',
+                    margin: '12px 24px 0', padding: '8px 16px', borderRadius: 8,
+                    background: '#FEF2F2', color: '#DC2626', fontSize: 13, textAlign: 'center',
                 }}>
                     {error}
                 </div>
             )}
 
-            {/* 하단 버튼 — 마이크 + 끊기 */}
-            <div style={{
-                position: 'absolute', bottom: 80,
-                display: 'flex', gap: 24, alignItems: 'center',
-            }}>
-                {/* 마이크 버튼 */}
-                <button
-                    onClick={() => {
-                        if (phase === 'listening') {
-                            recognitionRef.current?.stop()
-                            setPhase('idle')
-                        } else if (phase === 'idle') {
-                            startListening()
-                        }
-                    }}
-                    style={{
-                        width: 56, height: 56, borderRadius: '50%',
-                        background: phase === 'listening' ? '#f4f4f5' : '#e5e7eb',
-                        border: 'none',
-                        color: '#18181b',
-                        cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        transition: 'all 0.15s',
-                    }}
-                    title={phase === 'listening' ? '마이크 끄기' : '마이크 켜기'}
-                >
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="9" y="1" width="6" height="12" rx="3" />
-                        <path d="M5 10a7 7 0 0014 0" />
-                        <line x1="12" y1="17" x2="12" y2="21" />
-                        <line x1="8" y1="21" x2="16" y2="21" />
-                    </svg>
-                </button>
-
-                {/* 끊기 버튼 */}
-                <button
-                    onClick={handleHangup}
-                    style={{
-                        width: 56, height: 56, borderRadius: '50%',
-                        background: '#fce4ec',
-                        border: 'none',
-                        color: '#ef4444',
-                        cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        transition: 'all 0.15s',
-                    }}
-                    title="통화 종료"
-                >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="#ef4444" stroke="none">
-                        <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 010-1.36C3.42 8.63 7.48 7 12 7s8.58 1.63 11.71 4.72c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28a11.27 11.27 0 00-2.67-1.85.996.996 0 01-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
-                    </svg>
-                </button>
-            </div>
-
-            <style>{`
-                @keyframes vcFadeIn { from { opacity: 0; } to { opacity: 1; } }
-                @keyframes vcPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
-                @keyframes vcBar {
-                    0% { height: 4px; }
-                    100% { height: 14px; }
-                }
-                @keyframes vcDot {
-                    0%, 100% { opacity: 0.3; }
-                    50% { opacity: 1; }
-                }
-            `}</style>
+            {/* 종료 버튼 */}
+            <button
+                onClick={handleHangup}
+                style={{
+                    position: 'absolute', bottom: 60,
+                    width: 64, height: 64, borderRadius: '50%',
+                    background: '#EF4444', border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(239,68,68,0.3)',
+                }}
+            >
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
+                    <line x1="23" y1="1" x2="1" y2="23" />
+                </svg>
+            </button>
         </div>
     )
 }
