@@ -4,9 +4,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Replicate from 'replicate'
 
-const replicate = new Replicate({
-    auth: process.env.REPLICATE_API_TOKEN,
-})
+function getReplicate() {
+    const token = process.env.REPLICATE_API_TOKEN
+    if (!token) {
+        console.error('[TTS] ❌ REPLICATE_API_TOKEN 환경변수가 없습니다!')
+    } else {
+        console.log('[TTS] ✅ REPLICATE_API_TOKEN 로드됨 (길이:', token.length, ')')
+    }
+    return new Replicate({ auth: token })
+}
 
 // 멘토별 기본 음성 디자인 프롬프트 — 🇰🇷 한국어 톤 특화 (기본 멘토 폴백)
 const MENTOR_VOICE_DESIGNS: Record<string, string> = {
@@ -185,6 +191,7 @@ export async function POST(request: NextRequest) {
 
         console.log('[TTS] Replicate input:', JSON.stringify(replicateInput, null, 2))
 
+        const replicate = getReplicate()
         let output: any
         try {
             output = await replicate.run('qwen/qwen3-tts', {
