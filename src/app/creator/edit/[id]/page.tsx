@@ -1025,13 +1025,14 @@ export default function CreatorEditPage() {
                                                 padding: '5px 10px', borderRadius: 8,
                                                 border: '1px solid #bbf7d0', background: '#f0fdf4',
                                                 color: '#16a34a', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                                                whiteSpace: 'nowrap',
                                             }}
-                                        >🎙️ 다시 녹음</button>
+                                        >🎙️ 다시녹음</button>
                                         <label style={{
                                             padding: '5px 10px', borderRadius: 8,
                                             border: '1px solid #e5e7eb', background: '#fff',
                                             color: '#6b7280', fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                                            display: 'flex', alignItems: 'center',
+                                            display: 'flex', alignItems: 'center', whiteSpace: 'nowrap',
                                         }}>
                                             📁 파일 교체
                                             <input
@@ -1072,6 +1073,7 @@ export default function CreatorEditPage() {
                                                 padding: '5px 10px', borderRadius: 8,
                                                 border: '1px solid #e5e7eb', background: '#fff',
                                                 color: '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                                                whiteSpace: 'nowrap',
                                             }}
                                         >🗑️ 삭제</button>
                                     </div>

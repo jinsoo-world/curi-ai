@@ -220,8 +220,18 @@ export async function POST(request: NextRequest) {
                     )
                 }
             } else {
+                // 에러 메시지를 유저 친화적으로 변환
+                const rawMsg = replicateErr?.message || ''
+                let userMsg = '음성 생성에 실패했습니다. 잠시 후 다시 시도해주세요.'
+                if (rawMsg.includes('429') || rawMsg.includes('Too Many Requests') || rawMsg.includes('throttled')) {
+                    userMsg = '요청이 너무 많습니다. 10초 후 다시 시도해주세요.'
+                } else if (rawMsg.includes('401') || rawMsg.includes('Unauthenticated')) {
+                    userMsg = 'API 인증 오류입니다. 관리자에게 문의해주세요.'
+                } else if (rawMsg.includes('422') || rawMsg.includes('Unprocessable')) {
+                    userMsg = '음성 파일 형식이 맞지 않습니다. 다른 파일로 시도해주세요.'
+                }
                 return NextResponse.json(
-                    { error: `음성 생성 실패: ${replicateErr?.message || '알 수 없는 오류'}` },
+                    { error: userMsg },
                     { status: 500 }
                 )
             }
@@ -248,8 +258,15 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ audioUrl, detectedEmotion, detectedLanguage: lang })
     } catch (error: any) {
         console.error('[TTS API Error]', error)
+        const rawMsg = error?.message || ''
+        let userMsg = '음성 생성 중 오류가 발생했습니다.'
+        if (rawMsg.includes('429') || rawMsg.includes('throttled')) {
+            userMsg = '요청이 너무 많습니다. 10초 후 다시 시도해주세요.'
+        } else if (rawMsg.includes('401') || rawMsg.includes('Unauthenticated')) {
+            userMsg = 'API 인증 오류입니다. 관리자에게 문의해주세요.'
+        }
         return NextResponse.json(
-            { error: error?.message || '음성 생성 중 오류가 발생했습니다.' },
+            { error: userMsg },
             { status: 500 }
         )
     }
