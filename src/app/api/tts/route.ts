@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
         // 1단계: Voice Cloning — reference_audio → voice_id
         if (voiceSampleUrl && !voiceId) {
             console.log('[TTS] 1단계: Voice Cloning 시작 — voiceSampleUrl:', voiceSampleUrl)
-            try {
+            const doClone = async (): Promise<string | null> => {
                 const cloneRes = await fetch('https://api.replicate.com/v1/models/minimax/voice-cloning/predictions', {
                     method: 'POST',
                     headers: {
@@ -188,17 +188,31 @@ export async function POST(request: NextRequest) {
                 console.log('[TTS] Voice Clone 결과:', JSON.stringify({ status: cloneData.status, output: cloneData.output }, null, 2))
 
                 if (cloneData.status === 'succeeded' && cloneData.output) {
-                    // output이 voice_id string이거나 object
-                    voiceId = typeof cloneData.output === 'string'
+                    return typeof cloneData.output === 'string'
                         ? cloneData.output
                         : (cloneData.output as any).voice_id || (cloneData.output as any).id || null
-                    if (voiceId) {
-                        voiceIdCache.set(cacheKey, voiceId)
-                        console.log('[TTS] Voice ID 캐시 저장:', voiceId)
-                    }
                 }
-            } catch (cloneErr) {
-                console.error('[TTS] Voice Clone 실패:', cloneErr)
+                const errDetail = cloneData.error || ''
+                if (errDetail.includes('429') || errDetail.includes('throttled')) {
+                    throw new Error('429')
+                }
+                return null
+            }
+
+            try {
+                voiceId = await doClone()
+            } catch (e: any) {
+                if (e?.message === '429') {
+                    console.log('[TTS] Voice Clone 429 → 10초 대기 후 재시도')
+                    await new Promise(r => setTimeout(r, 10000))
+                    try { voiceId = await doClone() } catch { /* skip */ }
+                } else {
+                    console.error('[TTS] Voice Clone 실패:', e)
+                }
+            }
+            if (voiceId) {
+                voiceIdCache.set(cacheKey, voiceId)
+                console.log('[TTS] Voice ID 캐시 저장:', voiceId)
             }
         }
 
@@ -240,9 +254,10 @@ export async function POST(request: NextRequest) {
             const errMsg = err1?.message || ''
             console.error('[TTS] 첫 시도 실패:', errMsg)
 
-            // 429 rate limit → 3초 대기 후 재시도
+            // 429 rate limit → 10초 대기 후 재시도
             if (errMsg.includes('429') || errMsg.includes('throttled')) {
-                await new Promise(r => setTimeout(r, 3000))
+                console.log('[TTS] Rate limit → 10초 대기 후 재시도...')
+                await new Promise(r => setTimeout(r, 10000))
                 try {
                     output = await callTTS(replicateInput)
                 } catch (err2: any) {
