@@ -16,6 +16,7 @@ interface MentorData {
     title: string
     avatar_url: string | null
     voice_sample_url: string | null
+    voice_id: string | null
     greeting_message: string
     sample_questions: string[]
     system_prompt: string
@@ -995,6 +996,7 @@ export default function ChatPage() {
                         mentorEmoji={mentorEmoji}
                         mentorImage={mentorImage}
                         voiceSampleUrl={mentor.voice_sample_url}
+                        voiceId={mentor.voice_id}
                         userName={userName}
                         onSendMessage={async (text: string) => {
                             // 음성 통화에서의 AI 답변 — 자연스러운 대화체!

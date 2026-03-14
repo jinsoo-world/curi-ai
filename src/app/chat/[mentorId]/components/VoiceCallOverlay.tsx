@@ -9,6 +9,7 @@ interface VoiceCallOverlayProps {
     mentorEmoji: string
     mentorImage?: string
     voiceSampleUrl?: string | null
+    voiceId?: string | null // ⚡ DB에서 받은 pre-cloned voice_id
     userName?: string
     onSendMessage: (text: string) => Promise<string>
 }
@@ -19,7 +20,7 @@ interface SpeechRecognitionEvent {
 }
 
 export default function VoiceCallOverlay({
-    isOpen, onClose, mentorName, mentorEmoji, mentorImage, voiceSampleUrl, userName, onSendMessage,
+    isOpen, onClose, mentorName, mentorEmoji, mentorImage, voiceSampleUrl, voiceId, userName, onSendMessage,
 }: VoiceCallOverlayProps) {
     const [phase, setPhase] = useState<'connecting' | 'listening' | 'thinking' | 'speaking' | 'idle'>('idle')
     const [transcript, setTranscript] = useState('')
@@ -31,13 +32,69 @@ export default function VoiceCallOverlay({
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-    // 🛑 AbortController — 끼어들기 시 LLM+TTS 요청 완전 취소
     const abortRef = useRef<AbortController | null>(null)
-    // 📞 동적 프리패칭 — 해당 멘토 목소리로 미리 생성된 인사말 URL
     const prefetchedGreetingRef = useRef<string | null>(null)
 
+    // 🔊 오디오 큐 — 문장별 TTS를 순차 재생 (겹침 방지)
+    const audioQueueRef = useRef<string[]>([])
+    const isPlayingRef = useRef(false)
+
+    // ⚡ 안전한 voiceId — null이면 폴백 없이 TTS route에서 처리
+    const safeVoiceId = voiceId || undefined
+
     // ────────────────────────────────────────────────────────────
-    // 📞 동적 프리패칭: 컴포넌트 마운트 시 해당 멘토 TTS로 인사말 미리 생성
+    // 🔊 오디오 큐 순차 재생 시스템
+    // ────────────────────────────────────────────────────────────
+    const playNextInQueue = useCallback(() => {
+        if (isPlayingRef.current) return
+        const nextUrl = audioQueueRef.current.shift()
+        if (!nextUrl) {
+            // 큐 비었으면 듣기 모드로 전환
+            setPhase('listening')
+            startListening()
+            return
+        }
+
+        isPlayingRef.current = true
+        const audio = new Audio(nextUrl)
+        audioRef.current = audio
+
+        audio.onended = () => {
+            isPlayingRef.current = false
+            audioRef.current = null
+            playNextInQueue() // 다음 문장 재생
+        }
+        audio.onerror = () => {
+            isPlayingRef.current = false
+            audioRef.current = null
+            playNextInQueue()
+        }
+
+        audio.play().catch(() => {
+            isPlayingRef.current = false
+            playNextInQueue()
+        })
+    }, [])
+
+    const enqueueAudio = useCallback((audioUrl: string) => {
+        audioQueueRef.current.push(audioUrl)
+        if (!isPlayingRef.current) {
+            playNextInQueue()
+        }
+    }, [playNextInQueue])
+
+    const clearAudioQueue = useCallback(() => {
+        audioQueueRef.current = []
+        isPlayingRef.current = false
+        if (audioRef.current) {
+            audioRef.current.pause()
+            audioRef.current.src = ''
+            audioRef.current = null
+        }
+    }, [])
+
+    // ────────────────────────────────────────────────────────────
+    // 📞 프리패칭: 인사말 미리 생성
     // ────────────────────────────────────────────────────────────
     useEffect(() => {
         if (!isOpen) return
@@ -52,6 +109,7 @@ export default function VoiceCallOverlay({
             body: JSON.stringify({
                 text: greetingText,
                 mentorName,
+                voiceId: safeVoiceId,
                 voiceSampleUrl: voiceSampleUrl || undefined,
             }),
         })
@@ -59,35 +117,42 @@ export default function VoiceCallOverlay({
         .then(data => {
             if (data?.audioUrl) {
                 prefetchedGreetingRef.current = data.audioUrl
-                // 브라우저 캐시에 미리 로드
                 const preload = new Audio(data.audioUrl)
                 preload.preload = 'auto'
-                console.log('[VoiceCall] 🎙️ 멘토 인사말 프리패칭 완료:', mentorName)
+                console.log('[VoiceCall] 🎙️ 인사말 프리패칭 완료')
             }
         })
         .catch(() => {})
-    }, [isOpen, userName, mentorName, voiceSampleUrl])
+    }, [isOpen, userName, mentorName, safeVoiceId, voiceSampleUrl])
 
     // ────────────────────────────────────────────────────────────
-    // 📞 Pre-greeting: 프리패칭된 인사말 즉시 재생
+    // 📞 Pre-greeting: 프리패칭 or 즉시 듣기
     // ────────────────────────────────────────────────────────────
     const playGreeting = useCallback(async () => {
         setPhase('speaking')
 
         if (prefetchedGreetingRef.current) {
-            // ⚡ 프리패칭 HIT → 즉시 재생 (0.1초)
             const audio = new Audio(prefetchedGreetingRef.current)
             audioRef.current = audio
-            audio.onended = () => { setPhase('listening'); startListening() }
-            audio.onerror = () => { setPhase('listening'); startListening() }
-            try {
-                await audio.play()
-            } catch {
+            isPlayingRef.current = true
+            audio.onended = () => {
+                isPlayingRef.current = false
+                audioRef.current = null
+                setPhase('listening')
+                startListening()
+            }
+            audio.onerror = () => {
+                isPlayingRef.current = false
+                audioRef.current = null
+                setPhase('listening')
+                startListening()
+            }
+            try { await audio.play() } catch {
+                isPlayingRef.current = false
                 setPhase('listening')
                 startListening()
             }
         } else {
-            // 프리패칭 미완료 → 브라우저TTS 없이 바로 듣기 시작
             console.log('[VoiceCall] 프리패칭 미완료 → 바로 듣기 진입')
             setPhase('listening')
             startListening()
@@ -95,14 +160,13 @@ export default function VoiceCallOverlay({
     }, [])
 
     // ────────────────────────────────────────────────────────────
-    // 🔄 Lifecycle: 연결/해제
+    // 🔄 Lifecycle
     // ────────────────────────────────────────────────────────────
     useEffect(() => {
         if (isOpen) {
             setCallDuration(0)
             setPhase('connecting')
             timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000)
-            // 프리패칭이 빠르면 0.3초 후 인사말 즉시 재생
             setTimeout(() => playGreeting(), 500)
         } else {
             if (timerRef.current) clearInterval(timerRef.current)
@@ -112,11 +176,7 @@ export default function VoiceCallOverlay({
             if (timerRef.current) clearInterval(timerRef.current)
             abortRef.current?.abort()
             recognitionRef.current?.stop()
-            if (audioRef.current) {
-                audioRef.current.pause()
-                audioRef.current.src = ''
-                audioRef.current = null
-            }
+            clearAudioQueue()
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
             if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
         }
@@ -135,18 +195,14 @@ export default function VoiceCallOverlay({
         abortRef.current?.abort()
         abortRef.current = null
         recognitionRef.current?.stop()
-        if (audioRef.current) {
-            audioRef.current.pause()
-            audioRef.current.src = ''
-            audioRef.current = null
-        }
+        clearAudioQueue()
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
         if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
         setPhase('idle')
-    }, [])
+    }, [clearAudioQueue])
 
     // ────────────────────────────────────────────────────────────
-    // 🎙️ 장시간 침묵 → 멘토가 먼저 말 걸기 (학습된 목소리)
+    // 🎙️ 장시간 침묵 → 멘토 먼저 말 걸기
     // ────────────────────────────────────────────────────────────
     const startIdleTimer = useCallback(() => {
         if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
@@ -159,17 +215,13 @@ export default function VoiceCallOverlay({
                     body: JSON.stringify({
                         text: '아직 계세요? 궁금한 게 있으면 편하게 말씀해 주세요!',
                         mentorName,
-                        voiceSampleUrl: voiceSampleUrl || undefined,
+                        voiceId: safeVoiceId,
                     }),
                 })
                 if (ttsRes.ok) {
                     const { audioUrl } = await ttsRes.json()
                     if (audioUrl) {
-                        const audio = new Audio(audioUrl)
-                        audioRef.current = audio
-                        audio.onended = () => { setPhase('listening'); startListening() }
-                        audio.onerror = () => { setPhase('listening'); startListening() }
-                        await audio.play()
+                        enqueueAudio(audioUrl)
                         return
                     }
                 }
@@ -177,25 +229,21 @@ export default function VoiceCallOverlay({
             setPhase('listening')
             startListening()
         }, 15000)
-    }, [mentorName, voiceSampleUrl])
+    }, [mentorName, safeVoiceId, enqueueAudio])
 
     // ────────────────────────────────────────────────────────────
-    // 🛑 끼어들기: AbortController로 LLM+TTS 완전 취소
+    // 🛑 끼어들기 (오디오 큐 + abort 완전 취소)
     // ────────────────────────────────────────────────────────────
     const interruptSpeaking = useCallback(() => {
-        console.log('[VoiceCall] 🛑 끼어들기! LLM+TTS 완전 취소')
+        console.log('[VoiceCall] 🛑 끼어들기! LLM+TTS+큐 완전 취소')
         abortRef.current?.abort()
         abortRef.current = null
-        if (audioRef.current) {
-            audioRef.current.pause()
-            audioRef.current.src = ''
-            audioRef.current = null
-        }
+        clearAudioQueue()
         setPhase('listening')
-    }, [])
+    }, [clearAudioQueue])
 
     // ────────────────────────────────────────────────────────────
-    // 👂 음성 인식 (listening 모드) — 500ms 침묵 감지
+    // 👂 음성 인식 — 500ms 침묵 감지
     // ────────────────────────────────────────────────────────────
     const startListening = useCallback(() => {
         const SpeechRecognition =
@@ -264,7 +312,8 @@ export default function VoiceCallOverlay({
     }, [phase, startIdleTimer])
 
     // ────────────────────────────────────────────────────────────
-    // 🛑 speaking 중 끼어들기 감지 (보조 음성 인식)
+    // 🛑 speaking 중 끼어들기 감지 — VAD 민감도 하향 ⭐
+    // 0.3초 이상 명확한 발화 지속 시에만 인터럽트 발동
     // ────────────────────────────────────────────────────────────
     const startInterruptionDetection = useCallback(() => {
         const SpeechRecognition =
@@ -276,12 +325,37 @@ export default function VoiceCallOverlay({
         recognition.continuous = true
         recognition.interimResults = true
 
-        recognition.onresult = () => {
-            interruptSpeaking()
-            recognition.stop()
-            setTimeout(() => startListening(), 100)
+        let speechStartTime: number | null = null
+
+        recognition.onresult = (event: SpeechRecognitionEvent) => {
+            // 발화 감지 시작 시간 기록
+            if (!speechStartTime) {
+                speechStartTime = Date.now()
+            }
+
+            // 0.3초(300ms) 이상 지속된 발화만 끼어들기로 인정
+            const elapsed = Date.now() - speechStartTime
+            if (elapsed >= 300) {
+                // isFinal 결과가 있거나, 충분히 긴 interim이면 진짜 발화
+                let hasFinal = false
+                let interimLen = 0
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) hasFinal = true
+                    else interimLen += event.results[i][0].transcript.length
+                }
+
+                if (hasFinal || interimLen >= 2) {
+                    console.log(`[VoiceCall] 끼어들기 감지 (${elapsed}ms, len=${interimLen})`)
+                    interruptSpeaking()
+                    recognition.stop()
+                    setTimeout(() => startListening(), 100)
+                    return
+                }
+            }
         }
 
+        // 침묵 시 타이머 리셋
+        recognition.onspeechend = () => { speechStartTime = null }
         recognition.onerror = () => { /* 무시 */ }
         recognition.onend = () => { /* 자동 종료 허용 */ }
 
@@ -292,23 +366,31 @@ export default function VoiceCallOverlay({
     }, [interruptSpeaking, startListening])
 
     // ────────────────────────────────────────────────────────────
-    // 첫 문장 추출 (TTS 텍스트 80자 제한)
+    // 📝 문장 분할 — LLM 응답을 문장 단위로 쪼개기
     // ────────────────────────────────────────────────────────────
-    const extractFirstSentences = (text: string, maxLen: number) => {
-        const sentences = text.match(/[^.!?。？！]+[.!?。？！]+/g)
-        if (sentences) {
-            let result = ''
-            for (const s of sentences) {
-                if ((result + s).length > maxLen) break
-                result += s
+    const splitIntoSentences = (text: string): string[] => {
+        // 한국어/영어 문장 구분: .!? + 한국어 마침표류
+        const raw = text.match(/[^.!?。？！]+[.!?。？！]+/g)
+        if (!raw || raw.length === 0) return [text.slice(0, 80)]
+
+        // 70자 이하로 유지
+        const sentences: string[] = []
+        let current = ''
+        for (const s of raw) {
+            if ((current + s).length > 70 && current) {
+                sentences.push(current.trim())
+                current = s
+            } else {
+                current += s
             }
-            return result || text.slice(0, maxLen)
         }
-        return text.slice(0, maxLen)
+        if (current.trim()) sentences.push(current.trim())
+
+        return sentences.length > 0 ? sentences : [text.slice(0, 80)]
     }
 
     // ────────────────────────────────────────────────────────────
-    // 🗣️ AI 답변 → MiniMax TTS 재생 (AbortController 적용)
+    // 🗣️ AI 답변 → 문장 청킹 TTS + 오디오 큐 순차 재생
     // ────────────────────────────────────────────────────────────
     const handleSendAndSpeak = useCallback(async (text: string) => {
         if (!text.trim()) { startListening(); return }
@@ -341,43 +423,50 @@ export default function VoiceCallOverlay({
             setPhase('speaking')
             startInterruptionDetection()
 
-            // 2) MiniMax TTS — 해당 멘토 목소리, 첫 문장 80자
-            const ttsText = extractFirstSentences(response, 80)
+            // 2) 문장 단위 청킹 → 각 문장을 병렬 TTS 요청 → 오디오 큐에 순차 적재
+            const sentences = splitIntoSentences(response)
+            console.log(`[VoiceCall] 📝 ${sentences.length}개 문장 청킹:`, sentences)
 
-            try {
-                const ttsRes = await fetch('/api/tts', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        text: ttsText,
-                        mentorName,
-                        voiceSampleUrl: voiceSampleUrl || undefined,
-                    }),
-                    signal: controller.signal,
-                })
+            // 모든 TTS 요청을 병렬로 보내되, 결과는 순서대로 큐에 넣기
+            const ttsPromises = sentences.map(async (sentence, idx) => {
+                try {
+                    const ttsRes = await fetch('/api/tts', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            text: sentence,
+                            mentorName,
+                            voiceId: safeVoiceId,
+                        }),
+                        signal: controller.signal,
+                    })
 
-                if (controller.signal.aborted) return
-
-                if (ttsRes.ok) {
-                    const { audioUrl } = await ttsRes.json()
-                    if (audioUrl && !controller.signal.aborted) {
-                        const audio = new Audio(audioUrl)
-                        audioRef.current = audio
-                        audio.onended = () => { setPhase('listening'); startListening() }
-                        audio.onerror = () => { setPhase('listening'); startListening() }
-                        await audio.play()
-                        return
+                    if (controller.signal.aborted) return null
+                    if (ttsRes.ok) {
+                        const { audioUrl } = await ttsRes.json()
+                        return { idx, audioUrl }
                     }
-                } else {
-                    console.error('[VoiceCall] TTS 실패:', ttsRes.status)
+                } catch (e: any) {
+                    if (e?.name === 'AbortError') return null
+                    console.error(`[VoiceCall] TTS 문장 ${idx} 실패:`, e)
                 }
-            } catch (ttsErr: any) {
-                if (ttsErr?.name === 'AbortError') return
-                console.error('[VoiceCall] TTS 에러:', ttsErr)
+                return null
+            })
+
+            // 순서 보장: 첫 문장부터 순차적으로 큐에 추가
+            const results = await Promise.all(ttsPromises)
+            if (controller.signal.aborted) return
+
+            for (const result of results) {
+                if (result?.audioUrl && !controller.signal.aborted) {
+                    enqueueAudio(result.audioUrl)
+                }
             }
 
-            if (!controller.signal.aborted) {
-                setTimeout(() => { setPhase('listening'); startListening() }, 1500)
+            // 아무것도 재생 못하면 듣기로 전환
+            if (audioQueueRef.current.length === 0 && !isPlayingRef.current) {
+                setPhase('listening')
+                startListening()
             }
         } catch (err: any) {
             if (err?.name === 'AbortError') return
@@ -385,7 +474,7 @@ export default function VoiceCallOverlay({
             setError('대화 중 오류가 발생했어요')
             setTimeout(() => { setError(null); setPhase('listening'); startListening() }, 2000)
         }
-    }, [onSendMessage, mentorName, voiceSampleUrl, startListening, startInterruptionDetection])
+    }, [onSendMessage, mentorName, safeVoiceId, startListening, startInterruptionDetection, enqueueAudio])
 
     const handleHangup = useCallback(() => {
         stopAll()
@@ -395,7 +484,7 @@ export default function VoiceCallOverlay({
     if (!isOpen) return null
 
     // ────────────────────────────────────────────────────────────
-    // 🎨 UI
+    // 🎨 UI (변경 없음)
     // ────────────────────────────────────────────────────────────
     const ringColor =
         phase === 'speaking' ? 'rgba(249,115,22,0.2)'

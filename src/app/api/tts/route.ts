@@ -4,9 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 // Vercel Serverless 함수 타임아웃 (60초 — TTS 생성에 충분한 시간)
 export const maxDuration = 60
 
-// voice_id 캐시 — 같은 멘토의 voice clone 결과를 재사용 (Vercel cold start마다 초기화)
-const voiceIdCache = new Map<string, string>()
-
 
 // 멘토별 기본 음성 디자인 프롬프트 — 🇰🇷 한국어 톤 특화 (기본 멘토 폴백)
 const MENTOR_VOICE_DESIGNS: Record<string, string> = {
@@ -134,7 +131,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
         }
 
-        const { text, mentorName, language, voiceSampleUrl, emotion, systemPrompt } = await request.json()
+        const { text, mentorName, language, voiceSampleUrl, voiceId: requestVoiceId, emotion, systemPrompt } = await request.json()
 
         if (!text || typeof text !== 'string') {
             return NextResponse.json({ error: '텍스트가 필요합니다.' }, { status: 400 })
@@ -162,75 +159,18 @@ export async function POST(request: NextRequest) {
             voiceDesign += ' ' + EMOTION_MODIFIERS[detectedEmotion]
         }
 
-        // 🚀 MiniMax Speech-02-Turbo — 2단계 Voice Clone 프로세스
+        // 🚀 MiniMax Speech-02-Turbo — voice_id 직접 사용 (clone 단계 없음!)
         const REPLICATE_TOKEN = process.env.REPLICATE_API_TOKEN
 
-        // voice_id 캐시 (같은 멘토면 재사용 → 속도 향상)
-        const cacheKey = voiceSampleUrl || 'default'
-        let voiceId: string | null = voiceIdCache.get(cacheKey) || null
-
-        // 1단계: Voice Cloning — voiceSampleUrl → voice_id
-        // (업로드 시점에 webm→wav 변환 완료 → 여기선 URL 직접 전달)
-        if (voiceSampleUrl && !voiceId) {
-            console.log('[TTS] 1단계: Voice Cloning 시작 — voiceSampleUrl:', voiceSampleUrl)
-
-            const doClone = async (): Promise<string | null> => {
-                const cloneRes = await fetch('https://api.replicate.com/v1/models/minimax/voice-cloning/predictions', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${REPLICATE_TOKEN}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'wait',
-                    },
-                    body: JSON.stringify({
-                        input: { voice_file: voiceSampleUrl },
-                    }),
-                })
-                const cloneData = await cloneRes.json()
-                console.log('[TTS] Voice Clone 결과:', JSON.stringify({ status: cloneData.status, output: cloneData.output, error: cloneData.error }, null, 2))
-
-                if (cloneData.status === 'succeeded' && cloneData.output) {
-                    return typeof cloneData.output === 'string'
-                        ? cloneData.output
-                        : (cloneData.output as any).voice_id || (cloneData.output as any).id || null
-                }
-                const errDetail = cloneData.error || ''
-                if (errDetail.includes('429') || errDetail.includes('throttled')) {
-                    throw new Error('429')
-                }
-                return null
-            }
-
-            try {
-                voiceId = await doClone()
-            } catch (e: any) {
-                if (e?.message === '429') {
-                    console.log('[TTS] Voice Clone 429 → 10초 대기 후 재시도')
-                    await new Promise(r => setTimeout(r, 10000))
-                    try { voiceId = await doClone() } catch { /* skip */ }
-                } else {
-                    console.error('[TTS] Voice Clone 실패:', e)
-                }
-            }
-            if (voiceId) {
-                voiceIdCache.set(cacheKey, voiceId)
-                console.log('[TTS] Voice ID 캐시 저장:', voiceId)
-            }
+        // voice_id: 요청에서 직접 받거나, 없으면 폴백
+        let voiceId: string = requestVoiceId || 'Wise_Woman'
+        if (requestVoiceId) {
+            console.log('[TTS] ⚡ DB에서 받은 voice_id 직접 사용:', requestVoiceId)
+        } else if (voiceSampleUrl) {
+            console.log('[TTS] ⚠️ voice_id 없음, voiceSampleUrl만 있음 → Wise_Woman 폴백')
         }
 
-        // 2단계: Speech-02-Turbo TTS — voice_id 사용 (폴백 포함)
-        let replicateInput: Record<string, any> = { text: trimmedText }
-        if (voiceId) {
-            replicateInput.voice_id = voiceId
-            console.log('[TTS] 2단계: 클론된 voice_id 사용:', voiceId)
-        } else {
-            // Voice Clone 실패 또는 음성 샘플 없음 → 기본 음성 폴백
-            if (voiceSampleUrl) {
-                console.error('[TTS] Voice Clone 실패 — Wise_Woman 폴백. voiceSampleUrl:', voiceSampleUrl)
-            }
-            replicateInput.voice_id = 'Wise_Woman'
-            console.log('[TTS] 2단계: 기본 음성 사용 (Wise_Woman)')
-        }
+        let replicateInput: Record<string, any> = { text: trimmedText, voice_id: voiceId }
 
         let output: any
 
