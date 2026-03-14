@@ -33,24 +33,62 @@ export default function VoiceCallOverlay({
     const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     // 🛑 AbortController — 끼어들기 시 LLM+TTS 요청 완전 취소
     const abortRef = useRef<AbortController | null>(null)
+    // 📞 동적 프리패칭 — 해당 멘토 목소리로 미리 생성된 인사말 URL
+    const prefetchedGreetingRef = useRef<string | null>(null)
 
     // ────────────────────────────────────────────────────────────
-    // 📞 1. Pre-greeting: 로컬 greeting.mp3 즉시 재생 (API 없음, 0.1초)
+    // 📞 동적 프리패칭: 컴포넌트 마운트 시 해당 멘토 TTS로 인사말 미리 생성
+    // ────────────────────────────────────────────────────────────
+    useEffect(() => {
+        if (!isOpen) return
+        prefetchedGreetingRef.current = null
+
+        const displayName = userName || '고객'
+        const greetingText = `네, ${displayName}님! ${mentorName}입니다, 반갑습니다!`
+
+        fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                text: greetingText,
+                mentorName,
+                voiceSampleUrl: voiceSampleUrl || undefined,
+            }),
+        })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+            if (data?.audioUrl) {
+                prefetchedGreetingRef.current = data.audioUrl
+                // 브라우저 캐시에 미리 로드
+                const preload = new Audio(data.audioUrl)
+                preload.preload = 'auto'
+                console.log('[VoiceCall] 🎙️ 멘토 인사말 프리패칭 완료:', mentorName)
+            }
+        })
+        .catch(() => {})
+    }, [isOpen, userName, mentorName, voiceSampleUrl])
+
+    // ────────────────────────────────────────────────────────────
+    // 📞 Pre-greeting: 프리패칭된 인사말 즉시 재생
     // ────────────────────────────────────────────────────────────
     const playGreeting = useCallback(async () => {
         setPhase('speaking')
-        try {
-            const audio = new Audio('/audio/greeting.mp3')
+
+        if (prefetchedGreetingRef.current) {
+            // ⚡ 프리패칭 HIT → 즉시 재생 (0.1초)
+            const audio = new Audio(prefetchedGreetingRef.current)
             audioRef.current = audio
             audio.onended = () => { setPhase('listening'); startListening() }
-            audio.onerror = () => {
-                // greeting.mp3 없으면 바로 듣기 모드
-                console.warn('[VoiceCall] greeting.mp3 로드 실패 → 바로 듣기 시작')
+            audio.onerror = () => { setPhase('listening'); startListening() }
+            try {
+                await audio.play()
+            } catch {
                 setPhase('listening')
                 startListening()
             }
-            await audio.play()
-        } catch {
+        } else {
+            // 프리패칭 미완료 → 브라우저TTS 없이 바로 듣기 시작
+            console.log('[VoiceCall] 프리패칭 미완료 → 바로 듣기 진입')
             setPhase('listening')
             startListening()
         }
@@ -64,7 +102,8 @@ export default function VoiceCallOverlay({
             setCallDuration(0)
             setPhase('connecting')
             timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000)
-            setTimeout(() => playGreeting(), 300)
+            // 프리패칭이 빠르면 0.3초 후 인사말 즉시 재생
+            setTimeout(() => playGreeting(), 500)
         } else {
             if (timerRef.current) clearInterval(timerRef.current)
             stopAll()
@@ -145,10 +184,8 @@ export default function VoiceCallOverlay({
     // ────────────────────────────────────────────────────────────
     const interruptSpeaking = useCallback(() => {
         console.log('[VoiceCall] 🛑 끼어들기! LLM+TTS 완전 취소')
-        // 진행 중인 LLM/TTS fetch 취소
         abortRef.current?.abort()
         abortRef.current = null
-        // 재생 중인 오디오 중지
         if (audioRef.current) {
             audioRef.current.pause()
             audioRef.current.src = ''
@@ -158,7 +195,7 @@ export default function VoiceCallOverlay({
     }, [])
 
     // ────────────────────────────────────────────────────────────
-    // 👂 음성 인식 (listening 모드)
+    // 👂 음성 인식 (listening 모드) — 500ms 침묵 감지
     // ────────────────────────────────────────────────────────────
     const startListening = useCallback(() => {
         const SpeechRecognition =
@@ -194,7 +231,7 @@ export default function VoiceCallOverlay({
             }
             setTranscript(finalText + interim)
 
-            // ⚡ 500ms 침묵 감지 → 즉시 전송 (사람 대화 리듬)
+            // ⚡ 500ms 침묵 감지 → 즉시 전송
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
             if (finalText) {
                 silenceTimerRef.current = setTimeout(() => {
@@ -271,12 +308,11 @@ export default function VoiceCallOverlay({
     }
 
     // ────────────────────────────────────────────────────────────
-    // 🗣️ AI 답변 → TTS 재생 (AbortController 적용)
+    // 🗣️ AI 답변 → MiniMax TTS 재생 (AbortController 적용)
     // ────────────────────────────────────────────────────────────
     const handleSendAndSpeak = useCallback(async (text: string) => {
         if (!text.trim()) { startListening(); return }
 
-        // 이전 요청 취소
         abortRef.current?.abort()
         const controller = new AbortController()
         abortRef.current = controller
@@ -284,7 +320,7 @@ export default function VoiceCallOverlay({
         setPhase('thinking')
 
         try {
-            // 1) AI 답변 가져오기
+            // 1) AI 답변
             let response: string
             try {
                 response = await onSendMessage(text)
@@ -305,7 +341,7 @@ export default function VoiceCallOverlay({
             setPhase('speaking')
             startInterruptionDetection()
 
-            // 2) MiniMax Voice Clone TTS — 첫 문장 80자
+            // 2) MiniMax TTS — 해당 멘토 목소리, 첫 문장 80자
             const ttsText = extractFirstSentences(response, 80)
 
             try {
@@ -359,7 +395,7 @@ export default function VoiceCallOverlay({
     if (!isOpen) return null
 
     // ────────────────────────────────────────────────────────────
-    // 🎨 UI — LennyBot 스타일
+    // 🎨 UI
     // ────────────────────────────────────────────────────────────
     const ringColor =
         phase === 'speaking' ? 'rgba(249,115,22,0.2)'
@@ -416,7 +452,6 @@ export default function VoiceCallOverlay({
                 @keyframes ringPulse { 0%{box-shadow:0 0 0 0 rgba(249,115,22,.3)} 100%{box-shadow:0 0 0 20px rgba(249,115,22,0)} }
             `}</style>
 
-            {/* 아바타 */}
             <div style={{
                 width: 180, height: 180, borderRadius: '50%',
                 border: `6px solid ${ringColor}`,
@@ -433,12 +468,10 @@ export default function VoiceCallOverlay({
                 )}
             </div>
 
-            {/* 이름 */}
             <h2 style={{ fontSize: 24, fontWeight: 700, color: '#111', margin: '20px 0 8px' }}>
                 {mentorName}
             </h2>
 
-            {/* 상태 */}
             <div style={{
                 display: 'flex', alignItems: 'center',
                 padding: '6px 16px', borderRadius: 20,
@@ -448,10 +481,8 @@ export default function VoiceCallOverlay({
                 {statusText} {statusDots}
             </div>
 
-            {/* 타이머 */}
             <p style={{ color: '#aaa', fontSize: 14, marginTop: 8 }}>{formatDuration(callDuration)}</p>
 
-            {/* 인식 텍스트 */}
             {transcript && (
                 <div style={{
                     margin: '20px 24px 0', padding: '12px 16px', borderRadius: 12,
@@ -463,7 +494,6 @@ export default function VoiceCallOverlay({
                 </div>
             )}
 
-            {/* 에러 */}
             {error && (
                 <div style={{
                     margin: '12px 24px 0', padding: '8px 16px', borderRadius: 8,
@@ -473,7 +503,6 @@ export default function VoiceCallOverlay({
                 </div>
             )}
 
-            {/* 종료 버튼 */}
             <button
                 onClick={handleHangup}
                 style={{

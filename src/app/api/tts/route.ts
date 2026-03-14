@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
                         'Prefer': 'wait',
                     },
                     body: JSON.stringify({
-                        input: { audio: voiceSampleUrl },
+                        input: { voice_file: voiceSampleUrl },
                     }),
                 })
                 const cloneData = await cloneRes.json()
