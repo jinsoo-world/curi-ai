@@ -65,6 +65,7 @@ export default function CreatorEditPage() {
     const [voiceSampleUploading, setVoiceSampleUploading] = useState(false)
     const [voiceTestLoading, setVoiceTestLoading] = useState(false)
     const [voiceTestAudioUrl, setVoiceTestAudioUrl] = useState<string | null>(null)
+    const [clonedVoiceId, setClonedVoiceId] = useState<string | null>(null)
     const voiceInputRef = useRef<HTMLInputElement>(null)
     const [isRecording, setIsRecording] = useState(false)
     const [recordingSeconds, setRecordingSeconds] = useState(0)
@@ -106,6 +107,7 @@ export default function CreatorEditPage() {
                     if (res.ok) {
                         const data = await res.json()
                         setVoiceSampleUrl(data.url)
+                        if (data.voiceId) setClonedVoiceId(data.voiceId)
                         setToast({ type: 'success', message: '🎙️ 녹음 업로드 완료!' })
                     } else {
                         setError('녹음 업로드에 실패했습니다.')
@@ -210,6 +212,9 @@ export default function CreatorEditPage() {
             }
             if (m.voice_sample_url) {
                 setVoiceSampleUrl(m.voice_sample_url)
+            }
+            if (m.voice_id) {
+                setClonedVoiceId(m.voice_id)
             }
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : '멘토 정보를 불러올 수 없습니다.')
@@ -979,6 +984,7 @@ export default function CreatorEditPage() {
                                                 if (res.ok) {
                                                     const data = await res.json()
                                                     setVoiceSampleUrl(data.url)
+                                                    if (data.voiceId) setClonedVoiceId(data.voiceId)
                                                     setToast({ type: 'success', message: '🎙️ 음성 샘플 업로드 완료!' })
                                                 } else {
                                                     setError('음성 파일 업로드에 실패했습니다.')
@@ -1064,6 +1070,7 @@ export default function CreatorEditPage() {
                                                         if (res.ok) {
                                                             const data = await res.json()
                                                             setVoiceSampleUrl(data.url)
+                                                            if (data.voiceId) setClonedVoiceId(data.voiceId)
                                                             setToast({ type: 'success', message: '✅ 파일 교체 완료!' })
                                                             setTimeout(() => setToast(null), 3000)
                                                         }
@@ -1079,6 +1086,7 @@ export default function CreatorEditPage() {
                                                 setVoiceSamplePreviewUrl(null)
                                                 setVoiceSampleUrl(null)
                                                 setVoiceTestAudioUrl(null)
+                                                setClonedVoiceId(null)
                                             }}
                                             style={{
                                                 padding: '5px 10px', borderRadius: 8,
@@ -1102,7 +1110,7 @@ export default function CreatorEditPage() {
                                             setVoiceTestLoading(true)
                                             setError('')
                                             try {
-                                                console.log('[Voice Test] 요청 시작:', { voiceSampleUrl, name, greetingMessage })
+                                                console.log('[Voice Test] 요청 시작:', { voiceSampleUrl, name, clonedVoiceId, greetingMessage })
                                                 const res = await fetch('/api/tts', {
                                                     method: 'POST',
                                                     headers: { 'Content-Type': 'application/json' },
@@ -1110,6 +1118,7 @@ export default function CreatorEditPage() {
                                                         text: greetingMessage || `안녕하세요! ${name || 'AI'}입니다. 만나서 반가워요!`,
                                                         mentorName: name,
                                                         voiceSampleUrl: voiceSampleUrl,
+                                                        voiceId: clonedVoiceId,
                                                     }),
                                                 })
                                                 const data = await res.json()
