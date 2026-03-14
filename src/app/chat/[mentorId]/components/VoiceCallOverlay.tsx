@@ -32,39 +32,39 @@ export default function VoiceCallOverlay({
     const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-    // 🔥 전화 연결 시 인사말 + TTS warm-up
+    // 🔥 전화 연결 시 인사말 — 학습된 목소리(MiniMax voice clone)로 인사
     const playGreetingAndWarmUp = useCallback(async () => {
         setPhase('speaking')
         const displayName = userName || '고객'
         const greetingText = `안녕하세요 ${displayName}님, ${mentorName}입니다. 반갑습니다!`
 
-        // 1) 브라우저 TTS로 즉시 인사 (0초 지연)
-        const synth = window.speechSynthesis
-        synth.cancel()
-        const utterance = new SpeechSynthesisUtterance(greetingText)
-        utterance.lang = 'ko-KR'
-        utterance.rate = 1.0
-
-        const voices = synth.getVoices()
-        const koVoice = voices.find(v => v.lang === 'ko-KR') || voices.find(v => v.lang.startsWith('ko'))
-        if (koVoice) utterance.voice = koVoice
-
-        utterance.onend = () => { setPhase('listening'); startListening() }
-        utterance.onerror = () => { setPhase('listening'); startListening() }
-        synth.speak(utterance)
-
-        // 2) 백그라운드에서 TTS warm-up ping (cold start 방지)
-        if (voiceSampleUrl) {
-            fetch('/api/tts', {
+        try {
+            const ttsRes = await fetch('/api/tts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    text: '안녕',
+                    text: greetingText,
                     mentorName,
-                    voiceSampleUrl,
+                    voiceSampleUrl: voiceSampleUrl || undefined,
                 }),
-            }).catch(() => {}) // 결과 무시 — 모델을 따뜻하게 유지하는 것이 목적
+            })
+            if (ttsRes.ok) {
+                const { audioUrl } = await ttsRes.json()
+                if (audioUrl) {
+                    const audio = new Audio(audioUrl)
+                    audioRef.current = audio
+                    audio.onended = () => { setPhase('listening'); startListening() }
+                    audio.onerror = () => { setPhase('listening'); startListening() }
+                    await audio.play()
+                    return
+                }
+            }
+        } catch (err) {
+            console.error('[VoiceCall] 인사말 TTS 실패:', err)
         }
+        // TTS 실패 시 바로 듣기 모드
+        setPhase('listening')
+        startListening()
     }, [userName, mentorName, voiceSampleUrl])
 
     useEffect(() => {
