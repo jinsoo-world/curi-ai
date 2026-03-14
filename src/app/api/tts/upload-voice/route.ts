@@ -15,7 +15,6 @@ export async function POST(request: NextRequest) {
         const formData = await request.formData()
         const file = formData.get('file') as File | null
         const mentorId = formData.get('mentorId') as string || 'temp'
-        const mentorName = formData.get('mentorName') as string || 'AI Mentor'
 
         if (!file) {
             return NextResponse.json({ error: '파일이 필요합니다.' }, { status: 400 })
@@ -51,51 +50,76 @@ export async function POST(request: NextRequest) {
             .getPublicUrl(fileName)
         const publicUrl = urlData.publicUrl
 
-        // 2. ElevenLabs Voice Clone (Add Voice API)
+        // 2. DB에서 기존 voice_id 확인 → 있으면 clone 스킵!
         let voiceId: string | null = null
+
+        if (mentorId && mentorId !== 'temp') {
+            const { data: mentor } = await admin
+                .from('mentors')
+                .select('voice_id, voice_sample_url')
+                .eq('id', mentorId)
+                .single()
+
+            if (mentor?.voice_id) {
+                // ⚡ 이미 클론된 voice_id 존재 → clone 안 함!
+                console.log('[Voice Upload] ✅ 기존 voice_id 재사용:', mentor.voice_id)
+                voiceId = mentor.voice_id
+
+                // voice_sample_url만 업데이트
+                await admin
+                    .from('mentors')
+                    .update({ voice_sample_url: publicUrl })
+                    .eq('id', mentorId)
+
+                return NextResponse.json({
+                    url: publicUrl,
+                    path: uploadData.path,
+                    voiceId,
+                    reused: true, // 프론트에서 "기존 목소리 유지" 표시용
+                })
+            }
+        }
+
+        // 3. voice_id 없으면 → ElevenLabs Add Voice (1회 clone)
         const ELEVENLABS_KEY = process.env.ELEVENLABS_API_KEY
 
         if (ELEVENLABS_KEY) {
-            console.log('[Voice Upload] ElevenLabs Add Voice 시작')
+            console.log('[Voice Upload] 🔄 ElevenLabs Add Voice (첫 클로닝)')
             try {
                 const elForm = new FormData()
                 elForm.append('name', `curi-${mentorId}-${Date.now()}`)
-                elForm.append('description', `Voice clone for ${mentorName}`)
+                elForm.append('description', `Curi AI mentor voice`)
 
-                // 파일을 Blob으로 변환하여 ElevenLabs에 전송
                 const fileBlob = new Blob([buffer], { type: file.type || 'audio/mpeg' })
                 elForm.append('files', fileBlob, file.name)
 
                 const elRes = await fetch('https://api.elevenlabs.io/v1/voices/add', {
                     method: 'POST',
-                    headers: {
-                        'xi-api-key': ELEVENLABS_KEY,
-                    },
+                    headers: { 'xi-api-key': ELEVENLABS_KEY },
                     body: elForm,
                 })
 
                 const elData = await elRes.json()
-                console.log('[Voice Upload] ElevenLabs 응답:', JSON.stringify({ status: elRes.status, voice_id: elData.voice_id, error: elData.detail }))
+                console.log('[Voice Upload] ElevenLabs 응답:', elRes.status, elData.voice_id || elData.detail)
 
                 if (elRes.ok && elData.voice_id) {
                     voiceId = elData.voice_id
-                    console.log('[Voice Upload] ✅ ElevenLabs voice_id:', voiceId)
+                    console.log('[Voice Upload] ✅ 클론 성공! voice_id:', voiceId)
                 } else {
                     console.error('[Voice Upload] ElevenLabs 실패:', elData.detail || elData)
                 }
             } catch (cloneErr) {
-                console.error('[Voice Upload] ElevenLabs 에러 (무시):', cloneErr)
+                console.error('[Voice Upload] ElevenLabs 에러:', cloneErr)
             }
         }
 
-        // 3. DB에 voice_id 저장
-        if (voiceId && mentorId && mentorId !== 'temp') {
+        // 4. DB에 voice_id + voice_sample_url 저장
+        if (mentorId && mentorId !== 'temp') {
             try {
-                await admin
-                    .from('mentors')
-                    .update({ voice_id: voiceId, voice_sample_url: publicUrl })
-                    .eq('id', mentorId)
-                console.log('[Voice Upload] ✅ DB voice_id 저장 완료:', mentorId)
+                const updateData: Record<string, string> = { voice_sample_url: publicUrl }
+                if (voiceId) updateData.voice_id = voiceId
+                await admin.from('mentors').update(updateData).eq('id', mentorId)
+                console.log('[Voice Upload] ✅ DB 저장 완료')
             } catch (dbErr) {
                 console.error('[Voice Upload] DB 업데이트 실패:', dbErr)
             }

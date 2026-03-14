@@ -1119,46 +1119,21 @@ export default function CreatorEditPage() {
                                             setVoiceTestLoading(true)
                                             setError('')
                                             try {
-                                                let effectiveVoiceId = clonedVoiceId
-
-                                                // ⚡ voice_id 없으면 먼저 재학습 (on-demand clone)
-                                                if (!effectiveVoiceId && voiceSampleUrl) {
-                                                    console.log('[Voice Test] voice_id 없음 → 재학습 시작:', voiceSampleUrl)
-                                                    setToast({ type: 'success', message: '🔄 목소리 학습 중... (10~30초 소요)' })
-                                                    try {
-                                                        const cloneRes = await fetch('/api/tts/clone-voice', {
-                                                            method: 'POST',
-                                                            headers: { 'Content-Type': 'application/json' },
-                                                            body: JSON.stringify({ voiceSampleUrl }),
-                                                        })
-                                                        const cloneData = await cloneRes.json()
-                                                        console.log('[Voice Test] Clone 결과:', cloneData)
-                                                        if (cloneRes.ok && cloneData.voiceId) {
-                                                            effectiveVoiceId = cloneData.voiceId
-                                                            setClonedVoiceId(cloneData.voiceId)
-                                                            setToast({ type: 'success', message: '✅ 목소리 학습 완료!' })
-                                                        } else {
-                                                            setToast({ type: 'error', message: `❌ 학습 실패: ${cloneData.error || '알 수 없는 오류'}` })
-                                                            setVoiceTestLoading(false)
-                                                            return
-                                                        }
-                                                    } catch (cloneErr: any) {
-                                                        console.error('[Voice Test] Clone 실패:', cloneErr)
-                                                        setToast({ type: 'error', message: '❌ 목소리 학습 실패. 다시 녹음해주세요.' })
-                                                        setVoiceTestLoading(false)
-                                                        return
-                                                    }
+                                                // 🔒 클론 API 절대 호출 안 함! DB voice_id만 사용
+                                                if (!clonedVoiceId) {
+                                                    setToast({ type: 'error', message: '⚠️ 목소리가 아직 학습되지 않았습니다. 음성 파일을 업로드하면 자동으로 학습됩니다.' })
+                                                    setVoiceTestLoading(false)
+                                                    return
                                                 }
 
-                                                console.log('[Voice Test] TTS 요청:', { voiceSampleUrl, name, effectiveVoiceId })
+                                                console.log('[Voice Test] TTS 요청 (clone 없음):', { voiceId: clonedVoiceId })
                                                 const res = await fetch('/api/tts', {
                                                     method: 'POST',
                                                     headers: { 'Content-Type': 'application/json' },
                                                     body: JSON.stringify({
                                                         text: greetingMessage || `안녕하세요! ${name || 'AI'}입니다. 만나서 반가워요!`,
                                                         mentorName: name,
-                                                        voiceSampleUrl: voiceSampleUrl,
-                                                        voiceId: effectiveVoiceId,
+                                                        voiceId: clonedVoiceId,
                                                     }),
                                                 })
                                                 const data = await res.json()
