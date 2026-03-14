@@ -43,6 +43,15 @@ export default function VoiceCallOverlay({
         }
         return () => {
             if (timerRef.current) clearInterval(timerRef.current)
+            // 페이지 이탈 시 오디오 완전 정지
+            recognitionRef.current?.stop()
+            if (audioRef.current) {
+                audioRef.current.pause()
+                audioRef.current.src = ''
+                audioRef.current = null
+            }
+            if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
+            if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
         }
     }, [isOpen])
 
