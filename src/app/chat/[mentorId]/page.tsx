@@ -804,6 +804,7 @@ export default function ChatPage() {
                             mentorEmoji={mentorEmoji}
                             isStreaming={isStreaming}
                             autoTTS={autoTTS}
+                            systemPrompt={mentor?.system_prompt}
                         />
 
 

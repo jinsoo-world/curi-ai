@@ -21,6 +21,7 @@ interface ChatMessagesProps {
     mentorEmoji: string
     isStreaming: boolean
     autoTTS?: boolean
+    systemPrompt?: string
 }
 
 /* ── 스피커 아이콘 ── */
@@ -90,7 +91,7 @@ function splitSentences(text: string): string[] {
 // 🎵 전역 TTS 캐시 (세션 내 동일 텍스트 즉시 재생)
 const globalTTSCache = new Map<string, string>()
 
-function TTSButton({ message, mentorName, autoPlay }: { message: ChatMessage; mentorName: string; autoPlay?: boolean }) {
+function TTSButton({ message, mentorName, autoPlay, systemPrompt }: { message: ChatMessage; mentorName: string; autoPlay?: boolean; systemPrompt?: string }) {
     const [status, setStatus] = useState<'idle' | 'loading' | 'playing'>('idle')
     const [progress, setProgress] = useState(0)
     const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -106,7 +107,7 @@ function TTSButton({ message, mentorName, autoPlay }: { message: ChatMessage; me
         const res = await fetch('/api/tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, mentorName }),
+            body: JSON.stringify({ text, mentorName, systemPrompt }),
         })
         if (!res.ok) return null
         const data = await res.json()
@@ -238,7 +239,7 @@ const ThumbDownIcon = ({ filled }: { filled: boolean }) => (
 )
 
 /** 복사/음성재생/좋아요/아쉬워요 액션 아이콘 — 제미나이 스타일 작은 아이콘 */
-function MessageActions({ message, mentorName, autoPlay }: { message: ChatMessage; mentorName?: string; autoPlay?: boolean }) {
+function MessageActions({ message, mentorName, autoPlay, systemPrompt }: { message: ChatMessage; mentorName?: string; autoPlay?: boolean; systemPrompt?: string }) {
     const [copied, setCopied] = useState(false)
     const [feedback, setFeedback] = useState<'like' | 'dislike' | null>(null)
     const isAssistant = message.role === 'assistant'
@@ -301,7 +302,7 @@ function MessageActions({ message, mentorName, autoPlay }: { message: ChatMessag
             </button>
             {isAssistant && (
                 <>
-                    <TTSButton message={message} mentorName={mentorName || ''} autoPlay={autoPlay} />
+                    <TTSButton message={message} mentorName={mentorName || ''} autoPlay={autoPlay} systemPrompt={systemPrompt} />
                     <button
                         onClick={() => handleFeedback('like')}
                         style={{
@@ -462,6 +463,7 @@ export default function ChatMessages({
     mentorEmoji,
     isStreaming,
     autoTTS,
+    systemPrompt,
 }: ChatMessagesProps) {
     // 스트리밍 종료 감지 — autoTTS가 켜져 있을 때만
     const prevStreamingRef = useRef(isStreaming)
@@ -672,7 +674,7 @@ export default function ChatMessages({
 
                                 {/* 액션 아이콘 — hover 시 표시 */}
                                 {msg.content && !isEmptyAssistant && (
-                                    <MessageActions message={msg} mentorName={mentor.name} autoPlay={autoPlayMsgId === msg.id} />
+                                    <MessageActions message={msg} mentorName={mentor.name} autoPlay={autoPlayMsgId === msg.id} systemPrompt={systemPrompt} />
                                 )}
                             </div>
                         </div>
