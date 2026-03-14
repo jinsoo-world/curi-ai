@@ -69,6 +69,7 @@ export async function updateUserProfile(
     if ('avatar_url' in data) updateData.avatar_url = data.avatar_url || null
     if ('phone' in data) updateData.phone = data.phone || null
     if ('marketing_consent' in data) updateData.marketing_consent = data.marketing_consent ?? false
+    if ('auto_tts' in data) updateData.auto_tts = data.auto_tts ?? false
 
     const { error } = await db
         .from('users')

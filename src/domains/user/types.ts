@@ -22,6 +22,7 @@ export interface ProfileUpdateData {
     avatar_url?: string | null
     phone?: string | null
     marketing_consent?: boolean | null
+    auto_tts?: boolean | null
 }
 
 /** 프로필 응답 데이터 */

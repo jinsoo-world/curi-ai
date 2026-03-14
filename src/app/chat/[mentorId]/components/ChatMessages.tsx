@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -20,6 +20,7 @@ interface ChatMessagesProps {
     mentorImage: string | undefined
     mentorEmoji: string
     isStreaming: boolean
+    autoTTS?: boolean
 }
 
 /* ── 스피커 아이콘 ── */
@@ -45,82 +46,171 @@ const SpinnerIcon = () => (
 )
 
 /** TTS 음성 재생 버튼 */
-function TTSButton({ message, mentorName }: { message: ChatMessage; mentorName: string }) {
+// 🚫 마크다운 제거 — TTS 전 깨끗한 텍스트로 변환
+function stripMarkdown(text: string): string {
+    return text
+        .replace(/```[\s\S]*?```/g, '') // 코드 블록 제거
+        .replace(/`([^`]+)`/g, '$1')    // 인라인 코드
+        .replace(/#{1,6}\s*/g, '')       // 제목
+        .replace(/\*\*([^*]+)\*\*/g, '$1') // 굵게
+        .replace(/\*([^*]+)\*/g, '$1')     // 기울임
+        .replace(/__([^_]+)__/g, '$1')
+        .replace(/_([^_]+)_/g, '$1')
+        .replace(/~~([^~]+)~~/g, '$1')     // 취소선
+        .replace(/>\s*/g, '')              // 인용
+        .replace(/[-*+]\s+/g, '')          // 목록
+        .replace(/\d+\.\s+/g, '')          // 번호 목록
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // 링크
+        .replace(/!\[([^\]]*)\]\([^)]+\)/g, '') // 이미지
+        .replace(/\|[^|]*\|/g, '')         // 테이블
+        .replace(/---+/g, '')              // 구분선
+        .replace(/\n{3,}/g, '\n\n')        // 과도한 줄바꿈
+        .trim()
+}
+
+// ✂️ 문장 단위 분할
+function splitSentences(text: string): string[] {
+    // 한국어: .다 / .요 / .까 등 + 영어: . ! ? 기준 분할
+    const chunks = text.split(/(?<=[.!?다요까죠세])\s+/g).filter(s => s.trim().length > 5)
+    if (chunks.length === 0) return [text]
+    // 너무 짧은 조각은 합치기
+    const merged: string[] = []
+    let current = ''
+    for (const chunk of chunks) {
+        current += (current ? ' ' : '') + chunk
+        if (current.length >= 40) {
+            merged.push(current)
+            current = ''
+        }
+    }
+    if (current) merged.push(current)
+    return merged
+}
+
+// 🎵 전역 TTS 캐시 (세션 내 동일 텍스트 즉시 재생)
+const globalTTSCache = new Map<string, string>()
+
+function TTSButton({ message, mentorName, autoPlay }: { message: ChatMessage; mentorName: string; autoPlay?: boolean }) {
     const [status, setStatus] = useState<'idle' | 'loading' | 'playing'>('idle')
+    const [progress, setProgress] = useState(0)
     const audioRef = useRef<HTMLAudioElement | null>(null)
-    const cacheRef = useRef<Map<string, string>>(new Map())
+    const hasAutoPlayed = useRef(false)
+    const abortRef = useRef(false)
+
+    // 단일 문장 TTS 호출 (캐시 사용)
+    const fetchTTS = useCallback(async (text: string): Promise<string | null> => {
+        const cacheKey = `${mentorName}:${text.slice(0, 100)}`
+        const cached = globalTTSCache.get(cacheKey)
+        if (cached) return cached
+
+        const res = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, mentorName }),
+        })
+        if (!res.ok) return null
+        const data = await res.json()
+        if (data.audioUrl) globalTTSCache.set(cacheKey, data.audioUrl)
+        return data.audioUrl || null
+    }, [mentorName])
 
     const handleTTS = useCallback(async () => {
-        // 재생 중이면 정지
         if (status === 'playing' && audioRef.current) {
             audioRef.current.pause()
             audioRef.current.currentTime = 0
+            abortRef.current = true
             setStatus('idle')
+            setProgress(0)
             return
         }
-
-        // 로딩 중이면 무시
         if (status === 'loading') return
 
         setStatus('loading')
+        setProgress(0)
+        abortRef.current = false
 
         try {
-            // 캐시 확인
-            let audioUrl = cacheRef.current.get(message.id)
+            const cleanText = stripMarkdown(message.content)
+            const sentences = splitSentences(cleanText)
 
-            if (!audioUrl) {
-                const res = await fetch('/api/tts', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        text: message.content.slice(0, 500),
-                        mentorName,
-                    }),
+            // 문장별 순차 재생
+            for (let i = 0; i < sentences.length; i++) {
+                if (abortRef.current) break
+
+                const text = sentences[i].slice(0, 500)
+                const audioUrl = await fetchTTS(text)
+                if (!audioUrl || abortRef.current) continue
+
+                await new Promise<void>((resolve, reject) => {
+                    const audio = new Audio(audioUrl)
+                    audioRef.current = audio
+                    setStatus('playing')
+
+                    audio.ontimeupdate = () => {
+                        if (audio.duration) {
+                            const sentenceProgress = audio.currentTime / audio.duration
+                            const totalProgress = (i + sentenceProgress) / sentences.length
+                            setProgress(totalProgress * 100)
+                        }
+                    }
+                    audio.onended = () => resolve()
+                    audio.onerror = () => reject(new Error('재생 실패'))
+                    audio.play().catch(reject)
                 })
-
-                if (!res.ok) {
-                    const err = await res.json()
-                    throw new Error(err.error || '음성 생성 실패')
-                }
-
-                const data = await res.json()
-                audioUrl = data.audioUrl
-                if (audioUrl) cacheRef.current.set(message.id, audioUrl)
             }
-
-            if (!audioUrl) throw new Error('음성 URL 없음')
-
-            // 오디오 재생
-            const audio = new Audio(audioUrl)
-            audioRef.current = audio
-            audio.onended = () => setStatus('idle')
-            audio.onerror = () => setStatus('idle')
-            await audio.play()
-            setStatus('playing')
         } catch (err) {
             console.error('[TTS Error]', err)
+        } finally {
             setStatus('idle')
+            setProgress(0)
+            abortRef.current = false
         }
-    }, [status, message.id, message.content, mentorName])
+    }, [status, message.content, fetchTTS])
+
+    // 자동 재생 트리거
+    useEffect(() => {
+        if (autoPlay && !hasAutoPlayed.current && status === 'idle') {
+            hasAutoPlayed.current = true
+            handleTTS()
+        }
+    }, [autoPlay])
 
     return (
-        <button
-            onClick={handleTTS}
-            disabled={status === 'loading'}
-            style={{
-                background: 'none', border: 'none', cursor: status === 'loading' ? 'wait' : 'pointer',
-                padding: '6px 8px', borderRadius: 8,
-                color: status === 'playing' ? '#22c55e' : status === 'loading' ? '#cbd5e1' : '#94a3b8',
-                display: 'flex', alignItems: 'center',
-                transition: 'color 0.15s, background 0.15s',
-            }}
-            onMouseEnter={e => { if (status !== 'loading') e.currentTarget.style.background = '#f1f5f9' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
-            title={status === 'playing' ? '정지' : status === 'loading' ? '음성 생성 중...' : '음성으로 듣기'}
-            aria-label="음성 재생"
-        >
-            {status === 'loading' ? <SpinnerIcon /> : status === 'playing' ? <StopIcon /> : <SpeakerIcon />}
-        </button>
+        <div style={{ position: 'relative', display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
+            <button
+                onClick={handleTTS}
+                disabled={status === 'loading'}
+                style={{
+                    background: 'none', border: 'none', cursor: status === 'loading' ? 'wait' : 'pointer',
+                    padding: '6px 8px', borderRadius: 8,
+                    color: status === 'playing' ? '#22c55e' : status === 'loading' ? '#cbd5e1' : '#94a3b8',
+                    display: 'flex', alignItems: 'center',
+                    transition: 'color 0.15s, background 0.15s',
+                }}
+                onMouseEnter={e => { if (status !== 'loading') e.currentTarget.style.background = '#f1f5f9' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+                title={status === 'playing' ? '정지' : status === 'loading' ? '음성 생성 중...' : '음성으로 듣기'}
+                aria-label="음성 재생"
+            >
+                {status === 'loading' ? <SpinnerIcon /> : status === 'playing' ? <StopIcon /> : <SpeakerIcon />}
+            </button>
+            {/* 🔔 재생 중 프로그레스 바 */}
+            {(status === 'playing' || status === 'loading') && (
+                <div style={{
+                    width: 28, height: 3, borderRadius: 2,
+                    background: '#e2e8f0', overflow: 'hidden',
+                }}>
+                    <div style={{
+                        width: `${status === 'loading' ? 30 : progress}%`,
+                        height: '100%',
+                        background: status === 'loading' ? '#cbd5e1' : '#22c55e',
+                        borderRadius: 2,
+                        transition: 'width 0.3s ease',
+                        animation: status === 'loading' ? 'ttsLoadPulse 1.5s ease infinite' : 'none',
+                    }} />
+                </div>
+            )}
+        </div>
     )
 }
 
@@ -148,7 +238,7 @@ const ThumbDownIcon = ({ filled }: { filled: boolean }) => (
 )
 
 /** 복사/음성재생/좋아요/아쉬워요 액션 아이콘 — 제미나이 스타일 작은 아이콘 */
-function MessageActions({ message, mentorName }: { message: ChatMessage; mentorName?: string }) {
+function MessageActions({ message, mentorName, autoPlay }: { message: ChatMessage; mentorName?: string; autoPlay?: boolean }) {
     const [copied, setCopied] = useState(false)
     const [feedback, setFeedback] = useState<'like' | 'dislike' | null>(null)
     const isAssistant = message.role === 'assistant'
@@ -211,7 +301,7 @@ function MessageActions({ message, mentorName }: { message: ChatMessage; mentorN
             </button>
             {isAssistant && (
                 <>
-                    <TTSButton message={message} mentorName={mentorName || ''} />
+                    <TTSButton message={message} mentorName={mentorName || ''} autoPlay={autoPlay} />
                     <button
                         onClick={() => handleFeedback('like')}
                         style={{
@@ -371,7 +461,23 @@ export default function ChatMessages({
     mentorImage,
     mentorEmoji,
     isStreaming,
+    autoTTS,
 }: ChatMessagesProps) {
+    // 스트리밍 종료 감지 — autoTTS가 켜져 있을 때만
+    const prevStreamingRef = useRef(isStreaming)
+    const [autoPlayMsgId, setAutoPlayMsgId] = useState<string | null>(null)
+
+    useEffect(() => {
+        if (prevStreamingRef.current && !isStreaming && autoTTS) {
+            // 스트리밍이 끈났을 때 마지막 assistant 메시지 자동 재생
+            const lastMsg = messages[messages.length - 1]
+            if (lastMsg?.role === 'assistant' && lastMsg.content) {
+                setAutoPlayMsgId(lastMsg.id)
+            }
+        }
+        prevStreamingRef.current = isStreaming
+    }, [isStreaming, autoTTS, messages])
+
     return (
         <>
             {messages.map((msg, idx) => {
@@ -566,7 +672,7 @@ export default function ChatMessages({
 
                                 {/* 액션 아이콘 — hover 시 표시 */}
                                 {msg.content && !isEmptyAssistant && (
-                                    <MessageActions message={msg} mentorName={mentor.name} />
+                                    <MessageActions message={msg} mentorName={mentor.name} autoPlay={autoPlayMsgId === msg.id} />
                                 )}
                             </div>
                         </div>

@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import { MentorHeader, ChatMessages, ChatInput, SuggestionCards, ElevenLabsWidget } from './components'
+import { MentorHeader, ChatMessages, ChatInput, SuggestionCards, ElevenLabsWidget, VoiceCallOverlay } from './components'
 import ChatSidebar from './components/ChatSidebar'
 import MarketingConsentPopup from '@/components/MarketingConsentPopup'
 import type { ChatMessage } from './components'
@@ -114,6 +114,34 @@ export default function ChatPage() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false)
     const [showMarketingPopup, setShowMarketingPopup] = useState(false)
     const [marketingChecked, setMarketingChecked] = useState(false)
+    const [autoTTS, setAutoTTS] = useState(false)
+    const [voiceCallOpen, setVoiceCallOpen] = useState(false)
+
+    // 프로필에서 autoTTS 설정 로드
+    useEffect(() => {
+        async function loadAutoTTS() {
+            try {
+                const res = await fetch('/api/profile')
+                if (res.ok) {
+                    const data = await res.json()
+                    if (data?.profile?.auto_tts) setAutoTTS(true)
+                }
+            } catch { /* 게스트는 무시 */ }
+        }
+        loadAutoTTS()
+    }, [])
+
+    const toggleAutoTTS = useCallback(async () => {
+        const next = !autoTTS
+        setAutoTTS(next)
+        try {
+            await fetch('/api/profile', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ auto_tts: next }),
+            })
+        } catch { /* 게스트는 로컬만 */ }
+    }, [autoTTS])
 
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -775,6 +803,7 @@ export default function ChatPage() {
                             mentorImage={mentorImage}
                             mentorEmoji={mentorEmoji}
                             isStreaming={isStreaming}
+                            autoTTS={autoTTS}
                         />
 
 
@@ -789,6 +818,94 @@ export default function ChatPage() {
                     onSubmit={sendMessage}
                     isStreaming={isStreaming}
                 />
+
+                {/* 자동 음성 재생 토글 */}
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    paddingBottom: 4,
+                }}>
+                    <button
+                        onClick={toggleAutoTTS}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '5px 14px',
+                            borderRadius: 20,
+                            border: 'none',
+                            background: autoTTS ? '#f0fdf4' : 'transparent',
+                            color: autoTTS ? '#16a34a' : '#94a3b8',
+                            fontSize: 12,
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                        }}
+                        title={autoTTS ? '자동 음성 재생 ON' : '자동 음성 재생 OFF'}
+                    >
+                        <span style={{ fontSize: 14 }}>{autoTTS ? '🔊' : '🔇'}</span>
+                        자동 음성 재생 {autoTTS ? 'ON' : 'OFF'}
+                    </button>
+
+                    {/* 📱 전화 모드 버튼 */}
+                    <button
+                        onClick={() => setVoiceCallOpen(true)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '5px 14px',
+                            borderRadius: 20,
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#94a3b8',
+                            fontSize: 12,
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                        }}
+                        title="음성 통화 모드"
+                    >
+                        <span style={{ fontSize: 14 }}>📞</span>
+                        음성 대화
+                    </button>
+                </div>
+
+                {/* 📱 음성 통화 오버레이 */}
+                {mentor && (
+                    <VoiceCallOverlay
+                        isOpen={voiceCallOpen}
+                        onClose={() => setVoiceCallOpen(false)}
+                        mentorName={mentor.name}
+                        mentorEmoji={mentorEmoji}
+                        mentorImage={mentorImage}
+                        onSendMessage={async (text: string) => {
+                            // 음성 통화에서의 AI 답변 — 채팅 히스토리에도 추가
+                            const res = await fetch('/api/chat', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    mentorId: params?.mentorId,
+                                    sessionId,
+                                    message: text,
+                                    context: messages.slice(-MAX_CONTEXT_MESSAGES),
+                                }),
+                            })
+                            if (!res.ok) throw new Error('AI 답변 실패')
+                            const reader = res.body?.getReader()
+                            if (!reader) throw new Error('스트림 없음')
+
+                            let fullResponse = ''
+                            const decoder = new TextDecoder()
+                            while (true) {
+                                const { done, value } = await reader.read()
+                                if (done) break
+                                fullResponse += decoder.decode(value, { stream: true })
+                            }
+                            return fullResponse
+                        }}
+                    />
+                )}
 
                 {/* ElevenLabs 음성 대화 오버레이 */}
                 {mentor?.name && ELEVENLABS_AGENT_IDS[mentor.name] && (

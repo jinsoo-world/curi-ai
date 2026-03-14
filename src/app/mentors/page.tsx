@@ -7,6 +7,7 @@ import { getActiveMentors, MENTOR_IMAGES } from '@/domains/mentor'
 import { MembershipBanner } from '@/components/MembershipBanner'
 import type { MentorCardData } from '@/domains/mentor'
 import NotificationBanner from './NotificationBanner'
+import VoicePreviewButton from './VoicePreviewButton'
 import AppSidebar from '@/components/AppSidebar'
 import CreditClaimWrapper from './CreditClaimWrapper'
 import { Suspense } from 'react'
@@ -143,6 +144,11 @@ function MentorCard({
                 }}>
                     {title}
                 </p>
+
+                {/* 🎵 보이스 프리뷰 */}
+                <div style={{ marginTop: 12 }}>
+                    <VoicePreviewButton mentorName={name} />
+                </div>
 
             </div>
         </article>
