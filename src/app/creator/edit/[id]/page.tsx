@@ -56,6 +56,15 @@ export default function CreatorEditPage() {
     const [dragOver, setDragOver] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
+    // ── 목소리 학습 ──
+    const [voiceSampleUrl, setVoiceSampleUrl] = useState<string | null>(null)
+    const [voiceSampleFile, setVoiceSampleFile] = useState<File | null>(null)
+    const [voiceSamplePreviewUrl, setVoiceSamplePreviewUrl] = useState<string | null>(null)
+    const [voiceSampleUploading, setVoiceSampleUploading] = useState(false)
+    const [voiceTestLoading, setVoiceTestLoading] = useState(false)
+    const [voiceTestAudioUrl, setVoiceTestAudioUrl] = useState<string | null>(null)
+    const voiceInputRef = useRef<HTMLInputElement>(null)
+
     // ── 미리보기 채팅 ──
     const [previewMessages, setPreviewMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
     const [previewInput, setPreviewInput] = useState('')
@@ -117,6 +126,9 @@ export default function CreatorEditPage() {
             if (m.avatar_url) {
                 setCurrentAvatarUrl(m.avatar_url)
                 setAvatarPreview(m.avatar_url)
+            }
+            if (m.voice_sample_url) {
+                setVoiceSampleUrl(m.voice_sample_url)
             }
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : '멘토 정보를 불러올 수 없습니다.')
@@ -375,6 +387,7 @@ export default function CreatorEditPage() {
                     personaTemplate,
                     organization,
                     ...(avatarUrl !== undefined && { avatarUrl }),
+                    ...(voiceSampleUrl !== undefined && { voiceSampleUrl }),
                 }),
             })
             const data = await res.json()
@@ -763,6 +776,137 @@ export default function CreatorEditPage() {
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── 🎙️ 내 목소리 학습 ── */}
+                    <div style={styles.card}>
+                        <label style={{ ...styles.label, marginBottom: 4, fontSize: 15 }}>🎙️ 내 목소리 학습</label>
+                        <p style={styles.hint}>3초 이상의 음성 파일을 업로드하면 AI가 목소리를 학습합니다</p>
+
+                        {!voiceSampleFile && !voiceSampleUrl ? (
+                            <div
+                                onClick={() => voiceInputRef.current?.click()}
+                                style={{
+                                    border: '2px dashed #d1d5db', borderRadius: 12, padding: '20px 12px',
+                                    display: 'flex', flexDirection: 'column' as const,
+                                    alignItems: 'center', gap: 6, cursor: 'pointer',
+                                    background: '#fafafa', transition: 'all 0.2s',
+                                }}
+                                onMouseEnter={e => ((e.currentTarget as HTMLElement).style.borderColor = '#22c55e')}
+                                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.borderColor = '#d1d5db')}
+                            >
+                                <div style={{ fontSize: 28 }}>🎤</div>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>음성 파일 업로드</div>
+                                <div style={{ fontSize: 11, color: '#9ca3af' }}>MP3, WAV, M4A · 10MB 이하</div>
+                                <input
+                                    ref={voiceInputRef}
+                                    type="file"
+                                    accept="audio/*"
+                                    style={{ display: 'none' }}
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0]
+                                        if (!file) return
+                                        setVoiceSampleFile(file)
+                                        setVoiceSamplePreviewUrl(URL.createObjectURL(file))
+                                        setVoiceSampleUploading(true)
+                                        try {
+                                            const formData = new FormData()
+                                            formData.append('file', file)
+                                            formData.append('mentorId', mentorId || 'temp')
+                                            const res = await fetch('/api/tts/upload-voice', { method: 'POST', body: formData })
+                                            if (res.ok) {
+                                                const data = await res.json()
+                                                setVoiceSampleUrl(data.url)
+                                                setToast({ type: 'success', message: '🎙️ 음성 업로드 완료!' })
+                                            } else {
+                                                setError('음성 업로드에 실패했습니다.')
+                                            }
+                                        } catch {
+                                            setError('음성 업로드에 실패했습니다.')
+                                        } finally {
+                                            setVoiceSampleUploading(false)
+                                        }
+                                    }}
+                                />
+                            </div>
+                        ) : (
+                            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: 14 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <span style={{ fontSize: 18 }}>🎙️</span>
+                                        <div>
+                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#18181b' }}>
+                                                {voiceSampleFile?.name || '저장된 음성 샘플'}
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#16a34a' }}>
+                                                {voiceSampleUploading ? '⏳ 업로드 중...' : voiceSampleUrl ? '✅ 학습 준비 완료' : '처리 중...'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setVoiceSampleFile(null)
+                                            setVoiceSampleUrl(null)
+                                            setVoiceSamplePreviewUrl(null)
+                                            setVoiceTestAudioUrl(null)
+                                        }}
+                                        style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', color: '#9ca3af', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                                    >🗑️ 삭제</button>
+                                </div>
+
+                                {voiceSamplePreviewUrl && (
+                                    <audio controls src={voiceSamplePreviewUrl} style={{ width: '100%', height: 36, marginBottom: 8 }} />
+                                )}
+
+                                {voiceSampleUrl && (
+                                    <>
+                                        <button
+                                            onClick={async () => {
+                                                setVoiceTestLoading(true)
+                                                try {
+                                                    const res = await fetch('/api/tts', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({
+                                                            text: greetingMessage || `안녕하세요! ${name || 'AI'}입니다. 만나서 반가워요!`,
+                                                            mentorName: name,
+                                                            voiceSampleUrl: voiceSampleUrl,
+                                                        }),
+                                                    })
+                                                    if (res.ok) {
+                                                        const data = await res.json()
+                                                        setVoiceTestAudioUrl(data.audioUrl)
+                                                    } else {
+                                                        const errData = await res.json().catch(() => ({}))
+                                                        setError(errData.error || '테스트 음성 생성에 실패했습니다.')
+                                                    }
+                                                } catch {
+                                                    setError('테스트 음성 생성에 실패했습니다.')
+                                                } finally {
+                                                    setVoiceTestLoading(false)
+                                                }
+                                            }}
+                                            disabled={voiceTestLoading}
+                                            style={{
+                                                width: '100%', padding: '10px', borderRadius: 10,
+                                                border: '1px solid #bbf7d0', background: voiceTestLoading ? '#f0fdf4' : '#fff',
+                                                color: '#16a34a', fontSize: 13, fontWeight: 600,
+                                                cursor: voiceTestLoading ? 'wait' : 'pointer', transition: 'all 150ms',
+                                            }}
+                                        >
+                                            {voiceTestLoading ? '⏳ 음성 생성 중...' : '🔊 학습된 목소리로 테스트'}
+                                        </button>
+
+                                        {voiceTestAudioUrl && (
+                                            <div style={{ marginTop: 10 }}>
+                                                <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600, marginBottom: 4 }}>🔊 생성된 음성:</div>
+                                                <audio controls src={voiceTestAudioUrl} style={{ width: '100%', height: 36 }} />
+                                            </div>
+                                        )}
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>

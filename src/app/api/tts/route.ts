@@ -185,11 +185,42 @@ export async function POST(request: NextRequest) {
 
         console.log('[TTS] Replicate input:', JSON.stringify(replicateInput, null, 2))
 
-        const output = await replicate.run('qwen/qwen3-tts', {
-            input: replicateInput,
-        })
+        let output: any
+        try {
+            output = await replicate.run('qwen/qwen3-tts', {
+                input: replicateInput,
+            })
+            console.log('[TTS] Replicate output type:', typeof output, output)
+        } catch (replicateErr: any) {
+            console.error('[TTS] Replicate 실행 실패:', replicateErr?.message || replicateErr)
 
-        console.log('[TTS] Replicate output type:', typeof output, output)
+            // voice clone 모드에서 실패 시 → voice_design 모드로 폴백
+            if (voiceSampleUrl) {
+                console.log('[TTS] Clone 실패 → Voice Design 모드로 폴백')
+                try {
+                    output = await replicate.run('qwen/qwen3-tts', {
+                        input: {
+                            text: trimmedText,
+                            mode: 'voice_design',
+                            voice_design_text: voiceDesign,
+                            language: lang,
+                        },
+                    })
+                    console.log('[TTS] 폴백 성공:', typeof output)
+                } catch (fallbackErr: any) {
+                    console.error('[TTS] 폴백도 실패:', fallbackErr?.message)
+                    return NextResponse.json(
+                        { error: `음성 생성 실패: ${fallbackErr?.message || '알 수 없는 오류'}` },
+                        { status: 500 }
+                    )
+                }
+            } else {
+                return NextResponse.json(
+                    { error: `음성 생성 실패: ${replicateErr?.message || '알 수 없는 오류'}` },
+                    { status: 500 }
+                )
+            }
+        }
 
         // output은 보통 URL string 또는 ReadableStream
         let audioUrl: string
@@ -206,7 +237,7 @@ export async function POST(request: NextRequest) {
         }
 
         if (!audioUrl) {
-            return NextResponse.json({ error: '음성 생성에 실패했습니다.' }, { status: 500 })
+            return NextResponse.json({ error: '음성 생성에 실패했습니다. (빈 결과)' }, { status: 500 })
         }
 
         return NextResponse.json({ audioUrl, detectedEmotion, detectedLanguage: lang })

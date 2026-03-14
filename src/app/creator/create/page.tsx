@@ -1168,11 +1168,12 @@ export default function CreatorCreatePage() {
                                                             voiceSampleUrl: voiceSampleUrl,
                                                         }),
                                                     })
-                                                    if (res.ok) {
+                                                if (res.ok) {
                                                         const data = await res.json()
                                                         setVoiceTestAudioUrl(data.audioUrl)
                                                     } else {
-                                                        setError('테스트 음성 생성에 실패했습니다.')
+                                                        const errData = await res.json().catch(() => ({}))
+                                                        setError(errData.error || '테스트 음성 생성에 실패했습니다.')
                                                     }
                                                 } catch {
                                                     setError('테스트 음성 생성에 실패했습니다.')

@@ -30,6 +30,7 @@ export async function PATCH(req: NextRequest) {
             category,
             organization,
             personaTemplate,
+            voiceSampleUrl,
         } = body
 
         if (!mentorId) {
@@ -57,6 +58,7 @@ export async function PATCH(req: NextRequest) {
         if (category !== undefined) updateData.category = category
         if (organization !== undefined) updateData.organization = organization
         if (personaTemplate !== undefined) updateData.persona_template = personaTemplate
+        if (voiceSampleUrl !== undefined) updateData.voice_sample_url = voiceSampleUrl
         if (isActive !== undefined) {
             updateData.is_active = isActive
             // 비활성화는 is_active 컬럼으로만 관리
