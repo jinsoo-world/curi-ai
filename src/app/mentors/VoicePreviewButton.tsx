@@ -14,6 +14,9 @@ const PREVIEW_LINES: Record<string, string> = {
 const DEFAULT_LINE = '안녕하세요, 큐리 AI 멘토입니다. 무엇이든 물어보세요!'
 
 export default function VoicePreviewButton({ mentorName }: { mentorName: string }) {
+    // 🎵 음성 미리듣기가 지원되는 기본 멘토만 표시
+    if (!PREVIEW_LINES[mentorName]) return null
+
     const [status, setStatus] = useState<'idle' | 'loading' | 'playing'>('idle')
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const cacheRef = useRef<Map<string, string>>(new Map())

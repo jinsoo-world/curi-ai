@@ -204,10 +204,10 @@ export default function VoiceCallOverlay({
         : 'rgba(229,231,235,0.5)'
 
     const statusText =
-        phase === 'connecting' ? 'Connecting...'
-        : phase === 'listening' ? 'Listening...'
-        : phase === 'thinking' ? 'Thinking...'
-        : phase === 'speaking' ? 'Talking'
+        phase === 'connecting' ? '연결 중...'
+        : phase === 'listening' ? '듣고 있어요...'
+        : phase === 'thinking' ? '생각 중...'
+        : phase === 'speaking' ? '말하는 중'
         : ''
 
     const statusColor =
