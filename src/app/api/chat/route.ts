@@ -8,6 +8,7 @@ import { deductCredit, getCreditBalance } from '@/domains/credit'
 import { CREDIT_CONSTANTS } from '@/domains/credit/types'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
 export async function POST(req: Request) {
     try {

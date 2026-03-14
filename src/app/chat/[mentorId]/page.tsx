@@ -821,6 +821,7 @@ export default function ChatPage() {
                                     >
                                         💬 대화하기
                                     </button>
+                                    {mentor.voice_sample_url && (
                                     <button
                                         onClick={() => setVoiceCallOpen(true)}
                                         style={{
@@ -849,6 +850,7 @@ export default function ChatPage() {
                                     >
                                         📞 전화하기
                                     </button>
+                                    )}
                                 </div>
 
                                 {/* 추천 질문 — Lenny 스타일 리스트 */}
@@ -954,7 +956,8 @@ export default function ChatPage() {
                         자동 음성 재생 {autoTTS ? 'ON' : 'OFF'}
                     </button>
 
-                    {/* 📱 전화 모드 버튼 */}
+                    {/* 📱 전화 모드 버튼 — 음성 데이터가 있는 AI만 표시 */}
+                    {mentor?.voice_sample_url && (
                     <button
                         onClick={() => setVoiceCallOpen(true)}
                         style={{
@@ -976,6 +979,7 @@ export default function ChatPage() {
                         <span style={{ fontSize: 14 }}>📞</span>
                         음성 대화
                     </button>
+                    )}
                 </div>
 
                 {/* 📱 음성 통화 오버레이 */}
@@ -988,15 +992,21 @@ export default function ChatPage() {
                         mentorImage={mentorImage}
                         voiceSampleUrl={mentor.voice_sample_url}
                         onSendMessage={async (text: string) => {
-                            // 음성 통화에서의 AI 답변 — 채팅 히스토리에도 추가
+                            // 음성 통화에서의 AI 답변
+                            const chatMessages = [
+                                ...messages.slice(-MAX_CONTEXT_MESSAGES).map((m: { role: string; content: string }) => ({
+                                    role: m.role,
+                                    content: m.content,
+                                })),
+                                { role: 'user', content: text },
+                            ]
                             const res = await fetch('/api/chat', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                     mentorId: params?.mentorId,
                                     sessionId,
-                                    message: text,
-                                    context: messages.slice(-MAX_CONTEXT_MESSAGES),
+                                    messages: chatMessages,
                                 }),
                             })
                             if (!res.ok) throw new Error('AI 답변 실패')
@@ -1005,10 +1015,26 @@ export default function ChatPage() {
 
                             let fullResponse = ''
                             const decoder = new TextDecoder()
+                            let buffer = ''
                             while (true) {
                                 const { done, value } = await reader.read()
                                 if (done) break
-                                fullResponse += decoder.decode(value, { stream: true })
+                                buffer += decoder.decode(value, { stream: true })
+                                // SSE 파싱: "data: {...}\n\n"
+                                const lines = buffer.split('\n')
+                                buffer = lines.pop() || ''
+                                for (const line of lines) {
+                                    if (line.startsWith('data: ')) {
+                                        try {
+                                            const json = JSON.parse(line.slice(6))
+                                            if (json.fullResponse) {
+                                                fullResponse = json.fullResponse
+                                            } else if (json.text) {
+                                                fullResponse += json.text
+                                            }
+                                        } catch { /* skip */ }
+                                    }
+                                }
                             }
                             return fullResponse
                         }}

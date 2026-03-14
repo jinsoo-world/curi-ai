@@ -163,36 +163,64 @@ export default function VoiceCallOverlay({
         setPhase('thinking')
 
         try {
-            const response = await onSendMessage(text)
+            // 1) AI 답변 가져오기
+            let response: string
+            try {
+                response = await onSendMessage(text)
+            } catch (chatErr) {
+                console.error('[VoiceCall] Chat API 실패:', chatErr)
+                setError('AI 답변을 가져올 수 없어요')
+                setTimeout(() => { setError(null); setPhase('listening'); startListening() }, 3000)
+                return
+            }
+
+            if (!response?.trim()) {
+                console.warn('[VoiceCall] AI 답변이 비었음')
+                setPhase('listening')
+                startListening()
+                return
+            }
+
             setPhase('speaking')
 
-            const ttsRes = await fetch('/api/tts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    text: response.slice(0, 500),
-                    mentorName,
-                    voiceSampleUrl: voiceSampleUrl || undefined,
-                }),
-            })
+            // 2) TTS 호출
+            try {
+                const ttsRes = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: response.slice(0, 300),
+                        mentorName,
+                        voiceSampleUrl: voiceSampleUrl || undefined,
+                    }),
+                })
 
-            if (ttsRes.ok) {
-                const { audioUrl } = await ttsRes.json()
-                if (audioUrl) {
-                    const audio = new Audio(audioUrl)
-                    audioRef.current = audio
-                    audio.onended = () => { setPhase('listening'); startListening() }
-                    audio.onerror = () => { setPhase('listening'); startListening() }
-                    await audio.play()
-                    return
+                if (ttsRes.ok) {
+                    const { audioUrl } = await ttsRes.json()
+                    if (audioUrl) {
+                        const audio = new Audio(audioUrl)
+                        audioRef.current = audio
+                        audio.onended = () => { setPhase('listening'); startListening() }
+                        audio.onerror = () => { setPhase('listening'); startListening() }
+                        await audio.play()
+                        return
+                    }
+                } else {
+                    const errText = await ttsRes.text().catch(() => '')
+                    console.error('[VoiceCall] TTS API 실패:', ttsRes.status, errText)
                 }
+            } catch (ttsErr) {
+                console.error('[VoiceCall] TTS fetch 실패:', ttsErr)
             }
+
+            // TTS 실패해도 대화는 계속
             setTimeout(() => { setPhase('listening'); startListening() }, 2000)
-        } catch {
+        } catch (err) {
+            console.error('[VoiceCall] 전체 에러:', err)
             setError('대화 중 오류가 발생했어요')
             setTimeout(() => { setError(null); setPhase('listening'); startListening() }, 2000)
         }
-    }, [onSendMessage, mentorName, startListening])
+    }, [onSendMessage, mentorName, voiceSampleUrl, startListening])
 
     const handleHangup = useCallback(() => {
         stopAll()
