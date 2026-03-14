@@ -198,28 +198,18 @@ export async function POST(request: NextRequest) {
             console.log('[TTS] 성공:', typeof output)
         } catch (err1: any) {
             const errMsg = err1?.message || ''
-            console.error('[TTS] 첫 시도 실패:', errMsg)
+            console.error('[TTS] 실패:', errMsg)
 
-            // 429 rate limit → 10초 대기 후 재시도
+            // ⚡ 즉시 에러 반환 — 대기/재시도 없음 (프론트에서 처리)
+            let userMsg = '음성 생성에 실패했습니다.'
+            let statusCode = 500
             if (errMsg.includes('429') || errMsg.includes('throttled')) {
-                console.log('[TTS] Rate limit → 10초 대기 후 재시도...')
-                await new Promise(r => setTimeout(r, 10000))
-                try {
-                    output = await callTTS(replicateInput)
-                } catch (err2: any) {
-                    console.error('[TTS] 재시도 실패:', err2?.message)
-                }
+                userMsg = '요청이 너무 많습니다.'
+                statusCode = 429
+            } else if (errMsg.includes('401') || errMsg.includes('Unauthenticated')) {
+                userMsg = 'API 인증 오류입니다.'
             }
-
-            if (!output) {
-                let userMsg = '음성 생성에 실패했습니다. 잠시 후 다시 시도해주세요.'
-                if (errMsg.includes('429') || errMsg.includes('throttled')) {
-                    userMsg = '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.'
-                } else if (errMsg.includes('401') || errMsg.includes('Unauthenticated')) {
-                    userMsg = 'API 인증 오류입니다. 관리자에게 문의해주세요.'
-                }
-                return NextResponse.json({ error: userMsg }, { status: 500 })
-            }
+            return NextResponse.json({ error: userMsg }, { status: statusCode })
         }
 
         // output은 보통 URL string 또는 ReadableStream

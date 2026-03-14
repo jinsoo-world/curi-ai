@@ -33,25 +33,25 @@ export default function VoiceCallOverlay({
     const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const abortRef = useRef<AbortController | null>(null)
-    const prefetchedGreetingRef = useRef<string | null>(null)
 
-    // 🔊 Ordered Slot 큐 — race condition 방어
+    // 🔊 Ordered Slot 큐 + Concurrency 1 Lock
     const slotMapRef = useRef<Map<number, string | null>>(new Map())
     const nextPlayIndexRef = useRef(0)
     const totalSlotsRef = useRef(0)
     const isPlayingRef = useRef(false)
     const streamDoneRef = useRef(false)
+    const ttsQueueRef = useRef<{ sentence: string; slotIndex: number }[]>([])
+    const isTtsProcessingRef = useRef(false)  // ⚡ Concurrency 1 Lock
 
     const safeVoiceId = voiceId || undefined
 
-    // ── 🔊 Ordered Slot 큐 매니저 ──
+    // ── 🔊 Ordered Slot 큐 재생 ──
     const tryPlayNext = useCallback(() => {
         if (isPlayingRef.current) return
         const nextIdx = nextPlayIndexRef.current
         const audioUrl = slotMapRef.current.get(nextIdx)
 
         if (audioUrl === undefined || audioUrl === null) {
-            console.log(`[VoiceCall] 큐 대기 [${nextIdx}], streamDone:${streamDoneRef.current}, total:${totalSlotsRef.current}`)
             if (streamDoneRef.current && nextIdx >= totalSlotsRef.current) {
                 setPhase('listening')
                 startListening()
@@ -67,13 +67,7 @@ export default function VoiceCallOverlay({
         audioRef.current = audio
         audio.onended = () => { isPlayingRef.current = false; audioRef.current = null; tryPlayNext() }
         audio.onerror = () => { isPlayingRef.current = false; audioRef.current = null; tryPlayNext() }
-
-        console.log(`[VoiceCall] ▶️ 재생 [${nextIdx}]:`, audioUrl.slice(0, 60))
-        audio.play().catch((e) => {
-            console.error('[VoiceCall] ❌ play 실패:', e)
-            isPlayingRef.current = false
-            tryPlayNext()
-        })
+        audio.play().catch(() => { isPlayingRef.current = false; tryPlayNext() })
     }, [])
 
     const resetSlotQueue = useCallback(() => {
@@ -91,21 +85,15 @@ export default function VoiceCallOverlay({
         }
     }, [])
 
-    // ── ⚡ Fire-and-forget TTS ──
-    // ── ⚡ 순차 TTS 큐 — 한 번에 1개만 호출 (429 방지) ──
-    const ttsQueueRef = useRef<{ sentence: string; slotIndex: number }[]>([])
-    const isTtsProcessingRef = useRef(false)
-
+    // ── ⚡ 순차 TTS 큐 — Concurrency 1 완벽 잠금 ──
+    // 앞선 요청이 "완전히 끝나야" 다음 요청 시작
     const processTtsQueue = useCallback(async (controller: AbortController) => {
-        if (isTtsProcessingRef.current) return
+        if (isTtsProcessingRef.current) return  // Lock 걸려있으면 진입 불가
         isTtsProcessingRef.current = true
 
         while (ttsQueueRef.current.length > 0) {
             if (controller.signal.aborted) break
-            const item = ttsQueueRef.current.shift()!
-            const { sentence, slotIndex } = item
-
-            console.log(`[VoiceCall] 🚀 TTS [${slotIndex}]: "${sentence.slice(0, 40)}..."`)
+            const { sentence, slotIndex } = ttsQueueRef.current.shift()!
 
             try {
                 const res = await fetch('/api/tts', {
@@ -120,18 +108,15 @@ export default function VoiceCallOverlay({
                 if (res.ok) {
                     const data = await res.json()
                     if (data?.audioUrl) {
-                        console.log(`[VoiceCall] ✅ TTS 완료 [${slotIndex}]`)
                         slotMapRef.current.set(slotIndex, data.audioUrl)
                         tryPlayNext()
                     } else {
-                        console.error(`[VoiceCall] ❌ TTS 실패 [${slotIndex}]: audioUrl 없음`)
                         slotMapRef.current.delete(slotIndex)
                         nextPlayIndexRef.current = Math.max(nextPlayIndexRef.current, slotIndex + 1)
                         tryPlayNext()
                     }
                 } else if (res.status === 429) {
-                    // Rate limit → 500ms 후 1회 재시도, 실패 시 스킵
-                    console.warn(`[VoiceCall] ⏳ 429 → 500ms 후 재시도`)
+                    // 429 → 500ms 후 1회 재시도, 실패 시 스킵
                     await new Promise(r => setTimeout(r, 500))
                     try {
                         const retry = await fetch('/api/tts', {
@@ -148,81 +133,55 @@ export default function VoiceCallOverlay({
                                 continue
                             }
                         }
-                    } catch { /* 재시도도 실패 → 스킵 */ }
-                    console.warn(`[VoiceCall] ⏭️ 429 재시도 실패 → 스킵`)
+                    } catch { /* skip */ }
                     slotMapRef.current.delete(slotIndex)
                     nextPlayIndexRef.current = Math.max(nextPlayIndexRef.current, slotIndex + 1)
                     tryPlayNext()
                 } else {
-                    console.error(`[VoiceCall] ❌ TTS HTTP ${res.status}`)
                     slotMapRef.current.delete(slotIndex)
                     nextPlayIndexRef.current = Math.max(nextPlayIndexRef.current, slotIndex + 1)
                     tryPlayNext()
                 }
             } catch (e: any) {
                 if (e?.name === 'AbortError') break
-                console.error('[VoiceCall] TTS fetch 에러:', e)
                 slotMapRef.current.delete(slotIndex)
                 nextPlayIndexRef.current = Math.max(nextPlayIndexRef.current, slotIndex + 1)
                 tryPlayNext()
             }
         }
 
-        isTtsProcessingRef.current = false
-
-        // 큐 다 처리되고 스트림도 끝났으면 → 재생 완료 체크
+        isTtsProcessingRef.current = false  // Lock 해제
         if (streamDoneRef.current) tryPlayNext()
     }, [mentorName, safeVoiceId, tryPlayNext])
 
     const enqueueTts = useCallback((sentence: string, slotIndex: number, controller: AbortController) => {
         slotMapRef.current.set(slotIndex, null) // 슬롯 예약
         ttsQueueRef.current.push({ sentence, slotIndex })
-        processTtsQueue(controller) // 이미 실행 중이면 무시됨
+        processTtsQueue(controller)
     }, [processTtsQueue])
 
-    // ── 📞 인사말 프리패칭 ──
-    useEffect(() => {
-        if (!isOpen) return
-        prefetchedGreetingRef.current = null
+    // ── 📞 인사말: 프리패칭 대신 큐 1순위로 통합 ──
+    // 프리패칭 제거! → 인사말도 동일한 TTS 큐에 넣어서 충돌 원천 차단
+    const playGreeting = useCallback(async () => {
+        setPhase('speaking')
+        const controller = new AbortController()
+        abortRef.current = controller
+
+        resetSlotQueue()
         const displayName = userName || '고객'
         const greetingText = `네, ${displayName}님! ${mentorName}입니다, 반갑습니다!`
 
-        fetch('/api/tts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: greetingText, mentorName, voiceId: safeVoiceId }),
-        })
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-            if (data?.audioUrl) {
-                prefetchedGreetingRef.current = data.audioUrl
-                new Audio(data.audioUrl).preload = 'auto'
-                console.log('[VoiceCall] 🎙️ 인사말 프리패칭 완료')
-            }
-        })
-        .catch(() => {})
-    }, [isOpen, userName, mentorName, safeVoiceId])
-
-    const playGreeting = useCallback(async () => {
-        setPhase('speaking')
-        if (prefetchedGreetingRef.current) {
-            const audio = new Audio(prefetchedGreetingRef.current)
-            audioRef.current = audio
-            isPlayingRef.current = true
-            audio.onended = () => { isPlayingRef.current = false; audioRef.current = null; setPhase('listening'); startListening() }
-            audio.onerror = () => { isPlayingRef.current = false; audioRef.current = null; setPhase('listening'); startListening() }
-            try { await audio.play() } catch { isPlayingRef.current = false; setPhase('listening'); startListening() }
-        } else {
-            setPhase('listening')
-            startListening()
-        }
-    }, [])
+        // 인사말을 큐의 0번 슬롯으로 넣기 — 프리패칭 충돌 없음!
+        totalSlotsRef.current = 1
+        streamDoneRef.current = true
+        enqueueTts(greetingText, 0, controller)
+    }, [userName, mentorName, enqueueTts, resetSlotQueue])
 
     useEffect(() => {
         if (isOpen) {
             setCallDuration(0); setPhase('connecting')
             timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000)
-            setTimeout(() => playGreeting(), 500)
+            setTimeout(() => playGreeting(), 300)
         } else {
             if (timerRef.current) clearInterval(timerRef.current)
             stopAll()
@@ -249,28 +208,17 @@ export default function VoiceCallOverlay({
         if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
         idleTimerRef.current = setTimeout(async () => {
             setPhase('speaking')
-            try {
-                const r = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: '아직 계세요? 궁금한 게 있으면 편하게 말씀해 주세요!', mentorName, voiceId: safeVoiceId }) })
-                if (r.ok) {
-                    const { audioUrl } = await r.json()
-                    if (audioUrl) {
-                        resetSlotQueue()
-                        slotMapRef.current.set(0, audioUrl)
-                        totalSlotsRef.current = 1
-                        streamDoneRef.current = true
-                        tryPlayNext()
-                        return
-                    }
-                }
-            } catch { /* ignore */ }
-            setPhase('listening'); startListening()
+            const controller = new AbortController()
+            abortRef.current = controller
+            resetSlotQueue()
+            totalSlotsRef.current = 1
+            streamDoneRef.current = true
+            enqueueTts('아직 계세요? 궁금한 게 있으면 편하게 말씀해 주세요!', 0, controller)
         }, 15000)
-    }, [mentorName, safeVoiceId, tryPlayNext, resetSlotQueue])
+    }, [enqueueTts, resetSlotQueue])
 
     // ── 🛑 끼어들기 — 3중 abort ──
     const interruptSpeaking = useCallback(() => {
-        console.log('[VoiceCall] 🛑 끼어들기! abort 체인 시작')
         abortRef.current?.abort(); abortRef.current = null
         resetSlotQueue()
         setPhase('listening')
@@ -307,18 +255,15 @@ export default function VoiceCallOverlay({
         try { recognition.start(); recognitionRef.current = recognition } catch { setError('음성 인식 시작 실패'); setPhase('idle') }
     }, [phase, startIdleTimer])
 
-    // ── 🛑 끼어들기 감지 — isFinal + 2글자 (노이즈 필터) ──
+    // ── 🛑 끼어들기 감지 — isFinal + 2글자 ──
     const startInterruptionDetection = useCallback(() => {
         const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
         if (!SR) return
         const recognition = new SR()
         recognition.lang = 'ko-KR'; recognition.continuous = true; recognition.interimResults = false
-
         recognition.onresult = (event: SpeechRecognitionEvent) => {
             for (let i = event.resultIndex; i < event.results.length; i++) {
-                const text = event.results[i][0].transcript.trim()
-                if (text.length >= 2) {
-                    console.log(`[VoiceCall] 🛑 진짜 끼어들기: "${text}"`)
+                if (event.results[i][0].transcript.trim().length >= 2) {
                     interruptSpeaking(); recognition.stop()
                     setTimeout(() => startListening(), 100); return
                 }
@@ -328,7 +273,7 @@ export default function VoiceCallOverlay({
         try { recognition.start(); recognitionRef.current = recognition } catch { /* ignore */ }
     }, [interruptSpeaking, startListening])
 
-    // ── 🗣️ 실시간 스트리밍 → 문장 콜백 → fire-and-forget TTS → ordered slot 큐 ──
+    // ── 🗣️ 스트리밍 → fire TTS → ordered slot 큐 ──
     const handleSendAndSpeak = useCallback(async (text: string) => {
         if (!text.trim()) { startListening(); return }
         abortRef.current?.abort()
@@ -364,7 +309,6 @@ export default function VoiceCallOverlay({
             }
         } catch (err: any) {
             if (err?.name === 'AbortError') return
-            console.error('[VoiceCall] 에러:', err)
             setError('대화 중 오류가 발생했어요')
             setTimeout(() => { setError(null); setPhase('listening'); startListening() }, 2000)
         }
