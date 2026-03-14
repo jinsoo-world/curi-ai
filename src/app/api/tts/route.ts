@@ -163,23 +163,8 @@ export async function POST(request: NextRequest) {
         let replicateInput: Record<string, any>
 
         if (voiceSampleUrl) {
-            // 🎙️ Voice Clone 모드 — 업로드된 음성 샘플로 목소리 복제
+            // 🎙️ Voice Clone 모드 — 업로드된 음성 샘플로 목소리 복제 (HEAD 체크 생략 → 속도 최적화)
             console.log('[TTS] Voice Clone 모드 — voiceSampleUrl:', voiceSampleUrl)
-
-            // voiceSampleUrl이 접근 가능한지 확인
-            try {
-                const checkRes = await fetch(voiceSampleUrl, { method: 'HEAD' })
-                console.log('[TTS] Voice sample URL check:', checkRes.status, checkRes.statusText)
-                if (!checkRes.ok) {
-                    console.error('[TTS] Voice sample URL 접근 불가:', checkRes.status)
-                    return NextResponse.json(
-                        { error: `음성 샘플 파일에 접근할 수 없습니다. (${checkRes.status}) 버킷이 Public인지 확인하세요.` },
-                        { status: 400 }
-                    )
-                }
-            } catch (urlErr) {
-                console.error('[TTS] Voice sample URL 접근 오류:', urlErr)
-            }
 
             replicateInput = {
                 text: trimmedText,

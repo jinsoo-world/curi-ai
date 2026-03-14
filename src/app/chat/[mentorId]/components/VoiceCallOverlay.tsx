@@ -75,21 +75,34 @@ export default function VoiceCallOverlay({
     const startIdleTimer = useCallback(() => {
         if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
         idleTimerRef.current = setTimeout(async () => {
-            // 15초 침묵 → 멘토가 먼저 말 걸기 (브라우저 TTS)
+            // 15초 침묵 → 멘토가 먼저 말 걸기 (학습된 목소리)
             setPhase('speaking')
-            const synth = window.speechSynthesis
-            synth.cancel()
-            const utterance = new SpeechSynthesisUtterance('아직 계세요? 궁금한 게 있으면 편하게 말씀해 주세요!')
-            utterance.lang = 'ko-KR'
-            utterance.rate = 1.05
-            const voices = synth.getVoices()
-            const koVoice = voices.find(v => v.lang === 'ko-KR') || voices.find(v => v.lang.startsWith('ko'))
-            if (koVoice) utterance.voice = koVoice
-            utterance.onend = () => { setPhase('listening'); startListening() }
-            utterance.onerror = () => { setPhase('listening'); startListening() }
-            synth.speak(utterance)
+            try {
+                const ttsRes = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: '아직 계세요? 궁금한 게 있으면 편하게 말씀해 주세요!',
+                        mentorName,
+                        voiceSampleUrl: voiceSampleUrl || undefined,
+                    }),
+                })
+                if (ttsRes.ok) {
+                    const { audioUrl } = await ttsRes.json()
+                    if (audioUrl) {
+                        const audio = new Audio(audioUrl)
+                        audioRef.current = audio
+                        audio.onended = () => { setPhase('listening'); startListening() }
+                        audio.onerror = () => { setPhase('listening'); startListening() }
+                        await audio.play()
+                        return
+                    }
+                }
+            } catch { /* ignore */ }
+            setPhase('listening')
+            startListening()
         }, 15000)
-    }, [])
+    }, [mentorName, voiceSampleUrl])
 
     const startListening = useCallback(() => {
         const SpeechRecognition =
@@ -196,32 +209,45 @@ export default function VoiceCallOverlay({
 
             setPhase('speaking')
 
-            // 2) 브라우저 SpeechSynthesis — 즉시 재생 (0초 지연)
-            const ttsText = extractFirstSentences(response, 200)
-            const synth = window.speechSynthesis
-            synth.cancel() // 이전 발화 중단
+            // 2) Replicate Voice Clone TTS — 첫 문장만 (80자) → 생성 시간 최소화
+            const ttsText = extractFirstSentences(response, 80)
 
-            const utterance = new SpeechSynthesisUtterance(ttsText)
-            utterance.lang = 'ko-KR'
-            utterance.rate = 1.05  // 살짝 빠르게
-            utterance.pitch = 1.0
+            try {
+                const ttsRes = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: ttsText,
+                        mentorName,
+                        voiceSampleUrl: voiceSampleUrl || undefined,
+                    }),
+                })
 
-            // 한국어 음성 선택 (남성 우선)
-            const voices = synth.getVoices()
-            const koVoice = voices.find(v => v.lang === 'ko-KR') 
-                || voices.find(v => v.lang.startsWith('ko'))
-            if (koVoice) utterance.voice = koVoice
+                if (ttsRes.ok) {
+                    const { audioUrl } = await ttsRes.json()
+                    if (audioUrl) {
+                        const audio = new Audio(audioUrl)
+                        audioRef.current = audio
+                        audio.onended = () => { setPhase('listening'); startListening() }
+                        audio.onerror = () => { setPhase('listening'); startListening() }
+                        await audio.play()
+                        return
+                    }
+                } else {
+                    console.error('[VoiceCall] TTS 실패:', ttsRes.status)
+                }
+            } catch (ttsErr) {
+                console.error('[VoiceCall] TTS 에러:', ttsErr)
+            }
 
-            utterance.onend = () => { setPhase('listening'); startListening() }
-            utterance.onerror = () => { setPhase('listening'); startListening() }
-
-            synth.speak(utterance)
+            // TTS 실패 시 잠시 후 다시 듣기
+            setTimeout(() => { setPhase('listening'); startListening() }, 1500)
         } catch (err) {
             console.error('[VoiceCall] 전체 에러:', err)
             setError('대화 중 오류가 발생했어요')
             setTimeout(() => { setError(null); setPhase('listening'); startListening() }, 2000)
         }
-    }, [onSendMessage, startListening])
+    }, [onSendMessage, mentorName, voiceSampleUrl, startListening])
 
     const handleHangup = useCallback(() => {
         stopAll()
