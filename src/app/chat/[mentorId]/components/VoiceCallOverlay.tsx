@@ -22,10 +22,12 @@ interface SpeechRecognitionEvent {
 export default function VoiceCallOverlay({
     isOpen, onClose, mentorName, mentorEmoji, mentorImage, voiceSampleUrl, voiceId, userName, onStreamMessage,
 }: VoiceCallOverlayProps) {
-    const [phase, setPhase] = useState<'connecting' | 'listening' | 'thinking' | 'speaking' | 'idle'>('idle')
+    const [phase, setPhase] = useState<'connecting' | 'listening' | 'thinking' | 'speaking' | 'idle' | 'expired'>('idle')
     const [transcript, setTranscript] = useState('')
     const [callDuration, setCallDuration] = useState(0)
     const [error, setError] = useState<string | null>(null)
+    const [remainingSeconds, setRemainingSeconds] = useState<number>(180)
+    const [voiceExpired, setVoiceExpired] = useState(false)
 
     const recognitionRef = useRef<any>(null)
     const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -33,6 +35,7 @@ export default function VoiceCallOverlay({
     const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const abortRef = useRef<AbortController | null>(null)
+    const maxCallSecondsRef = useRef(60) // 1분 제한
 
     // 🔊 Ordered Slot 큐 + Concurrency 1 Lock
     const slotMapRef = useRef<Map<number, string | null>>(new Map())
@@ -177,11 +180,29 @@ export default function VoiceCallOverlay({
         enqueueTts(greetingText, 0, controller)
     }, [userName, mentorName, enqueueTts, resetSlotQueue])
 
+    // 🔒 통화 전 사용량 체크
     useEffect(() => {
         if (isOpen) {
-            setCallDuration(0); setPhase('connecting')
-            timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000)
-            setTimeout(() => playGreeting(), 300)
+            setCallDuration(0)
+            // 사용량 조회
+            fetch('/api/voice-usage').then(r => r.json()).then(data => {
+                if (data.expired) {
+                    setVoiceExpired(true)
+                    setPhase('expired')
+                    return
+                }
+                setRemainingSeconds(data.remainingSeconds || 180)
+                // 이번 통화 최대 시간: min(60초, 남은 시간)
+                maxCallSecondsRef.current = Math.min(60, data.remainingSeconds || 60)
+                setPhase('connecting')
+                timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000)
+                setTimeout(() => playGreeting(), 300)
+            }).catch(() => {
+                // API 실패 시 그냥 60초 제한으로 진행
+                setPhase('connecting')
+                timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000)
+                setTimeout(() => playGreeting(), 300)
+            })
         } else {
             if (timerRef.current) clearInterval(timerRef.current)
             stopAll()
@@ -193,6 +214,22 @@ export default function VoiceCallOverlay({
             if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
         }
     }, [isOpen])
+
+    // ⏱️ 1분 자동 종료
+    useEffect(() => {
+        if (callDuration > 0 && callDuration >= maxCallSecondsRef.current && phase !== 'expired' && phase !== 'idle') {
+            console.log(`[VoiceCall] ⏱️ ${maxCallSecondsRef.current}초 도달 → 자동 종료`)
+            stopAll()
+            // 사용량 업데이트
+            fetch('/api/voice-usage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ secondsUsed: callDuration }),
+            }).catch(() => {})
+            setPhase('expired')
+            setError('⏱️ 1분 무료체험이 종료되었습니다')
+        }
+    }, [callDuration])
 
     const formatDuration = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`
 
@@ -314,7 +351,18 @@ export default function VoiceCallOverlay({
         }
     }, [onStreamMessage, startListening, startInterruptionDetection, enqueueTts, resetSlotQueue, tryPlayNext])
 
-    const handleHangup = useCallback(() => { stopAll(); onClose() }, [stopAll, onClose])
+    const handleHangup = useCallback(() => {
+        stopAll()
+        // 🔒 통화 종료 시 사용량 업데이트
+        if (callDuration > 0) {
+            fetch('/api/voice-usage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ secondsUsed: callDuration }),
+            }).catch(() => {})
+        }
+        onClose()
+    }, [stopAll, onClose, callDuration])
 
     if (!isOpen) return null
 
@@ -335,9 +383,15 @@ export default function VoiceCallOverlay({
                 {mentorImage ? <img src={mentorImage} alt={mentorName} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : <span style={{ fontSize:64 }}>{mentorEmoji}</span>}
             </div>
             <h2 style={{ fontSize:24,fontWeight:700,color:'#111',margin:'20px 0 8px' }}>{mentorName}</h2>
-            <div style={{ display:'flex',alignItems:'center',padding:'6px 16px',borderRadius:20,background:phase==='speaking'?'rgba(249,115,22,0.08)':'rgba(0,0,0,0.04)',color:phase==='speaking'?'#f97316':'#666',fontSize:14,fontWeight:500 }}>{statusText} {statusDots}</div>
-            <p style={{ color:'#aaa',fontSize:14,marginTop:8 }}>{formatDuration(callDuration)}</p>
-            {transcript && <div style={{ margin:'20px 24px 0',padding:'12px 16px',borderRadius:12,background:'#fff',border:'1px solid #e5e7eb',maxWidth:300,fontSize:14,color:'#374151',textAlign:'center',maxHeight:80,overflow:'hidden' }}>{transcript}</div>}
+            <div style={{ display:'flex',alignItems:'center',padding:'6px 16px',borderRadius:20,background:phase==='speaking'?'rgba(249,115,22,0.08)':phase==='expired'?'rgba(239,68,68,0.08)':'rgba(0,0,0,0.04)',color:phase==='speaking'?'#f97316':phase==='expired'?'#ef4444':'#666',fontSize:14,fontWeight:500 }}>{phase === 'expired' ? '무료체험 종료' : statusText} {statusDots}</div>
+            <p style={{ color:'#aaa',fontSize:14,marginTop:8 }}>{formatDuration(callDuration)}{phase !== 'expired' && phase !== 'idle' ? ` / ${formatDuration(maxCallSecondsRef.current)}` : ''}</p>
+            {voiceExpired && phase === 'expired' && (
+                <div style={{ margin:'20px 24px 0',padding:'16px 20px',borderRadius:16,background:'linear-gradient(135deg,#FEF2F2,#FFF7ED)',border:'1px solid #FECACA',maxWidth:320,textAlign:'center' }}>
+                    <p style={{ fontSize:16,fontWeight:700,color:'#DC2626',marginBottom:8 }}>📞 무료체험이 종료되었어요</p>
+                    <p style={{ fontSize:13,color:'#666',lineHeight:1.5 }}>총 3분의 무료 음성통화를 모두 사용하셨습니다.<br/>텍스트 채팅은 계속 이용 가능합니다!</p>
+                </div>
+            )}
+            {transcript && !voiceExpired && <div style={{ margin:'20px 24px 0',padding:'12px 16px',borderRadius:12,background:'#fff',border:'1px solid #e5e7eb',maxWidth:300,fontSize:14,color:'#374151',textAlign:'center',maxHeight:80,overflow:'hidden' }}>{transcript}</div>}
             {error && <div style={{ margin:'12px 24px 0',padding:'8px 16px',borderRadius:8,background:'#FEF2F2',color:'#DC2626',fontSize:13,textAlign:'center' }}>{error}</div>}
             <button onClick={handleHangup} style={{ position:'absolute',bottom:60,width:64,height:64,borderRadius:'50%',background:'#EF4444',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 12px rgba(239,68,68,0.3)' }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="23" y1="1" x2="1" y2="23"/></svg>
