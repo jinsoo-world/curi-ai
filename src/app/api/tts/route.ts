@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
             replicateInput = {
                 text: trimmedText,
                 mode: 'voice_design',
-                voice_design_text: voiceDesign,
+                voice_description: voiceDesign,
                 language: lang,
             }
         }
@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
                         input: {
                             text: trimmedText,
                             mode: 'voice_design',
-                            voice_design_text: voiceDesign,
+                            voice_description: voiceDesign,
                             language: lang,
                         },
                     })
