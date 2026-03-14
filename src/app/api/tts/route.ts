@@ -169,9 +169,11 @@ export async function POST(request: NextRequest) {
         const cacheKey = voiceSampleUrl || 'default'
         let voiceId: string | null = voiceIdCache.get(cacheKey) || null
 
-        // 1단계: Voice Cloning — reference_audio → voice_id
+        // 1단계: Voice Cloning — voiceSampleUrl → voice_id
+        // (업로드 시점에 webm→wav 변환 완료 → 여기선 URL 직접 전달)
         if (voiceSampleUrl && !voiceId) {
             console.log('[TTS] 1단계: Voice Cloning 시작 — voiceSampleUrl:', voiceSampleUrl)
+
             const doClone = async (): Promise<string | null> => {
                 const cloneRes = await fetch('https://api.replicate.com/v1/models/minimax/voice-cloning/predictions', {
                     method: 'POST',
@@ -185,7 +187,7 @@ export async function POST(request: NextRequest) {
                     }),
                 })
                 const cloneData = await cloneRes.json()
-                console.log('[TTS] Voice Clone 결과:', JSON.stringify({ status: cloneData.status, output: cloneData.output }, null, 2))
+                console.log('[TTS] Voice Clone 결과:', JSON.stringify({ status: cloneData.status, output: cloneData.output, error: cloneData.error }, null, 2))
 
                 if (cloneData.status === 'succeeded' && cloneData.output) {
                     return typeof cloneData.output === 'string'
@@ -216,12 +218,16 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // 2단계: Speech-02-Turbo TTS — voice_id 또는 기본 음성
+        // 2단계: Speech-02-Turbo TTS — voice_id 사용 (폴백 포함)
         let replicateInput: Record<string, any> = { text: trimmedText }
         if (voiceId) {
             replicateInput.voice_id = voiceId
             console.log('[TTS] 2단계: 클론된 voice_id 사용:', voiceId)
         } else {
+            // Voice Clone 실패 또는 음성 샘플 없음 → 기본 음성 폴백
+            if (voiceSampleUrl) {
+                console.error('[TTS] Voice Clone 실패 — Wise_Woman 폴백. voiceSampleUrl:', voiceSampleUrl)
+            }
             replicateInput.voice_id = 'Wise_Woman'
             console.log('[TTS] 2단계: 기본 음성 사용 (Wise_Woman)')
         }

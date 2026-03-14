@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useRouter, useParams } from 'next/navigation'
+import { convertWebmToWav, needsConversion } from '@/lib/audio-convert'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MENTOR_IMAGES } from '@/domains/mentor/constants'
@@ -86,13 +87,17 @@ export default function CreatorEditPage() {
             mediaRecorder.onstop = async () => {
                 stream.getTracks().forEach(t => t.stop())
                 const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-                const file = new File([blob], `recording-${Date.now()}.webm`, { type: 'audio/webm' })
+                let file: File = new File([blob], `recording-${Date.now()}.webm`, { type: 'audio/webm' })
 
                 setVoiceSampleFile(file)
                 setVoiceSamplePreviewUrl(URL.createObjectURL(blob))
 
                 setVoiceSampleUploading(true)
                 try {
+                    // 🔧 webm → wav 변환 (MiniMax voice-cloning 호환)
+                    if (needsConversion(file)) {
+                        file = await convertWebmToWav(file)
+                    }
                     const formData = new FormData()
                     formData.append('file', file)
                     formData.append('mentorId', mentorId || 'temp')
@@ -951,7 +956,7 @@ export default function CreatorEditPage() {
                                         accept="audio/*,.mp3,.wav,.m4a,.ogg,.webm"
                                         style={{ display: 'none' }}
                                         onChange={async (e) => {
-                                            const file = e.target.files?.[0]
+                                            let file = e.target.files?.[0]
                                             if (!file) return
                                             if (file.size > 10 * 1024 * 1024) {
                                                 setError('음성 파일은 10MB 이하만 가능합니다.')
@@ -961,6 +966,10 @@ export default function CreatorEditPage() {
                                             setVoiceSamplePreviewUrl(URL.createObjectURL(file))
                                             setVoiceSampleUploading(true)
                                             try {
+                                                // 🔧 webm/ogg → wav 변환 (MiniMax voice-cloning 호환)
+                                                if (needsConversion(file)) {
+                                                    file = await convertWebmToWav(file)
+                                                }
                                                 const formData = new FormData()
                                                 formData.append('file', file)
                                                 formData.append('mentorId', mentorId || 'temp')
