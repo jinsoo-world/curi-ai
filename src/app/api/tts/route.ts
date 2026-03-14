@@ -240,19 +240,9 @@ export async function POST(request: NextRequest) {
                 }
             }
 
-            // voice clone 실패 시 → voice_design 폴백
+            // voice clone 실패 시 → 에러만 로그 (다른 목소리로 폴백하지 않음)
             if (!output && voiceSampleUrl) {
-                console.log('[TTS] Clone 실패 → Voice Design 모드로 폴백')
-                try {
-                    output = await callReplicate({
-                        text: trimmedText,
-                        mode: 'voice_design',
-                        voice_description: voiceDesign,
-                        language: lang,
-                    })
-                } catch (fallbackErr: any) {
-                    console.error('[TTS] 폴백도 실패:', fallbackErr?.message)
-                }
+                console.error('[TTS] Voice Clone 실패 — 폴백 없이 에러 반환')
             }
 
             if (!output) {

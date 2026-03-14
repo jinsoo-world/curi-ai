@@ -992,8 +992,9 @@ export default function ChatPage() {
                         mentorImage={mentorImage}
                         voiceSampleUrl={mentor.voice_sample_url}
                         onSendMessage={async (text: string) => {
-                            // 음성 통화에서의 AI 답변
+                            // 음성 통화에서의 AI 답변 — 짧게!
                             const chatMessages = [
+                                { role: 'system', content: '[음성 통화 모드] 지금은 전화 통화 중입니다. 반드시 1~2문장으로만 짧고 핵심적으로 답하세요. 이모지나 특수문자를 사용하지 마세요.' },
                                 ...messages.slice(-MAX_CONTEXT_MESSAGES).map((m: { role: string; content: string }) => ({
                                     role: m.role,
                                     content: m.content,

@@ -157,6 +157,21 @@ export default function VoiceCallOverlay({
         }
     }, [phase, startIdleTimer])
 
+    // 첫 문장만 추출 (TTS 속도 최적화)
+    const extractFirstSentences = (text: string, maxLen: number) => {
+        // 마침표/물음표/느낌표로 끝나는 첫 1~2문장
+        const sentences = text.match(/[^.!?。？！]+[.!?。？！]+/g)
+        if (sentences) {
+            let result = ''
+            for (const s of sentences) {
+                if ((result + s).length > maxLen) break
+                result += s
+            }
+            return result || text.slice(0, maxLen)
+        }
+        return text.slice(0, maxLen)
+    }
+
     const handleSendAndSpeak = useCallback(async (text: string) => {
         if (!text.trim()) { startListening(); return }
 
@@ -189,7 +204,7 @@ export default function VoiceCallOverlay({
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        text: response.slice(0, 300),
+                        text: extractFirstSentences(response, 150),
                         mentorName,
                         voiceSampleUrl: voiceSampleUrl || undefined,
                     }),
