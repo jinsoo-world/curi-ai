@@ -1076,11 +1076,15 @@ export default function ChatPage() {
 
                                                 if (cutIndex > 0) {
                                                     const completeSentence = sentenceBuffer.slice(0, cutIndex).trim()
-                                                    sentenceBuffer = sentenceBuffer.slice(cutIndex).trimStart()
-                                                    if (completeSentence.length >= 2) {
+                                                    const remainder = sentenceBuffer.slice(cutIndex).trimStart()
+
+                                                    // ⚡ 스마트 청킹: 15자 미만이면 전송하지 말고 다음 문장과 합침
+                                                    if (completeSentence.length >= 15) {
+                                                        sentenceBuffer = remainder
                                                         console.log('[Stream] 🎯 문장 전송:', completeSentence)
                                                         onSentence(completeSentence)
                                                     }
+                                                    // 15자 미만이면 sentenceBuffer 그대로 유지 → 다음 청크와 합쳐짐
                                                 }
                                             }
                                             if (json.fullResponse) {

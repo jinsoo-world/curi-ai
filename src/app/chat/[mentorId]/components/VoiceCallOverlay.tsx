@@ -130,10 +130,29 @@ export default function VoiceCallOverlay({
                         tryPlayNext()
                     }
                 } else if (res.status === 429) {
-                    // Rate limit → 3초 대기 후 다시 큐에 넣고 재시도
-                    console.warn(`[VoiceCall] ⏳ 429 Rate limit → 3초 대기 후 재시도`)
-                    ttsQueueRef.current.unshift(item)
-                    await new Promise(r => setTimeout(r, 3000))
+                    // Rate limit → 500ms 후 1회 재시도, 실패 시 스킵
+                    console.warn(`[VoiceCall] ⏳ 429 → 500ms 후 재시도`)
+                    await new Promise(r => setTimeout(r, 500))
+                    try {
+                        const retry = await fetch('/api/tts', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ text: sentence, mentorName, voiceId: safeVoiceId }),
+                            signal: controller.signal,
+                        })
+                        if (retry.ok) {
+                            const retryData = await retry.json()
+                            if (retryData?.audioUrl) {
+                                slotMapRef.current.set(slotIndex, retryData.audioUrl)
+                                tryPlayNext()
+                                continue
+                            }
+                        }
+                    } catch { /* 재시도도 실패 → 스킵 */ }
+                    console.warn(`[VoiceCall] ⏭️ 429 재시도 실패 → 스킵`)
+                    slotMapRef.current.delete(slotIndex)
+                    nextPlayIndexRef.current = Math.max(nextPlayIndexRef.current, slotIndex + 1)
+                    tryPlayNext()
                 } else {
                     console.error(`[VoiceCall] ❌ TTS HTTP ${res.status}`)
                     slotMapRef.current.delete(slotIndex)
