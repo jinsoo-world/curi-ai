@@ -835,7 +835,7 @@ export default function CreatorCreatePage() {
                                 <input
                                     ref={fileInputRef}
                                     type="file"
-                                    accept=".pdf,.txt,.md,.doc,.docx,.hwp,.hwpx,.ppt,.pptx"
+                                    accept=".pdf,.txt,.md,.doc,.docx,.hwp,.hwpx,.ppt,.pptx,.vtt"
                                     multiple
                                     style={{ display: 'none' }}
                                     onChange={e => handleFileUpload(e.target.files)}
@@ -854,6 +854,7 @@ export default function CreatorCreatePage() {
                                         { ext: 'PPT', color: '#ea580c', bg: '#ffedd5' },
                                         { ext: 'DOCX', color: '#2563eb', bg: '#dbeafe' },
                                         { ext: 'TXT', color: '#6b7280', bg: '#f3f4f6' },
+                                        { ext: 'VTT', color: '#7c3aed', bg: '#ede9fe' },
                                     ].map(f => (
                                         <span key={f.ext} style={{
                                             fontSize: 10, fontWeight: 700,

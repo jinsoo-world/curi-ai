@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
     try {
@@ -28,13 +29,19 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: '오디오 파일만 업로드 가능합니다.' }, { status: 400 })
         }
 
+        // 서비스 롤 클라이언트 (RLS 우회) — Storage 업로드에 필요
+        const admin = createAdmin(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        )
+
         // Supabase Storage에 업로드
         const ext = file.name.split('.').pop() || 'mp3'
         const fileName = `voice-samples/${user.id}/${mentorId}-${Date.now()}.${ext}`
 
         const buffer = Buffer.from(await file.arrayBuffer())
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { data: uploadData, error: uploadError } = await admin.storage
             .from('mentor-files')
             .upload(fileName, buffer, {
                 contentType: file.type || 'audio/mpeg',
@@ -47,7 +54,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Public URL 생성
-        const { data: urlData } = supabase.storage
+        const { data: urlData } = admin.storage
             .from('mentor-files')
             .getPublicUrl(fileName)
 

@@ -13,12 +13,13 @@ const ALLOWED_TYPES = [
     'application/pdf',
     'text/plain',
     'text/markdown',
+    'text/vtt',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]
 
 // HWP/HWPX는 MIME 타입이 없으므로 확장자로 체크
-const ALLOWED_EXTENSIONS = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx', 'ppt', 'pptx']
+const ALLOWED_EXTENSIONS = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx', 'ppt', 'pptx', 'vtt']
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const MAX_FILES_PER_MENTOR = 10
@@ -31,6 +32,7 @@ const EXT_MIME_MAP: Record<string, string> = {
     hwpx: 'application/octet-stream',
     ppt: 'application/vnd.ms-powerpoint',
     pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    vtt: 'text/vtt',
     doc: 'application/msword',
     docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     pdf: 'application/pdf',
@@ -66,7 +68,7 @@ export async function POST(req: NextRequest) {
         const ext = file.name.split('.').pop()?.toLowerCase() || ''
         if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTENSIONS.includes(ext)) {
             return NextResponse.json(
-                { error: '지원하지 않는 파일 형식입니다. HWP, PDF, TXT, MD, DOC, DOCX만 가능합니다.' },
+                { error: '지원하지 않는 파일 형식입니다. HWP, PDF, TXT, MD, DOC, DOCX, VTT만 가능합니다.' },
                 { status: 400 },
             )
         }

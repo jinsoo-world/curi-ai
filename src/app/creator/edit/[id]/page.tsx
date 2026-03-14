@@ -662,7 +662,7 @@ export default function CreatorEditPage() {
                             <input
                                 ref={fileInputRef}
                                 type="file"
-                                accept=".pdf,.txt,.md,.doc,.docx,.hwp,.hwpx,.ppt,.pptx"
+                                accept=".pdf,.txt,.md,.doc,.docx,.hwp,.hwpx,.ppt,.pptx,.vtt"
                                 multiple
                                 style={{ display: 'none' }}
                                 onChange={e => handleFileUpload(e.target.files)}
@@ -672,7 +672,7 @@ export default function CreatorEditPage() {
                                 {uploading ? '업로드 중...' : '파일 추가 (클릭 또는 드래그)'}
                             </div>
                             <div style={{ fontSize: 11, color: '#9ca3af' }}>
-                                HWP, PDF, PPT, DOCX, TXT · 최대 10개 · 합산 50MB
+                                HWP, PDF, PPT, DOCX, TXT, VTT · 최대 10개 · 합산 50MB
                             </div>
                         </div>
 

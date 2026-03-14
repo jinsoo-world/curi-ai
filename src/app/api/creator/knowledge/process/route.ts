@@ -3,6 +3,134 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { generateEmbedding, splitIntoChunks } from '@/domains/knowledge/embedding'
+import { GoogleGenAI } from '@google/genai'
+
+/**
+ * VTT 파일 전처리: 타임스탬프 제거, 추임새 제거, 화자별 대화 정리
+ */
+function parseVttContent(raw: string): { fullText: string; speakers: Record<string, string[]> } {
+    const lines = raw.split('\n')
+    const speakers: Record<string, string[]> = {}
+    const dialogues: string[] = []
+
+    // 추임새/의미없는 발화 패턴
+    const FILLER_PATTERNS = [
+        /^(네|네네|네네네|예|예예|예예예|응|응응|응응응|어|어어|어어어|아|아아|으음|음|으으|오|오오)\.?$/,
+        /^(네 맞아요|네 예예예|어어어|으음 으음|응응응|어 어|네네|아 네|네 네|어 네|아 그래요|아하하|오케이)\.?$/,
+        /^(있습니다|그렇습니다|하나님이|그렇구나)\.?$/,
+    ]
+
+    let currentSpeaker = ''
+    let isTimestamp = false
+
+    for (const line of lines) {
+        const trimmed = line.trim()
+
+        // WEBVTT 헤더, 빈 줄, 시퀀스 번호 건너뛰기
+        if (!trimmed || trimmed === 'WEBVTT' || /^\d+$/.test(trimmed)) continue
+
+        // 타임스탬프 라인 건너뛰기
+        if (/^\d{2}:\d{2}:\d{2}\.\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}\.\d{3}$/.test(trimmed)) {
+            isTimestamp = true
+            continue
+        }
+
+        if (isTimestamp || true) {
+            isTimestamp = false
+
+            // 화자 분리: "화자명: 내용" 형식
+            const speakerMatch = trimmed.match(/^(.+?):\s*(.+)$/)
+            if (speakerMatch) {
+                currentSpeaker = speakerMatch[1].trim()
+                const content = speakerMatch[2].trim()
+
+                // 추임새 필터링
+                if (FILLER_PATTERNS.some(p => p.test(content))) continue
+
+                // 너무 짧은 발화 (2글자 이하) 건너뛰기
+                if (content.length <= 2) continue
+
+                if (!speakers[currentSpeaker]) speakers[currentSpeaker] = []
+                speakers[currentSpeaker].push(content)
+                dialogues.push(`[${currentSpeaker}] ${content}`)
+            } else if (trimmed.length > 2) {
+                // 화자 없는 라인
+                if (!FILLER_PATTERNS.some(p => p.test(trimmed))) {
+                    dialogues.push(trimmed)
+                }
+            }
+        }
+    }
+
+    return {
+        fullText: dialogues.join('\n'),
+        speakers,
+    }
+}
+
+/**
+ * Gemini를 사용하여 VTT 텍스트 오탈자/고유명사 보정
+ */
+async function correctVttWithGemini(text: string): Promise<string> {
+    if (!process.env.GEMINI_API_KEY) {
+        console.log('[VTT] No GEMINI_API_KEY, skipping correction')
+        return text
+    }
+
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
+
+        // 텍스트가 너무 길면 청크로 나눠서 보정 (Gemini 토큰 한도 고려)
+        const MAX_CHUNK = 8000
+        if (text.length <= MAX_CHUNK) {
+            const result = await ai.models.generateContent({
+                model: 'gemini-2.0-flash-lite',
+                contents: `다음은 줌(Zoom) 녹화 자막에서 추출한 대화 텍스트입니다.
+음성 인식 오류로 인한 오탈자와 고유명사 오류를 교정해주세요.
+
+규칙:
+1. 문맥상 명백한 오탈자만 수정하세요 (예: "케스님" → "캐스님", "안마의자" → "감마에다가")
+2. 대화의 의미나 구조는 절대 변경하지 마세요
+3. 새로운 내용을 추가하지 마세요
+4. 화자 태그 [이름]은 유지하세요
+5. 교정된 텍스트만 출력하세요, 설명은 하지 마세요
+
+텍스트:
+${text}`,
+            })
+
+            const corrected = result.text?.trim()
+            if (corrected && corrected.length > text.length * 0.5) {
+                console.log(`[VTT] Gemini correction: ${text.length} → ${corrected.length} chars`)
+                return corrected
+            }
+        } else {
+            // 긴 텍스트 — 청크별 보정
+            const chunks = []
+            for (let i = 0; i < text.length; i += MAX_CHUNK) {
+                chunks.push(text.slice(i, i + MAX_CHUNK))
+            }
+            console.log(`[VTT] Text too long (${text.length}), splitting into ${chunks.length} chunks for correction`)
+
+            const correctedChunks = []
+            for (const chunk of chunks) {
+                const result = await ai.models.generateContent({
+                    model: 'gemini-2.0-flash-lite',
+                    contents: `다음은 줌 녹화 자막 텍스트의 일부입니다. 음성 인식 오탈자만 교정하세요.
+규칙: 오탈자만 수정, 구조 유지, 설명 없이 교정 텍스트만 출력.
+
+${chunk}`,
+                })
+                correctedChunks.push(result.text?.trim() || chunk)
+            }
+            return correctedChunks.join('\n')
+        }
+    } catch (err) {
+        console.error('[VTT] Gemini correction error:', err instanceof Error ? err.message : err)
+    }
+
+    return text // 보정 실패 시 원본 반환
+}
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -123,6 +251,18 @@ export async function POST(req: NextRequest) {
         if (['txt', 'md'].includes(ext)) {
             // 텍스트/마크다운: 직접 읽기
             textContent = await fileData.text()
+
+        } else if (ext === 'vtt') {
+            // VTT (줌 녹화 자막): 전처리 + Gemini 보정
+            console.log('[Process] Parsing VTT file:', source.title)
+            const rawVtt = await fileData.text()
+            const { fullText, speakers } = parseVttContent(rawVtt)
+            console.log(`[Process] VTT parsed: ${Object.keys(speakers).length} speakers, ${fullText.length} chars (raw: ${rawVtt.length})`)
+
+            // Gemini로 오탈자 보정
+            textContent = await correctVttWithGemini(fullText)
+            console.log(`[Process] VTT after correction: ${textContent.length} chars`)
+
 
         } else if (['hwp', 'hwpx'].includes(ext)) {
             // HWP: @ohah/hwpjs로 마크다운 변환 시도 (무료, 로컬 처리)
