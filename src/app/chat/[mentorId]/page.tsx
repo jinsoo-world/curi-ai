@@ -697,7 +697,7 @@ export default function ChatPage() {
                     mentorEmoji={mentorEmoji}
                     isStreaming={isStreaming}
                     onNewChat={handleNewChat}
-                    onCall={ELEVENLABS_AGENT_IDS[mentor.name] ? () => setIsCallOpen(true) : undefined}
+                    onCall={() => setVoiceCallOpen(true)}
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                     isSidebarOpen={isSidebarOpen}
                 />
@@ -933,59 +933,7 @@ export default function ChatPage() {
                     isStreaming={isStreaming}
                 />
 
-                {/* 자동 음성 재생 토글 */}
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    paddingBottom: 4,
-                }}>
-                    <button
-                        onClick={toggleAutoTTS}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            padding: '5px 14px',
-                            borderRadius: 20,
-                            border: 'none',
-                            background: autoTTS ? '#f0fdf4' : 'transparent',
-                            color: autoTTS ? '#16a34a' : '#94a3b8',
-                            fontSize: 12,
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                        }}
-                        title={autoTTS ? '자동 음성 재생 ON' : '자동 음성 재생 OFF'}
-                    >
-                        <span style={{ fontSize: 14 }}>{autoTTS ? '🔊' : '🔇'}</span>
-                        자동 음성 재생 {autoTTS ? 'ON' : 'OFF'}
-                    </button>
 
-                    {/* 📱 전화 모드 버튼 — 음성 데이터가 있는 AI만 표시 */}
-                    {mentor?.voice_sample_url && (
-                    <button
-                        onClick={() => setVoiceCallOpen(true)}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            padding: '5px 14px',
-                            borderRadius: 20,
-                            border: 'none',
-                            background: 'transparent',
-                            color: '#94a3b8',
-                            fontSize: 12,
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                        }}
-                        title="음성 통화 모드"
-                    >
-                        <span style={{ fontSize: 14 }}>📞</span>
-                        음성 대화
-                    </button>
-                    )}
-                </div>
 
                 {/* 📱 음성 통화 오버레이 */}
                 {mentor && (
