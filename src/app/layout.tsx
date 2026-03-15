@@ -178,26 +178,25 @@ export default function RootLayout({
             }}
           />
         )}
-        {/* 카카오 JS SDK */}
+        {/* 카카오 JS SDK — script onload로 초기화 보장 */}
         <Script
-          src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"
-          integrity="sha384-DKYJZ8NLiK8MN4/C5P2dtSmLQ4KwPaoqAfyA/DfmEc1VDxu4yyC7wy6K1Hs90nk"
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
-        <Script
-          id="kakao-init"
+          id="kakao-sdk-loader"
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              function _initKakao() {
-                if (window.Kakao && !window.Kakao.isInitialized()) {
-                  window.Kakao.init('27c5c27a03c6f936db39d20090643b3c');
-                  console.log('[Kakao] SDK initialized');
-                }
-              }
-              setTimeout(_initKakao, 500);
-              setTimeout(_initKakao, 2000);
+              (function() {
+                var s = document.createElement('script');
+                s.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js';
+                s.integrity = 'sha384-DKYJZ8NLiK8MN4/C5P2dtSmLQ4KwPaoqAfyA/DfmEc1VDxu4yyC7wy6K1Hs90nk';
+                s.crossOrigin = 'anonymous';
+                s.onload = function() {
+                  if (window.Kakao && !window.Kakao.isInitialized()) {
+                    window.Kakao.init('27c5c27a03c6f936db39d20090643b3c');
+                    console.log('[Kakao] SDK initialized:', window.Kakao.isInitialized());
+                  }
+                };
+                document.head.appendChild(s);
+              })();
             `,
           }}
         />

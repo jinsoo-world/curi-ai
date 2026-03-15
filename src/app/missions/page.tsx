@@ -760,31 +760,47 @@ export default function MissionsPage() {
                         <button
                             onClick={async () => {
                                 const w = window as any
+                                // SDK 동적 로딩 보장
+                                const ensureKakao = (): Promise<boolean> => new Promise((resolve) => {
+                                    if (w.Kakao) {
+                                        if (!w.Kakao.isInitialized()) w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
+                                        resolve(true)
+                                        return
+                                    }
+                                    // SDK가 아직 없으면 동적 로드
+                                    const s = document.createElement('script')
+                                    s.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js'
+                                    s.onload = () => {
+                                        if (w.Kakao && !w.Kakao.isInitialized()) w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
+                                        resolve(!!w.Kakao)
+                                    }
+                                    s.onerror = () => resolve(false)
+                                    document.head.appendChild(s)
+                                })
+
                                 let shared = false
                                 try {
-                                    // Kakao SDK 초기화
-                                    if (w.Kakao && !w.Kakao.isInitialized()) {
-                                        w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
-                                    }
-                                    const shareParams = {
-                                        objectType: 'feed' as const,
-                                        content: {
-                                            title: '큐리 AI - 나만의 AI 멘토',
-                                            description: '24시간 대화할 수 있는 AI 멘토를 만나보세요! 🤖✨',
-                                            imageUrl: 'https://www.curi-ai.com/icons/icon-512x512.png',
-                                            link: { mobileWebUrl: inviteLink, webUrl: inviteLink },
-                                        },
-                                        buttons: [
-                                            { title: '큐리 AI 시작하기', link: { mobileWebUrl: inviteLink, webUrl: inviteLink } },
-                                        ],
-                                    }
-                                    // v2 SDK: Kakao.Share → v1 SDK: Kakao.Link
-                                    if (w.Kakao?.Share?.sendDefault) {
-                                        w.Kakao.Share.sendDefault(shareParams)
-                                        shared = true
-                                    } else if (w.Kakao?.Link?.sendDefault) {
-                                        w.Kakao.Link.sendDefault(shareParams)
-                                        shared = true
+                                    const ready = await ensureKakao()
+                                    if (ready) {
+                                        const shareParams = {
+                                            objectType: 'feed' as const,
+                                            content: {
+                                                title: '큐리 AI - 나만의 AI 멘토',
+                                                description: '24시간 대화할 수 있는 AI 멘토를 만나보세요! 🤖✨',
+                                                imageUrl: 'https://www.curi-ai.com/icons/icon-512x512.png',
+                                                link: { mobileWebUrl: inviteLink, webUrl: inviteLink },
+                                            },
+                                            buttons: [
+                                                { title: '큐리 AI 시작하기', link: { mobileWebUrl: inviteLink, webUrl: inviteLink } },
+                                            ],
+                                        }
+                                        if (w.Kakao?.Share?.sendDefault) {
+                                            w.Kakao.Share.sendDefault(shareParams)
+                                            shared = true
+                                        } else if (w.Kakao?.Link?.sendDefault) {
+                                            w.Kakao.Link.sendDefault(shareParams)
+                                            shared = true
+                                        }
                                     }
                                 } catch (e) {
                                     console.error('[Kakao Share]', e)
@@ -793,7 +809,7 @@ export default function MissionsPage() {
                                     setShowInviteModal(false)
                                     setShowShareConfirm(true)
                                 } else {
-                                    // 폴백: 클립보드 복사 + 안내
+                                    // 폴백: 클립보드 복사
                                     try { await navigator.clipboard.writeText(inviteLink) } catch {}
                                     setCopied(true)
                                     setTimeout(() => setCopied(false), 2000)
