@@ -731,7 +731,7 @@ export default function MissionsPage() {
                         <div style={{
                             display: 'flex', alignItems: 'center', gap: 8,
                             background: '#f4f4f5', borderRadius: 12,
-                            padding: '12px 14px', marginBottom: 16,
+                            padding: '12px 14px', marginBottom: 12,
                         }}>
                             <input
                                 readOnly
@@ -756,9 +756,69 @@ export default function MissionsPage() {
                             </button>
                         </div>
 
-
-
-                        {/* 초대 현황 */}
+                        {/* 카카오톡 공유 버튼 */}
+                        <button
+                            onClick={async () => {
+                                const w = window as any
+                                if (w.Kakao && !w.Kakao.isInitialized()) {
+                                    w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
+                                }
+                                if (w.Kakao && w.Kakao.isInitialized()) {
+                                    w.Kakao.Share.sendDefault({
+                                        objectType: 'feed',
+                                        content: {
+                                            title: '큐리 AI - 나만의 AI 멘토',
+                                            description: '24시간 대화할 수 있는 AI 멘토를 만나보세요! 🤖✨',
+                                            imageUrl: 'https://www.curi-ai.com/icons/icon-512x512.png',
+                                            link: { mobileWebUrl: inviteLink, webUrl: inviteLink },
+                                        },
+                                        buttons: [
+                                            { title: '큐리 AI 시작하기', link: { mobileWebUrl: inviteLink, webUrl: inviteLink } },
+                                        ],
+                                    })
+                                    // 카카오 공유 다이얼로그 열림 → 확인 모달로 클로버 적립
+                                    setShowInviteModal(false)
+                                    setShowShareConfirm(true)
+                                } else {
+                                    alert('카카오톡 SDK 로드에 실패했어요. 링크를 복사해서 공유해주세요!')
+                                }
+                            }}
+                            disabled={sharing}
+                            style={{
+                                width: '100%',
+                                padding: '14px 20px',
+                                borderRadius: 12,
+                                border: 'none',
+                                background: '#FEE500',
+                                color: '#191919',
+                                fontSize: 15,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 8,
+                                transition: 'transform 150ms, box-shadow 150ms',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                                marginBottom: 8,
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.transform = 'translateY(-1px)'
+                                e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.12)'
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.transform = 'translateY(0)'
+                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'
+                            }}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                                <path d="M9 1C4.58 1 1 3.87 1 7.35c0 2.21 1.47 4.15 3.68 5.24L4.2 15.5c-.06.23.2.41.4.28l3.27-2.07c.37.04.75.06 1.13.06 4.42 0 8-2.87 8-6.35S13.42 1 9 1z" fill="#191919"/>
+                            </svg>
+                            카카오톡으로 공유하기
+                        </button>
+                        <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 0' }}>
+                            공유하면 🍀 10클로버를 받아요!
+                        </p>                        {/* 초대 현황 */}
                         {missionStatus.friendsInvited > 0 && (
                             <div style={{
                                 marginTop: 16, padding: '12px 16px',
