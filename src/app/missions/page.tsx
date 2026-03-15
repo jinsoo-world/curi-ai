@@ -784,19 +784,23 @@ export default function MissionsPage() {
                                 } catch (e) {
                                     console.error('[Kakao Share]', e)
                                 }
-                                // 폴백: Web Share API 또는 클립보드 복사
-                                if (navigator.share) {
-                                    try {
-                                        await navigator.share({ title: '큐리 AI', text: '나만의 AI 멘토를 만나보세요! 🤖', url: inviteLink })
-                                        setShowInviteModal(false)
-                                        await confirmShare()
-                                    } catch {}
-                                } else {
-                                    await navigator.clipboard.writeText(inviteLink)
-                                    alert('링크가 복사되었어요! 카카오톡에 붙여넣기 해주세요 💛')
-                                    setShowInviteModal(false)
-                                    setShowShareConfirm(true)
-                                }
+                                // 폴백: 카카오 공유 URL로 직접 이동
+                                const shareUrl = `https://sharer.kakao.com/talk/friends/picker/link?app_key=27c5c27a03c6f936db39d20090643b3c&ka=sdk%2F2.7.4&validation_action=default&validation_params=${encodeURIComponent(JSON.stringify({
+                                    link_ver: '4.0',
+                                    template_object: {
+                                        object_type: 'feed',
+                                        content: {
+                                            title: '큐리 AI - 나만의 AI 멘토',
+                                            description: '24시간 대화할 수 있는 AI 멘토를 만나보세요! 🤖✨',
+                                            image_url: 'https://www.curi-ai.com/icons/icon-512x512.png',
+                                            link: { mobile_web_url: inviteLink, web_url: inviteLink },
+                                        },
+                                        buttons: [{ title: '큐리 AI 시작하기', link: { mobile_web_url: inviteLink, web_url: inviteLink } }],
+                                    },
+                                }))}`
+                                window.open(shareUrl, '_blank', 'width=500,height=600')
+                                setShowInviteModal(false)
+                                setShowShareConfirm(true)
                             }}
                             disabled={sharing}
                             style={{
