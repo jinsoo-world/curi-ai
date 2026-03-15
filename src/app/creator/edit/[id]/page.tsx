@@ -5,7 +5,6 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useRouter, useParams } from 'next/navigation'
 import { convertWebmToWav, needsConversion } from '@/lib/audio-convert'
-import { extractVideoId, extractYoutubeTranscript } from '@/lib/youtube-client'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MENTOR_IMAGES } from '@/domains/mentor/constants'
@@ -57,9 +56,6 @@ export default function CreatorEditPage() {
     const [summaryLoading, setSummaryLoading] = useState(false)
     const [uploading, setUploading] = useState(false)
     const [dragOver, setDragOver] = useState(false)
-    const [youtubeUrl, setYoutubeUrl] = useState('')
-    const [youtubeLoading, setYoutubeLoading] = useState(false)
-    const [youtubeStep, setYoutubeStep] = useState(0) // 0=idle, 1=자막추출, 2=정제, 3=임베딩
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     // ── 목소리 학습 ──
@@ -798,7 +794,7 @@ export default function CreatorEditPage() {
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                {src.processing_status === 'processing' ? <span>⏳</span> : src.processing_status === 'failed' ? <span>❌</span> : src.source_type === 'youtube' ? <span style={{ fontSize: 22 }}>🎥</span> : (() => { const ext = src.title?.split('.').pop()?.toLowerCase(); const iconMap: Record<string, string> = { pdf: '/file-icons/pdf.png', hwp: '/file-icons/hwp.png', docx: '/file-icons/docx.png', doc: '/file-icons/doc.png', ppt: '/file-icons/ppt.png', pptx: '/file-icons/ppt.png', txt: '/file-icons/txt.png' }; const iconSrc = ext ? iconMap[ext] : null; return iconSrc ? <img src={iconSrc} alt={ext} style={{ width: 28, height: 28, objectFit: 'contain' }} /> : <span>📁</span> })()}
+                                                {src.processing_status === 'processing' ? <span>⏳</span> : src.processing_status === 'failed' ? <span>❌</span> : (() => { const ext = src.title?.split('.').pop()?.toLowerCase(); const iconMap: Record<string, string> = { pdf: '/file-icons/pdf.png', hwp: '/file-icons/hwp.png', docx: '/file-icons/docx.png', doc: '/file-icons/doc.png', ppt: '/file-icons/ppt.png', pptx: '/file-icons/ppt.png', txt: '/file-icons/txt.png' }; const iconSrc = ext ? iconMap[ext] : null; return iconSrc ? <img src={iconSrc} alt={ext} style={{ width: 28, height: 28, objectFit: 'contain' }} /> : <span>📁</span> })()}
                                                 <div>
                                                     <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{src.title}</div>
                                                     <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
@@ -870,126 +866,6 @@ export default function CreatorEditPage() {
                                         </div>
                                     </div>
                                 ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* ── 🎥 유튜브 URL 학습 ── */}
-                    <div style={styles.card}>
-                        <label style={{ ...styles.label, marginBottom: 4, fontSize: 15 }}>🎥 유튜브 URL 학습</label>
-                        <p style={styles.hint}>유튜브 영상 URL을 입력하면 자막을 자동 추출하여 AI가 학습합니다</p>
-
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
-                            <input
-                                type="url"
-                                placeholder="https://youtube.com/watch?v=..."
-                                value={youtubeUrl}
-                                onChange={e => setYoutubeUrl(e.target.value)}
-                                disabled={youtubeLoading}
-                                style={{
-                                    flex: 1, padding: '12px 14px', borderRadius: 12,
-                                    border: '1.5px solid #e5e7eb', fontSize: 14,
-                                    outline: 'none', transition: 'border 0.2s',
-                                    background: youtubeLoading ? '#f9fafb' : '#fff',
-                                }}
-                                onFocus={e => e.currentTarget.style.borderColor = '#ef4444'}
-                                onBlur={e => e.currentTarget.style.borderColor = '#e5e7eb'}
-                            />
-                            <button
-                                onClick={async () => {
-                                    if (!youtubeUrl.trim() || youtubeLoading) return
-                                    const videoId = extractVideoId(youtubeUrl)
-                                    if (!videoId) {
-                                        setToast({ type: 'error', message: '올바른 YouTube URL을 입력해주세요.' })
-                                        return
-                                    }
-                                    setYoutubeLoading(true)
-                                    setYoutubeStep(1)
-                                    try {
-                                        // 1단계: 브라우저에서 자막 추출 시도
-                                        let transcript = ''
-                                        let title = ''
-                                        try {
-                                            const result = await extractYoutubeTranscript(videoId, (s) => setYoutubeStep(s))
-                                            transcript = result.text
-                                            title = result.title
-                                        } catch {
-                                            // 클라이언트 추출 실패 → 서버 폴백 (서버가 CONSENT 쿠키로 시도)
-                                            console.log('[YouTube] Client extraction failed, falling back to server')
-                                        }
-                                        // 2~3단계: 서버로 전송
-                                        setYoutubeStep(2)
-                                        const res = await fetch('/api/creator/knowledge/youtube', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({
-                                                url: youtubeUrl,
-                                                mentorId,
-                                                ...(transcript ? { transcript, title } : {}),
-                                            }),
-                                        })
-                                        setYoutubeStep(3)
-                                        const data = await res.json()
-                                        if (!res.ok) {
-                                            setToast({ type: 'error', message: data.error || '유튜브 학습에 실패했습니다.' })
-                                        } else {
-                                            setToast({ type: 'success', message: `🎥 "${data.title}" 학습 완료! (${data.chunksProcessed}개 청크)` })
-                                            setYoutubeUrl('')
-                                            const listRes = await fetch(`/api/creator/knowledge/list?mentorId=${mentorId}`)
-                                            const listData = await listRes.json()
-                                            if (listData.sources) setKnowledgeSources(listData.sources)
-                                        }
-                                    } catch (err) {
-                                        setToast({ type: 'error', message: err instanceof Error ? err.message : '유튜브 학습에 실패했습니다.' })
-                                    } finally {
-                                        setYoutubeLoading(false)
-                                        setYoutubeStep(0)
-                                    }
-                                }}
-                                disabled={youtubeLoading || !youtubeUrl.trim()}
-                                style={{
-                                    padding: '12px 20px', borderRadius: 12,
-                                    border: 'none', cursor: youtubeLoading || !youtubeUrl.trim() ? 'not-allowed' : 'pointer',
-                                    background: youtubeLoading || !youtubeUrl.trim() ? '#d1d5db' : '#ef4444',
-                                    color: '#fff', fontSize: 14, fontWeight: 700,
-                                    whiteSpace: 'nowrap' as const,
-                                    transition: 'all 0.2s',
-                                }}
-                            >
-                                {youtubeLoading ? '⏳ 학습 중...' : '학습하기'}
-                            </button>
-                        </div>
-
-                        {/* 단계별 진행 상태 */}
-                        {youtubeLoading ? (
-                            <div style={{
-                                marginTop: 12, padding: '14px 16px', borderRadius: 12,
-                                background: 'linear-gradient(135deg, #fef3c7 0%, #fff7ed 100%)',
-                                border: '1px solid #fde68a',
-                            }}>
-                                {[
-                                    { step: 1, icon: '📡', text: '영상 자막을 읽어오는 중...' },
-                                    { step: 2, icon: '🧠', text: 'AI가 핵심 지식을 정리하는 중...' },
-                                    { step: 3, icon: '💾', text: '장기 기억 장치에 저장하는 중...' },
-                                ].map(({ step, icon, text }) => (
-                                    <div key={step} style={{
-                                        display: 'flex', alignItems: 'center', gap: 8,
-                                        padding: '4px 0', fontSize: 13,
-                                        color: youtubeStep >= step ? '#92400e' : '#d1d5db',
-                                        fontWeight: youtubeStep === step ? 700 : 400,
-                                        transition: 'all 0.3s',
-                                    }}>
-                                        <span>{youtubeStep > step ? '✅' : youtubeStep === step ? icon : '⬜'}</span>
-                                        <span>{`${step}단계: ${text}`}</span>
-                                        {youtubeStep === step && (
-                                            <span style={{ animation: 'pulse 1.5s infinite', fontSize: 11 }}>⏳</span>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>
-                                자막이 있는 유튜브 영상만 학습 가능합니다 · Shorts도 지원
                             </div>
                         )}
                     </div>
