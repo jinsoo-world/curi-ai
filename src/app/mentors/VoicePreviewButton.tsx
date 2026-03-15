@@ -25,6 +25,19 @@ export default function VoicePreviewButton({ mentorName, voiceId }: { mentorName
         e.preventDefault() // Link 클릭 방지
         e.stopPropagation()
 
+        // 🔒 비회원이면 로그인 유도
+        try {
+            const authRes = await fetch('/api/auth/me')
+            const authData = await authRes.json()
+            if (!authData?.user) {
+                window.location.href = '/login'
+                return
+            }
+        } catch {
+            window.location.href = '/login'
+            return
+        }
+
         if (status === 'playing' && audioRef.current) {
             audioRef.current.pause()
             audioRef.current.currentTime = 0
