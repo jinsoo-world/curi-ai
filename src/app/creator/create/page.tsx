@@ -52,6 +52,9 @@ export default function CreatorCreatePage() {
     const fileInputRef = useRef<HTMLInputElement>(null)
     const avatarInputRef = useRef<HTMLInputElement>(null)
     const [dragOver, setDragOver] = useState(false)
+    const [youtubeUrl, setYoutubeUrl] = useState('')
+    const [youtubeLoading, setYoutubeLoading] = useState(false)
+    const [youtubeStep, setYoutubeStep] = useState(0)
     const [mentorIdForUpload, setMentorIdForUpload] = useState<string | null>(null)
 
     // 미리보기 디바이스 모드
@@ -971,6 +974,137 @@ export default function CreatorCreatePage() {
                                             )}
                                         </div>
                                     ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* ── 🎥 유튜브 URL 학습 ── */}
+                        <div style={styles.card}>
+                            <label style={{ ...styles.label, marginBottom: 4, fontSize: 15 }}>🎥 유튜브 URL 학습</label>
+                            <p style={styles.hint}>유튜브 영상 URL을 입력하면 자막을 자동 추출하여 AI가 학습합니다</p>
+
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+                                <input
+                                    type="url"
+                                    placeholder="https://youtube.com/watch?v=..."
+                                    value={youtubeUrl}
+                                    onChange={e => setYoutubeUrl(e.target.value)}
+                                    disabled={youtubeLoading}
+                                    style={{
+                                        flex: 1, padding: '12px 14px', borderRadius: 12,
+                                        border: '1.5px solid #e5e7eb', fontSize: 14,
+                                        outline: 'none', transition: 'border 0.2s',
+                                        background: youtubeLoading ? '#f9fafb' : '#fff',
+                                    }}
+                                    onFocus={e => e.currentTarget.style.borderColor = '#ef4444'}
+                                    onBlur={e => e.currentTarget.style.borderColor = '#e5e7eb'}
+                                />
+                                <button
+                                    onClick={async () => {
+                                        if (!youtubeUrl.trim() || youtubeLoading) return
+                                        if (!youtubeUrl.includes('youtube.com') && !youtubeUrl.includes('youtu.be')) {
+                                            setError('올바른 YouTube URL을 입력해주세요.')
+                                            return
+                                        }
+                                        // draft mentor 자동 생성
+                                        let mid = mentorIdForUpload
+                                        if (!mid) {
+                                            if (!name.trim() || !title.trim()) {
+                                                setError('유튜브 학습 전에 AI 이름과 한줄 소개를 입력해주세요.')
+                                                return
+                                            }
+                                            try {
+                                                const res = await fetch('/api/creator/mentor', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ step: 1, name: name.trim(), title: title.trim(), description: '', expertise: [] }),
+                                                })
+                                                const data = await res.json()
+                                                if (!res.ok) throw new Error(data.error)
+                                                mid = data.mentor.id
+                                                setMentorIdForUpload(mid)
+                                            } catch (err: unknown) {
+                                                setError(err instanceof Error ? err.message : 'AI 생성에 실패했습니다.')
+                                                return
+                                            }
+                                        }
+                                        setYoutubeLoading(true)
+                                        setYoutubeStep(1)
+                                        const stepTimer1 = setTimeout(() => setYoutubeStep(2), 5000)
+                                        const stepTimer2 = setTimeout(() => setYoutubeStep(3), 12000)
+                                        try {
+                                            const res = await fetch('/api/creator/knowledge/youtube', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ url: youtubeUrl, mentorId: mid }),
+                                            })
+                                            const data = await res.json()
+                                            if (!res.ok) {
+                                                setError(data.error || '유튜브 학습에 실패했습니다.')
+                                            } else {
+                                                setToast(`🎥 "${data.title}" 학습 완료!`)
+                                                setYoutubeUrl('')
+                                                setTimeout(() => setToast(null), 4000)
+                                                // 파일 목록에도 추가
+                                                setUploadedFiles(prev => [...prev, {
+                                                    id: `yt-${Date.now()}`,
+                                                    fileName: `🎥 ${data.title}`,
+                                                    fileSize: data.totalCharacters || 0,
+                                                    status: 'completed' as const,
+                                                }])
+                                            }
+                                        } catch {
+                                            setError('네트워크 오류가 발생했습니다.')
+                                        } finally {
+                                            clearTimeout(stepTimer1)
+                                            clearTimeout(stepTimer2)
+                                            setYoutubeLoading(false)
+                                            setYoutubeStep(0)
+                                        }
+                                    }}
+                                    disabled={youtubeLoading || !youtubeUrl.trim()}
+                                    style={{
+                                        padding: '12px 20px', borderRadius: 12,
+                                        border: 'none', cursor: youtubeLoading || !youtubeUrl.trim() ? 'not-allowed' : 'pointer',
+                                        background: youtubeLoading || !youtubeUrl.trim() ? '#d1d5db' : '#ef4444',
+                                        color: '#fff', fontSize: 14, fontWeight: 700,
+                                        whiteSpace: 'nowrap' as const,
+                                        transition: 'all 0.2s',
+                                    }}
+                                >
+                                    {youtubeLoading ? '⏳ 학습 중...' : '학습하기'}
+                                </button>
+                            </div>
+
+                            {youtubeLoading ? (
+                                <div style={{
+                                    marginTop: 12, padding: '14px 16px', borderRadius: 12,
+                                    background: 'linear-gradient(135deg, #fef3c7 0%, #fff7ed 100%)',
+                                    border: '1px solid #fde68a',
+                                }}>
+                                    {[
+                                        { step: 1, icon: '📡', text: '영상 자막을 읽어오는 중...' },
+                                        { step: 2, icon: '🧠', text: 'AI가 핵심 지식을 정리하는 중...' },
+                                        { step: 3, icon: '💾', text: '장기 기억 장치에 저장하는 중...' },
+                                    ].map(({ step, icon, text }) => (
+                                        <div key={step} style={{
+                                            display: 'flex', alignItems: 'center', gap: 8,
+                                            padding: '4px 0', fontSize: 13,
+                                            color: youtubeStep >= step ? '#92400e' : '#d1d5db',
+                                            fontWeight: youtubeStep === step ? 700 : 400,
+                                            transition: 'all 0.3s',
+                                        }}>
+                                            <span>{youtubeStep > step ? '✅' : youtubeStep === step ? icon : '⬜'}</span>
+                                            <span>{`${step}단계: ${text}`}</span>
+                                            {youtubeStep === step && (
+                                                <span style={{ animation: 'pulse 1.5s infinite', fontSize: 11 }}>⏳</span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>
+                                    자막이 있는 유튜브 영상만 학습 가능합니다 · Shorts도 지원
                                 </div>
                             )}
                         </div>
