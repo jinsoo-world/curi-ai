@@ -118,6 +118,8 @@ export default function ChatPage() {
     const [marketingChecked, setMarketingChecked] = useState(false)
     const [autoTTS, setAutoTTS] = useState(false)
     const [voiceCallOpen, setVoiceCallOpen] = useState(false)
+    const [isLoggedIn, setIsLoggedIn] = useState(false)
+    const [showLoginGate, setShowLoginGate] = useState(false)
 
     const [userName, setUserName] = useState('')
 
@@ -194,8 +196,10 @@ export default function ChatPage() {
                 const authRes = await fetch('/api/auth/me')
                 const authData = await authRes.json()
                 isLoggedIn = !!authData?.user
+                setIsLoggedIn(isLoggedIn)
             } catch {
                 isLoggedIn = false
+                setIsLoggedIn(false)
             }
 
             // ── 2. 비로그인(게스트): 고정 ID, URL 변경 없음 ──
@@ -236,27 +240,15 @@ export default function ChatPage() {
                 return
             }
 
-            // ?new=true가 아니면 → 기존 세션 찾아서 이어가기
+            // ?new=true가 아니어도 → 항상 새 세션으로 시작 (프로필+질문 3개 표시)
+            // 기존 대화가 있으면 사이드바 자동 열기
             if (!isNewChatRequested) {
                 try {
                     const res = await fetch(`/api/sessions?mentorId=${mentorId}`)
                     const { sessions } = await res.json()
                     if (sessions?.length > 0) {
-                        const lastSession = sessions[0] // 최근 순 정렬
-                        setSessionId(lastSession.id)
-                        // 메시지 로드
-                        const msgRes = await fetch(`/api/sessions/${lastSession.id}/messages`)
-                        const { messages: loaded } = await msgRes.json()
-                        if (loaded?.length) {
-                            setMessages(loaded)
-                            setShowSuggestions(false)
-                        } else {
-                            // 빈 세션 → 추천 질문 표시
-                            setShowSuggestions(true)
-                        }
-                        // URL 업데이트 (히스토리 교체, 새로고침 없음)
-                        window.history.replaceState(null, '', `/chat/${mentorId}?session=${lastSession.id}`)
-                        return
+                        // 기존 대화 존재 → 사이드바 열기 (데스크탑에서)
+                        setIsSidebarOpen(true)
                     }
                 } catch (e) {
                     console.error('기존 세션 조회 실패:', e)
@@ -414,6 +406,15 @@ export default function ChatPage() {
     // ───── 메시지 전송 ─────
     const sendMessage = useCallback(async (content: string) => {
         if (!content.trim() || isStreaming) return
+
+        // 🔒 비회원 3턴 체크
+        if (!isLoggedIn) {
+            const guestUserMsgs = messages.filter(m => m.role === 'user').length
+            if (guestUserMsgs >= 3) {
+                setShowLoginGate(true)
+                return
+            }
+        }
 
         // 0.5초 딜레이 방지
         const now = Date.now()
@@ -1070,6 +1071,102 @@ export default function ChatPage() {
                             return fullResponse
                         }}
                     />
+                )}
+
+                {/* 🔒 비회원 3턴 로그인 유도 모달 */}
+                {showLoginGate && (
+                    <>
+                        <div
+                            onClick={() => setShowLoginGate(false)}
+                            style={{
+                                position: 'fixed',
+                                inset: 0,
+                                background: 'rgba(0,0,0,0.5)',
+                                zIndex: 2000,
+                                animation: 'shareOverlayIn 0.2s ease',
+                            }}
+                        />
+                        <div style={{
+                            position: 'fixed',
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            background: '#fff',
+                            borderRadius: 24,
+                            padding: '36px 28px 28px',
+                            width: 'min(380px, calc(100vw - 40px))',
+                            zIndex: 2001,
+                            textAlign: 'center',
+                            animation: 'shareModalIn 0.25s ease',
+                            boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+                        }}>
+                            {/* 아이콘 */}
+                            <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+                            <h3 style={{
+                                margin: '0 0 8px',
+                                fontSize: 20,
+                                fontWeight: 700,
+                                color: '#1e293b',
+                            }}>
+                                무료 체험이 끝났어요!
+                            </h3>
+                            <p style={{
+                                margin: '0 0 24px',
+                                fontSize: 14,
+                                color: '#64748b',
+                                lineHeight: 1.6,
+                            }}>
+                                회원가입하면 더 많은 AI 멘토와<br />
+                                무제한 대화할 수 있어요 ✨
+                            </p>
+                            {/* 구글 로그인 버튼 */}
+                            <button
+                                onClick={() => {
+                                    window.location.href = '/login'
+                                }}
+                                style={{
+                                    width: '100%',
+                                    padding: '14px 20px',
+                                    borderRadius: 14,
+                                    border: 'none',
+                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                    color: '#fff',
+                                    fontSize: 16,
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.15s, box-shadow 0.15s',
+                                    boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
+                                    marginBottom: 10,
+                                }}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.transform = 'translateY(-1px)'
+                                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(34,197,94,0.4)'
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.transform = 'translateY(0)'
+                                    e.currentTarget.style.boxShadow = '0 4px 14px rgba(34,197,94,0.3)'
+                                }}
+                            >
+                                🚀 무료 회원가입하기
+                            </button>
+                            <button
+                                onClick={() => setShowLoginGate(false)}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 20px',
+                                    borderRadius: 14,
+                                    border: 'none',
+                                    background: 'transparent',
+                                    color: '#94a3b8',
+                                    fontSize: 14,
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                나중에 할게요
+                            </button>
+                        </div>
+                    </>
                 )}
 
                 {/* ElevenLabs 음성 대화 오버레이 */}
