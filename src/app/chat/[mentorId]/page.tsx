@@ -407,10 +407,10 @@ export default function ChatPage() {
     const sendMessage = useCallback(async (content: string) => {
         if (!content.trim() || isStreaming) return
 
-        // 🔒 비회원 3턴 체크
+        // 🔒 비회원 3턴 체크 (전체 멘토 합산)
         if (!isLoggedIn) {
-            const guestUserMsgs = messages.filter(m => m.role === 'user').length
-            if (guestUserMsgs >= 3) {
+            const totalGuestMsgs = getGuestMessageCount()
+            if (totalGuestMsgs >= 3) {
                 setShowLoginGate(true)
                 return
             }
