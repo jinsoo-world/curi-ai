@@ -128,7 +128,7 @@ export async function GET() {
             newCredits.push({ type: 'mission_ask_10', amount: 30, description: '미션 완료: 10번 질문하기' })
         }
         if (friendsInvited >= 1 && !existingTypes.includes('mission_invite')) {
-            newCredits.push({ type: 'mission_invite', amount: 100, description: `미션 완료: 친구 ${friendsInvited}명 초대` })
+            newCredits.push({ type: 'mission_invite', amount: 10, description: `미션 완료: 친구 ${friendsInvited}명 초대` })
         }
         if (profileUpdated && !existingTypes.includes('mission_profile_update')) {
             newCredits.push({ type: 'mission_profile_update', amount: 30, description: '미션 완료: 마이페이지 업데이트' })

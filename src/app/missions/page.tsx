@@ -65,7 +65,7 @@ export default function MissionsPage() {
                             aiCreated: Math.min(data.aiCreated || 0, 2),
                             questionsAsked: Math.min(data.questionsAsked || 0, 10),
                             friendsInvited: data.friendsInvited || 0,
-                            friendClovers: (data.friendsInvited || 0) * 100,
+                            friendClovers: (data.friendsInvited || 0) * 10,
                             sharesToday: data.sharesToday || 0,
                             profileUpdated: data.profileUpdated || false,
                             cloverHuntToday: data.cloverHuntToday || 0,
@@ -221,9 +221,9 @@ export default function MissionsPage() {
             id: 'invite-friend',
             icon: '🎉',
             title: '친구 초대하기',
-            description: '친구 1명이 가입하면 100클로버!',
-            reward: 100,
-            rewardLabel: '🍀 +100',
+            description: '친구 1명이 가입하면 10클로버!',
+            reward: 10,
+            rewardLabel: '🍀 +10',
             progress: missionStatus.friendsInvited,
             goal: 1,
             completed: missionStatus.friendsInvited >= 1,
@@ -724,7 +724,7 @@ export default function MissionsPage() {
                         </h3>
                         <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, marginBottom: 20 }}>
                             아래 링크를 친구에게 공유하면<br />
-                            친구가 가입할 때 🍀 100 클로버를 받아요!
+                            친구가 가입할 때 🍀 10 클로버를 받아요!
                         </p>
 
                         {/* 초대 링크 */}
@@ -760,27 +760,42 @@ export default function MissionsPage() {
                         <button
                             onClick={async () => {
                                 const w = window as any
-                                if (w.Kakao && !w.Kakao.isInitialized()) {
-                                    w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
+                                try {
+                                    if (w.Kakao && !w.Kakao.isInitialized()) {
+                                        w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
+                                    }
+                                    if (w.Kakao?.Share) {
+                                        w.Kakao.Share.sendDefault({
+                                            objectType: 'feed',
+                                            content: {
+                                                title: '큐리 AI - 나만의 AI 멘토',
+                                                description: '24시간 대화할 수 있는 AI 멘토를 만나보세요! 🤖✨',
+                                                imageUrl: 'https://www.curi-ai.com/icons/icon-512x512.png',
+                                                link: { mobileWebUrl: inviteLink, webUrl: inviteLink },
+                                            },
+                                            buttons: [
+                                                { title: '큐리 AI 시작하기', link: { mobileWebUrl: inviteLink, webUrl: inviteLink } },
+                                            ],
+                                        })
+                                        setShowInviteModal(false)
+                                        setShowShareConfirm(true)
+                                        return
+                                    }
+                                } catch (e) {
+                                    console.error('[Kakao Share]', e)
                                 }
-                                if (w.Kakao && w.Kakao.isInitialized()) {
-                                    w.Kakao.Share.sendDefault({
-                                        objectType: 'feed',
-                                        content: {
-                                            title: '큐리 AI - 나만의 AI 멘토',
-                                            description: '24시간 대화할 수 있는 AI 멘토를 만나보세요! 🤖✨',
-                                            imageUrl: 'https://www.curi-ai.com/icons/icon-512x512.png',
-                                            link: { mobileWebUrl: inviteLink, webUrl: inviteLink },
-                                        },
-                                        buttons: [
-                                            { title: '큐리 AI 시작하기', link: { mobileWebUrl: inviteLink, webUrl: inviteLink } },
-                                        ],
-                                    })
-                                    // 카카오 공유 다이얼로그 열림 → 확인 모달로 클로버 적립
+                                // 폴백: Web Share API 또는 클립보드 복사
+                                if (navigator.share) {
+                                    try {
+                                        await navigator.share({ title: '큐리 AI', text: '나만의 AI 멘토를 만나보세요! 🤖', url: inviteLink })
+                                        setShowInviteModal(false)
+                                        await confirmShare()
+                                    } catch {}
+                                } else {
+                                    await navigator.clipboard.writeText(inviteLink)
+                                    alert('링크가 복사되었어요! 카카오톡에 붙여넣기 해주세요 💛')
                                     setShowInviteModal(false)
                                     setShowShareConfirm(true)
-                                } else {
-                                    alert('카카오톡 SDK 로드에 실패했어요. 링크를 복사해서 공유해주세요!')
                                 }
                             }}
                             disabled={sharing}
