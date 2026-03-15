@@ -107,6 +107,7 @@ export default function CreatorEditPage() {
                     if (res.ok) {
                         const data = await res.json()
                         setVoiceSampleUrl(data.url)
+                        setVoiceSamplePreviewUrl(data.url)
                         if (data.voiceId) setClonedVoiceId(data.voiceId)
                         setToast({ type: 'success', message: '🎙️ 녹음 업로드 완료!' })
                     } else {
@@ -214,6 +215,7 @@ export default function CreatorEditPage() {
             }
             if (m.voice_sample_url) {
                 setVoiceSampleUrl(m.voice_sample_url)
+                setVoiceSamplePreviewUrl(m.voice_sample_url)
             }
             if (m.voice_id) {
                 setClonedVoiceId(m.voice_id)
@@ -988,6 +990,7 @@ export default function CreatorEditPage() {
                                                 if (res.ok) {
                                                     const data = await res.json()
                                                     setVoiceSampleUrl(data.url)
+                                                    setVoiceSamplePreviewUrl(data.url)
                                                     if (data.voiceId) setClonedVoiceId(data.voiceId)
                                                     setToast({ type: 'success', message: '🎙️ 음성 샘플 업로드 완료!' })
                                                 } else {
