@@ -22,12 +22,10 @@ export async function extractAndUpdateTopic(
     messageCount: number,
 ): Promise<void> {
     try {
-        // 주제 업데이트 시점: 2턴, 4턴, 8턴, 이후 8턴마다
+        // 주제 업데이트 시점: 초반 6턴까지 매번, 이후 4턴마다
         const shouldUpdate =
-            messageCount === 2 ||
-            messageCount === 4 ||
-            messageCount === 8 ||
-            (messageCount > 8 && messageCount % 8 === 0)
+            messageCount <= 6 ||
+            messageCount % 4 === 0
 
         if (!shouldUpdate) return
 
