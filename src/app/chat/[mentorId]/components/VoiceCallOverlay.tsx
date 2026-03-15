@@ -219,6 +219,8 @@ export default function VoiceCallOverlay({
     useEffect(() => {
         if (callDuration > 0 && callDuration >= maxCallSecondsRef.current && phase !== 'expired' && phase !== 'idle') {
             console.log(`[VoiceCall] ⏱️ ${maxCallSecondsRef.current}초 도달 → 자동 종료`)
+            // 타이머 즉시 정지
+            if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
             stopAll()
             // 사용량 업데이트
             fetch('/api/voice-usage', {

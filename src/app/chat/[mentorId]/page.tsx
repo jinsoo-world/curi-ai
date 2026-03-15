@@ -129,7 +129,7 @@ export default function ChatPage() {
                 if (res.ok) {
                     const data = await res.json()
                     if (data?.profile?.auto_tts) setAutoTTS(true)
-                    const name = data?.profile?.google_name || data?.profile?.name || ''
+                    const name = data?.google_name || data?.profile?.name || data?.profile?.google_name || ''
                     if (name) setUserName(name)
                 }
             } catch { /* 게스트는 무시 */ }
