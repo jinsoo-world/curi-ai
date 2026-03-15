@@ -36,11 +36,19 @@ function extractVideoId(url: string): string | null {
  * youtube-transcript 패키지가 차단될 수 있으므로 방어 로직 포함
  */
 async function fetchTranscript(videoId: string): Promise<{ text: string; lang: string }> {
-    const langs = ['ko', 'en']
+    // 언어 없이 → ko → en 순으로 시도 (자동감지가 가장 성공률 높음)
+    const attempts: Array<{ lang?: string; label: string }> = [
+        { label: 'auto' },
+        { lang: 'ko', label: 'ko' },
+        { lang: 'en', label: 'en' },
+    ]
 
-    for (const lang of langs) {
+    let lastError: Error | null = null
+
+    for (const attempt of attempts) {
         try {
-            const transcript = await YoutubeTranscript.fetchTranscript(videoId, { lang })
+            const options = attempt.lang ? { lang: attempt.lang } : undefined
+            const transcript = await YoutubeTranscript.fetchTranscript(videoId, options)
             if (transcript && transcript.length > 0) {
                 const text = transcript
                     .map(t => t.text)
@@ -56,39 +64,31 @@ async function fetchTranscript(videoId: string): Promise<{ text: string; lang: s
                     .replace(/&quot;/g, '"')
                     .replace(/\s+/g, ' ')
                     .trim()
-                return { text, lang }
+                console.log(`[YouTube] Transcript OK (${attempt.label}): ${text.length} chars`)
+                return { text, lang: attempt.label }
             }
-        } catch {
+        } catch (err) {
+            lastError = err instanceof Error ? err : new Error(String(err))
+            console.error(`[YouTube] Transcript attempt (${attempt.label}) failed:`, lastError.message)
             continue
         }
     }
 
-    // 언어 지정 없이 시도 (자동생성 자막)
-    try {
-        const transcript = await YoutubeTranscript.fetchTranscript(videoId)
-        if (transcript && transcript.length > 0) {
-            const text = transcript
-                .map(t => t.text)
-                .join(' ')
-                .replace(/\[음악\]/g, '')
-                .replace(/\[Music\]/g, '')
-                .replace(/\s+/g, ' ')
-                .trim()
-            return { text, lang: 'auto' }
-        }
-    } catch (err) {
-        // youtube-transcript 패키지 차단 감지
-        const msg = err instanceof Error ? err.message : String(err)
-        if (msg.includes('Too Many Requests') || msg.includes('429') || msg.includes('403')) {
-            throw new Error('RATE_LIMITED')
-        }
-        if (msg.includes('Could not get') || msg.includes('disabled')) {
-            throw new Error('NO_TRANSCRIPT')
-        }
-        throw new Error('FETCH_FAILED')
-    }
+    // 모든 시도 실패 → 에러 분류
+    const msg = lastError?.message || ''
+    console.error(`[YouTube] All transcript attempts failed. Last error:`, msg)
 
-    throw new Error('NO_TRANSCRIPT')
+    if (msg.includes('Too Many Requests') || msg.includes('429') || msg.includes('captcha') || msg.includes('solving a captcha')) {
+        throw new Error('RATE_LIMITED')
+    }
+    if (msg.includes('No transcripts') || msg.includes('disabled') || msg.includes('not available')) {
+        throw new Error('NO_TRANSCRIPT')
+    }
+    if (msg.includes('no longer available') || msg.includes('unavailable')) {
+        throw new Error('NO_TRANSCRIPT')
+    }
+    // 알 수 없는 에러지만 서버 문제일 가능성 높음
+    throw new Error('FETCH_FAILED')
 }
 
 /**
