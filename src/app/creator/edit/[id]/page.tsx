@@ -56,6 +56,8 @@ export default function CreatorEditPage() {
     const [summaryLoading, setSummaryLoading] = useState(false)
     const [uploading, setUploading] = useState(false)
     const [dragOver, setDragOver] = useState(false)
+    const [youtubeUrl, setYoutubeUrl] = useState('')
+    const [youtubeLoading, setYoutubeLoading] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     // ── 목소리 학습 ──
@@ -794,7 +796,7 @@ export default function CreatorEditPage() {
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                {src.processing_status === 'processing' ? <span>⏳</span> : src.processing_status === 'failed' ? <span>❌</span> : (() => { const ext = src.title?.split('.').pop()?.toLowerCase(); const iconMap: Record<string, string> = { pdf: '/file-icons/pdf.png', hwp: '/file-icons/hwp.png', docx: '/file-icons/docx.png', doc: '/file-icons/doc.png', ppt: '/file-icons/ppt.png', pptx: '/file-icons/ppt.png', txt: '/file-icons/txt.png' }; const iconSrc = ext ? iconMap[ext] : null; return iconSrc ? <img src={iconSrc} alt={ext} style={{ width: 28, height: 28, objectFit: 'contain' }} /> : <span>📁</span> })()}
+                                                {src.processing_status === 'processing' ? <span>⏳</span> : src.processing_status === 'failed' ? <span>❌</span> : src.source_type === 'youtube' ? <span style={{ fontSize: 22 }}>🎥</span> : (() => { const ext = src.title?.split('.').pop()?.toLowerCase(); const iconMap: Record<string, string> = { pdf: '/file-icons/pdf.png', hwp: '/file-icons/hwp.png', docx: '/file-icons/docx.png', doc: '/file-icons/doc.png', ppt: '/file-icons/ppt.png', pptx: '/file-icons/ppt.png', txt: '/file-icons/txt.png' }; const iconSrc = ext ? iconMap[ext] : null; return iconSrc ? <img src={iconSrc} alt={ext} style={{ width: 28, height: 28, objectFit: 'contain' }} /> : <span>📁</span> })()}
                                                 <div>
                                                     <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{src.title}</div>
                                                     <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
@@ -868,6 +870,77 @@ export default function CreatorEditPage() {
                                 ))}
                             </div>
                         )}
+                    </div>
+
+                    {/* ── 🎥 유튜브 URL 학습 ── */}
+                    <div style={styles.card}>
+                        <label style={{ ...styles.label, marginBottom: 4, fontSize: 15 }}>🎥 유튜브 URL 학습</label>
+                        <p style={styles.hint}>유튜브 영상 URL을 입력하면 자막을 자동 추출하여 AI가 학습합니다</p>
+
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+                            <input
+                                type="url"
+                                placeholder="https://youtube.com/watch?v=..."
+                                value={youtubeUrl}
+                                onChange={e => setYoutubeUrl(e.target.value)}
+                                disabled={youtubeLoading}
+                                style={{
+                                    flex: 1, padding: '12px 14px', borderRadius: 12,
+                                    border: '1.5px solid #e5e7eb', fontSize: 14,
+                                    outline: 'none', transition: 'border 0.2s',
+                                    background: youtubeLoading ? '#f9fafb' : '#fff',
+                                }}
+                                onFocus={e => e.currentTarget.style.borderColor = '#ef4444'}
+                                onBlur={e => e.currentTarget.style.borderColor = '#e5e7eb'}
+                            />
+                            <button
+                                onClick={async () => {
+                                    if (!youtubeUrl.trim() || youtubeLoading) return
+                                    // 간단한 유튜브 URL 검증
+                                    if (!youtubeUrl.includes('youtube.com') && !youtubeUrl.includes('youtu.be')) {
+                                        setToast({ type: 'error', message: '올바른 YouTube URL을 입력해주세요.' })
+                                        return
+                                    }
+                                    setYoutubeLoading(true)
+                                    try {
+                                        const res = await fetch('/api/creator/knowledge/youtube', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ url: youtubeUrl, mentorId }),
+                                        })
+                                        const data = await res.json()
+                                        if (!res.ok) {
+                                            setToast({ type: 'error', message: data.error || '유튜브 학습에 실패했습니다.' })
+                                        } else {
+                                            setToast({ type: 'success', message: `🎥 "${data.title}" 학습 완료! (${data.chunksProcessed}개 청크)` })
+                                            setYoutubeUrl('')
+                                            // 파일 목록 새로고침
+                                            const listRes = await fetch(`/api/creator/knowledge/list?mentorId=${mentorId}`)
+                                            const listData = await listRes.json()
+                                            if (listData.sources) setKnowledgeSources(listData.sources)
+                                        }
+                                    } catch {
+                                        setToast({ type: 'error', message: '네트워크 오류가 발생했습니다.' })
+                                    } finally {
+                                        setYoutubeLoading(false)
+                                    }
+                                }}
+                                disabled={youtubeLoading || !youtubeUrl.trim()}
+                                style={{
+                                    padding: '12px 20px', borderRadius: 12,
+                                    border: 'none', cursor: youtubeLoading || !youtubeUrl.trim() ? 'not-allowed' : 'pointer',
+                                    background: youtubeLoading || !youtubeUrl.trim() ? '#d1d5db' : '#ef4444',
+                                    color: '#fff', fontSize: 14, fontWeight: 700,
+                                    whiteSpace: 'nowrap' as const,
+                                    transition: 'all 0.2s',
+                                }}
+                            >
+                                {youtubeLoading ? '⏳ 학습 중...' : '학습하기'}
+                            </button>
+                        </div>
+                        <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>
+                            자막이 있는 유튜브 영상만 학습 가능합니다 · Shorts도 지원
+                        </div>
                     </div>
 
                     {/* ── 🎙️ 내 목소리 학습 ── */}
