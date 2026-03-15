@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useRouter, useParams } from 'next/navigation'
 import { convertWebmToWav, needsConversion } from '@/lib/audio-convert'
+import { extractVideoId, extractYoutubeTranscript } from '@/lib/youtube-client'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MENTOR_IMAGES } from '@/domains/mentor/constants'
@@ -897,20 +898,27 @@ export default function CreatorEditPage() {
                             <button
                                 onClick={async () => {
                                     if (!youtubeUrl.trim() || youtubeLoading) return
-                                    if (!youtubeUrl.includes('youtube.com') && !youtubeUrl.includes('youtu.be')) {
+                                    const videoId = extractVideoId(youtubeUrl)
+                                    if (!videoId) {
                                         setToast({ type: 'error', message: '올바른 YouTube URL을 입력해주세요.' })
                                         return
                                     }
                                     setYoutubeLoading(true)
                                     setYoutubeStep(1)
-                                    // 단계별 텍스트 자동 전환 (서버 처리 중 체감 속도용)
-                                    const stepTimer1 = setTimeout(() => setYoutubeStep(2), 5000)
-                                    const stepTimer2 = setTimeout(() => setYoutubeStep(3), 12000)
                                     try {
+                                        // 1~2단계: 브라우저에서 CORS 프록시로 자막 직접 추출
+                                        const result = await extractYoutubeTranscript(videoId, (step) => setYoutubeStep(step))
+                                        // 3단계: 추출한 텍스트를 서버로 전송 (서버는 정제+임베딩만)
+                                        setYoutubeStep(3)
                                         const res = await fetch('/api/creator/knowledge/youtube', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ url: youtubeUrl, mentorId }),
+                                            body: JSON.stringify({
+                                                url: youtubeUrl,
+                                                mentorId,
+                                                transcript: result.text,
+                                                title: result.title,
+                                            }),
                                         })
                                         const data = await res.json()
                                         if (!res.ok) {
@@ -922,11 +930,9 @@ export default function CreatorEditPage() {
                                             const listData = await listRes.json()
                                             if (listData.sources) setKnowledgeSources(listData.sources)
                                         }
-                                    } catch {
-                                        setToast({ type: 'error', message: '네트워크 오류가 발생했습니다.' })
+                                    } catch (err) {
+                                        setToast({ type: 'error', message: err instanceof Error ? err.message : '유튜브 학습에 실패했습니다.' })
                                     } finally {
-                                        clearTimeout(stepTimer1)
-                                        clearTimeout(stepTimer2)
                                         setYoutubeLoading(false)
                                         setYoutubeStep(0)
                                     }
