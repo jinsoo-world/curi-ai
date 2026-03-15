@@ -245,14 +245,14 @@ export async function POST(req: NextRequest) {
             }
 
             await admin.from('knowledge_sources')
-                .update({ processing_status: 'failed' })
+                .delete()
                 .eq('id', source.id)
             return NextResponse.json({ error: userMessage }, { status: 400 })
         }
 
         if (rawText.length < 50) {
             await admin.from('knowledge_sources')
-                .update({ processing_status: 'failed' })
+                .delete()
                 .eq('id', source.id)
             return NextResponse.json({ error: '영상 내용이 너무 짧아 학습에 적합하지 않습니다.' }, { status: 400 })
         }
