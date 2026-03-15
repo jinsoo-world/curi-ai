@@ -1033,20 +1033,28 @@ export default function CreatorCreatePage() {
                                         setYoutubeLoading(true)
                                         setYoutubeStep(1)
                                         try {
-                                            // 1~2단계: 브라우저에서 CORS 프록시로 자막 직접 추출
-                                            const result = await extractYoutubeTranscript(videoId, (step) => setYoutubeStep(step))
-                                            // 3단계: 추출한 텍스트를 서버로 전송
-                                            setYoutubeStep(3)
+                                            // 1단계: 브라우저에서 자막 추출 시도
+                                            let transcript = ''
+                                            let ytTitle = ''
+                                            try {
+                                                const result = await extractYoutubeTranscript(videoId, (s) => setYoutubeStep(s))
+                                                transcript = result.text
+                                                ytTitle = result.title
+                                            } catch {
+                                                console.log('[YouTube] Client extraction failed, server fallback')
+                                            }
+                                            // 2~3단계: 서버로 전송
+                                            setYoutubeStep(2)
                                             const res = await fetch('/api/creator/knowledge/youtube', {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify({
                                                     url: youtubeUrl,
                                                     mentorId: mid,
-                                                    transcript: result.text,
-                                                    title: result.title,
+                                                    ...(transcript ? { transcript, title: ytTitle } : {}),
                                                 }),
                                             })
+                                            setYoutubeStep(3)
                                             const data = await res.json()
                                             if (!res.ok) {
                                                 setError(data.error || '유튜브 학습에 실패했습니다.')
