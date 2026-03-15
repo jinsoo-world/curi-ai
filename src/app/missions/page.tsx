@@ -128,7 +128,7 @@ export default function MissionsPage() {
         if (sharing || missionStatus.sharesToday >= 3) return
 
         // 공유 창 열기
-        const shareText = '큐리 AI에서 나만의 AI 멘토를 만들어보세요! 🤖'
+        const shareText = '큐리 AI에서 나만의 AI를 만들어보세요! 🤖'
         const shareUrl = inviteLink
 
         try {
@@ -785,9 +785,9 @@ export default function MissionsPage() {
                                         const shareParams = {
                                             objectType: 'feed' as const,
                                             content: {
-                                                title: '큐리 AI - 나만의 AI 멘토',
-                                                description: '24시간 대화할 수 있는 AI 멘토를 만나보세요! 🤖✨',
-                                                imageUrl: 'https://www.curi-ai.com/icons/icon-512x512.png',
+                                                title: '큐리 AI - 나만의 AI를 만들어보세요!',
+                                                description: '24시간 대화하고, 나만의 AI도 직접 만들 수 있어요 🤖✨',
+                                                imageUrl: 'https://www.curi-ai.com/og-image.png',
                                                 link: { mobileWebUrl: inviteLink, webUrl: inviteLink },
                                             },
                                             buttons: [
