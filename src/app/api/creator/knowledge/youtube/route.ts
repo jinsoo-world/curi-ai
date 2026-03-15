@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { generateEmbedding, splitIntoChunks } from '@/domains/knowledge/embedding'
-import { YoutubeTranscript } from 'youtube-transcript'
 import { GoogleGenAI } from '@google/genai'
 
 export const dynamic = 'force-dynamic'
@@ -31,64 +30,183 @@ function extractVideoId(url: string): string | null {
     }
 }
 
+// HTML 엔티티 디코딩
+function decodeEntities(text: string): string {
+    return text
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&apos;/g, "'")
+        .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+        .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+}
+
 /**
- * YouTube 영상 자막 가져오기
- * youtube-transcript 패키지가 차단될 수 있으므로 방어 로직 포함
+ * YouTube InnerTube API로 자막 트랙 목록 가져오기
+ * youtube-transcript 패키지 대신 직접 호출 (서버 IP 차단 우회)
  */
-async function fetchTranscript(videoId: string): Promise<{ text: string; lang: string }> {
-    // 언어 없이 → ko → en 순으로 시도 (자동감지가 가장 성공률 높음)
-    const attempts: Array<{ lang?: string; label: string }> = [
-        { label: 'auto' },
-        { lang: 'ko', label: 'ko' },
-        { lang: 'en', label: 'en' },
-    ]
+async function getCaptionTracks(videoId: string): Promise<Array<{ baseUrl: string; languageCode: string; name: string }>> {
+    // Method 1: InnerTube API (Android 클라이언트 — IP 차단 우회 효과)
+    try {
+        const res = await fetch('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'com.google.android.youtube/19.29.37 (Linux; U; Android 14)',
+            },
+            body: JSON.stringify({
+                context: {
+                    client: {
+                        clientName: 'ANDROID',
+                        clientVersion: '19.29.37',
+                    },
+                },
+                videoId,
+            }),
+        })
 
-    let lastError: Error | null = null
-
-    for (const attempt of attempts) {
-        try {
-            const options = attempt.lang ? { lang: attempt.lang } : undefined
-            const transcript = await YoutubeTranscript.fetchTranscript(videoId, options)
-            if (transcript && transcript.length > 0) {
-                const text = transcript
-                    .map(t => t.text)
-                    .join(' ')
-                    .replace(/\[음악\]/g, '')
-                    .replace(/\[Music\]/g, '')
-                    .replace(/\[박수\]/g, '')
-                    .replace(/\[Applause\]/g, '')
-                    .replace(/&amp;/g, '&')
-                    .replace(/&lt;/g, '<')
-                    .replace(/&gt;/g, '>')
-                    .replace(/&#39;/g, "'")
-                    .replace(/&quot;/g, '"')
-                    .replace(/\s+/g, ' ')
-                    .trim()
-                console.log(`[YouTube] Transcript OK (${attempt.label}): ${text.length} chars`)
-                return { text, lang: attempt.label }
+        if (res.ok) {
+            const data = await res.json()
+            const tracks = data?.captions?.playerCaptionsTracklistRenderer?.captionTracks
+            if (Array.isArray(tracks) && tracks.length > 0) {
+                console.log(`[YouTube] InnerTube: found ${tracks.length} caption tracks`)
+                return tracks.map((t: { baseUrl: string; languageCode: string; name?: { simpleText?: string } }) => ({
+                    baseUrl: t.baseUrl,
+                    languageCode: t.languageCode,
+                    name: t.name?.simpleText || t.languageCode,
+                }))
             }
-        } catch (err) {
-            lastError = err instanceof Error ? err : new Error(String(err))
-            console.error(`[YouTube] Transcript attempt (${attempt.label}) failed:`, lastError.message)
-            continue
+            console.log('[YouTube] InnerTube: no caption tracks found')
+        } else {
+            console.log(`[YouTube] InnerTube: HTTP ${res.status}`)
+        }
+    } catch (err) {
+        console.error('[YouTube] InnerTube error:', err instanceof Error ? err.message : err)
+    }
+
+    // Method 2: 웹 페이지에서 파싱
+    try {
+        const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+            },
+        })
+        const html = await res.text()
+
+        // captcha 체크
+        if (html.includes('class="g-recaptcha"')) {
+            console.error('[YouTube] CAPTCHA detected! Server IP is blocked.')
+            throw new Error('RATE_LIMITED')
+        }
+
+        // ytInitialPlayerResponse에서 자막 정보 파싱
+        const match = html.match(/var ytInitialPlayerResponse\s*=\s*(\{.+?\});/)
+        if (match) {
+            try {
+                const playerData = JSON.parse(match[1])
+                const tracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks
+                if (Array.isArray(tracks) && tracks.length > 0) {
+                    console.log(`[YouTube] WebPage: found ${tracks.length} caption tracks`)
+                    return tracks.map((t: { baseUrl: string; languageCode: string; name?: { simpleText?: string } }) => ({
+                        baseUrl: t.baseUrl,
+                        languageCode: t.languageCode,
+                        name: t.name?.simpleText || t.languageCode,
+                    }))
+                }
+            } catch {
+                console.error('[YouTube] WebPage: JSON parse failed')
+            }
+        }
+        console.log('[YouTube] WebPage: no caption tracks found in page source')
+    } catch (err) {
+        if (err instanceof Error && err.message === 'RATE_LIMITED') throw err
+        console.error('[YouTube] WebPage error:', err instanceof Error ? err.message : err)
+    }
+
+    return []
+}
+
+/**
+ * 자막 트랙 URL에서 텍스트 추출
+ */
+async function fetchTranscriptFromUrl(baseUrl: string): Promise<string> {
+    const res = await fetch(baseUrl, {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+    })
+    if (!res.ok) throw new Error(`Transcript fetch failed: ${res.status}`)
+    const xml = await res.text()
+
+    // XML에서 텍스트 추출 (두 가지 형식 지원)
+    const texts: string[] = []
+
+    // 형식 1: <text start="..." dur="...">내용</text>
+    const textRegex = /<text[^>]*>([^<]*)<\/text>/g
+    let m
+    while ((m = textRegex.exec(xml)) !== null) {
+        const t = decodeEntities(m[1]).trim()
+        if (t) texts.push(t)
+    }
+
+    // 형식 2: <p t="..." d="..."><s>내용</s></p>
+    if (texts.length === 0) {
+        const pRegex = /<p\s+t="\d+"\s+d="\d+"[^>]*>([\s\S]*?)<\/p>/g
+        while ((m = pRegex.exec(xml)) !== null) {
+            const inner = m[1]
+            const sRegex = /<s[^>]*>([^<]*)<\/s>/g
+            let combined = ''
+            let s
+            while ((s = sRegex.exec(inner)) !== null) {
+                combined += s[1]
+            }
+            if (!combined) combined = inner.replace(/<[^>]+>/g, '')
+            const t = decodeEntities(combined).trim()
+            if (t) texts.push(t)
         }
     }
 
-    // 모든 시도 실패 → 에러 분류
-    const msg = lastError?.message || ''
-    console.error(`[YouTube] All transcript attempts failed. Last error:`, msg)
+    return texts.join(' ')
+}
 
-    if (msg.includes('Too Many Requests') || msg.includes('429') || msg.includes('captcha') || msg.includes('solving a captcha')) {
-        throw new Error('RATE_LIMITED')
-    }
-    if (msg.includes('No transcripts') || msg.includes('disabled') || msg.includes('not available')) {
+/**
+ * YouTube 영상 자막 가져오기 — InnerTube API 직접 호출
+ */
+async function fetchTranscript(videoId: string): Promise<{ text: string; lang: string }> {
+    const tracks = await getCaptionTracks(videoId)
+
+    if (tracks.length === 0) {
         throw new Error('NO_TRANSCRIPT')
     }
-    if (msg.includes('no longer available') || msg.includes('unavailable')) {
+
+    console.log(`[YouTube] Available tracks:`, tracks.map(t => `${t.languageCode}(${t.name})`).join(', '))
+
+    // 우선순위: ko → en → 첫 번째 트랙
+    const preferred = tracks.find(t => t.languageCode === 'ko')
+        || tracks.find(t => t.languageCode === 'en')
+        || tracks[0]
+
+    console.log(`[YouTube] Using track: ${preferred.languageCode}`)
+
+    const rawText = await fetchTranscriptFromUrl(preferred.baseUrl)
+
+    const cleaned = rawText
+        .replace(/\[음악\]/g, '')
+        .replace(/\[Music\]/g, '')
+        .replace(/\[박수\]/g, '')
+        .replace(/\[Applause\]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+
+    if (!cleaned || cleaned.length < 10) {
         throw new Error('NO_TRANSCRIPT')
     }
-    // 알 수 없는 에러지만 서버 문제일 가능성 높음
-    throw new Error('FETCH_FAILED')
+
+    console.log(`[YouTube] Transcript OK (${preferred.languageCode}): ${cleaned.length} chars`)
+    return { text: cleaned, lang: preferred.languageCode }
 }
 
 /**
