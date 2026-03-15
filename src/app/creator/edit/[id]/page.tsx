@@ -58,6 +58,7 @@ export default function CreatorEditPage() {
     const [dragOver, setDragOver] = useState(false)
     const [youtubeUrl, setYoutubeUrl] = useState('')
     const [youtubeLoading, setYoutubeLoading] = useState(false)
+    const [youtubeStep, setYoutubeStep] = useState(0) // 0=idle, 1=자막추출, 2=정제, 3=임베딩
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     // ── 목소리 학습 ──
@@ -896,12 +897,15 @@ export default function CreatorEditPage() {
                             <button
                                 onClick={async () => {
                                     if (!youtubeUrl.trim() || youtubeLoading) return
-                                    // 간단한 유튜브 URL 검증
                                     if (!youtubeUrl.includes('youtube.com') && !youtubeUrl.includes('youtu.be')) {
                                         setToast({ type: 'error', message: '올바른 YouTube URL을 입력해주세요.' })
                                         return
                                     }
                                     setYoutubeLoading(true)
+                                    setYoutubeStep(1)
+                                    // 단계별 텍스트 자동 전환 (서버 처리 중 체감 속도용)
+                                    const stepTimer1 = setTimeout(() => setYoutubeStep(2), 5000)
+                                    const stepTimer2 = setTimeout(() => setYoutubeStep(3), 12000)
                                     try {
                                         const res = await fetch('/api/creator/knowledge/youtube', {
                                             method: 'POST',
@@ -914,7 +918,6 @@ export default function CreatorEditPage() {
                                         } else {
                                             setToast({ type: 'success', message: `🎥 "${data.title}" 학습 완료! (${data.chunksProcessed}개 청크)` })
                                             setYoutubeUrl('')
-                                            // 파일 목록 새로고침
                                             const listRes = await fetch(`/api/creator/knowledge/list?mentorId=${mentorId}`)
                                             const listData = await listRes.json()
                                             if (listData.sources) setKnowledgeSources(listData.sources)
@@ -922,7 +925,10 @@ export default function CreatorEditPage() {
                                     } catch {
                                         setToast({ type: 'error', message: '네트워크 오류가 발생했습니다.' })
                                     } finally {
+                                        clearTimeout(stepTimer1)
+                                        clearTimeout(stepTimer2)
                                         setYoutubeLoading(false)
+                                        setYoutubeStep(0)
                                     }
                                 }}
                                 disabled={youtubeLoading || !youtubeUrl.trim()}
@@ -938,9 +944,39 @@ export default function CreatorEditPage() {
                                 {youtubeLoading ? '⏳ 학습 중...' : '학습하기'}
                             </button>
                         </div>
-                        <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>
-                            자막이 있는 유튜브 영상만 학습 가능합니다 · Shorts도 지원
-                        </div>
+
+                        {/* 단계별 진행 상태 */}
+                        {youtubeLoading ? (
+                            <div style={{
+                                marginTop: 12, padding: '14px 16px', borderRadius: 12,
+                                background: 'linear-gradient(135deg, #fef3c7 0%, #fff7ed 100%)',
+                                border: '1px solid #fde68a',
+                            }}>
+                                {[
+                                    { step: 1, icon: '📡', text: '영상 자막을 읽어오는 중...' },
+                                    { step: 2, icon: '🧠', text: 'AI가 핵심 지식을 정리하는 중...' },
+                                    { step: 3, icon: '💾', text: '장기 기억 장치에 저장하는 중...' },
+                                ].map(({ step, icon, text }) => (
+                                    <div key={step} style={{
+                                        display: 'flex', alignItems: 'center', gap: 8,
+                                        padding: '4px 0', fontSize: 13,
+                                        color: youtubeStep >= step ? '#92400e' : '#d1d5db',
+                                        fontWeight: youtubeStep === step ? 700 : 400,
+                                        transition: 'all 0.3s',
+                                    }}>
+                                        <span>{youtubeStep > step ? '✅' : youtubeStep === step ? icon : '⬜'}</span>
+                                        <span>{`${step}단계: ${text}`}</span>
+                                        {youtubeStep === step && (
+                                            <span style={{ animation: 'pulse 1.5s infinite', fontSize: 11 }}>⏳</span>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>
+                                자막이 있는 유튜브 영상만 학습 가능합니다 · Shorts도 지원
+                            </div>
+                        )}
                     </div>
 
                     {/* ── 🎙️ 내 목소리 학습 ── */}
