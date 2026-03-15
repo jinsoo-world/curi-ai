@@ -197,7 +197,6 @@ export async function POST(req: NextRequest) {
             .from('knowledge_sources')
             .select('id')
             .eq('mentor_id', mentorId)
-            .eq('source_type', 'youtube')
             .like('original_url', `%${videoId}%`)
             .limit(1)
 
@@ -214,17 +213,17 @@ export async function POST(req: NextRequest) {
             .insert({
                 mentor_id: mentorId,
                 title: `🎥 ${title}`,
-                source_type: 'youtube',
+                source_type: 'text',  // DB에 'youtube' enum 없으므로 'text' 사용
                 original_url: url,
-                processing_status: 'yt_step1',  // 단계별 상태
+                processing_status: 'processing',
                 file_size: 0,
             })
             .select('id')
             .single()
 
         if (insertErr || !source) {
-            console.error('[YouTube] Insert error:', insertErr)
-            return NextResponse.json({ error: '학습 시작에 실패했습니다.' }, { status: 500 })
+            console.error('[YouTube] Insert error:', insertErr?.message || insertErr)
+            return NextResponse.json({ error: `학습 시작에 실패했습니다: ${insertErr?.message || '알 수 없는 오류'}` }, { status: 500 })
         }
 
         // ═══ Step 1: 자막 추출 ═══
@@ -259,12 +258,10 @@ export async function POST(req: NextRequest) {
         }
 
         // ═══ Step 2: Gemini로 자막 정제 ═══
-        await updateProgress(admin, source.id, 'yt_step2')
         const refinedText = await refineTranscriptWithGemini(rawText)
         console.log(`[YouTube] Step2 refined: ${rawText.length} → ${refinedText.length} chars`)
 
         // ═══ Step 3: 청크 분할 + 임베딩 ═══
-        await updateProgress(admin, source.id, 'yt_step3')
         const chunks = splitIntoChunks(refinedText)
         console.log(`[YouTube] Step3 chunks: ${chunks.length}`)
         let successCount = 0
