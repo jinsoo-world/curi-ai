@@ -27,8 +27,15 @@ export async function POST(request: NextRequest) {
 
         // voice_id: 요청에서 직접 또는 기본 다국어 음성
         const voiceId = requestVoiceId || 'pFZP5JQG7iQjIQuC4Bku'  // ElevenLabs 기본 여성 한국어 음성 (Lily)
+        const isClonedVoice = !!requestVoiceId  // 클론 음성 여부
 
-        console.log('[TTS] ElevenLabs 요청:', { voiceId, textLen: trimmedText.length })
+        console.log('[TTS] ElevenLabs 요청:', { voiceId, isClonedVoice, textLen: trimmedText.length })
+
+        // 클론 음성: 고품질 모델 + 높은 유사도 / 기본 음성: 빠른 모델
+        const modelId = isClonedVoice ? 'eleven_multilingual_v2' : 'eleven_turbo_v2_5'
+        const voiceSettings = isClonedVoice
+            ? { stability: 0.65, similarity_boost: 0.90, style: 0.0, use_speaker_boost: true }
+            : { stability: 0.5, similarity_boost: 0.75, style: 0.0, use_speaker_boost: true }
 
         // ElevenLabs TTS Streaming API
         const ttsRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`, {
@@ -40,13 +47,8 @@ export async function POST(request: NextRequest) {
             },
             body: JSON.stringify({
                 text: trimmedText,
-                model_id: 'eleven_turbo_v2_5',
-                voice_settings: {
-                    stability: 0.5,
-                    similarity_boost: 0.75,
-                    style: 0.0,
-                    use_speaker_boost: true,
-                },
+                model_id: modelId,
+                voice_settings: voiceSettings,
             }),
         })
 
