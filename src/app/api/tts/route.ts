@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
         // 클론 음성: 고품질 모델 + 높은 유사도 / 기본 음성: 빠른 모델
         const modelId = isClonedVoice ? 'eleven_multilingual_v2' : 'eleven_turbo_v2_5'
         const voiceSettings = isClonedVoice
-            ? { stability: 0.65, similarity_boost: 0.90, style: 0.0, use_speaker_boost: true }
-            : { stability: 0.5, similarity_boost: 0.75, style: 0.0, use_speaker_boost: true }
+            ? { stability: 0.75, similarity_boost: 0.85, style: 0.25, use_speaker_boost: true }
+            : { stability: 0.75, similarity_boost: 0.85, style: 0.25, use_speaker_boost: true }
 
         // ElevenLabs TTS Streaming API
         const ttsRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`, {
