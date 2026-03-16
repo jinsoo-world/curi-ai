@@ -919,6 +919,7 @@ export default function ChatPage() {
                             isStreaming={isStreaming}
                             autoTTS={autoTTS}
                             systemPrompt={mentor?.system_prompt}
+                            voiceId={mentor.voice_id}
                         />
 
 
