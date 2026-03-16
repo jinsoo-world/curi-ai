@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify({
                 text: trimmedText,
                 model_id: modelId,
+                language_code: 'ko',
                 voice_settings: voiceSettings,
             }),
         })
