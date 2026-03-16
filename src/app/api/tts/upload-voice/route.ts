@@ -50,8 +50,9 @@ export async function POST(request: NextRequest) {
             .getPublicUrl(fileName)
         const publicUrl = urlData.publicUrl
 
-        // 2. DB에서 기존 voice_id 확인 → 있으면 clone 스킵!
+        // 2. DB에서 기존 voice_id 확인 → 있으면 ElevenLabs에서 삭제 후 재클론
         let voiceId: string | null = null
+        const ELEVENLABS_KEY = process.env.ELEVENLABS_API_KEY
 
         if (mentorId && mentorId !== 'temp') {
             const { data: mentor } = await admin
@@ -60,31 +61,23 @@ export async function POST(request: NextRequest) {
                 .eq('id', mentorId)
                 .single()
 
-            if (mentor?.voice_id) {
-                // ⚡ 이미 클론된 voice_id 존재 → clone 안 함!
-                console.log('[Voice Upload] ✅ 기존 voice_id 재사용:', mentor.voice_id)
-                voiceId = mentor.voice_id
-
-                // voice_sample_url만 업데이트
-                await admin
-                    .from('mentors')
-                    .update({ voice_sample_url: publicUrl })
-                    .eq('id', mentorId)
-
-                return NextResponse.json({
-                    url: publicUrl,
-                    path: uploadData.path,
-                    voiceId,
-                    reused: true, // 프론트에서 "기존 목소리 유지" 표시용
-                })
+            if (mentor?.voice_id && ELEVENLABS_KEY) {
+                // 🗑️ 기존 클론 삭제 → 새 녹음으로 재클론
+                console.log('[Voice Upload] 🗑️ 기존 voice_id 삭제:', mentor.voice_id)
+                try {
+                    await fetch(`https://api.elevenlabs.io/v1/voices/${mentor.voice_id}`, {
+                        method: 'DELETE',
+                        headers: { 'xi-api-key': ELEVENLABS_KEY },
+                    })
+                } catch (e) {
+                    console.error('[Voice Upload] 기존 voice 삭제 실패 (무시):', e)
+                }
             }
         }
 
-        // 3. voice_id 없으면 → ElevenLabs Add Voice (1회 clone)
-        const ELEVENLABS_KEY = process.env.ELEVENLABS_API_KEY
-
+        // 3. 새 녹음으로 ElevenLabs Add Voice (클론)
         if (ELEVENLABS_KEY) {
-            console.log('[Voice Upload] 🔄 ElevenLabs Add Voice (첫 클로닝)')
+            console.log('[Voice Upload] 🔄 ElevenLabs Add Voice (새 클로닝)')
             try {
                 const elForm = new FormData()
                 elForm.append('name', `curi-${mentorId}-${Date.now()}`)
