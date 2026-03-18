@@ -286,28 +286,53 @@ export default function MentorHeader({
         ? mentor.avatar_url
         : `https://www.curi-ai.com${mentor.avatar_url || '/icons/icon-512x512.png'}`
 
-    const handleKakaoShare = () => {
+    const handleKakaoShare = async () => {
         const w = window as any
-        if (w.Kakao && !w.Kakao.isInitialized()) {
-            w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
-        }
-        if (w.Kakao && w.Kakao.isInitialized()) {
-            w.Kakao.Share.sendDefault({
-                objectType: 'feed',
-                content: {
-                    title: shareTitle,
-                    description: shareText,
-                    imageUrl: shareImageUrl,
-                    link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
-                },
-                buttons: [
-                    { title: '대화하기', link: { mobileWebUrl: shareUrl, webUrl: shareUrl } },
-                ],
-            })
-        } else {
-            navigator.clipboard.writeText(shareUrl).then(() => {
+        // SDK 동적 로딩 보장 (미션 페이지와 동일 패턴)
+        const ensureKakao = (): Promise<boolean> => new Promise((resolve) => {
+            if (w.Kakao) {
+                if (!w.Kakao.isInitialized()) w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
+                resolve(true)
+                return
+            }
+            const s = document.createElement('script')
+            s.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js'
+            s.onload = () => {
+                if (w.Kakao && !w.Kakao.isInitialized()) w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
+                resolve(!!w.Kakao)
+            }
+            s.onerror = () => resolve(false)
+            document.head.appendChild(s)
+        })
+
+        try {
+            const ready = await ensureKakao()
+            if (ready) {
+                const shareParams = {
+                    objectType: 'feed' as const,
+                    content: {
+                        title: shareTitle,
+                        description: shareText,
+                        imageUrl: shareImageUrl,
+                        link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
+                    },
+                    buttons: [
+                        { title: '대화하기', link: { mobileWebUrl: shareUrl, webUrl: shareUrl } },
+                    ],
+                }
+                if (w.Kakao?.Share?.sendDefault) {
+                    w.Kakao.Share.sendDefault(shareParams)
+                } else if (w.Kakao?.Link?.sendDefault) {
+                    w.Kakao.Link.sendDefault(shareParams)
+                }
+            } else {
+                await navigator.clipboard.writeText(shareUrl)
                 alert('링크가 복사되었습니다. 카카오톡에 붙여넣기 해주세요!')
-            })
+            }
+        } catch (e) {
+            console.error('[Kakao Share]', e)
+            try { await navigator.clipboard.writeText(shareUrl) } catch {}
+            alert('링크가 복사되었습니다. 카카오톡에 붙여넣기 해주세요!')
         }
         setShowShareMenu(false)
     }
