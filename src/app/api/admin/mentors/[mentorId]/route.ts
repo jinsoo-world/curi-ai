@@ -37,8 +37,8 @@ export async function GET(
             .not('user_id', 'is', null)
             .order('last_message_at', { ascending: false, nullsFirst: false })
 
-        // 각 세션의 최근 메시지 가져오기
-        const enrichedMemberSessions = await Promise.all(
+        // 각 세션의 메시지 가져오기
+        const allMemberSessions = await Promise.all(
             (memberSessions || []).map(async (session) => {
                 const { data: msgs } = await supabase
                     .from('messages')
@@ -52,6 +52,8 @@ export async function GET(
                 }
             })
         )
+        // 빈 세션(메시지 0개) 필터링
+        const enrichedMemberSessions = allMemberSessions.filter(s => s.messages.length > 0)
 
         // === ② 비회원 대화 내역 (guest_chat_logs) ===
         const { data: guestLogs } = await supabase
