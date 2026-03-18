@@ -32,7 +32,7 @@ export async function GET(
 }
 
 // 🔒 음성 삭제 시 voice_id/voice_sample_url 초기화 + ElevenLabs Voice 삭제
-const ALLOWED_FIELDS = ['voice_id', 'voice_sample_url']
+const ALLOWED_FIELDS = ['voice_id', 'voice_sample_url', 'voice_test_url']
 
 export async function PATCH(
     request: NextRequest,

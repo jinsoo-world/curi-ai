@@ -220,6 +220,9 @@ export default function CreatorEditPage() {
             if (m.voice_id) {
                 setClonedVoiceId(m.voice_id)
             }
+            if (m.voice_test_url) {
+                setVoiceTestAudioUrl(m.voice_test_url)
+            }
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : '멘토 정보를 불러올 수 없습니다.')
         } finally {
@@ -1153,6 +1156,14 @@ export default function CreatorEditPage() {
                                                     setVoiceTestAudioUrl(data.audioUrl)
                                                     setToast({ type: 'success', message: '🔊 음성 생성 완료!' })
                                                     setTimeout(() => setToast(null), 3000)
+                                                    // 💾 생성된 테스트 음성 DB에 저장
+                                                    try {
+                                                        await fetch(`/api/mentors/${params?.id}`, {
+                                                            method: 'PATCH',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ voice_test_url: data.audioUrl }),
+                                                        })
+                                                    } catch { /* silent */ }
                                                 } else {
                                                     const errMsg = data.error || '음성 생성 실패'
                                                     console.error('[Voice Test] 실패:', errMsg)
