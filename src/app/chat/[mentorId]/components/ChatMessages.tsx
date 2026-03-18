@@ -486,6 +486,7 @@ export default function ChatMessages({
         <>
             {messages.map((msg, idx) => {
                 const isUser = msg.role === 'user'
+                const isVoiceCall = msg.id.startsWith('voice-')
                 const isEmptyAssistant = !isUser && !msg.content
                 const prevMsg = idx > 0 ? messages[idx - 1] : null
                 const showDateSeparator = msg.createdAt && !isSameDay(prevMsg?.createdAt, msg.createdAt)
@@ -595,7 +596,22 @@ export default function ChatMessages({
                                     {isEmptyAssistant ? (
                                         <TypingIndicator />
                                     ) : isUser ? (
-                                        <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>
+                                        <span style={{ whiteSpace: 'pre-wrap', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            {isVoiceCall && (
+                                                <span style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    width: 20,
+                                                    height: 20,
+                                                    borderRadius: '50%',
+                                                    background: 'rgba(255,255,255,0.25)',
+                                                    flexShrink: 0,
+                                                    fontSize: 11,
+                                                }}>📞</span>
+                                            )}
+                                            {msg.content}
+                                        </span>
                                     ) : msg.content.includes('__GUEST_LOGIN_CTA__') ? (
                                         <>
                                             <MarkdownContent content={msg.content.replace('__GUEST_LOGIN_CTA__', '')} />
@@ -669,7 +685,14 @@ export default function ChatMessages({
                                         color: '#b0b8c1',
                                         marginTop: 4,
                                         textAlign: isUser ? 'right' : 'left',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                        justifyContent: isUser ? 'flex-end' : 'flex-start',
                                     }}>
+                                        {isVoiceCall && (
+                                            <span style={{ color: '#22c55e', fontWeight: 500 }}>📞 음성통화</span>
+                                        )}
                                         {timeStr}
                                     </div>
                                 )}

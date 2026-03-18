@@ -1033,6 +1033,7 @@ export default function ChatPage() {
                                     mentorId: params?.mentorId,
                                     sessionId,
                                     messages: chatMessages,
+                                    inputMethod: 'voice_call',
                                 }),
                                 signal, // ⚡ 끼어들기 시 LLM 스트림 즉시 중단
                             })
