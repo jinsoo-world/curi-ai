@@ -4,11 +4,16 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import { MentorHeader, ChatMessages, ChatInput, SuggestionCards, ElevenLabsWidget, VoiceCallOverlay } from './components'
-import ChatSidebar from './components/ChatSidebar'
-import MarketingConsentPopup from '@/components/MarketingConsentPopup'
+import nextDynamic from 'next/dynamic'
+import { MentorHeader, ChatMessages, ChatInput, SuggestionCards } from './components'
 import { MAX_DAILY_FREE_GUEST } from '@/domains/chat/constants'
 import type { ChatMessage } from './components'
+
+// 무거운 컴포넌트 — 필요할 때만 로드 (초기 번들에서 제외)
+const ChatSidebar = nextDynamic(() => import('./components/ChatSidebar'), { ssr: false })
+const ElevenLabsWidget = nextDynamic(() => import('./components').then(m => ({ default: m.ElevenLabsWidget })), { ssr: false })
+const VoiceCallOverlay = nextDynamic(() => import('./components').then(m => ({ default: m.VoiceCallOverlay })), { ssr: false })
+const MarketingConsentPopup = nextDynamic(() => import('@/components/MarketingConsentPopup'), { ssr: false })
 
 interface MentorData {
     id: string
