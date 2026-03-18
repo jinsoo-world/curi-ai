@@ -773,8 +773,9 @@ export default function ChatPage() {
                     aiContentLength={aiContentLength}
                     isReportNew={isReportNew}
                     pdfExportEnabled={mentor.pdf_export_enabled || false}
-                    exportLabel={isEbookBot ? '원고(PDF) 다운로드' : '리포트'}
+                    exportLabel={isEbookBot ? '전자책 원고 보기' : '리포트'}
                     exportMode={isEbookBot ? 'raw' : 'report'}
+                    onEditRequest={isEbookBot ? (prefill: string) => setInput(prefill) : undefined}
                 />
 
                 {/* Messages Area */}

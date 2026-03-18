@@ -1,8 +1,10 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { generateEbookHtml } from './ebookTemplate'
+
+const EbookViewer = lazy(() => import('./EbookViewer'))
 
 interface MentorHeaderProps {
     mentor: {
@@ -35,6 +37,8 @@ interface MentorHeaderProps {
     exportLabel?: string
     /** 내보내기 모드: 'report'=AI요약, 'raw'=전자책 원고 조립 */
     exportMode?: 'report' | 'raw'
+    /** 수정 요청 시 채팅 입력란 프리필 */
+    onEditRequest?: (prefill: string) => void
 }
 
 /* ── SVG 아이콘 ── */
@@ -95,6 +99,7 @@ export default function MentorHeader({
     pdfExportEnabled = false,
     exportLabel = '리포트',
     exportMode = 'report',
+    onEditRequest,
 }: MentorHeaderProps) {
     const router = useRouter()
     const [showShareMenu, setShowShareMenu] = useState(false)
@@ -103,10 +108,11 @@ export default function MentorHeader({
     const [exportData, setExportData] = useState<{ report: any; markdown: string; meta: any } | null>(null)
     const [exportError, setExportError] = useState<string | null>(null)
     const [ebookData, setEbookData] = useState<{ ebook: any; meta: any } | null>(null)
+    const [showEbookViewer, setShowEbookViewer] = useState(false)
 
     const handleExport = async () => {
         if (exportMode === 'raw') {
-            // 전자책 봇: API로 전체 대화 기반 원고 조립
+            // 전자책 봇: API로 전체 대화 기반 원고 조립 → 풀스크린 뷰어
             if (!sessionId || sessionId.startsWith('guest-')) return
             setShowExportModal(true)
             setExportLoading(true)
@@ -125,6 +131,8 @@ export default function MentorHeader({
                 }
                 const data = await res.json()
                 setEbookData(data)
+                setShowExportModal(false) // 모달 닫고
+                setShowEbookViewer(true)  // 풀스크린 뷰어 열기
             } catch (e: any) {
                 setExportError(e.message)
             } finally {
@@ -295,6 +303,7 @@ export default function MentorHeader({
 
 
     return (
+        <>
         <header style={{
             display: 'flex',
             alignItems: 'center',
@@ -928,5 +937,19 @@ export default function MentorHeader({
                 }
             `}</style>
         </header>
+
+            {/* 전자책 풀스크린 뷰어 */}
+            {showEbookViewer && ebookData && (
+                <Suspense fallback={null}>
+                    <EbookViewer
+                        ebook={ebookData.ebook}
+                        meta={ebookData.meta}
+                        sessionId={sessionId || undefined}
+                        onClose={() => setShowEbookViewer(false)}
+                        onEditRequest={onEditRequest}
+                    />
+                </Suspense>
+            )}
+        </>
     )
 }
