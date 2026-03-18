@@ -4,6 +4,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { GoogleGenAI } from '@google/genai'
 import { GEMINI_MODEL } from './constants'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 function getAI() {
     return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
@@ -15,12 +16,14 @@ function getAI() {
  * 호출 타이밍:
  * - message_count가 2, 4, 8일 때 실행 (초반에 자주, 이후 간격 넓힘)
  * - fire-and-forget으로 호출하여 응답 속도에 영향 없음
+ * - RLS 우회를 위해 내부에서 adminClient 사용
  */
 export async function extractAndUpdateTopic(
-    db: SupabaseClient,
+    _db: SupabaseClient,
     sessionId: string,
     messageCount: number,
 ): Promise<void> {
+    const db = createAdminClient()  // RLS 우회 — service_role 사용
     try {
         // 주제 업데이트 시점: 초반 6턴까지 매번, 이후 4턴마다
         const shouldUpdate =
