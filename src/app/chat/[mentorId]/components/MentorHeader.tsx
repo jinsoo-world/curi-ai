@@ -456,17 +456,18 @@ export default function MentorHeader({
                     />
                 )}
 
-                <div>
+                <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{
                         fontWeight: 700,
-                        fontSize: 16,
+                        fontSize: 15,
                         color: '#1e293b',
                         lineHeight: 1.3,
                         display: 'flex',
                         alignItems: 'center',
                         gap: 6,
+                        overflow: 'hidden',
                     }}>
-                        {mentor.name}
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mentor.name}</span>
                         <span style={{
                             fontSize: 11,
                             fontWeight: 700,
@@ -476,19 +477,23 @@ export default function MentorHeader({
                             borderRadius: 5,
                             letterSpacing: '0.03em',
                             lineHeight: 1.4,
+                            flexShrink: 0,
                         }}>AI</span>
                     </div>
                     <div style={{
-                        fontSize: 13,
+                        fontSize: 12,
                         color: '#94a3b8',
                         lineHeight: 1.3,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
                     }}>
                         {mentor.title}
                     </div>
                 </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                 {isStreaming && (
                     <div className="header-streaming-badge" style={{
                         fontSize: 13,
