@@ -9,6 +9,7 @@ import type { MentorCardData } from '@/domains/mentor'
 import NotificationBanner from './NotificationBanner'
 import AppSidebar from '@/components/AppSidebar'
 import CreditClaimWrapper from './CreditClaimWrapper'
+import MentorMatchHero from './MentorMatchHero'
 import { Suspense } from 'react'
 
 export const metadata: Metadata = {
@@ -197,6 +198,9 @@ export default async function MentorsPage() {
 
                 {/* ─── Notification Banner ─── */}
                 <NotificationBanner />
+
+                {/* ─── AI 멘토 매칭 히어로 ─── */}
+                <MentorMatchHero />
 
                 {/* ─── Mentor Grid ─── */}
                 <main>

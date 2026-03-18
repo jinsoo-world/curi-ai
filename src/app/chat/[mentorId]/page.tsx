@@ -541,6 +541,18 @@ export default function ChatPage() {
         }
     }, [isStreaming, lastSentAt, messages, mentorId, sessionId, fetchSuggestions])
 
+    // ───── 멘토 매칭에서 전달된 auto_msg 자동 전송 ─────
+    const autoMsgSent = useRef(false)
+    useEffect(() => {
+        if (autoMsgSent.current) return
+        const autoMsg = searchParams.get('auto_msg')
+        if (!autoMsg || !mentor || !sessionId) return
+        autoMsgSent.current = true
+        const decoded = decodeURIComponent(autoMsg)
+        window.history.replaceState(null, '', `/chat/${mentorId}?session=${sessionId}`)
+        setTimeout(() => sendMessage(decoded), 500)
+    }, [mentor, sessionId, searchParams, mentorId, sendMessage])
+
     // ───── 마수동 2차 터치: 대화 3회 후 미동의 유저에게 팝업 ─────
     useEffect(() => {
         if (marketingChecked) return
