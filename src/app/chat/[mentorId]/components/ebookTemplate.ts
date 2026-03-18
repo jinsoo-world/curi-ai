@@ -4,7 +4,7 @@
 interface EbookPage {
     pageNum: number
     title: string
-    imageGuide: string
+    imageGuide?: string
     content: string
     quote?: string
     cta?: string
@@ -16,7 +16,7 @@ interface EbookData {
         title: string
         subtitle: string
         author: string
-        imageGuide: string
+        imageGuide?: string
     }
     pages: EbookPage[]
 }
@@ -247,7 +247,8 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string): string 
     `
 }
 
-function escapeHtml(text: string): string {
+function escapeHtml(text: string | undefined): string {
+    if (!text) return ''
     return text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
