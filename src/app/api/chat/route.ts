@@ -37,10 +37,10 @@ export async function POST(req: Request) {
         const FREE_TRIAL_END = new Date('2026-04-30T23:59:59+09:00')
         const isFreeTrial = new Date() < FREE_TRIAL_END
 
-        // ── 🔒 비로그인 사용자 대화 제한 (무료 체험 기간에는 스킵) ──
-        if (!user && !isFreeTrial && typeof guestMessageCount === 'number' && guestMessageCount >= MAX_DAILY_FREE_GUEST) {
+        // ── 🔒 비로그인 사용자 대화 제한 (isFreeTrial 무관, 항상 적용) ──
+        if (!user && typeof guestMessageCount === 'number' && guestMessageCount >= MAX_DAILY_FREE_GUEST) {
             const encoder = new TextEncoder()
-            const guestLimitMsg = '오늘의 무료 체험 대화를 다 사용하셨어요! 🙏\n로그인하시면 하루 20회까지 대화할 수 있어요 ✨'
+            const guestLimitMsg = '무료 체험 대화를 모두 사용했어요! 😊\n\n회원가입하면 매일 무제한 대화 + 10,000원 크레딧을 드려요 🎁'
             const limitStream = new ReadableStream({
                 start(controller) {
                     controller.enqueue(
@@ -52,6 +52,33 @@ export async function POST(req: Request) {
             return new Response(limitStream, {
                 headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
             })
+        }
+
+        // ── 🛡️ IP 기반 하드캡 (비회원 시크릿 모드 악용 방지, 일 15회) ──
+        if (!user && ip) {
+            const adminDb = createAdminClient()
+            const today = new Date().toISOString().split('T')[0]
+            const { count } = await adminDb
+                .from('guest_chat_logs')
+                .select('*', { count: 'exact', head: true })
+                .eq('ip_address', ip)
+                .gte('created_at', `${today}T00:00:00`)
+
+            if (count && count >= 15) {
+                const encoder = new TextEncoder()
+                const ipLimitMsg = '오늘 이 기기에서의 무료 체험이 종료되었습니다.\n회원가입하시면 계속 대화할 수 있어요! 🚀'
+                const limitStream = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue(
+                            encoder.encode(`data: ${JSON.stringify({ text: ipLimitMsg, done: true, fullResponse: ipLimitMsg, guestLimit: true })}\n\n`)
+                        )
+                        controller.close()
+                    },
+                })
+                return new Response(limitStream, {
+                    headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
+                })
+            }
         }
 
         // ── 🛡️ 위기상담 가드레일 (AI 호출 전에 차단) ──

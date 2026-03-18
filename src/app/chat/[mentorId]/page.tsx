@@ -724,7 +724,15 @@ export default function ChatPage() {
                     mentorEmoji={mentorEmoji}
                     isStreaming={isStreaming}
                     onNewChat={handleNewChat}
-                    onCall={mentor.voice_sample_url ? () => setVoiceCallOpen(true) : undefined}
+                    onCall={mentor.voice_sample_url ? () => {
+                        if (!isLoggedIn) {
+                            if (confirm('📞 전화 기능은 회원 전용이에요!\n\n가입하면 AI 멘토와 직접 통화할 수 있어요.\n지금 무료 회원가입하시겠어요?')) {
+                                window.location.href = '/login'
+                            }
+                            return
+                        }
+                        setVoiceCallOpen(true)
+                    } : undefined}
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                     isSidebarOpen={isSidebarOpen}
                 />
@@ -855,7 +863,15 @@ export default function ChatPage() {
                                     </button>
                                     {mentor.voice_sample_url && (
                                     <button
-                                        onClick={() => setVoiceCallOpen(true)}
+                                        onClick={() => {
+                                            if (!isLoggedIn) {
+                                                if (confirm('📞 전화 기능은 회원 전용이에요!\n\n가입하면 AI 멘토와 직접 통화할 수 있어요.\n지금 무료 회원가입하시겠어요?')) {
+                                                    window.location.href = '/login'
+                                                }
+                                                return
+                                            }
+                                            setVoiceCallOpen(true)
+                                        }}
                                         style={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -997,6 +1013,31 @@ export default function ChatPage() {
                                 ✦ {q}
                             </button>
                         ))}
+                    </div>
+                )}
+
+                {/* 비회원 대화 카운터 */}
+                {!isLoggedIn && (
+                    <div style={{
+                        display: 'flex', justifyContent: 'center', padding: '6px 0',
+                    }}>
+                        <div style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            padding: '5px 14px', borderRadius: 20,
+                            background: getGuestMessageCount() >= 2 
+                                ? 'linear-gradient(135deg, #fef3c7, #fde68a)' 
+                                : 'rgba(0,0,0,0.04)',
+                            fontSize: 12, color: getGuestMessageCount() >= 2 ? '#92400e' : '#94a3b8',
+                            fontWeight: 600, transition: 'all 0.3s',
+                        }}>
+                            <span>{getGuestMessageCount() >= 2 ? '⚡' : '💬'}</span>
+                            무료 체험 {getGuestMessageCount()}/3회
+                            {getGuestMessageCount() >= 2 && (
+                                <span style={{ fontSize: 11, fontWeight: 500 }}>
+                                    · <a href="/login" style={{ color: '#d97706', textDecoration: 'underline' }}>가입하면 무제한</a>
+                                </span>
+                            )}
+                        </div>
                     </div>
                 )}
 

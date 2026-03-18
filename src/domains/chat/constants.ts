@@ -16,7 +16,7 @@ export const GEMINI_CONFIG = {
 export const MAX_DAILY_FREE = 20
 
 /** 비로그인 사용자 일일 대화 제한 */
-export const MAX_DAILY_FREE_GUEST = 10
+export const MAX_DAILY_FREE_GUEST = 3
 
 /** 유저 메모리 조회 제한 */
 export const MAX_MEMORY_ITEMS = 10
