@@ -134,8 +134,15 @@ export default function ChatPage() {
     const [showLoginGate, setShowLoginGate] = useState(false)
     const [showVoiceSample, setShowVoiceSample] = useState(false)
     const voiceSampleAudioRef = useRef<HTMLAudioElement | null>(null)
+    const [isReportNew, setIsReportNew] = useState(false)
+    const reportShownRef = useRef(false)
 
     const [userName, setUserName] = useState('')
+
+    // AI 답변 총 글자수 계산
+    const aiContentLength = messages
+        .filter(m => m.role === 'assistant')
+        .reduce((sum, m) => sum + (m.content?.length || 0), 0)
 
     // 프로필에서 autoTTS 설정 + 유저 이름 로드
     useEffect(() => {
@@ -569,6 +576,27 @@ export default function ChatPage() {
         setTimeout(() => sendMessage(decoded), 500)
     }, [mentor, sessionId, searchParams, mentorId, sendMessage])
 
+    // ───── 리포트 안내: AI 답변 1500자 넘으면 인챗 안내 카드 1회 삽입 ─────
+    useEffect(() => {
+        if (reportShownRef.current) return
+        if (!isLoggedIn || !sessionId || sessionId.startsWith('guest-')) return
+        if (aiContentLength >= 1500 && !isStreaming) {
+            reportShownRef.current = true
+            setIsReportNew(true)
+            setMessages(prev => [
+                ...prev,
+                {
+                    id: `report-prompt-${Date.now()}`,
+                    role: 'system' as const,
+                    content: '__REPORT_PROMPT__',
+                    createdAt: new Date().toISOString(),
+                },
+            ])
+            // 10초 후 NEW 뱃지 자동 해제
+            setTimeout(() => setIsReportNew(false), 10000)
+        }
+    }, [aiContentLength, isStreaming, isLoggedIn, sessionId])
+
     // ───── 마수동 2차 터치: 대화 3회 후 미동의 유저에게 팝업 ─────
     useEffect(() => {
         if (marketingChecked) return
@@ -736,7 +764,8 @@ export default function ChatPage() {
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                     isSidebarOpen={isSidebarOpen}
                     sessionId={sessionId}
-                    messageCount={messages.length}
+                    aiContentLength={aiContentLength}
+                    isReportNew={isReportNew}
                 />
 
                 {/* Messages Area */}

@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm'
 
 export interface ChatMessage {
     id: string
-    role: 'user' | 'assistant'
+    role: 'user' | 'assistant' | 'system'
     content: string
     createdAt?: string
 }
@@ -501,6 +501,38 @@ export default function ChatMessages({
     return (
         <>
             {messages.map((msg, idx) => {
+                // 시스템 메시지: 리포트 프롬프트 카드
+                if (msg.role === 'system' && msg.content === '__REPORT_PROMPT__') {
+                    return (
+                        <div key={msg.id} style={{
+                            display: 'flex', justifyContent: 'center',
+                            margin: '12px 0',
+                            animation: 'msgFadeIn 0.5s ease-out',
+                        }}>
+                            <div style={{
+                                background: 'linear-gradient(135deg, #eff6ff, #f0f9ff)',
+                                border: '1px solid #bfdbfe',
+                                borderRadius: 16,
+                                padding: '14px 20px',
+                                maxWidth: 360,
+                                textAlign: 'center',
+                            }}>
+                                <div style={{ fontSize: 20, marginBottom: 6 }}>📋</div>
+                                <div style={{ fontSize: 14, fontWeight: 600, color: '#1e40af', marginBottom: 4 }}>
+                                    대화가 꽤 쌓였네요!
+                                </div>
+                                <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>
+                                    지금까지 나눈 핵심 내용을 정리한<br />
+                                    <strong style={{ color: '#3b82f6' }}>AI 요약 리포트</strong>를 받아보세요
+                                </div>
+                                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
+                                    상단의 <strong>리포트</strong> 버튼을 눌러보세요 ↗
+                                </div>
+                            </div>
+                        </div>
+                    )
+                }
+
                 const isUser = msg.role === 'user'
                 const isVoiceCall = msg.id.startsWith('voice-')
                 const isEmptyAssistant = !isUser && !msg.content

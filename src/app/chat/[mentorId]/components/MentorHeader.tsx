@@ -24,8 +24,10 @@ interface MentorHeaderProps {
     isSidebarOpen?: boolean
     /** 현재 세션 ID (내보내기용) */
     sessionId?: string | null
-    /** 메시지 수 (내보내기 버튼 표시 조건) */
-    messageCount?: number
+    /** AI 답변 총 글자수 (리포트 활성화 기준 1500자) */
+    aiContentLength?: number
+    /** 리포트 버튼 처음 활성화 여부 (NEW 뱃지) */
+    isReportNew?: boolean
 }
 
 /* ── SVG 아이콘 ── */
@@ -81,7 +83,8 @@ export default function MentorHeader({
     onToggleSidebar,
     isSidebarOpen,
     sessionId,
-    messageCount = 0,
+    aiContentLength = 0,
+    isReportNew = false,
 }: MentorHeaderProps) {
     const router = useRouter()
     const [showShareMenu, setShowShareMenu] = useState(false)
@@ -384,33 +387,50 @@ export default function MentorHeader({
                     <span className="header-text-label">새 대화</span>
                 </button>
 
-                {/* 내보내기 버튼 — 로그인 세션 + 메시지 3개 이상일 때 */}
-                {sessionId && !sessionId.startsWith('guest-') && messageCount >= 3 && (
+                {/* 내보내기 버튼 — 로그인 세션 + AI 답변 1500자 이상 */}
+                {sessionId && !sessionId.startsWith('guest-') && aiContentLength >= 1500 && (
                     <button
                         onClick={handleExport}
                         aria-label="대화 리포트"
                         title="AI 요약 리포트"
                         style={{
-                            background: 'transparent',
-                            border: 'none',
+                            position: 'relative',
+                            background: isReportNew ? '#f0f9ff' : 'transparent',
+                            border: isReportNew ? '1px solid #bfdbfe' : 'none',
                             borderRadius: 10,
                             padding: '7px 12px',
                             fontSize: 14,
-                            color: '#64748b',
+                            color: isReportNew ? '#3b82f6' : '#64748b',
                             cursor: 'pointer',
-                            fontWeight: 500,
+                            fontWeight: isReportNew ? 600 : 500,
                             display: 'flex',
                             alignItems: 'center',
                             gap: 5,
-                            transition: 'background 0.15s',
+                            transition: 'all 0.3s',
+                            animation: isReportNew ? 'reportPulse 2s ease-in-out 3' : 'none',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#eff6ff' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = isReportNew ? '#f0f9ff' : 'transparent' }}
                     >
                         <ExportIcon />
                         <span className="header-text-label">리포트</span>
+                        {isReportNew && (
+                            <span style={{
+                                position: 'absolute', top: -4, right: -4,
+                                background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+                                color: '#fff', fontSize: 9, fontWeight: 700,
+                                padding: '1px 5px', borderRadius: 6,
+                                lineHeight: 1.5, letterSpacing: '0.05em',
+                            }}>NEW</span>
+                        )}
                     </button>
                 )}
+                <style>{`
+                    @keyframes reportPulse {
+                        0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+                        50% { box-shadow: 0 0 0 6px rgba(59,130,246,0.15); }
+                    }
+                `}</style>
 
                 {/* 공유하기 버튼 */}
                 <button
