@@ -4,7 +4,8 @@ import Script from 'next/script'
 import GoogleAnalytics from '@/components/GoogleAnalytics'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
-import CloverHunt from '@/components/CloverHunt'
+import dynamic from 'next/dynamic'
+const CloverHunt = dynamic(() => import('@/components/CloverHunt'), { loading: () => null })
 import './globals.css'
 
 const notoSansKr = Noto_Sans_KR({

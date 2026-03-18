@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import AppSidebar from '@/components/AppSidebar'
 import { createClient } from '@/lib/supabase/client'
 
@@ -245,7 +246,7 @@ export default function CloverStorePage() {
                                     overflow: 'hidden',
                                 }}>
                                     {item.image ? (
-                                        <img src={item.image} alt={item.brand} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                        <Image src={item.image} alt={item.brand} width={180} height={160} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                                     ) : item.emoji}
                                     {/* 할인 배지 */}
                                     <div style={{
@@ -400,7 +401,7 @@ export default function CloverStorePage() {
                         </button>
                         <div style={{ fontSize: 56, marginBottom: 12 }}>
                             {showPurchaseModal.image ? (
-                                <img src={showPurchaseModal.image} alt={showPurchaseModal.brand} style={{ width: 120, height: 120, objectFit: 'contain' }} />
+                                <Image src={showPurchaseModal.image} alt={showPurchaseModal.brand} width={120} height={120} style={{ objectFit: 'contain' }} />
                             ) : showPurchaseModal.emoji}
                         </div>
                         <h3 style={{ fontSize: 18, fontWeight: 700, color: '#18181b', marginBottom: 4 }}>

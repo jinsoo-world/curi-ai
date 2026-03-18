@@ -249,7 +249,7 @@ export default async function MentorsPage() {
                     <div style={{ maxWidth: 1000, margin: '0 auto' }}>
                         {/* 로고 + 회사명 */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-                            <img src="/logo.png" alt="큐리 AI" style={{ width: 28, height: 28, borderRadius: 6 }} />
+                            <Image src="/logo.png" alt="큐리 AI" width={28} height={28} style={{ borderRadius: 6 }} />
                             <span style={{ fontSize: 15, fontWeight: 700, color: '#374151' }}>큐리 AI</span>
                         </div>
 
