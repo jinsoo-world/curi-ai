@@ -58,8 +58,22 @@ export async function GET(
         const totalMessages = enrichedSessions.reduce((sum, s) => sum + (s.message_count || 0), 0)
         const mentorSet = new Set(enrichedSessions.map(s => (s.mentors as any)?.name).filter(Boolean))
 
+        // display_name 폴백: null이면 Auth 메타데이터 또는 이메일 앞부분 사용
+        let displayName = user.display_name
+        if (!displayName) {
+            try {
+                const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId)
+                displayName = authUser?.user_metadata?.full_name
+                    || authUser?.user_metadata?.name
+                    || (user.email ? user.email.split('@')[0] : null)
+                    || '(이름 없음)'
+            } catch {
+                displayName = user.email ? user.email.split('@')[0] : '(이름 없음)'
+            }
+        }
+
         return NextResponse.json({
-            user,
+            user: { ...user, display_name: displayName },
             sessions: enrichedSessions,
             stats: {
                 totalSessions,
