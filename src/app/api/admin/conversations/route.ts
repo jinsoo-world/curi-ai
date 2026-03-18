@@ -33,6 +33,7 @@ export async function GET() {
             user_messages: number
             assistant_messages: number
             stt_messages: number
+            voice_call_messages: number
             active_users: Set<string>
         }> = {}
 
@@ -44,7 +45,7 @@ export async function GET() {
             if (!dailyMap[date]) {
                 dailyMap[date] = {
                     date, total_sessions: 0, total_messages: 0,
-                    user_messages: 0, assistant_messages: 0, stt_messages: 0,
+                    user_messages: 0, assistant_messages: 0, stt_messages: 0, voice_call_messages: 0,
                     active_users: new Set(),
                 }
             }
@@ -59,7 +60,7 @@ export async function GET() {
                 if (date && !dailyMap[date]) {
                     dailyMap[date] = {
                         date, total_sessions: 0, total_messages: 0,
-                        user_messages: 0, assistant_messages: 0, stt_messages: 0,
+                        user_messages: 0, assistant_messages: 0, stt_messages: 0, voice_call_messages: 0,
                         active_users: new Set(),
                     }
                 }
@@ -69,6 +70,7 @@ export async function GET() {
             if (m.role === 'user') dailyMap[date].user_messages++
             if (m.role === 'assistant') dailyMap[date].assistant_messages++
             if (m.input_method === 'stt') dailyMap[date].stt_messages++
+            if (m.input_method === 'voice_call') dailyMap[date].voice_call_messages++
         })
 
         const dailyStats = Object.values(dailyMap)
@@ -138,12 +140,20 @@ export async function GET() {
             .eq('input_method', 'stt')
             .gte('created_at', weekAgo)
 
+        const { count: voiceCallCount } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('role', 'user')
+            .eq('input_method', 'voice_call')
+            .gte('created_at', weekAgo)
+
         return NextResponse.json({
             dailyStats,
             recentSessions: enrichedSessions,
             inputRatio: {
                 text: textCount || 0,
                 stt: sttCount || 0,
+                voice_call: voiceCallCount || 0,
             },
         })
     } catch (error) {
@@ -151,7 +161,7 @@ export async function GET() {
         return NextResponse.json({
             dailyStats: [],
             recentSessions: [],
-            inputRatio: { text: 0, stt: 0 },
+            inputRatio: { text: 0, stt: 0, voice_call: 0 },
         })
     }
 }

@@ -337,8 +337,8 @@ export default function MentorsPage() {
                                         📚 지식 {m.knowledge_count}개
                                     </span>
                                     {m.has_voice && (
-                                        <span style={{ fontSize: 11, color: '#64748b', background: '#f1f5f9', borderRadius: 6, padding: '2px 8px' }}>
-                                            🎙️ 음성
+                                        <span style={{ fontSize: 11, color: '#16a34a', background: '#f0fdf4', borderRadius: 6, padding: '2px 8px', fontWeight: 600 }}>
+                                            📞 전화지원
                                         </span>
                                     )}
                                     {m.has_greeting && (

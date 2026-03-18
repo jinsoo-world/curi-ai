@@ -25,6 +25,7 @@ interface ConversationData {
     inputRatio: {
         text: number
         stt: number
+        voice_call: number
     }
 }
 
@@ -80,9 +81,9 @@ export default function ConversationsPage() {
     const totalMsgsWeek = stats.reduce((s, d) => s + (d.total_messages || 0), 0)
     const totalSessionsWeek = stats.reduce((s, d) => s + (d.total_sessions || 0), 0)
     const avgMsgPerSession = totalSessionsWeek ? (totalMsgsWeek / totalSessionsWeek).toFixed(1) : '0'
-    const sttRatio = data.inputRatio ? (
-        (data.inputRatio.stt / Math.max(data.inputRatio.stt + data.inputRatio.text, 1)) * 100
-    ).toFixed(0) : '0'
+    const voiceCallCount = data.inputRatio?.voice_call || 0
+    const sttCount = data.inputRatio?.stt || 0
+    const totalVoice = voiceCallCount + sttCount
 
     const formatRelative = (d: string) => {
         if (!d) return '—'
@@ -154,7 +155,7 @@ export default function ConversationsPage() {
                             { label: '주간 세션', value: totalSessionsWeek, icon: '📱', color: '#3b82f6' },
                             { label: '주간 메시지', value: totalMsgsWeek, icon: '💬', color: '#7c3aed' },
                             { label: '세션당 평균', value: avgMsgPerSession, icon: '📊', color: '#d97706' },
-                            { label: 'STT 사용률', value: `${sttRatio}%`, icon: '🎤', color: '#16a34a' },
+                            { label: '전화 콜 수', value: `${voiceCallCount}건`, icon: '📞', color: '#16a34a' },
                         ].map((c, i) => (
                             <div key={i} style={{
                                 background: '#fff',
@@ -265,13 +266,19 @@ export default function ConversationsPage() {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                         <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6' }} />
                                         <span style={{ fontSize: 13, color: '#64748b' }}>
-                                            텍스트 <b style={{ color: '#1e293b' }}>{data.inputRatio?.text?.toLocaleString() || 0}</b>
+                                            ✏️ 텍스트 <b style={{ color: '#1e293b' }}>{data.inputRatio?.text?.toLocaleString() || 0}</b>
                                         </span>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                         <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a' }} />
                                         <span style={{ fontSize: 13, color: '#64748b' }}>
-                                            음성(STT) <b style={{ color: '#1e293b' }}>{data.inputRatio?.stt?.toLocaleString() || 0}</b>
+                                            🎤 음성입력 <b style={{ color: '#1e293b' }}>{data.inputRatio?.stt?.toLocaleString() || 0}</b>
+                                        </span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f97316' }} />
+                                        <span style={{ fontSize: 13, color: '#64748b' }}>
+                                            📞 음성통화 <b style={{ color: '#1e293b' }}>{data.inputRatio?.voice_call?.toLocaleString() || 0}</b>
                                         </span>
                                     </div>
                                 </div>
