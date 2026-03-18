@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
+import ReactMarkdown from 'react-markdown'
 
 const MENTOR_IMAGES: Record<string, string> = {
     '열정진': '/mentors/passion-jjin.png',
@@ -91,6 +92,7 @@ export default function MentorDetailPage() {
 
     return (
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
+            <AdminMdStyle />
             {/* 뒤로 가기 */}
             <button onClick={() => router.push('/admin/mentors')} style={{
                 background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1', fontSize: 14, fontWeight: 600,
@@ -199,7 +201,9 @@ export default function MentorDetailPage() {
                                                 color: msg.role === 'user' ? '#fff' : '#1e293b',
                                                 fontSize: 13, lineHeight: 1.6, wordBreak: 'break-word',
                                             }}>
-                                                {msg.content}
+                                                {msg.role === 'user' ? msg.content : (
+                                                    <div className="admin-md"><ReactMarkdown>{msg.content}</ReactMarkdown></div>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -261,7 +265,7 @@ export default function MentorDetailPage() {
                                                     maxWidth: '75%', padding: '10px 14px', borderRadius: 12,
                                                     background: '#f1f5f9', color: '#1e293b', fontSize: 13, lineHeight: 1.6,
                                                 }}>
-                                                    {msg.ai_response}
+                                                    <div className="admin-md"><ReactMarkdown>{msg.ai_response}</ReactMarkdown></div>
                                                 </div>
                                             </div>
                                             <div style={{ textAlign: 'center', fontSize: 10, color: '#cbd5e1', marginTop: 4 }}>
@@ -286,3 +290,20 @@ export default function MentorDetailPage() {
         </div>
     )
 }
+
+/* 어드민 마크다운 스타일 — 인라인 global */
+const AdminMdStyle = () => (
+    <style>{`
+        .admin-md p { margin: 0 0 6px; }
+        .admin-md p:last-child { margin: 0; }
+        .admin-md h1, .admin-md h2, .admin-md h3 { font-size: 14px; font-weight: 700; margin: 8px 0 4px; }
+        .admin-md ul, .admin-md ol { margin: 4px 0; padding-left: 18px; }
+        .admin-md li { margin: 2px 0; }
+        .admin-md strong { font-weight: 700; }
+        .admin-md em { font-style: italic; }
+        .admin-md hr { border: none; border-top: 1px solid #e2e8f0; margin: 8px 0; }
+        .admin-md code { background: #e2e8f0; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+        .admin-md pre { background: #1e293b; color: #e2e8f0; padding: 10px; border-radius: 8px; overflow-x: auto; font-size: 12px; }
+        .admin-md blockquote { border-left: 3px solid #6366f1; margin: 4px 0; padding: 4px 10px; color: #64748b; }
+    `}</style>
+)
