@@ -209,12 +209,40 @@ export async function POST(req: Request) {
 
                     // 완료 시 메시지 저장 (domains/chat)
                     const isGuestSession = !sessionId || sessionId.startsWith('guest-')
+                    console.log(`[Chat Save] sessionId=${sessionId}, isGuest=${isGuestSession}, hasResponse=${!!fullResponse}, responseLen=${fullResponse.length}`)
                     if (!isGuestSession && fullResponse && sessionId) {
-                        // 💾 메시지 저장은 admin client로 (RLS 우회 — 서버 백엔드 로직)
-                        const adminDb = createAdminClient()
-                        await saveUserMessage(adminDb, sessionId, lastUserMessage)
-                        await saveAssistantMessage(adminDb, sessionId, fullResponse)
-                        await updateSessionActivity(adminDb, sessionId, messages.length + 1)
+                        try {
+                            // 💾 메시지 저장은 admin client로 (RLS 우회 — 서버 백엔드 로직)
+                            const adminDb = createAdminClient()
+                            
+                            const { error: userMsgErr } = await adminDb.from('messages').insert({
+                                session_id: sessionId,
+                                role: 'user',
+                                content: lastUserMessage,
+                            })
+                            if (userMsgErr) console.error('[Chat Save] userMessage INSERT failed:', JSON.stringify(userMsgErr))
+                            else console.log('[Chat Save] userMessage saved OK')
+
+                            const { error: assistantMsgErr } = await adminDb.from('messages').insert({
+                                session_id: sessionId,
+                                role: 'assistant',
+                                content: fullResponse,
+                            })
+                            if (assistantMsgErr) console.error('[Chat Save] assistantMessage INSERT failed:', JSON.stringify(assistantMsgErr))
+                            else console.log('[Chat Save] assistantMessage saved OK')
+
+                            const { error: updateErr } = await adminDb
+                                .from('chat_sessions')
+                                .update({
+                                    message_count: messages.length + 1,
+                                    last_message_at: new Date().toISOString(),
+                                })
+                                .eq('id', sessionId)
+                            if (updateErr) console.error('[Chat Save] session update failed:', JSON.stringify(updateErr))
+                            else console.log('[Chat Save] session activity updated OK')
+                        } catch (saveErr) {
+                            console.error('[Chat Save] CRITICAL save error:', saveErr instanceof Error ? saveErr.message : saveErr)
+                        }
 
                         if (user) {
                             const dailyUsed = (userProfile as any)?.daily_free_used || 0
