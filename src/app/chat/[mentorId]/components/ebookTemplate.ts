@@ -113,18 +113,18 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string): string 
         // 인용구 (뷰어 스타일과 동일)
         const quoteHtml = page.quote ? `
             <div style="
-                margin: 28px 0;
-                padding: 18px 22px;
-                border-left: 4px solid #6366f1;
+                margin: 32px 0;
+                padding: 22px 26px;
+                border-left: 5px solid #6366f1;
                 background: linear-gradient(135deg, #eef2ff, #f8fafc);
                 border-radius: 0 8px 8px 0;
             ">
                 <p style="
-                    font-size: 13pt;
+                    font-size: 18pt;
                     color: #4338ca;
                     font-style: italic;
                     margin: 0;
-                    line-height: 1.7;
+                    line-height: 1.8;
                 ">💡 ${escapeHtml(page.quote)}</p>
             </div>
         ` : ''
@@ -132,15 +132,15 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string): string 
         // 체크리스트
         const checklistHtml = page.checklist?.length ? `
             <div style="
-                margin: 24px 0;
-                padding: 20px 24px;
+                margin: 28px 0;
+                padding: 24px 28px;
                 background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
                 border: 1px solid #86efac;
                 border-radius: 12px;
             ">
-                <p style="font-size: 11pt; font-weight: 700; color: #166534; margin: 0 0 12px 0;">✅ 당장 해야 할 첫 번째 미션</p>
+                <p style="font-size: 16pt; font-weight: 700; color: #166534; margin: 0 0 14px 0;">✅ 당장 해야 할 첫 번째 미션</p>
                 ${page.checklist.map(item => `
-                    <p style="font-size: 11pt; color: #15803d; margin: 8px 0; line-height: 1.6;">
+                    <p style="font-size: 16pt; color: #15803d; margin: 10px 0; line-height: 1.7;">
                         ☐ ${escapeHtml(item)}
                     </p>
                 `).join('')}
@@ -150,29 +150,29 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string): string 
         // CTA (뷰어 스타일과 동일)
         const ctaHtml = page.cta ? `
             <div style="
-                margin: 24px 0;
-                padding: 20px 24px;
+                margin: 28px 0;
+                padding: 24px 28px;
                 background: linear-gradient(135deg, #1e3a5f, #2563eb);
                 border-radius: 12px;
                 text-align: center;
             ">
                 <p style="
-                    font-size: 12pt;
+                    font-size: 18pt;
                     color: #ffffff;
                     font-weight: 700;
                     margin: 0;
-                    line-height: 1.6;
+                    line-height: 1.7;
                 ">${escapeHtml(page.cta)}</p>
             </div>
         ` : ''
 
-        // ★ 본문 콘텐츠: 뷰어 clamp(15-18px) ≈ 13pt, 줄간격 1.9
+        // ★ 본문 콘텐츠: 뷰어와 일치하도록 20pt로 확대
         const contentHtml = escapeHtml(page.content)
-            .replace(/\n\n/g, '</p><p style="margin: 0 0 24px 0; line-height: 1.9; font-size: 13pt; color: #334155;">')
+            .replace(/\n\n/g, '</p><p style="margin: 0 0 28px 0; line-height: 1.9; font-size: 20pt; color: #334155;">')
             .replace(/\n/g, '<br/>')
 
         return `
-            <div style="${pageBreak} padding: 40px 35px; min-height: 250mm; box-sizing: border-box; position: relative;">
+            <div style="${pageBreak} padding: 50px 40px; box-sizing: border-box; position: relative;">
                 <!-- 페이지 헤더 -->
                 <div style="
                     display: flex;
@@ -196,23 +196,23 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string): string 
                     ">Page ${page.pageNum}</span>
                 </div>
 
-                <!-- 섹션 제목: 뷰어 clamp(20-28px) ≈ 22pt -->
+                <!-- 섹션 제목 -->
                 <h2 style="
                     font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
-                    font-size: 22pt;
+                    font-size: 32pt;
                     font-weight: 700;
                     color: #0f172a;
-                    margin: 0 0 24px 0;
+                    margin: 0 0 28px 0;
                     line-height: 1.4;
                     word-break: keep-all;
                 ">${escapeHtml(page.title)}</h2>
 
-                <!-- 본문: 뷰어와 동일한 스타일 -->
+                <!-- 본문 -->
                 <p style="
                     font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
-                    margin: 0 0 24px 0;
+                    margin: 0 0 28px 0;
                     line-height: 1.9;
-                    font-size: 13pt;
+                    font-size: 20pt;
                     color: #334155;
                     word-break: keep-all;
                 ">${contentHtml}</p>
