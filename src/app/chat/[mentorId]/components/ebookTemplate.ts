@@ -1,5 +1,6 @@
 // 전자책 JSON → HTML 변환 템플릿
 // html2pdf.js에서 사용할 디자인된 HTML을 생성
+// ★ EbookViewer.tsx 스타일과 동일하게 맞춤
 
 interface EbookPage {
     pageNum: number
@@ -23,6 +24,7 @@ interface EbookData {
 
 /**
  * 전자책 JSON 데이터를 디자인된 HTML로 변환
+ * 뷰어(EbookViewer.tsx)와 동일한 스타일 적용
  */
 export function generateEbookHtml(ebook: EbookData, mentorName: string): string {
     const coverHtml = `
@@ -106,31 +108,19 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string): string 
         const isLastPage = idx === ebook.pages.length - 1
         const pageBreak = isLastPage ? '' : 'page-break-after: always;'
 
-        // 이미지 가이드 박스
-        const imageGuideHtml = page.imageGuide ? `
-            <div style="
-                margin: 16px 0;
-                padding: 14px 18px;
-                border: 2px dashed #cbd5e1;
-                border-radius: 8px;
-                background: #f8fafc;
-                text-align: center;
-            ">
-                <span style="font-size: 9pt; color: #94a3b8;">🖼️ ${escapeHtml(page.imageGuide)}</span>
-            </div>
-        ` : ''
+        // ★ imageGuide는 PDF에서 표시하지 않음 (뷰어와 동일)
 
-        // 인용구
+        // 인용구 (뷰어 스타일과 동일)
         const quoteHtml = page.quote ? `
             <div style="
-                margin: 20px 0;
+                margin: 24px 0;
                 padding: 16px 20px;
                 border-left: 4px solid #6366f1;
                 background: linear-gradient(135deg, #eef2ff, #f8fafc);
                 border-radius: 0 8px 8px 0;
             ">
                 <p style="
-                    font-size: 11pt;
+                    font-size: 12pt;
                     color: #4338ca;
                     font-style: italic;
                     margin: 0;
@@ -139,31 +129,31 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string): string 
             </div>
         ` : ''
 
-        // 체크리스트 (Page 5용)
+        // 체크리스트
         const checklistHtml = page.checklist?.length ? `
             <div style="
-                margin: 20px 0;
-                padding: 18px 22px;
+                margin: 24px 0;
+                padding: 20px 24px;
                 background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
                 border: 1px solid #86efac;
-                border-radius: 10px;
+                border-radius: 12px;
             ">
-                <p style="font-size: 11pt; font-weight: 700; color: #166534; margin: 0 0 10px 0;">✅ 당장 해야 할 첫 번째 미션</p>
+                <p style="font-size: 11pt; font-weight: 700; color: #166534; margin: 0 0 12px 0;">✅ 당장 해야 할 첫 번째 미션</p>
                 ${page.checklist.map(item => `
-                    <p style="font-size: 10.5pt; color: #15803d; margin: 6px 0; line-height: 1.6;">
+                    <p style="font-size: 11pt; color: #15803d; margin: 8px 0; line-height: 1.6;">
                         ☐ ${escapeHtml(item)}
                     </p>
                 `).join('')}
             </div>
         ` : ''
 
-        // CTA
+        // CTA (뷰어 스타일과 동일)
         const ctaHtml = page.cta ? `
             <div style="
-                margin: 20px 0;
-                padding: 18px 22px;
+                margin: 24px 0;
+                padding: 20px 24px;
                 background: linear-gradient(135deg, #1e3a5f, #2563eb);
-                border-radius: 10px;
+                border-radius: 12px;
                 text-align: center;
             ">
                 <p style="
@@ -176,55 +166,55 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string): string 
             </div>
         ` : ''
 
-        // 본문 콘텐츠 처리 (줄바꿈 → <br>)
+        // ★ 본문 콘텐츠: 뷰어와 동일한 글자 크기(15px=11.25pt → 11.5pt)와 줄간격(1.9)
         const contentHtml = escapeHtml(page.content)
-            .replace(/\n\n/g, '</p><p style="margin: 0 0 12px 0; line-height: 1.85; font-size: 10.5pt; color: #334155;">')
+            .replace(/\n\n/g, '</p><p style="margin: 0 0 18px 0; line-height: 1.9; font-size: 11.5pt; color: #334155;">')
             .replace(/\n/g, '<br/>')
 
         return `
-            <div style="${pageBreak} padding: 30px 25px; min-height: 250mm; box-sizing: border-box; position: relative;">
+            <div style="${pageBreak} padding: 36px 30px; min-height: 250mm; box-sizing: border-box; position: relative;">
                 <!-- 페이지 헤더 -->
                 <div style="
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    margin-bottom: 20px;
-                    padding-bottom: 10px;
+                    margin-bottom: 24px;
+                    padding-bottom: 12px;
                     border-bottom: 2px solid #e2e8f0;
                 ">
-                    <span style="font-size: 8pt; color: #94a3b8; font-family: 'Pretendard', sans-serif;">
+                    <span style="font-size: 8pt; color: #94a3b8; font-family: 'Pretendard', sans-serif; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                         ${escapeHtml(ebook.cover.title)}
                     </span>
                     <span style="
                         font-size: 8pt;
                         color: #ffffff;
-                        background: #2563eb;
-                        padding: 2px 8px;
+                        background: #6366f1;
+                        padding: 3px 12px;
                         border-radius: 10px;
                         font-family: 'Pretendard', sans-serif;
+                        font-weight: 600;
                     ">Page ${page.pageNum}</span>
                 </div>
 
-                <!-- 섹션 제목 -->
+                <!-- 섹션 제목: 뷰어와 동일 크기 -->
                 <h2 style="
                     font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
-                    font-size: 18pt;
+                    font-size: 20pt;
                     font-weight: 700;
                     color: #0f172a;
-                    margin: 0 0 16px 0;
+                    margin: 0 0 20px 0;
                     line-height: 1.4;
                     word-break: keep-all;
                 ">${escapeHtml(page.title)}</h2>
 
-                ${imageGuideHtml}
-
-                <!-- 본문 -->
+                <!-- 본문: 뷰어와 동일한 스타일 -->
                 <p style="
                     font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
-                    margin: 0 0 12px 0;
-                    line-height: 1.85;
-                    font-size: 10.5pt;
+                    margin: 0 0 18px 0;
+                    line-height: 1.9;
+                    font-size: 11.5pt;
                     color: #334155;
+                    word-break: keep-all;
                 ">${contentHtml}</p>
 
                 ${quoteHtml}
