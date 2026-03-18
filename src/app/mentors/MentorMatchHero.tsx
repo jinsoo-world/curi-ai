@@ -144,12 +144,12 @@ export default function MentorMatchHero() {
                     fontSize: 22, fontWeight: 800, color: '#1e293b',
                     margin: '0 0 6px', lineHeight: 1.4,
                 }}>
-                    🎯 고민 한 줄이면 AI가 멘토를 찾아드려요
+                    🎯 고민 한 줄이면 딱 맞는 AI를 찾아드려요
                 </h2>
                 <p style={{
                     fontSize: 14, color: '#64748b', margin: '0 0 20px',
                 }}>
-                    어떤 고민이든 적어보세요. 3초 안에 딱 맞는 멘토를 매칭해드릴게요.
+                    어떤 고민이든 적어보세요. 3초 안에 딱 맞는 AI를 매칭해드릴게요.
                 </p>
 
                 {/* 입력 영역 */}
@@ -207,7 +207,7 @@ export default function MentorMatchHero() {
                                     }} />
                                     매칭 중...
                                 </span>
-                            ) : '멘토 찾기 ✦'}
+                            ) : 'AI 찾기 ✦'}
                         </button>
                     </div>
                 )}
