@@ -1,8 +1,39 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, lazy, Suspense } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { generateEbookHtml } from './ebookTemplate'
+
+/* 로딩 단계별 문구 컴포넌트 */
+function EbookLoadingSteps({ isRaw }: { isRaw: boolean }) {
+    const [step, setStep] = useState(0)
+    const steps = isRaw
+        ? ['대화 내용을 분석하고 있어요...', '목차를 구성하고 있어요...', '표지를 디자인하고 있어요...', '본문을 작성하고 있어요...', '거의 다 됐어요! 마무리 중...']
+        : ['대화를 분석하고 있어요...', '핵심 인사이트를 추출 중...', '리포트를 구성하고 있어요...']
+    useEffect(() => {
+        const timer = setInterval(() => setStep(s => Math.min(s + 1, steps.length - 1)), 3000)
+        return () => clearInterval(timer)
+    }, [steps.length])
+    return (
+        <div>
+            <p style={{ color: '#4f46e5', fontSize: 15, fontWeight: 600, margin: 0, animation: 'fadeInUp 0.4s ease' }} key={step}>
+                {steps[step]}
+            </p>
+            <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 12 }}>
+                {steps.map((_, i) => (
+                    <div key={i} style={{
+                        width: i <= step ? 20 : 8, height: 4, borderRadius: 2,
+                        background: i <= step ? '#6366f1' : '#e0e7ff',
+                        transition: 'all 0.3s ease',
+                    }} />
+                ))}
+            </div>
+            <p style={{ color: '#94a3b8', fontSize: 11, margin: '8px 0 0' }}>
+                {isRaw ? '표지 + 5페이지 전자책 생성' : '핵심 요약 추출'}
+            </p>
+        </div>
+    )
+}
 
 const EbookViewer = lazy(() => import('./EbookViewer'))
 
@@ -730,22 +761,26 @@ export default function MentorHeader({
                                 >✕</button>
                             </div>
 
-                            {/* 로딩 */}
+                            {/* 로딩 (#1: 지루하지 않은 로딩) */}
                             {exportLoading && (
-                                <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                                <div style={{ textAlign: 'center', padding: '36px 0' }}>
                                     <div style={{
-                                        width: 40, height: 40, borderRadius: '50%',
-                                        border: '3px solid #e0e7ff', borderTopColor: '#6366f1',
-                                        animation: 'spin 1s linear infinite',
-                                        margin: '0 auto 16px',
-                                    }} />
-                                    <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-                                    <p style={{ color: '#64748b', fontSize: 14, margin: 0 }}>
-                                        {exportMode === 'raw' ? '전체 대화를 분석하여 원고를 조립하고 있어요...' : 'AI가 대화를 분석하고 있어요...'}
-                                    </p>
-                                    <p style={{ color: '#94a3b8', fontSize: 12, margin: '6px 0 0' }}>
-                                        {exportMode === 'raw' ? '표지 + 5페이지 전자책을 생성 중' : '핵심 결정, 인사이트, 할 일을 추출 중'}
-                                    </p>
+                                        fontSize: 48, marginBottom: 20,
+                                        animation: 'bookBounce 1.5s ease-in-out infinite',
+                                    }}>📖</div>
+                                    <style>{`
+                                        @keyframes bookBounce {
+                                            0%, 100% { transform: scale(1) rotate(0deg); }
+                                            25% { transform: scale(1.1) rotate(-5deg); }
+                                            50% { transform: scale(1) rotate(0deg); }
+                                            75% { transform: scale(1.1) rotate(5deg); }
+                                        }
+                                        @keyframes fadeInUp {
+                                            from { opacity: 0; transform: translateY(8px); }
+                                            to { opacity: 1; transform: translateY(0); }
+                                        }
+                                    `}</style>
+                                    <EbookLoadingSteps isRaw={exportMode === 'raw'} />
                                 </div>
                             )}
 
