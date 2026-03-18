@@ -368,14 +368,16 @@ export default function MentorHeader({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '10px 16px 10px 12px',
+            padding: '10px 12px',
             borderBottom: '1px solid #f1f5f9',
             background: '#fff',
             position: 'sticky',
             top: 0,
             zIndex: 10,
+            overflow: 'hidden',
+            gap: 8,
         }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1, overflow: 'hidden' }}>
                 {/* 모바일 사이드바 토글 */}
                 {onToggleSidebar && !isSidebarOpen && (
                     <button
@@ -546,15 +548,15 @@ export default function MentorHeader({
                         style={{
                             background: 'linear-gradient(135deg, #22c55e, #16a34a)',
                             border: 'none',
-                            borderRadius: 10,
-                            padding: '7px 14px',
-                            fontSize: 13,
+                            borderRadius: 8,
+                            padding: '6px 10px',
+                            fontSize: 12,
                             color: '#fff',
                             cursor: 'pointer',
                             fontWeight: 600,
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 4,
+                            gap: 3,
                             transition: 'all 0.15s',
                             boxShadow: '0 2px 8px rgba(34,197,94,0.3)',
                             whiteSpace: 'nowrap',
@@ -562,7 +564,7 @@ export default function MentorHeader({
                         onMouseEnter={e => { e.currentTarget.style.opacity = '0.9' }}
                         onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
                     >
-                        🎁 무료 회원가입
+                        회원가입
                     </button>
                 ) : (
                     <>
