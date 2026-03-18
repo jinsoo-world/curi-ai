@@ -136,10 +136,11 @@ export default function GuestLogsPage() {
 
             {/* 대화 테이블 */}
             <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 900 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1000 }}>
                     <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e5e7eb' }}>
                             <th style={thStyle}>시간</th>
+                            <th style={thStyle}>방문자</th>
                             <th style={thStyle}>멘토</th>
                             <th style={thStyle}>유저 메시지</th>
                             <th style={thStyle}>AI 응답</th>
@@ -152,7 +153,7 @@ export default function GuestLogsPage() {
                     <tbody>
                         {logs.length === 0 ? (
                             <tr>
-                                <td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
+                                <td colSpan={9} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
                                     아직 비회원 대화 로그가 없습니다. Supabase SQL을 먼저 실행해 주세요.
                                 </td>
                             </tr>
@@ -165,6 +166,28 @@ export default function GuestLogsPage() {
                                             {' '}
                                             {new Date(log.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                                         </span>
+                                    </td>
+                                    <td style={tdStyle}>
+                                        {log.visitor_id ? (() => {
+                                            const short = log.visitor_id!.slice(0, 8)
+                                            const hue = [...short].reduce((h, c) => h + c.charCodeAt(0), 0) % 360
+                                            return (
+                                                <span
+                                                    title={log.visitor_id!}
+                                                    style={{
+                                                        fontSize: 11, fontWeight: 700, fontFamily: 'monospace',
+                                                        background: `hsl(${hue}, 40%, 94%)`,
+                                                        color: `hsl(${hue}, 55%, 35%)`,
+                                                        borderRadius: 6, padding: '3px 8px',
+                                                        cursor: 'default', letterSpacing: 0.5,
+                                                    }}
+                                                >
+                                                    {short}
+                                                </span>
+                                            )
+                                        })() : (
+                                            <span style={{ fontSize: 11, color: '#cbd5e1' }}>—</span>
+                                        )}
                                     </td>
                                     <td style={tdStyle}>
                                         <strong style={{ color: '#1e293b' }}>{log.mentor_name}</strong>
