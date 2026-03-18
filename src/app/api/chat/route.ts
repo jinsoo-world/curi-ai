@@ -325,7 +325,15 @@ export async function POST(req: Request) {
                                 browser: analytics.browser,
                                 country: analytics.country,
                                 city: analytics.city,
-                                visitor_id: visitorId || null,
+                                visitor_id: visitorId || (() => {
+                                    // 🔑 서버 사이드 fallback: IP + UA 해시로 식별값 생성
+                                    const raw = `${analytics.ip_address}|${ua}`
+                                    let hash = 0
+                                    for (let i = 0; i < raw.length; i++) {
+                                        hash = ((hash << 5) - hash + raw.charCodeAt(i)) | 0
+                                    }
+                                    return `fp-${(hash >>> 0).toString(16).padStart(8, '0')}`
+                                })(),
                             })
                         } catch (guestLogErr) {
                             console.error('[Guest Log] Save failed:', guestLogErr instanceof Error ? guestLogErr.message : guestLogErr)
