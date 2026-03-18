@@ -525,7 +525,7 @@ export default function ChatMessages({
                                 </div>
                                 <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>
                                     지금까지 나눈 핵심 내용을 정리한<br />
-                                    <strong style={{ color: '#3b82f6' }}>{exportLabel === '리포트' || !exportLabel ? 'AI 요약 리포트' : '원고(PDF)'}</strong>를 받아보세요
+                                    <strong style={{ color: '#3b82f6' }}>{exportLabel === '리포트' || !exportLabel ? 'AI 요약 리포트' : '전자책 원고'}</strong>를 받아보세요
                                 </div>
                                 <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
                                     상단의 <strong>{exportLabel || '리포트'}</strong> 버튼을 눌러보세요 ↗

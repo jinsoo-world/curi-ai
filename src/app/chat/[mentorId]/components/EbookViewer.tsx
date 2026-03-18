@@ -236,6 +236,7 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
             <div style={{
                 width: '100%', height: '100%', background: t.cover,
                 display: 'flex', flexDirection: 'column',
+                justifyContent: 'center', alignItems: 'center',
                 padding: '40px 28px', boxSizing: 'border-box',
                 position: 'relative', overflow: 'hidden',
             }}>
@@ -293,7 +294,7 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
                         contentEditable suppressContentEditableWarning
                         onBlur={e => handleCoverEdit('title', e.currentTarget.textContent || '')}
                         style={{
-                            fontSize: theme === 'impact' ? 'clamp(26px, 6vw, 40px)' : 'clamp(22px, 5vw, 34px)',
+                            fontSize: theme === 'impact' ? 'clamp(28px, 6vw, 44px)' : 'clamp(24px, 5vw, 38px)',
                             fontWeight: theme === 'minimal' ? 900 : 800,
                             color: t.titleColor, lineHeight: theme === 'impact' ? 1.2 : 1.35,
                             margin: '0 0 16px', wordBreak: 'keep-all', outline: 'none', cursor: 'text',
@@ -315,7 +316,7 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
                         contentEditable suppressContentEditableWarning
                         onBlur={e => handleCoverEdit('subtitle', e.currentTarget.textContent || '')}
                         style={{
-                            fontSize: 'clamp(12px, 2.2vw, 15px)', color: t.subtitleColor,
+                            fontSize: 'clamp(14px, 2.5vw, 17px)', color: t.subtitleColor,
                             lineHeight: 1.7, margin: 0, outline: 'none', cursor: 'text',
                         }}
                     >{cover.subtitle}</p>
@@ -323,11 +324,11 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
 
                 {/* 하단 저자 (다크 테마) */}
                 {isDark && (
-                    <div style={{ zIndex: 1, textAlign: 'center', marginTop: theme === 'impact' ? 0 : 'auto' }}>
+                    <div style={{ zIndex: 1, textAlign: 'center', marginTop: theme === 'impact' ? 0 : 'auto', width: '100%' }}>
                         <span
                             contentEditable suppressContentEditableWarning
                             onBlur={e => handleCoverEdit('author', e.currentTarget.textContent || '')}
-                            style={{ fontSize: 12, color: t.authorColor, outline: 'none', letterSpacing: 1 }}
+                            style={{ fontSize: 14, color: t.authorColor, outline: 'none', letterSpacing: 1 }}
                         >{authorName} 지음</span>
                     </div>
                 )}
@@ -381,7 +382,7 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
                     contentEditable suppressContentEditableWarning
                     onBlur={e => handleContentEdit(pageIndex, 'title', e.currentTarget.textContent || '')}
                     style={{
-                        fontSize: 'clamp(18px, 3.5vw, 24px)', fontWeight: 700, color: '#0f172a',
+                        fontSize: 'clamp(20px, 4vw, 28px)', fontWeight: 700, color: '#0f172a',
                         margin: '0 0 20px', lineHeight: 1.4, wordBreak: 'keep-all', outline: 'none', cursor: 'text',
                     }}
                 >{page.title}</h2>
@@ -390,7 +391,7 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
                     contentEditable suppressContentEditableWarning
                     onBlur={e => handleContentEdit(pageIndex, 'content', e.currentTarget.innerText || '')}
                     style={{
-                        fontSize: 'clamp(14px, 2.2vw, 16px)', color: '#334155',
+                        fontSize: 'clamp(15px, 2.5vw, 18px)', color: '#334155',
                         lineHeight: 1.9, whiteSpace: 'pre-wrap', wordBreak: 'keep-all',
                         outline: 'none', cursor: 'text', minHeight: 120,
                     }}
@@ -400,7 +401,7 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
                     <div style={{ margin: '24px 0', padding: '16px 20px', borderLeft: `4px solid ${t.pageAccent}`, background: t.accentLight, borderRadius: '0 8px 8px 0' }}>
                         <p contentEditable suppressContentEditableWarning
                             onBlur={e => handleContentEdit(pageIndex, 'quote', e.currentTarget.textContent || '')}
-                            style={{ fontSize: 14, color: t.pageAccent, fontStyle: 'italic', margin: 0, lineHeight: 1.7, outline: 'none' }}
+                            style={{ fontSize: 16, color: t.pageAccent, fontStyle: 'italic', margin: 0, lineHeight: 1.7, outline: 'none' }}
                         >💡 {page.quote}</p>
                     </div>
                 )}

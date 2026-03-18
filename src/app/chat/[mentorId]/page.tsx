@@ -1001,7 +1001,7 @@ export default function ChatPage() {
                             autoTTS={autoTTS}
                             systemPrompt={mentor?.system_prompt}
                             voiceId={mentor.voice_id}
-                            exportLabel={isEbookBot ? '원고(PDF) 다운로드' : '리포트'}
+                            exportLabel={isEbookBot ? '전자책 원고보기' : '리포트'}
                         />
 
 
