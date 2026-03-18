@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import AppSidebar from '@/components/AppSidebar'
 import { createClient } from '@/lib/supabase/client'
+import CreditClaimModal from '@/components/CreditClaimModal'
 
 interface MissionItem {
     id: string
@@ -36,6 +37,7 @@ export default function MissionsPage() {
     const [copied, setCopied] = useState(false)
     const [showInviteModal, setShowInviteModal] = useState(false)
     const [referralCode, setReferralCode] = useState('')
+    const [showTrialModal, setShowTrialModal] = useState(false)
 
     // 클로버 애니메이션
     const [cloverAnim, setCloverAnim] = useState<{ show: boolean; amount: number; label: string }>({
@@ -100,7 +102,7 @@ export default function MissionsPage() {
             const labels: Record<string, string> = {
                 ai_create: '🤖 내 AI 만들기 완료!',
                 questions_10: '💬 10번 질문 미션 완료!',
-                profile_update: '👤 마이페이지 업데이트 완료!',
+                profile_update: '🎁 무료 체험권 받기 완료!',
             }
             setTimeout(() => {
                 showCloverAnimation(amount, labels[rewardType] || '미션 완료!')
@@ -232,16 +234,16 @@ export default function MissionsPage() {
         },
         {
             id: 'profile-update',
-            icon: '👤',
-            title: '마이페이지 업데이트',
-            description: '마이페이지에서 프로필을 업데이트하세요',
+            icon: '🎁',
+            title: '무료 체험권 받기',
+            description: '간단한 정보 입력으로 무료 체험을 시작하세요',
             reward: 30,
             rewardLabel: '🍀 +30',
             progress: missionStatus.profileUpdated ? 1 : 0,
             goal: 1,
             completed: missionStatus.profileUpdated,
-            action: () => window.location.href = '/profile',
-            actionLabel: '마이페이지',
+            action: () => setShowTrialModal(true),
+            actionLabel: '체험권 받기',
         },
     ]
 
@@ -541,7 +543,7 @@ export default function MissionsPage() {
                                                 mission_ask_10: '💬 10번 질문 미션',
                                                 mission_invite: '🎉 친구 초대 미션',
                                                 mission_share: '📤 공유 미션',
-                                                mission_profile_update: '👤 마이페이지 업데이트',
+                                                mission_profile_update: '🎁 무료 체험권 받기',
                                                 purchase: '💳 충전',
                                                 usage: '🛒 사용',
                                                 refund: '↩️ 환불',
@@ -856,6 +858,22 @@ export default function MissionsPage() {
                     </div>
                 </div>
             )}
+
+            {/* 무료 체험권 모달 */}
+            <CreditClaimModal
+                isOpen={showTrialModal}
+                onClose={() => setShowTrialModal(false)}
+                onComplete={() => {
+                    setShowTrialModal(false)
+                    setMissionStatus(prev => ({ ...prev, profileUpdated: true }))
+                    showCloverAnimation(30, '🎁 무료 체험권 받기 완료!')
+                    // 클로버 적립 API 호출
+                    fetch('/api/missions/profile-update', { method: 'POST' })
+                        .then(res => res.json())
+                        .then(data => { if (data.clovers) setClovers(data.clovers) })
+                        .catch(() => {})
+                }}
+            />
         </>
     )
 }
