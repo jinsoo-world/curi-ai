@@ -982,6 +982,7 @@ export default function MentorHeader({
                         sessionId={sessionId || undefined}
                         onClose={() => setShowEbookViewer(false)}
                         onEditRequest={onEditRequest}
+                        onEbookUpdate={(newEbook) => setEbookData(prev => prev ? { ...prev, ebook: newEbook } : prev)}
                     />
                 </Suspense>
             )}

@@ -31,11 +31,17 @@ interface EbookMeta {
     sessionTitle: string
 }
 
+interface ChatMessage {
+    role: 'user' | 'assistant'
+    content: string
+}
+
 interface EbookViewerProps {
     ebook: EbookData
     meta: EbookMeta
     onClose: () => void
     onEditRequest?: (prefill: string) => void
+    onEbookUpdate?: (newEbook: EbookData) => void
     sessionId?: string
 }
 
@@ -103,7 +109,7 @@ const THEMES = {
 type ThemeKey = keyof typeof THEMES
 
 /* ── 메인 컴포넌트 ── */
-export default function EbookViewer({ ebook, meta, onClose, onEditRequest }: EbookViewerProps) {
+export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbookUpdate, sessionId }: EbookViewerProps) {
     const [currentPage, setCurrentPage] = useState(0)
     const [theme, setTheme] = useState<ThemeKey>('gradient')
     const [showThemeMenu, setShowThemeMenu] = useState(false)
@@ -111,10 +117,17 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest }: Ebo
     const [editedCover, setEditedCover] = useState<Partial<EbookCover>>({})
     const [showChat, setShowChat] = useState(false)
     const [chatInput, setChatInput] = useState('')
+    const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
+    const [isEditing, setIsEditing] = useState(false)
+    const chatEndRef = useRef<HTMLDivElement>(null)
     const touchStartX = useRef(0)
     const totalPages = (ebook.pages?.length || 0) + 1
     const t = THEMES[theme]
     const generatedAt = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, [chatHistory, isEditing])
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
@@ -169,9 +182,42 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest }: Ebo
         setChatInput(`Page ${pageNum} 수정: `)
         setShowChat(true)
     }
-    const handleSendEdit = () => {
-        if (!chatInput.trim()) return
-        if (onEditRequest) { onEditRequest(chatInput); onClose() }
+    const handleSendEdit = async () => {
+        const msg = chatInput.trim()
+        if (!msg || isEditing) return
+        
+        setChatHistory(prev => [...prev, { role: 'user', content: msg }])
+        setChatInput('')
+        setIsEditing(true)
+        
+        try {
+            // 현재 ebook + 수정 요청을 AI에게 전달
+            const currentEbook = applyEdits(ebook)
+            const res = await fetch('/api/chat/edit-ebook', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    currentEbook,
+                    editRequest: msg,
+                    mentorName: meta.mentorName,
+                }),
+            })
+            
+            if (!res.ok) throw new Error('수정 실패')
+            const data = await res.json()
+            
+            if (data.ebook && onEbookUpdate) {
+                onEbookUpdate(data.ebook)
+                setEditedContent({})
+                setEditedCover({})
+            }
+            
+            setChatHistory(prev => [...prev, { role: 'assistant', content: data.summary || '✅ 수정 완료!' }])
+        } catch {
+            setChatHistory(prev => [...prev, { role: 'assistant', content: '❌ 수정에 실패했습니다. 다시 시도해 주세요.' }])
+        } finally {
+            setIsEditing(false)
+        }
     }
     const handleContentEdit = (pageIndex: number, field: string, value: string) => {
         setEditedContent(prev => ({ ...prev, [pageIndex]: { ...(prev[pageIndex] || {}), [field]: value } }))
@@ -496,25 +542,57 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest }: Ebo
                             <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>✏️ 수정 요청</span>
                             <button onClick={() => setShowChat(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 16 }}>✕</button>
                         </div>
-                        <div style={{ flex: 1, padding: 16 }}>
-                            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', margin: '0 0 12px', lineHeight: 1.5 }}>
-                                수정하고 싶은 내용을 입력하세요. 전송 후 AI가 수정 반영합니다.
-                            </p>
+                        <div style={{ flex: 1, padding: 16, overflowY: 'auto' }}>
+                            {chatHistory.length === 0 && (
+                                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', margin: '0 0 12px', lineHeight: 1.5 }}>
+                                    수정하고 싶은 내용을 입력하세요. AI가 즉시 반영합니다.
+                                </p>
+                            )}
+                            {chatHistory.map((msg, i) => (
+                                <div key={i} style={{
+                                    marginBottom: 12,
+                                    display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                                }}>
+                                    <div style={{
+                                        maxWidth: '85%', padding: '8px 12px', borderRadius: 12,
+                                        fontSize: 13, lineHeight: 1.5,
+                                        ...(msg.role === 'user'
+                                            ? { background: t.accent, color: '#fff', borderBottomRightRadius: 4 }
+                                            : { background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.9)', borderBottomLeftRadius: 4 }
+                                        ),
+                                    }}>{msg.content}</div>
+                                </div>
+                            ))}
+                            {isEditing && (
+                                <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 12 }}>
+                                    <div style={{
+                                        padding: '8px 16px', borderRadius: 12, borderBottomLeftRadius: 4,
+                                        background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)',
+                                        fontSize: 13,
+                                    }}>
+                                        <span style={{ display: 'inline-block', animation: 'pulse 1.5s infinite' }}>✨ 수정 중...</span>
+                                    </div>
+                                </div>
+                            )}
+                            <div ref={chatEndRef} />
                         </div>
                         <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                             <div style={{ display: 'flex', gap: 8 }}>
                                 <input value={chatInput} onChange={e => setChatInput(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && handleSendEdit()}
-                                    placeholder="예: Page 3의 노하우를 더 구체적으로..."
+                                    onKeyDown={e => e.key === 'Enter' && !e.nativeEvent.isComposing && handleSendEdit()}
+                                    placeholder={isEditing ? '수정 중...' : '수정할 내용을 입력하세요'}
+                                    disabled={isEditing}
                                     style={{
                                         flex: 1, padding: '10px 14px', borderRadius: 8,
                                         border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)',
                                         color: '#fff', fontSize: 13, outline: 'none',
+                                        opacity: isEditing ? 0.5 : 1,
                                     }} autoFocus />
-                                <button onClick={handleSendEdit} style={{
+                                <button onClick={handleSendEdit} disabled={isEditing} style={{
                                     padding: '10px 16px', borderRadius: 8, border: 'none',
-                                    background: t.accent, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-                                }}>전송</button>
+                                    background: isEditing ? 'rgba(255,255,255,0.2)' : t.accent,
+                                    color: '#fff', fontSize: 13, fontWeight: 600, cursor: isEditing ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+                                }}>{isEditing ? '⏳' : '전송'}</button>
                             </div>
                         </div>
                     </div>
