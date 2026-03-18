@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 
 interface OverviewData {
     overview: {
@@ -17,11 +17,15 @@ interface OverviewData {
         userGrowth: string
         avgMessagesPerSession: string
         activeSubscriptions: number
+        guestSessions: number
+        todayMentors: number
+        totalMentors: number
     }
     signupTrend: Array<{ date: string; count: number }>
     hourlyDistribution: number[]
     authProviders: Record<string, number>
     signalCounts: Record<string, number>
+    insights: Array<{ emoji: string; text: string }>
 }
 
 // ========================================
@@ -46,7 +50,7 @@ function StatCard({ label, value, sub, color, trend, icon }: {
             borderRadius: 16,
             padding: '20px 24px',
             flex: '1 1 200px',
-            minWidth: 170,
+            minWidth: 150,
             position: 'relative',
             overflow: 'hidden',
             boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
@@ -85,72 +89,207 @@ function StatCard({ label, value, sub, color, trend, icon }: {
     )
 }
 
-function AreaChart({ data, dataKey, color, height = 120 }: {
+function AreaChartWithTooltip({ data, dataKey, color, height = 130, unit = '' }: {
     data: Array<Record<string, unknown>>
     dataKey: string
     color: string
     height?: number
+    unit?: string
 }) {
+    const [hover, setHover] = useState<{ idx: number; x: number; y: number } | null>(null)
+
     if (!data.length) return <div style={{ color: '#94a3b8', fontSize: 13, padding: 20 }}>데이터 없음</div>
+
     const values = data.map(d => Number(d[dataKey]) || 0)
     const max = Math.max(...values, 1)
     const width = 500
-    const stepX = width / Math.max(values.length - 1, 1)
-    const points = values.map((v, i) => `${i * stepX},${height - (v / max) * (height - 20) - 10}`).join(' ')
-    const areaPoints = `0,${height} ${points} ${(values.length - 1) * stepX},${height}`
+    const padLeft = 35
+    const chartW = width - padLeft
+    const stepX = chartW / Math.max(values.length - 1, 1)
+    const yTicks = [0, Math.round(max / 2), max]
+
+    const getY = (v: number) => height - (v / max) * (height - 20) - 10
+    const points = values.map((v, i) => `${padLeft + i * stepX},${getY(v)}`).join(' ')
+    const areaPoints = `${padLeft},${height} ${points} ${padLeft + (values.length - 1) * stepX},${height}`
+
+    // 오늘 날짜
+    const todayStr = new Date().toISOString().split('T')[0]
+    const lastDateInData = String(data[data.length - 1]?.date || '')
 
     return (
-        <div>
-            <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height }} preserveAspectRatio="none">
+        <div style={{ position: 'relative' }}>
+            <svg
+                viewBox={`0 0 ${width} ${height + 25}`}
+                style={{ width: '100%', height: height + 25 }}
+                preserveAspectRatio="none"
+                onMouseLeave={() => setHover(null)}
+            >
                 <defs>
-                    <linearGradient id={`grad-${dataKey}-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+                    <linearGradient id={`grad-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={color} stopOpacity="0.15" />
                         <stop offset="100%" stopColor={color} stopOpacity="0" />
                     </linearGradient>
                 </defs>
-                <polygon points={areaPoints} fill={`url(#grad-${dataKey}-${color.replace('#', '')})`} />
+
+                {/* Y축 눈금 + 격자 */}
+                {yTicks.map(tick => {
+                    const y = getY(tick)
+                    return (
+                        <g key={tick}>
+                            <line x1={padLeft} y1={y} x2={width} y2={y} stroke="#f1f5f9" strokeWidth="1" />
+                            <text x={padLeft - 5} y={y + 3} textAnchor="end" fill="#94a3b8" fontSize="9">
+                                {tick}{unit}
+                            </text>
+                        </g>
+                    )
+                })}
+
+                {/* 영역 + 선 */}
+                <polygon points={areaPoints} fill={`url(#grad-${dataKey})`} />
                 <polyline points={points} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-                {values.map((v, i) => (
-                    <circle key={i} cx={i * stepX} cy={height - (v / max) * (height - 20) - 10} r="3" fill={color} stroke="#fff" strokeWidth="1.5" />
-                ))}
-            </svg>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, padding: '0 2px' }}>
+
+                {/* 점 + 호버 영역 */}
+                {values.map((v, i) => {
+                    const cx = padLeft + i * stepX
+                    const cy = getY(v)
+                    const isHovered = hover?.idx === i
+                    return (
+                        <g key={i}>
+                            <rect
+                                x={cx - stepX / 2}
+                                y={0}
+                                width={stepX}
+                                height={height}
+                                fill="transparent"
+                                onMouseEnter={(e) => {
+                                    const rect = (e.target as SVGRectElement).closest('svg')?.getBoundingClientRect()
+                                    if (rect) setHover({ idx: i, x: (cx / width) * rect.width, y: (cy / (height + 25)) * rect.height })
+                                }}
+                            />
+                            <circle cx={cx} cy={cy} r={isHovered ? 5 : 3} fill={isHovered ? '#fff' : color} stroke={color} strokeWidth={isHovered ? 3 : 1.5} />
+                        </g>
+                    )
+                })}
+
+                {/* X축 레이블 */}
                 {data.length > 1 && [0, Math.floor(data.length / 2), data.length - 1].map(i => (
-                    <span key={i} style={{ fontSize: 10, color: '#94a3b8' }}>
+                    <text key={i} x={padLeft + i * stepX} y={height + 16} textAnchor="middle" fill="#94a3b8" fontSize="9">
                         {String(data[i]?.date || '').slice(5)}
-                    </span>
+                    </text>
                 ))}
-            </div>
+
+                {/* 오늘 표시 */}
+                {lastDateInData === todayStr && (
+                    <text x={padLeft + (values.length - 1) * stepX} y={height + 24} textAnchor="middle" fill={color} fontSize="8" fontWeight="700">
+                        오늘
+                    </text>
+                )}
+            </svg>
+
+            {/* 툴팁 */}
+            {hover !== null && (
+                <div style={{
+                    position: 'absolute',
+                    left: hover.x - 40,
+                    top: hover.y - 44,
+                    background: '#1e293b',
+                    color: '#fff',
+                    padding: '6px 10px',
+                    borderRadius: 8,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    pointerEvents: 'none',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    zIndex: 10,
+                }}>
+                    <div>{String(data[hover.idx]?.date || '').slice(5)}</div>
+                    <div style={{ color: '#93c5fd' }}>{values[hover.idx]}{unit}</div>
+                </div>
+            )}
         </div>
     )
 }
 
-function BarChart({ data, height = 120, color }: {
+function BarChartWithTooltip({ data, height = 130, color }: {
     data: number[]
     height?: number
     color: string
 }) {
+    const [hoverIdx, setHoverIdx] = useState<number | null>(null)
     const max = Math.max(...data, 1)
     const width = 500
-    const barW = width / data.length - 2
+    const padLeft = 30
+    const chartW = width - padLeft
+    const barW = chartW / data.length - 2
+    const yTicks = [0, Math.round(max / 2), max]
+
+    const getY = (v: number) => height - (v / max) * height
 
     return (
-        <svg viewBox={`0 0 ${width} ${height + 20}`} style={{ width: '100%', height: height + 20 }}>
-            {data.map((v, i) => {
-                const barH = (v / max) * height
-                const x = i * (width / data.length) + 1
-                return (
-                    <g key={i}>
-                        <rect x={x} y={height - barH} width={barW} height={barH} rx={3} fill={color} opacity={v > 0 ? 0.7 : 0.1} />
-                        {i % 3 === 0 && (
-                            <text x={x + barW / 2} y={height + 14} textAnchor="middle" fill="#94a3b8" fontSize="9">
-                                {i}시
+        <div style={{ position: 'relative' }}>
+            <svg
+                viewBox={`0 0 ${width} ${height + 20}`}
+                style={{ width: '100%', height: height + 20 }}
+                onMouseLeave={() => setHoverIdx(null)}
+            >
+                {/* Y축 눈금 */}
+                {yTicks.map(tick => {
+                    const y = getY(tick)
+                    return (
+                        <g key={tick}>
+                            <line x1={padLeft} y1={y} x2={width} y2={y} stroke="#f1f5f9" strokeWidth="1" />
+                            <text x={padLeft - 5} y={y + 3} textAnchor="end" fill="#94a3b8" fontSize="9">
+                                {tick}
                             </text>
-                        )}
-                    </g>
-                )
-            })}
-        </svg>
+                        </g>
+                    )
+                })}
+
+                {data.map((v, i) => {
+                    const barH = (v / max) * height
+                    const x = padLeft + i * (chartW / data.length) + 1
+                    const isHovered = hoverIdx === i
+                    return (
+                        <g key={i}
+                            onMouseEnter={() => setHoverIdx(i)}
+                        >
+                            <rect x={x} y={getY(v)} width={barW} height={barH} rx={3}
+                                fill={isHovered ? color : color}
+                                opacity={v > 0 ? (isHovered ? 1 : 0.6) : 0.08}
+                            />
+                            {i % 3 === 0 && (
+                                <text x={x + barW / 2} y={height + 14} textAnchor="middle" fill="#94a3b8" fontSize="9">
+                                    {i}시
+                                </text>
+                            )}
+                        </g>
+                    )
+                })}
+            </svg>
+
+            {/* 툴팁 */}
+            {hoverIdx !== null && (
+                <div style={{
+                    position: 'absolute',
+                    left: `${((padLeft + hoverIdx * (chartW / data.length) + barW / 2) / width) * 100}%`,
+                    top: `${(getY(data[hoverIdx]) / (height + 20)) * 100 - 10}%`,
+                    transform: 'translateX(-50%)',
+                    background: '#1e293b',
+                    color: '#fff',
+                    padding: '5px 10px',
+                    borderRadius: 8,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    pointerEvents: 'none',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    zIndex: 10,
+                }}>
+                    {hoverIdx}시: <span style={{ color: '#fbbf24' }}>{data[hoverIdx]}건</span>
+                </div>
+            )}
+        </div>
     )
 }
 
@@ -222,13 +361,13 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
     )
 }
 
-// 대화 품질 신호 카드
-const SIGNAL_META: Record<string, { emoji: string; label: string; desc: string; color: string }> = {
-    long_session: { emoji: '💚', label: '긴 대화', desc: '10턴 이상 (만족 신호)', color: '#16a34a' },
-    re_question: { emoji: '🔄', label: '재질문', desc: 'AI 답변 부족 의심', color: '#f59e0b' },
-    early_exit: { emoji: '🚪', label: '조기 이탈', desc: '1~2턴 후 나감', color: '#ef4444' },
-    negative_feedback: { emoji: '👎', label: '부정 피드백', desc: '유저 불만족', color: '#dc2626' },
-    topic_gap: { emoji: '❓', label: '지식 갭', desc: 'AI가 모르는 질문', color: '#8b5cf6' },
+// 대화 품질 신호
+const SIGNAL_META: Record<string, { emoji: string; label: string; color: string }> = {
+    long_session: { emoji: '💚', label: '긴 대화 (10턴+)', color: '#16a34a' },
+    re_question: { emoji: '🔄', label: '재질문', color: '#f59e0b' },
+    early_exit: { emoji: '🚪', label: '조기 이탈', color: '#ef4444' },
+    negative_feedback: { emoji: '👎', label: '부정 피드백', color: '#dc2626' },
+    topic_gap: { emoji: '❓', label: '지식 갭', color: '#8b5cf6' },
 }
 
 function SignalSummary({ signals }: { signals: Record<string, number> }) {
@@ -263,7 +402,6 @@ function SignalSummary({ signals }: { signals: Record<string, number> }) {
                                     width: `${Math.max(pct, 2)}%`,
                                     background: meta.color,
                                     borderRadius: 3,
-                                    transition: 'width 0.5s ease',
                                 }} />
                             </div>
                         </div>
@@ -287,7 +425,7 @@ export default function OverviewPage() {
     const [error, setError] = useState<string | null>(null)
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
 
-    const fetchData = () => {
+    const fetchData = useCallback(() => {
         setLoading(true)
         fetch('/api/admin/metrics')
             .then(r => {
@@ -297,22 +435,19 @@ export default function OverviewPage() {
             .then(d => { setData(d); setLastRefresh(new Date()) })
             .catch(e => setError(e.message))
             .finally(() => setLoading(false))
-    }
+    }, [])
 
-    useEffect(() => { fetchData() }, [])
+    useEffect(() => { fetchData() }, [fetchData])
 
-    // 5분마다 자동 갱신
     useEffect(() => {
         const interval = setInterval(fetchData, 5 * 60 * 1000)
         return () => clearInterval(interval)
-    }, [])
+    }, [fetchData])
 
     if (loading && !data) {
         return (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-                <div style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
-                }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
                     <div style={{
                         width: 48, height: 48, borderRadius: '50%',
                         border: '3px solid #e0e7ff',
@@ -346,12 +481,24 @@ export default function OverviewPage() {
 
     const o = data.overview
 
-    // 가입 경로 도넛
-    const authDonut = Object.entries(data.authProviders).map(([k, v]) => ({
-        label: k === 'google' ? 'Google' : k === 'kakao' ? '카카오' : k === 'anonymous' ? '게스트' : k,
-        value: v,
+    // 가입 경로: 카카오=노랑, 구글=파랑 순서 고정
+    const providerOrder = ['kakao', 'google']
+    const providerLabels: Record<string, string> = { kakao: '카카오', google: 'Google' }
+    const providerColors: Record<string, string> = { kakao: '#FEE500', google: '#4285F4' }
+    const otherColors = ['#a78bfa', '#34d399', '#f472b6']
+
+    const sortedProviders = [
+        ...providerOrder.filter(k => data.authProviders[k]),
+        ...Object.keys(data.authProviders).filter(k => !providerOrder.includes(k)),
+    ]
+
+    const authDonut = sortedProviders.map(k => ({
+        label: providerLabels[k] || k,
+        value: data.authProviders[k],
     }))
-    const authColors = ['#60a5fa', '#fbbf24', '#a78bfa', '#34d399', '#f472b6']
+    const authColors = sortedProviders.map((k, i) =>
+        providerColors[k] || otherColors[i % otherColors.length]
+    )
 
     return (
         <div>
@@ -386,23 +533,46 @@ export default function OverviewPage() {
                 </div>
             </div>
 
-            {/* === 핵심 지표 6개 === */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))', gap: 12, marginBottom: 28 }}>
+            {/* === 핵심 지표 8개 (2행) === */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 28 }}>
                 <StatCard icon="👥" label="총 유저" value={o.totalUsers} color="#3b82f6" trend={o.userGrowth} sub="vs 지난주" />
                 <StatCard icon="🆕" label="오늘 신규 가입" value={o.newUsersToday} color="#16a34a" sub={`어제: ${o.newUsersYesterday}`} />
-                <StatCard icon="📱" label="WAU" value={o.wau} color="#7c3aed" trend={o.weeklyGrowth} sub="주간 활성 유저" />
+                <StatCard icon="📱" label="WAU" value={o.wau} color="#7c3aed" trend={o.weeklyGrowth} sub="주간 활성" />
                 <StatCard icon="📝" label="총 메시지" value={o.totalMessages} color="#db2777" sub={`오늘: ${o.todayMessages.toLocaleString()}`} />
                 <StatCard icon="⚡" label="세션당 평균" value={`${o.avgMessagesPerSession}회`} color="#ea580c" sub="메시지" />
                 <StatCard icon="💎" label="구독 유저" value={o.activeSubscriptions} color="#7c3aed" sub="프리미엄" />
+                <StatCard icon="👻" label="비회원 대화" value={o.guestSessions} color="#64748b" sub="게스트 세션" />
+                <StatCard icon="🤖" label="오늘 생성 AI" value={o.todayMentors} color="#059669" sub={`전체: ${o.totalMentors}`} />
+            </div>
+
+            {/* === 오늘의 인사이트 === */}
+            <div style={{
+                background: 'linear-gradient(135deg, #f0f9ff 0%, #faf5ff 100%)',
+                border: '1px solid #e0e7ff',
+                borderRadius: 16,
+                padding: '20px 24px',
+                marginBottom: 20,
+            }}>
+                <h3 style={{ fontSize: 13, fontWeight: 700, margin: '0 0 12px', color: '#4f46e5' }}>
+                    💡 오늘의 인사이트
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {data.insights.map((ins, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 16 }}>{ins.emoji}</span>
+                            <span style={{ fontSize: 13, color: '#334155' }}>{ins.text}</span>
+                        </div>
+                    ))}
+                </div>
             </div>
 
             {/* === 차트 2열 × 2행 === */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <ChartCard title="🆕 일별 신규 가입 추이 (30일)">
-                    <AreaChart data={data.signupTrend} dataKey="count" color="#16a34a" height={130} />
+                    <AreaChartWithTooltip data={data.signupTrend} dataKey="count" color="#16a34a" height={130} unit="명" />
                 </ChartCard>
                 <ChartCard title="🕐 시간대별 메시지 분포 (이번 주)">
-                    <BarChart data={data.hourlyDistribution} color="#d97706" height={130} />
+                    <BarChartWithTooltip data={data.hourlyDistribution} color="#d97706" height={130} />
                 </ChartCard>
             </div>
 

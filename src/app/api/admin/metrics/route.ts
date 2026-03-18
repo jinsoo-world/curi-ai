@@ -87,6 +87,22 @@ export async function GET() {
             .select('*', { count: 'exact', head: true })
             .eq('status', 'active')
 
+        // === 비회원(게스트) 대화 수 — user_id가 NULL인 세션 ===
+        const { count: guestSessions } = await supabase
+            .from('chat_sessions')
+            .select('*', { count: 'exact', head: true })
+            .is('user_id', null)
+
+        // === 오늘 생성된 AI(멘토) 수 ===
+        const { count: todayMentors } = await supabase
+            .from('mentors')
+            .select('*', { count: 'exact', head: true })
+            .gte('created_at', today)
+
+        const { count: totalMentors } = await supabase
+            .from('mentors')
+            .select('*', { count: 'exact', head: true })
+
         // === 유저 가입 추이 (최근 30일) ===
         const { data: signupData } = await supabase
             .from('users')
@@ -154,6 +170,52 @@ export async function GET() {
             }
         })
 
+        // === 오늘의 인사이트 ===
+        const insights: Array<{ emoji: string; text: string }> = []
+
+        // 1) 헤비 유저 (오늘 메시지 10개 이상)
+        const { data: heavyUsers } = await supabase
+            .from('chat_sessions')
+            .select('user_id, message_count, users!inner(display_name)')
+            .gte('last_message_at', today)
+            .gt('message_count', 10)
+            .order('message_count', { ascending: false })
+            .limit(3)
+        if (heavyUsers && heavyUsers.length > 0) {
+            const names = heavyUsers.map((h: Record<string, unknown>) => {
+                const user = h.users as Record<string, unknown> | null
+                const name = user?.display_name || '알 수 없음'
+                return `${name}(${h.message_count}회)`
+            }).join(', ')
+            insights.push({ emoji: '🔥', text: `오늘 열정 유저: ${names}` })
+        }
+
+        // 2) 신규 가입 후 바로 대화한 유저
+        const { data: quickStarters } = await supabase
+            .from('users')
+            .select('display_name, created_at')
+            .gte('created_at', today)
+        if (quickStarters && quickStarters.length > 0) {
+            insights.push({ emoji: '🌱', text: `오늘 신규 가입 ${quickStarters.length}명 — 환영합니다!` })
+        }
+
+        // 3) 오늘 대화가 활발한 시간대
+        const peakHour = hourlyDist.indexOf(Math.max(...hourlyDist))
+        const peakVal = Math.max(...hourlyDist)
+        if (peakVal > 0) {
+            insights.push({ emoji: '⏰', text: `오늘 피크: ${peakHour}시 (${peakVal}건 메시지)` })
+        }
+
+        // 4) 비회원 전환 포텐셜
+        if ((guestSessions || 0) > 0) {
+            insights.push({ emoji: '👋', text: `비회원 ${guestSessions}개 세션 — 전환 가능성 있는 잠재 유저` })
+        }
+
+        // 기본 인사이트
+        if (insights.length === 0) {
+            insights.push({ emoji: '✨', text: '오늘은 아직 특별한 인사이트가 없어요. 대화가 더 쌓이면 자동 분석됩니다.' })
+        }
+
         // === 성장률 계산 ===
         const weeklyGrowth = lastWau > 0 ? (((wau - lastWau) / lastWau) * 100).toFixed(1) : '—'
         const userGrowth = (newUsersLastWeek || 0) > 0
@@ -175,11 +237,15 @@ export async function GET() {
                 userGrowth,
                 avgMessagesPerSession,
                 activeSubscriptions: activeSubscriptions || 0,
+                guestSessions: guestSessions || 0,
+                todayMentors: todayMentors || 0,
+                totalMentors: totalMentors || 0,
             },
             signupTrend,
             hourlyDistribution: hourlyDist,
             authProviders,
             signalCounts,
+            insights,
         })
     } catch (error) {
         console.error('Admin metrics error:', error)
