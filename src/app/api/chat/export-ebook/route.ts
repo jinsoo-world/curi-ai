@@ -125,7 +125,7 @@ export async function POST(req: Request) {
         // Gemini로 구조화된 원고 JSON 생성
         const ai = getAI()
         const result = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-preview-05-20',
+            model: 'gemini-3-flash-preview',
             config: {
                 systemInstruction: EBOOK_SYSTEM_PROMPT,
                 temperature: 0.3,
