@@ -64,14 +64,6 @@ const THEMES = {
         decoStyle: 'circles' as const,
         pageBg: '#fff', pageAccent: '#6366f1',
     },
-    impact: {
-        name: '임팩트',
-        cover: 'linear-gradient(160deg, #0c0c0c 0%, #1a1a1a 50%, #2d0a0a 100%)',
-        titleColor: '#ef4444', subtitleColor: 'rgba(255,255,255,0.7)', authorColor: 'rgba(255,255,255,0.5)',
-        accent: '#ef4444', accentLight: '#fef2f2', text: '#1e293b',
-        decoStyle: 'lines' as const,
-        pageBg: '#fff', pageAccent: '#dc2626',
-    },
     minimal: {
         name: '미니멀',
         cover: '#fafaf9',
@@ -95,14 +87,6 @@ const THEMES = {
         accent: '#16a34a', accentLight: '#dcfce7', text: '#1e293b',
         decoStyle: 'border' as const,
         pageBg: '#fff', pageAccent: '#15803d',
-    },
-    casual: {
-        name: '캐주얼',
-        cover: '#f1f5f9',
-        titleColor: '#1e293b', subtitleColor: '#6366f1', authorColor: '#94a3b8',
-        accent: '#6366f1', accentLight: '#e0e7ff', text: '#1e293b',
-        decoStyle: 'badges' as const,
-        pageBg: '#fff', pageAccent: '#6366f1',
     },
 } as const
 
@@ -226,11 +210,11 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
         setEditedCover(prev => ({ ...prev, [field]: value }))
     }
 
-    /* ── 6종 표지 렌더링 ── */
+    /* ── 4종 표지 렌더링 ── */
     const renderCover = () => {
         const cover = { ...ebook.cover, ...editedCover }
         const authorName = cover.author || meta.mentorName
-        const isDark = theme !== 'minimal' && theme !== 'casual'
+        const isDark = theme !== 'minimal'
 
         return (
             <div style={{
@@ -247,13 +231,6 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
                     <div style={{ position: 'absolute', top: '40%', right: -20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.02)' }} />
                 </>}
 
-                {t.decoStyle === 'lines' && <>
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: '#ef4444' }} />
-                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: '#ef4444' }} />
-                    <div style={{ position: 'absolute', top: '20%', left: 20, right: 20, height: 1, background: 'rgba(239,68,68,0.2)' }} />
-                    <div style={{ position: 'absolute', bottom: '20%', left: 20, right: 20, height: 1, background: 'rgba(239,68,68,0.2)' }} />
-                </>}
-
                 {t.decoStyle === 'border' && (
                     <div style={{ position: 'absolute', top: 16, left: 16, right: 16, bottom: 16, border: '2px solid rgba(251,191,36,0.3)', borderRadius: 0 }} />
                 )}
@@ -262,13 +239,8 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
                     <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to top, rgba(217,119,6,0.3), transparent)' }} />
                 )}
 
-                {t.decoStyle === 'badges' && <>
-                    <div style={{ position: 'absolute', top: 20, right: 20, background: '#6366f1', color: '#fff', padding: '4px 12px', borderRadius: 20, fontSize: 10, fontWeight: 700 }}>AI 생성</div>
-                    <div style={{ position: 'absolute', top: 20, left: 20, background: '#f97316', color: '#fff', padding: '4px 12px', borderRadius: 20, fontSize: 10, fontWeight: 700 }}>전자책</div>
-                </>}
-
                 {/* 상단 서브텍스트 (미니멀 스타일) */}
-                {(theme === 'minimal' || theme === 'casual') && (
+                {theme === 'minimal' && (
                     <p style={{ fontSize: 12, color: t.subtitleColor, letterSpacing: 1, margin: '0 0 auto', textAlign: 'center' }}>
                         {authorName} 지음
                     </p>
@@ -276,41 +248,31 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
 
                 {/* 메인 타이틀 영역 */}
                 <div style={{
-                    flex: (theme === 'minimal' || theme === 'casual') ? undefined : 1,
+                    flex: theme === 'minimal' ? undefined : 1,
                     display: 'flex', flexDirection: 'column',
-                    justifyContent: theme === 'impact' ? 'flex-end' : 'center',
+                    justifyContent: 'center',
                     alignItems: 'center', textAlign: 'center',
                     zIndex: 1, maxWidth: 480, margin: '0 auto',
-                    paddingBottom: theme === 'impact' ? 40 : 0,
                 }}>
-                    {/* 임팩트 스타일: 상단에 작은 서브 */}
-                    {theme === 'impact' && (
-                        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: 4, margin: '0 0 12px', textTransform: 'uppercase' }}>
-                            ― {authorName} ―
-                        </p>
-                    )}
-
                     <h1
                         contentEditable suppressContentEditableWarning
                         onBlur={e => handleCoverEdit('title', e.currentTarget.textContent || '')}
                         style={{
-                            fontSize: theme === 'impact' ? 'clamp(28px, 6vw, 44px)' : 'clamp(24px, 5vw, 38px)',
+                            fontSize: 'clamp(24px, 5vw, 38px)',
                             fontWeight: theme === 'minimal' ? 900 : 800,
-                            color: t.titleColor, lineHeight: theme === 'impact' ? 1.2 : 1.35,
+                            color: t.titleColor, lineHeight: 1.35,
                             margin: '0 0 16px', wordBreak: 'keep-all', outline: 'none', cursor: 'text',
-                            letterSpacing: theme === 'minimal' ? 2 : theme === 'impact' ? -1 : 0,
+                            letterSpacing: theme === 'minimal' ? 2 : 0,
                             textShadow: isDark ? '0 2px 20px rgba(0,0,0,0.3)' : 'none',
                         }}
                     >{cover.title}</h1>
 
                     {/* 구분선 */}
-                    {theme !== 'impact' && theme !== 'casual' && (
-                        <div style={{
-                            width: theme === 'minimal' ? 60 : 40, height: theme === 'minimal' ? 3 : 2,
-                            background: theme === 'minimal' ? '#0c0a09' : theme === 'classic' ? '#fbbf24' : 'rgba(255,255,255,0.3)',
-                            margin: '0 auto 16px',
-                        }} />
-                    )}
+                    <div style={{
+                        width: theme === 'minimal' ? 60 : 40, height: theme === 'minimal' ? 3 : 2,
+                        background: theme === 'minimal' ? '#0c0a09' : theme === 'classic' ? '#fbbf24' : 'rgba(255,255,255,0.3)',
+                        margin: '0 auto 16px',
+                    }} />
 
                     <p
                         contentEditable suppressContentEditableWarning
@@ -322,9 +284,9 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
                     >{cover.subtitle}</p>
                 </div>
 
-                {/* 하단 저자 (다크 테마) */}
+                {/* 하단 저자 */}
                 {isDark && (
-                    <div style={{ zIndex: 1, textAlign: 'center', marginTop: theme === 'impact' ? 0 : 'auto', width: '100%' }}>
+                    <div style={{ zIndex: 1, textAlign: 'center', marginTop: 'auto', width: '100%' }}>
                         <span
                             contentEditable suppressContentEditableWarning
                             onBlur={e => handleCoverEdit('author', e.currentTarget.textContent || '')}
@@ -342,14 +304,7 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
                     </div>
                 )}
 
-                {/* 캐주얼 하단 저자 */}
-                {theme === 'casual' && (
-                    <div style={{ marginTop: 'auto', textAlign: 'center', padding: '12px 20px', background: 'rgba(99,102,241,0.1)', borderRadius: 12 }}>
-                        <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600 }}>✨ {authorName}</span>
-                    </div>
-                )}
-
-                {/* AI 수정 요청 버튼 (내지와 동일) */}
+                {/* AI 수정 요청 버튼 */}
                 <button onClick={() => handleEditRequest(0)} style={{
                     position: 'absolute', bottom: 16, right: 16, padding: '8px 16px', borderRadius: 20,
                     border: `1px solid ${isDark ? 'rgba(255,255,255,0.2)' : t.accentLight}`,
