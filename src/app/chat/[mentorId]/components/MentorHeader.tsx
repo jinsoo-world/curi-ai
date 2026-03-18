@@ -22,6 +22,10 @@ interface MentorHeaderProps {
     onToggleSidebar?: () => void
     /** 사이드바 열림 상태 (열렸으면 헤더 햄버거 숨김) */
     isSidebarOpen?: boolean
+    /** 현재 세션 ID (내보내기용) */
+    sessionId?: string | null
+    /** 메시지 수 (내보내기 버튼 표시 조건) */
+    messageCount?: number
 }
 
 /* ── SVG 아이콘 ── */
@@ -48,6 +52,13 @@ const ShareIcon = () => (
         <polyline points="5.5,4.5 8,2 10.5,4.5" />
     </svg>
 )
+const ExportIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8 2v8" />
+        <polyline points="4,6 8,10 12,6" />
+        <path d="M2 13h12" />
+    </svg>
+)
 const KakaoIcon = () => (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <path d="M9 1.5C4.86 1.5 1.5 4.14 1.5 7.38c0 2.08 1.38 3.9 3.45 4.94-.15.56-.55 2.03-.63 2.34-.1.39.14.38.3.28.12-.08 1.94-1.32 2.73-1.86.53.08 1.08.12 1.65.12 4.14 0 7.5-2.64 7.5-5.88S13.14 1.5 9 1.5z" fill="#3C1E1E"/>
@@ -69,9 +80,57 @@ export default function MentorHeader({
     onCall,
     onToggleSidebar,
     isSidebarOpen,
+    sessionId,
+    messageCount = 0,
 }: MentorHeaderProps) {
     const router = useRouter()
     const [showShareMenu, setShowShareMenu] = useState(false)
+    const [showExportModal, setShowExportModal] = useState(false)
+    const [exportLoading, setExportLoading] = useState(false)
+    const [exportData, setExportData] = useState<{ report: any; markdown: string; meta: any } | null>(null)
+    const [exportError, setExportError] = useState<string | null>(null)
+
+    const handleExport = async () => {
+        if (!sessionId || sessionId.startsWith('guest-')) return
+        setShowExportModal(true)
+        setExportLoading(true)
+        setExportError(null)
+        setExportData(null)
+        try {
+            const res = await fetch('/api/chat/export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId }),
+            })
+            if (!res.ok) {
+                const err = await res.json()
+                throw new Error(err.error || '리포트 생성 실패')
+            }
+            const data = await res.json()
+            setExportData(data)
+        } catch (e: any) {
+            setExportError(e.message)
+        } finally {
+            setExportLoading(false)
+        }
+    }
+
+    const handleDownloadMarkdown = () => {
+        if (!exportData) return
+        const blob = new Blob([exportData.markdown], { type: 'text/markdown;charset=utf-8' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${exportData.meta.mentorName}_리포트_${new Date().toISOString().split('T')[0]}.md`
+        a.click()
+        URL.revokeObjectURL(url)
+    }
+
+    const handleCopyReport = async () => {
+        if (!exportData) return
+        await navigator.clipboard.writeText(exportData.markdown)
+        alert('리포트가 클립보드에 복사되었습니다!')
+    }
     const [copied, setCopied] = useState(false)
 
     const shareUrl = typeof window !== 'undefined'
@@ -325,6 +384,34 @@ export default function MentorHeader({
                     <span className="header-text-label">새 대화</span>
                 </button>
 
+                {/* 내보내기 버튼 — 로그인 세션 + 메시지 3개 이상일 때 */}
+                {sessionId && !sessionId.startsWith('guest-') && messageCount >= 3 && (
+                    <button
+                        onClick={handleExport}
+                        aria-label="대화 리포트"
+                        title="AI 요약 리포트"
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            borderRadius: 10,
+                            padding: '7px 12px',
+                            fontSize: 14,
+                            color: '#64748b',
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            transition: 'background 0.15s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                    >
+                        <ExportIcon />
+                        <span className="header-text-label">리포트</span>
+                    </button>
+                )}
+
                 {/* 공유하기 버튼 */}
                 <button
                     onClick={() => setShowShareMenu(true)}
@@ -473,6 +560,176 @@ export default function MentorHeader({
                                 <KakaoIcon />
                                 카카오 공유하기
                             </button>
+                        </div>
+                    </>
+                )}
+
+                {/* 내보내기 리포트 모달 */}
+                {showExportModal && (
+                    <>
+                        <div
+                            onClick={() => setShowExportModal(false)}
+                            style={{
+                                position: 'fixed', inset: 0,
+                                background: 'rgba(0,0,0,0.4)',
+                                zIndex: 1000,
+                                animation: 'shareOverlayIn 0.2s ease',
+                            }}
+                        />
+                        <div style={{
+                            position: 'fixed',
+                            left: '50%', top: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            background: '#fff',
+                            borderRadius: 20,
+                            padding: '28px 24px 24px',
+                            width: 'min(480px, calc(100vw - 32px))',
+                            maxHeight: '80vh',
+                            overflowY: 'auto',
+                            zIndex: 1001,
+                            animation: 'shareModalIn 0.2s ease',
+                        }}>
+                            {/* 헤더 */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#18181b' }}>
+                                    📋 AI 요약 리포트
+                                </h3>
+                                <button
+                                    onClick={() => setShowExportModal(false)}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#9ca3af', fontSize: 20 }}
+                                >✕</button>
+                            </div>
+
+                            {/* 로딩 */}
+                            {exportLoading && (
+                                <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                                    <div style={{
+                                        width: 40, height: 40, borderRadius: '50%',
+                                        border: '3px solid #e0e7ff', borderTopColor: '#6366f1',
+                                        animation: 'spin 1s linear infinite',
+                                        margin: '0 auto 16px',
+                                    }} />
+                                    <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+                                    <p style={{ color: '#64748b', fontSize: 14, margin: 0 }}>AI가 대화를 분석하고 있어요...</p>
+                                    <p style={{ color: '#94a3b8', fontSize: 12, margin: '6px 0 0' }}>핵심 결정, 인사이트, 할 일을 추출 중</p>
+                                </div>
+                            )}
+
+                            {/* 에러 */}
+                            {exportError && (
+                                <div style={{ textAlign: 'center', padding: '30px 0' }}>
+                                    <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+                                    <p style={{ color: '#dc2626', fontSize: 14, margin: 0 }}>{exportError}</p>
+                                    <button onClick={handleExport} style={{
+                                        marginTop: 16, padding: '8px 20px', borderRadius: 10,
+                                        border: 'none', background: '#6366f1', color: '#fff',
+                                        fontSize: 13, cursor: 'pointer',
+                                    }}>다시 시도</button>
+                                </div>
+                            )}
+
+                            {/* 리포트 내용 */}
+                            {exportData && (
+                                <div>
+                                    {/* 메타 */}
+                                    <div style={{
+                                        background: '#f8fafc', borderRadius: 12, padding: '14px 16px', marginBottom: 16,
+                                        border: '1px solid #f1f5f9',
+                                    }}>
+                                        <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>
+                                            {exportData.report.title}
+                                        </div>
+                                        <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                                            {exportData.meta.mentorName} 멘토 · {exportData.meta.createdDate} · {exportData.meta.messageCount}개 메시지
+                                        </div>
+                                    </div>
+
+                                    {/* 요약 */}
+                                    <div style={{ marginBottom: 16 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>📝 요약</div>
+                                        <p style={{ fontSize: 14, color: '#334155', lineHeight: 1.7, margin: 0 }}>{exportData.report.summary}</p>
+                                    </div>
+
+                                    {/* 핵심 결정 */}
+                                    {exportData.report.keyDecisions?.length > 0 && (
+                                        <div style={{ marginBottom: 16 }}>
+                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>📌 핵심 결정 사항</div>
+                                            {exportData.report.keyDecisions.map((d: string, i: number) => (
+                                                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 4, fontSize: 14, color: '#334155' }}>
+                                                    <span>✅</span><span>{d}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* 인사이트 */}
+                                    {exportData.report.insights?.length > 0 && (
+                                        <div style={{ marginBottom: 16 }}>
+                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>💡 주요 인사이트</div>
+                                            {exportData.report.insights.map((ins: string, i: number) => (
+                                                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 4, fontSize: 14, color: '#334155' }}>
+                                                    <span>•</span><span>{ins}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* 할 일 */}
+                                    {exportData.report.actionItems?.length > 0 && (
+                                        <div style={{ marginBottom: 16 }}>
+                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>✅ 다음 할 일</div>
+                                            {exportData.report.actionItems.map((a: string, i: number) => (
+                                                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 4, fontSize: 14, color: '#334155' }}>
+                                                    <span>☐</span><span>{a}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* 목차 */}
+                                    {exportData.report.outline && (
+                                        <div style={{ marginBottom: 16 }}>
+                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>📚 확정된 구조</div>
+                                            <div style={{
+                                                background: '#f8fafc', borderRadius: 10, padding: '12px 16px',
+                                                fontSize: 13, lineHeight: 1.8, color: '#334155',
+                                                whiteSpace: 'pre-wrap', border: '1px solid #f1f5f9',
+                                            }}>
+                                                {exportData.report.outline}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* 액션 버튼 */}
+                                    <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                                        <button
+                                            onClick={handleDownloadMarkdown}
+                                            style={{
+                                                flex: 1, padding: '12px 16px', borderRadius: 12,
+                                                border: '1px solid #e5e7eb', background: '#fff',
+                                                fontSize: 14, fontWeight: 600, color: '#374151',
+                                                cursor: 'pointer', display: 'flex', alignItems: 'center',
+                                                justifyContent: 'center', gap: 6,
+                                            }}
+                                        >
+                                            📥 다운로드
+                                        </button>
+                                        <button
+                                            onClick={handleCopyReport}
+                                            style={{
+                                                flex: 1, padding: '12px 16px', borderRadius: 12,
+                                                border: 'none',
+                                                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                                fontSize: 14, fontWeight: 600, color: '#fff',
+                                                cursor: 'pointer', display: 'flex', alignItems: 'center',
+                                                justifyContent: 'center', gap: 6,
+                                            }}
+                                        >
+                                            📋 복사하기
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </>
                 )}

@@ -397,6 +397,22 @@ function MarkdownContent({ content }: { content: string }) {
                             color: '#64748b',
                         }}>{children}</blockquote>
                     ),
+                    a: ({ href, children }) => (
+                        <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                                color: '#3b82f6',
+                                textDecoration: 'underline',
+                                textUnderlineOffset: '3px',
+                                fontWeight: 500,
+                                wordBreak: 'break-all',
+                            }}
+                        >
+                            {children} <span style={{ fontSize: '0.8em', opacity: 0.6 }}>↗</span>
+                        </a>
+                    ),
                 }}
             >
                 {content}

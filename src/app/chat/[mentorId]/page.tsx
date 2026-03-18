@@ -735,6 +735,8 @@ export default function ChatPage() {
                     } : undefined}
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                     isSidebarOpen={isSidebarOpen}
+                    sessionId={sessionId}
+                    messageCount={messages.length}
                 />
 
                 {/* Messages Area */}
