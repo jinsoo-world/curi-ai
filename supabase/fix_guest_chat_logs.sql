@@ -35,6 +35,8 @@ ALTER TABLE guest_chat_logs ADD COLUMN IF NOT EXISTS visitor_id text;   -- 쿠�
 -- ── 3. messages 테이블 분석 컬럼 추가 (회원 대화) ──
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS ip_address text;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS device_type text;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS os text;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS browser text;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS country text;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS city text;
 

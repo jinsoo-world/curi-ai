@@ -256,6 +256,8 @@ export async function POST(req: Request) {
                                 input_method: inputMethod || 'text',
                                 ip_address: analytics.ip_address,
                                 device_type: analytics.device_type,
+                                os: analytics.os,
+                                browser: analytics.browser,
                                 country: analytics.country,
                                 city: analytics.city,
                             })
