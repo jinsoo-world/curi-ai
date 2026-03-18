@@ -121,29 +121,29 @@ export default function MentorMatchHero() {
     }
 
     return (
-        <div style={{
+        <div className="match-hero-wrap" style={{
             maxWidth: 1000, margin: '0 auto',
             padding: '40px 40px 16px',
             minHeight: 200,
         }}>
-            <div style={{
-                background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #312e81 100%)',
+            <div className="match-hero-card" style={{
+                background: 'linear-gradient(135deg, #052e16 0%, #14532d 40%, #166534 100%)',
                 borderRadius: 28,
                 padding: '44px 36px 40px',
                 position: 'relative',
                 overflow: 'hidden',
-                boxShadow: '0 20px 60px rgba(15,23,42,0.3)',
+                boxShadow: '0 20px 60px rgba(5,46,22,0.4)',
             }}>
                 {/* 배경 데코 */}
                 <div style={{
                     position: 'absolute', top: -60, right: -60,
                     width: 240, height: 240, borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%)',
+                    background: 'radial-gradient(circle, rgba(34,197,94,0.15) 0%, transparent 70%)',
                 }} />
                 <div style={{
                     position: 'absolute', bottom: -40, left: -20,
                     width: 160, height: 160, borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%)',
+                    background: 'radial-gradient(circle, rgba(74,222,128,0.1) 0%, transparent 70%)',
                 }} />
                 <div style={{
                     position: 'absolute', top: 20, left: '30%',
@@ -156,15 +156,15 @@ export default function MentorMatchHero() {
                 <div style={{ position: 'relative', zIndex: 1 }}>
                     <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: 6,
-                        background: 'rgba(99,102,241,0.2)',
-                        border: '1px solid rgba(99,102,241,0.3)',
+                        background: 'rgba(34,197,94,0.2)',
+                        border: '1px solid rgba(34,197,94,0.3)',
                         borderRadius: 20, padding: '5px 14px',
-                        fontSize: 12, fontWeight: 600, color: '#a5b4fc',
+                        fontSize: 12, fontWeight: 600, color: '#86efac',
                         marginBottom: 14, letterSpacing: '0.02em',
                     }}>
                         ✨ AI 매칭
                     </div>
-                    <h2 style={{
+                    <h2 className="match-hero-title" style={{
                         fontSize: 26, fontWeight: 800, color: '#fff',
                         margin: '0 0 8px', lineHeight: 1.35,
                         letterSpacing: '-0.03em',
@@ -185,7 +185,7 @@ export default function MentorMatchHero() {
                         position: 'relative', zIndex: 1,
                         animation: 'heroSlideUp 0.4s ease',
                     }}>
-                        <div style={{
+                        <div className="match-hero-input-bar" style={{
                             display: 'flex', gap: 0,
                             background: 'rgba(255,255,255,0.07)',
                             border: '1.5px solid rgba(255,255,255,0.15)',
@@ -212,19 +212,21 @@ export default function MentorMatchHero() {
                                     fontSize: 15,
                                     color: '#fff',
                                     outline: 'none',
-                                    caretColor: '#818cf8',
+                                    caretColor: '#4ade80',
+                                    minWidth: 0,
                                 }}
                             />
                             <button
                                 onClick={handleMatch}
                                 disabled={!concern.trim() || isMatching}
+                                className="match-hero-btn"
                                 style={{
                                     padding: '13px 26px',
                                     borderRadius: 14,
                                     border: 'none',
                                     background: (!concern.trim() || isMatching)
                                         ? 'rgba(255,255,255,0.08)'
-                                        : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                        : 'linear-gradient(135deg, #22c55e, #16a34a)',
                                     color: (!concern.trim() || isMatching) ? 'rgba(255,255,255,0.3)' : '#fff',
                                     fontSize: 15,
                                     fontWeight: 700,
@@ -232,8 +234,9 @@ export default function MentorMatchHero() {
                                     whiteSpace: 'nowrap',
                                     transition: 'all 0.3s',
                                     boxShadow: concern.trim() && !isMatching
-                                        ? '0 4px 20px rgba(99,102,241,0.4)' : 'none',
+                                        ? '0 4px 20px rgba(34,197,94,0.4)' : 'none',
                                     letterSpacing: '0.01em',
+                                    flexShrink: 0,
                                 }}
                             >
                                 {isMatching ? (
@@ -251,7 +254,7 @@ export default function MentorMatchHero() {
                             </button>
                         </div>
                         {/* 빠른 태그 */}
-                        <div style={{
+                        <div className="match-hero-tags" style={{
                             display: 'flex', gap: 8, marginTop: 14,
                             flexWrap: 'wrap',
                         }}>
@@ -298,7 +301,7 @@ export default function MentorMatchHero() {
                             <div style={{
                                 width: 52, height: 52, borderRadius: 16,
                                 overflow: 'hidden', flexShrink: 0,
-                                border: '2px solid rgba(99,102,241,0.3)',
+                                border: '2px solid rgba(34,197,94,0.3)',
                             }}>
                                 {getMentorImage(matchResult.mentor) ? (
                                     <Image
@@ -308,7 +311,7 @@ export default function MentorMatchHero() {
                                         style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                                     />
                                 ) : (
-                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(99,102,241,0.2)', fontSize: 24 }}>🤖</div>
+                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(34,197,94,0.2)', fontSize: 24 }}>🤖</div>
                                 )}
                             </div>
                             <div style={{ textAlign: 'left' }}>
@@ -319,7 +322,7 @@ export default function MentorMatchHero() {
 
                         <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.7)', marginBottom: 20, lineHeight: 1.6 }}>
                             무료 회원가입하면<br />
-                            <strong style={{ color: '#a5b4fc' }}>{matchResult.mentor.name}</strong>과 바로 대화를 시작할 수 있어요 ✨
+                            <strong style={{ color: '#86efac' }}>{matchResult.mentor.name}</strong>과 바로 대화를 시작할 수 있어요 ✨
                         </p>
 
                         <button
@@ -333,10 +336,10 @@ export default function MentorMatchHero() {
                             style={{
                                 width: '100%', padding: '14px 20px', borderRadius: 14,
                                 border: 'none',
-                                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
                                 color: '#fff', fontSize: 16, fontWeight: 700,
                                 cursor: 'pointer',
-                                boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
+                                boxShadow: '0 4px 20px rgba(34,197,94,0.4)',
                                 marginBottom: 10,
                             }}
                         >
@@ -361,21 +364,21 @@ export default function MentorMatchHero() {
 
                 {/* 매칭 결과 */}
                 {matchResult && !showLoginPrompt && (
-                    <div style={{
+                    <div className="match-hero-result" style={{
                         animation: 'heroSlideUp 0.4s ease',
                         background: 'rgba(255,255,255,0.06)',
                         borderRadius: 20,
                         padding: '24px',
-                        border: '1px solid rgba(99,102,241,0.25)',
+                        border: '1px solid rgba(34,197,94,0.25)',
                         backdropFilter: 'blur(12px)',
                         position: 'relative', zIndex: 1,
                     }}>
                         <div style={{
                             display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: 'rgba(99,102,241,0.15)',
-                            border: '1px solid rgba(99,102,241,0.3)',
+                            background: 'rgba(34,197,94,0.15)',
+                            border: '1px solid rgba(34,197,94,0.3)',
                             borderRadius: 20, padding: '4px 14px',
-                            fontSize: 12, fontWeight: 700, color: '#a5b4fc',
+                            fontSize: 12, fontWeight: 700, color: '#86efac',
                             marginBottom: 16,
                         }}>
                             ✨ AI 매칭 완료 — {matchResult.reason}
@@ -385,8 +388,8 @@ export default function MentorMatchHero() {
                             <div style={{
                                 width: 64, height: 64, borderRadius: 18,
                                 overflow: 'hidden', flexShrink: 0,
-                                border: '2px solid rgba(99,102,241,0.3)',
-                                background: 'rgba(99,102,241,0.1)',
+                                border: '2px solid rgba(34,197,94,0.3)',
+                                background: 'rgba(34,197,94,0.1)',
                             }}>
                                 {getMentorImage(matchResult.mentor) ? (
                                     <Image
@@ -422,22 +425,22 @@ export default function MentorMatchHero() {
                                 color: 'rgba(255,255,255,0.7)',
                                 lineHeight: 1.6,
                                 marginBottom: 16,
-                                borderLeft: '3px solid #6366f1',
+                                borderLeft: '3px solid #22c55e',
                             }}>
                                 💬 &ldquo;{matchResult.firstMessage}&rdquo;
                             </div>
                         )}
 
-                        <div style={{ display: 'flex', gap: 10 }}>
+                        <div className="match-hero-actions" style={{ display: 'flex', gap: 10 }}>
                             <button
                                 onClick={startChat}
                                 style={{
                                     flex: 1, padding: '14px 20px', borderRadius: 14,
                                     border: 'none',
-                                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
                                     color: '#fff', fontSize: 16, fontWeight: 700,
                                     cursor: 'pointer',
-                                    boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
+                                    boxShadow: '0 4px 20px rgba(34,197,94,0.4)',
                                 }}
                             >
                                 🚀 바로 상담 시작하기
@@ -467,6 +470,51 @@ export default function MentorMatchHero() {
                 @keyframes spin { to { transform: rotate(360deg) } }
                 @keyframes heroSlideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
                 input::placeholder { color: rgba(255,255,255,0.3) !important; }
+                @media (max-width: 768px) {
+                    .match-hero-wrap {
+                        padding: 16px 16px 8px !important;
+                    }
+                    .match-hero-card {
+                        border-radius: 20px !important;
+                        padding: 28px 20px 24px !important;
+                    }
+                    .match-hero-title {
+                        font-size: 20px !important;
+                    }
+                    .match-hero-input-bar {
+                        flex-direction: column !important;
+                        gap: 8px !important;
+                        padding: 8px !important;
+                        border-radius: 16px !important;
+                    }
+                    .match-hero-input-bar input {
+                        padding: 14px 16px !important;
+                        font-size: 15px !important;
+                    }
+                    .match-hero-btn {
+                        width: 100% !important;
+                        padding: 14px !important;
+                        border-radius: 12px !important;
+                    }
+                    .match-hero-tags {
+                        gap: 6px !important;
+                        margin-top: 10px !important;
+                    }
+                    .match-hero-tags button {
+                        padding: 6px 12px !important;
+                        font-size: 12px !important;
+                    }
+                    .match-hero-result {
+                        padding: 18px !important;
+                        border-radius: 16px !important;
+                    }
+                    .match-hero-actions {
+                        flex-direction: column !important;
+                    }
+                    .match-hero-actions button {
+                        width: 100% !important;
+                    }
+                }
             `}</style>
         </div>
     )
