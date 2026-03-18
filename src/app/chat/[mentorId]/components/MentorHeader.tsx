@@ -138,7 +138,7 @@ export default function MentorHeader({
     const [exportLoading, setExportLoading] = useState(false)
     const [exportData, setExportData] = useState<{ report: any; markdown: string; meta: any } | null>(null)
     const [exportError, setExportError] = useState<string | null>(null)
-    const [ebookData, setEbookData] = useState<{ ebook: any; meta: any } | null>(null)
+    const [ebookData, setEbookData] = useState<{ ebook: any; meta: any; ctaLinks?: string[] } | null>(null)
     const [showEbookViewer, setShowEbookViewer] = useState(false)
 
     const handleExport = async () => {
@@ -977,6 +977,7 @@ export default function MentorHeader({
                     <EbookViewer
                         ebook={ebookData.ebook}
                         meta={ebookData.meta}
+                        ctaLinks={ebookData.ctaLinks || []}
                         sessionId={sessionId || undefined}
                         onClose={() => setShowEbookViewer(false)}
                         onEditRequest={onEditRequest}

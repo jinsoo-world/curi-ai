@@ -48,7 +48,7 @@ const PDF_THEMES: Record<string, {
     },
 }
 
-export function generateEbookHtml(ebook: EbookData, mentorName: string, theme?: string): string {
+export function generateEbookHtml(ebook: EbookData, mentorName: string, theme?: string, ctaLinks?: string[]): string {
     const t = PDF_THEMES[theme || 'gradient'] || PDF_THEMES.gradient
     const coverBg = t.cover.includes('gradient') ? `background: ${t.cover};` : `background: ${t.cover};`
 
@@ -248,6 +248,41 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string, theme?: 
         `
     }).join('')
 
+    // CTA 링크 페이지 (채팅에서 추출된 URL이 있을 때)
+    const ctaPageHtml = ctaLinks && ctaLinks.length > 0 ? `
+        <div style="page-break-before: always; padding: 60px 40px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 200mm;">
+            <div style="text-align: center; max-width: 480px;">
+                <div style="font-size: 48px; margin-bottom: 20px;">🔗</div>
+                <h2 style="
+                    font-family: 'Pretendard', sans-serif;
+                    font-size: 22pt;
+                    font-weight: 700;
+                    color: #0f172a;
+                    margin: 0 0 10px 0;
+                ">더 알아보기</h2>
+                <p style="font-size: 12pt; color: #64748b; margin: 0 0 32px 0; line-height: 1.6;">
+                    아래 링크에서 더 자세한 내용을 확인하세요.
+                </p>
+                ${ctaLinks.map((url, i) => `
+                    <a href="${url}" target="_blank" style="
+                        display: block;
+                        margin: 10px auto;
+                        padding: 16px 32px;
+                        background: linear-gradient(135deg, #6366f1, #4f46e5);
+                        color: #ffffff;
+                        text-decoration: none;
+                        border-radius: 12px;
+                        font-size: 13pt;
+                        font-weight: 600;
+                        font-family: 'Pretendard', sans-serif;
+                        max-width: 400px;
+                        word-break: break-all;
+                    ">${url.replace(/^https?:\/\//, '').split('/')[0]} →</a>
+                `).join('')}
+            </div>
+        </div>
+    ` : ''
+
     return `
         <div style="
             font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
@@ -257,6 +292,7 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string, theme?: 
         ">
             ${coverHtml}
             ${pagesHtml}
+            ${ctaPageHtml}
         </div>
     `
 }

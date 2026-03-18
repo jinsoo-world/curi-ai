@@ -39,6 +39,7 @@ interface ChatMessage {
 interface EbookViewerProps {
     ebook: EbookData
     meta: EbookMeta
+    ctaLinks?: string[]
     onClose: () => void
     onEditRequest?: (prefill: string) => void
     onEbookUpdate?: (newEbook: EbookData) => void
@@ -93,7 +94,7 @@ const THEMES = {
 type ThemeKey = keyof typeof THEMES
 
 /* ── 메인 컴포넌트 ── */
-export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbookUpdate, sessionId }: EbookViewerProps) {
+export default function EbookViewer({ ebook, meta, ctaLinks, onClose, onEditRequest, onEbookUpdate, sessionId }: EbookViewerProps) {
     const [currentPage, setCurrentPage] = useState(0)
     const [theme, setTheme] = useState<ThemeKey>('gradient')
     const [showThemeMenu, setShowThemeMenu] = useState(false)
@@ -178,7 +179,7 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
             const { generateEbookHtml } = await import('./ebookTemplate')
             const html2pdf = (await import('html2pdf.js')).default
             const finalEbook = applyEdits(ebook)
-            const htmlContent = generateEbookHtml(finalEbook, meta.mentorName, theme)
+            const htmlContent = generateEbookHtml(finalEbook, meta.mentorName, theme, ctaLinks)
             const container = document.createElement('div')
             container.innerHTML = htmlContent
             document.body.appendChild(container)

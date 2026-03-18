@@ -139,6 +139,13 @@ export async function POST(req: Request) {
             .map(m => `[${m.role === 'user' ? '유저' : 'AI'}] ${m.content}`)
             .join('\n\n')
 
+        // 채팅 메시지에서 URL 자동 추출 (유저가 넣은 랜딩 링크)
+        const urlRegex = /https?:\/\/[^\s<>"'\]\)]+/g
+        const allUrls = messages
+            .filter(m => m.role === 'user')
+            .flatMap(m => m.content.match(urlRegex) || [])
+        const ctaLinks = [...new Set(allUrls)].slice(0, 3) // 중복 제거, 최대 3개
+
         // Gemini로 구조화된 원고 JSON 생성
         const ai = getAI()
         const result = await ai.models.generateContent({
@@ -174,6 +181,7 @@ export async function POST(req: Request) {
 
         return Response.json({
             ebook: ebookData,
+            ctaLinks,
             meta: {
                 mentorName,
                 createdDate: new Date().toLocaleDateString('ko-KR', {
