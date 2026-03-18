@@ -178,7 +178,7 @@ export default function MentorDetailPage() {
                                         {user?.display_name || user?.email?.split('@')[0] || '알 수 없는 유저'}
                                     </div>
                                     <div style={{ fontSize: 12, color: '#94a3b8' }}>
-                                        {user?.email} · {session.message_count || 0}개 메시지 · {timeAgo(session.last_message_at)}
+                                        {user?.email} · {session.messages?.length || 0}개 메시지 · {timeAgo(session.last_message_at)}
                                     </div>
                                 </div>
                                 <span style={{ fontSize: 18, transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>

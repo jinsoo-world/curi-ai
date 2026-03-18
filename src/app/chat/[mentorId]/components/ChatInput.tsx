@@ -242,7 +242,7 @@ export default function ChatInput({
                         onKeyDown={handleKeyDown}
                         onFocus={() => setIsFocused(true)}
                         onBlur={() => setIsFocused(false)}
-                        placeholder={isListening ? '듣고 있어요...' : '멘토에게 메시지 보내기'}
+                        placeholder={isListening ? '듣고 있어요...' : '메시지 보내기'}
                         aria-label="멘토에게 보낼 메시지"
                         rows={1}
                         maxLength={MAX_INPUT_LENGTH}

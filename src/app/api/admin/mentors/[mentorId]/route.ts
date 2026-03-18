@@ -85,7 +85,7 @@ export async function GET(
         // === 통계 ===
         const totalMemberSessions = enrichedMemberSessions.length
         const totalGuestSessions = guestSessions.length
-        const totalMemberMessages = enrichedMemberSessions.reduce((sum, s) => sum + (s.message_count || 0), 0)
+        const totalMemberMessages = enrichedMemberSessions.reduce((sum, s) => sum + (s.messages?.length || 0), 0)
         const totalGuestMessages = guestLogs?.length || 0
         const uniqueMembers = new Set(enrichedMemberSessions.map(s => s.user_id).filter(Boolean)).size
         const uniqueGuests = new Set(guestSessions.map(s => s.visitor_id).filter(Boolean)).size
