@@ -777,7 +777,7 @@ export default function ChatPage() {
                     aiContentLength={aiContentLength}
                     isReportNew={isReportNew}
                     pdfExportEnabled={mentor.pdf_export_enabled || false}
-                    exportLabel={isEbookBot ? '📄 원고 다운로드' : '리포트'}
+                    exportLabel={isEbookBot ? '원고(PDF) 다운로드' : '리포트'}
                     exportMode={isEbookBot ? 'raw' : 'report'}
                     lastAiMessage={lastAiMessage}
                 />
@@ -1005,6 +1005,7 @@ export default function ChatPage() {
                             autoTTS={autoTTS}
                             systemPrompt={mentor?.system_prompt}
                             voiceId={mentor.voice_id}
+                            exportLabel={isEbookBot ? '원고(PDF) 다운로드' : '리포트'}
                         />
 
 

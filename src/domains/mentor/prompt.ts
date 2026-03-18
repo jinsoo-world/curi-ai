@@ -99,7 +99,11 @@ export function buildSystemPrompt(
 
     // ── ② 크리에이터가 작성한 에이전트 프롬프트 (핵심) ──
     if (mentor.system_prompt && mentor.system_prompt.trim()) {
-        parts.push(`\n[📝 크리에이터 지시사항 — 최우선 반영]\n${mentor.system_prompt}`)
+        // 범용 템플릿 변수 치환: {{user_name}} → 실제 유저 이름
+        let processedPrompt = mentor.system_prompt
+        const userName = userContext?.displayName || '선생님'
+        processedPrompt = processedPrompt.replace(/\{\{user_name\}\}/g, userName)
+        parts.push(`\n[📝 크리에이터 지시사항 — 최우선 반영]\n${processedPrompt}`)
     }
 
     // ── ③ AI 유형별 기본 행동 지시 ──
