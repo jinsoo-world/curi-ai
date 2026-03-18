@@ -79,10 +79,8 @@ export async function PATCH(req: NextRequest) {
             throw new Error(error.message)
         }
 
-        // 멘토 활성/비활성 변경 시 멘토 목록 ISR 캐시 즉시 무효화
-        if (isActive !== undefined) {
-            revalidatePath('/mentors')
-        }
+        // 멘토 수정 시 목록 페이지 ISR 캐시 즉시 무효화 (아바타, 이름 등 변경 즉시 반영)
+        revalidatePath('/mentors')
 
         return NextResponse.json({ success: true, message: '멘토가 수정되었습니다.' })
     } catch (error: unknown) {
