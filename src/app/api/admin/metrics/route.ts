@@ -87,11 +87,14 @@ export async function GET() {
             .select('*', { count: 'exact', head: true })
             .eq('status', 'active')
 
-        // === 비회원(게스트) 대화 수 — user_id가 NULL인 세션 ===
-        const { count: guestSessions } = await supabase
-            .from('chat_sessions')
-            .select('*', { count: 'exact', head: true })
-            .is('user_id', null)
+        // === 비회원(게스트) 대화 수 — guest_chat_logs 테이블 기준 ===
+        const { data: guestLogs } = await supabase
+            .from('guest_chat_logs')
+            .select('visitor_id')
+            .gte('created_at', today)
+        const guestVisitorSet = new Set(guestLogs?.map(l => l.visitor_id).filter(Boolean) || [])
+        const guestSessions = guestLogs?.length || 0
+        const guestUniqueVisitors = guestVisitorSet.size
 
         // === 오늘 생성된 AI(멘토) 수 ===
         const { count: todayMentors } = await supabase

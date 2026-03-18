@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
 /** 멘토 프로필 이미지 폴백 매핑 */
@@ -46,6 +47,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 }
 
 export default function MentorsPage() {
+    const router = useRouter()
     const [mentors, setMentors] = useState<MentorStat[]>([])
     const [loading, setLoading] = useState(true)
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
@@ -243,14 +245,18 @@ export default function MentorsPage() {
                         const statusConf = STATUS_CONFIG[m.status] || STATUS_CONFIG.active
 
                         return (
-                            <div key={m.mentor_id} style={{
+                            <div key={m.mentor_id} onClick={() => router.push(`/admin/mentors/${m.mentor_id}`)} style={{
                                 background: '#fff',
                                 border: `1px solid ${m.status === 'deleted' ? '#fecaca' : m.status === 'inactive' ? '#fde68a' : '#e5e7eb'}`,
                                 borderRadius: 16, padding: 24,
                                 position: 'relative', overflow: 'hidden',
                                 boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                                 opacity: m.status === 'deleted' ? 0.6 : 1,
-                            }}>
+                                cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)' }}
+                            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)' }}
+                            >
                                 {/* 상태 뱃지 */}
                                 <div style={{
                                     position: 'absolute', top: 16, right: 16,
