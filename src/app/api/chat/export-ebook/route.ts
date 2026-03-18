@@ -111,13 +111,17 @@ export async function POST(req: Request) {
             .single()
 
         // 사용자 닉네임 조회 (저자명으로 사용)
-        const { data: profile } = await admin
-            .from('profiles')
-            .select('display_name')
-            .eq('id', user.id)
-            .single()
-
-        const authorName = profile?.display_name || user.user_metadata?.name || user.email?.split('@')[0] || '저자'
+        let authorName = '저자'
+        try {
+            const { data: userProfile } = await admin
+                .from('users')
+                .select('display_name')
+                .eq('id', user.id)
+                .single()
+            authorName = userProfile?.display_name || user.user_metadata?.name || user.email?.split('@')[0] || '저자'
+        } catch {
+            authorName = user.user_metadata?.name || user.email?.split('@')[0] || '저자'
+        }
 
         // 메시지 조회
         const { data: messages } = await admin
