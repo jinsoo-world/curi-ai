@@ -26,19 +26,20 @@ export default function AppSidebar() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        // sessionStorage 캐시 체크 (유저 ID가 같을 때만 사용)
+        // sessionStorage 캐시 체크 (유저 ID가 같고 5분 이내일 때만 사용)
         if (!skipCache) {
             try {
                 const cached = sessionStorage.getItem('sidebar_profile')
                 if (cached) {
-                    const { profile: cachedProfile, user: cachedUser } = JSON.parse(cached)
-                    // 캐시된 유저 ID와 현재 유저 ID가 같을 때만 캐시 사용
-                    if (cachedUser?.id === user.id) {
+                    const { profile: cachedProfile, user: cachedUser, ts } = JSON.parse(cached)
+                    const isExpired = !ts || Date.now() - ts > 5 * 60 * 1000 // 5분 TTL
+                    // 캐시된 유저 ID와 현재 유저 ID가 같고, 만료되지 않았을 때만 캐시 사용
+                    if (cachedUser?.id === user.id && !isExpired) {
                         setProfile(cachedProfile)
                         setUser(cachedUser)
                         return
                     }
-                    // 다른 유저 → 캐시 삭제
+                    // 만료 또는 다른 유저 → 캐시 삭제
                     sessionStorage.removeItem('sidebar_profile')
                 }
             } catch {}
@@ -66,8 +67,8 @@ export default function AppSidebar() {
                 gender: null,
             }
             setProfile(p)
-            // 캐시 저장 (유저 ID 포함)
-            try { sessionStorage.setItem('sidebar_profile', JSON.stringify({ profile: p, user: { id: user.id, email: user.email } })) } catch {}
+            // 캐시 저장 (유저 ID + 타임스탬프 포함)
+            try { sessionStorage.setItem('sidebar_profile', JSON.stringify({ profile: p, user: { id: user.id, email: user.email }, ts: Date.now() })) } catch {}
         } catch {
             const p = {
                 display_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
@@ -292,7 +293,7 @@ export default function AppSidebar() {
                                     fontSize: 14, fontWeight: 600, color: '#18181b',
                                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                 }}>
-                                    {profile?.display_name || user?.user_metadata?.name || '사용자'}
+                                    {profile?.display_name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || '사용자'}
                                 </div>
                                 <div style={{
                                     fontSize: 11, fontWeight: 600,
