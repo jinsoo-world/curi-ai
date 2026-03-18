@@ -21,6 +21,19 @@ export default function CreditClaimWrapper() {
             const timer = setTimeout(() => {
                 setShowModal(true)
             }, 1500)
+
+            // 🔗 비회원→회원 전환 트래킹: visitor_id 연결
+            try {
+                const visitorId = localStorage.getItem('curi_visitor_id')
+                if (visitorId) {
+                    fetch('/api/user/link-visitor', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ visitorId }),
+                    }).catch(() => {})
+                }
+            } catch {}
+
             return () => clearTimeout(timer)
         }
     }, [searchParams])
