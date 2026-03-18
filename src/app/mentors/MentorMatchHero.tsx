@@ -4,6 +4,16 @@ import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
+/** 멘토 프로필 이미지 폴백 매핑 */
+const MENTOR_IMAGES: Record<string, string> = {
+    '열정진': '/mentors/passion-jjin.png',
+    '글담쌤': '/mentors/geuldam.jpg',
+    'Cathy': '/mentors/cathy.jpeg',
+    '봉이 김선달': '/mentors/bongi-kimsundal.png',
+    '신사임당': '/mentors/shin-saimdang.png',
+    '갓출리더의 홧병상담소': '/mentors/god-leader.png',
+}
+
 const PLACEHOLDER_CONCERNS = [
     '돈 버는 콘텐츠를 만들고 싶어요',
     '사는 게 답답하고 막막해요',
@@ -27,14 +37,19 @@ export default function MentorMatchHero() {
     const [concern, setConcern] = useState('')
     const [isMatching, setIsMatching] = useState(false)
     const [matchResult, setMatchResult] = useState<MatchResult | null>(null)
+    const [showLoginPrompt, setShowLoginPrompt] = useState(false)
     const [placeholderIdx, setPlaceholderIdx] = useState(0)
     const inputRef = useRef<HTMLInputElement>(null)
     const router = useRouter()
 
-    // 플레이스홀더 순환
     const rotatePlaceholder = useCallback(() => {
         setPlaceholderIdx(prev => (prev + 1) % PLACEHOLDER_CONCERNS.length)
     }, [])
+
+    /** 멘토 이미지 가져오기 (avatar_url → MENTOR_IMAGES 폴백) */
+    const getMentorImage = (mentor: MatchResult['mentor']): string | null => {
+        return mentor.avatar_url || MENTOR_IMAGES[mentor.name] || null
+    }
 
     const handleMatch = async () => {
         const text = concern.trim()
@@ -42,6 +57,7 @@ export default function MentorMatchHero() {
 
         setIsMatching(true)
         setMatchResult(null)
+        setShowLoginPrompt(false)
 
         try {
             const res = await fetch('/api/mentor-match', {
@@ -60,9 +76,34 @@ export default function MentorMatchHero() {
         }
     }
 
-    const startChat = () => {
+    const startChat = async () => {
         if (!matchResult) return
-        // 고민을 쿼리로 전달 → 채팅에서 자동 전송
+
+        // 로그인 여부 확인
+        try {
+            const authRes = await fetch('/api/auth/me')
+            const authData = await authRes.json()
+
+            if (!authData?.user) {
+                // 비회원: 로그인 유도
+                setShowLoginPrompt(true)
+                return
+            }
+
+            // 회원: 고민 저장 후 채팅으로 이동
+            try {
+                await fetch('/api/user-concerns', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        concern: concern.trim(),
+                        matchedMentorId: matchResult.mentor.id,
+                        matchedMentorName: matchResult.mentor.name,
+                    }),
+                })
+            } catch { /* 저장 실패해도 진행 */ }
+        } catch { /* auth 확인 실패해도 진행 */ }
+
         const encoded = encodeURIComponent(concern.trim())
         router.push(`/chat/${matchResult.mentor.id}?auto_msg=${encoded}`)
     }
@@ -72,7 +113,6 @@ export default function MentorMatchHero() {
             maxWidth: 1000, margin: '0 auto',
             padding: '40px 40px 16px',
         }}>
-            {/* 메인 카드 */}
             <div style={{
                 background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9ff 100%)',
                 borderRadius: 24,
@@ -81,7 +121,6 @@ export default function MentorMatchHero() {
                 position: 'relative',
                 overflow: 'hidden',
             }}>
-                {/* 배경 장식 */}
                 <div style={{
                     position: 'absolute', top: -40, right: -40,
                     width: 180, height: 180, borderRadius: '50%',
@@ -101,7 +140,7 @@ export default function MentorMatchHero() {
                 </p>
 
                 {/* 입력 영역 */}
-                {!matchResult && (
+                {!matchResult && !showLoginPrompt && (
                     <div style={{
                         display: 'flex', gap: 10,
                         animation: 'slideUp 0.3s ease',
@@ -134,18 +173,14 @@ export default function MentorMatchHero() {
                                 padding: '14px 24px',
                                 borderRadius: 14,
                                 border: 'none',
-                                background: isMatching
-                                    ? '#94a3b8'
-                                    : 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                background: isMatching ? '#94a3b8' : 'linear-gradient(135deg, #22c55e, #16a34a)',
                                 color: '#fff',
                                 fontSize: 15,
                                 fontWeight: 700,
                                 cursor: concern.trim() && !isMatching ? 'pointer' : 'not-allowed',
                                 whiteSpace: 'nowrap',
                                 transition: 'all 0.2s',
-                                boxShadow: concern.trim() && !isMatching
-                                    ? '0 4px 14px rgba(34,197,94,0.3)'
-                                    : 'none',
+                                boxShadow: concern.trim() && !isMatching ? '0 4px 14px rgba(34,197,94,0.3)' : 'none',
                             }}
                         >
                             {isMatching ? (
@@ -164,8 +199,96 @@ export default function MentorMatchHero() {
                     </div>
                 )}
 
+                {/* 비회원 로그인 유도 */}
+                {showLoginPrompt && matchResult && (
+                    <div style={{
+                        animation: 'slideUp 0.4s ease',
+                        background: '#fff',
+                        borderRadius: 18,
+                        padding: '28px 24px',
+                        border: '2px solid #fbbf2420',
+                        boxShadow: '0 8px 30px rgba(251,191,36,0.1)',
+                        textAlign: 'center',
+                    }}>
+                        {/* 매칭된 멘토 미리보기 */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center', marginBottom: 16 }}>
+                            <div style={{
+                                width: 48, height: 48, borderRadius: 14,
+                                overflow: 'hidden', flexShrink: 0,
+                                border: '2px solid #22c55e20',
+                            }}>
+                                {getMentorImage(matchResult.mentor) ? (
+                                    <Image
+                                        src={getMentorImage(matchResult.mentor)!}
+                                        alt={matchResult.mentor.name}
+                                        width={48} height={48}
+                                        style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                                    />
+                                ) : (
+                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0fdf4', fontSize: 24 }}>🤖</div>
+                                )}
+                            </div>
+                            <div style={{ textAlign: 'left' }}>
+                                <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b' }}>{matchResult.mentor.name}</div>
+                                <div style={{ fontSize: 12, color: '#64748b' }}>님이 기다리고 있어요!</div>
+                            </div>
+                        </div>
+
+                        <p style={{ fontSize: 15, color: '#475569', marginBottom: 20, lineHeight: 1.6 }}>
+                            무료 회원가입하면<br />
+                            <strong style={{ color: '#16a34a' }}>{matchResult.mentor.name}</strong>과 바로 대화를 시작할 수 있어요 ✨
+                        </p>
+
+                        <button
+                            onClick={() => {
+                                // 고민을 localStorage에 저장해서 로그인 후 자동 매칭
+                                localStorage.setItem('pending_concern', JSON.stringify({
+                                    concern: concern.trim(),
+                                    mentorId: matchResult.mentor.id,
+                                }))
+                                router.push('/login')
+                            }}
+                            style={{
+                                width: '100%',
+                                padding: '14px 20px',
+                                borderRadius: 14,
+                                border: 'none',
+                                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                color: '#fff',
+                                fontSize: 16,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
+                                marginBottom: 10,
+                            }}
+                        >
+                            🚀 무료 회원가입하고 대화 시작
+                        </button>
+                        <button
+                            onClick={() => {
+                                setShowLoginPrompt(false)
+                                // 비회원도 채팅은 가능 — 바로 이동
+                                const encoded = encodeURIComponent(concern.trim())
+                                router.push(`/chat/${matchResult.mentor.id}?auto_msg=${encoded}`)
+                            }}
+                            style={{
+                                width: '100%',
+                                padding: '12px 20px',
+                                borderRadius: 14,
+                                border: 'none',
+                                background: 'transparent',
+                                color: '#94a3b8',
+                                fontSize: 13,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            일단 비회원으로 대화해볼게요
+                        </button>
+                    </div>
+                )}
+
                 {/* 매칭 결과 */}
-                {matchResult && (
+                {matchResult && !showLoginPrompt && (
                     <div style={{
                         animation: 'slideUp 0.4s ease',
                         background: '#fff',
@@ -174,7 +297,6 @@ export default function MentorMatchHero() {
                         border: '2px solid #22c55e30',
                         boxShadow: '0 8px 30px rgba(34,197,94,0.12)',
                     }}>
-                        {/* 매칭 뱃지 */}
                         <div style={{
                             display: 'inline-flex', alignItems: 'center', gap: 6,
                             background: '#f0fdf4', border: '1px solid #bbf7d0',
@@ -185,20 +307,16 @@ export default function MentorMatchHero() {
                             ✨ AI 매칭 완료 — {matchResult.reason}
                         </div>
 
-                        {/* 멘토 정보 */}
-                        <div style={{
-                            display: 'flex', alignItems: 'center', gap: 16,
-                            marginBottom: 16,
-                        }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
                             <div style={{
                                 width: 64, height: 64, borderRadius: 18,
                                 overflow: 'hidden', flexShrink: 0,
                                 border: '3px solid #22c55e20',
                                 background: '#f0fdf4',
                             }}>
-                                {matchResult.mentor.avatar_url ? (
+                                {getMentorImage(matchResult.mentor) ? (
                                     <Image
-                                        src={matchResult.mentor.avatar_url}
+                                        src={getMentorImage(matchResult.mentor)!}
                                         alt={matchResult.mentor.name}
                                         width={64} height={64}
                                         style={{ objectFit: 'cover', width: '100%', height: '100%' }}
@@ -221,7 +339,6 @@ export default function MentorMatchHero() {
                             </div>
                         </div>
 
-                        {/* 첫 메시지 미리보기 */}
                         {matchResult.firstMessage && (
                             <div style={{
                                 background: '#f8fafc',
@@ -237,7 +354,6 @@ export default function MentorMatchHero() {
                             </div>
                         )}
 
-                        {/* 버튼 */}
                         <div style={{ display: 'flex', gap: 10 }}>
                             <button
                                 onClick={startChat}
@@ -252,7 +368,6 @@ export default function MentorMatchHero() {
                                     fontWeight: 700,
                                     cursor: 'pointer',
                                     boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
-                                    transition: 'all 0.15s',
                                 }}
                             >
                                 🚀 바로 상담 시작하기

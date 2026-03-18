@@ -126,6 +126,26 @@ export async function POST(req: Request) {
             memories,
         )
 
+        // 📋 유저의 활성 고민 주입 (멘토 매칭에서 저장된 고민)
+        if (user) {
+            try {
+                const { data: concerns } = await supabase
+                    .from('user_concerns')
+                    .select('concern, matched_mentor_name, created_at')
+                    .eq('user_id', user.id)
+                    .eq('status', 'active')
+                    .order('created_at', { ascending: false })
+                    .limit(3)
+
+                if (concerns && concerns.length > 0) {
+                    const concernLines = concerns.map(c => 
+                        `- "${c.concern}"${c.matched_mentor_name ? ` (${c.matched_mentor_name}에게 상담 요청)` : ''}`
+                    ).join('\n')
+                    systemPrompt += `\n\n[📋 사용자의 최근 고민]\n이 사용자가 최근에 고민하고 있는 것들입니다. 대화에 자연스럽게 참고하세요.\n${concernLines}\n→ 해당 고민과 관련된 대화가 나오면 "그 고민은 잘 해결되고 있어요?" 같이 자연스럽게 언급해주세요.`
+                }
+            } catch { /* 고민 조회 실패 무시 */ }
+        }
+
         // 📚 RAG 지식 검색 (멘토별 지식 베이스)
         try {
             console.log('[Chat RAG] Generating embedding for:', lastUserMessage.slice(0, 50))

@@ -103,6 +103,34 @@ ${mentorInfo}
             firstMessage = matched.sample_questions?.[0] || ''
         }
 
+        // 📊 트래킹 로그 저장
+        try {
+            // 유저 인증 확인 (선택적)
+            let userId = null
+            let isGuest = true
+            try {
+                const { createClient } = await import('@/lib/supabase/server')
+                const userSupabase = await createClient()
+                const { data: { user } } = await userSupabase.auth.getUser()
+                if (user) {
+                    userId = user.id
+                    isGuest = false
+                }
+            } catch { /* 게스트 */ }
+
+            await supabase.from('mentor_match_logs').insert({
+                user_id: userId,
+                concern: concern.trim(),
+                matched_mentor_id: matched.id,
+                matched_mentor_name: matched.name,
+                match_reason: reason,
+                match_type: firstMessage ? 'gemini' : 'keyword',
+                is_guest: isGuest,
+            })
+        } catch (logErr: any) {
+            console.error('[Mentor Match] Log save failed:', logErr.message)
+        }
+
         return NextResponse.json({
             mentor: matched,
             reason: reason || '당신에게 딱 맞는 멘토!',

@@ -8,6 +8,7 @@ const navItems = [
     { href: '/admin/users', label: '👥 Users', id: 'users' },
     { href: '/admin/mentors', label: '🤖 Mentors', id: 'mentors' },
     { href: '/admin/conversations', label: '💬 Conversations', id: 'conversations' },
+    { href: '/admin/match-logs', label: '🎯 멘토 매칭', id: 'match-logs' },
 ]
 
 export default function AdminSidebar() {
