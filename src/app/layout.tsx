@@ -132,7 +132,7 @@ export default function RootLayout({
         )}
         <GoogleAnalytics />
         <Analytics />
-        <SpeedInsights />
+        <SpeedInsights sampleRate={0.3} />
         {children}
         <CloverHunt />
         <script
