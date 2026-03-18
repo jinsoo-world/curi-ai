@@ -282,6 +282,10 @@ export default function MentorHeader({
     const shareTitle = `${mentor.name} AI ㅣ ${mentor.title}`
     const shareText = '궁금한 것을 언제든 물어보세요.'
 
+    const shareImageUrl = mentor.avatar_url?.startsWith('http')
+        ? mentor.avatar_url
+        : `https://www.curi-ai.com${mentor.avatar_url || '/icons/icon-512x512.png'}`
+
     const handleKakaoShare = () => {
         const w = window as any
         if (w.Kakao && !w.Kakao.isInitialized()) {
@@ -293,7 +297,7 @@ export default function MentorHeader({
                 content: {
                     title: shareTitle,
                     description: shareText,
-                    imageUrl: 'https://www.curi-ai.com/icons/icon-512x512.png',
+                    imageUrl: shareImageUrl,
                     link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
                 },
                 buttons: [
