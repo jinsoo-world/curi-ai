@@ -63,11 +63,20 @@ export async function GET(request: NextRequest) {
                     || (user as Record<string, unknown>).updated_at as string  // 로그인 시 updated_at 갱신됨
                     || user.created_at  // 최종 폴백: 가입일
 
-                // 만든 AI 수
-                const { count: aiCount } = await supabase
-                    .from('mentors')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('creator_id', user.id)
+                // 만든 AI 수 (creator_profiles.user_id → creator_profiles.id → mentors.creator_id)
+                let aiCount = 0
+                const { data: creatorProfile } = await supabase
+                    .from('creator_profiles')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .maybeSingle()
+                if (creatorProfile) {
+                    const { count } = await supabase
+                        .from('mentors')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('creator_id', creatorProfile.id)
+                    aiCount = count || 0
+                }
 
                 // 누적 출석일수 (고유 활동 날짜 수, KST 기준)
                 const activeDates = new Set<string>()
