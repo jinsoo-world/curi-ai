@@ -27,8 +27,14 @@ export default function GuestLogsPage() {
             .then(r => r.json())
             .then(data => {
                 setLogs(data.logs || [])
-                setStats(data.stats || null)
+                const s = data.stats || {}
+                setStats({
+                    total: s.total || 0,
+                    todayCount: s.todayCount || 0,
+                    mentorCounts: s.mentorCounts || {},
+                })
             })
+            .catch(() => setStats({ total: 0, todayCount: 0, mentorCounts: {} }))
             .finally(() => setLoading(false))
     }, [])
 
@@ -55,7 +61,7 @@ export default function GuestLogsPage() {
                         <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>오늘</div>
                         <div style={{ fontSize: 28, fontWeight: 800, color: '#22c55e' }}>{stats.todayCount}</div>
                     </div>
-                    {Object.entries(stats.mentorCounts).map(([name, count]) => (
+                    {Object.entries(stats.mentorCounts || {}).map(([name, count]) => (
                         <div key={name} style={{ background: '#fff', borderRadius: 14, padding: '20px 18px', border: '1px solid #e5e7eb' }}>
                             <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>{name}</div>
                             <div style={{ fontSize: 28, fontWeight: 800, color: '#8b5cf6' }}>{count}</div>

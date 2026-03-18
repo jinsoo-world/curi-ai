@@ -32,8 +32,15 @@ export default function MatchLogsPage() {
             .then(r => r.json())
             .then(data => {
                 setLogs(data.logs || [])
-                setStats(data.stats || null)
+                const s = data.stats || {}
+                setStats({
+                    total: s.total || 0,
+                    guestCount: s.guestCount || 0,
+                    memberCount: s.memberCount || 0,
+                    mentorCounts: s.mentorCounts || {},
+                })
             })
+            .catch(() => setStats({ total: 0, guestCount: 0, memberCount: 0, mentorCounts: {} }))
             .finally(() => setLoading(false))
     }, [])
 
@@ -56,7 +63,7 @@ export default function MatchLogsPage() {
                     <StatCard label="총 매칭" value={stats.total} color="#22c55e" />
                     <StatCard label="회원" value={stats.memberCount} color="#3b82f6" />
                     <StatCard label="비회원" value={stats.guestCount} color="#f59e0b" />
-                    {Object.entries(stats.mentorCounts).map(([name, count]) => (
+                    {Object.entries(stats.mentorCounts || {}).map(([name, count]) => (
                         <StatCard key={name} label={name} value={count} color="#8b5cf6" />
                     ))}
                 </div>
