@@ -928,6 +928,52 @@ export default function ChatPage() {
                     </div>
                 </div>
 
+                {/* 🔥 후속 질문 제안 칩 — AI 응답 후 대화 유도 */}
+                {messages.length > 0 && showSuggestions && suggestions.length > 0 && !isStreaming && (
+                    <div style={{
+                        padding: '8px 16px 4px',
+                        display: 'flex',
+                        gap: 8,
+                        flexWrap: 'wrap',
+                        justifyContent: 'center',
+                        animation: 'slideUp 0.3s ease',
+                    }}>
+                        {suggestions.slice(0, 3).map((q, i) => (
+                            <button
+                                key={i}
+                                onClick={() => sendMessage(q)}
+                                style={{
+                                    padding: '8px 14px',
+                                    borderRadius: 20,
+                                    border: '1px solid #d1fae5',
+                                    background: '#f0fdf4',
+                                    color: '#16a34a',
+                                    fontSize: 13,
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s',
+                                    maxWidth: '90%',
+                                    textOverflow: 'ellipsis',
+                                    overflow: 'hidden',
+                                    whiteSpace: 'nowrap',
+                                }}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.background = '#dcfce7'
+                                    e.currentTarget.style.borderColor = '#22c55e'
+                                    e.currentTarget.style.transform = 'translateY(-1px)'
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.background = '#f0fdf4'
+                                    e.currentTarget.style.borderColor = '#d1fae5'
+                                    e.currentTarget.style.transform = 'translateY(0)'
+                                }}
+                            >
+                                ✦ {q}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 <ChatInput
                     value={input}
                     onChange={setInput}
