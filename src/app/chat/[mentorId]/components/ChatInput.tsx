@@ -8,7 +8,7 @@ const MAX_INPUT_LENGTH = 1000
 interface ChatInputProps {
     value: string
     onChange: (value: string) => void
-    onSubmit: (content: string) => void
+    onSubmit: (content: string, inputMethod?: 'text' | 'stt') => void
     isStreaming: boolean
 }
 
@@ -52,6 +52,8 @@ export default function ChatInput({
     const [sttError, setSttError] = useState<string | null>(null)
     const [isFocused, setIsFocused] = useState(false)
     const interimRef = useRef('')
+    /** STT로 입력이 들어왔는지 추적 */
+    const usedSttRef = useRef(false)
 
     useEffect(() => {
         const SpeechRecognition =
@@ -96,6 +98,7 @@ export default function ChatInput({
                 if (newValue.length <= MAX_INPUT_LENGTH) {
                     onChange(newValue)
                     interimRef.current = ''
+                    usedSttRef.current = true
                 }
             } else if (interimTranscript) {
                 interimRef.current = interimTranscript
@@ -151,11 +154,13 @@ export default function ChatInput({
     const handleSubmit = useCallback((e: React.FormEvent) => {
         e.preventDefault()
         if (!value.trim() || isStreaming) return
+        const method = usedSttRef.current ? 'stt' as const : 'text' as const
         if (isListening) {
             recognitionRef.current?.stop()
             setIsListening(false)
         }
-        onSubmit(value)
+        onSubmit(value, method)
+        usedSttRef.current = false
         if (inputRef.current) inputRef.current.style.height = 'auto'
     }, [value, isStreaming, isListening, onSubmit])
 
@@ -163,11 +168,13 @@ export default function ChatInput({
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
             if (!value.trim() || isStreaming) return
+            const method = usedSttRef.current ? 'stt' as const : 'text' as const
             if (isListening) {
                 recognitionRef.current?.stop()
                 setIsListening(false)
             }
-            onSubmit(value)
+            onSubmit(value, method)
+            usedSttRef.current = false
             if (inputRef.current) inputRef.current.style.height = 'auto'
         }
     }, [value, isStreaming, isListening, onSubmit])

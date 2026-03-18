@@ -16,7 +16,7 @@ export async function POST(req: Request) {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
 
-        const { messages, mentorId, sessionId, guestMessageCount } = await req.json()
+        const { messages, mentorId, sessionId, guestMessageCount, inputMethod } = await req.json()
         const lastUserMessage = messages[messages.length - 1]?.content || ''
 
         // 🎁 2026-04-30까지 무료 체험 기간
@@ -239,6 +239,7 @@ export async function POST(req: Request) {
                                 session_id: sessionId,
                                 role: 'user',
                                 content: lastUserMessage,
+                                input_method: inputMethod || 'text',
                             })
                             if (userMsgErr) console.error('[Chat Save] userMessage INSERT failed:', JSON.stringify(userMsgErr))
                             else console.log('[Chat Save] userMessage saved OK')

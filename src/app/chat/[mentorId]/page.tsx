@@ -404,7 +404,7 @@ export default function ChatPage() {
     }, [mentorId])
 
     // ───── 메시지 전송 ─────
-    const sendMessage = useCallback(async (content: string) => {
+    const sendMessage = useCallback(async (content: string, inputMethod: 'text' | 'stt' = 'text') => {
         if (!content.trim() || isStreaming) return
 
         // 🔒 비회원 3턴 체크 (전체 멘토 합산)
@@ -457,6 +457,7 @@ export default function ChatPage() {
                     messages: contextMessages,
                     mentorId,
                     sessionId,
+                    inputMethod,
                     ...(isGuest ? { guestMessageCount: getGuestMessageCount() } : {}),
                 }),
             })
@@ -710,7 +711,7 @@ export default function ChatPage() {
                     mentorEmoji={mentorEmoji}
                     isStreaming={isStreaming}
                     onNewChat={handleNewChat}
-                    onCall={() => setVoiceCallOpen(true)}
+                    onCall={mentor.voice_sample_url ? () => setVoiceCallOpen(true) : undefined}
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                     isSidebarOpen={isSidebarOpen}
                 />
