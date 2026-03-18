@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
         // 유저 기본 정보 조회 (users 테이블)
         let query = supabase
             .from('users')
-            .select('id, email, display_name, avatar_url, membership_tier, created_at, phone, gender, marketing_agreed, marketing_consent, subscription_tier, clovers, birth_year, referral_code', { count: 'exact' })
+            .select('id, email, display_name, avatar_url, membership_tier, created_at, updated_at, phone, gender, marketing_agreed, marketing_consent, subscription_tier, clovers, birth_year, referral_code', { count: 'exact' })
             .order('created_at', { ascending: false })
             .range(offset, offset + pageSize - 1)
 
@@ -59,7 +59,9 @@ export async function GET(request: NextRequest) {
                 const lastActive = sessions
                     ?.filter(s => s.last_message_at)
                     ?.sort((a, b) => new Date(b.last_message_at!).getTime() - new Date(a.last_message_at!).getTime())
-                    ?.[0]?.last_message_at || null
+                    ?.[0]?.last_message_at
+                    || (user as Record<string, unknown>).updated_at as string  // 로그인 시 updated_at 갱신됨
+                    || user.created_at  // 최종 폴백: 가입일
 
                 // 만든 AI 수
                 const { count: aiCount } = await supabase

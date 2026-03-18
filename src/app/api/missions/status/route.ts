@@ -134,60 +134,11 @@ export async function GET() {
 
         const profileUpdated = !!(profile?.phone || profile?.gender)
         let { sharesToday, creditHistory, cloverHuntToday, completedMissions } = creditsData
-        let finalClovers = profile?.clovers || 0
+        const finalClovers = profile?.clovers || 0
 
-        // ── 자동 미션 적립 (credit_transactions 테이블) ──
-        // completedMissions (limit 없음)로 중복 체크 → 절대 중복 적립 안 됨
+        // ── 미션 완료 여부만 반환 (자동 적립 없음) ──
+        // 완료된 미션 타입 목록 (credit_transactions에 기록된 것만)
         const existingTypes = completedMissions.map((c: { type: string }) => c.type)
-        const newCredits: { type: string; amount: number; description: string }[] = []
-
-        if ((aiCreated || 0) >= 1 && !existingTypes.includes('mission_create_ai_1')) {
-            newCredits.push({ type: 'mission_create_ai_1', amount: 25, description: '미션 완료: AI 1개 만들기' })
-        }
-        if ((aiCreated || 0) >= 2 && !existingTypes.includes('mission_create_ai_2')) {
-            newCredits.push({ type: 'mission_create_ai_2', amount: 25, description: '미션 완료: AI 2개 만들기' })
-        }
-        if (questionsAsked >= 10 && !existingTypes.includes('mission_ask_10')) {
-            newCredits.push({ type: 'mission_ask_10', amount: 30, description: '미션 완료: 10번 질문하기' })
-        }
-        if (friendsInvited >= 1 && !existingTypes.includes('mission_invite')) {
-            newCredits.push({ type: 'mission_invite', amount: 10, description: `미션 완료: 친구 ${friendsInvited}명 초대` })
-        }
-        if (profileUpdated && !existingTypes.includes('mission_profile_update')) {
-            newCredits.push({ type: 'mission_profile_update', amount: 30, description: '미션 완료: 마이페이지 업데이트' })
-        }
-
-        if (newCredits.length > 0) {
-            // 새 적립 insert
-            let runningBalance = finalClovers
-            for (const credit of newCredits) {
-                runningBalance += credit.amount
-                await supabaseAdmin.from('credit_transactions').insert({
-                    user_id: user.id,
-                    amount: credit.amount,
-                    balance_after: runningBalance,
-                    type: credit.type,
-                    description: credit.description,
-                })
-            }
-
-            finalClovers = runningBalance
-
-            // users 잔액 동기화
-            await supabaseAdmin.from('users').update({
-                clovers: finalClovers,
-                credit_balance: finalClovers,
-            }).eq('id', user.id)
-
-            // 이력 재조회
-            const { data: updatedHistory } = await supabaseAdmin
-                .from('credit_transactions')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false })
-                .limit(20)
-            creditHistory = updatedHistory || []
-        }
 
         return NextResponse.json({
             ok: true,
@@ -200,6 +151,7 @@ export async function GET() {
             creditHistory,
             profileUpdated,
             cloverHuntToday,
+            completedMissionTypes: existingTypes,
         })
     } catch (err: unknown) {
         console.error('Mission status error:', err)
