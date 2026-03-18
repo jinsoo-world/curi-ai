@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getMentorById, buildSystemPrompt, buildGeminiHistory } from '@/domains/mentor'
 import { getUserChatContext } from '@/domains/user'
 import { generateChatStream, getUserMemories, saveUserMessage, saveAssistantMessage, updateSessionActivity, incrementDailyFreeUsage, detectCrisisKeywords, CRISIS_RESPONSE, ERROR_MESSAGES, extractAndSaveMemories, extractAndUpdateTopic } from '@/domains/chat'
@@ -209,9 +210,11 @@ export async function POST(req: Request) {
                     // 완료 시 메시지 저장 (domains/chat)
                     const isGuestSession = !sessionId || sessionId.startsWith('guest-')
                     if (!isGuestSession && fullResponse && sessionId) {
-                        await saveUserMessage(supabase, sessionId, lastUserMessage)
-                        await saveAssistantMessage(supabase, sessionId, fullResponse)
-                        await updateSessionActivity(supabase, sessionId, messages.length + 1)
+                        // 💾 메시지 저장은 admin client로 (RLS 우회 — 서버 백엔드 로직)
+                        const adminDb = createAdminClient()
+                        await saveUserMessage(adminDb, sessionId, lastUserMessage)
+                        await saveAssistantMessage(adminDb, sessionId, fullResponse)
+                        await updateSessionActivity(adminDb, sessionId, messages.length + 1)
 
                         if (user) {
                             const dailyUsed = (userProfile as any)?.daily_free_used || 0
