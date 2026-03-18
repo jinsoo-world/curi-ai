@@ -349,11 +349,15 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
                     </div>
                 )}
 
-                {/* 편집 힌트 */}
-                <div style={{
-                    position: 'absolute', bottom: 8, right: 12,
-                    fontSize: 9, color: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)',
-                }}>클릭하여 직접 편집</div>
+                {/* AI 수정 요청 버튼 (내지와 동일) */}
+                <button onClick={() => handleEditRequest(0)} style={{
+                    position: 'absolute', bottom: 16, right: 16, padding: '8px 16px', borderRadius: 20,
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.2)' : t.accentLight}`,
+                    background: isDark ? 'rgba(255,255,255,0.1)' : '#fff',
+                    fontSize: 12, color: isDark ? 'rgba(255,255,255,0.7)' : t.pageAccent,
+                    cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                    backdropFilter: 'blur(4px)', zIndex: 2,
+                }}>✏️ AI에게 수정 요청</button>
             </div>
         )
     }
