@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             : `${baseUrl}${mentorImage || '/logo.png'}`
 
         const title = `${mentor.name} AI ㅣ ${mentor.title}`
-        const description = '궁금한 것을 언제든 물어보세요.'
+        const description = mentor.description || `${mentor.name} AI와 지금 바로 대화해보세요 — 큐리 AI`
 
         return {
             title,
