@@ -643,7 +643,7 @@ export default function ChatMessages({
                                                     fontSize: 20, fontWeight: 800, color: '#fff',
                                                     marginBottom: 8, letterSpacing: '-0.3px',
                                                 }}>
-                                                    지금 가입하면 10,000원 크레딧 증정!
+                                                    가입하면 더 깊은 대화가 시작돼요
                                                 </div>
                                                 <div style={{
                                                     fontSize: 13, color: '#94a3b8', marginBottom: 20,
@@ -662,7 +662,6 @@ export default function ChatMessages({
                                                     {[
                                                         { icon: '💬', text: '매일 무제한 AI 대화', highlight: '무제한' },
                                                         { icon: '📞', text: 'AI 멘토와 음성 전화', highlight: '음성 전화' },
-                                                        { icon: '💰', text: '가입 즉시 10,000원 크레딧', highlight: '10,000원' },
                                                         { icon: '📝', text: '대화 기록 영구 저장', highlight: '영구 저장' },
                                                     ].map((item, i) => (
                                                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

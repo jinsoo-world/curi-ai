@@ -132,6 +132,8 @@ export default function ChatPage() {
     const [voiceCallOpen, setVoiceCallOpen] = useState(false)
     const [isLoggedIn, setIsLoggedIn] = useState(false)
     const [showLoginGate, setShowLoginGate] = useState(false)
+    const [showVoiceSample, setShowVoiceSample] = useState(false)
+    const voiceSampleAudioRef = useRef<HTMLAudioElement | null>(null)
 
     const [userName, setUserName] = useState('')
 
@@ -726,9 +728,7 @@ export default function ChatPage() {
                     onNewChat={handleNewChat}
                     onCall={mentor.voice_sample_url ? () => {
                         if (!isLoggedIn) {
-                            if (confirm('📞 전화 기능은 회원 전용이에요!\n\n가입하면 AI 멘토와 직접 통화할 수 있어요.\n지금 무료 회원가입하시겠어요?')) {
-                                window.location.href = '/login'
-                            }
+                            setShowVoiceSample(true)
                             return
                         }
                         setVoiceCallOpen(true)
@@ -865,9 +865,7 @@ export default function ChatPage() {
                                     <button
                                         onClick={() => {
                                             if (!isLoggedIn) {
-                                                if (confirm('📞 전화 기능은 회원 전용이에요!\n\n가입하면 AI 멘토와 직접 통화할 수 있어요.\n지금 무료 회원가입하시겠어요?')) {
-                                                    window.location.href = '/login'
-                                                }
+                                                setShowVoiceSample(true)
                                                 return
                                             }
                                             setVoiceCallOpen(true)
@@ -1016,30 +1014,7 @@ export default function ChatPage() {
                     </div>
                 )}
 
-                {/* 비회원 대화 카운터 */}
-                {!isLoggedIn && (
-                    <div style={{
-                        display: 'flex', justifyContent: 'center', padding: '6px 0',
-                    }}>
-                        <div style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            padding: '5px 14px', borderRadius: 20,
-                            background: getGuestMessageCount() >= 2 
-                                ? 'linear-gradient(135deg, #fef3c7, #fde68a)' 
-                                : 'rgba(0,0,0,0.04)',
-                            fontSize: 12, color: getGuestMessageCount() >= 2 ? '#92400e' : '#94a3b8',
-                            fontWeight: 600, transition: 'all 0.3s',
-                        }}>
-                            <span>{getGuestMessageCount() >= 2 ? '⚡' : '💬'}</span>
-                            무료 체험 {getGuestMessageCount()}/3회
-                            {getGuestMessageCount() >= 2 && (
-                                <span style={{ fontSize: 11, fontWeight: 500 }}>
-                                    · <a href="/login" style={{ color: '#d97706', textDecoration: 'underline' }}>가입하면 무제한</a>
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                )}
+
 
                 <ChatInput
                     value={input}
@@ -1049,6 +1024,116 @@ export default function ChatPage() {
                 />
 
 
+
+                {/* 🔊 비회원 음성 샘플 모달 */}
+                {showVoiceSample && mentor && (
+                    <div
+                        onClick={() => { setShowVoiceSample(false); voiceSampleAudioRef.current?.pause() }}
+                        style={{
+                            position: 'fixed', inset: 0, zIndex: 9999,
+                            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                    >
+                        <div
+                            onClick={e => e.stopPropagation()}
+                            style={{
+                                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                                borderRadius: 24, padding: '36px 32px', maxWidth: 380, width: '90%',
+                                textAlign: 'center', position: 'relative', overflow: 'hidden',
+                            }}
+                        >
+                            {/* 배경 글로우 */}
+                            <div style={{
+                                position: 'absolute', top: -50, right: -50,
+                                width: 140, height: 140, borderRadius: '50%',
+                                background: 'radial-gradient(circle, rgba(34,197,94,0.12) 0%, transparent 70%)',
+                            }} />
+
+                            <div style={{ fontSize: 48, marginBottom: 16 }}>
+                                {mentorImage ? (
+                                    <img src={mentorImage} alt="" style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }} />
+                                ) : mentorEmoji || '🎙️'}
+                            </div>
+                            <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', marginBottom: 6 }}>
+                                {mentor.name}의 목소리를 들어보세요
+                            </div>
+                            <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 24, lineHeight: 1.6 }}>
+                                AI가 복제한 진짜 목소리로 대화할 수 있어요
+                            </div>
+
+                            {/* 오디오 플레이어 */}
+                            {mentor.voice_sample_url && (
+                                <div style={{
+                                    background: 'rgba(255,255,255,0.06)', borderRadius: 16,
+                                    padding: '16px 20px', marginBottom: 24,
+                                }}>
+                                    <audio
+                                        ref={voiceSampleAudioRef}
+                                        src={mentor.voice_sample_url}
+                                        controls
+                                        autoPlay
+                                        style={{ width: '100%', height: 40 }}
+                                        onEnded={() => {}}
+                                    />
+                                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 8 }}>
+                                        🎧 멘토의 실제 목소리 샘플
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 혜택 + CTA */}
+                            <div style={{
+                                display: 'flex', flexDirection: 'column', gap: 8,
+                                marginBottom: 20, textAlign: 'left',
+                                background: 'rgba(255,255,255,0.04)',
+                                borderRadius: 12, padding: '14px 16px',
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#e2e8f0' }}>
+                                    <span>📞</span> 이 목소리로 <strong style={{ color: '#4ade80' }}>직접 통화</strong> 가능
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#e2e8f0' }}>
+                                    <span>💬</span> 매일 <strong style={{ color: '#4ade80' }}>무제한</strong> 텍스트 대화
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#e2e8f0' }}>
+                                    <span>📝</span> 대화 기록 <strong style={{ color: '#4ade80' }}>영구 저장</strong>
+                                </div>
+                            </div>
+
+                            <a
+                                href="/login"
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                                    padding: '14px 36px',
+                                    background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                                    color: '#fff', borderRadius: 14, fontSize: 16, fontWeight: 800,
+                                    textDecoration: 'none',
+                                    boxShadow: '0 4px 20px rgba(34,197,94,0.4)',
+                                    transition: 'transform 0.15s',
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                            >
+                                🚀 무료 가입하고 전화하기
+                            </a>
+                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 12 }}>
+                                ✓ 30초 가입 ✓ 카드 불필요 ✓ 언제든 탈퇴
+                            </div>
+
+                            {/* 닫기 */}
+                            <button
+                                onClick={() => { setShowVoiceSample(false); voiceSampleAudioRef.current?.pause() }}
+                                style={{
+                                    position: 'absolute', top: 12, right: 12,
+                                    background: 'rgba(255,255,255,0.1)', border: 'none',
+                                    borderRadius: '50%', width: 32, height: 32,
+                                    color: '#94a3b8', fontSize: 18, cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}
+                            >×</button>
+                        </div>
+                    </div>
+                )}
 
                 {/* 📱 음성 통화 오버레이 */}
                 {mentor && (
