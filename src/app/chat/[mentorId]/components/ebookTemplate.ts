@@ -207,14 +207,14 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string, theme?: 
                     padding-bottom: 12px;
                     border-bottom: 2px solid #e2e8f0;
                 ">
-                    <span style="font-size: 8pt; color: #94a3b8; font-family: 'Pretendard', sans-serif; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <span style="font-size: 12pt; color: #94a3b8; font-family: 'Pretendard', sans-serif; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                         ${escapeHtml(ebook.cover.title)}
                     </span>
                     <span style="
-                        font-size: 8pt;
+                        font-size: 11pt;
                         color: #ffffff;
                         background: #6366f1;
-                        padding: 3px 12px;
+                        padding: 4px 14px;
                         border-radius: 10px;
                         font-family: 'Pretendard', sans-serif;
                         font-weight: 600;
