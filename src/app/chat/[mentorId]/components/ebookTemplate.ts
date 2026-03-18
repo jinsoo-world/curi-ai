@@ -113,14 +113,14 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string): string 
         // 인용구 (뷰어 스타일과 동일)
         const quoteHtml = page.quote ? `
             <div style="
-                margin: 24px 0;
-                padding: 16px 20px;
+                margin: 28px 0;
+                padding: 18px 22px;
                 border-left: 4px solid #6366f1;
                 background: linear-gradient(135deg, #eef2ff, #f8fafc);
                 border-radius: 0 8px 8px 0;
             ">
                 <p style="
-                    font-size: 12pt;
+                    font-size: 13pt;
                     color: #4338ca;
                     font-style: italic;
                     margin: 0;
@@ -166,13 +166,13 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string): string 
             </div>
         ` : ''
 
-        // ★ 본문 콘텐츠: 뷰어와 동일한 글자 크기(15px=11.25pt → 11.5pt)와 줄간격(1.9)
+        // ★ 본문 콘텐츠: 뷰어 clamp(15-18px) ≈ 13pt, 줄간격 1.9
         const contentHtml = escapeHtml(page.content)
-            .replace(/\n\n/g, '</p><p style="margin: 0 0 18px 0; line-height: 1.9; font-size: 11.5pt; color: #334155;">')
+            .replace(/\n\n/g, '</p><p style="margin: 0 0 24px 0; line-height: 1.9; font-size: 13pt; color: #334155;">')
             .replace(/\n/g, '<br/>')
 
         return `
-            <div style="${pageBreak} padding: 36px 30px; min-height: 250mm; box-sizing: border-box; position: relative;">
+            <div style="${pageBreak} padding: 40px 35px; min-height: 250mm; box-sizing: border-box; position: relative;">
                 <!-- 페이지 헤더 -->
                 <div style="
                     display: flex;
@@ -196,13 +196,13 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string): string 
                     ">Page ${page.pageNum}</span>
                 </div>
 
-                <!-- 섹션 제목: 뷰어와 동일 크기 -->
+                <!-- 섹션 제목: 뷰어 clamp(20-28px) ≈ 22pt -->
                 <h2 style="
                     font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
-                    font-size: 20pt;
+                    font-size: 22pt;
                     font-weight: 700;
                     color: #0f172a;
-                    margin: 0 0 20px 0;
+                    margin: 0 0 24px 0;
                     line-height: 1.4;
                     word-break: keep-all;
                 ">${escapeHtml(page.title)}</h2>
@@ -210,9 +210,9 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string): string 
                 <!-- 본문: 뷰어와 동일한 스타일 -->
                 <p style="
                     font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
-                    margin: 0 0 18px 0;
+                    margin: 0 0 24px 0;
                     line-height: 1.9;
-                    font-size: 11.5pt;
+                    font-size: 13pt;
                     color: #334155;
                     word-break: keep-all;
                 ">${contentHtml}</p>
