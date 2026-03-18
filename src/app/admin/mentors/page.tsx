@@ -3,6 +3,16 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 
+/** 멘토 프로필 이미지 폴백 매핑 */
+const MENTOR_IMAGES: Record<string, string> = {
+    '열정진': '/mentors/passion-jjin.png',
+    '글담쌤': '/mentors/geuldam.jpg',
+    'Cathy': '/mentors/cathy.jpeg',
+    '봉이 김선달': '/mentors/bongi-kimsundal.png',
+    '신사임당': '/mentors/shin-saimdang.png',
+    '갓출리더의 홧병상담소': '/mentors/god-leader.png',
+}
+
 interface MentorStat {
     mentor_id: string
     mentor_name: string
@@ -265,13 +275,14 @@ export default function MentorsPage() {
                                         flexShrink: 0,
                                         border: `2px solid ${color}30`,
                                     }}>
-                                        {m.avatar_url ? (
+                                        {(m.avatar_url || MENTOR_IMAGES[m.mentor_name]) ? (
                                             <Image
-                                                src={m.avatar_url}
+                                                src={m.avatar_url || MENTOR_IMAGES[m.mentor_name]}
                                                 alt={m.mentor_name}
                                                 width={56}
                                                 height={56}
                                                 style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                                                unoptimized
                                             />
                                         ) : (
                                             <span style={{ fontSize: 28 }}>🤖</span>

@@ -52,7 +52,7 @@ export async function GET() {
         return NextResponse.json({
             dailyStats: dailyStats || [],
             recentSessions: recentSessions || [],
-            inputMethods: {
+            inputRatio: {
                 text: textCount || 0,
                 stt: sttCount || 0,
             },
