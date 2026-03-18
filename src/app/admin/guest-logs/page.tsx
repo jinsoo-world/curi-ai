@@ -16,12 +16,15 @@ interface GuestLog {
     country: string | null
     city: string | null
     visitor_id: string | null
+    converted: boolean
+    converted_user: { email: string; display_name: string | null; converted_at: string | null } | null
 }
 
 interface Stats {
     total: number
     todayCount: number
     uniqueVisitors: number
+    convertedCount: number
     mentorCounts: Record<string, number>
     countryCounts: Record<string, number>
     deviceCounts: Record<string, number>
@@ -55,12 +58,13 @@ export default function GuestLogsPage() {
                     total: s.total || 0,
                     todayCount: s.todayCount || 0,
                     uniqueVisitors: s.uniqueVisitors || 0,
+                    convertedCount: s.convertedCount || 0,
                     mentorCounts: s.mentorCounts || {},
                     countryCounts: s.countryCounts || {},
                     deviceCounts: s.deviceCounts || {},
                 })
             })
-            .catch(() => setStats({ total: 0, todayCount: 0, uniqueVisitors: 0, mentorCounts: {}, countryCounts: {}, deviceCounts: {} }))
+            .catch(() => setStats({ total: 0, todayCount: 0, uniqueVisitors: 0, convertedCount: 0, mentorCounts: {}, countryCounts: {}, deviceCounts: {} }))
             .finally(() => setLoading(false))
     }, [])
 
@@ -83,6 +87,7 @@ export default function GuestLogsPage() {
                     <StatCard label="총 대화" value={stats.total} color="#f59e0b" icon="💬" />
                     <StatCard label="오늘" value={stats.todayCount} color="#22c55e" icon="📅" />
                     <StatCard label="고유 방문자" value={stats.uniqueVisitors} color="#3b82f6" icon="👥" />
+                    <StatCard label="회원 전환" value={stats.convertedCount} color="#ec4899" icon="🔄" />
                     {Object.entries(stats.deviceCounts).map(([device, count]) => (
                         <StatCard key={device} label={device} value={count} color="#8b5cf6" icon={device === '모바일' ? '📱' : device === '데스크톱' ? '💻' : '📟'} />
                     ))}
@@ -140,13 +145,14 @@ export default function GuestLogsPage() {
                             <th style={thStyle}>AI 응답</th>
                             <th style={thStyle}>기기</th>
                             <th style={thStyle}>지역</th>
+                            <th style={thStyle}>전환</th>
                             <th style={thStyle}>#</th>
                         </tr>
                     </thead>
                     <tbody>
                         {logs.length === 0 ? (
                             <tr>
-                                <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
+                                <td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
                                     아직 비회원 대화 로그가 없습니다. Supabase SQL을 먼저 실행해 주세요.
                                 </td>
                             </tr>
@@ -189,6 +195,23 @@ export default function GuestLogsPage() {
                                             <span style={{ fontSize: 12 }}>
                                                 {countryFlag(log.country)} {log.city || log.country}
                                             </span>
+                                        ) : (
+                                            <span style={{ fontSize: 12, color: '#cbd5e1' }}>—</span>
+                                        )}
+                                    </td>
+                                    <td style={tdStyle}>
+                                        {log.converted ? (
+                                            <div>
+                                                <span style={{
+                                                    fontSize: 11, background: '#fce7f3', color: '#ec4899',
+                                                    borderRadius: 6, padding: '2px 8px', fontWeight: 700,
+                                                }}>
+                                                    ✅ 회원 전환
+                                                </span>
+                                                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
+                                                    {log.converted_user?.display_name || log.converted_user?.email?.split('@')[0] || ''}
+                                                </div>
+                                            </div>
                                         ) : (
                                             <span style={{ fontSize: 12, color: '#cbd5e1' }}>—</span>
                                         )}

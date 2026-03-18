@@ -16,14 +16,44 @@ export async function GET() {
             return NextResponse.json({ logs: [], stats: {} })
         }
 
+        // 🔗 전환 트래킹: visitor_id로 회원 매칭
+        const visitorIds = [...new Set(logs?.filter(l => l.visitor_id).map(l => l.visitor_id) || [])]
+        let convertedMap: Record<string, { email: string; display_name: string | null; converted_at: string | null }> = {}
+
+        if (visitorIds.length > 0) {
+            const { data: convertedUsers } = await supabase
+                .from('users')
+                .select('visitor_id, email, display_name, converted_at')
+                .in('visitor_id', visitorIds)
+
+            if (convertedUsers) {
+                convertedUsers.forEach(u => {
+                    if (u.visitor_id) {
+                        convertedMap[u.visitor_id] = {
+                            email: u.email || '',
+                            display_name: u.display_name || null,
+                            converted_at: u.converted_at || null,
+                        }
+                    }
+                })
+            }
+        }
+
+        // 로그에 전환 정보 추가
+        const enrichedLogs = logs?.map(l => ({
+            ...l,
+            converted: l.visitor_id ? !!convertedMap[l.visitor_id] : false,
+            converted_user: l.visitor_id ? convertedMap[l.visitor_id] || null : null,
+        })) || []
+
         // 통계
-        const total = logs?.length || 0
+        const total = enrichedLogs.length
         const mentorCounts: Record<string, number> = {}
         const countryCounts: Record<string, number> = {}
         const deviceCounts: Record<string, number> = {}
         const uniqueVisitors = new Set<string>()
 
-        logs?.forEach(l => {
+        enrichedLogs.forEach(l => {
             const name = l.mentor_name || '알 수 없음'
             mentorCounts[name] = (mentorCounts[name] || 0) + 1
 
@@ -32,12 +62,11 @@ export async function GET() {
             if (l.visitor_id) uniqueVisitors.add(l.visitor_id)
         })
 
-        // 오늘 대화
         const today = new Date().toISOString().split('T')[0]
-        const todayCount = logs?.filter(l => l.created_at?.startsWith(today)).length || 0
+        const todayCount = enrichedLogs.filter(l => l.created_at?.startsWith(today)).length
 
         return NextResponse.json({
-            logs: logs || [],
+            logs: enrichedLogs,
             stats: {
                 total,
                 todayCount,
@@ -45,6 +74,7 @@ export async function GET() {
                 countryCounts,
                 deviceCounts,
                 uniqueVisitors: uniqueVisitors.size,
+                convertedCount: Object.keys(convertedMap).length,
             },
         })
     } catch (error: any) {
