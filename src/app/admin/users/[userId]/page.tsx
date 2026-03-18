@@ -20,6 +20,7 @@ interface Session {
     last_message_at: string | null
     created_at: string
     deleted_at: string | null
+    has_voice?: boolean
     mentors: { id: string; name: string; slug: string; avatar_url: string | null } | null
 }
 
@@ -285,20 +286,41 @@ export default function UserDetailPage() {
                                     }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
-                                        <div style={{
-                                            width: 36, height: 36, borderRadius: 10,
-                                            background: mentor ? '#f0f0ff' : '#f8fafc',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontSize: 16, flexShrink: 0,
-                                        }}>
-                                            🤖
-                                        </div>
+                                        {mentor?.avatar_url ? (
+                                            <img src={mentor.avatar_url} alt="" style={{
+                                                width: 36, height: 36, borderRadius: 10,
+                                                objectFit: 'cover', flexShrink: 0,
+                                            }} />
+                                        ) : (
+                                            <div style={{
+                                                width: 36, height: 36, borderRadius: 10,
+                                                background: '#f0f0ff',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: 16, flexShrink: 0,
+                                            }}>
+                                                🤖
+                                            </div>
+                                        )}
                                         <div style={{ minWidth: 0, flex: 1 }}>
                                             <div style={{
                                                 fontSize: 14, fontWeight: 600, color: '#1e293b',
                                                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                display: 'flex', alignItems: 'center', gap: 6,
                                             }}>
                                                 {session.title || `${mentor?.name || '멘토'} 대화`}
+                                                {(session as Session).has_voice ? (
+                                                    <span style={{
+                                                        fontSize: 10, color: '#059669', background: '#d1fae5',
+                                                        padding: '2px 7px', borderRadius: 8, fontWeight: 700,
+                                                        display: 'inline-flex', alignItems: 'center', gap: 3,
+                                                    }}>📞 전화</span>
+                                                ) : (
+                                                    <span style={{
+                                                        fontSize: 10, color: '#6366f1', background: '#e0e7ff',
+                                                        padding: '2px 7px', borderRadius: 8, fontWeight: 700,
+                                                        display: 'inline-flex', alignItems: 'center', gap: 3,
+                                                    }}>💬 채팅</span>
+                                                )}
                                             </div>
                                             <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                                 <span style={{ fontWeight: 600, color: '#6366f1' }}>{mentor?.name || '알 수 없음'}</span>

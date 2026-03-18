@@ -36,14 +36,31 @@ export async function GET(
             .eq('user_id', userId)
             .order('last_message_at', { ascending: false, nullsFirst: false })
 
+        // 세션별 음성 대화 여부 확인 (input_method='stt' 메시지가 있으면 음성 세션)
+        const sessionIds = sessions?.map(s => s.id) || []
+        let voiceSessionIds: Set<string> = new Set()
+        if (sessionIds.length > 0) {
+            const { data: voiceMessages } = await supabase
+                .from('messages')
+                .select('session_id')
+                .in('session_id', sessionIds)
+                .eq('input_method', 'stt')
+            voiceMessages?.forEach(m => voiceSessionIds.add(m.session_id))
+        }
+
+        const enrichedSessions = (sessions || []).map(s => ({
+            ...s,
+            has_voice: voiceSessionIds.has(s.id),
+        }))
+
         // 통계 요약
-        const totalSessions = sessions?.length || 0
-        const totalMessages = sessions?.reduce((sum, s) => sum + (s.message_count || 0), 0) || 0
-        const mentorSet = new Set(sessions?.map(s => (s.mentors as any)?.name).filter(Boolean))
+        const totalSessions = enrichedSessions.length
+        const totalMessages = enrichedSessions.reduce((sum, s) => sum + (s.message_count || 0), 0)
+        const mentorSet = new Set(enrichedSessions.map(s => (s.mentors as any)?.name).filter(Boolean))
 
         return NextResponse.json({
             user,
-            sessions: sessions || [],
+            sessions: enrichedSessions,
             stats: {
                 totalSessions,
                 totalMessages,
