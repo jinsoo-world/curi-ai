@@ -534,55 +534,31 @@ export default function MentorHeader({
                     </button>
                 )}
 
-                {/* 비회원: 회원가입/로그인 버튼 */}
+                {/* 비회원: 회원가입 버튼 */}
                 {(!sessionId || sessionId.startsWith('guest-')) ? (
-                    <>
-                        <button
-                            onClick={() => router.push('/login')}
-                            style={{
-                                background: 'transparent',
-                                border: '1.5px solid #22c55e',
-                                borderRadius: 10,
-                                padding: '7px 14px',
-                                fontSize: 13,
-                                color: '#16a34a',
-                                cursor: 'pointer',
-                                fontWeight: 600,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                transition: 'all 0.15s',
-                                whiteSpace: 'nowrap',
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.background = '#f0fdf4' }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-                        >
-                            🎁 무료 회원가입
-                        </button>
-                        <button
-                            onClick={() => router.push('/login')}
-                            style={{
-                                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                                border: 'none',
-                                borderRadius: 10,
-                                padding: '7px 14px',
-                                fontSize: 13,
-                                color: '#fff',
-                                cursor: 'pointer',
-                                fontWeight: 600,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                transition: 'all 0.15s',
-                                boxShadow: '0 2px 8px rgba(34,197,94,0.3)',
-                                whiteSpace: 'nowrap',
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.opacity = '0.9' }}
-                            onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
-                        >
-                            로그인
-                        </button>
-                    </>
+                    <button
+                        onClick={() => router.push('/login')}
+                        style={{
+                            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                            border: 'none',
+                            borderRadius: 10,
+                            padding: '7px 14px',
+                            fontSize: 13,
+                            color: '#fff',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            transition: 'all 0.15s',
+                            boxShadow: '0 2px 8px rgba(34,197,94,0.3)',
+                            whiteSpace: 'nowrap',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.opacity = '0.9' }}
+                        onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+                    >
+                        🎁 무료 회원가입
+                    </button>
                 ) : (
                     <>
                         <button
