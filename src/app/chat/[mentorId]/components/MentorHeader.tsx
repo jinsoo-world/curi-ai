@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { generateEbookHtml } from './ebookTemplate'
 
 interface MentorHeaderProps {
     mentor: {
@@ -32,10 +33,8 @@ interface MentorHeaderProps {
     pdfExportEnabled?: boolean
     /** 내보내기 버튼 라벨 (기본: '리포트') */
     exportLabel?: string
-    /** 내보내기 모드: 'report'=AI요약, 'raw'=마지막AI응답 그대로 */
+    /** 내보내기 모드: 'report'=AI요약, 'raw'=전자책 원고 조립 */
     exportMode?: 'report' | 'raw'
-    /** 마지막 AI 응답 (raw 모드용) */
-    lastAiMessage?: string
 }
 
 /* ── SVG 아이콘 ── */
@@ -96,7 +95,6 @@ export default function MentorHeader({
     pdfExportEnabled = false,
     exportLabel = '리포트',
     exportMode = 'report',
-    lastAiMessage = '',
 }: MentorHeaderProps) {
     const router = useRouter()
     const [showShareMenu, setShowShareMenu] = useState(false)
@@ -104,18 +102,34 @@ export default function MentorHeader({
     const [exportLoading, setExportLoading] = useState(false)
     const [exportData, setExportData] = useState<{ report: any; markdown: string; meta: any } | null>(null)
     const [exportError, setExportError] = useState<string | null>(null)
+    const [ebookData, setEbookData] = useState<{ ebook: any; meta: any } | null>(null)
 
     const handleExport = async () => {
         if (exportMode === 'raw') {
-            // 전자책 봇: 마지막 AI 응답을 바로 보여줌
+            // 전자책 봇: API로 전체 대화 기반 원고 조립
+            if (!sessionId || sessionId.startsWith('guest-')) return
             setShowExportModal(true)
-            setExportLoading(false)
+            setExportLoading(true)
             setExportError(null)
-            setExportData({
-                report: { title: mentor.name + ' 원고', summary: '', keyDecisions: [], insights: [], actionItems: [], outline: null },
-                markdown: lastAiMessage,
-                meta: { mentorName: mentor.name, createdDate: new Date().toLocaleDateString('ko-KR'), messageCount: 0 },
-            })
+            setEbookData(null)
+            setExportData(null)
+            try {
+                const res = await fetch('/api/chat/export-ebook', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId }),
+                })
+                if (!res.ok) {
+                    const err = await res.json()
+                    throw new Error(err.error || '원고 생성 실패')
+                }
+                const data = await res.json()
+                setEbookData(data)
+            } catch (e: any) {
+                setExportError(e.message)
+            } finally {
+                setExportLoading(false)
+            }
             return
         }
 
@@ -161,33 +175,47 @@ export default function MentorHeader({
 
     /** PDF 다운로드 (클라이언트 사이드) */
     const handleDownloadPdf = async () => {
-        if (!exportData) return
         try {
             const html2pdf = (await import('html2pdf.js')).default
-            const htmlContent = `
-                <div style="font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;padding:20px;line-height:1.8;color:#1e293b;max-width:600px;">
-                    ${markdownToHtml(exportData.markdown)}
-                </div>
-            `
+            let htmlContent: string
+            let filename: string
+
+            if (ebookData) {
+                // 전자책 모드: ebookTemplate 사용
+                htmlContent = generateEbookHtml(ebookData.ebook, ebookData.meta.mentorName)
+                filename = `${ebookData.ebook.cover?.title || mentor.name}_전자책_${new Date().toISOString().split('T')[0]}.pdf`
+            } else if (exportData) {
+                // 리포트 모드: 기존 마크다운 변환
+                htmlContent = `
+                    <div style="font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;padding:20px;line-height:1.8;color:#1e293b;max-width:600px;">
+                        ${markdownToHtml(exportData.markdown)}
+                    </div>
+                `
+                filename = `${mentor.name}_${new Date().toISOString().split('T')[0]}.pdf`
+            } else {
+                return
+            }
+
             const container = document.createElement('div')
             container.innerHTML = htmlContent
             document.body.appendChild(container)
 
             await html2pdf()
                 .set({
-                    margin: [15, 15, 15, 15],
-                    filename: `${mentor.name}_${new Date().toISOString().split('T')[0]}.pdf`,
+                    margin: ebookData ? [0, 0, 0, 0] : [15, 15, 15, 15],
+                    filename,
                     image: { type: 'jpeg', quality: 0.98 },
                     html2canvas: { scale: 2, useCORS: true },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                })
+                    pagebreak: { mode: ['css', 'legacy'] },
+                } as any)
                 .from(container)
                 .save()
 
             document.body.removeChild(container)
         } catch (e) {
             console.error('PDF 생성 오류:', e)
-            alert('PDF 생성에 실패했습니다. 마크다운으로 다운로드해주세요.')
+            alert('PDF 생성에 실패했습니다. 다시 시도해 주세요.')
         }
     }
 
@@ -703,8 +731,12 @@ export default function MentorHeader({
                                         margin: '0 auto 16px',
                                     }} />
                                     <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-                                    <p style={{ color: '#64748b', fontSize: 14, margin: 0 }}>AI가 대화를 분석하고 있어요...</p>
-                                    <p style={{ color: '#94a3b8', fontSize: 12, margin: '6px 0 0' }}>핵심 결정, 인사이트, 할 일을 추출 중</p>
+                                    <p style={{ color: '#64748b', fontSize: 14, margin: 0 }}>
+                                        {exportMode === 'raw' ? '전체 대화를 분석하여 원고를 조립하고 있어요...' : 'AI가 대화를 분석하고 있어요...'}
+                                    </p>
+                                    <p style={{ color: '#94a3b8', fontSize: 12, margin: '6px 0 0' }}>
+                                        {exportMode === 'raw' ? '표지 + 5페이지 전자책을 생성 중' : '핵심 결정, 인사이트, 할 일을 추출 중'}
+                                    </p>
                                 </div>
                             )}
 
@@ -718,6 +750,66 @@ export default function MentorHeader({
                                         border: 'none', background: '#6366f1', color: '#fff',
                                         fontSize: 13, cursor: 'pointer',
                                     }}>다시 시도</button>
+                                </div>
+                            )}
+
+                            {/* 전자책 원고 (ebook 모드) */}
+                            {ebookData && (
+                                <div>
+                                    {/* 표지 미리보기 */}
+                                    <div style={{
+                                        background: 'linear-gradient(135deg, #0f172a, #2563eb)',
+                                        borderRadius: 12, padding: '24px 20px',
+                                        marginBottom: 16, textAlign: 'center',
+                                    }}>
+                                        <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: '0 0 8px', lineHeight: 1.4, wordBreak: 'keep-all' }}>
+                                            {ebookData.ebook.cover?.title || '전자책'}
+                                        </h2>
+                                        <p style={{ color: 'rgba(186,230,253,0.9)', fontSize: 13, margin: 0 }}>
+                                            {ebookData.ebook.cover?.subtitle || ''}
+                                        </p>
+                                        {ebookData.ebook.cover?.author && (
+                                            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, margin: '12px 0 0' }}>
+                                                by {ebookData.ebook.cover.author}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* 페이지 목록 미리보기 */}
+                                    <div style={{ marginBottom: 16 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 8 }}>📖 구성 ({ebookData.ebook.pages?.length || 0}페이지)</div>
+                                        {ebookData.ebook.pages?.map((page: any, i: number) => (
+                                            <div key={i} style={{
+                                                display: 'flex', gap: 10, alignItems: 'center',
+                                                padding: '8px 12px', borderRadius: 8,
+                                                background: i % 2 === 0 ? '#f8fafc' : '#fff',
+                                                marginBottom: 2,
+                                            }}>
+                                                <span style={{
+                                                    fontSize: 10, color: '#fff', background: '#2563eb',
+                                                    padding: '1px 6px', borderRadius: 8, fontWeight: 600,
+                                                }}>P{page.pageNum}</span>
+                                                <span style={{ fontSize: 13, color: '#334155' }}>{page.title}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* 다운로드 버튼 */}
+                                    <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                                        <button
+                                            onClick={handleDownloadPdf}
+                                            style={{
+                                                flex: 1, padding: '14px 16px', borderRadius: 12,
+                                                border: 'none',
+                                                background: 'linear-gradient(135deg, #0f172a, #2563eb)',
+                                                fontSize: 15, fontWeight: 700, color: '#fff',
+                                                cursor: 'pointer', display: 'flex', alignItems: 'center',
+                                                justifyContent: 'center', gap: 8,
+                                            }}
+                                        >
+                                            📄 전자책 PDF 다운로드
+                                        </button>
+                                    </div>
                                 </div>
                             )}
 

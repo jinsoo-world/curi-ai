@@ -148,11 +148,7 @@ export default function ChatPage() {
     // 전자책 봇 자동 감지
     const isEbookBot = mentor ? /전자책|PDF|ebook|원고/i.test(mentor.name) : false
 
-    // 마지막 AI 응답 (raw 모드 다운로드용)
-    const lastAiMessage = messages
-        .filter(m => m.role === 'assistant' && m.content)
-        .map(m => m.content)
-        .pop() || ''
+
 
     // 프로필에서 autoTTS 설정 + 유저 이름 로드
     useEffect(() => {
@@ -779,7 +775,6 @@ export default function ChatPage() {
                     pdfExportEnabled={mentor.pdf_export_enabled || false}
                     exportLabel={isEbookBot ? '원고(PDF) 다운로드' : '리포트'}
                     exportMode={isEbookBot ? 'raw' : 'report'}
-                    lastAiMessage={lastAiMessage}
                 />
 
                 {/* Messages Area */}
