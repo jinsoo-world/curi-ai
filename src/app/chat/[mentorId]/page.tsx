@@ -96,6 +96,18 @@ function clearGuestMessages(mentorId: string): void {
     localStorage.removeItem(`guest_chat_messages_${mentorId}`)
 }
 
+/** 📊 비회원 식별용 고유 ID 생성 (localStorage 기반) */
+function getVisitorId(): string {
+    if (typeof window === 'undefined') return ''
+    const key = 'curi_visitor_id'
+    let vid = localStorage.getItem(key)
+    if (!vid) {
+        vid = crypto.randomUUID()
+        localStorage.setItem(key, vid)
+    }
+    return vid
+}
+
 export default function ChatPage() {
     const router = useRouter()
     const params = useParams()
@@ -458,6 +470,7 @@ export default function ChatPage() {
                     mentorId,
                     sessionId,
                     inputMethod,
+                    visitorId: isGuest ? getVisitorId() : undefined,
                     ...(isGuest ? { guestMessageCount: getGuestMessageCount() } : {}),
                 }),
             })
@@ -1034,6 +1047,7 @@ export default function ChatPage() {
                                     sessionId,
                                     messages: chatMessages,
                                     inputMethod: 'voice_call',
+                                    visitorId: (!sessionId || sessionId.startsWith('guest-')) ? getVisitorId() : undefined,
                                 }),
                                 signal, // ⚡ 끼어들기 시 LLM 스트림 즉시 중단
                             })

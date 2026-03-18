@@ -16,8 +16,22 @@ export async function POST(req: Request) {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
 
-        const { messages, mentorId, sessionId, guestMessageCount, inputMethod } = await req.json()
+        const { messages, mentorId, sessionId, guestMessageCount, inputMethod, visitorId } = await req.json()
         const lastUserMessage = messages[messages.length - 1]?.content || ''
+
+        // 📊 분석 데이터 수집 (헤더에서 추출)
+        const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || ''
+        const ua = req.headers.get('user-agent') || ''
+        const country = req.headers.get('x-vercel-ip-country') || ''
+        const city = req.headers.get('x-vercel-ip-city') || ''
+        const analytics = {
+            ip_address: ip.slice(0, 45),
+            device_type: parseDeviceType(ua),
+            os: parseOS(ua),
+            browser: parseBrowser(ua),
+            country,
+            city: decodeURIComponent(city),
+        }
 
         // 🎁 2026-04-30까지 무료 체험 기간
         const FREE_TRIAL_END = new Date('2026-04-30T23:59:59+09:00')
@@ -240,6 +254,10 @@ export async function POST(req: Request) {
                                 role: 'user',
                                 content: lastUserMessage,
                                 input_method: inputMethod || 'text',
+                                ip_address: analytics.ip_address,
+                                device_type: analytics.device_type,
+                                country: analytics.country,
+                                city: analytics.city,
                             })
                             if (userMsgErr) console.error('[Chat Save] userMessage INSERT failed:', JSON.stringify(userMsgErr))
                             else console.log('[Chat Save] userMessage saved OK')
@@ -299,6 +317,13 @@ export async function POST(req: Request) {
                                 user_message: lastUserMessage.slice(0, 500),
                                 ai_response: fullResponse.slice(0, 500),
                                 message_index: guestMessageCount || messages.length,
+                                ip_address: analytics.ip_address,
+                                device_type: analytics.device_type,
+                                os: analytics.os,
+                                browser: analytics.browser,
+                                country: analytics.country,
+                                city: analytics.city,
+                                visitor_id: visitorId || null,
                             })
                         } catch (guestLogErr) {
                             console.error('[Guest Log] Save failed:', guestLogErr instanceof Error ? guestLogErr.message : guestLogErr)
@@ -332,4 +357,31 @@ export async function POST(req: Request) {
             { status: 500, headers: { 'Content-Type': 'application/json' } }
         )
     }
+}
+
+// ── 📊 User-Agent 파싱 헬퍼 ──
+function parseDeviceType(ua: string): string {
+    if (/iPad|tablet/i.test(ua)) return '태블릿'
+    if (/Mobile|Android.*Mobile|iPhone|iPod/i.test(ua)) return '모바일'
+    return '데스크톱'
+}
+
+function parseOS(ua: string): string {
+    if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS'
+    if (/Android/i.test(ua)) return 'Android'
+    if (/Mac OS X/i.test(ua)) return 'macOS'
+    if (/Windows/i.test(ua)) return 'Windows'
+    if (/Linux/i.test(ua)) return 'Linux'
+    return '기타'
+}
+
+function parseBrowser(ua: string): string {
+    if (/Whale/i.test(ua)) return 'Whale'
+    if (/SamsungBrowser/i.test(ua)) return 'Samsung'
+    if (/Edg/i.test(ua)) return 'Edge'
+    if (/OPR|Opera/i.test(ua)) return 'Opera'
+    if (/Chrome/i.test(ua) && !/Chromium/i.test(ua)) return 'Chrome'
+    if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) return 'Safari'
+    if (/Firefox/i.test(ua)) return 'Firefox'
+    return '기타'
 }
