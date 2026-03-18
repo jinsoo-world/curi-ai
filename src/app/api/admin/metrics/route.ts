@@ -48,11 +48,6 @@ export async function GET() {
             .from('chat_sessions')
             .select('*', { count: 'exact', head: true })
 
-        const { count: activeSessions } = await supabase
-            .from('chat_sessions')
-            .select('*', { count: 'exact', head: true })
-            .gte('last_message_at', today)
-
         const { count: totalMessages } = await supabase
             .from('messages')
             .select('*', { count: 'exact', head: true })
@@ -77,12 +72,20 @@ export async function GET() {
             .lt('last_message_at', weekAgo)
         const lastWau = new Set(lastWauData?.map(d => d.user_id).filter(Boolean)).size
 
-        // === 일별 추이 (최근 30일) ===
-        const { data: dailyStats } = await supabase
-            .from('mv_daily_stats')
-            .select('*')
-            .order('date', { ascending: true })
-            .limit(30)
+        // === 세션당 평균 메시지 ===
+        const { data: avgMsgData } = await supabase
+            .from('chat_sessions')
+            .select('message_count')
+            .gt('message_count', 0)
+        const avgMessagesPerSession = avgMsgData?.length
+            ? (avgMsgData.reduce((sum, s) => sum + (s.message_count || 0), 0) / avgMsgData.length).toFixed(1)
+            : '0'
+
+        // === 구독 유저 수 ===
+        const { count: activeSubscriptions } = await supabase
+            .from('subscriptions')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'active')
 
         // === 유저 가입 추이 (최근 30일) ===
         const { data: signupData } = await supabase
@@ -98,16 +101,7 @@ export async function GET() {
         })
         const signupTrend = Object.entries(signupsByDay).map(([date, count]) => ({ date, count }))
 
-        // === 세션당 평균 메시지 ===
-        const { data: avgMsgData } = await supabase
-            .from('chat_sessions')
-            .select('message_count')
-            .gt('message_count', 0)
-        const avgMessagesPerSession = avgMsgData?.length
-            ? (avgMsgData.reduce((sum, s) => sum + (s.message_count || 0), 0) / avgMsgData.length).toFixed(1)
-            : '0'
-
-        // === 시간대별 메시지 분포 (오늘) ===
+        // === 시간대별 메시지 분포 (이번 주) ===
         const { data: hourlyData } = await supabase
             .from('messages')
             .select('created_at')
@@ -120,12 +114,7 @@ export async function GET() {
             hourlyDist[hour]++
         })
 
-        // === 멘토별 대화 비율 ===
-        const { data: mentorShareData } = await supabase
-            .from('mv_mentor_stats')
-            .select('mentor_name, total_sessions')
-
-        // === auth provider 분포 (Auth Admin API 기반으로 정확한 값 사용) ===
+        // === auth provider 분포 ===
         const authProviders: Record<string, number> = {}
         let authPage = 1
         let hasMore = true
@@ -146,11 +135,24 @@ export async function GET() {
             }
         }
 
-        // === 마케팅 수신 동의 통계 ===
-        const { count: marketingConsentCount } = await supabase
-            .from('users')
-            .select('*', { count: 'exact', head: true })
-            .eq('marketing_consent', true)
+        // === 대화 품질 신호 (최근 7일) ===
+        const { data: signalData } = await supabase
+            .from('conversation_signals')
+            .select('signal_type')
+            .gte('created_at', weekAgo)
+
+        const signalCounts: Record<string, number> = {
+            re_question: 0,
+            early_exit: 0,
+            long_session: 0,
+            negative_feedback: 0,
+            topic_gap: 0,
+        }
+        signalData?.forEach(s => {
+            if (s.signal_type in signalCounts) {
+                signalCounts[s.signal_type]++
+            }
+        })
 
         // === 성장률 계산 ===
         const weeklyGrowth = lastWau > 0 ? (((wau - lastWau) / lastWau) * 100).toFixed(1) : '—'
@@ -165,7 +167,6 @@ export async function GET() {
                 newUsersYesterday: newUsersYesterday || 0,
                 newUsersThisWeek: newUsersThisWeek || 0,
                 totalSessions: totalSessions || 0,
-                activeSessions: activeSessions || 0,
                 totalMessages: totalMessages || 0,
                 todayMessages: todayMessages || 0,
                 wau,
@@ -173,16 +174,12 @@ export async function GET() {
                 weeklyGrowth,
                 userGrowth,
                 avgMessagesPerSession,
-                marketingConsentCount: marketingConsentCount || 0,
-                marketingConsentRate: (totalUsers || 0) > 0
-                    ? (((marketingConsentCount || 0) / (totalUsers || 1)) * 100).toFixed(1)
-                    : '0',
+                activeSubscriptions: activeSubscriptions || 0,
             },
-            dailyStats: dailyStats || [],
             signupTrend,
             hourlyDistribution: hourlyDist,
-            mentorShare: mentorShareData || [],
             authProviders,
+            signalCounts,
         })
     } catch (error) {
         console.error('Admin metrics error:', error)

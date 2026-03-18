@@ -9,7 +9,6 @@ interface OverviewData {
         newUsersYesterday: number
         newUsersThisWeek: number
         totalSessions: number
-        activeSessions: number
         totalMessages: number
         todayMessages: number
         wau: number
@@ -17,26 +16,16 @@ interface OverviewData {
         weeklyGrowth: string
         userGrowth: string
         avgMessagesPerSession: string
-        marketingConsentCount: number
-        marketingConsentRate: string
+        activeSubscriptions: number
     }
-    dailyStats: Array<{
-        date: string
-        active_users: number
-        total_sessions: number
-        total_messages: number
-        user_messages: number
-        assistant_messages: number
-        stt_messages: number
-    }>
     signupTrend: Array<{ date: string; count: number }>
     hourlyDistribution: number[]
-    mentorShare: Array<{ mentor_name: string; total_sessions: number }>
     authProviders: Record<string, number>
+    signalCounts: Record<string, number>
 }
 
 // ========================================
-// 재사용 컴포넌트 (화이트 테마)
+// 재사용 컴포넌트
 // ========================================
 
 function StatCard({ label, value, sub, color, trend, icon }: {
@@ -233,6 +222,61 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
     )
 }
 
+// 대화 품질 신호 카드
+const SIGNAL_META: Record<string, { emoji: string; label: string; desc: string; color: string }> = {
+    long_session: { emoji: '💚', label: '긴 대화', desc: '10턴 이상 (만족 신호)', color: '#16a34a' },
+    re_question: { emoji: '🔄', label: '재질문', desc: 'AI 답변 부족 의심', color: '#f59e0b' },
+    early_exit: { emoji: '🚪', label: '조기 이탈', desc: '1~2턴 후 나감', color: '#ef4444' },
+    negative_feedback: { emoji: '👎', label: '부정 피드백', desc: '유저 불만족', color: '#dc2626' },
+    topic_gap: { emoji: '❓', label: '지식 갭', desc: 'AI가 모르는 질문', color: '#8b5cf6' },
+}
+
+function SignalSummary({ signals }: { signals: Record<string, number> }) {
+    const total = Object.values(signals).reduce((s, v) => s + v, 0)
+
+    if (total === 0) {
+        return (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>✨</div>
+                <div style={{ color: '#94a3b8', fontSize: 13 }}>최근 7일 수집된 신호 없음</div>
+                <div style={{ color: '#cbd5e1', fontSize: 11, marginTop: 4 }}>대화가 더 쌓이면 자동 감지됩니다</div>
+            </div>
+        )
+    }
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {Object.entries(SIGNAL_META).map(([key, meta]) => {
+                const count = signals[key] || 0
+                const pct = total > 0 ? (count / total) * 100 : 0
+                return (
+                    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 16, width: 24, textAlign: 'center' }}>{meta.emoji}</span>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: '#1e293b' }}>{meta.label}</span>
+                                <span style={{ fontSize: 11, color: '#94a3b8' }}>{count}건</span>
+                            </div>
+                            <div style={{ height: 6, background: '#f1f5f9', borderRadius: 3, overflow: 'hidden' }}>
+                                <div style={{
+                                    height: '100%',
+                                    width: `${Math.max(pct, 2)}%`,
+                                    background: meta.color,
+                                    borderRadius: 3,
+                                    transition: 'width 0.5s ease',
+                                }} />
+                            </div>
+                        </div>
+                    </div>
+                )
+            })}
+            <div style={{ textAlign: 'right', fontSize: 10, color: '#94a3b8', marginTop: 4 }}>
+                최근 7일 · 총 {total}건
+            </div>
+        </div>
+    )
+}
+
 // ========================================
 // 메인 페이지
 // ========================================
@@ -302,20 +346,12 @@ export default function OverviewPage() {
 
     const o = data.overview
 
-    // 멘토 점유율 데이터
-    const mentorDonut = data.mentorShare.map(m => ({ label: m.mentor_name, value: m.total_sessions }))
-    const mentorColors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']
-
     // 가입 경로 도넛
     const authDonut = Object.entries(data.authProviders).map(([k, v]) => ({
         label: k === 'google' ? 'Google' : k === 'kakao' ? '카카오' : k === 'anonymous' ? '게스트' : k,
         value: v,
     }))
     const authColors = ['#60a5fa', '#fbbf24', '#a78bfa', '#34d399', '#f472b6']
-
-    // 피크 시간대 찾기
-    const peakHour = data.hourlyDistribution.indexOf(Math.max(...data.hourlyDistribution))
-    const peakMessages = Math.max(...data.hourlyDistribution)
 
     return (
         <div>
@@ -350,50 +386,35 @@ export default function OverviewPage() {
                 </div>
             </div>
 
-            {/* === 핵심 지표 그리드 === */}
+            {/* === 핵심 지표 6개 === */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))', gap: 12, marginBottom: 28 }}>
                 <StatCard icon="👥" label="총 유저" value={o.totalUsers} color="#3b82f6" trend={o.userGrowth} sub="vs 지난주" />
                 <StatCard icon="🆕" label="오늘 신규 가입" value={o.newUsersToday} color="#16a34a" sub={`어제: ${o.newUsersYesterday}`} />
                 <StatCard icon="📱" label="WAU" value={o.wau} color="#7c3aed" trend={o.weeklyGrowth} sub="주간 활성 유저" />
-                <StatCard icon="💬" label="총 대화 세션" value={o.totalSessions} color="#d97706" />
                 <StatCard icon="📝" label="총 메시지" value={o.totalMessages} color="#db2777" sub={`오늘: ${o.todayMessages.toLocaleString()}`} />
                 <StatCard icon="⚡" label="세션당 평균" value={`${o.avgMessagesPerSession}회`} color="#ea580c" sub="메시지" />
-                <StatCard icon="🟢" label="오늘 활성" value={o.activeSessions} color="#16a34a" sub="세션" />
-                <StatCard icon="🕐" label="피크 시간" value={`${peakHour}시`} color="#a855f7" sub={`${peakMessages}개 메시지`} />
-                <StatCard icon="📣" label="마수동 동의율" value={`${o.marketingConsentRate}%`} color="#059669" sub={`${o.marketingConsentCount}명 동의`} />
+                <StatCard icon="💎" label="구독 유저" value={o.activeSubscriptions} color="#7c3aed" sub="프리미엄" />
             </div>
 
-            {/* === 차트 그리드 (2열) === */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <ChartCard title="📈 일별 활성 유저 추이 (30일)">
-                    <AreaChart data={data.dailyStats} dataKey="active_users" color="#3b82f6" height={130} />
-                </ChartCard>
-                <ChartCard title="💬 일별 메시지 수 추이 (30일)">
-                    <AreaChart data={data.dailyStats} dataKey="total_messages" color="#7c3aed" height={130} />
-                </ChartCard>
-            </div>
-
+            {/* === 차트 2열 × 2행 === */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <ChartCard title="🆕 일별 신규 가입 추이 (30일)">
-                    <AreaChart data={data.signupTrend} dataKey="count" color="#16a34a" height={110} />
+                    <AreaChart data={data.signupTrend} dataKey="count" color="#16a34a" height={130} />
                 </ChartCard>
                 <ChartCard title="🕐 시간대별 메시지 분포 (이번 주)">
-                    <BarChart data={data.hourlyDistribution} color="#d97706" height={110} />
+                    <BarChart data={data.hourlyDistribution} color="#d97706" height={130} />
                 </ChartCard>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <ChartCard title="🤖 멘토별 대화 점유율">
-                    {mentorDonut.length > 0 ?
-                        <DonutChart data={mentorDonut} colors={mentorColors} /> :
-                        <div style={{ color: '#94a3b8', fontSize: 13 }}>데이터 없음</div>
-                    }
-                </ChartCard>
                 <ChartCard title="🔐 가입 경로 분포">
                     {authDonut.length > 0 ?
                         <DonutChart data={authDonut} colors={authColors} /> :
                         <div style={{ color: '#94a3b8', fontSize: 13 }}>데이터 없음</div>
                     }
+                </ChartCard>
+                <ChartCard title="🚨 대화 품질 신호 (최근 7일)">
+                    <SignalSummary signals={data.signalCounts} />
                 </ChartCard>
             </div>
         </div>
