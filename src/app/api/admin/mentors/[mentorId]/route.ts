@@ -36,7 +36,6 @@ export async function GET(
             .eq('mentor_id', mentorId)
             .not('user_id', 'is', null)
             .order('last_message_at', { ascending: false, nullsFirst: false })
-            .limit(100)
 
         // 각 세션의 최근 메시지 가져오기
         const enrichedMemberSessions = await Promise.all(
@@ -46,7 +45,6 @@ export async function GET(
                     .select('role, content, created_at')
                     .eq('session_id', session.id)
                     .order('created_at', { ascending: true })
-                    .limit(50)
 
                 return {
                     ...session,
@@ -61,7 +59,6 @@ export async function GET(
             .select('id, visitor_id, user_message, ai_response, created_at, device_type, os, browser, country, city')
             .eq('mentor_id', mentorId)
             .order('created_at', { ascending: false })
-            .limit(100)
 
         // visitor_id별로 그룹핑 (비회원 세션처럼 보이도록)
         const guestByVisitor: Record<string, typeof guestLogs> = {}

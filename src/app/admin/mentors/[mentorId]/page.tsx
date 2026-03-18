@@ -199,7 +199,7 @@ export default function MentorDetailPage() {
                                                 color: msg.role === 'user' ? '#fff' : '#1e293b',
                                                 fontSize: 13, lineHeight: 1.6, wordBreak: 'break-word',
                                             }}>
-                                                {msg.content?.substring(0, 500)}{msg.content?.length > 500 ? '...' : ''}
+                                                {msg.content}
                                             </div>
                                         </div>
                                     ))}
@@ -261,7 +261,7 @@ export default function MentorDetailPage() {
                                                     maxWidth: '75%', padding: '10px 14px', borderRadius: 12,
                                                     background: '#f1f5f9', color: '#1e293b', fontSize: 13, lineHeight: 1.6,
                                                 }}>
-                                                    {msg.ai_response?.substring(0, 500)}{(msg.ai_response?.length || 0) > 500 ? '...' : ''}
+                                                    {msg.ai_response}
                                                 </div>
                                             </div>
                                             <div style={{ textAlign: 'center', fontSize: 10, color: '#cbd5e1', marginTop: 4 }}>
