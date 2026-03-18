@@ -323,7 +323,7 @@ export default function OverviewPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
                 <div>
                     <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, letterSpacing: -0.5, color: '#1e293b' }}>
-                        📊 Dashboard Overview
+                        📊 대시보드
                     </h1>
                     <p style={{ color: '#94a3b8', fontSize: 13, margin: '6px 0 0' }}>
                         {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}

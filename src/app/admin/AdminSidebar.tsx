@@ -1,14 +1,16 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 
 const navItems = [
-    { href: '/admin/overview', label: '📊 Overview', id: 'overview' },
-    { href: '/admin/users', label: '👥 Users', id: 'users' },
-    { href: '/admin/mentors', label: '🤖 Mentors', id: 'mentors' },
-    { href: '/admin/conversations', label: '💬 Conversations', id: 'conversations' },
-    { href: '/admin/match-logs', label: '🎯 멘토 매칭', id: 'match-logs' },
+    { href: '/admin/overview', label: '📊 대시보드', id: 'overview' },
+    { href: '/admin/users', label: '👥 회원', id: 'users' },
+    { href: '/admin/guest-logs', label: '👤 비회원', id: 'guest-logs' },
+    { href: '/admin/mentors', label: '🤖 생성된 AI', id: 'mentors' },
+    { href: '/admin/conversations', label: '💬 대화 내역', id: 'conversations' },
+    { href: '/admin/match-logs', label: '🎯 멘토매칭', id: 'match-logs' },
 ]
 
 export default function AdminSidebar() {
@@ -29,27 +31,25 @@ export default function AdminSidebar() {
             zIndex: 50,
         }}>
             <div style={{ padding: '0 20px', marginBottom: 32 }}>
-                <h1 style={{
+                <Link href="/admin/overview" style={{
                     fontSize: 18,
                     fontWeight: 700,
                     color: '#1a1a2e',
                     margin: 0,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 8,
+                    gap: 10,
+                    textDecoration: 'none',
                 }}>
-                    <span style={{
-                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                        borderRadius: 8,
-                        width: 32,
-                        height: 32,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 16,
-                    }}>🔮</span>
-                    큐리 Admin
-                </h1>
+                    <Image
+                        src="/logo.png"
+                        alt="큐리"
+                        width={32}
+                        height={32}
+                        style={{ borderRadius: 8 }}
+                    />
+                    큐리 어드민
+                </Link>
             </div>
             <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {navItems.map(item => {

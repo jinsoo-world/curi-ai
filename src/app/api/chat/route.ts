@@ -288,6 +288,22 @@ export async function POST(req: Request) {
                         }
                     }
 
+                    // 📊 비회원 대화 로깅 (게스트 세션일 때 DB에 기록)
+                    if (isGuestSession && fullResponse) {
+                        try {
+                            const adminDb = createAdminClient()
+                            await adminDb.from('guest_chat_logs').insert({
+                                mentor_id: mentorId,
+                                mentor_name: mentor.name,
+                                user_message: lastUserMessage.slice(0, 500),
+                                ai_response: fullResponse.slice(0, 500),
+                                message_index: guestMessageCount || messages.length,
+                            })
+                        } catch (guestLogErr) {
+                            console.error('[Guest Log] Save failed:', guestLogErr instanceof Error ? guestLogErr.message : guestLogErr)
+                        }
+                    }
+
                     controller.enqueue(
                         encoder.encode(`data: ${JSON.stringify({ text: '', done: true, fullResponse })}\n\n`)
                     )
