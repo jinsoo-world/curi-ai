@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 
         // 유저별 세션/메시지 통계 추가
         const enrichedUsers = await Promise.all(
-            (rawUsers || []).map(async (user) => {
+            (rawUsers || []).map(async (user, index) => {
                 // 세션 수 + 총 메시지 수 (chat_sessions의 message_count 합산)
                 const { data: sessions } = await supabase
                     .from('chat_sessions')
@@ -133,6 +133,7 @@ export async function GET(request: NextRequest) {
                     created_ai_count: aiCount || 0,
                     clovers: (user as Record<string, unknown>).clovers || 0,
                     attendance_days: attendanceDays,
+                    user_number: (totalCount || 0) - offset - index,
                 }
             })
         )

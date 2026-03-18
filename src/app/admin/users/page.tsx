@@ -22,6 +22,7 @@ interface UserData {
     created_ai_count?: number
     clovers?: number
     attendance_days?: number
+    user_number?: number
 }
 
 interface UsersResponse {
@@ -202,6 +203,7 @@ export default function UsersPage() {
                     <thead>
                         <tr style={{ borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
                             {[
+                                { key: 'user_number', label: '#' },
                                 { key: 'display_name', label: '유저' },
                                 { key: 'id', label: 'UUID' },
                                 { key: 'auth_provider', label: '가입경로' },
@@ -239,9 +241,9 @@ export default function UsersPage() {
                     </thead>
                     <tbody>
                         {loading && !data ? (
-                            <tr><td colSpan={16} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>로딩 중...</td></tr>
+                            <tr><td colSpan={17} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>로딩 중...</td></tr>
                         ) : !data?.users?.length ? (
-                            <tr><td colSpan={16} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>유저 없음</td></tr>
+                            <tr><td colSpan={17} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>유저 없음</td></tr>
                         ) : data.users.map((user, i) => (
                             <tr
                                 key={user.id}
@@ -255,6 +257,9 @@ export default function UsersPage() {
                                 onMouseEnter={e => (e.currentTarget.style.background = '#f0f0ff')}
                                 onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#fafbfc')}
                             >
+                                <td style={{ padding: '12px 14px', fontSize: 12, fontWeight: 700, color: '#4f46e5', fontVariantNumeric: 'tabular-nums', textAlign: 'center', minWidth: 40 }}>
+                                    {(user as UserData).user_number || '—'}
+                                </td>
                                 <td style={{ padding: '12px 14px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                         {user.avatar_url ? (
