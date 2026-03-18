@@ -28,6 +28,14 @@ interface MentorHeaderProps {
     aiContentLength?: number
     /** 리포트 버튼 처음 활성화 여부 (NEW 뱃지) */
     isReportNew?: boolean
+    /** PDF 내보내기 활성화 여부 (멘토 설정) */
+    pdfExportEnabled?: boolean
+    /** 내보내기 버튼 라벨 (기본: '리포트') */
+    exportLabel?: string
+    /** 내보내기 모드: 'report'=AI요약, 'raw'=마지막AI응답 그대로 */
+    exportMode?: 'report' | 'raw'
+    /** 마지막 AI 응답 (raw 모드용) */
+    lastAiMessage?: string
 }
 
 /* ── SVG 아이콘 ── */
@@ -85,6 +93,10 @@ export default function MentorHeader({
     sessionId,
     aiContentLength = 0,
     isReportNew = false,
+    pdfExportEnabled = false,
+    exportLabel = '리포트',
+    exportMode = 'report',
+    lastAiMessage = '',
 }: MentorHeaderProps) {
     const router = useRouter()
     const [showShareMenu, setShowShareMenu] = useState(false)
@@ -94,6 +106,19 @@ export default function MentorHeader({
     const [exportError, setExportError] = useState<string | null>(null)
 
     const handleExport = async () => {
+        if (exportMode === 'raw') {
+            // 전자책 봇: 마지막 AI 응답을 바로 보여줌
+            setShowExportModal(true)
+            setExportLoading(false)
+            setExportError(null)
+            setExportData({
+                report: { title: mentor.name + ' 원고', summary: '', keyDecisions: [], insights: [], actionItems: [], outline: null },
+                markdown: lastAiMessage,
+                meta: { mentorName: mentor.name, createdDate: new Date().toLocaleDateString('ko-KR'), messageCount: 0 },
+            })
+            return
+        }
+
         if (!sessionId || sessionId.startsWith('guest-')) return
         setShowExportModal(true)
         setExportLoading(true)
@@ -115,6 +140,54 @@ export default function MentorHeader({
             setExportError(e.message)
         } finally {
             setExportLoading(false)
+        }
+    }
+
+    /** 마크다운 → HTML 변환 (간이) */
+    function markdownToHtml(md: string): string {
+        return md
+            .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+            .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+            .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+            .replace(/^---$/gm, '<hr/>')
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/^- \[ \] (.+)$/gm, '<p>☐ $1</p>')
+            .replace(/^- (.+)$/gm, '<p>• $1</p>')
+            .replace(/^> (.+)$/gm, '<blockquote style="border-left:3px solid #6366f1;padding:8px 16px;margin:12px 0;background:#f8fafc;">$1</blockquote>')
+            .replace(/\n\n/g, '<br/><br/>')
+            .replace(/\n/g, '<br/>')
+    }
+
+    /** PDF 다운로드 (클라이언트 사이드) */
+    const handleDownloadPdf = async () => {
+        if (!exportData) return
+        try {
+            const html2pdf = (await import('html2pdf.js')).default
+            const htmlContent = `
+                <div style="font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;padding:20px;line-height:1.8;color:#1e293b;max-width:600px;">
+                    ${markdownToHtml(exportData.markdown)}
+                </div>
+            `
+            const container = document.createElement('div')
+            container.innerHTML = htmlContent
+            document.body.appendChild(container)
+
+            await html2pdf()
+                .set({
+                    margin: [15, 15, 15, 15],
+                    filename: `${mentor.name}_${new Date().toISOString().split('T')[0]}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                })
+                .from(container)
+                .save()
+
+            document.body.removeChild(container)
+        } catch (e) {
+            console.error('PDF 생성 오류:', e)
+            alert('PDF 생성에 실패했습니다. 마크다운으로 다운로드해주세요.')
         }
     }
 
@@ -387,8 +460,8 @@ export default function MentorHeader({
                     <span className="header-text-label">새 대화</span>
                 </button>
 
-                {/* 내보내기 버튼 — 로그인 세션 + AI 답변 1500자 이상 */}
-                {sessionId && !sessionId.startsWith('guest-') && aiContentLength >= 1500 && (
+                {/* 내보내기 버튼 — PDF 활성화 + 로그인 세션 + AI 답변 1500자 이상 */}
+                {pdfExportEnabled && sessionId && !sessionId.startsWith('guest-') && aiContentLength >= 1500 && (
                     <button
                         onClick={handleExport}
                         aria-label="대화 리포트"
@@ -413,7 +486,7 @@ export default function MentorHeader({
                         onMouseLeave={e => { e.currentTarget.style.background = isReportNew ? '#f0f9ff' : 'transparent' }}
                     >
                         <ExportIcon />
-                        <span className="header-text-label">리포트</span>
+                        <span className="header-text-label">{exportLabel}</span>
                         {isReportNew && (
                             <span style={{
                                 position: 'absolute', top: -4, right: -4,
@@ -612,7 +685,7 @@ export default function MentorHeader({
                             {/* 헤더 */}
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                                 <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#18181b' }}>
-                                    📋 AI 요약 리포트
+                                    {exportMode === 'raw' ? '📄 원고 다운로드' : '📋 AI 요약 리포트'}
                                 </h3>
                                 <button
                                     onClick={() => setShowExportModal(false)}
@@ -723,24 +796,24 @@ export default function MentorHeader({
                                     {/* 액션 버튼 */}
                                     <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
                                         <button
-                                            onClick={handleDownloadMarkdown}
+                                            onClick={handleDownloadPdf}
                                             style={{
-                                                flex: 1, padding: '12px 16px', borderRadius: 12,
-                                                border: '1px solid #e5e7eb', background: '#fff',
-                                                fontSize: 14, fontWeight: 600, color: '#374151',
+                                                flex: 2, padding: '12px 16px', borderRadius: 12,
+                                                border: 'none',
+                                                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                                fontSize: 14, fontWeight: 600, color: '#fff',
                                                 cursor: 'pointer', display: 'flex', alignItems: 'center',
                                                 justifyContent: 'center', gap: 6,
                                             }}
                                         >
-                                            📥 다운로드
+                                            📄 PDF 다운로드
                                         </button>
                                         <button
                                             onClick={handleCopyReport}
                                             style={{
                                                 flex: 1, padding: '12px 16px', borderRadius: 12,
-                                                border: 'none',
-                                                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                                                fontSize: 14, fontWeight: 600, color: '#fff',
+                                                border: '1px solid #e5e7eb', background: '#fff',
+                                                fontSize: 14, fontWeight: 600, color: '#374151',
                                                 cursor: 'pointer', display: 'flex', alignItems: 'center',
                                                 justifyContent: 'center', gap: 6,
                                             }}

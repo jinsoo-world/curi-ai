@@ -35,20 +35,23 @@ export async function GET(req: NextRequest) {
             throw new Error(error.message)
         }
 
-        // mentor handle도 함께 조회
+        // mentor handle + pdf_export_enabled 조회
         const { data: mentor } = await admin
             .from('mentors')
-            .select('handle')
+            .select('handle, pdf_export_enabled')
             .eq('id', mentorId)
             .single()
 
         return NextResponse.json({
-            monetization: data || {
-                is_premium: false,
-                monthly_price: 9900,
-                free_trial_chats: 3,
-                free_trial_days: 7,
-                toggle_count: 0,
+            monetization: {
+                ...(data || {
+                    is_premium: false,
+                    monthly_price: 9900,
+                    free_trial_chats: 3,
+                    free_trial_days: 7,
+                    toggle_count: 0,
+                }),
+                pdf_export_enabled: mentor?.pdf_export_enabled || false,
             },
             handle: mentor?.handle || null,
         })
@@ -69,7 +72,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json()
-        const { mentorId, isPremium, monthlyPrice, freeTrialChats, freeTrialDays, handle } = body
+        const { mentorId, isPremium, monthlyPrice, freeTrialChats, freeTrialDays, pdfExportEnabled, handle } = body
 
         if (!mentorId) {
             return NextResponse.json({ error: 'mentorId는 필수입니다.' }, { status: 400 })
@@ -130,6 +133,16 @@ export async function POST(req: NextRequest) {
                 .eq('id', mentorId)
 
             if (handleError) throw new Error(handleError.message)
+        }
+
+        // pdf_export_enabled 업데이트 (mentors 테이블)
+        if (pdfExportEnabled !== undefined) {
+            const { error: pdfError } = await admin
+                .from('mentors')
+                .update({ pdf_export_enabled: pdfExportEnabled })
+                .eq('id', mentorId)
+
+            if (pdfError) throw new Error(pdfError.message)
         }
 
         return NextResponse.json({

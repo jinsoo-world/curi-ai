@@ -20,6 +20,7 @@ interface MentorData {
     greeting_message: string
     sample_questions: string[]
     system_prompt: string
+    pdf_export_enabled?: boolean
 }
 
 // 멘토별 프로필 이미지
@@ -143,6 +144,15 @@ export default function ChatPage() {
     const aiContentLength = messages
         .filter(m => m.role === 'assistant')
         .reduce((sum, m) => sum + (m.content?.length || 0), 0)
+
+    // 전자책 봇 자동 감지
+    const isEbookBot = mentor ? /전자책|PDF|ebook|원고/i.test(mentor.name) : false
+
+    // 마지막 AI 응답 (raw 모드 다운로드용)
+    const lastAiMessage = messages
+        .filter(m => m.role === 'assistant' && m.content)
+        .map(m => m.content)
+        .pop() || ''
 
     // 프로필에서 autoTTS 설정 + 유저 이름 로드
     useEffect(() => {
@@ -766,6 +776,10 @@ export default function ChatPage() {
                     sessionId={sessionId}
                     aiContentLength={aiContentLength}
                     isReportNew={isReportNew}
+                    pdfExportEnabled={mentor.pdf_export_enabled || false}
+                    exportLabel={isEbookBot ? '📄 원고 다운로드' : '리포트'}
+                    exportMode={isEbookBot ? 'raw' : 'report'}
+                    lastAiMessage={lastAiMessage}
                 />
 
                 {/* Messages Area */}

@@ -37,6 +37,7 @@ export default function CreatorEditPage() {
     const [freeTrialDays, setFreeTrialDays] = useState(7)
     const [mentorHandle, setMentorHandle] = useState('')
     const [handleError, setHandleError] = useState<string | null>(null)
+    const [pdfExportEnabled, setPdfExportEnabled] = useState(false)
     const [premiumSaving, setPremiumSaving] = useState(false)
     const [premiumLoaded, setPremiumLoaded] = useState(false)
     const premiumSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -249,6 +250,7 @@ export default function CreatorEditPage() {
                 setMonthlyPrice(m.monthly_price || 9900)
                 setFreeTrialChats(m.free_trial_chats || 3)
                 setFreeTrialDays(m.free_trial_days || 7)
+                setPdfExportEnabled(m.pdf_export_enabled || false)
                 if (data.handle) setMentorHandle(data.handle)
                 setPremiumLoaded(true)
             }
@@ -277,6 +279,7 @@ export default function CreatorEditPage() {
                         monthlyPrice: overrides.monthlyPrice !== undefined ? overrides.monthlyPrice : monthlyPrice,
                         freeTrialChats: overrides.freeTrialChats !== undefined ? overrides.freeTrialChats : freeTrialChats,
                         freeTrialDays: overrides.freeTrialDays !== undefined ? overrides.freeTrialDays : freeTrialDays,
+                        pdfExportEnabled: overrides.pdfExportEnabled !== undefined ? overrides.pdfExportEnabled : pdfExportEnabled,
                         handle: overrides.handle !== undefined ? overrides.handle : undefined,
                     }),
                 })
@@ -1359,6 +1362,49 @@ export default function CreatorEditPage() {
                     </div>
 
                     </>)}
+
+                    {/* ── PDF 생성/추출 ── */}
+                    <div style={styles.card}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div>
+                                <div style={{ fontSize: 16, fontWeight: 700, color: '#18181b' }}>📄 PDF 생성/추출</div>
+                                <div style={{ fontSize: 13, color: '#9ca3af', marginTop: 2 }}>AI 대화에서 생성된 콘텐츠를 PDF로 다운로드할 수 있게 합니다</div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const next = !pdfExportEnabled
+                                    setPdfExportEnabled(next)
+                                    debounceSavePremium({ pdfExportEnabled: next })
+                                }}
+                                style={{
+                                    width: 52, height: 28, borderRadius: 14,
+                                    border: 'none', cursor: 'pointer',
+                                    background: pdfExportEnabled ? '#3b82f6' : '#d1d5db',
+                                    position: 'relative' as const,
+                                    transition: 'background 200ms',
+                                }}
+                            >
+                                <div style={{
+                                    width: 22, height: 22, borderRadius: '50%',
+                                    background: '#fff', position: 'absolute' as const,
+                                    top: 3, left: pdfExportEnabled ? 27 : 3,
+                                    transition: 'left 200ms',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                }} />
+                            </button>
+                        </div>
+                        {pdfExportEnabled && (
+                            <div style={{
+                                marginTop: 12, padding: '10px 14px',
+                                background: '#eff6ff', borderRadius: 8,
+                                border: '1px solid #bfdbfe',
+                                fontSize: 13, color: '#1e40af', lineHeight: 1.6,
+                            }}>
+                                ✅ 사용자가 대화 중 <strong>1,500자 이상</strong>의 AI 응답을 받으면 상단에 <strong>리포트</strong> 버튼이 표시됩니다.
+                                전자책/보고서 등 장문 콘텐츠 봇에 적합합니다.
+                            </div>
+                        )}
+                    </div>
 
                     {/* ── 커스텀 URL ── */}
                     <div style={styles.card}>
