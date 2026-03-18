@@ -33,7 +33,14 @@ export async function POST(request: NextRequest) {
 
         const result = await ai.models.generateContent({
             model: 'gemini-2.0-flash',
-            contents: `당신은 AI 멘토 매칭 전문가입니다.
+            config: {
+                temperature: 0.7,
+                maxOutputTokens: 256,
+            },
+            contents: [{
+                role: 'user',
+                parts: [{
+                    text: `당신은 AI 멘토 매칭 전문가입니다.
 
 사용자의 고민: "${concern.trim()}"
 
@@ -44,9 +51,11 @@ ${mentorInfo}
 응답 형식 (반드시 JSON만 출력):
 {
   "mentor_name": "선택한 멘토 이름 (정확히)",
-  "reason": "20자 이내의 짧은 매칭 이유 (예: '세일즈 고민엔 역시!')",
+  "reason": "20자 이내의 짧은 매칭 이유",
   "first_message": "사용자의 고민을 반영한 멘토의 첫 대화 메시지 (해당 멘토의 말투와 캐릭터로, 2문장 이내)"
-}`,
+}`
+                }]
+            }],
         })
 
         const responseText = result.text || ''
