@@ -192,7 +192,7 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string, theme?: 
 
         // ★ 본문 콘텐츠: PDF용 15pt (A4 기준 적정 크기)
         const contentHtml = escapeHtml(page.content)
-            .replace(/\n\n/g, '</p><p style="margin: 0 0 20px 0; line-height: 1.85; font-size: 15pt; color: #334155;">')
+            .replace(/\n\n/g, '</p><p style="margin: 0 0 20px 0; line-height: 1.85; font-size: 16pt; color: #334155;">')
             .replace(/\n/g, '<br/>')
 
         return `
@@ -223,7 +223,7 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string, theme?: 
                 <!-- 섹션 제목 -->
                 <h2 style="
                     font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
-                    font-size: 24pt;
+                    font-size: 28pt;
                     font-weight: 700;
                     color: #0f172a;
                     margin: 0 0 20px 0;
@@ -236,7 +236,7 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string, theme?: 
                     font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
                     margin: 0 0 20px 0;
                     line-height: 1.85;
-                    font-size: 15pt;
+                    font-size: 16pt;
                     color: #334155;
                     word-break: keep-all;
                 ">${contentHtml}</p>
