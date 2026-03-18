@@ -770,14 +770,12 @@ export default function MentorHeader({
                                     }}>📖</div>
                                     <style>{`
                                         @keyframes bookBounce {
-                                            0%, 100% { transform: scale(1) rotate(0deg); }
-                                            25% { transform: scale(1.1) rotate(-5deg); }
-                                            50% { transform: scale(1) rotate(0deg); }
-                                            75% { transform: scale(1.1) rotate(5deg); }
+                                            0%, 100% { opacity: 1; }
+                                            50% { opacity: 0.6; }
                                         }
                                         @keyframes fadeInUp {
-                                            from { opacity: 0; transform: translateY(8px); }
-                                            to { opacity: 1; transform: translateY(0); }
+                                            from { opacity: 0; }
+                                            to { opacity: 1; }
                                         }
                                     `}</style>
                                     <EbookLoadingSteps isRaw={exportMode === 'raw'} />
