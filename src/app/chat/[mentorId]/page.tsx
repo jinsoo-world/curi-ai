@@ -1208,22 +1208,6 @@ export default function ChatPage() {
                             >
                                 🚀 무료 회원가입하기
                             </button>
-                            <button
-                                onClick={() => setShowLoginGate(false)}
-                                style={{
-                                    width: '100%',
-                                    padding: '12px 20px',
-                                    borderRadius: 14,
-                                    border: 'none',
-                                    background: 'transparent',
-                                    color: '#94a3b8',
-                                    fontSize: 14,
-                                    fontWeight: 500,
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                나중에 할게요
-                            </button>
                         </div>
                     </>
                 )}
