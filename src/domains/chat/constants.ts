@@ -1,7 +1,7 @@
 // domains/chat — 채팅 도메인 상수
 
 /** Gemini 모델명 */
-export const GEMINI_MODEL = 'gemini-2.5-flash'
+export const GEMINI_MODEL = 'gemini-3-flash-preview'
 
 /** Gemini 기본 설정 */
 export const GEMINI_CONFIG = {

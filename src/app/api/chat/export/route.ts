@@ -85,7 +85,7 @@ export async function POST(req: Request) {
         // Gemini로 요약 생성
         const ai = getAI()
         const result = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3-flash-preview',
             config: {
                 systemInstruction: EXPORT_SYSTEM_PROMPT,
                 temperature: 0.3,

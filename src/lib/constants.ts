@@ -23,7 +23,7 @@ export const PRICING = {
 
 // AI 설정
 export const AI_CONFIG = {
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3-flash-preview',
     maxTokens: 2048,
     temperature: 0.7,
     topP: 0.9,
