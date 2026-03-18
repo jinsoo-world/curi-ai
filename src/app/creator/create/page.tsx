@@ -768,12 +768,12 @@ export default function CreatorCreatePage() {
                                     style={{ ...styles.textarea, fontFamily: 'monospace', fontSize: 13 }}
                                     value={systemPrompt}
                                     onChange={e => setSystemPrompt(e.target.value)}
-                                    maxLength={3000}
+                                    maxLength={10000}
                                     placeholder="예: 당신은 마케팅 전문가입니다. 데이터 기반 분석과 실전 사례를 통해 조언합니다."
                                     rows={8}
                                 />
                                 <div style={{ textAlign: 'right' as const, fontSize: 11, color: systemPrompt.length > 2700 ? '#f59e0b' : '#b0b8c1', marginTop: 4 }}>
-                                    {systemPrompt.length}/3,000
+                                    {systemPrompt.length.toLocaleString()}/10,000
                                 </div>
                             </div>
                         </div>
