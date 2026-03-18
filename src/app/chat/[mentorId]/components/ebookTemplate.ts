@@ -26,13 +26,38 @@ interface EbookData {
  * 전자책 JSON 데이터를 디자인된 HTML로 변환
  * 뷰어(EbookViewer.tsx)와 동일한 스타일 적용
  */
-export function generateEbookHtml(ebook: EbookData, mentorName: string): string {
+
+const PDF_THEMES: Record<string, {
+    cover: string; titleColor: string; subtitleColor: string; authorColor: string;
+}> = {
+    gradient: {
+        cover: 'linear-gradient(160deg, #1e1b4b 0%, #312e81 30%, #6366f1 70%, #818cf8 100%)',
+        titleColor: '#fff', subtitleColor: 'rgba(199,210,254,0.9)', authorColor: 'rgba(255,255,255,0.6)',
+    },
+    minimal: {
+        cover: '#fafaf9',
+        titleColor: '#0c0a09', subtitleColor: '#57534e', authorColor: '#a8a29e',
+    },
+    sunset: {
+        cover: 'linear-gradient(180deg, #1c1917 0%, #451a03 30%, #92400e 60%, #d97706 100%)',
+        titleColor: '#fff', subtitleColor: 'rgba(254,243,199,0.8)', authorColor: 'rgba(255,255,255,0.5)',
+    },
+    classic: {
+        cover: 'linear-gradient(160deg, #1a2e1a 0%, #14532d 40%, #166534 100%)',
+        titleColor: '#fbbf24', subtitleColor: 'rgba(255,255,255,0.75)', authorColor: 'rgba(253,224,71,0.6)',
+    },
+}
+
+export function generateEbookHtml(ebook: EbookData, mentorName: string, theme?: string): string {
+    const t = PDF_THEMES[theme || 'gradient'] || PDF_THEMES.gradient
+    const coverBg = t.cover.includes('gradient') ? `background: ${t.cover};` : `background: ${t.cover};`
+
     const coverHtml = `
         <div style="
             page-break-after: always;
             width: 100%;
             min-height: 250mm;
-            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 40%, #2563eb 100%);
+            ${coverBg}
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -64,7 +89,7 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string): string 
                     font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
                     font-size: 32pt;
                     font-weight: 800;
-                    color: #ffffff;
+                    color: ${t.titleColor};
                     line-height: 1.3;
                     margin: 0 0 20px 0;
                     letter-spacing: -0.5px;
@@ -74,7 +99,7 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string): string 
                 <p style="
                     font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
                     font-size: 14pt;
-                    color: rgba(186, 230, 253, 0.9);
+                    color: ${t.subtitleColor};
                     line-height: 1.6;
                     margin: 0;
                     word-break: keep-all;
@@ -96,7 +121,7 @@ export function generateEbookHtml(ebook: EbookData, mentorName: string): string 
                     <p style="
                         font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
                         font-size: 11pt;
-                        color: rgba(255,255,255,0.8);
+                        color: ${t.authorColor};
                         margin: 0;
                     ">by ${escapeHtml(ebook.cover.author || mentorName)}</p>
                 </div>

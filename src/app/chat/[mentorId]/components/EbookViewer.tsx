@@ -138,7 +138,7 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
             const { generateEbookHtml } = await import('./ebookTemplate')
             const html2pdf = (await import('html2pdf.js')).default
             const finalEbook = applyEdits(ebook)
-            const htmlContent = generateEbookHtml(finalEbook, meta.mentorName)
+            const htmlContent = generateEbookHtml(finalEbook, meta.mentorName, theme)
             const container = document.createElement('div')
             container.innerHTML = htmlContent
             document.body.appendChild(container)
