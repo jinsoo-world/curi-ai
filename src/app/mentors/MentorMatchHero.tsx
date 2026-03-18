@@ -124,6 +124,7 @@ export default function MentorMatchHero() {
         <div style={{
             maxWidth: 1000, margin: '0 auto',
             padding: '40px 40px 16px',
+            minHeight: 200,
         }}>
             <div style={{
                 background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9ff 100%)',
@@ -410,7 +411,7 @@ export default function MentorMatchHero() {
 
             <style>{`
                 @keyframes spin { to { transform: rotate(360deg) } }
-                @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes slideUp { from { opacity: 0; } to { opacity: 1; } }
             `}</style>
         </div>
     )

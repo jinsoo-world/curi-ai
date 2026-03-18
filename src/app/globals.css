@@ -56,12 +56,10 @@ body {
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(16px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -93,6 +91,8 @@ body {
 
 .animate-slide-up {
   animation: slideUp 400ms ease-out both;
+  will-change: opacity;
+  contain: layout;
 }
 
 .animate-spin-slow {

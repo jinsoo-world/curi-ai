@@ -107,11 +107,22 @@ export default function RootLayout({
     <html lang="ko" className={notoSansKr.variable}>
       <head>
         <link
-          rel="stylesheet"
+          rel="preload"
           as="style"
           crossOrigin="anonymous"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
+        <link
+          rel="stylesheet"
+          crossOrigin="anonymous"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+        />
+        <style dangerouslySetInnerHTML={{ __html: `
+          @font-face {
+            font-family: 'Pretendard Variable';
+            font-display: optional;
+          }
+        ` }} />
         {/* JSON-LD 구조화 데이터 */}
         <script
           type="application/ld+json"
