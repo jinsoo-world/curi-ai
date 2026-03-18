@@ -29,13 +29,15 @@ export async function GET() {
 
         // 통계 계산
         const total = logs?.length || 0
-        const guestCount = logs?.filter(l => l.is_guest).length || 0
-        const memberCount = total - guestCount
-        const mentorCounts: Record<string, number> = {}
-        logs?.forEach(l => {
-            const name = l.matched_mentor_name || '알 수 없음'
-            mentorCounts[name] = (mentorCounts[name] || 0) + 1
-        })
+        const guestLogs = logs?.filter(l => l.is_guest) || []
+        const memberLogs = logs?.filter(l => !l.is_guest) || []
+        const guestCount = guestLogs.length
+        const memberCount = memberLogs.length
+        // 이탈율 = 클릭 안 한 비율
+        const memberChurnCount = memberLogs.filter(l => !l.clicked_start).length
+        const guestChurnCount = guestLogs.filter(l => !l.clicked_start).length
+        const memberChurnRate = memberCount > 0 ? Math.round((memberChurnCount / memberCount) * 100) : 0
+        const guestChurnRate = guestCount > 0 ? Math.round((guestChurnCount / guestCount) * 100) : 0
 
         // 유저 이메일 매핑
         const userIds = [...new Set(logs?.filter(l => l.user_id).map(l => l.user_id) || [])]
@@ -64,7 +66,8 @@ export async function GET() {
                 total,
                 guestCount,
                 memberCount,
-                mentorCounts,
+                memberChurnRate,
+                guestChurnRate,
             },
         })
 

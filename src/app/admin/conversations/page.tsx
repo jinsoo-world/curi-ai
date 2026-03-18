@@ -100,7 +100,7 @@ export default function ConversationsPage() {
 
     // 차트 설정
     const chartW = 560
-    const chartH = 200
+    const chartH = 140
     const chartPadL = 45  // Y축 라벨 공간
     const chartPadR = 10
     const chartPadT = 20
@@ -108,7 +108,7 @@ export default function ConversationsPage() {
     const plotW = chartW - chartPadL - chartPadR
     const plotH = chartH - chartPadT - chartPadB
 
-    const msgMax = Math.max(...stats.map(d => d.total_messages || 0), 1)
+    const msgMax = Math.max(...stats.map(d => d.user_messages || 0), 1)
     // Y축 눈금을 깔끔하게
     const yStep = msgMax <= 20 ? 5 : msgMax <= 50 ? 10 : msgMax <= 100 ? 25 : msgMax <= 200 ? 50 : 100
     const yMax = Math.ceil(msgMax / yStep) * yStep
@@ -203,17 +203,9 @@ export default function ConversationsPage() {
                         boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                     }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                            <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: '#1e293b' }}>
-                                📈 일별 메시지 추이
+                            <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 16px', color: '#1e293b' }}>
+                                📈 일별 유저 메시지 추이
                             </h3>
-                            <div style={{ display: 'flex', gap: 16 }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b' }}>
-                                    <span style={{ width: 12, height: 12, borderRadius: 3, background: '#818cf8' }} /> 유저 메시지
-                                </span>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b' }}>
-                                    <span style={{ width: 12, height: 12, borderRadius: 3, background: '#c4b5fd' }} /> AI 응답
-                                </span>
-                            </div>
                         </div>
                         {stats.length > 0 ? (
                             <div style={{ position: 'relative' }}>
@@ -243,12 +235,10 @@ export default function ConversationsPage() {
                                     {/* 바 차트 */}
                                     {stats.map((d, i) => {
                                         const groupW = plotW / stats.length
-                                        const barW = Math.min(groupW * 0.35, 14)
-                                        const gap = 2
+                                        const barW = Math.min(groupW * 0.6, 16)
                                         const cx = chartPadL + i * groupW + groupW / 2
 
                                         const userH = ((d.user_messages || 0) / yMax) * plotH
-                                        const aiH = ((d.assistant_messages || 0) / yMax) * plotH
 
                                         const isHovered = hoveredBar === i
 
@@ -270,23 +260,13 @@ export default function ConversationsPage() {
 
                                                 {/* 유저 메시지 바 */}
                                                 <rect
-                                                    x={cx - barW - gap / 2}
+                                                    x={cx - barW / 2}
                                                     y={chartPadT + plotH - userH}
                                                     width={barW}
                                                     height={Math.max(userH, 0)}
                                                     rx={3}
                                                     fill="#818cf8"
                                                     opacity={isHovered ? 1 : 0.8}
-                                                />
-                                                {/* AI 응답 바 */}
-                                                <rect
-                                                    x={cx + gap / 2}
-                                                    y={chartPadT + plotH - aiH}
-                                                    width={barW}
-                                                    height={Math.max(aiH, 0)}
-                                                    rx={3}
-                                                    fill="#c4b5fd"
-                                                    opacity={isHovered ? 1 : 0.7}
                                                 />
 
                                                 {/* X축 날짜 — 간격에 따라 표시 */}
@@ -301,11 +281,11 @@ export default function ConversationsPage() {
                                                 {/* 호버 툴팁 */}
                                                 {isHovered && (
                                                     <g>
-                                                        <rect x={cx - 48} y={chartPadT - 18} width={96} height={16}
+                                                        <rect x={cx - 38} y={chartPadT - 18} width={76} height={16}
                                                             rx={4} fill="#1e293b" />
                                                         <text x={cx} y={chartPadT - 7} textAnchor="middle"
                                                             fill="#fff" fontSize="9" fontWeight="600">
-                                                            유저 {d.user_messages || 0} · AI {d.assistant_messages || 0}
+                                                            {d.user_messages || 0}건 메시지
                                                         </text>
                                                     </g>
                                                 )}

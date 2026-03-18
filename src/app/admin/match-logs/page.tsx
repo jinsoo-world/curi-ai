@@ -19,7 +19,8 @@ interface Stats {
     total: number
     guestCount: number
     memberCount: number
-    mentorCounts: Record<string, number>
+    memberChurnRate: number
+    guestChurnRate: number
 }
 
 export default function MatchLogsPage() {
@@ -37,10 +38,11 @@ export default function MatchLogsPage() {
                     total: s.total || 0,
                     guestCount: s.guestCount || 0,
                     memberCount: s.memberCount || 0,
-                    mentorCounts: s.mentorCounts || {},
+                    memberChurnRate: s.memberChurnRate || 0,
+                    guestChurnRate: s.guestChurnRate || 0,
                 })
             })
-            .catch(() => setStats({ total: 0, guestCount: 0, memberCount: 0, mentorCounts: {} }))
+            .catch(() => setStats({ total: 0, guestCount: 0, memberCount: 0, memberChurnRate: 0, guestChurnRate: 0 }))
             .finally(() => setLoading(false))
     }, [])
 
@@ -57,15 +59,14 @@ export default function MatchLogsPage() {
                 유저들이 AI 멘토 찾기에서 어떤 고민을 입력하고 어떤 멘토로 매칭되었는지 추적합니다.
             </p>
 
-            {/* 통계 카드 */}
+            {/* 통계 카드 5개 */}
             {stats && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 32 }}>
                     <StatCard label="총 매칭" value={stats.total} color="#22c55e" />
-                    <StatCard label="회원" value={stats.memberCount} color="#3b82f6" />
-                    <StatCard label="비회원" value={stats.guestCount} color="#f59e0b" />
-                    {Object.entries(stats.mentorCounts || {}).map(([name, count]) => (
-                        <StatCard key={name} label={name} value={count} color="#8b5cf6" />
-                    ))}
+                    <StatCard label="이용 회원" value={stats.memberCount} color="#3b82f6" />
+                    <StatCard label="이용 비회원" value={stats.guestCount} color="#f59e0b" />
+                    <StatCard label="회원 이탈률" value={`${stats.memberChurnRate}%`} color={stats.memberChurnRate > 50 ? '#ef4444' : '#64748b'} />
+                    <StatCard label="비회원 이탈률" value={`${stats.guestChurnRate}%`} color={stats.guestChurnRate > 50 ? '#ef4444' : '#64748b'} />
                 </div>
             )}
 
@@ -83,7 +84,6 @@ export default function MatchLogsPage() {
                             <th style={thStyle}>유저</th>
                             <th style={thStyle}>고민 내용</th>
                             <th style={thStyle}>매칭 멘토</th>
-                            <th style={thStyle}>매칭 이유</th>
                             <th style={thStyle}>유형</th>
                             <th style={thStyle}>클릭</th>
                         </tr>
@@ -91,7 +91,7 @@ export default function MatchLogsPage() {
                     <tbody>
                         {logs.length === 0 ? (
                             <tr>
-                                <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
+                                <td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
                                     아직 매칭 로그가 없습니다.
                                 </td>
                             </tr>
@@ -121,9 +121,6 @@ export default function MatchLogsPage() {
                                     </td>
                                     <td style={tdStyle}>
                                         <strong style={{ color: '#1e293b' }}>{log.matched_mentor_name}</strong>
-                                    </td>
-                                    <td style={tdStyle}>
-                                        <span style={{ color: '#64748b' }}>{log.match_reason}</span>
                                     </td>
                                     <td style={tdStyle}>
                                         <span style={{
@@ -157,7 +154,7 @@ export default function MatchLogsPage() {
     )
 }
 
-function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
+function StatCard({ label, value, color }: { label: string; value: number | string; color: string }) {
     return (
         <div style={{
             background: '#fff',

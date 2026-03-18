@@ -187,11 +187,11 @@ export default function MentorMatchHero() {
                     }}>
                         <div className="match-hero-input-bar" style={{
                             display: 'flex', gap: 0,
-                            background: 'rgba(255,255,255,0.07)',
-                            border: '1.5px solid rgba(255,255,255,0.15)',
+                            background: '#fff',
+                            border: '1.5px solid rgba(255,255,255,0.3)',
                             borderRadius: 18,
                             padding: 5,
-                            backdropFilter: 'blur(12px)',
+                            boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
                             transition: 'border-color 0.3s, box-shadow 0.3s',
                         }}>
                             <input
@@ -210,9 +210,9 @@ export default function MentorMatchHero() {
                                     border: 'none',
                                     background: 'transparent',
                                     fontSize: 15,
-                                    color: '#fff',
+                                    color: '#1e293b',
                                     outline: 'none',
-                                    caretColor: '#4ade80',
+                                    caretColor: '#16a34a',
                                     minWidth: 0,
                                 }}
                             />
@@ -469,7 +469,7 @@ export default function MentorMatchHero() {
             <style>{`
                 @keyframes spin { to { transform: rotate(360deg) } }
                 @keyframes heroSlideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-                input::placeholder { color: rgba(255,255,255,0.3) !important; }
+                input::placeholder { color: #94a3b8 !important; }
                 @media (max-width: 768px) {
                     .match-hero-wrap {
                         padding: 16px 16px 8px !important;

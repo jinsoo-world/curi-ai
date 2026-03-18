@@ -11,11 +11,17 @@ export async function GET() {
     const supabase = createAdminClient()
 
     try {
-        const today = new Date().toISOString().split('T')[0]
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
-        const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
-        const twoWeeksAgo = new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0]
-        const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
+        // KST 기준 날짜 계산 (UTC+9)
+        const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
+        const toKSTDate = (d: Date) => {
+            const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000)
+            return kst.toISOString().split('T')[0]
+        }
+        const today = toKSTDate(new Date())
+        const yesterday = toKSTDate(new Date(Date.now() - 86400000))
+        const weekAgo = toKSTDate(new Date(Date.now() - 7 * 86400000))
+        const twoWeeksAgo = toKSTDate(new Date(Date.now() - 14 * 86400000))
+        const monthAgo = toKSTDate(new Date(Date.now() - 30 * 86400000))
 
         // === 핵심 지표 ===
         const { count: totalUsers } = await supabase
@@ -115,7 +121,7 @@ export async function GET() {
 
         const signupsByDay: Record<string, number> = {}
         signupData?.forEach(u => {
-            const day = new Date(u.created_at).toISOString().split('T')[0]
+            const day = toKSTDate(new Date(u.created_at))
             signupsByDay[day] = (signupsByDay[day] || 0) + 1
         })
         const signupTrend = Object.entries(signupsByDay).map(([date, count]) => ({ date, count }))
@@ -129,7 +135,8 @@ export async function GET() {
 
         const hourlyDist = Array(24).fill(0)
         hourlyData?.forEach(m => {
-            const hour = new Date(m.created_at).getHours()
+            // KST 시간 기준
+            const hour = new Date(new Date(m.created_at).getTime() + 9 * 60 * 60 * 1000).getUTCHours()
             hourlyDist[hour]++
         })
 
@@ -176,21 +183,36 @@ export async function GET() {
         // === 오늘의 인사이트 ===
         const insights: Array<{ emoji: string; text: string }> = []
 
-        // 1) 헤비 유저 (오늘 메시지 10개 이상)
+        // 1) 헤비 유저 (오늘 메시지 10개 이상) — user_id별 합산으로 중복 제거
         const { data: heavyUsers } = await supabase
             .from('chat_sessions')
             .select('user_id, message_count, users!inner(display_name)')
             .gte('last_message_at', today)
-            .gt('message_count', 10)
-            .order('message_count', { ascending: false })
-            .limit(3)
+            .gt('message_count', 0)
         if (heavyUsers && heavyUsers.length > 0) {
-            const names = heavyUsers.map((h: Record<string, unknown>) => {
+            // user_id별로 메시지 수 합산 (같은 유저의 여러 세션 합치기)
+            const userMap = new Map<string, { name: string; total: number }>()
+            heavyUsers.forEach((h: Record<string, unknown>) => {
+                const userId = h.user_id as string
                 const user = h.users as Record<string, unknown> | null
-                const name = user?.display_name || '알 수 없음'
-                return `${name}(${h.message_count}회)`
-            }).join(', ')
-            insights.push({ emoji: '🔥', text: `오늘 열정 유저: ${names}` })
+                const name = (user?.display_name as string) || '알 수 없음'
+                const count = (h.message_count as number) || 0
+                const existing = userMap.get(userId)
+                if (existing) {
+                    existing.total += count
+                } else {
+                    userMap.set(userId, { name, total: count })
+                }
+            })
+            // 10회 이상만 필터 + 상위 3명
+            const topUsers = Array.from(userMap.values())
+                .filter(u => u.total >= 10)
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 3)
+            if (topUsers.length > 0) {
+                const names = topUsers.map(u => `${u.name}(${u.total}회)`).join(', ')
+                insights.push({ emoji: '🔥', text: `오늘 열정 유저: ${names}` })
+            }
         }
 
         // 2) 신규 가입 후 바로 대화한 유저
