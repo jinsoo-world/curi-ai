@@ -205,7 +205,6 @@ export default function UsersPage() {
                             {[
                                 { key: 'user_number', label: '#' },
                                 { key: 'display_name', label: '유저' },
-                                { key: 'id', label: 'UUID' },
                                 { key: 'auth_provider', label: '가입경로' },
                                 { key: 'segment', label: '세그먼트' },
                                 { key: 'phone', label: '전화번호' },
@@ -241,9 +240,9 @@ export default function UsersPage() {
                     </thead>
                     <tbody>
                         {loading && !data ? (
-                            <tr><td colSpan={17} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>로딩 중...</td></tr>
+                            <tr><td colSpan={16} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>로딩 중...</td></tr>
                         ) : !data?.users?.length ? (
-                            <tr><td colSpan={17} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>유저 없음</td></tr>
+                            <tr><td colSpan={16} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>유저 없음</td></tr>
                         ) : data.users.map((user, i) => (
                             <tr
                                 key={user.id}
@@ -290,9 +289,6 @@ export default function UsersPage() {
                                             </div>
                                         </div>
                                     </div>
-                                </td>
-                                <td style={{ padding: '12px 14px', fontSize: 10, fontFamily: 'monospace', color: '#94a3b8', letterSpacing: -0.5 }}>
-                                    {user.id.slice(0, 8)}
                                 </td>
                                 <td style={{ padding: '12px 14px' }}>{getProviderBadge(user.auth_provider)}</td>
                                 <td style={{ padding: '12px 14px' }}>{getSegmentBadge(user.segment)}</td>
