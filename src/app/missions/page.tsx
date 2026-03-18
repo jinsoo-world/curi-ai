@@ -221,9 +221,9 @@ export default function MissionsPage() {
             id: 'invite-friend',
             icon: '🎉',
             title: '친구 초대하기',
-            description: '친구 1명이 가입하면 10클로버!',
-            reward: 10,
-            rewardLabel: '🍀 +10',
+            description: '친구 1명이 가입하면 100클로버!',
+            reward: 100,
+            rewardLabel: '🍀 +100',
             progress: missionStatus.friendsInvited,
             goal: 1,
             completed: missionStatus.friendsInvited >= 1,
@@ -643,7 +643,7 @@ export default function MissionsPage() {
                 </div>
             )}
 
-            {/* 공유 확인 모달 */}
+            {/* 공유 완료 안내 모달 (클로버 적립 없음 — 실제 가입 시 auth/callback에서 100클로버 지급) */}
             {showShareConfirm && (
                 <div style={{
                     position: 'fixed', inset: 0, zIndex: 100,
@@ -656,39 +656,26 @@ export default function MissionsPage() {
                         textAlign: 'center', position: 'relative',
                         animation: 'fadeIn 0.3s ease',
                     }}>
-                        <div style={{ fontSize: 48, marginBottom: 12 }}>📤</div>
+                        <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
                         <h3 style={{ fontSize: 20, fontWeight: 700, color: '#18181b', marginBottom: 8 }}>
-                            공유를 완료했나요?
+                            공유 완료!
                         </h3>
                         <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, marginBottom: 24 }}>
-                            친구에게 공유를 완료하셨으면<br />아래 버튼을 눌러 클로버를 받으세요! 🍀
+                            친구가 링크를 통해 가입하면<br />🍀 <strong>100 클로버</strong>가 자동으로 적립돼요!
                         </p>
-                        <div style={{ display: 'flex', gap: 10 }}>
-                            <button
-                                onClick={() => setShowShareConfirm(false)}
-                                style={{
-                                    flex: 1, padding: '14px', borderRadius: 12,
-                                    border: '1px solid #e5e7eb', background: '#f9fafb',
-                                    fontSize: 14, fontWeight: 600, color: '#6b7280',
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                아직 안 했어요
-                            </button>
-                            <button
-                                onClick={confirmShare}
-                                style={{
-                                    flex: 1, padding: '14px', borderRadius: 12,
-                                    border: 'none',
-                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                                    fontSize: 14, fontWeight: 600, color: '#fff',
-                                    cursor: 'pointer',
-                                    boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
-                                }}
-                            >
-                                🍀 공유 완료!
-                            </button>
-                        </div>
+                        <button
+                            onClick={() => setShowShareConfirm(false)}
+                            style={{
+                                width: '100%', padding: '14px', borderRadius: 12,
+                                border: 'none',
+                                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                fontSize: 14, fontWeight: 600, color: '#fff',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
+                            }}
+                        >
+                            확인
+                        </button>
                     </div>
                 </div>
             )}
@@ -724,7 +711,7 @@ export default function MissionsPage() {
                         </h3>
                         <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, marginBottom: 20 }}>
                             아래 링크를 친구에게 공유하면<br />
-                            친구가 가입할 때 🍀 10 클로버를 받아요!
+                            친구가 가입할 때 🍀 <strong>100 클로버</strong>를 받아요!
                         </p>
 
                         {/* 초대 링크 */}

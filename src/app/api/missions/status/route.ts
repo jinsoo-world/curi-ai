@@ -92,7 +92,7 @@ export async function GET() {
 
             // credit_transactions 조회
             (async () => {
-                const [shareResult, historyResult, cloverHuntResult] = await Promise.all([
+                const [shareResult, historyResult, cloverHuntResult, completedMissionsResult] = await Promise.all([
                     supabaseAdmin.from('credit_transactions')
                         .select('id')
                         .eq('user_id', user.id)
@@ -113,22 +113,32 @@ export async function GET() {
                         .eq('user_id', user.id)
                         .eq('type', 'clover_hunt')
                         .gte('created_at', today.toISOString()),
+                    // 미션 완료 체크용: limit 없이 완료된 미션 타입만 조회 (중복 적립 방지)
+                    supabaseAdmin.from('credit_transactions')
+                        .select('type')
+                        .eq('user_id', user.id)
+                        .in('type', [
+                            'mission_create_ai_1', 'mission_create_ai_2',
+                            'mission_ask_10', 'mission_invite', 'mission_profile_update',
+                        ]),
                 ])
 
                 return {
                     sharesToday: shareResult.data?.length || 0,
                     creditHistory: historyResult.data || [],
                     cloverHuntToday: cloverHuntResult.data?.length || 0,
+                    completedMissions: completedMissionsResult.data || [],
                 }
             })(),
         ])
 
         const profileUpdated = !!(profile?.phone || profile?.gender)
-        let { sharesToday, creditHistory, cloverHuntToday } = creditsData
+        let { sharesToday, creditHistory, cloverHuntToday, completedMissions } = creditsData
         let finalClovers = profile?.clovers || 0
 
         // ── 자동 미션 적립 (credit_transactions 테이블) ──
-        const existingTypes = creditHistory.map((c: { type: string }) => c.type)
+        // completedMissions (limit 없음)로 중복 체크 → 절대 중복 적립 안 됨
+        const existingTypes = completedMissions.map((c: { type: string }) => c.type)
         const newCredits: { type: string; amount: number; description: string }[] = []
 
         if ((aiCreated || 0) >= 1 && !existingTypes.includes('mission_create_ai_1')) {
