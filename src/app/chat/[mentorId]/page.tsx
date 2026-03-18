@@ -7,6 +7,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { MentorHeader, ChatMessages, ChatInput, SuggestionCards, ElevenLabsWidget, VoiceCallOverlay } from './components'
 import ChatSidebar from './components/ChatSidebar'
 import MarketingConsentPopup from '@/components/MarketingConsentPopup'
+import { MAX_DAILY_FREE_GUEST } from '@/domains/chat/constants'
 import type { ChatMessage } from './components'
 
 interface MentorData {
@@ -434,10 +435,10 @@ export default function ChatPage() {
     const sendMessage = useCallback(async (content: string, inputMethod: 'text' | 'stt' = 'text') => {
         if (!content.trim() || isStreaming) return
 
-        // 🔒 비회원 3턴 체크 (전체 멘토 합산)
+        // 🔒 비회원 턴 제한 체크 (전체 멘토 합산)
         if (!isLoggedIn) {
             const totalGuestMsgs = getGuestMessageCount()
-            if (totalGuestMsgs >= 3) {
+            if (totalGuestMsgs >= MAX_DAILY_FREE_GUEST) {
                 setShowLoginGate(true)
                 return
             }
