@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const search = searchParams.get('search') || ''
     const segment = searchParams.get('segment') || 'all'
+    const sortBy = searchParams.get('sort') || 'created_at'
+    const sortDir = (searchParams.get('dir') || 'desc') as 'asc' | 'desc'
     const page = parseInt(searchParams.get('page') || '1')
     const pageSize = 20
     const offset = (page - 1) * pageSize
@@ -148,6 +150,40 @@ export async function GET(request: NextRequest) {
                 }
             })
         )
+
+        // 정렬 적용
+        enrichedUsers.sort((a, b) => {
+            const key = sortBy as keyof typeof a
+            let aVal = a[key]
+            let bVal = b[key]
+
+            // null/undefined 처리 → 맨 뒤로
+            if (aVal == null && bVal == null) return 0
+            if (aVal == null) return 1
+            if (bVal == null) return -1
+
+            // 날짜 문자열
+            if (typeof aVal === 'string' && typeof bVal === 'string') {
+                const aDate = Date.parse(aVal)
+                const bDate = Date.parse(bVal)
+                if (!isNaN(aDate) && !isNaN(bDate)) {
+                    return sortDir === 'asc' ? aDate - bDate : bDate - aDate
+                }
+                return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+            }
+
+            // 숫자
+            if (typeof aVal === 'number' && typeof bVal === 'number') {
+                return sortDir === 'asc' ? aVal - bVal : bVal - aVal
+            }
+
+            // boolean
+            if (typeof aVal === 'boolean' && typeof bVal === 'boolean') {
+                return sortDir === 'asc' ? (aVal ? 1 : 0) - (bVal ? 1 : 0) : (bVal ? 1 : 0) - (aVal ? 1 : 0)
+            }
+
+            return 0
+        })
 
         // 세그먼트 필터링
         const filteredUsers = segment !== 'all'
