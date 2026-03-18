@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 
 interface ConversationData {
     dailyStats: Array<{
@@ -31,15 +31,31 @@ interface ConversationData {
 export default function ConversationsPage() {
     const [data, setData] = useState<ConversationData | null>(null)
     const [loading, setLoading] = useState(true)
+    const [refreshing, setRefreshing] = useState(false)
     const [tab, setTab] = useState<'overview' | 'sessions'>('overview')
 
-    useEffect(() => {
+    const fetchData = useCallback(() => {
+        setLoading(true)
         fetch('/api/admin/conversations')
             .then(r => r.json())
             .then(d => setData(d))
             .catch(e => console.error(e))
             .finally(() => setLoading(false))
     }, [])
+
+    useEffect(() => { fetchData() }, [fetchData])
+
+    const handleRefreshViews = useCallback(async () => {
+        setRefreshing(true)
+        try {
+            await fetch('/api/admin/refresh-views', { method: 'POST' })
+            await fetchData()
+        } catch (e) {
+            console.error('MV refresh error:', e)
+        } finally {
+            setRefreshing(false)
+        }
+    }, [fetchData])
 
     if (loading) {
         return (
@@ -85,11 +101,29 @@ export default function ConversationsPage() {
     return (
         <div>
             {/* 헤더 */}
-            <div style={{ marginBottom: 24 }}>
-                <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, color: '#1e293b' }}>💬 대화 분석</h1>
-                <p style={{ color: '#94a3b8', fontSize: 13, margin: '6px 0 0' }}>
-                    세션 · 메시지 · 입력방식 분석
-                </p>
+            <div style={{ marginBottom: 24, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div>
+                    <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, color: '#1e293b' }}>💬 대화 분석</h1>
+                    <p style={{ color: '#94a3b8', fontSize: 13, margin: '6px 0 0' }}>
+                        세션 · 메시지 · 입력방식 분석
+                    </p>
+                </div>
+                <button
+                    onClick={handleRefreshViews}
+                    disabled={refreshing}
+                    style={{
+                        padding: '8px 16px', borderRadius: 10,
+                        border: '1px solid #e5e7eb',
+                        background: refreshing ? '#f1f5f9' : '#fff',
+                        color: refreshing ? '#94a3b8' : '#4f46e5',
+                        fontSize: 13, fontWeight: 600, cursor: refreshing ? 'default' : 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                        transition: 'all 0.2s',
+                    }}
+                >
+                    {refreshing ? '⚙️ 갱신 중...' : '🔄 데이터 새로고침'}
+                </button>
             </div>
 
             {/* 탭 */}

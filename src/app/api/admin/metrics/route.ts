@@ -125,16 +125,26 @@ export async function GET() {
             .from('mv_mentor_stats')
             .select('mentor_name, total_sessions')
 
-        // === auth provider 분포 ===
-        const { data: providerData } = await supabase
-            .from('users')
-            .select('auth_provider')
-
+        // === auth provider 분포 (Auth Admin API 기반으로 정확한 값 사용) ===
         const authProviders: Record<string, number> = {}
-        providerData?.forEach(u => {
-            const p = u.auth_provider || 'unknown'
-            authProviders[p] = (authProviders[p] || 0) + 1
-        })
+        let authPage = 1
+        let hasMore = true
+        while (hasMore) {
+            const { data: { users: authUserList } } = await supabase.auth.admin.listUsers({
+                page: authPage,
+                perPage: 1000,
+            })
+            if (!authUserList || authUserList.length === 0) {
+                hasMore = false
+            } else {
+                authUserList.forEach(u => {
+                    const p = u.app_metadata?.provider || u.app_metadata?.providers?.[0] || 'unknown'
+                    authProviders[p] = (authProviders[p] || 0) + 1
+                })
+                if (authUserList.length < 1000) hasMore = false
+                authPage++
+            }
+        }
 
         // === 마케팅 수신 동의 통계 ===
         const { count: marketingConsentCount } = await supabase

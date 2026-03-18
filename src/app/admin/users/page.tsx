@@ -16,10 +16,12 @@ interface UserData {
     last_active_at?: string
     phone?: string | null
     gender?: string | null
-    marketing_agreed?: boolean | null
+    birth_year?: number | null
+    marketing_consent?: boolean | null
     subscription_tier?: string | null
     created_ai_count?: number
     clovers?: number
+    attendance_days?: number
 }
 
 interface UsersResponse {
@@ -193,25 +195,29 @@ export default function UsersPage() {
             <div style={{
                 background: '#fff',
                 border: '1px solid #e5e7eb',
-                borderRadius: 16, overflow: 'hidden',
+                borderRadius: 16, overflow: 'auto',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
             }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1200 }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
                             {[
                                 { key: 'display_name', label: '유저' },
+                                { key: 'id', label: 'UUID' },
                                 { key: 'auth_provider', label: '가입경로' },
                                 { key: 'segment', label: '세그먼트' },
                                 { key: 'phone', label: '전화번호' },
+                                { key: 'gender', label: '성별' },
+                                { key: 'birth_year', label: '생년' },
                                 { key: 'subscription_tier', label: '체험권' },
                                 { key: 'clovers', label: '🍀 클로버' },
                                 { key: 'created_ai_count', label: '만든AI' },
                                 { key: 'total_sessions', label: '세션' },
                                 { key: 'total_messages', label: '메시지' },
+                                { key: 'attendance_days', label: '출석일' },
                                 { key: 'created_at', label: '가입일' },
                                 { key: 'last_active_at', label: '최근활동' },
-                                { key: 'marketing_agreed', label: '마케팅' },
+                                { key: 'marketing_consent', label: '마케팅' },
                             ].map(col => (
                                 <th
                                     key={col.key}
@@ -233,9 +239,9 @@ export default function UsersPage() {
                     </thead>
                     <tbody>
                         {loading && !data ? (
-                            <tr><td colSpan={12} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>로딩 중...</td></tr>
+                            <tr><td colSpan={16} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>로딩 중...</td></tr>
                         ) : !data?.users?.length ? (
-                            <tr><td colSpan={12} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>유저 없음</td></tr>
+                            <tr><td colSpan={16} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>유저 없음</td></tr>
                         ) : data.users.map((user, i) => (
                             <tr
                                 key={user.id}
@@ -280,10 +286,19 @@ export default function UsersPage() {
                                         </div>
                                     </div>
                                 </td>
+                                <td style={{ padding: '12px 14px', fontSize: 10, fontFamily: 'monospace', color: '#94a3b8', letterSpacing: -0.5 }}>
+                                    {user.id.slice(0, 8)}
+                                </td>
                                 <td style={{ padding: '12px 14px' }}>{getProviderBadge(user.auth_provider)}</td>
                                 <td style={{ padding: '12px 14px' }}>{getSegmentBadge(user.segment)}</td>
                                 <td style={{ padding: '12px 14px', fontSize: 12, color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
                                     {user.phone ? user.phone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3') : '—'}
+                                </td>
+                                <td style={{ padding: '12px 14px', fontSize: 12, color: '#64748b' }}>
+                                    {user.gender || '—'}
+                                </td>
+                                <td style={{ padding: '12px 14px', fontSize: 12, color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
+                                    {user.birth_year || '—'}
                                 </td>
                                 <td style={{ padding: '12px 14px' }}>
                                     {user.subscription_tier === 'free_trial' ? (
@@ -318,6 +333,9 @@ export default function UsersPage() {
                                 <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: '#1e293b' }}>
                                     {user.total_messages?.toLocaleString() || 0}
                                 </td>
+                                <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums', textAlign: 'center', color: '#f59e0b' }}>
+                                    {(user as UserData).attendance_days || 0}
+                                </td>
                                 <td style={{ padding: '12px 14px', fontSize: 12, color: '#64748b' }}>
                                     {formatDate(user.created_at)}
                                 </td>
@@ -325,7 +343,7 @@ export default function UsersPage() {
                                     {formatRelativeTime(user.last_active_at)}
                                 </td>
                                 <td style={{ padding: '12px 14px', fontSize: 12, textAlign: 'center' }}>
-                                    {user.marketing_agreed ? (
+                                    {user.marketing_consent ? (
                                         <span style={{ color: '#16a34a' }}>✅</span>
                                     ) : (
                                         <span style={{ color: '#cbd5e1' }}>—</span>

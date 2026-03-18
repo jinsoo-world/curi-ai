@@ -19,17 +19,27 @@ export async function GET() {
         // 멘토별 통계 직접 계산
         const mentors = await Promise.all(
             (mentorsList || []).map(async (mentor) => {
-                // 세션 수
+                // 세션 수 (전체)
                 const { count: totalSessions } = await supabase
                     .from('chat_sessions')
                     .select('*', { count: 'exact', head: true })
                     .eq('mentor_id', mentor.id)
 
-                // 고유 유저 수
+                // 비회원 세션 수 (user_id IS NULL)
+                const { count: guestSessions } = await supabase
+                    .from('chat_sessions')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('mentor_id', mentor.id)
+                    .is('user_id', null)
+
+                const memberSessions = (totalSessions || 0) - (guestSessions || 0)
+
+                // 고유 유저 수 (회원만)
                 const { data: userIds } = await supabase
                     .from('chat_sessions')
                     .select('user_id')
                     .eq('mentor_id', mentor.id)
+                    .not('user_id', 'is', null)
                 const uniqueUsers = new Set(userIds?.map(u => u.user_id).filter(Boolean)).size
 
                 // 총 메시지 수 (해당 멘토의 세션들 → 메시지)
@@ -66,6 +76,8 @@ export async function GET() {
                     mentor_slug: mentor.slug,
                     mentor_title: mentor.title,
                     total_sessions: totalSessions || 0,
+                    member_sessions: memberSessions,
+                    guest_sessions: guestSessions || 0,
                     unique_users: uniqueUsers,
                     total_messages: totalMessages,
                     last_active_at: lastSession?.[0]?.last_message_at || null,

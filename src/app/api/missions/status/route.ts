@@ -25,7 +25,20 @@ export async function GET() {
 
         const creatorProfile = creatorResult.data
         const sessions = sessionsResult.data
-        const profile = profileResult.data
+        let profile = profileResult.data
+
+        // referral_code가 없는 유저에게 자동 생성
+        if (profile && !profile.referral_code) {
+            const newCode = `CURI${user.id.slice(0, 6).toUpperCase()}${Date.now().toString(36).slice(-4).toUpperCase()}`
+            const { error: updateErr } = await supabaseAdmin
+                .from('users')
+                .update({ referral_code: newCode })
+                .eq('id', user.id)
+            if (!updateErr) {
+                profile = { ...profile, referral_code: newCode }
+                console.log(`[Mission] Auto-generated referral code for user ${user.id}: ${newCode}`)
+            }
+        }
 
         // ── 2차 병렬 조회 ──
         const today = new Date()

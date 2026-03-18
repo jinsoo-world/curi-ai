@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
         // 유저 기본 정보 조회 (users 테이블)
         let query = supabase
             .from('users')
-            .select('id, email, display_name, avatar_url, membership_tier, created_at, phone, gender, marketing_agreed, subscription_tier, clovers', { count: 'exact' })
+            .select('id, email, display_name, avatar_url, membership_tier, created_at, phone, gender, marketing_agreed, marketing_consent, subscription_tier, clovers, birth_year, referral_code', { count: 'exact' })
             .order('created_at', { ascending: false })
             .range(offset, offset + pageSize - 1)
 
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
                 // 세션 수 + 총 메시지 수 (chat_sessions의 message_count 합산)
                 const { data: sessions } = await supabase
                     .from('chat_sessions')
-                    .select('id, message_count, last_message_at')
+                    .select('id, message_count, last_message_at, created_at')
                     .eq('user_id', user.id)
 
                 const totalSessions = sessions?.length || 0
@@ -66,6 +66,20 @@ export async function GET(request: NextRequest) {
                     .from('mentors')
                     .select('id', { count: 'exact', head: true })
                     .eq('creator_id', user.id)
+
+                // 누적 출석일수 (고유 활동 날짜 수, KST 기준)
+                const activeDates = new Set<string>()
+                sessions?.forEach(s => {
+                    if (s.created_at) {
+                        const d = new Date(s.created_at)
+                        activeDates.add(d.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }))
+                    }
+                    if (s.last_message_at) {
+                        const d = new Date(s.last_message_at)
+                        activeDates.add(d.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }))
+                    }
+                })
+                const attendanceDays = activeDates.size
 
                 // 세그먼트 판단
                 const daysSinceJoin = Math.floor((Date.now() - new Date(user.created_at).getTime()) / 86400000)
@@ -89,10 +103,20 @@ export async function GET(request: NextRequest) {
                 // 실제 auth provider 조회
                 const authProvider = providerMap.get(user.id) || 'unknown'
 
+                // display_name 폴백: null이면 이메일 앞부분 사용
+                const displayName = user.display_name
+                    || (user.email ? user.email.split('@')[0] : null)
+                    || '(이름 없음)'
+
+                // marketing 동의: marketing_consent 또는 marketing_agreed 중 하나 사용
+                const marketingConsent = (user as Record<string, unknown>).marketing_consent
+                    ?? (user as Record<string, unknown>).marketing_agreed
+                    ?? null
+
                 return {
                     id: user.id,
                     email: user.email,
-                    display_name: user.display_name,
+                    display_name: displayName,
                     avatar_url: user.avatar_url,
                     membership_tier: user.membership_tier,
                     created_at: user.created_at,
@@ -103,10 +127,12 @@ export async function GET(request: NextRequest) {
                     segment: userSegment,
                     phone: (user as Record<string, unknown>).phone || null,
                     gender: (user as Record<string, unknown>).gender || null,
-                    marketing_agreed: (user as Record<string, unknown>).marketing_agreed ?? null,
+                    birth_year: (user as Record<string, unknown>).birth_year || null,
+                    marketing_consent: marketingConsent,
                     subscription_tier: (user as Record<string, unknown>).subscription_tier || null,
                     created_ai_count: aiCount || 0,
                     clovers: (user as Record<string, unknown>).clovers || 0,
+                    attendance_days: attendanceDays,
                 }
             })
         )

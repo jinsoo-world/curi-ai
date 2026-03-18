@@ -8,6 +8,8 @@ interface MentorStat {
     mentor_slug: string
     mentor_title: string
     total_sessions: number
+    member_sessions: number
+    guest_sessions: number
     unique_users: number
     total_messages: number
     last_active_at: string
@@ -184,12 +186,14 @@ export default function MentorsPage() {
                             </div>
 
                             {/* 메트릭 그리드 */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
                                 {[
-                                    { label: '총 세션', value: m.total_sessions, color },
+                                    { label: '회원 세션', value: m.member_sessions || 0, color },
+                                    { label: '비회원 세션', value: m.guest_sessions || 0, color: '#94a3b8' },
                                     { label: '고유 유저', value: m.unique_users, color: '#3b82f6' },
                                     { label: '총 메시지', value: m.total_messages, color: '#7c3aed' },
                                     { label: '세션당 평균', value: `${(m.avg_messages_per_session || 0).toFixed(1)}회`, color: '#d97706' },
+                                    { label: '총 세션', value: m.total_sessions, color: '#16a34a' },
                                 ].map((metric, i) => (
                                     <div key={i} style={{
                                         background: '#f8fafc',
