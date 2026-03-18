@@ -31,6 +31,7 @@ interface MatchResult {
     }
     reason: string
     firstMessage: string
+    logId?: string | null
 }
 
 export default function MentorMatchHero() {
@@ -78,6 +79,17 @@ export default function MentorMatchHero() {
 
     const startChat = async () => {
         if (!matchResult) return
+
+        // 클릭 추적
+        if (matchResult.logId) {
+            try {
+                fetch('/api/mentor-match/click', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ logId: matchResult.logId }),
+                })
+            } catch { /* 무시 */ }
+        }
 
         // 로그인 여부 확인
         try {

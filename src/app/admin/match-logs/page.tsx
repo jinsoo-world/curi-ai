@@ -85,12 +85,13 @@ export default function MatchLogsPage() {
                             <th style={thStyle}>매칭 멘토</th>
                             <th style={thStyle}>매칭 이유</th>
                             <th style={thStyle}>유형</th>
+                            <th style={thStyle}>클릭</th>
                         </tr>
                     </thead>
                     <tbody>
                         {logs.length === 0 ? (
                             <tr>
-                                <td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
+                                <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
                                     아직 매칭 로그가 없습니다.
                                 </td>
                             </tr>
@@ -133,6 +134,17 @@ export default function MatchLogsPage() {
                                             fontSize: 11, fontWeight: 600,
                                         }}>
                                             {log.match_type === 'gemini' ? '✨ AI' : '🔑 키워드'}
+                                        </span>
+                                    </td>
+                                    <td style={tdStyle}>
+                                        <span style={{
+                                            display: 'inline-flex',
+                                            background: log.clicked_start ? '#f0fdf4' : '#fef2f2',
+                                            color: log.clicked_start ? '#16a34a' : '#ef4444',
+                                            borderRadius: 6, padding: '2px 8px',
+                                            fontSize: 11, fontWeight: 600,
+                                        }}>
+                                            {log.clicked_start ? '✅ 클릭' : '❌ 이탈'}
                                         </span>
                                     </td>
                                 </tr>

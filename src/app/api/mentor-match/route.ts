@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
         let matched = null
         let reason = ''
         let firstMessage = ''
+        let matchType = 'keyword'
 
         try {
             const { GoogleGenAI } = await import('@google/genai')
@@ -88,8 +89,11 @@ ${mentorInfo}
             if (jsonMatch) {
                 const parsed = JSON.parse(jsonMatch[0])
                 matched = mentors.find(m => m.name === parsed.mentor_name)
-                reason = parsed.reason || ''
-                firstMessage = parsed.first_message || ''
+                if (matched) {
+                    reason = parsed.reason || ''
+                    firstMessage = parsed.first_message || ''
+                    matchType = 'gemini'
+                }
             }
         } catch (geminiError: any) {
             console.error('[Mentor Match] Gemini failed:', geminiError.message)
@@ -104,6 +108,7 @@ ${mentorInfo}
         }
 
         // 📊 트래킹 로그 저장
+        let logId: string | null = null
         try {
             // 유저 인증 확인 (선택적)
             let userId = null
@@ -118,15 +123,22 @@ ${mentorInfo}
                 }
             } catch { /* 게스트 */ }
 
-            await supabase.from('mentor_match_logs').insert({
+            const { data: logData, error: logError } = await supabase.from('mentor_match_logs').insert({
                 user_id: userId,
                 concern: concern.trim(),
                 matched_mentor_id: matched.id,
                 matched_mentor_name: matched.name,
                 match_reason: reason,
-                match_type: firstMessage ? 'gemini' : 'keyword',
+                match_type: matchType,
                 is_guest: isGuest,
-            })
+            }).select('id').single()
+
+            if (logError) {
+                console.error('[Mentor Match] Log insert error:', logError.message)
+            } else {
+                logId = logData?.id || null
+                console.log('[Mentor Match] Log saved:', logId)
+            }
         } catch (logErr: any) {
             console.error('[Mentor Match] Log save failed:', logErr.message)
         }
@@ -135,6 +147,7 @@ ${mentorInfo}
             mentor: matched,
             reason: reason || '당신에게 딱 맞는 멘토!',
             firstMessage,
+            logId,
         })
 
     } catch (error: any) {
