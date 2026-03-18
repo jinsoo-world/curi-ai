@@ -25,7 +25,7 @@ export async function extractAndUpdateTopic(
 ): Promise<void> {
     const db = createAdminClient()  // RLS 우회 — service_role 사용
     try {
-        // 주제 업데이트 시점: 초반 6턴까지 매번, 이후 4턴마다
+        // 주제 업데이트 시점: 1~6턴까지 매번, 이후 4턴마다
         const shouldUpdate =
             messageCount <= 6 ||
             messageCount % 4 === 0
@@ -40,7 +40,7 @@ export async function extractAndUpdateTopic(
             .order('created_at', { ascending: true })
             .limit(10)
 
-        if (!messages || messages.length < 2) return
+        if (!messages || messages.length < 1) return
 
         // 기존 제목 가져오기
         const { data: session } = await db

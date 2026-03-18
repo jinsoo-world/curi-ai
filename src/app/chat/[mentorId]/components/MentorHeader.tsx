@@ -534,99 +534,152 @@ export default function MentorHeader({
                     </button>
                 )}
 
-                <button
-                    onClick={onNewChat}
-                    style={{
-                        background: 'transparent',
-                        border: 'none',
-                        borderRadius: 10,
-                        padding: '7px 12px',
-                        fontSize: 14,
-                        color: '#64748b',
-                        cursor: 'pointer',
-                        fontWeight: 500,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        transition: 'background 0.15s',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-                >
-                    <PlusIcon />
-                    <span className="header-text-label">새 대화</span>
-                </button>
+                {/* 비회원: 회원가입/로그인 버튼 */}
+                {(!sessionId || sessionId.startsWith('guest-')) ? (
+                    <>
+                        <button
+                            onClick={() => router.push('/login')}
+                            style={{
+                                background: 'transparent',
+                                border: '1.5px solid #22c55e',
+                                borderRadius: 10,
+                                padding: '7px 14px',
+                                fontSize: 13,
+                                color: '#16a34a',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                transition: 'all 0.15s',
+                                whiteSpace: 'nowrap',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#f0fdf4' }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                        >
+                            🎁 무료 회원가입
+                        </button>
+                        <button
+                            onClick={() => router.push('/login')}
+                            style={{
+                                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                border: 'none',
+                                borderRadius: 10,
+                                padding: '7px 14px',
+                                fontSize: 13,
+                                color: '#fff',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                transition: 'all 0.15s',
+                                boxShadow: '0 2px 8px rgba(34,197,94,0.3)',
+                                whiteSpace: 'nowrap',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.opacity = '0.9' }}
+                            onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+                        >
+                            로그인
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        <button
+                            onClick={onNewChat}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                borderRadius: 10,
+                                padding: '7px 12px',
+                                fontSize: 14,
+                                color: '#64748b',
+                                cursor: 'pointer',
+                                fontWeight: 500,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 5,
+                                transition: 'background 0.15s',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9' }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                        >
+                            <PlusIcon />
+                            <span className="header-text-label">새 대화</span>
+                        </button>
 
-                {/* 내보내기 버튼 — PDF 활성화 + 로그인 세션 + AI 답변 1500자 이상 */}
-                {pdfExportEnabled && sessionId && !sessionId.startsWith('guest-') && aiContentLength >= 1500 && (
-                    <button
-                        onClick={handleExport}
-                        aria-label="대화 리포트"
-                        title="AI 요약 리포트"
-                        style={{
-                            position: 'relative',
-                            background: isReportNew ? '#f0f9ff' : 'transparent',
-                            border: isReportNew ? '1px solid #bfdbfe' : 'none',
-                            borderRadius: 10,
-                            padding: '7px 12px',
-                            fontSize: 14,
-                            color: isReportNew ? '#3b82f6' : '#64748b',
-                            cursor: 'pointer',
-                            fontWeight: isReportNew ? 600 : 500,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 5,
-                            transition: 'all 0.3s',
-                            animation: isReportNew ? 'reportPulse 2s ease-in-out 3' : 'none',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#eff6ff' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = isReportNew ? '#f0f9ff' : 'transparent' }}
-                    >
-                        <ExportIcon />
-                        <span className="header-text-label">{exportLabel}</span>
-                        {isReportNew && (
-                            <span style={{
-                                position: 'absolute', top: -4, right: -4,
-                                background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
-                                color: '#fff', fontSize: 9, fontWeight: 700,
-                                padding: '1px 5px', borderRadius: 6,
-                                lineHeight: 1.5, letterSpacing: '0.05em',
-                            }}>NEW</span>
+                        {/* 내보내기 버튼 — PDF 활성화 + 로그인 세션 + AI 답변 1500자 이상 */}
+                        {pdfExportEnabled && sessionId && !sessionId.startsWith('guest-') && aiContentLength >= 1500 && (
+                            <button
+                                onClick={handleExport}
+                                aria-label="대화 리포트"
+                                title="AI 요약 리포트"
+                                style={{
+                                    position: 'relative',
+                                    background: isReportNew ? '#f0f9ff' : 'transparent',
+                                    border: isReportNew ? '1px solid #bfdbfe' : 'none',
+                                    borderRadius: 10,
+                                    padding: '7px 12px',
+                                    fontSize: 14,
+                                    color: isReportNew ? '#3b82f6' : '#64748b',
+                                    cursor: 'pointer',
+                                    fontWeight: isReportNew ? 600 : 500,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 5,
+                                    transition: 'all 0.3s',
+                                    animation: isReportNew ? 'reportPulse 2s ease-in-out 3' : 'none',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#eff6ff' }}
+                                onMouseLeave={e => { e.currentTarget.style.background = isReportNew ? '#f0f9ff' : 'transparent' }}
+                            >
+                                <ExportIcon />
+                                <span className="header-text-label">{exportLabel}</span>
+                                {isReportNew && (
+                                    <span style={{
+                                        position: 'absolute', top: -4, right: -4,
+                                        background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+                                        color: '#fff', fontSize: 9, fontWeight: 700,
+                                        padding: '1px 5px', borderRadius: 6,
+                                        lineHeight: 1.5, letterSpacing: '0.05em',
+                                    }}>NEW</span>
+                                )}
+                            </button>
                         )}
-                    </button>
-                )}
-                <style>{`
-                    @keyframes reportPulse {
-                        0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
-                        50% { box-shadow: 0 0 0 6px rgba(59,130,246,0.15); }
-                    }
-                `}</style>
+                        <style>{`
+                            @keyframes reportPulse {
+                                0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+                                50% { box-shadow: 0 0 0 6px rgba(59,130,246,0.15); }
+                            }
+                        `}</style>
 
-                {/* 공유하기 버튼 */}
-                <button
-                    onClick={() => setShowShareMenu(true)}
-                    aria-label="공유하기"
-                    title="공유하기"
-                    style={{
-                        background: 'transparent',
-                        border: 'none',
-                        borderRadius: 10,
-                        padding: '7px 12px',
-                        fontSize: 14,
-                        color: '#64748b',
-                        cursor: 'pointer',
-                        fontWeight: 500,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        transition: 'background 0.15s',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-                >
-                    <ShareIcon />
-                    <span className="header-text-label">공유하기</span>
-                </button>
+                        {/* 공유하기 버튼 */}
+                        <button
+                            onClick={() => setShowShareMenu(true)}
+                            aria-label="공유하기"
+                            title="공유하기"
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                borderRadius: 10,
+                                padding: '7px 12px',
+                                fontSize: 14,
+                                color: '#64748b',
+                                cursor: 'pointer',
+                                fontWeight: 500,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 5,
+                                transition: 'background 0.15s',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9' }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                        >
+                            <ShareIcon />
+                            <span className="header-text-label">공유하기</span>
+                        </button>
+                    </>
+                )}
 
                 {/* 공유 모달 */}
                 {showShareMenu && (
