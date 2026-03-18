@@ -103,8 +103,12 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
     const [chatInput, setChatInput] = useState('')
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
     const [isEditing, setIsEditing] = useState(false)
+    const [slideDir, setSlideDir] = useState<'left' | 'right' | null>(null)
+    const [isAnimating, setIsAnimating] = useState(false)
+    const [dragOffset, setDragOffset] = useState(0)
     const chatEndRef = useRef<HTMLDivElement>(null)
     const touchStartX = useRef(0)
+    const isDragging = useRef(false)
     const totalPages = (ebook.pages?.length || 0) + 1
     const t = THEMES[theme]
     const generatedAt = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
@@ -125,12 +129,48 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
         return () => window.removeEventListener('keydown', handler)
     }, [currentPage])
 
-    const goNext = useCallback(() => setCurrentPage(p => Math.min(p + 1, totalPages - 1)), [totalPages])
-    const goPrev = useCallback(() => setCurrentPage(p => Math.max(p - 1, 0)), [])
-    const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX }
+    const animateTo = useCallback((nextPage: number, dir: 'left' | 'right') => {
+        if (isAnimating) return
+        setSlideDir(dir)
+        setIsAnimating(true)
+        setDragOffset(0)
+        setTimeout(() => {
+            setCurrentPage(nextPage)
+            setSlideDir(null)
+            setIsAnimating(false)
+        }, 280)
+    }, [isAnimating])
+
+    const goNext = useCallback(() => {
+        if (currentPage < totalPages - 1) animateTo(currentPage + 1, 'left')
+    }, [currentPage, totalPages, animateTo])
+    const goPrev = useCallback(() => {
+        if (currentPage > 0) animateTo(currentPage - 1, 'right')
+    }, [currentPage, animateTo])
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX
+        isDragging.current = true
+        setDragOffset(0)
+    }
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!isDragging.current || isAnimating) return
+        const diff = e.touches[0].clientX - touchStartX.current
+        // 경계 체크: 첫 페이지에서 오른쪽, 마지막 페이지에서 왼쪽 드래그 제한
+        if ((currentPage === 0 && diff > 0) || (currentPage === totalPages - 1 && diff < 0)) {
+            setDragOffset(diff * 0.2) // 저항감
+            return
+        }
+        setDragOffset(diff)
+    }
     const handleTouchEnd = (e: React.TouchEvent) => {
+        isDragging.current = false
         const diff = touchStartX.current - e.changedTouches[0].clientX
-        if (Math.abs(diff) > 50) { diff > 0 ? goNext() : goPrev() }
+        if (Math.abs(diff) > 60) {
+            diff > 0 ? goNext() : goPrev()
+        } else {
+            setDragOffset(0)
+        }
     }
 
     const handleDownloadPdf = async () => {
@@ -465,19 +505,27 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
 
             {/* 메인 콘텐츠 */}
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(8px, 2vw, 32px)', position: 'relative' }}>
+                <div onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(8px, 2vw, 32px)', position: 'relative', overflow: 'hidden' }}>
                     {currentPage > 0 && (
                         <button onClick={goPrev} style={{
                             position: 'absolute', left: 'clamp(2px, 1.5vw, 16px)', top: '50%', transform: 'translateY(-50%)',
                             width: 40, height: 40, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)',
                             background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: 16, cursor: 'pointer', zIndex: 5,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            opacity: isAnimating ? 0 : 1, transition: 'opacity 0.2s',
                         }}>‹</button>
                     )}
                     <div style={{
                         width: 'min(100%, 560px)', height: 'min(100%, 780px)',
                         borderRadius: 8, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                        transform: slideDir === 'left'
+                            ? 'translateX(-120%)'
+                            : slideDir === 'right'
+                            ? 'translateX(120%)'
+                            : `translateX(${dragOffset}px)`,
+                        transition: slideDir || dragOffset === 0 ? 'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
+                        opacity: slideDir ? 0.6 : 1,
                     }}>
                         {currentPage === 0 ? renderCover() : renderPage(currentPage - 1)}
                     </div>
@@ -487,6 +535,7 @@ export default function EbookViewer({ ebook, meta, onClose, onEditRequest, onEbo
                             width: 40, height: 40, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)',
                             background: 'rgba(0,0,0,0.4)', color: '#fff', fontSize: 16, cursor: 'pointer', zIndex: 5,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            opacity: isAnimating ? 0 : 1, transition: 'opacity 0.2s',
                         }}>›</button>
                     )}
                 </div>
