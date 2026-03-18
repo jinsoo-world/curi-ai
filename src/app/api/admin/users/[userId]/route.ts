@@ -18,7 +18,7 @@ export async function GET(
         // 유저 기본 정보
         const { data: user, error: userError } = await supabase
             .from('users')
-            .select('id, email, display_name, avatar_url, membership_tier, concern, onboarding_completed, created_at, phone, marketing_consent, clovers, gender, referral_code')
+            .select('id, email, display_name, avatar_url, membership_tier, concern, onboarding_completed, created_at, phone, marketing_consent, clovers, gender, referral_code, birth_year, auth_provider')
             .eq('id', userId)
             .single()
 

@@ -7,7 +7,6 @@ import { getActiveMentors, MENTOR_IMAGES } from '@/domains/mentor'
 import { MembershipBanner } from '@/components/MembershipBanner'
 import type { MentorCardData } from '@/domains/mentor'
 import NotificationBanner from './NotificationBanner'
-import VoicePreviewButton from './VoicePreviewButton'
 import AppSidebar from '@/components/AppSidebar'
 import CreditClaimWrapper from './CreditClaimWrapper'
 import { Suspense } from 'react'
@@ -48,9 +47,9 @@ const fallbackMentors = [
 
 /* ─── Mentor Card (Web: wide, responsive) ─── */
 function MentorCard({
-    name, title, description, questions, imageSrc, index, keywords, voiceSampleUrl, voiceId,
+    name, title, description, questions, imageSrc, index, keywords,
 }: {
-    name: string; title: string; description: string; questions: string[]; imageSrc: string; index: number; keywords?: string[]; voiceSampleUrl?: string | null; voiceId?: string | null
+    name: string; title: string; description: string; questions: string[]; imageSrc: string; index: number; keywords?: string[];
 }) {
     return (
         <article
@@ -145,12 +144,6 @@ function MentorCard({
                     {title}
                 </p>
 
-                {/* 🎵 보이스 프리뷰 — voice_sample_url 있는 멘토만 */}
-                {voiceSampleUrl && (
-                <div style={{ marginTop: 12 }}>
-                    <VoicePreviewButton mentorName={name} voiceId={voiceId} />
-                </div>
-                )}
 
             </div>
         </article>
@@ -226,8 +219,6 @@ export default async function MentorsPage() {
                                             imageSrc={mentor.avatar_url || MENTOR_IMAGES[mentor.name] || ''}
                                             index={index}
                                             keywords={mentor.expertise}
-                                            voiceSampleUrl={mentor.voice_sample_url}
-                                            voiceId={(mentor as any).voice_id}
                                         />
                                     </Link>
                                 ))

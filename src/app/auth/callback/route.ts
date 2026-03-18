@@ -30,7 +30,7 @@ export async function GET(request: Request) {
                 // 기존 프로필 확인
                 const { data: profile, error: profileError } = await db
                     .from('users')
-                    .select('onboarding_completed, display_name, avatar_url, phone, gender, birth_year')
+                    .select('onboarding_completed, display_name, avatar_url, phone, gender, birth_year, auth_provider')
                     .eq('id', user.id)
                     .single()
 
@@ -116,16 +116,37 @@ export async function GET(request: Request) {
                     return NextResponse.redirect(`${origin}/mentors?new_user=true`)
                 }
 
-                // 프로필 있지만 avatar_url이 없으면 Google 아바타 업데이트
+                // 기존 유저: 카카오 정보 업데이트 (전화번호, 성별, 출생연도, 아바타)
+                const updates: Record<string, unknown> = {}
+
+                // 아바타 업데이트
                 if (!profile.avatar_url && user.user_metadata?.avatar_url) {
-                    await db.from('users').update({
-                        avatar_url: user.user_metadata.avatar_url,
-                    }).eq('id', user.id)
+                    updates.avatar_url = user.user_metadata.avatar_url
                 }
 
-                // 크레딧 미수령 유저 → 멘토 페이지
-                if (!profile.phone) {
-                    return NextResponse.redirect(`${origin}/mentors`)
+                // 카카오 추가 정보 (없으면 업데이트)
+                const provider = user.app_metadata?.provider || 'unknown'
+                if (provider === 'kakao') {
+                    const kakaoPhone = user.user_metadata?.phone_number
+                        ? user.user_metadata.phone_number.replace(/[^0-9]/g, '').replace(/^82/, '0')
+                        : null
+                    const kakaoGender = user.user_metadata?.gender || null
+                    const kakaoBirthYear = user.user_metadata?.birthyear
+                        ? parseInt(user.user_metadata.birthyear)
+                        : null
+
+                    if (kakaoPhone && !profile.phone) updates.phone = kakaoPhone
+                    if (kakaoGender && !profile.gender) updates.gender = kakaoGender === 'male' ? '남성' : kakaoGender === 'female' ? '여성' : null
+                    if (kakaoBirthYear && !profile.birth_year) updates.birth_year = kakaoBirthYear
+                    if (!profile.auth_provider) updates.auth_provider = 'kakao'
+                }
+
+                if (Object.keys(updates).length > 0) {
+                    await db.from('users').update({
+                        ...updates,
+                        updated_at: new Date().toISOString(),
+                    }).eq('id', user.id)
+                    console.log(`[Auth Callback] Updated existing user ${user.id}:`, Object.keys(updates))
                 }
 
                 // 기존 유저 재로그인 → 멘토 페이지

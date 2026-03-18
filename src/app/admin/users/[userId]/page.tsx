@@ -38,6 +38,8 @@ interface UserDetail {
     clovers: number | null
     gender: string | null
     referral_code: string | null
+    birth_year: number | null
+    auth_provider: string | null
 }
 
 interface UserResponse {
@@ -219,12 +221,14 @@ export default function UserDetailPage() {
 
                 {/* 프로필 상세 정보 */}
                 <div style={{
-                    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+                    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
                     gap: 10, marginTop: 14,
                 }}>
                     {[
                         { label: '휴대폰', value: user.phone || '—', icon: '📱' },
-                        { label: '성별', value: user.gender === '남' ? '🙍‍♂️ 남' : user.gender === '여' ? '🙍‍♀️ 여' : '—', icon: '' },
+                        { label: '성별', value: user.gender === '남성' || user.gender === '남' ? '🙍‍♂️ 남성' : user.gender === '여성' || user.gender === '여' ? '🙍‍♀️ 여성' : '—', icon: '' },
+                        { label: '출생연도', value: user.birth_year ? `${user.birth_year}년` : '—', icon: '🎂' },
+                        { label: '가입경로', value: user.auth_provider === 'kakao' ? '🟡 카카오' : user.auth_provider === 'google' ? '🟢 구글' : user.auth_provider || '—', icon: '' },
                         { label: '마케팅', value: user.marketing_consent ? '✅ 동의' : '❌ 미동의', icon: '' },
                         { label: '초대코드', value: user.referral_code || '—', icon: '🔗' },
                     ].map((s, i) => (
