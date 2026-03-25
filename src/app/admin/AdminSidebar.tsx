@@ -11,6 +11,7 @@ const navItems = [
     { href: '/admin/mentors', label: '🤖 생성된 AI', id: 'mentors' },
     { href: '/admin/conversations', label: '💬 대화 내역', id: 'conversations' },
     { href: '/admin/match-logs', label: '🎯 멘토매칭', id: 'match-logs' },
+    { href: '/admin/ebook-logs', label: '📕 전자책', id: 'ebook-logs' },
 ]
 
 export default function AdminSidebar() {

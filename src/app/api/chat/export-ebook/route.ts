@@ -179,6 +179,19 @@ export async function POST(req: Request) {
 
         const mentorName = mentor?.persona_name || mentor?.name || 'AI 멘토'
 
+        // 📊 전자책 생성 로그 기록
+        try {
+            await admin.from('ebook_logs').insert({
+                user_id: user.id,
+                session_id: sessionId,
+                mentor_id: session.mentor_id,
+                action: 'generate',
+                ebook_title: ebookData.cover?.title || session.title || '',
+            })
+        } catch (logErr) {
+            console.error('[Ebook Log] Generate log failed:', logErr)
+        }
+
         return Response.json({
             ebook: ebookData,
             ctaLinks,

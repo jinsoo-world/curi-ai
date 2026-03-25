@@ -43,11 +43,15 @@ export default function CreatorManagePage() {
     const [stats, setStats] = useState<Stats>({ total: 0, active: 0, totalMessages: 0, totalUsers: 0 })
     const [mentorStats, setMentorStats] = useState<Record<string, MentorStatItem>>({})
     const [search, setSearch] = useState('')
+    const [isAdmin, setIsAdmin] = useState(false)
     const [openMenu, setOpenMenu] = useState<string | null>(null)
     const [deleting, setDeleting] = useState<string | null>(null)
     const [expandedMentor, setExpandedMentor] = useState<string | null>(null)
     const [shareModal, setShareModal] = useState<{ id: string; name: string; title: string } | null>(null)
     const [copied, setCopied] = useState(false)
+    const [transferModal, setTransferModal] = useState<{ id: string; name: string } | null>(null)
+    const [transferEmail, setTransferEmail] = useState('')
+    const [transferring, setTransferring] = useState(false)
     const menuRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -77,6 +81,7 @@ export default function CreatorManagePage() {
                 setMentors(data.mentors || [])
                 if (data.stats) setStats(data.stats)
                 if (data.mentorStats) setMentorStats(data.mentorStats)
+                if (data.isAdmin) setIsAdmin(true)
             }
         } catch {
             console.error('Failed to fetch mentors')
@@ -102,6 +107,30 @@ export default function CreatorManagePage() {
             alert(err instanceof Error ? err.message : '삭제 중 오류가 발생했습니다.')
         } finally {
             setDeleting(null)
+        }
+    }
+
+    async function handleTransfer() {
+        if (!transferModal || !transferEmail.trim()) return
+        if (!confirm(`정말 "${transferModal.name}"의 소유권을 ${transferEmail}에게 이전하시겠습니까?\n이전 후에는 되돌릴 수 없습니다.`)) return
+
+        setTransferring(true)
+        try {
+            const res = await fetch('/api/creator/mentor/transfer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mentorId: transferModal.id, targetEmail: transferEmail }),
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || '소유권 이전에 실패했습니다.')
+            alert(data.message || '소유권이 이전되었습니다.')
+            setTransferModal(null)
+            setTransferEmail('')
+            fetchMentors() // 목록 새로고침
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : '소유권 이전 중 오류가 발생했습니다.')
+        } finally {
+            setTransferring(false)
         }
     }
 
@@ -332,7 +361,7 @@ export default function CreatorManagePage() {
                                                         { icon: '📋', label: '복사', action: () => { navigator.clipboard.writeText(`${window.location.origin}/chat/${m.id}`); setOpenMenu(null) } },
                                                         { icon: '🌐', label: '배포', action: () => { window.open(`/chat/${m.id}`, '_blank'); setOpenMenu(null) } },
                                                         { icon: '🔗', label: '공유하기', action: () => { setShareModal({ id: m.id, name: m.name, title: m.title }); setOpenMenu(null) } },
-                                                        { icon: '🔄', label: '소유권 이전', action: () => { alert('준비 중인 기능입니다'); setOpenMenu(null) } },
+                                                        ...(isAdmin ? [{ icon: '🔄', label: '소유권 이전', action: () => { setTransferModal({ id: m.id, name: m.name }); setTransferEmail(''); setOpenMenu(null) } }] : []),
                                                         { icon: '👤', label: '사용자 초대', action: () => { navigator.clipboard.writeText(`${window.location.origin}/chat/${m.id}`); alert('링크가 복사되었습니다'); setOpenMenu(null) } },
                                                         { icon: '📊', label: '분석', action: () => { alert('준비 중인 기능입니다'); setOpenMenu(null) } },
                                                     ].map(item => (
@@ -547,6 +576,76 @@ export default function CreatorManagePage() {
                                 )
                             })}
                         </div>
+                    )}
+
+                    {/* 소유권 이전 모달 */}
+                    {transferModal && (
+                        <>
+                            <div
+                                onClick={() => { setTransferModal(null); setTransferEmail('') }}
+                                style={{
+                                    position: 'fixed', inset: 0,
+                                    background: 'rgba(0,0,0,0.4)', zIndex: 1000,
+                                    animation: 'shareOverlayIn 0.2s ease',
+                                }}
+                            />
+                            <div style={{
+                                position: 'fixed', left: '50%', top: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                background: '#fff', borderRadius: 20,
+                                padding: '28px 24px 24px',
+                                width: 'min(400px, calc(100vw - 48px))',
+                                zIndex: 1001,
+                                animation: 'shareModalIn 0.2s ease',
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#18181b' }}>🔄 소유권 이전</h3>
+                                    <button
+                                        onClick={() => { setTransferModal(null); setTransferEmail('') }}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#9ca3af', fontSize: 20, lineHeight: 1 }}
+                                    >✕</button>
+                                </div>
+                                <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 20px', lineHeight: 1.5 }}>
+                                    <strong>&ldquo;{transferModal.name}&rdquo;</strong>의 소유권을 이전합니다.<br />
+                                    이전받을 사용자의 이메일을 입력하세요.
+                                </p>
+                                <input
+                                    type="email"
+                                    placeholder="example@email.com"
+                                    value={transferEmail}
+                                    onChange={e => setTransferEmail(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter' && transferEmail.trim()) handleTransfer() }}
+                                    style={{
+                                        width: '100%', padding: '12px 14px',
+                                        borderRadius: 10, border: '1px solid #e5e7eb',
+                                        fontSize: 14, outline: 'none',
+                                        boxSizing: 'border-box', marginBottom: 12,
+                                    }}
+                                    autoFocus
+                                />
+                                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                    <button
+                                        onClick={() => { setTransferModal(null); setTransferEmail('') }}
+                                        style={{
+                                            padding: '10px 20px', borderRadius: 10,
+                                            border: '1px solid #e5e7eb', background: '#fff',
+                                            fontSize: 14, fontWeight: 500, cursor: 'pointer',
+                                            color: '#6b7280',
+                                        }}
+                                    >취소</button>
+                                    <button
+                                        onClick={handleTransfer}
+                                        disabled={transferring || !transferEmail.trim()}
+                                        style={{
+                                            padding: '10px 20px', borderRadius: 10,
+                                            border: 'none', background: transferring ? '#9ca3af' : '#18181b',
+                                            fontSize: 14, fontWeight: 600, cursor: transferring ? 'not-allowed' : 'pointer',
+                                            color: '#fff',
+                                        }}
+                                    >{transferring ? '이전 중...' : '소유권 이전'}</button>
+                                </div>
+                            </div>
+                        </>
                     )}
 
                     {/* 공유 모달 */}

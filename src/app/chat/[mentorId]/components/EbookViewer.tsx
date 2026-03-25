@@ -192,6 +192,19 @@ export default function EbookViewer({ ebook, meta, ctaLinks, onClose, onEditRequ
                 pagebreak: { mode: ['css', 'legacy'] },
             } as any).from(container).save()
             document.body.removeChild(container)
+
+            // 📊 다운로드 로그 기록
+            try {
+                await fetch('/api/chat/ebook-log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId,
+                        ebookTitle: finalEbook.cover?.title || '',
+                        action: 'download',
+                    }),
+                })
+            } catch { /* 로깅 실패는 무시 */ }
         } catch (e) {
             console.error('PDF error:', e)
             alert('PDF 생성에 실패했습니다.')

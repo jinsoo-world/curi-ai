@@ -168,7 +168,7 @@ export async function GET() {
             totalUsers,
         }
 
-        return NextResponse.json({ success: true, mentors: mentorListWithCreator, stats, mentorStats, role: 'creator' })
+        return NextResponse.json({ success: true, mentors: mentorListWithCreator, stats, mentorStats, role: 'creator', isAdmin })
     } catch (error: unknown) {
         console.error('[Creator List API] Error:', error)
         const message = error instanceof Error ? error.message : '멘토 목록 조회 중 오류가 발생했습니다.'

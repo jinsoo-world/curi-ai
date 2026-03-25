@@ -274,19 +274,7 @@ export default function ChatPage() {
             }
 
             // ?new=true가 아니어도 → 항상 새 세션으로 시작 (프로필+질문 3개 표시)
-            // 기존 대화가 있으면 사이드바 자동 열기
-            if (!isNewChatRequested) {
-                try {
-                    const res = await fetch(`/api/sessions?mentorId=${mentorId}`)
-                    const { sessions } = await res.json()
-                    if (sessions?.length > 0) {
-                        // 기존 대화 존재 → 사이드바 열기 (데스크탑에서)
-                        setIsSidebarOpen(true)
-                    }
-                } catch (e) {
-                    console.error('기존 세션 조회 실패:', e)
-                }
-            }
+            // 사이드바는 항상 닫힌 상태로 시작 (햄버거 버튼으로 수동 열기)
 
             // 게스트 대화 Merge 확인 (로그인 상태에서 이전 게스트 대화 이관)
             const guestMsgs = loadGuestMessages(mentorId)
