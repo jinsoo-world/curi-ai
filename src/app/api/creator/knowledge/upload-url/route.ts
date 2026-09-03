@@ -96,7 +96,10 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        // knowledge_sources에 레코드 미리 삽입 (processing_status: 'uploading')
+        // knowledge_sources에 레코드 미리 삽입
+        // ⚠️ DB CHECK 제약이 허용하는 값은 pending/processing/completed/failed 4개뿐이다.
+        // 예전엔 'uploading' 을 넣어 파일 업로드가 첫 단계에서 전부 막혔다.
+        // 'uploading' 은 화면 안에서만 쓰는 상태값이라 DB에 저장할 필요가 없다.
         const sourceType = ext === 'pdf' ? 'pdf' : 'text'
         const { data: source, error: dbError } = await admin
             .from('knowledge_sources')
@@ -106,7 +109,7 @@ export async function POST(req: NextRequest) {
                 title: fileName,
                 file_size: fileSize,
                 original_url: filePath,
-                processing_status: 'uploading',
+                processing_status: 'pending',
             })
             .select()
             .single()
