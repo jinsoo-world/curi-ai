@@ -311,12 +311,12 @@ export default function ChatInput({
                                 disabled={isStreaming}
                                 aria-label={isListening ? '음성 입력 중지' : '음성으로 입력'}
                                 style={{
-                                    width: 36,
-                                    height: 36,
+                                    width: 48,
+                                    height: 48,
                                     borderRadius: '50%',
-                                    background: isListening ? '#ef4444' : 'transparent',
+                                    background: isListening ? '#ef4444' : '#EDF7F1',
                                     border: 'none',
-                                    color: isListening ? '#fff' : '#94a3b8',
+                                    color: isListening ? '#fff' : 'var(--진초록)',
                                     cursor: isStreaming ? 'default' : 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -336,21 +336,19 @@ export default function ChatInput({
                             disabled={!canSend}
                             aria-label="메시지 전송"
                             style={{
-                                width: 36,
-                                height: 36,
+                                width: 52,
+                                height: 52,
                                 borderRadius: '50%',
-                                background: canSend
-                                    ? 'linear-gradient(135deg, #22c55e, #16a34a)'
-                                    : '#e2e8f0',
+                                background: canSend ? 'var(--연두)' : '#CFD8D2',
                                 border: 'none',
-                                color: canSend ? '#fff' : '#94a3b8',
+                                color: '#fff',
                                 cursor: canSend ? 'pointer' : 'default',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 transition: 'all 0.2s',
                                 flexShrink: 0,
-                                boxShadow: canSend ? '0 2px 8px rgba(34,197,94,0.3)' : 'none',
+                                boxShadow: canSend ? '0 4px 14px rgba(34,197,94,0.35)' : 'none',
                             }}
                         >
                             <SendIcon />

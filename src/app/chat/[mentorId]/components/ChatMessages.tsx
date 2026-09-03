@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { 한글강조_바로잡기 } from '@/domains/chat/markdown'
 
 export interface ChatMessage {
     id: string
@@ -345,16 +346,18 @@ function MessageActions({ message, mentorName, autoPlay, systemPrompt, voiceId }
 
 /** 마크다운 렌더링 — 제미나이 스타일 넓은 본문 */
 function MarkdownContent({ content }: { content: string }) {
+    // 한글은 조사가 바로 붙어 강조 표시가 깨진다. 렌더 전에 바로잡는다.
+    const 본문 = 한글강조_바로잡기(content)
     return (
         <div className="chat-markdown">
             <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
                     p: ({ children }) => (
-                        <p style={{ margin: '0 0 12px 0', lineHeight: 1.8 }}>{children}</p>
+                        <p style={{ margin: '0 0 12px 0', lineHeight: 1.75, fontSize: 'var(--글자-본문)' }}>{children}</p>
                     ),
                     strong: ({ children }) => (
-                        <strong style={{ fontWeight: 700, color: '#1e293b' }}>{children}</strong>
+                        <strong style={{ fontWeight: 800, color: 'var(--먹)' }}>{children}</strong>
                     ),
                     ul: ({ children }) => (
                         <ul style={{ margin: '6px 0 12px 0', paddingLeft: 20 }}>{children}</ul>
@@ -416,7 +419,7 @@ function MarkdownContent({ content }: { content: string }) {
                     ),
                 }}
             >
-                {content}
+                {본문}
             </ReactMarkdown>
         </div>
     )
