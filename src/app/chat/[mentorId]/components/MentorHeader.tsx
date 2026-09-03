@@ -368,9 +368,9 @@ export default function MentorHeader({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '10px 12px',
-            borderBottom: '1px solid #f1f5f9',
-            background: '#fff',
+            padding: '8px 10px',
+            borderBottom: '1px solid #E8EDE9',
+            background: 'var(--흰)',
             position: 'sticky',
             top: 0,
             zIndex: 10,
@@ -387,9 +387,10 @@ export default function MentorHeader({
                             background: 'none',
                             border: 'none',
                             cursor: 'pointer',
-                            padding: 8,
-                            borderRadius: 10,
-                            color: '#64748b',
+                            width: 44,
+                            height: 44,
+                            borderRadius: 'var(--둥근-소)',
+                            color: 'var(--먹연)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -460,9 +461,9 @@ export default function MentorHeader({
 
                 <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{
-                        fontWeight: 700,
-                        fontSize: 15,
-                        color: '#1e293b',
+                        fontWeight: 900,
+                        fontSize: 'var(--글자-중)',
+                        color: 'var(--먹)',
                         lineHeight: 1.3,
                         display: 'flex',
                         alignItems: 'center',
@@ -471,21 +472,21 @@ export default function MentorHeader({
                     }}>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mentor.name}</span>
                         <span style={{
-                            fontSize: 11,
-                            fontWeight: 700,
-                            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                            color: '#fff',
-                            padding: '2px 7px',
-                            borderRadius: 5,
+                            fontSize: 12,
+                            fontWeight: 800,
+                            background: '#EDF7F1',
+                            color: 'var(--진초록)',
+                            padding: '2px 8px',
+                            borderRadius: 6,
                             letterSpacing: '0.03em',
                             lineHeight: 1.4,
                             flexShrink: 0,
                         }}>AI</span>
                     </div>
                     <div style={{
-                        fontSize: 12,
-                        color: '#94a3b8',
-                        lineHeight: 1.3,
+                        fontSize: 'var(--글자-작)',
+                        color: 'var(--먹연)',
+                        lineHeight: 1.35,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -546,19 +547,18 @@ export default function MentorHeader({
                     <button
                         onClick={() => router.push('/login')}
                         style={{
-                            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                            border: 'none',
-                            borderRadius: 8,
-                            padding: '6px 10px',
-                            fontSize: 12,
-                            color: '#fff',
+                            background: 'var(--흰)',
+                            border: '2px solid var(--연두)',
+                            borderRadius: 'var(--둥근-소)',
+                            padding: '0 14px',
+                            height: 44,
+                            fontSize: 'var(--글자-작)',
+                            color: 'var(--진초록)',
                             cursor: 'pointer',
-                            fontWeight: 600,
+                            fontWeight: 800,
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 3,
                             transition: 'all 0.15s',
-                            boxShadow: '0 2px 8px rgba(34,197,94,0.3)',
                             whiteSpace: 'nowrap',
                         }}
                         onMouseEnter={e => { e.currentTarget.style.opacity = '0.9' }}
