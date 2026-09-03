@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getMentorById } from '@/domains/mentor'
+import { getMentorById, getPublicMentorById } from '@/domains/mentor'
 
 export async function GET(
     _request: NextRequest,
@@ -13,7 +13,8 @@ export async function GET(
         const supabase = await createClient()
 
         // domains/mentor — ID → slug → 폴백 순서로 조회
-        const mentor = await getMentorById(supabase, mentorId)
+        // 사용자 권한으로 안 보이면 목록과 같은 기준(공개+활성)으로 다시 본다
+        const mentor = (await getMentorById(supabase, mentorId)) ?? (await getPublicMentorById(mentorId))
 
         if (!mentor) {
             // 목록(관리자 권한)에는 보이는데 상세(사용자 권한)에서 안 보이는 카드가 있다.

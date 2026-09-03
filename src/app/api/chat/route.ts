@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getMentorById, buildSystemPrompt, buildGeminiHistory } from '@/domains/mentor'
+import { getMentorById, getPublicMentorById, buildSystemPrompt, buildGeminiHistory } from '@/domains/mentor'
 import { getUserChatContext } from '@/domains/user'
 import { generateChatStream, getUserMemories, saveUserMessage, saveAssistantMessage, updateSessionActivity, incrementDailyFreeUsage, detectCrisisKeywords, CRISIS_RESPONSE, ERROR_MESSAGES, extractAndSaveMemories, extractAndUpdateTopic } from '@/domains/chat'
 import { MAX_DAILY_FREE, MAX_DAILY_FREE_GUEST } from '@/domains/chat/constants'
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
         }
 
         // 멘토 정보 조회 (domains/mentor)
-        const mentor = await getMentorById(supabase, mentorId)
+        const mentor = (await getMentorById(supabase, mentorId)) ?? (await getPublicMentorById(mentorId))
         if (!mentor) {
             return new Response('Mentor not found', { status: 404 })
         }

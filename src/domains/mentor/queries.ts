@@ -68,6 +68,39 @@ export async function getMentorById(
 }
 
 /**
+ * 공개 멘토 상세 조회 (목록과 같은 기준)
+ *
+ * 목록(getActiveMentors)은 관리자 권한 + is_active=true 로 뽑는데
+ * 상세는 사용자 권한으로 뽑아, 목록엔 보이지만 누르면 404 인 카드가 생겼다.
+ * (2026-09-04 실측: 「구글 문서 치트키」 등 2개. 줄은 살아 있고 is_active=true 인데
+ *  사용자 권한 조회만 0행이었다.) 두 화면 기준을 하나로 맞춘다.
+ */
+export async function getPublicMentorById(mentorId: string) {
+    let db: SupabaseClient
+    try {
+        db = createAdminClient()
+    } catch {
+        return null
+    }
+
+    const { data: byId } = await db
+        .from('mentors')
+        .select('*')
+        .eq('id', mentorId)
+        .eq('is_active', true)
+        .maybeSingle()
+    if (byId) return byId
+
+    const { data: bySlug } = await db
+        .from('mentors')
+        .select('*')
+        .eq('slug', mentorId)
+        .eq('is_active', true)
+        .maybeSingle()
+    return bySlug ?? null
+}
+
+/**
  * 크리에이터(유저)가 만든 활성 멘토 목록 조회
  */
 export async function getMentorsByCreator(
