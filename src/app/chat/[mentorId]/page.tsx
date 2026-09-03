@@ -10,9 +10,11 @@ import { MAX_DAILY_FREE_GUEST } from '@/domains/chat/constants'
 import type { ChatMessage } from './components'
 
 // 무거운 컴포넌트 — 필요할 때만 로드 (초기 번들에서 제외)
+// ⚠️ 반드시 파일을 직접 가리켜야 한다. 배럴('./components')을 가리키면
+// 위에서 이미 정적으로 불러온 같은 묶음이라 지연 로딩이 무효가 된다.
 const ChatSidebar = nextDynamic(() => import('./components/ChatSidebar'), { ssr: false })
-const ElevenLabsWidget = nextDynamic(() => import('./components').then(m => ({ default: m.ElevenLabsWidget })), { ssr: false })
-const VoiceCallOverlay = nextDynamic(() => import('./components').then(m => ({ default: m.VoiceCallOverlay })), { ssr: false })
+const ElevenLabsWidget = nextDynamic(() => import('./components/ElevenLabsWidget'), { ssr: false })
+const VoiceCallOverlay = nextDynamic(() => import('./components/VoiceCallOverlay'), { ssr: false })
 const MarketingConsentPopup = nextDynamic(() => import('@/components/MarketingConsentPopup'), { ssr: false })
 
 interface MentorData {
