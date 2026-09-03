@@ -301,22 +301,23 @@ export default function CreatorCreatePage() {
             const pubData = await pubRes.json()
             if (!pubRes.ok) throw new Error(pubData.error)
 
-            // 내 주소 저장
+            // AI 주소 저장
+            // 수정 화면(프리미엄 탭)과 같은 곳(mentors.handle)에 저장한다.
             // 예전에는 입력만 받고 아무 데도 보내지 않아, 리더가 적어 넣고
-            // 초록 확인 표시까지 봤는데도 저장되지 않고 사라졌다(2026-09-04 확인).
+            // 초록 확인 표시까지 봤는데도 사라졌다(2026-09-04 확인).
             if (customHandle.trim()) {
                 try {
-                    const hRes = await fetch('/api/user/handle', {
+                    const hRes = await fetch('/api/creator/monetization', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ handle: customHandle.trim() }),
+                        body: JSON.stringify({ mentorId, handle: customHandle.trim() }),
                     })
                     if (!hRes.ok) {
                         const hData = await hRes.json().catch(() => null)
-                        setToast(hData?.error || '내 주소는 저장하지 못했어요. 마이페이지에서 다시 정할 수 있어요.')
+                        setToast(hData?.error || '주소는 저장하지 못했어요. 내 AI 관리에서 다시 정할 수 있어요.')
                     }
                 } catch {
-                    setToast('내 주소는 저장하지 못했어요. 마이페이지에서 다시 정할 수 있어요.')
+                    setToast('주소는 저장하지 못했어요. 내 AI 관리에서 다시 정할 수 있어요.')
                 }
             }
 
@@ -1365,8 +1366,8 @@ export default function CreatorCreatePage() {
                         {/* ── 커스텀 URL ── */}
                         <div style={styles.card}>
                             <div style={styles.field}>
-                                <label style={{ ...styles.label, fontSize: 15 }}>🔗 내 주소</label>
-                                <p style={styles.hint}>내가 만든 AI를 한 곳에 모아 보여주는 주소예요. 한 번 정하면 내 모든 AI가 여기 모입니다.</p>
+                                <label style={{ ...styles.label, fontSize: 15 }}>🔗 이 AI의 주소</label>
+                                <p style={styles.hint}>이 AI로 바로 들어오는 링크예요. 나중에 「내 AI 관리」에서 바꿀 수 있어요.</p>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginTop: 8 }}>
                                     <span style={{
                                         padding: '10px 12px', background: '#f3f4f6', borderRadius: '10px 0 0 10px',

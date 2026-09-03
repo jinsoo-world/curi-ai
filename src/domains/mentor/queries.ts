@@ -101,6 +101,31 @@ export async function getPublicMentorById(mentorId: string) {
 }
 
 /**
+ * AI 주소(handle)로 공개 멘토 찾기
+ *
+ * 리더가 수정 화면 프리미엄 탭에서 정하는 주소는 mentors.handle 에 저장된다.
+ * 그런데 curi-ai.com/{주소} 화면은 users.handle 만 찾아서, 리더가 정한
+ * AI 주소로 들어가면 404 였다(2026-09-04 확인). 그 통로를 잇는다.
+ */
+export async function getPublicMentorByHandle(handle: string) {
+    let db: SupabaseClient
+    try {
+        db = createAdminClient()
+    } catch {
+        return null
+    }
+
+    const { data } = await db
+        .from('mentors')
+        .select('id, name, handle, is_active')
+        .eq('handle', handle)
+        .eq('is_active', true)
+        .maybeSingle()
+
+    return data ?? null
+}
+
+/**
  * 크리에이터(유저)가 만든 활성 멘토 목록 조회
  */
 export async function getMentorsByCreator(

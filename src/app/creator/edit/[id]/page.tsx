@@ -1409,8 +1409,8 @@ export default function CreatorEditPage() {
                     {/* ── 커스텀 URL ── */}
                     <div style={styles.card}>
                         <div style={styles.field}>
-                            <label style={{ ...styles.label, fontSize: 15 }}>🔗 커스텀 URL</label>
-                            <p style={styles.hint}>이 AI만의 고유 링크를 설정하세요</p>
+                            <label style={{ ...styles.label, fontSize: 15 }}>🔗 이 AI의 주소</label>
+                            <p style={styles.hint}>이 AI로 바로 들어오는 링크예요. 적고 빈 곳을 누르면 저장됩니다.</p>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginTop: 8 }}>
                                 <span style={{
                                     padding: '10px 12px', background: '#f3f4f6', borderRadius: '10px 0 0 10px',
@@ -1439,7 +1439,17 @@ export default function CreatorEditPage() {
                             </div>
                             {handleError && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 4 }}>{handleError}</div>}
                             {mentorHandle && !handleError && (
-                                <div style={{ fontSize: 12, color: '#22c55e', marginTop: 4 }}>✓ curi-ai.com/{mentorHandle}</div>
+                                <div style={{ fontSize: 'var(--글자-작)', marginTop: 8 }}>
+                                    <a
+                                        href={`/${mentorHandle}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        style={{ color: 'var(--진초록)', fontWeight: 700 }}
+                                    >
+                                        curi-ai.com/{mentorHandle} 열어보기
+                                    </a>
+                                    {premiumSaving && <span style={{ color: 'var(--먹연)', marginLeft: 8 }}>저장 중…</span>}
+                                </div>
                             )}
                         </div>
                     </div>

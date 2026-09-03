@@ -1,12 +1,12 @@
 export const dynamic = 'force-dynamic'
 
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserByHandle } from '@/domains/user'
-import { getMentorsByCreator, MENTOR_IMAGES } from '@/domains/mentor'
+import { getMentorsByCreator, MENTOR_IMAGES, getPublicMentorByHandle } from '@/domains/mentor'
 import type { MentorCardData } from '@/domains/mentor'
 
 interface PageProps {
@@ -165,6 +165,10 @@ export default async function CreatorProfilePage({ params }: PageProps) {
     const user = await getUserByHandle(db, cleanHandle)
 
     if (!user) {
+        // 사람 주소가 아니면 AI 주소일 수 있다.
+        // 리더가 프리미엄 탭에서 정하는 주소는 mentors.handle 에 저장된다.
+        const mentor = await getPublicMentorByHandle(cleanHandle)
+        if (mentor) redirect(`/chat/${mentor.id}`)
         notFound()
     }
 
