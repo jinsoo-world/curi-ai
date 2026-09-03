@@ -231,7 +231,7 @@ export default function VoiceCallOverlay({
                 body: JSON.stringify({ secondsUsed: callDuration }),
             }).catch(() => {})
             setPhase('expired')
-            setError('⏱️ 1분 무료체험이 종료되었습니다')
+            setError(`⏱️ 이번 통화 ${Math.floor(maxCallSecondsRef.current / 60)}분이 끝났어요`)
         }
     }, [callDuration])
 
@@ -392,7 +392,7 @@ export default function VoiceCallOverlay({
             {voiceExpired && phase === 'expired' && (
                 <div style={{ margin:'20px 24px 0',padding:'16px 20px',borderRadius:16,background:'linear-gradient(135deg,#FEF2F2,#FFF7ED)',border:'1px solid #FECACA',maxWidth:320,textAlign:'center' }}>
                     <p style={{ fontSize:16,fontWeight:700,color:'#DC2626',marginBottom:8 }}>📞 무료체험이 종료되었어요</p>
-                    <p style={{ fontSize:13,color:'#666',lineHeight:1.5 }}>총 3분의 무료 음성통화를 모두 사용하셨습니다.<br/>텍스트 채팅은 계속 이용 가능합니다!</p>
+                    <p style={{ fontSize:13,color:'#666',lineHeight:1.5 }}>{`총 ${Math.floor(VOICE_FREE_TOTAL_SECONDS / 60)}분의 무료 음성통화를 모두 사용하셨습니다.`}<br/>텍스트 채팅은 계속 이용 가능합니다!</p>
                 </div>
             )}
             {transcript && !voiceExpired && <div style={{ margin:'20px 24px 0',padding:'12px 16px',borderRadius:12,background:'#fff',border:'1px solid #e5e7eb',maxWidth:300,fontSize:14,color:'#374151',textAlign:'center',maxHeight:80,overflow:'hidden' }}>{transcript}</div>}

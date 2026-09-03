@@ -162,7 +162,7 @@ export default function LoginPage() {
                     fontSize: 17, fontWeight: 800, color: '#15803d',
                     letterSpacing: '-0.02em',
                 }}>
-                    4월 30일까지 무료체험 이벤트 진행 중!
+                    체험권 받은 날부터 7일 무료!
                 </div>
                 <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
                     나만의 AI를 만들고 대화해 보세요

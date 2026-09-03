@@ -200,7 +200,7 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                                 🎁 무료 이용 기간
                             </div>
                             <div style={{ fontSize: 24, fontWeight: 800, color: '#16a34a' }}>
-                                ~ 2026년 4월 30일
+                                받은 날부터 7일
                             </div>
                             <div style={{ fontSize: 12, color: '#6b7280', marginTop: 6 }}>
                                 기간 내 모든 AI 상담을 무제한으로 이용할 수 있습니다
@@ -272,7 +272,7 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                     </h2>
                     <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.5 }}>
                         간단한 정보를 입력하시면<br />
-                        4월 30일까지 무료로 이용 가능합니다
+                        받은 날부터 7일 동안 무료로 이용할 수 있습니다
                     </p>
                 </div>
 

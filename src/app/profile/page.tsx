@@ -788,7 +788,7 @@ export default function ProfilePage() {
                                                         </span>
                                                     </div>
                                                     <div style={{ fontSize: 13, color: '#6d28d9', lineHeight: 1.5 }}>
-                                                        <strong>2026년 4월 30일</strong>까지 모든 기능을 무료로 이용할 수 있습니다.
+                                                        체험권을 <strong>받은 날부터 7일</strong> 동안 모든 기능을 무료로 이용할 수 있습니다.
                                                         대화 횟수 제한 없이 마음껏 사용하세요! ✨
                                                     </div>
                                                 </div>
