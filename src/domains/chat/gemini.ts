@@ -28,6 +28,10 @@ export async function generateChatStream(
         config: {
             systemInstruction: systemPrompt,
             ...GEMINI_CONFIG,
+            // 구글 검색 연결 — 멘토가 최신 정보를 찾아볼 수 있게 한다.
+            // 이걸 안 켜면 학습 시점 이후의 일을 모르고, 모르는 채로 지어낸다.
+            // (실측 2026-09-04: 오늘 날짜를 3월 25일이라고 답했다)
+            tools: [{ googleSearch: {} }],
         },
         contents: messages,
     })

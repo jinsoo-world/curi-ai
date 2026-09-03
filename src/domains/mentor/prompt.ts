@@ -56,6 +56,20 @@ const PERSONA_TYPE_INSTRUCTIONS: Record<string, string> = {
  * 구조: AI 정체성 → 크리에이터 지시 → AI 유형 → 고정 규칙 → 스타일 → 유저 정보 → 메모리
  * (지식 파일은 chat/route.ts에서 최상단에 별도 삽입)
  */
+/** 지금을 한국 시간으로 적는다 (서버는 UTC 로 돌아간다) */
+function 지금_한국시간(): string {
+    const 한국 = new Intl.DateTimeFormat('ko-KR', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long',
+        hour: 'numeric',
+        minute: '2-digit',
+    })
+    return 한국.format(new Date())
+}
+
 export function buildSystemPrompt(
     mentor: {
         name?: string
@@ -74,6 +88,14 @@ export function buildSystemPrompt(
     memories?: MemoryItem[] | null,
 ): string {
     const parts: string[] = []
+
+    // ── ⓞ 지금 이 순간 (한국 시간) ──
+    // 이걸 안 주면 멘토가 학습 시점의 날짜를 오늘이라고 답한다.
+    // 실측 2026-09-04: '오늘은 2026년 3월 25일이에요' 라고 답했다.
+    parts.push(`[지금]
+오늘은 ${지금_한국시간()} 입니다.
+날짜·요일·시각을 물으면 위 값으로만 답하세요. 절대 추측하지 마세요.
+'며칠 남았다' 같은 계산도 위 날짜를 기준으로 하세요.`)
 
     // ── ① AI 정체성 (이름, 소개, 소속, 전문분야, 카테고리) ──
     const identityLines: string[] = []
