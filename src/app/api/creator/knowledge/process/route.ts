@@ -84,7 +84,7 @@ async function correctVttWithGemini(text: string): Promise<string> {
         const MAX_CHUNK = 8000
         if (text.length <= MAX_CHUNK) {
             const result = await ai.models.generateContent({
-                model: 'gemini-3.5-flash-lite',
+                model: 'gemini-2.0-flash-lite',
                 contents: `다음은 줌(Zoom) 녹화 자막에서 추출한 대화 텍스트입니다.
 음성 인식 오류로 인한 오탈자와 고유명사 오류를 교정해주세요.
 
@@ -115,7 +115,7 @@ ${text}`,
             const correctedChunks = []
             for (const chunk of chunks) {
                 const result = await ai.models.generateContent({
-                    model: 'gemini-3.5-flash-lite',
+                    model: 'gemini-2.0-flash-lite',
                     contents: `다음은 줌 녹화 자막 텍스트의 일부입니다. 음성 인식 오탈자만 교정하세요.
 규칙: 오탈자만 수정, 구조 유지, 설명 없이 교정 텍스트만 출력.
 

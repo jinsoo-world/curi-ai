@@ -1,7 +1,7 @@
 // /api/chat/edit-ebook — 전자책 인라인 수정 API
 // 현재 ebook JSON + 수정 요청을 받아 수정된 ebook JSON을 반환
 import { createClient } from '@/lib/supabase/server'
-import { GoogleGenAI, ThinkingLevel } from '@google/genai'
+import { GoogleGenAI } from '@google/genai'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -44,12 +44,12 @@ export async function POST(req: Request) {
 
         const ai = getAI()
         const result = await ai.models.generateContent({
-            model: 'gemini-3.8-flash',
+            model: 'gemini-3-flash-preview',
             config: {
                 systemInstruction: EDIT_SYSTEM_PROMPT,
                 temperature: 0.3,
                 maxOutputTokens: 8192,
-                thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+                thinkingConfig: { thinkingBudget: 0 },
             },
             contents: [{
                 role: 'user',

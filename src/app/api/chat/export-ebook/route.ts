@@ -2,7 +2,7 @@
 // 전체 대화를 기반으로 구조화된 JSON 원고를 생성
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { GoogleGenAI, ThinkingLevel } from '@google/genai'
+import { GoogleGenAI } from '@google/genai'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60  // 원고 생성은 시간이 더 걸릴 수 있음
@@ -149,12 +149,12 @@ export async function POST(req: Request) {
         // Gemini로 구조화된 원고 JSON 생성
         const ai = getAI()
         const result = await ai.models.generateContent({
-            model: 'gemini-3.8-flash',
+            model: 'gemini-3-flash-preview',
             config: {
                 systemInstruction: EBOOK_SYSTEM_PROMPT,
                 temperature: 0.3,
                 maxOutputTokens: 8192,
-                thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+                thinkingConfig: { thinkingBudget: 0 },
             },
             contents: [{
                 role: 'user',

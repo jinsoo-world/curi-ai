@@ -1,18 +1,14 @@
 // domains/chat — 채팅 도메인 상수
 
-import { ThinkingLevel } from '@google/genai'
-
-/** Gemini 모델명 (최신 안정판 Flash) */
-export const GEMINI_MODEL = 'gemini-3.8-flash'
+/** Gemini 모델명 */
+export const GEMINI_MODEL = 'gemini-3-flash-preview'
 
 /** Gemini 기본 설정 */
 export const GEMINI_CONFIG = {
     temperature: 0.8,
     maxOutputTokens: 4096,
     thinkingConfig: {
-        // 3세대 모델은 thinkingBudget 대신 thinkingLevel 을 쓴다.
-        // 3.8-flash 가 지원하는 최저값이 LOW (응답 속도 우선)
-        thinkingLevel: ThinkingLevel.LOW,
+        thinkingBudget: 0,   // 사고 과정 출력 완전 비활성화
     },
 } as const
 
