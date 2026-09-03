@@ -79,8 +79,21 @@ export async function POST(req: NextRequest) {
         }
 
         // 파일 경로 생성
+        //
+        // ⚠️ 저장소 키에 한글을 넣으면 거부된다(InvalidKey).
+        // 실측 2026-09-04: '부대표_시험자료3.txt' → 400 InvalidKey
+        //                  'test-upload.txt'     → 200
+        // 예전 규칙은 한글을 '안전한 문자'로 허용해서(가-힣) 한글 이름
+        // 파일은 무조건 업로드 단계에서 막혔다.
+        // 보이는 이름은 title 에 원본 그대로 저장하니 영향 없다.
         const timestamp = Date.now()
-        const safeName = fileName.replace(/[^a-zA-Z0-9가-힣._-]/g, '_')
+        const 점 = fileName.lastIndexOf('.')
+        const 확장자 = 점 > 0 ? fileName.slice(점 + 1).replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : ''
+        const 본이름 = (점 > 0 ? fileName.slice(0, 점) : fileName)
+            .replace(/[^a-zA-Z0-9._-]/g, '')
+            .replace(/^[._-]+/, '')
+            .slice(0, 40)
+        const safeName = `${본이름 || 'file'}${확장자 ? '.' + 확장자 : ''}`
         const filePath = `${mentorId}/${timestamp}-${safeName}`
 
         // Signed Upload URL 생성 (60초 유효)

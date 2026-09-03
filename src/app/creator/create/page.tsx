@@ -301,6 +301,25 @@ export default function CreatorCreatePage() {
             const pubData = await pubRes.json()
             if (!pubRes.ok) throw new Error(pubData.error)
 
+            // 내 주소 저장
+            // 예전에는 입력만 받고 아무 데도 보내지 않아, 리더가 적어 넣고
+            // 초록 확인 표시까지 봤는데도 저장되지 않고 사라졌다(2026-09-04 확인).
+            if (customHandle.trim()) {
+                try {
+                    const hRes = await fetch('/api/user/handle', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ handle: customHandle.trim() }),
+                    })
+                    if (!hRes.ok) {
+                        const hData = await hRes.json().catch(() => null)
+                        setToast(hData?.error || '내 주소는 저장하지 못했어요. 마이페이지에서 다시 정할 수 있어요.')
+                    }
+                } catch {
+                    setToast('내 주소는 저장하지 못했어요. 마이페이지에서 다시 정할 수 있어요.')
+                }
+            }
+
             // 성공 → 미션 보상 페이지로 (2회 이하일 때만 보상 애니메이션)
             const aiCount = pubData.aiCount || 0
             if (aiCount <= 2) {
@@ -1346,8 +1365,8 @@ export default function CreatorCreatePage() {
                         {/* ── 커스텀 URL ── */}
                         <div style={styles.card}>
                             <div style={styles.field}>
-                                <label style={{ ...styles.label, fontSize: 15 }}>🔗 커스텀 URL</label>
-                                <p style={styles.hint}>이 AI만의 고유 링크를 설정하세요</p>
+                                <label style={{ ...styles.label, fontSize: 15 }}>🔗 내 주소</label>
+                                <p style={styles.hint}>내가 만든 AI를 한 곳에 모아 보여주는 주소예요. 한 번 정하면 내 모든 AI가 여기 모입니다.</p>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginTop: 8 }}>
                                     <span style={{
                                         padding: '10px 12px', background: '#f3f4f6', borderRadius: '10px 0 0 10px',
