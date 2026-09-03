@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { MembershipBanner } from '@/components/MembershipBanner'
 import AppSidebar from '@/components/AppSidebar'
+import SpeechHero from '@/components/ui/SpeechHero'
 
 // 하드코딩 fallback
 const MENTOR_IMAGES: Record<string, string> = {
@@ -235,22 +236,19 @@ export default function ChatsPage() {
     }
 
     return (
-        <div style={{ minHeight: '100dvh', background: '#f8f9fa' }}>
+        <div style={{ minHeight: '100dvh', background: 'var(--종이)' }}>
             <AppSidebar />
 
             <div className="sidebar-content" style={{ marginLeft: 240, minHeight: '100dvh' }}>
                 <MembershipBanner />
 
-                <section className="chats-section" style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px' }}>
-                    <h2 style={{
-                        fontSize: 28, fontWeight: 800, color: '#18181b',
-                        letterSpacing: '-0.03em', margin: '0 0 6px',
-                    }}>
-                        대화 내역
-                    </h2>
-                    <p style={{ fontSize: 15, color: '#9ca3af', margin: '0 0 24px' }}>
-                        AI와 나눈 대화를 다시 확인하세요
-                    </p>
+                <SpeechHero
+                    eyebrow="다시 이어서 이야기하기"
+                    title={'지난 이야기를\n여기서 이어요'}
+                    tail={false}
+                />
+
+                <section className="chats-section" style={{ maxWidth: 800, margin: '0 auto', padding: 'var(--틈-대) var(--틈) var(--틈-절)' }}>
 
                     {isLoading ? (
                         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>

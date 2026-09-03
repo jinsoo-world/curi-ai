@@ -87,10 +87,10 @@ export default function CloverStorePage() {
                         marginBottom: 4, animation: 'fadeIn 0.3s ease',
                     }}>
                         <h1 style={{
-                            fontSize: 24, fontWeight: 800, color: '#18181b',
+                            fontSize: 'var(--글자-대)', fontWeight: 900, color: 'var(--먹)',
                             letterSpacing: '-0.03em', margin: 0,
                         }}>
-                            🍀 클로버 스토어
+                            🍀 클로버 상점
                         </h1>
                         <button
                             onClick={() => setShowInfoModal(true)}

@@ -284,15 +284,15 @@ export default function MissionsPage() {
 
                 <div style={{ maxWidth: 680, margin: '0 auto' }}>
                     {/* 헤더 */}
-                    <div style={{ marginBottom: 28, animation: 'fadeIn 0.4s ease' }}>
+                    <div style={{ marginBottom: 'var(--틈-대)', animation: 'fadeIn 0.4s ease' }}>
                         <h1 style={{
-                            fontSize: 24, fontWeight: 800, color: '#18181b',
+                            fontSize: 'var(--글자-대)', fontWeight: 900, color: 'var(--먹)',
                             letterSpacing: '-0.03em', margin: 0,
                         }}>
-                            🍀 미션 보상
+                            🍀 클로버 모으기
                         </h1>
-                        <p style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
-                            미션을 완료하고 클로버를 모아보세요!
+                        <p style={{ fontSize: 'var(--글자-본문)', color: 'var(--먹연)', marginTop: 6 }}>
+                            아래를 하나씩 해내면 클로버가 쌓여요. 클로버로 대화를 계속할 수 있어요.
                         </p>
                     </div>
 

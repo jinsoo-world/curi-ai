@@ -266,7 +266,7 @@ export default function ProfilePage() {
     }
 
     return (
-        <div style={{ minHeight: '100dvh', background: '#f8f9fa' }}>
+        <div style={{ minHeight: '100dvh', background: 'var(--종이)' }}>
             <AppSidebar />
 
             <div className="sidebar-content" style={{ marginLeft: 240, minHeight: '100dvh' }}>

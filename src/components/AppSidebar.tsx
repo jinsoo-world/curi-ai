@@ -113,7 +113,7 @@ export default function AppSidebar() {
         { label: '내 AI 만들기', href: '/creator/create', icon: '✨' },
         { label: '내 AI 관리', href: '/creator/manage', icon: '📊' },
         { type: 'divider' as const },
-        { label: '미션 보상', href: '/missions', icon: '🍀' },
+        { label: '클로버 모으기', href: '/missions', icon: '🍀' },
         { label: '스토어', href: '/store', icon: '🎁' },
         // { label: '멤버십', href: '/pricing', icon: '👑' }, // 무료체험 기간 비공개
         { label: '마이페이지', href: '/profile', icon: '👤' },
@@ -376,12 +376,12 @@ export default function AppSidebar() {
                 style={{
                     position: 'fixed',
                     bottom: 0, left: 0, right: 0,
-                    background: '#fff',
-                    borderTop: '1px solid #f2f3f4',
+                    background: 'var(--흰)',
+                    borderTop: '1px solid #E8EDE9',
                     display: 'none', /* shown via CSS media query */
                     justifyContent: 'space-around',
                     alignItems: 'center',
-                    padding: '8px 0 max(8px, env(safe-area-inset-bottom))',
+                    padding: '6px 0 max(6px, env(safe-area-inset-bottom))',
                     zIndex: 40,
                 }}
             >
@@ -437,7 +437,7 @@ export default function AppSidebar() {
                         ),
                     },
                     {
-                        label: '미션보상',
+                        label: '클로버',
                         href: '/missions',
                         icon: (active: boolean) => (
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -478,13 +478,15 @@ export default function AppSidebar() {
                             href={item.href}
                             style={{
                                 display: 'flex', flexDirection: 'column',
-                                alignItems: 'center', gap: 2,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 3,
                                 textDecoration: 'none',
-                                fontSize: 11,
-                                fontWeight: isActive ? 700 : 400,
-                                color: isActive ? '#191F28' : '#B0B8C1',
-                                padding: '2px 0',
-                                minWidth: 56,
+                                fontSize: 13,
+                                fontWeight: isActive ? 800 : 500,
+                                color: isActive ? 'var(--먹)' : '#8A948D',
+                                minWidth: 60,
+                                minHeight: 'var(--손가락)',
                                 transition: 'color 200ms ease',
                             }}
                         >
