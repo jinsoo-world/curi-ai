@@ -35,3 +35,12 @@ export const MAX_DAILY_FREE_GUEST = 10
 
 /** 유저 메모리 조회 제한 */
 export const MAX_MEMORY_ITEMS = 10
+
+/**
+ * 음성 통화 무료 체험 한도 (대표 지시 0904 — 넉넉하게)
+ * 예전엔 총 180초(3분)·한 통화 60초가 서로 다른 파일에 박혀 있었다.
+ * 한 통화 60초는 말이 끝나기 전에 끊겼다.
+ * ⚠️ 음성은 외부 업체 요금이 분당 나간다. 무제한으로 열지 않는다.
+ */
+export const VOICE_FREE_TOTAL_SECONDS = 900   // 총 15분
+export const VOICE_MAX_CALL_SECONDS = 300     // 한 통화 5분

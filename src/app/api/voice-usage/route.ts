@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// 무료체험 한도: 총 180초 (3분)
-const FREE_TRIAL_LIMIT_SECONDS = 180
+import { VOICE_FREE_TOTAL_SECONDS, VOICE_MAX_CALL_SECONDS } from '@/domains/chat/constants'
+
+const FREE_TRIAL_LIMIT_SECONDS = VOICE_FREE_TOTAL_SECONDS
 
 export async function GET(request: NextRequest) {
     try {
@@ -24,6 +25,7 @@ export async function GET(request: NextRequest) {
             totalSeconds,
             remainingSeconds,
             limitSeconds: FREE_TRIAL_LIMIT_SECONDS,
+            maxCallSeconds: VOICE_MAX_CALL_SECONDS,
             expired: remainingSeconds <= 0,
         })
     } catch (e: any) {
@@ -74,6 +76,7 @@ export async function POST(request: NextRequest) {
             totalSeconds,
             remainingSeconds,
             limitSeconds: FREE_TRIAL_LIMIT_SECONDS,
+            maxCallSeconds: VOICE_MAX_CALL_SECONDS,
             expired: remainingSeconds <= 0,
         })
     } catch (e: any) {

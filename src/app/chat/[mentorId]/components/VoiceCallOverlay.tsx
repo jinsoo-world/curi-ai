@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { VOICE_FREE_TOTAL_SECONDS, VOICE_MAX_CALL_SECONDS } from '@/domains/chat/constants'
 
 interface VoiceCallOverlayProps {
     isOpen: boolean
@@ -191,9 +192,10 @@ export default function VoiceCallOverlay({
                     setPhase('expired')
                     return
                 }
-                setRemainingSeconds(data.remainingSeconds || 180)
-                // 이번 통화 최대 시간: min(60초, 남은 시간)
-                maxCallSecondsRef.current = Math.min(60, data.remainingSeconds || 60)
+                setRemainingSeconds(data.remainingSeconds || VOICE_FREE_TOTAL_SECONDS)
+                // 이번 통화 최대 시간 = min(한 통화 상한, 남은 시간)
+                const 통화상한 = data.maxCallSeconds || VOICE_MAX_CALL_SECONDS
+                maxCallSecondsRef.current = Math.min(통화상한, data.remainingSeconds || 통화상한)
                 setPhase('connecting')
                 timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000)
                 setTimeout(() => playGreeting(), 300)
