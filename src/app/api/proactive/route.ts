@@ -4,7 +4,7 @@ import { createProactiveNotification } from '@/domains/notification'
 
 export const dynamic = 'force-dynamic'
 
-const GEMINI_MODEL = 'gemini-3-flash-preview'
+const GEMINI_MODEL = 'gemini-3.8-flash'
 
 /**
  * POST /api/proactive

@@ -1,7 +1,7 @@
 // /api/chat/export — AI 요약 리포트 생성 API
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { GoogleGenAI } from '@google/genai'
+import { GoogleGenAI, ThinkingLevel } from '@google/genai'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -85,12 +85,12 @@ export async function POST(req: Request) {
         // Gemini로 요약 생성
         const ai = getAI()
         const result = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-3.8-flash',
             config: {
                 systemInstruction: EXPORT_SYSTEM_PROMPT,
                 temperature: 0.3,
                 maxOutputTokens: 2048,
-                thinkingConfig: { thinkingBudget: 0 },
+                thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
             },
             contents: [{
                 role: 'user',

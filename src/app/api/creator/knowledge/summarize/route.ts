@@ -4,7 +4,7 @@ import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { GoogleGenAI } from '@google/genai'
 
-const GEMINI_MODEL = 'gemini-3-flash-preview'
+const GEMINI_MODEL = 'gemini-3.8-flash'
 
 export async function POST(request: Request) {
     try {
