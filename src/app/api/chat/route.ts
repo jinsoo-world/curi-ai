@@ -181,7 +181,19 @@ export async function POST(req: Request) {
                         systemPrompt = `[참고 지식]\n${knowledgeText}\n참고: 위 지식을 대화에 자연스럽게 활용하되, 출처를 직접 언급하지 마세요.\n\n${systemPrompt}`
                     }
                 } else {
-                    console.log('[Chat RAG] No knowledge matched above threshold for mentor:', mentorId)
+                    // 왜 0건인지 기록한다. 조각이 아예 없는 건지, 문턱(0.7)이 높은 건지.
+                    const admin = createAdminClient()
+                    const { count: 조각수 } = await admin
+                        .from('knowledge_chunks')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('mentor_id', mentorId)
+                    const 문턱없이 = await matchKnowledge(admin, embedding, mentorId, 0, 3)
+                    console.warn('[Chat RAG] 0건 진단:', JSON.stringify({
+                        mentorId,
+                        저장된조각수: 조각수 ?? null,
+                        문턱없이뽑은유사도: 문턱없이.map(k => Number(k.similarity?.toFixed(3))),
+                        현재문턱: 0.7,
+                    }))
                 }
             } else {
                 console.log('[Chat RAG] Empty embedding returned')

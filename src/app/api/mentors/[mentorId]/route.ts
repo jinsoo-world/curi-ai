@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getMentorById } from '@/domains/mentor'
 
 export async function GET(
@@ -15,6 +16,24 @@ export async function GET(
         const mentor = await getMentorById(supabase, mentorId)
 
         if (!mentor) {
+            // 목록(관리자 권한)에는 보이는데 상세(사용자 권한)에서 안 보이는 카드가 있다.
+            // 어긋나는 이유를 서버 기록에 남긴다.
+            try {
+                const { data: row } = await createAdminClient()
+                    .from('mentors')
+                    .select('id, name, is_active, creator_id')
+                    .eq('id', mentorId)
+                    .maybeSingle()
+                console.warn('[Mentors API] 상세 404 진단:', JSON.stringify({
+                    mentorId,
+                    관리자권한으로보임: !!row,
+                    이름: row?.name ?? null,
+                    is_active: row?.is_active ?? null,
+                    크리에이터있음: !!row?.creator_id,
+                }))
+            } catch (diagErr) {
+                console.warn('[Mentors API] 상세 404 진단 실패:', diagErr)
+            }
             return NextResponse.json(
                 { error: '멘토를 찾을 수 없습니다' },
                 { status: 404 }

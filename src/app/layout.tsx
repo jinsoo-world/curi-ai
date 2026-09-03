@@ -199,7 +199,7 @@ export default function RootLayout({
               (function() {
                 var s = document.createElement('script');
                 s.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js';
-                s.integrity = 'sha384-DKYJZ8NLiK8MN4/C5P2dtSmLQ4KwPaoqAfyA/DfmEc1VDxu4yyC7wy6K1Hs90nk';
+                s.integrity = 'sha384-DKYJZ8NLiK8MN4/C5P2dtSmLQ4KwPaoqAfyA/DfmEc1VDxu4yyC7wy6K1Hs90nka';
                 s.crossOrigin = 'anonymous';
                 s.onload = function() {
                   if (window.Kakao && !window.Kakao.isInitialized()) {
