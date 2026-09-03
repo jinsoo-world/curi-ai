@@ -159,7 +159,9 @@ export default function ChatPage() {
 
 
     // 프로필에서 autoTTS 설정 + 유저 이름 로드
+    // 게스트는 부를 필요가 없다(전에는 무조건 불러 401 을 만들었다)
     useEffect(() => {
+        if (!isLoggedIn) return
         async function loadProfile() {
             try {
                 const res = await fetch('/api/profile')
@@ -172,7 +174,7 @@ export default function ChatPage() {
             } catch { /* 게스트는 무시 */ }
         }
         loadProfile()
-    }, [])
+    }, [isLoggedIn])
 
     const toggleAutoTTS = useCallback(async () => {
         const next = !autoTTS
@@ -330,6 +332,7 @@ export default function ChatPage() {
 
     // ───── 사이드바 세션 목록 로드 ─────
     const loadSidebarSessions = useCallback(async () => {
+        if (!isLoggedIn) return // 게스트는 서버에 세션이 없다
         try {
             const res = await fetch(`/api/sessions?mentorId=${mentorId}`)
             const { sessions } = await res.json()
@@ -337,7 +340,7 @@ export default function ChatPage() {
         } catch (e) {
             console.error('사이드바 세션 로드 실패:', e)
         }
-    }, [mentorId])
+    }, [mentorId, isLoggedIn])
 
     useEffect(() => {
         loadSidebarSessions()
@@ -609,11 +612,8 @@ export default function ChatPage() {
         if (typeof window !== 'undefined' && localStorage.getItem('marketing_popup_dismissed')) return
 
         async function checkMarketingConsent() {
+            if (!isLoggedIn) return // 게스트는 스킵
             try {
-                const res = await fetch('/api/auth/me')
-                const data = await res.json()
-                if (!data?.user) return // 게스트는 스킵
-
                 const profileRes = await fetch('/api/profile')
                 const profileData = await profileRes.json()
                 const consent = profileData?.profile?.marketing_consent ?? profileData?.marketing_consent
@@ -624,7 +624,7 @@ export default function ChatPage() {
             setMarketingChecked(true)
         }
         checkMarketingConsent()
-    }, [messages, marketingChecked])
+    }, [messages, marketingChecked, isLoggedIn])
 
     const handleMarketingAccept = async () => {
         setShowMarketingPopup(false)
