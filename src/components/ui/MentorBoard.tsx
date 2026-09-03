@@ -60,13 +60,7 @@ export default function MentorBoard({ mentors }: { mentors: BoardMentor[] }) {
                         </p>
                     </div>
                 ) : (
-                    <div
-                        style={{
-                            display: 'grid',
-                            gap: 'var(--틈-대)',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                        }}
-                    >
+                    <div className="mentor-grid">
                         {보일멘토.map((m) => (
                             <MentorBigCard
                                 key={m.id}

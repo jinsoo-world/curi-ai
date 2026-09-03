@@ -345,3 +345,17 @@ button, a[role="button"] {
     font-size: 14px !important;
   }
 }
+/* ─── 멘토 목록 배열 (0904 전면 개편)
+   대표 지시 = 4*n. 휴대폰은 2열, 넓은 화면은 4열. ─── */
+.mentor-grid {
+  display: grid;
+  gap: var(--틈);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 760px) {
+  .mentor-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--틈-대);
+  }
+}
