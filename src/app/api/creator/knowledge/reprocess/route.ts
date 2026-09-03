@@ -159,15 +159,21 @@ export async function POST() {
                 for (let i = 0; i < chunks.length; i++) {
                     try {
                         const emb = await generateEmbedding(chunks[i])
-                        await admin.from('knowledge_chunks').insert({
+                        const { error: insErr } = await admin.from('knowledge_chunks').insert({
                             source_id: source.id,
                             mentor_id: source.mentor_id,
                             content: chunks[i],
                             embedding: emb,
                             chunk_index: i,
                         })
+                        if (insErr) {
+                            console.error(`[Reprocess] Chunk ${i} 저장 실패:`, JSON.stringify(insErr))
+                            continue
+                        }
                         ok++
-                    } catch { /* skip */ }
+                    } catch (e) {
+                        console.error(`[Reprocess] Chunk ${i} 처리 실패:`, e instanceof Error ? e.message : e)
+                    }
                 }
 
                 await admin.from('knowledge_sources')

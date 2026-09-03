@@ -41,13 +41,17 @@ export async function addKnowledgeSource(
         for (let i = 0; i < chunks.length; i++) {
             const embedding = await generateEmbedding(chunks[i])
 
-            await db.from('knowledge_chunks').insert({
+            const { error: insertError } = await db.from('knowledge_chunks').insert({
                 source_id: source.id,
                 mentor_id: mentorId,
                 content: chunks[i],
                 embedding: embedding,
                 chunk_index: i,
             })
+            if (insertError) {
+                console.error(`[Knowledge] 조각 ${i} 저장 실패:`, JSON.stringify(insertError))
+                throw new Error(`조각 저장 실패: ${insertError.message}`)
+            }
         }
 
         // 4. 처리 완료

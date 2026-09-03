@@ -188,11 +188,19 @@ export async function POST(req: Request) {
                         .select('id', { count: 'exact', head: true })
                         .eq('mentor_id', mentorId)
                     const 문턱없이 = await matchKnowledge(admin, embedding, mentorId, 0, 3)
+                    const { data: 원장 } = await admin
+                        .from('knowledge_sources')
+                        .select('id, title, processing_status, chunk_count, created_at')
+                        .eq('mentor_id', mentorId)
+                        .order('created_at', { ascending: false })
+                        .limit(5)
                     console.warn('[Chat RAG] 0건 진단:', JSON.stringify({
                         mentorId,
                         저장된조각수: 조각수 ?? null,
                         문턱없이뽑은유사도: 문턱없이.map(k => Number(k.similarity?.toFixed(3))),
                         현재문턱: 0.7,
+                        올린파일수: 원장?.length ?? 0,
+                        올린파일: (원장 ?? []).map(r => ({ 제목: r.title, 상태: r.processing_status, 조각수: r.chunk_count })),
                     }))
                 }
             } else {

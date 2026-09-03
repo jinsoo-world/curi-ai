@@ -495,13 +495,18 @@ export async function POST(req: NextRequest) {
                     console.error(`[Process] Chunk ${i}: empty embedding returned`)
                     continue
                 }
-                await admin.from('knowledge_chunks').insert({
+                const { error: insertErr } = await admin.from('knowledge_chunks').insert({
                     source_id: sourceId,
                     mentor_id: mentorId,
                     content: chunks[i],
                     embedding,
                     chunk_index: i,
                 })
+                if (insertErr) {
+                    // 여기서 오류를 안 보고 성공으로 세던 것이 조각 0건의 구멍이었다
+                    console.error(`[Process] Chunk ${i} 저장 실패:`, JSON.stringify(insertErr))
+                    continue
+                }
                 successCount++
             } catch (embErr) {
                 console.error(`[Process] Chunk ${i}/${chunks.length} failed:`, embErr instanceof Error ? embErr.message : embErr)
