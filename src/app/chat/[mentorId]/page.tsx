@@ -1392,8 +1392,11 @@ export default function ChatPage() {
                     </>
                 )}
 
-                {/* ElevenLabs 음성 대화 오버레이 */}
-                {mentor?.name && ELEVENLABS_AGENT_IDS[mentor.name] && (
+                {/* ElevenLabs 음성 대화 오버레이
+                    통화를 열 때만 올린다. 예전엔 항상 올려서, 닫혀 있어도
+                    음성 라이브러리 480KB 를 첫 화면에서 받아왔다.
+                    (위젯 자체는 !isOpen 이면 null 을 그린다) */}
+                {isCallOpen && mentor?.name && ELEVENLABS_AGENT_IDS[mentor.name] && (
                     <ElevenLabsWidget
                         agentId={ELEVENLABS_AGENT_IDS[mentor.name]}
                         mentorName={mentor.name}
