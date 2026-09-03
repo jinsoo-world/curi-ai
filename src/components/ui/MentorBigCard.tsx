@@ -2,9 +2,12 @@ import Link from 'next/link'
 import Image from 'next/image'
 
 /**
- * 멘토 큰 카드
- * 사진을 크게, 이름을 굵게, 무엇을 도와주는지 한 줄.
- * 칩은 '무슨 이야기를 할 수 있나'를 미리 보여준다.
+ * 멘토 카드
+ *
+ * 하나투어는 큰 여행 사진이 재료였다. 여기는 재료가 다르다 —
+ * 멘토가 가진 그림은 112px 짜리 작은 프로필뿐이다.
+ * 그걸 큰 사진 자리에 늘리면 흐려진다. 그래서 색면 위에
+ * 원형 프로필을 얹고, 대신 이름을 크게 키웠다.
  */
 export default function MentorBigCard({
     href,
@@ -33,38 +36,55 @@ export default function MentorBigCard({
                 color: 'inherit',
             }}
         >
-            <div style={{ position: 'relative', width: '100%', aspectRatio: '4 / 3', background: '#E8EDE9' }}>
-                {imageSrc ? (
-                    <Image src={imageSrc} alt="" fill sizes="(max-width: 760px) 100vw, 420px" style={{ objectFit: 'cover' }} />
-                ) : (
-                    <span
-                        style={{
-                            position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
-                            fontSize: 44,
-                        }}
-                        aria-hidden
-                    >
-                        🍀
-                    </span>
-                )}
-            </div>
+            {/* 색면 + 원형 프로필 */}
+            <div
+                style={{
+                    background: '#EDF7F1',
+                    padding: 'var(--틈-대) var(--틈)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--틈)',
+                }}
+            >
+                <span
+                    style={{
+                        position: 'relative',
+                        flex: '0 0 auto',
+                        width: 84,
+                        height: 84,
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        background: 'var(--흰)',
+                        display: 'grid',
+                        placeItems: 'center',
+                        boxShadow: '0 0 0 3px var(--흰)',
+                    }}
+                >
+                    {imageSrc ? (
+                        <Image src={imageSrc} alt="" fill sizes="84px" style={{ objectFit: 'cover' }} />
+                    ) : (
+                        <span style={{ fontSize: 36 }} aria-hidden>🍀</span>
+                    )}
+                </span>
 
-            <div style={{ padding: 'var(--틈) var(--틈) var(--틈-대)' }}>
                 <h3
                     style={{
                         fontSize: 'var(--글자-대)',
                         fontWeight: 900,
                         letterSpacing: '-0.03em',
-                        marginBottom: 6,
+                        lineHeight: 1.25,
                     }}
                 >
                     {name}
                 </h3>
+            </div>
+
+            <div style={{ padding: 'var(--틈) var(--틈) var(--틈-대)' }}>
                 <p
                     style={{
                         fontSize: 'var(--글자-본문)',
                         color: 'var(--먹연)',
-                        lineHeight: 1.5,
+                        lineHeight: 1.55,
                         marginBottom: chips.length ? 'var(--틈)' : 0,
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
@@ -94,6 +114,23 @@ export default function MentorBigCard({
                         ))}
                     </div>
                 )}
+
+                <span
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginTop: 'var(--틈)',
+                        height: 'var(--손가락)',
+                        borderRadius: 'var(--둥근-소)',
+                        background: 'var(--연두)',
+                        color: 'var(--흰)',
+                        fontSize: 'var(--글자-중)',
+                        fontWeight: 800,
+                    }}
+                >
+                    대화 시작하기
+                </span>
             </div>
         </Link>
     )
