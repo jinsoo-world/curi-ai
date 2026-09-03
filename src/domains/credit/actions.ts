@@ -16,13 +16,13 @@ export async function chargeCredit(
     // 현재 잔액 조회
     const { data: user } = await supabase
         .from('users')
-        .select('credit_balance')
+        .select('clovers')
         .eq('id', request.user_id)
         .single()
 
     if (!user) return { success: false, error: '유저를 찾을 수 없습니다.' }
 
-    const currentBalance = user.credit_balance ?? 0
+    const currentBalance = user.clovers ?? 0
     const newBalance = currentBalance + request.amount
 
     // 트랜잭션 기록
@@ -41,13 +41,13 @@ export async function chargeCredit(
 
     if (txError) {
         console.error('Credit charge transaction error:', txError)
-        return { success: false, error: '크레딧 충전 처리 중 오류가 발생했습니다.' }
+        return { success: false, error: '클로버 충전 처리 중 오류가 발생했습니다.' }
     }
 
     // 잔액 업데이트
     const { error: updateError } = await supabase
         .from('users')
-        .update({ credit_balance: newBalance })
+        .update({ clovers: newBalance })
         .eq('id', request.user_id)
 
     if (updateError) {
@@ -68,20 +68,20 @@ export async function deductCredit(
     // 현재 잔액 조회
     const { data: user } = await supabase
         .from('users')
-        .select('credit_balance')
+        .select('clovers')
         .eq('id', request.user_id)
         .single()
 
     if (!user) return { success: false, error: '유저를 찾을 수 없습니다.' }
 
-    const currentBalance = user.credit_balance ?? 0
+    const currentBalance = user.clovers ?? 0
 
     // 잔액 부족 체크
     if (currentBalance < request.amount) {
         return {
             success: false,
             remainingBalance: currentBalance,
-            error: '크레딧이 부족합니다. 충전 후 다시 시도해주세요.',
+            error: '클로버가 부족해요. 모아서 다시 시도해주세요.',
         }
     }
 
@@ -95,19 +95,19 @@ export async function deductCredit(
             amount: -request.amount,
             balance_after: newBalance,
             type: 'chat_usage',
-            description: request.description ?? '대화 크레딧 차감',
+            description: request.description ?? '대화 클로버 차감',
             mentor_id: request.mentor_id,
         })
 
     if (txError) {
         console.error('Credit deduct transaction error:', txError)
-        return { success: false, error: '크레딧 차감 처리 중 오류가 발생했습니다.' }
+        return { success: false, error: '클로버 차감 처리 중 오류가 발생했습니다.' }
     }
 
     // 잔액 업데이트
     const { error: updateError } = await supabase
         .from('users')
-        .update({ credit_balance: newBalance })
+        .update({ clovers: newBalance })
         .eq('id', request.user_id)
 
     if (updateError) {
@@ -140,7 +140,7 @@ export async function grantSignupBonus(userId: string): Promise<boolean> {
         user_id: userId,
         amount: CREDIT_CONSTANTS.SIGNUP_BONUS,
         type: 'signup_bonus',
-        description: '🎉 가입 축하 크레딧',
+        description: '🍀 가입 축하 클로버',
     })
 
     return result.success

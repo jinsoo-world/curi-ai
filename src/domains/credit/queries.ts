@@ -14,11 +14,11 @@ export async function getCreditBalance(): Promise<number> {
 
     const { data } = await supabase
         .from('users')
-        .select('credit_balance')
+        .select('clovers')
         .eq('id', user.id)
         .single()
 
-    return data?.credit_balance ?? 0
+    return data?.clovers ?? 0
 }
 
 /** 현재 유저의 크레딧 트랜잭션 히스토리 조회 */
@@ -51,9 +51,9 @@ export async function getUserCreditBalance(userId: string): Promise<number> {
 
     const { data } = await supabase
         .from('users')
-        .select('credit_balance')
+        .select('clovers')
         .eq('id', userId)
         .single()
 
-    return data?.credit_balance ?? 0
+    return data?.clovers ?? 0
 }

@@ -27,7 +27,7 @@ export interface CreditTransaction {
 /** 유저 크레딧 잔액 (users 테이블 확장) */
 export interface UserCreditBalance {
     user_id: string
-    credit_balance: number
+    clovers: number
 }
 
 /** 크레딧 충전 요청 */

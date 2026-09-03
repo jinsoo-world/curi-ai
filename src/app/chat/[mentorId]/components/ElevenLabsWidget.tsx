@@ -52,7 +52,7 @@ export default function ElevenLabsWidget({
             const reason = details?.reason || ''
             const closeReason = details?.closeReason || details?.message || ''
             if (closeReason.includes('quota') || closeReason.includes('limit')) {
-                setErrorMsg('음성 통화 크레딧이 소진되었어요. ElevenLabs 대시보드에서 크레딧을 확인해주세요.')
+                setErrorMsg('지금은 음성 통화를 연결할 수 없어요. 잠시 후 다시 시도해주세요.')
             } else if (reason === 'error') {
                 setErrorMsg(`통화가 끊겼어요: ${closeReason || '알 수 없는 오류'}`)
             }

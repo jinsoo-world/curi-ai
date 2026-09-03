@@ -153,7 +153,7 @@ export default function PrivacyPage() {
                                     <td style={tdStyle}>업로드 문서(HWP/PDF/DOCX/PPT), 프로필 이미지</td>
                                 </tr>
                                 <tr>
-                                    <td style={{ ...tdStyle, fontWeight: 500 }}>결제 및 크레딧 충전</td>
+                                    <td style={{ ...tdStyle, fontWeight: 500 }}>결제 및 클로버 충전</td>
                                     <td style={tdStyle}>결제 수단 종류, 결제 금액, 결제 일시</td>
                                     <td style={tdStyle}>—</td>
                                 </tr>
@@ -186,7 +186,7 @@ export default function PrivacyPage() {
                             <li style={{ marginBottom: 8 }}>회원 식별, 가입 의사 확인, 본인 확인 및 인증</li>
                             <li style={{ marginBottom: 8 }}>AI 멘토링 대화 서비스 제공 및 개인화</li>
                             <li style={{ marginBottom: 8 }}>크리에이터 AI 멘토 생성 및 지식 학습 (문서 파싱, RAG)</li>
-                            <li style={{ marginBottom: 8 }}>크레딧 충전, 결제 처리, 크리에이터 수익 정산</li>
+                            <li style={{ marginBottom: 8 }}>클로버 충전, 결제 처리, 크리에이터 수익 정산</li>
                             <li style={{ marginBottom: 8 }}>미션 보상(🍀 클로버) 및 레퍼럴(친구 초대) 시스템 운영</li>
                             <li style={{ marginBottom: 8 }}>인구통계학적 특성과 이용자의 관심, 기호, 성향의 추정을 통한 맞춤형 멘토 추천 및 마케팅 활용</li>
                             <li style={{ marginBottom: 8 }}>서비스 개선, 신규 기능 개발, 이용 통계 분석</li>

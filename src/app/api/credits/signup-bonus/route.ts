@@ -34,11 +34,11 @@ export async function POST() {
         // 현재 잔액 조회
         const { data: userData } = await admin
             .from('users')
-            .select('credit_balance')
+            .select('clovers')
             .eq('id', user.id)
             .single()
 
-        const currentBalance = userData?.credit_balance ?? 0
+        const currentBalance = userData?.clovers ?? 0
         const bonusAmount = 10000
         const newBalance = currentBalance + bonusAmount
 
@@ -50,18 +50,18 @@ export async function POST() {
                 amount: bonusAmount,
                 balance_after: newBalance,
                 type: 'signup_bonus',
-                description: '🎉 가입 축하 1만원 크레딧',
+                description: '🍀 가입 축하 클로버 10,000개',
             })
 
         if (txError) {
             console.error('[Signup Bonus] Transaction error:', txError.message)
-            return NextResponse.json({ error: '크레딧 지급 실패' }, { status: 500 })
+            return NextResponse.json({ error: '클로버 지급 실패' }, { status: 500 })
         }
 
         // 잔액 업데이트
         await admin
             .from('users')
-            .update({ credit_balance: newBalance })
+            .update({ clovers: newBalance })
             .eq('id', user.id)
 
         return NextResponse.json({
@@ -71,7 +71,7 @@ export async function POST() {
         })
     } catch (error: unknown) {
         console.error('[Signup Bonus] Error:', error)
-        const message = error instanceof Error ? error.message : '크레딧 지급 중 오류'
+        const message = error instanceof Error ? error.message : '클로버 지급 중 오류'
         return NextResponse.json({ error: message }, { status: 500 })
     }
 }

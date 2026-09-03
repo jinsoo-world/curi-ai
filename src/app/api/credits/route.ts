@@ -18,7 +18,7 @@ export async function GET() {
         // 잔액 조회
         const { data: userData } = await supabase
             .from('users')
-            .select('credit_balance')
+            .select('clovers')
             .eq('id', user.id)
             .single()
 
@@ -31,7 +31,7 @@ export async function GET() {
             .limit(20)
 
         return NextResponse.json({
-            balance: userData?.credit_balance ?? 0,
+            balance: userData?.clovers ?? 0,
             transactions: transactions ?? [],
         })
     } catch (error) {

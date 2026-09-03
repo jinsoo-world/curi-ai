@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getMentorById, getPublicMentorById, buildSystemPrompt, buildGeminiHistory } from '@/domains/mentor'
 import { getUserChatContext } from '@/domains/user'
 import { generateChatStream, getUserMemories, saveUserMessage, saveAssistantMessage, updateSessionActivity, incrementDailyFreeUsage, detectCrisisKeywords, CRISIS_RESPONSE, ERROR_MESSAGES, extractAndSaveMemories, extractAndUpdateTopic } from '@/domains/chat'
-import { MAX_DAILY_FREE, MAX_DAILY_FREE_GUEST } from '@/domains/chat/constants'
+import { MAX_DAILY_FREE, MAX_DAILY_FREE_GUEST, FREE_TRIAL_OPEN } from '@/domains/chat/constants'
 import { generateEmbedding, matchKnowledge } from '@/domains/knowledge'
 import { deductCredit, getCreditBalance } from '@/domains/credit'
 import { CREDIT_CONSTANTS } from '@/domains/credit/types'
@@ -33,9 +33,11 @@ export async function POST(req: Request) {
             city: decodeURIComponent(city),
         }
 
-        // 🎁 2026-04-30까지 무료 체험 기간
-        const FREE_TRIAL_END = new Date('2026-04-30T23:59:59+09:00')
-        const isFreeTrial = new Date() < FREE_TRIAL_END
+        // 🎁 무료 개방 (2026-09-04 대표 지시로 종료일 제거)
+        // 예전엔 2026-04-30 이 하드코딩돼 있었다. 그 날이 지나자
+        // 로그인한 회원은 전원 '클로버가 부족합니다'만 보게 됐고 아무도 몰랐다.
+        // 유료로 전환할 때는 이 값을 false 로 바꾼다(날짜를 다시 박지 않는다).
+        const isFreeTrial = FREE_TRIAL_OPEN
 
         // ── 🔒 비로그인 사용자 대화 제한 (isFreeTrial 무관, 항상 적용) ──
         if (!user && typeof guestMessageCount === 'number' && guestMessageCount >= MAX_DAILY_FREE_GUEST) {
@@ -107,13 +109,13 @@ export async function POST(req: Request) {
         if (user && !isFreeTrial) {
             const { data: creditData } = await supabase
                 .from('users')
-                .select('credit_balance')
+                .select('clovers')
                 .eq('id', user.id)
                 .single()
-            const balance = creditData?.credit_balance ?? 0
+            const balance = creditData?.clovers ?? 0
             if (balance < CREDIT_CONSTANTS.CHAT_COST_PER_MESSAGE) {
                 const encoder = new TextEncoder()
-                const noCreditsMsg = '크레딧이 부족합니다 😢\n\n충전 후 다시 대화해주세요! 💰'
+                const noCreditsMsg = '클로버가 부족해요 😢\n\n미션 보상에서 클로버를 모아 다시 대화해주세요! 🍀'
                 const creditStream = new ReadableStream({
                     start(controller) {
                         controller.enqueue(

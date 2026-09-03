@@ -20,7 +20,7 @@ export async function GET() {
         const [creatorResult, sessionsResult, profileResult] = await Promise.all([
             supabaseAdmin.from('creator_profiles').select('id').eq('user_id', user.id).maybeSingle(),
             supabaseAdmin.from('chat_sessions').select('id').eq('user_id', user.id),
-            supabaseAdmin.from('users').select('clovers, credit_balance, referral_code, phone, gender, marketing_consent').eq('id', user.id).single(),
+            supabaseAdmin.from('users').select('clovers, referral_code, phone, gender, marketing_consent').eq('id', user.id).single(),
         ])
 
         const creatorProfile = creatorResult.data
