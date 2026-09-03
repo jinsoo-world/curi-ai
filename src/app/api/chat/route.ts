@@ -200,6 +200,8 @@ export async function POST(req: Request) {
                         문턱없이뽑은유사도: 문턱없이.map(k => Number(k.similarity?.toFixed(3))),
                         현재문턱: 0.7,
                         올린파일수: 원장?.length ?? 0,
+                        전체원장건수: (await admin.from('knowledge_sources').select('id', { count: 'exact', head: true })).count ?? null,
+                        전체조각건수: (await admin.from('knowledge_chunks').select('id', { count: 'exact', head: true })).count ?? null,
                         올린파일: (원장 ?? []).map(r => ({ 제목: r.title, 상태: r.processing_status, 조각수: r.chunk_count })),
                     }))
                 }
