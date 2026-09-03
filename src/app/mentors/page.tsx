@@ -7,9 +7,10 @@ import { getActiveMentors, MENTOR_IMAGES } from '@/domains/mentor'
 import { MembershipBanner } from '@/components/MembershipBanner'
 import type { MentorCardData } from '@/domains/mentor'
 import NotificationBanner from './NotificationBanner'
+import SpeechHero from '@/components/ui/SpeechHero'
+import MentorBoard from '@/components/ui/MentorBoard'
 import AppSidebar from '@/components/AppSidebar'
 import CreditClaimWrapper from './CreditClaimWrapper'
-import MentorMatchHero from './MentorMatchHero'
 import { Suspense } from 'react'
 
 export const metadata: Metadata = {
@@ -155,7 +156,7 @@ export default async function MentorsPage() {
     const mentors = await getActiveMentors()
 
     return (
-        <div style={{ minHeight: '100dvh', background: '#f8f9fa' }} role="document">
+        <div style={{ minHeight: '100dvh', background: 'var(--종이)' }} role="document">
 
             {/* ─── Sidebar ─── */}
             <AppSidebar />
@@ -174,71 +175,34 @@ export default async function MentorsPage() {
                 {/* ─── Membership Top Banner ─── */}
                 <MembershipBanner />
 
-                {/* ─── Hero ─── */}
-                <section className="mentors-hero" style={{
-                    maxWidth: 1000, margin: '0 auto',
-                    padding: '48px 40px 24px',
-                }}>
-                    <h1 style={{
-                        fontSize: 38, fontWeight: 800, color: '#18181b',
-                        lineHeight: 1.35, letterSpacing: '-0.03em', margin: 0,
-                    }}>
-                        오늘은 어떤 이야기를{' '}
-                        <span style={{
-                            background: 'linear-gradient(135deg, #16a34a, #22c55e)',
-                            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                        }}>
-                            나눠볼까요?
-                        </span>
-                    </h1>
-                    <p style={{ fontSize: 17, color: '#9ca3af', marginTop: 12 }}>
-                        나만의 AI와 24시간 대화하고, 직접 AI를 만들어보세요.
-                    </p>
-                </section>
+                {/* ─── 말풍선 히로 (전면 개편 0904) ─── */}
+                <SpeechHero
+                    eyebrow="오늘 말 걸 상대 고르기"
+                    title={'오늘은 어떤 이야기를\n나눠볼까요?'}
+                />
 
-                {/* ─── Notification Banner ─── */}
+                {/* ─── 알림 ─── */}
                 <NotificationBanner />
 
-                {/* ─── AI 멘토 매칭 히어로 ─── */}
-                <MentorMatchHero />
-
-                {/* ─── Mentor Grid ─── */}
-                <main>
-                    <section className="mentors-grid-section" style={{
-                        maxWidth: 1000, margin: '0 auto',
-                        padding: '0 40px 80px',
-                    }}>
-                        <div className="mentors-grid" style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                            gap: 24,
-                        }}>
-                            {mentors.length > 0
-                                ? mentors.map((mentor: MentorCardData, index: number) => (
-                                    <Link key={mentor.id} href={`/chat/${mentor.id}`} aria-label={`${mentor.name} 멘토와 대화하기`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                                        <MentorCard
-                                            name={mentor.name} title={mentor.title}
-                                            description={mentor.description}
-                                            questions={mentor.sample_questions || []}
-                                            imageSrc={mentor.avatar_url || MENTOR_IMAGES[mentor.name] || ''}
-                                            index={index}
-                                            keywords={mentor.expertise}
-                                        />
-                                    </Link>
-                                ))
-                                : fallbackMentors.map((m, index) => (
-                                    <Link key={m.id} href={`/chat/${m.id}`} aria-label={`${m.name} 멘토와 대화하기`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                                        <MentorCard
-                                            key={m.id} name={m.name} title={m.title}
-                                            description={m.desc} questions={m.questions}
-                                            imageSrc={MENTOR_IMAGES[m.name] || '/mentors/passion-jin.png'}
-                                            index={index}
-                                        />
-                                    </Link>
-                                ))}
-                        </div>
-                    </section>
-                </main>
+                {/* ─── 관심사 탭 + 멘토 목록 ─── */}
+                <MentorBoard
+                    mentors={(mentors.length > 0
+                        ? mentors.map((m: MentorCardData) => ({
+                            id: m.id,
+                            name: m.name,
+                            title: m.title || m.description || '',
+                            image: m.avatar_url || MENTOR_IMAGES[m.name] || null,
+                            expertise: m.expertise || [],
+                        }))
+                        : fallbackMentors.map((m) => ({
+                            id: m.id,
+                            name: m.name,
+                            title: m.title || m.desc || '',
+                            image: MENTOR_IMAGES[m.name] || '/mentors/passion-jin.png',
+                            expertise: [],
+                        }))
+                    )}
+                />
 
                 {/* ─── Footer ─── */}
                 <footer className="mentors-footer" style={{

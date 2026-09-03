@@ -1,9 +1,42 @@
 @import "tailwindcss";
 
 /* ============================================
-   큐리 AI — Design System
-   아정당 스타일 + 큐리어스 연두색 (#22c55e)
+   큐리 AI — 디자인 토대 (2026-09-04 전면 개편)
+
+   보는 사람이 중장년이다. 큰 글씨·큰 손가락 자리·높은 대비는
+   취향이 아니라 기능이다. 색은 여기 한 곳에만 적는다.
+   화면 파일에 색을 손으로 박지 않는다.
    ============================================ */
+
+:root {
+    /* 색 — 6개로 끝낸다 */
+    --먹      : #111813;   /* 글씨. 검정이지만 초록빛이 도는 중성 */
+    --먹연    : #5C6660;   /* 부제·설명 */
+    --연두    : #22c55e;   /* 브랜드. 버튼·강조 */
+    --진초록  : #0B4A2A;   /* 히로 색면. 흰 글씨를 얹는다 */
+    --형광    : #D8F94A;   /* 카테고리 탭. 연두와 채도가 달라 붙어도 안 섞인다 */
+    --종이    : #F6F7F4;   /* 배경 */
+    --흰      : #FFFFFF;
+
+    /* 글자 — 중장년 기준으로 한 단 크게 */
+    --글자-초대 : clamp(34px, 9vw, 56px);  /* 히로 */
+    --글자-대   : clamp(22px, 5.5vw, 30px);
+    --글자-중   : 18px;
+    --글자-본문 : 17px;                     /* 16 아니라 17 */
+    --글자-작   : 15px;                     /* 그 아래는 쓰지 않는다 */
+
+    /* 간격·모양 */
+    --틈-소 : 8px;
+    --틈    : 16px;
+    --틈-대 : 28px;
+    --틈-절 : 48px;
+    --둥근-소 : 12px;
+    --둥근   : 20px;
+    --둥근-대 : 28px;
+    --손가락 : 52px;        /* 누를 수 있는 것의 최소 높이 */
+    --그림자 : 0 2px 10px rgba(17, 24, 19, 0.06);
+    --그림자-대 : 0 8px 28px rgba(17, 24, 19, 0.10);
+}
 
 * {
   box-sizing: border-box;
@@ -14,19 +47,36 @@
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 body {
-  background-color: #f8f9fa;
-  color: #1a1a2e;
-  line-height: 1.7;
+  background-color: var(--종이);
+  color: var(--먹);
+  line-height: 1.65;
   min-height: 100dvh;
+}
+
+/* 누를 수 있는 것은 손가락 크기를 지킨다 */
+button, a[role="button"] {
+  min-height: var(--손가락);
 }
 
 ::selection {
   background-color: #dcfce7;
-  color: #14532d;
+  color: var(--진초록);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+:focus-visible {
+  outline: 3px solid var(--연두);
+  outline-offset: 2px;
 }
 
 ::-webkit-scrollbar {
