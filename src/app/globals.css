@@ -353,9 +353,17 @@ button, a[role="button"] {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-@media (min-width: 760px) {
+/* 옆 메뉴가 240px 을 먹어서, 4열은 화면이 충분히 넓을 때만 켠다.
+   좁은 화면에서 4열을 밀어붙이면 카드가 눌려 글자가 3줄로 쪼개진다. */
+@media (min-width: 820px) {
+  .mentor-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--틈-대);
+  }
+}
+
+@media (min-width: 1180px) {
   .mentor-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--틈-대);
   }
 }
