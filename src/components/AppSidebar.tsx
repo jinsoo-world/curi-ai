@@ -529,6 +529,7 @@ export default function AppSidebar() {
                         textDecoration: 'none',
                         position: 'relative',
                     }}
+                    aria-label="카카오 오픈채팅 커뮤니티 열기"
                     title="커뮤니티"
                     onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.2)' }}
                     onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.15)' }}
@@ -539,28 +540,6 @@ export default function AppSidebar() {
                     </svg>
                 </a>
 
-                {/* AI 만들기 (+) */}
-                <Link
-                    href="/creator/create"
-                    style={{
-                        width: 50, height: 50,
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 4px 14px rgba(34,197,94,0.35)',
-                        cursor: 'pointer',
-                        transition: 'transform 150ms, box-shadow 150ms',
-                        textDecoration: 'none',
-                    }}
-                    title="AI 만들기"
-                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(34,197,94,0.45)' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(34,197,94,0.35)' }}
-                >
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                </Link>
             </div>
 
             {/* CSS for responsive sidebar/mobile-nav */}
