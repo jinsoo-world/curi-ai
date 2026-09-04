@@ -12,7 +12,7 @@ export function MembershipBanner() {
     return (
         <>
             <div style={{
-                background: 'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)',
+                background: 'var(--형광)',
                 padding: '12px 16px',
                 display: 'flex',
                 alignItems: 'center',
@@ -28,7 +28,7 @@ export function MembershipBanner() {
                         gap: 8,
                         background: 'none',
                         border: 'none',
-                        color: '#fff',
+                        color: 'var(--진초록)',
                         fontSize: 16,
                         fontWeight: 600,
                         cursor: 'pointer',
@@ -52,7 +52,7 @@ export function MembershipBanner() {
                         transform: 'translateY(-50%)',
                         background: 'none',
                         border: 'none',
-                        color: 'rgba(255,255,255,0.7)',
+                        color: 'rgba(11,74,42,0.55)',
                         fontSize: 18,
                         cursor: 'pointer',
                         padding: 4,

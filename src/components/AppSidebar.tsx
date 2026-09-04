@@ -421,7 +421,7 @@ export default function AppSidebar() {
                         ),
                     },
                     {
-                        label: 'AI 제작',
+                        label: '내 AI',
                         href: '/creator/manage',
                         icon: (active: boolean) => (
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -504,7 +504,7 @@ export default function AppSidebar() {
                 className="floating-action-btns"
                 style={{
                     position: 'fixed',
-                    right: 20,
+                    right: 16,
                     bottom: 24,
                     zIndex: 50,
                     display: 'flex',
@@ -573,6 +573,11 @@ export default function AppSidebar() {
                 @media (max-width: 768px) {
                     .app-sidebar { display: none !important; }
                     .app-mobile-nav { display: flex !important; }
+                    /* 하단 메뉴가 보이는 화면에서는 떠 있는 단추를 그 위로 올린다.
+                       전에는 bottom:24 로 메뉴·본문 위에 겹쳐 버튼을 가렸다. */
+                    .floating-action-btns {
+                        bottom: calc(72px + max(8px, env(safe-area-inset-bottom))) !important;
+                    }
                     .app-mobile-header { display: flex !important; }
                     .floating-action-btns { bottom: 130px !important; right: 14px !important; }
                 }
