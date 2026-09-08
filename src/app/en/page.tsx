@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import SetHtmlLang from './SetHtmlLang'
 
 // 해외 방문자가 처음 만나는 유일한 영어 화면이다.
 // 서비스 화면은 아직 한국어 전용이라, 여기서 무엇을 하는 곳인지만 정확히 알린다.
@@ -8,30 +9,42 @@ export const metadata: Metadata = {
     title: { absolute: 'Curi AI — Turn your experience into an AI that works for you' },
     description:
         'Build an AI from what you already know, share it with the people who need it, and earn from it. No coding required.',
+    // 한국어 짝은 루트(/)가 아니라 /login 이다. 루트는 307 리다이렉트라 짝이 될 수 없다.
     alternates: {
         canonical: '/en',
         languages: {
-            'ko-KR': '/',
-            en: '/en',
+            'ko-KR': '/login',
+            'en-US': '/en',
+            'x-default': '/en',
         },
     },
+    // ⚠️ openGraph·twitter 는 루트 것과 합쳐지지 않고 통째로 덮인다.
+    //    그래서 이미지·사이트명까지 여기서 다시 적는다. 안 적으면 공유 카드에서 사라진다.
     openGraph: {
         title: 'Curi AI — Turn your experience into an AI that works for you',
         description:
             'Build an AI from what you already know, share it, and earn from it. No coding required.',
-        url: 'https://www.curi-ai.com/en',
-        locale: 'en_US',
         type: 'website',
+        url: 'https://www.curi-ai.com/en',
+        siteName: 'Curi AI',
+        locale: 'en_US',
+        images: [
+            {
+                url: '/og-image.png',
+                width: 1200,
+                height: 630,
+                alt: 'Curi AI',
+            },
+        ],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Curi AI — Turn your experience into an AI that works for you',
+        description:
+            'Build an AI from what you already know, share it, and earn from it. No coding required.',
+        images: ['/og-image.png'],
     },
 }
-
-// 색은 globals.css 의 토큰과 같은 값을 쓴다(서버 컴포넌트라 var() 대신 값으로 적는다)
-const 진초록 = '#0B4A2A'
-const 연두 = '#22c55e'
-const 형광 = '#D8F94A'
-const 종이 = '#F6F7F4'
-const 먹 = '#111813'
-const 먹연 = '#5C6660'
 
 const steps = [
     {
@@ -53,15 +66,19 @@ const steps = [
 
 export default function EnglishLandingPage() {
     return (
-        <div lang="en" style={{ minHeight: '100dvh', background: 종이, color: 먹 }}>
+        <div
+            lang="en"
+            style={{ minHeight: '100dvh', background: 'var(--종이)', color: 'var(--먹)' }}
+        >
+            <SetHtmlLang lang="en" />
+
             <header
                 style={{
                     position: 'sticky',
                     top: 0,
                     zIndex: 50,
-                    background: 'rgba(246,247,244,0.95)',
-                    backdropFilter: 'blur(20px)',
-                    borderBottom: '1px solid #e7e9e4',
+                    background: 'var(--종이)',
+                    borderBottom: '1px solid var(--선)',
                 }}
             >
                 <div
@@ -75,54 +92,65 @@ export default function EnglishLandingPage() {
                         justifyContent: 'space-between',
                     }}
                 >
-                    <Link
-                        href="/en"
+                    <span
                         style={{
                             fontSize: 20,
                             fontWeight: 800,
                             letterSpacing: '-0.04em',
-                            color: 진초록,
-                            textDecoration: 'none',
+                            color: 'var(--진초록)',
                         }}
                     >
                         🤖 Curi AI
-                    </Link>
+                    </span>
                     <Link
-                        href="/"
-                        style={{ fontSize: 15, color: 먹연, textDecoration: 'none', fontWeight: 600 }}
+                        href="/login"
+                        lang="ko"
+                        hrefLang="ko"
+                        style={{
+                            fontSize: 'var(--글자-작)',
+                            color: 'var(--먹연)',
+                            textDecoration: 'none',
+                            fontWeight: 600,
+                        }}
                     >
                         한국어
                     </Link>
                 </div>
             </header>
 
-            <main style={{ maxWidth: 900, margin: '0 auto', padding: '0 clamp(16px, 4vw, 40px) 80px' }}>
+            <main
+                style={{
+                    maxWidth: 900,
+                    margin: '0 auto',
+                    padding: '0 clamp(16px, 4vw, 40px) var(--틈-절)',
+                }}
+            >
                 <section
                     style={{
-                        background: 진초록,
-                        color: '#fff',
-                        borderRadius: 28,
+                        background: 'var(--진초록)',
+                        color: 'var(--흰)',
+                        borderRadius: 'var(--둥근-대)',
                         padding: 'clamp(32px, 7vw, 64px)',
-                        marginTop: 28,
+                        marginTop: 'var(--틈-대)',
                     }}
                 >
                     <span
                         style={{
                             display: 'inline-block',
-                            background: 형광,
-                            color: 진초록,
+                            background: 'var(--형광)',
+                            color: 'var(--진초록)',
                             fontSize: 14,
                             fontWeight: 700,
                             padding: '6px 14px',
                             borderRadius: 999,
-                            marginBottom: 20,
+                            marginBottom: 'var(--틈)',
                         }}
                     >
                         No coding required
                     </span>
                     <h1
                         style={{
-                            fontSize: 'clamp(34px, 9vw, 56px)',
+                            fontSize: 'var(--글자-초대)',
                             fontWeight: 800,
                             lineHeight: 1.15,
                             letterSpacing: '-0.03em',
@@ -135,10 +163,10 @@ export default function EnglishLandingPage() {
                     </h1>
                     <p
                         style={{
-                            fontSize: 17,
+                            fontSize: 'var(--글자-본문)',
                             lineHeight: 1.7,
-                            marginTop: 20,
-                            marginBottom: 32,
+                            marginTop: 'var(--틈)',
+                            marginBottom: 'var(--틈-대)',
                             color: 'rgba(255,255,255,0.86)',
                             maxWidth: 520,
                         }}
@@ -152,27 +180,29 @@ export default function EnglishLandingPage() {
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            minHeight: 52,
+                            minHeight: 'var(--손가락)',
                             padding: '0 28px',
-                            background: 연두,
-                            color: '#fff',
-                            fontSize: 17,
+                            background: 'var(--연두)',
+                            color: 'var(--흰)',
+                            fontSize: 'var(--글자-본문)',
                             fontWeight: 700,
                             borderRadius: 999,
                             textDecoration: 'none',
+                            // 초점 테두리색이 버튼 배경과 같은 연두라, 띄우지 않으면 키보드로 쓸 때 안 보인다
+                            outlineOffset: 3,
                         }}
                     >
                         Start for free
                     </Link>
                 </section>
 
-                <section style={{ marginTop: 48 }}>
+                <section style={{ marginTop: 'var(--틈-절)' }}>
                     <h2
                         style={{
-                            fontSize: 'clamp(22px, 5.5vw, 30px)',
+                            fontSize: 'var(--글자-대)',
                             fontWeight: 800,
                             letterSpacing: '-0.02em',
-                            marginBottom: 24,
+                            marginBottom: 'var(--틈-대)',
                         }}
                     >
                         How it works
@@ -180,7 +210,7 @@ export default function EnglishLandingPage() {
                     <div
                         style={{
                             display: 'grid',
-                            gap: 16,
+                            gap: 'var(--틈)',
                             gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
                         }}
                     >
@@ -188,10 +218,10 @@ export default function EnglishLandingPage() {
                             <div
                                 key={s.n}
                                 style={{
-                                    background: '#fff',
-                                    border: '1px solid #e7e9e4',
-                                    borderRadius: 20,
-                                    padding: 28,
+                                    background: 'var(--흰)',
+                                    border: '1px solid var(--선)',
+                                    borderRadius: 'var(--둥근)',
+                                    padding: 'var(--틈-대)',
                                 }}
                             >
                                 <div
@@ -199,21 +229,34 @@ export default function EnglishLandingPage() {
                                         width: 36,
                                         height: 36,
                                         borderRadius: 999,
-                                        background: 형광,
-                                        color: 진초록,
+                                        background: 'var(--형광)',
+                                        color: 'var(--진초록)',
                                         fontWeight: 800,
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        marginBottom: 16,
+                                        marginBottom: 'var(--틈)',
                                     }}
                                 >
                                     {s.n}
                                 </div>
-                                <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 8px' }}>
+                                <h3
+                                    style={{
+                                        fontSize: 'var(--글자-중)',
+                                        fontWeight: 700,
+                                        margin: '0 0 var(--틈-소)',
+                                    }}
+                                >
                                     {s.title}
                                 </h3>
-                                <p style={{ fontSize: 15, lineHeight: 1.7, color: 먹연, margin: 0 }}>
+                                <p
+                                    style={{
+                                        fontSize: 'var(--글자-작)',
+                                        lineHeight: 1.7,
+                                        color: 'var(--먹연)',
+                                        margin: 0,
+                                    }}
+                                >
                                     {s.body}
                                 </p>
                             </div>
@@ -223,22 +266,43 @@ export default function EnglishLandingPage() {
 
                 <section
                     style={{
-                        marginTop: 48,
-                        background: '#fff',
-                        border: '1px solid #e7e9e4',
-                        borderRadius: 20,
+                        marginTop: 'var(--틈-절)',
+                        background: 'var(--흰)',
+                        border: '1px solid var(--선)',
+                        borderRadius: 'var(--둥근)',
                         padding: 'clamp(24px, 5vw, 40px)',
                     }}
                 >
-                    <h2 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 12px' }}>
+                    <h2
+                        style={{
+                            fontSize: 'var(--글자-대)',
+                            fontWeight: 800,
+                            margin: '0 0 var(--틈-소)',
+                        }}
+                    >
                         Who this is for
                     </h2>
-                    <p style={{ fontSize: 16, lineHeight: 1.8, color: 먹연, margin: 0 }}>
+                    <p
+                        style={{
+                            fontSize: 'var(--글자-본문)',
+                            lineHeight: 1.8,
+                            color: 'var(--먹연)',
+                            margin: 0,
+                        }}
+                    >
                         People whose knowledge lives in their head rather than in a product. Coaches,
                         consultants, writers, teachers, and anyone who has answered the same question
                         a hundred times and wishes it could answer itself.
                     </p>
-                    <p style={{ fontSize: 15, lineHeight: 1.8, color: 먹연, marginTop: 16, marginBottom: 0 }}>
+                    <p
+                        style={{
+                            fontSize: 'var(--글자-작)',
+                            lineHeight: 1.8,
+                            color: 'var(--먹연)',
+                            marginTop: 'var(--틈)',
+                            marginBottom: 0,
+                        }}
+                    >
                         The service interface is currently in Korean. An English interface is on the
                         way. If you would like to be told when it opens, start with a free account.
                     </p>
@@ -247,23 +311,28 @@ export default function EnglishLandingPage() {
 
             <footer
                 style={{
-                    borderTop: '1px solid #e7e9e4',
-                    padding: '28px clamp(16px, 4vw, 40px) 48px',
+                    borderTop: '1px solid var(--선)',
+                    padding: 'var(--틈-대) clamp(16px, 4vw, 40px) var(--틈-절)',
                 }}
             >
-                <div style={{ maxWidth: 900, margin: '0 auto', fontSize: 13, color: 먹연 }}>
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                        <Link href="/terms" style={{ color: 먹연, textDecoration: 'none' }}>
+                <div
+                    style={{
+                        maxWidth: 900,
+                        margin: '0 auto',
+                        fontSize: 'var(--글자-작)',
+                        color: 'var(--먹연)',
+                    }}
+                >
+                    <div style={{ display: 'flex', gap: 'var(--틈-소)', marginBottom: 10, flexWrap: 'wrap' }}>
+                        <Link href="/terms" style={{ color: 'var(--먹연)', textDecoration: 'none' }}>
                             Terms
                         </Link>
-                        <span style={{ color: '#d1d5db' }}>|</span>
-                        <Link href="/privacy" style={{ color: 먹연, textDecoration: 'none' }}>
+                        <span aria-hidden="true">|</span>
+                        <Link href="/privacy" style={{ color: 'var(--먹연)', textDecoration: 'none' }}>
                             Privacy
                         </Link>
                     </div>
-                    <div style={{ color: '#9aa39d' }}>
-                        Mission-driven Inc. Seoul, Republic of Korea.
-                    </div>
+                    <div>Mission-driven Inc. Seoul, Republic of Korea.</div>
                 </div>
             </footer>
         </div>
