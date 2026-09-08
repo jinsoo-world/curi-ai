@@ -32,6 +32,9 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: SITE_URL,
+    // ⚠️ languages(hreflang)를 여기 두면 자식 화면 전부가 상속해
+    //    「/pricing 의 영어판은 /en」처럼 사실이 아닌 선언을 하게 된다.
+    //    그래서 짝을 이루는 두 화면(/login·/en)에만 각자 적는다.
   },
   openGraph: {
     title: '큐리AI — 나만의 AI를 만들고 수익화해보세요!',

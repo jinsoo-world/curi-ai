@@ -478,7 +478,7 @@ export default function LoginPage() {
                 {/* 정책 링크 */}
                 <div style={{
                     display: 'flex', gap: 4, marginTop: 14,
-                    fontSize: 12,
+                    fontSize: 12, flexWrap: 'wrap',
                 }}>
                     <Link href="/privacy" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
                         개인정보처리방침
@@ -486,6 +486,15 @@ export default function LoginPage() {
                     <span style={{ color: '#d1d5db' }}>ㅣ</span>
                     <Link href="/terms" style={{ color: '#6b7280', textDecoration: 'none' }}>
                         서비스이용약관
+                    </Link>
+                    <span aria-hidden="true" style={{ color: '#d1d5db' }}>ㅣ</span>
+                    <Link
+                        href="/en"
+                        lang="en"
+                        hrefLang="en"
+                        style={{ color: '#6b7280', textDecoration: 'none' }}
+                    >
+                        English
                     </Link>
                 </div>
 
