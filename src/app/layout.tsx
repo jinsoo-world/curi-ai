@@ -32,6 +32,11 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: SITE_URL,
+    // 해외 방문자용 영어 소개 화면. 검색엔진에 두 언어를 같이 알린다
+    languages: {
+      'ko-KR': SITE_URL,
+      en: `${SITE_URL}/en`,
+    },
   },
   openGraph: {
     title: '큐리AI — 나만의 AI를 만들고 수익화해보세요!',

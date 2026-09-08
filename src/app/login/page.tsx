@@ -487,6 +487,10 @@ export default function LoginPage() {
                     <Link href="/terms" style={{ color: '#6b7280', textDecoration: 'none' }}>
                         서비스이용약관
                     </Link>
+                    <span style={{ color: '#d1d5db' }}>ㅣ</span>
+                    <Link href="/en" style={{ color: '#6b7280', textDecoration: 'none' }}>
+                        English
+                    </Link>
                 </div>
 
                 {/* 카피라이트 */}
