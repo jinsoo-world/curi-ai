@@ -9,27 +9,17 @@ import { createClient } from '@/lib/supabase/client'
 import { CREATOR_PLANS } from '@/domains/subscription'
 import AppSidebar from '@/components/AppSidebar'
 
-type LeaderPlan = 'starter' | 'pro'
-
-/** 요금제별로 무엇을 주는지 (값은 CREATOR_PLANS 에서 온다) */
-const 혜택: Record<LeaderPlan, string[]> = {
-    starter: [
-        '내 AI 만들기 (개수 제한 없음)',
-        '수강생과 대화 무제한',
-        '사진 보고 답하기',
-        '내 AI 에 값을 매겨 판매',
-    ],
-    pro: [
-        '스타터의 모든 것',
-        '내 자료로 AI 가르치기 (강의안·FAQ·자막)',
-        '내 목소리로 답하기',
-        '대화량·이용자 순위 보기',
-    ],
-}
+/** 리더 플랜 하나에 들어 있는 것 (값은 CREATOR_PLANS 에서 온다) */
+const 혜택: string[] = [
+    '내 AI 만들기 (개수 제한 없음)',
+    '내 자료로 AI 가르치기 (강의안·FAQ·자막)',
+    '수강생과 대화 무제한 · 사진 보고 답하기',
+    '내 목소리로 답하기',
+    '내 AI 에 값을 매겨 판매 · 대화량 보기',
+]
 
 export default function CreatorPricingPage() {
     const router = useRouter()
-    const [selected, setSelected] = useState<LeaderPlan>('starter')
     const [userId, setUserId] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -56,7 +46,7 @@ export default function CreatorPricingPage() {
 
             await payment.requestBillingAuth({
                 method: 'CARD',
-                successUrl: `${window.location.origin}/billing/success?planType=${selected}`,
+                successUrl: `${window.location.origin}/billing/success?planType=pro`,
                 failUrl: `${window.location.origin}/billing/fail`,
             })
         } catch (error) {
@@ -66,7 +56,7 @@ export default function CreatorPricingPage() {
         }
     }
 
-    const plan = CREATOR_PLANS[selected]
+    const plan = CREATOR_PLANS.pro
 
     return (
         <main style={{ minHeight: '100dvh', background: 'linear-gradient(180deg, #f0fdf4 0%, #ffffff 40%)' }}>
@@ -79,37 +69,22 @@ export default function CreatorPricingPage() {
                     나를 닮은 AI 를 만들어 두면, 내가 자는 동안에도 수강생 질문에 답합니다.
                 </p>
 
-                {/* 요금제 고르기 */}
-                <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-                    {(['starter', 'pro'] as const).map(type => (
-                        <button
-                            key={type}
-                            onClick={() => setSelected(type)}
-                            style={{
-                                flex: 1,
-                                padding: '16px 12px',
-                                borderRadius: 16,
-                                border: selected === type ? '2px solid #22c55e' : '1.5px solid #e4e4e7',
-                                background: selected === type ? '#f0fdf4' : '#fff',
-                                cursor: 'pointer',
-                                textAlign: 'left',
-                            }}
-                        >
-                            <div style={{ fontSize: 13, color: '#71717a', marginBottom: 4 }}>
-                                {CREATOR_PLANS[type].label.replace('크리에이터 ', '')}
-                            </div>
-                            <div style={{ fontSize: 20, fontWeight: 800, color: '#18181b' }}>
-                                ₩{CREATOR_PLANS[type].price.toLocaleString()}
-                                <span style={{ fontSize: 13, fontWeight: 500, color: '#71717a' }}> / 월</span>
-                            </div>
-                        </button>
-                    ))}
+                {/* 값 */}
+                <div style={{
+                    background: '#fff', border: '1.5px solid #bbf7d0', borderRadius: 18,
+                    padding: '22px 24px', marginBottom: 18, textAlign: 'center',
+                }}>
+                    <div style={{ fontSize: 13, color: '#71717a', marginBottom: 6 }}>{plan.label}</div>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: '#18181b' }}>
+                        ₩{plan.price.toLocaleString()}
+                        <span style={{ fontSize: 15, fontWeight: 500, color: '#71717a' }}> / 월</span>
+                    </div>
                 </div>
 
                 {/* 혜택 */}
                 <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '20px 22px', marginBottom: 22 }}>
-                    {혜택[selected].map((f, i) => (
-                        <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: i === 혜택[selected].length - 1 ? 0 : 12 }}>
+                    {혜택.map((f, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: i === 혜택.length - 1 ? 0 : 12 }}>
                             <span style={{ color: '#22c55e', fontWeight: 700, flexShrink: 0 }}>✓</span>
                             <span style={{ fontSize: 15, color: '#3f3f46', lineHeight: 1.6, wordBreak: 'keep-all' }}>{f}</span>
                         </div>

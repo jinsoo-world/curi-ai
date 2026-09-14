@@ -13,7 +13,7 @@ function BillingSuccessContent() {
     const [error, setError] = useState('')
     const [planType, setPlanType] = useState('')
     /** 리더(크리에이터) 요금제인지 — 안내 문구와 다음 화면이 달라진다 */
-    const isLeaderPlan = planType === 'starter' || planType === 'pro'
+    const isLeaderPlan = planType === 'pro'
 
     useEffect(() => {
         const processPayment = async () => {
@@ -116,7 +116,7 @@ function BillingSuccessContent() {
                         </h2>
                         <p style={{ fontSize: 15, color: '#6b7280', margin: '0 0 32px' }}>
                             {isLeaderPlan ? (
-                                <>{planType === 'pro' ? '프로' : '스타터'} 구독이 시작됐어요.<br />
+                                <>리더 플랜이 시작됐어요.<br />
                                 이제 내 AI 를 만들어 수강생에게 열어보세요!</>
                             ) : (
                                 <>{planType === 'annual' ? '연간' : '월간'} 구독이 활성화되었습니다.<br />

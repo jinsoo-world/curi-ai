@@ -1,10 +1,13 @@
 // domains/subscription — 타입 정의
 
 /** 우리가 파는 요금제 전부 */
-export type PlanType = 'monthly' | 'annual' | 'starter' | 'pro'
+export type PlanType = 'monthly' | 'annual' | 'pro'
 
-/** 리더(크리에이터)가 자기 AI 를 운영하려고 내는 요금제 */
-export const LEADER_PLAN_TYPES = ['starter', 'pro'] as const
+/** 리더(크리에이터)가 자기 AI 를 운영하려고 내는 요금제.
+ *  대표 확정 2026-09-14 = 하나만 둔다. 고를 게 둘이면 「뭐가 다르지」를 고민하느라
+ *  아무것도 안 고른다. 핵심 기능(내 자료로 AI 가르치기)을 뺀 싼 요금제는
+ *  반쪽이라 팔리지 않고, 넣으면 비싼 요금제가 의미가 없다. */
+export const LEADER_PLAN_TYPES = ['pro'] as const
 
 export interface Subscription {
     id: string
@@ -59,10 +62,9 @@ export const USER_PLANS: Record<'basic' | 'premium', PlanInfo> = {
     premium: { price: 19900, label: '프리미엄', periodDays: 30, discount: '무제한 대화' },
 }
 
-/** 크리에이터 AI 구독 플랜 */
-export const CREATOR_PLANS: Record<'starter' | 'pro', PlanInfo> = {
-    starter: { price: 9900, label: '크리에이터 스타터', periodDays: 30 },
-    pro: { price: 19900, label: '크리에이터 프로', periodDays: 30, discount: 'RAG + 보이스' },
+/** 리더 구독 — 하나뿐이다. 값을 바꾸려면 여기 숫자 하나만 고치면 된다. */
+export const CREATOR_PLANS: Record<'pro', PlanInfo> = {
+    pro: { price: 19900, label: '리더 플랜', periodDays: 30 },
 }
 
 /**
@@ -91,6 +93,5 @@ export const PLANS: Record<'monthly' | 'annual', PlanInfo> = {
 const ALL_PLANS: Record<PlanType, PlanInfo> = {
     monthly: PLANS.monthly,
     annual: PLANS.annual,
-    starter: CREATOR_PLANS.starter,
     pro: CREATOR_PLANS.pro,
 }
