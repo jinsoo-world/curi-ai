@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import CloverIcon from '@/components/ui/CloverIcon'
 
 /**
  * 🍀 CloverHunt — 네잎클로버 보물찾기 글로벌 컴포넌트
@@ -332,7 +333,7 @@ export default function CloverHunt() {
                                 zIndex: 1,
                             }}
                         >
-                            {isGolden ? '🌟' : '🍀'}
+                            <CloverIcon size={26} color={isGolden ? '#F2B705' : '#22c55e'} />
                         </div>
 
                         {(phase === 'appear' || phase === 'urgent') && (
@@ -351,7 +352,7 @@ export default function CloverHunt() {
                                 animation: phase === 'urgent' ? 'urgentBlink 0.4s ease-in-out infinite' : 'cloverHintPulse 1.5s ease-in-out infinite',
                                 border: isGolden ? '1px solid #fbbf24' : 'none',
                             }}>
-                                {isGolden ? '✨ 황금 클로버!' : phase === 'urgent' ? '⚡ 빨리 터치!' : '터치해서 클로버 GET'}
+                                {isGolden ? '황금 클로버' : phase === 'urgent' ? '빨리 누르세요' : '눌러서 클로버 받기'}
                             </div>
                         )}
 
@@ -369,7 +370,7 @@ export default function CloverHunt() {
                                     textShadow: isGolden ? '0 0 12px rgba(250,204,21,0.6)' : '0 2px 4px rgba(0,0,0,0.1)',
                                     whiteSpace: 'nowrap',
                                 }}>
-                                    {isGolden ? `🌟 +${earnedAmount} 잭팟!` : `+${earnedAmount} 🍀`}
+                                    {isGolden ? `+${earnedAmount} 황금 클로버` : `+${earnedAmount} 클로버`}
                                 </div>
                             </div>
                         )}
@@ -414,7 +415,7 @@ export default function CloverHunt() {
                             maxWidth: '90vw',
                         }}>
                             <span style={{ fontSize: 28 }}>
-                                {isGolden ? '🌟' : isAllClear ? '🎉' : '🍀'}
+                                <CloverIcon size={30} color={isGolden ? '#F2B705' : '#22c55e'} />
                             </span>
                             <div>
                                 <div>

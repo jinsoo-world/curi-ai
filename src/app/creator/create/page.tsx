@@ -631,7 +631,7 @@ export default function CreatorCreatePage() {
                                     boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
                                     animation: 'fadeIn 0.4s ease',
                                 }}>
-                                    <div style={{ fontSize: 56, marginBottom: 16 }}>🔐</div>
+                                    
                                     <h2 style={{
                                         fontSize: 22, fontWeight: 800, color: '#18181b',
                                         marginBottom: 8, letterSpacing: '-0.02em',

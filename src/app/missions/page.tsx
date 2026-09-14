@@ -328,7 +328,7 @@ export default function MissionsPage() {
                             border: '1px solid #f0f0f0',
                             animation: 'fadeIn 0.4s ease',
                         }}>
-                            <div style={{ fontSize: 56, marginBottom: 16 }}>🔐</div>
+                            
                             <h2 style={{ fontSize: 20, fontWeight: 700, color: '#18181b', marginBottom: 8 }}>
                                 로그인이 필요합니다
                             </h2>

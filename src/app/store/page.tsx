@@ -149,7 +149,7 @@ export default function CloverStorePage() {
                             animation: 'fadeIn 0.4s ease',
                             marginBottom: 24,
                         }}>
-                            <div style={{ fontSize: 48, marginBottom: 12 }}>🔐</div>
+                            
                             <h2 style={{ fontSize: 18, fontWeight: 700, color: '#18181b', marginBottom: 6 }}>
                                 로그인이 필요합니다
                             </h2>

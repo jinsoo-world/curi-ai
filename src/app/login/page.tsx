@@ -157,15 +157,14 @@ export default function LoginPage() {
                 textAlign: 'center',
                 animation: 'fadeIn 0.5s ease',
             }}>
-                <div style={{ fontSize: 28, marginBottom: 4 }}>🎁</div>
                 <div style={{
                     fontSize: 17, fontWeight: 800, color: '#15803d',
                     letterSpacing: '-0.02em',
                 }}>
-                    체험권 받은 날부터 7일 무료!
+                    체험권을 받은 날부터 7일 무료
                 </div>
                 <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
-                    나만의 AI를 만들고 대화해 보세요
+                    사진 한 장으로 내 프로필 사진을 만들어 보세요
                 </div>
             </div>
 
@@ -197,7 +196,7 @@ export default function LoginPage() {
                         큐리 AI
                     </h1>
                     <p style={{ fontSize: 15, color: '#9ca3af', lineHeight: 1.6 }}>
-                        나만의 AI를 만들어보세요
+                        사진 한 장으로 만드는 내 프로필 사진
                     </p>
                 </div>
 
