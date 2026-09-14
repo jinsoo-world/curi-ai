@@ -4,7 +4,7 @@
 // 무료·테스트 화면에만 쓴다. 유료·회원·결제 화면엔 절대 넣지 않는다.
 // layout.tsx 의 애드센스 스크립트(215줄 부근)는 여기서 건드리지 않는다. 그건 사이트 전체 1회 로딩용이고,
 // 이 컴포넌트는 "이 자리에 광고 하나 넣어라"라는 표시(ins 태그)만 만든다.
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 declare global {
     interface Window {
@@ -22,6 +22,13 @@ export default function AdSlot({ slot, className }: AdSlotProps) {
     // React 18/19 StrictMode(개발 모드)에서는 effect 가 두 번 돈다.
     // push 를 두 번 하면 애드센스가 콘솔에 에러를 찍으므로, ref 로 "이미 한 번 밀었다"를 기억해 두 번째는 건너뛴다.
     const 이미밀었음 = useRef(false)
+    const 상자 = useRef<HTMLDivElement>(null)
+    const insRef = useRef<HTMLModElement>(null)
+    // 🔴 기본은 "안 보임"이다. 광고가 실제로 채워진 게 확인될 때만 보여준다.
+    // 2026-09-15 실서비스에서 "광고" 글자만 떠 있던 사고의 교훈 —
+    // 심사 대기 중에는 구글이 ins 태그를 아예 안 건드려서 data-ad-status 가 붙지 않는다.
+    // 그래서 "안 뜨면 숨긴다"가 아니라 "뜬 걸 확인하면 보여준다"로 뒤집었다.
+    const [광고가채워짐, set광고가채워짐] = useState(false)
 
     useEffect(() => {
         if (이미밀었음.current) return
@@ -34,32 +41,50 @@ export default function AdSlot({ slot, className }: AdSlotProps) {
         }
     }, [])
 
+    // 구글이 ins 태그에 data-ad-status="filled" 를 붙이는 순간을 지켜본다.
+    // 붙으면 그때 상자를 보여준다. 끝내 안 붙으면 상자는 계속 안 보인다(= 지금 심사 대기 상태).
+    useEffect(() => {
+        const el = insRef.current
+        if (!el) return
+        const 확인 = () => {
+            if (el.getAttribute('data-ad-status') === 'filled') set광고가채워짐(true)
+        }
+        확인() // 이미 붙어 있을 수도 있으니 한 번 본다
+        const 감시 = new MutationObserver(확인)
+        감시.observe(el, { attributes: true, attributeFilter: ['data-ad-status'] })
+        return () => 감시.disconnect()
+    }, [])
+
     return (
-        <div className={`curi-ad-slot ${className ?? ''}`} style={{ width: '100%', textAlign: 'center' }}>
-            {/* "광고" 라벨 — 5060 고객이 우리 콘텐츠와 헷갈리지 않게. 작고 연한 회색으로 눈에 안 띄게 */}
-            <div style={{ fontSize: 11, color: '#a1a1aa', marginBottom: 4, textAlign: 'left' }}>광고</div>
+        <div
+            ref={상자}
+            className={`curi-ad-slot ${className ?? ''}`}
+            style={{ width: '100%', textAlign: 'center' }}
+        >
+            {/* "광고" 라벨 — 5060 고객이 우리 콘텐츠와 헷갈리지 않게. 작고 연한 회색으로 눈에 안 띄게.
+                광고가 진짜 떴을 때만 같이 보인다. */}
+            <div
+                style={{
+                    fontSize: 11,
+                    color: '#a1a1aa',
+                    marginBottom: 4,
+                    textAlign: 'left',
+                    display: 광고가채워짐 ? 'block' : 'none',
+                }}
+            >
+                광고
+            </div>
             <ins
+                ref={insRef}
                 className="adsbygoogle"
+                // ⚠️ 이 태그는 절대 숨기면 안 된다. 숨기면 구글이 여기에 광고를 영영 안 채운다.
+                // 광고가 없을 때는 스스로 높이 0이 되므로 빈 자리가 생기지 않는다(실측 확인).
                 style={{ display: 'block' }}
                 data-ad-client="ca-pub-2184886903448753"
                 data-ad-slot={slot}
                 data-ad-format="auto"
                 data-full-width-responsive="true"
             />
-            {/*
-              심사 대기 중이거나 채울 광고가 없으면 구글이 ins 태그에 data-ad-status="unfilled" 를 붙인다.
-              ⚠️ 이때 ins 만 접으면 "광고" 라벨 글자만 덩그러니 남는다(2026-09-15에 실제로 그럴 뻔했다).
-              그래서 ins 가 아니라 **라벨을 포함한 상자 전체**를 접는다.
-            */}
-            <style>{`
-                .curi-ad-slot:has(ins.adsbygoogle[data-ad-status="unfilled"]) {
-                    display: none !important;
-                }
-                /* :has() 를 모르는 낡은 브라우저 대비 — 최소한 빈 사각형은 안 남게 */
-                ins.adsbygoogle[data-ad-status="unfilled"] {
-                    display: none !important;
-                }
-            `}</style>
         </div>
     )
 }
