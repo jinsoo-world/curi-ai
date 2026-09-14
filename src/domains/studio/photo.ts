@@ -25,6 +25,9 @@ export interface Choice {
  *
  * 도구를 하나씩 늘리면 첫 화면이 열두 칸이 되고 중장년은 거기서 멈춘다.
  * 그래서 「사진 만들기」 하나로 묶고 안에서 쓰임새를 고르게 한다.
+ *
+ * ⛔ 「초상 사진」은 뺐다(대표 지시 0915 「너무 암울한 느낌인데. 그건 빼자」).
+ *    초상(初喪)이 장례를 뜻하는 말이기도 해서 중장년에게는 그쪽으로 먼저 읽힌다.
  */
 export interface Purpose {
     id: string
@@ -58,24 +61,30 @@ export const PURPOSES: Purpose[] = [
             'No tilt, no smile, no hair covering the eyebrows, no accessories.',
     },
     {
-        id: 'portrait',
-        label: '초상 사진',
-        desc: '작품처럼 남기는 인물 사진',
-        ratio: 'portrait23',
-        sample: '/samples/act-m1.webp',
-        prompt:
-            'A fine-art portrait: dramatic directional light with deep shadow falloff, dark muted background, ' +
-            'a quiet contemplative expression, the character of the face is the subject.',
-    },
-    {
-        id: 'memorial',
-        label: '기념 사진',
-        desc: '환갑·정년·기념일에 남기는 사진',
+        // 대표 지시 0915 「프로필 사진 하나 추가해. 강의 프로필 등」
+        // 큐리어스 리더가 강의를 열 때 쓰는 사진이다. 이력서용과 다른 점 =
+        // 「믿음직한가」가 아니라 「이 사람 강의를 듣고 싶은가」로 본다.
+        id: 'teach',
+        label: '강의·강사 프로필',
+        desc: '강의 소개·SNS 소개에 쓰는 사진',
         ratio: 'portrait45',
         sample: '/samples/act-w5.webp',
         prompt:
-            'A warm commemorative portrait for a milestone day: dignified but happy, a genuine soft smile, ' +
-            'clean bright background, gentle even light, the kind of photo a family would frame.',
+            'A friendly instructor profile photo for a course page: warm and inviting rather than formal, ' +
+            'a genuine open smile with real eye contact, relaxed shoulders, ' +
+            'bright clean background with soft even light, approachable and credible at the same time.',
+    },
+    {
+        // 이름을 「기념」에서 「축하할 날」로 바꿨다. 기념·추모가 붙어 읽히면
+        // 「초상 사진」과 같은 자리에 빠진다(대표 지적 0915).
+        id: 'celebrate',
+        label: '축하할 날',
+        desc: '환갑·정년·결혼기념일에 남기는 사진',
+        ratio: 'portrait45',
+        sample: '/samples/act-w5.webp',
+        prompt:
+            'A warm portrait for a happy milestone day: dignified and cheerful, a genuine relaxed smile, ' +
+            'clean bright background, gentle even light, the kind of photo a family would frame in the living room.',
     },
 ]
 
