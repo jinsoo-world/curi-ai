@@ -15,6 +15,8 @@ export const maxDuration = 60
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
 /** 사진 1장 최대 크기 */
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+/** 새 사진이 없을 때 거슬러 올라가 사진을 찾아볼 메시지 수 */
+const RECENT_IMAGE_LOOKBACK = 6
 
 /**
  * 우리 저장소의 대화 사진 주소가 맞는지 확인한다.
@@ -244,10 +246,27 @@ export async function POST(req: Request) {
         // 📷 사진 첨부 — 우리 저장소에 올려둔 사진을 읽어 Gemini 에 같이 넘긴다.
         // Gemini 는 주소만 줘서는 사진을 못 본다. 내용을 직접 실어 보내야 한다.
         const safeImageUrl = isOurChatImage(imageUrl) ? (imageUrl as string) : null
+
+        // 이번에 새로 보낸 사진이 없으면, 방금 전 대화에 붙은 사진을 한 번 더 보여준다.
+        // 사람은 사진을 보낸 뒤 "여기 왼쪽에 있는 거" 처럼 이어서 묻는다.
+        // 그때 AI 가 사진을 못 보면 아무 말이나 지어낸다.
+        // 대신 최근 몇 통 안의 사진 1장까지만 — 지난 사진을 매번 다시 실으면
+        // 응답이 느려지고 요금도 그만큼 더 나간다.
+        let sourceImageUrl = safeImageUrl
+        if (!sourceImageUrl) {
+            const recent = (messages as { imageUrl?: string }[]).slice(-RECENT_IMAGE_LOOKBACK)
+            for (let i = recent.length - 1; i >= 0; i--) {
+                if (isOurChatImage(recent[i]?.imageUrl)) {
+                    sourceImageUrl = recent[i].imageUrl as string
+                    break
+                }
+            }
+        }
+
         let attachedImage: { mimeType: string; data: string } | null = null
-        if (safeImageUrl) {
+        if (sourceImageUrl) {
             try {
-                const imgRes = await fetch(safeImageUrl, {
+                const imgRes = await fetch(sourceImageUrl, {
                     redirect: 'error',               // 우리 주소에서 딴 데로 튕기는 것 차단
                     signal: AbortSignal.timeout(10_000),
                 })

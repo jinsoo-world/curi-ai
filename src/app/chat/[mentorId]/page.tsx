@@ -478,7 +478,7 @@ export default function ChatPage() {
         try {
             const contextMessages = baseMessages
                 .slice(-MAX_CONTEXT_MESSAGES)
-                .map(m => ({ role: m.role, content: m.content }))
+                .map(m => ({ role: m.role, content: m.content, imageUrl: m.imageUrl }))
 
             const isGuest = !sessionId || sessionId.startsWith('guest-')
 
