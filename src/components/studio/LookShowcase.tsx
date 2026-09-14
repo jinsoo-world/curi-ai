@@ -90,8 +90,9 @@ export default function LookShowcase() {
                                 src={l.src}
                                 alt={`${l.label} 느낌 사진`}
                                 fill
-                                sizes="(max-width: 700px) 50vw, 260px"
-                    quality={90}
+                                sizes="(max-width: 700px) 50vw, 220px"
+                                quality={78}
+                                loading="lazy"
                                 style={{ objectFit: 'cover' }}
                             />
                             <span

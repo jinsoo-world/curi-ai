@@ -5,6 +5,7 @@ import Link from 'next/link'
 import AppSidebar from '@/components/AppSidebar'
 import { createClient } from '@/lib/supabase/client'
 import CreditClaimModal from '@/components/CreditClaimModal'
+import CloverIcon from '@/components/ui/CloverIcon'
 
 interface MissionItem {
     id: string
@@ -34,6 +35,16 @@ export default function MissionsPage() {
         profileUpdated: false,
         cloverHuntToday: 0,
     })
+    const [만든사진수, set만든사진수] = useState(0)
+    useEffect(() => {
+        void (async () => {
+            try {
+                const r = await fetch('/api/photos/list')
+                const d = await r.json()
+                set만든사진수((d.photos ?? []).length)
+            } catch {}
+        })()
+    }, [])
     const [copied, setCopied] = useState(false)
     const [showInviteModal, setShowInviteModal] = useState(false)
     const [referralCode, setReferralCode] = useState('')
@@ -100,9 +111,9 @@ export default function MissionsPage() {
         const amount = parseInt(params.get('amount') || '0')
         if (rewardType && amount > 0) {
             const labels: Record<string, string> = {
-                ai_create: '🤖 내 AI 만들기 완료!',
-                questions_10: '💬 10번 질문 미션 완료!',
-                profile_update: '🎁 무료 체험권 받기 완료!',
+                ai_create: '내 AI 만들기를 마쳤습니다',
+                questions_10: '10번 질문을 마쳤습니다',
+                profile_update: '무료 체험권을 받았습니다',
             }
             setTimeout(() => {
                 showCloverAnimation(amount, labels[rewardType] || '미션 완료!')
@@ -130,7 +141,7 @@ export default function MissionsPage() {
         if (sharing || missionStatus.sharesToday >= 3) return
 
         // 공유 창 열기
-        const shareText = '큐리 AI에서 나만의 AI를 만들어보세요! 🤖'
+        const shareText = '큐리 AI에서 사진 한 장으로 프로필 사진을 만들어보세요'
         const shareUrl = inviteLink
 
         try {
@@ -194,12 +205,25 @@ export default function MissionsPage() {
 
     const missions: MissionItem[] = [
         {
-            id: 'ask-10',
-            icon: '💬',
-            title: '10번 질문하기',
-            description: 'AI에게 10번 대화해보세요',
+            id: 'make-photo',
+            icon: '',
+            title: '사진 한 장 만들어보기',
+            description: '증명사진·강사 프로필·배우 프로필 중 아무거나',
             reward: 30,
-            rewardLabel: '🍀 +30',
+            rewardLabel: '+30',
+            progress: Math.min(1, 만든사진수),
+            goal: 1,
+            completed: 만든사진수 >= 1,
+            action: () => window.location.href = '/studio',
+            actionLabel: '만들러 가기',
+        },
+        {
+            id: 'ask-10',
+            icon: '',
+            title: '10번 질문하기',
+            description: 'AI에게 10번 물어보세요',
+            reward: 30,
+            rewardLabel: '+30',
             progress: missionStatus.questionsAsked,
             goal: 10,
             completed: missionStatus.questionsAsked >= 10,
@@ -208,11 +232,11 @@ export default function MissionsPage() {
         },
         {
             id: 'create-ai',
-            icon: '🤖',
+            icon: '',
             title: '내 AI 만들어보기',
             description: '1개당 25클로버 (최대 2개)',
             reward: 25,
-            rewardLabel: '🍀 +25/개',
+            rewardLabel: '+25/개',
             progress: missionStatus.aiCreated,
             goal: 2,
             completed: missionStatus.aiCreated >= 2,
@@ -221,11 +245,11 @@ export default function MissionsPage() {
         },
         {
             id: 'invite-friend',
-            icon: '🎉',
+            icon: '',
             title: '친구 초대하기',
-            description: '친구 1명이 가입하면 100클로버!',
+            description: '친구 1명이 가입하면 100클로버',
             reward: 100,
-            rewardLabel: '🍀 +100',
+            rewardLabel: '+100',
             progress: missionStatus.friendsInvited,
             goal: 1,
             completed: missionStatus.friendsInvited >= 1,
@@ -234,11 +258,11 @@ export default function MissionsPage() {
         },
         {
             id: 'profile-update',
-            icon: '🎁',
+            icon: '',
             title: '무료 체험권 받기',
             description: '간단한 정보 입력으로 무료 체험을 시작하세요',
             reward: 30,
-            rewardLabel: '🍀 +30',
+            rewardLabel: '+30',
             progress: missionStatus.profileUpdated ? 1 : 0,
             goal: 1,
             completed: missionStatus.profileUpdated,
@@ -289,10 +313,10 @@ export default function MissionsPage() {
                             fontSize: 'var(--글자-대)', fontWeight: 900, color: 'var(--먹)',
                             letterSpacing: '-0.03em', margin: 0,
                         }}>
-                            🍀 클로버 모으기
+                            클로버 모으기
                         </h1>
                         <p style={{ fontSize: 'var(--글자-본문)', color: 'var(--먹연)', marginTop: 6 }}>
-                            아래를 하나씩 해내면 클로버가 쌓여요. 클로버로 대화를 계속할 수 있어요.
+                            아래를 하나씩 해내면 클로버가 쌓입니다. 클로버로 사진을 만들 수 있어요.
                         </p>
                     </div>
 
@@ -313,7 +337,7 @@ export default function MissionsPage() {
                             </p>
                             <Link href="/login" style={{
                                 display: 'inline-block', padding: '14px 32px', borderRadius: 14,
-                                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                background: '#1C2321',
                                 color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: 16,
                                 boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
                             }}>
@@ -341,14 +365,14 @@ export default function MissionsPage() {
                             {/* 클로버 잔고 */}
                             <div style={{
                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+                                background: '#F4F6F3',
                                 border: '1.5px solid #bbf7d0', borderRadius: 16,
                                 padding: '18px 24px', marginBottom: 20,
                             }}>
                                 <div>
                                     <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 500 }}>내 클로버</div>
                                     <div style={{ fontSize: 28, fontWeight: 800, color: '#15803d', letterSpacing: '-0.02em' }}>
-                                        🍀 {clovers.toLocaleString()}
+                                        {clovers.toLocaleString()}
                                     </div>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
@@ -361,7 +385,7 @@ export default function MissionsPage() {
 
                             {/* 🍀 오늘의 네잎클로버 카드 */}
                             <div style={{
-                                background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)',
+                                background: '#F4F6F3',
                                 borderRadius: 16,
                                 border: '1.5px solid #a7f3d0',
                                 padding: '20px 24px',
@@ -370,7 +394,7 @@ export default function MissionsPage() {
                             }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                        <span style={{ fontSize: 28 }}>🍀</span>
+                                        <CloverIcon size={28} />
                                         <div>
                                             <div style={{ fontSize: 16, fontWeight: 700, color: '#15803d' }}>오늘의 네잎클로버</div>
                                             <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>행운을 가져다주는 네잎클로버를 찾아보세요!</div>
@@ -391,13 +415,13 @@ export default function MissionsPage() {
                                 }}>
                                     <div style={{
                                         height: '100%', borderRadius: 4,
-                                        background: 'linear-gradient(90deg, #22c55e, #16a34a)',
+                                        background: '#22c55e',
                                         width: `${Math.min((missionStatus.cloverHuntToday / 3) * 100, 100)}%`,
                                         transition: 'width 0.5s ease',
                                     }} />
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11, color: '#9ca3af' }}>
-                                    <span>발견당 🍀 +10 클로버</span>
+                                    <span>발견당 10클로버</span>
                                     <span>10분 체류 시 5개까지!</span>
                                 </div>
                             </div>
@@ -481,7 +505,7 @@ export default function MissionsPage() {
                                                     disabled={mission.id === 'share' && sharing}
                                                     style={{
                                                         padding: '8px 16px', borderRadius: 10, border: 'none',
-                                                        background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                                        background: '#1C2321',
                                                         color: '#fff', fontSize: 13, fontWeight: 600,
                                                         cursor: 'pointer', transition: 'transform 150ms', whiteSpace: 'nowrap',
                                                         opacity: (mission.id === 'share' && sharing) ? 0.6 : 1,
@@ -508,10 +532,10 @@ export default function MissionsPage() {
                                     animation: 'fadeIn 0.5s ease',
                                 }}>
                                     <div style={{ fontSize: 14, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>
-                                        🎉 {missionStatus.friendsInvited}명의 친구가 새로 가입했어요!
+                                        친구 {missionStatus.friendsInvited}명이 새로 가입했습니다
                                     </div>
                                     <div style={{ fontSize: 13, color: '#a16207' }}>
-                                        🍀 {missionStatus.friendClovers}클로버가 적립되었어요
+                                        {missionStatus.friendClovers}클로버가 쌓였습니다
                                     </div>
                                 </div>
                             )}
@@ -527,7 +551,7 @@ export default function MissionsPage() {
                                 </h3>
                                 {creditHistory.length === 0 ? (
                                     <div style={{ textAlign: 'center', padding: '20px 0', color: '#9ca3af', fontSize: 14 }}>
-                                        아직 이력이 없어요. 미션을 완료하면 클로버가 적립돼요! 🍀
+                                        아직 이력이 없습니다. 하나씩 해내면 여기에 쌓입니다.
                                     </div>
                                 ) : (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -536,14 +560,14 @@ export default function MissionsPage() {
                                             const date = new Date(credit.created_at)
                                             const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
                                             const typeLabels: Record<string, string> = {
-                                                welcome_bonus: '🎉 웰컴 보너스',
-                                                mission_create_ai: '🤖 AI 만들기 미션',
-                                                mission_create_ai_1: '🤖 AI 1개 만들기',
-                                                mission_create_ai_2: '🤖 AI 2개 만들기',
-                                                mission_ask_10: '💬 10번 질문 미션',
-                                                mission_invite: '🎉 친구 초대 미션',
+                                                welcome_bonus: '가입 선물',
+                                                mission_create_ai: 'AI 만들기',
+                                                mission_create_ai_1: 'AI 1개 만들기',
+                                                mission_create_ai_2: 'AI 2개 만들기',
+                                                mission_ask_10: '10번 질문하기',
+                                                mission_invite: '친구 초대',
                                                 mission_share: '📤 공유 미션',
-                                                mission_profile_update: '🎁 무료 체험권 받기',
+                                                mission_profile_update: '무료 체험권 받기',
                                                 purchase: '💳 충전',
                                                 usage: '🛒 사용',
                                                 refund: '↩️ 환불',
@@ -569,7 +593,7 @@ export default function MissionsPage() {
                                                         fontSize: 15, fontWeight: 700,
                                                         color: isEarned ? '#16a34a' : '#ef4444',
                                                     }}>
-                                                        {isEarned ? '+' : ''}{credit.amount} 🍀
+                                                        {isEarned ? '+' : ''}{credit.amount}
                                                     </div>
                                                 </div>
                                             )
@@ -581,12 +605,12 @@ export default function MissionsPage() {
                                     <Link href="/store" style={{
                                         flex: 1, textAlign: 'center',
                                         padding: '12px 14px',
-                                        background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                        background: '#1C2321',
                                         borderRadius: 10, fontSize: 14, fontWeight: 600,
                                         color: '#fff', textDecoration: 'none',
                                         boxShadow: '0 2px 8px rgba(34,197,94,0.3)',
                                     }}>
-                                        🎁 클로버 스토어 바로가기
+                                        클로버 스토어 바로가기
                                     </Link>
                                 </div>
                             </div>
@@ -605,7 +629,7 @@ export default function MissionsPage() {
                     animation: 'fadeIn 0.3s ease',
                 }}>
                     <div style={{
-                        background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+                        background: '#F4F6F3',
                         borderRadius: 28,
                         padding: '48px 56px',
                         textAlign: 'center',
@@ -619,7 +643,7 @@ export default function MissionsPage() {
                             filter: 'drop-shadow(0 4px 20px rgba(34,197,94,0.5))',
                             marginBottom: 12,
                         }}>
-                            🍀
+                            <CloverIcon size={40} />
                         </div>
                         <div style={{
                             fontSize: 36, fontWeight: 900,
@@ -663,14 +687,14 @@ export default function MissionsPage() {
                             공유 완료!
                         </h3>
                         <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, marginBottom: 24 }}>
-                            친구가 링크를 통해 가입하면<br />🍀 <strong>100 클로버</strong>가 자동으로 적립돼요!
+                            친구가 이 링크로 가입하면 <strong>100클로버</strong>가 쌓입니다
                         </p>
                         <button
                             onClick={() => setShowShareConfirm(false)}
                             style={{
                                 width: '100%', padding: '14px', borderRadius: 12,
                                 border: 'none',
-                                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                background: '#1C2321',
                                 fontSize: 14, fontWeight: 600, color: '#fff',
                                 cursor: 'pointer',
                                 boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
@@ -707,13 +731,13 @@ export default function MissionsPage() {
                         >
                             ✕
                         </button>
-                        <div style={{ fontSize: 48, marginBottom: 12 }}>🎉</div>
+                        <div style={{ marginBottom: 12 }}><CloverIcon size={44} /></div>
                         <h3 style={{ fontSize: 20, fontWeight: 700, color: '#18181b', marginBottom: 6 }}>
                             친구 초대하기
                         </h3>
                         <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, marginBottom: 20 }}>
                             아래 링크를 친구에게 공유하면<br />
-                            친구가 가입할 때 🍀 <strong>100 클로버</strong>를 받아요!
+                            친구가 가입하면 <strong>100클로버</strong>를 받습니다
                         </p>
 
                         {/* 초대 링크 */}
@@ -775,7 +799,7 @@ export default function MissionsPage() {
                                             objectType: 'feed' as const,
                                             content: {
                                                 title: '큐리 AI - 나만의 AI를 만들어보세요!',
-                                                description: '24시간 대화하고, 나만의 AI도 직접 만들 수 있어요 🤖✨',
+                                                description: '사진 한 장으로 증명사진·프로필 사진을 만들 수 있어요',
                                                 imageUrl: 'https://www.curi-ai.com/og-image.png',
                                                 link: { mobileWebUrl: inviteLink, webUrl: inviteLink },
                                             },
@@ -839,7 +863,7 @@ export default function MissionsPage() {
                             카카오톡으로 공유하기
                         </button>
                         <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 0' }}>
-                            공유하면 🍀 10클로버를 받아요!
+                            공유하면 10클로버를 받습니다
                         </p>                        {/* 초대 현황 */}
                         {missionStatus.friendsInvited > 0 && (
                             <div style={{
@@ -848,10 +872,10 @@ export default function MissionsPage() {
                                 border: '1px solid #bbf7d0',
                             }}>
                                 <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d' }}>
-                                    🎉 {missionStatus.friendsInvited}명의 친구가 가입했어요!
+                                    친구 {missionStatus.friendsInvited}명이 가입했습니다
                                 </div>
                                 <div style={{ fontSize: 12, color: '#16a34a', marginTop: 2 }}>
-                                    🍀 총 {missionStatus.friendClovers}클로버 적립됨
+                                    모두 {missionStatus.friendClovers}클로버
                                 </div>
                             </div>
                         )}
@@ -866,7 +890,7 @@ export default function MissionsPage() {
                 onComplete={() => {
                     setShowTrialModal(false)
                     setMissionStatus(prev => ({ ...prev, profileUpdated: true }))
-                    showCloverAnimation(30, '🎁 무료 체험권 받기 완료!')
+                    showCloverAnimation(30, '무료 체험권을 받았습니다')
                     // 클로버 적립 API 호출
                     fetch('/api/missions/profile-update', { method: 'POST' })
                         .then(res => res.json())

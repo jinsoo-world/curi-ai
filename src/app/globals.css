@@ -531,10 +531,10 @@ button, a[role="button"] {
   cursor: default;
 }
 .app-top-sheet {
-  position: absolute;
+  position: fixed;
   right: 16px;
   top: 74px;
-  z-index: 60;
+  z-index: 120;
   width: 232px;
   background: #fff;
   border: 1px solid var(--선);

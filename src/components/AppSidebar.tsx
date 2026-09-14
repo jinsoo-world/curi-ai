@@ -116,7 +116,9 @@ export default function AppSidebar() {
                     />
                     <div className="app-top-sheet" role="menu" onClick={() => set열림(false)}>
                         <div className="app-top-sheet-head">
-                            <span className="app-top-sheet-name">{이름 ?? '내 계정'}</span>
+                            <Link href="/profile" className="app-top-sheet-name" style={{ textDecoration: 'none', color: 'inherit' }}>
+                                {이름 ?? '내 계정'}
+                            </Link>
                             <Link href="/charge" className="app-top-sheet-credit">
                                 <CloverIcon size={15} />
                                 {잔액 === null ? '–' : 잔액.toLocaleString()}개
@@ -154,6 +156,7 @@ export default function AppSidebar() {
 
                         <Link href="/charge" className="app-top-sheet-item">클로버 충전</Link>
                         <Link href="/invite" className="app-top-sheet-item">친구초대</Link>
+                        <Link href="/photos" className="app-top-sheet-item">내가 만든 사진</Link>
                         <Link href="/missions" className="app-top-sheet-item">무료로 모으기</Link>
                         <Link href="/profile" className="app-top-sheet-item">마이페이지</Link>
                         <div className="app-top-sheet-line" />

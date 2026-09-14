@@ -75,7 +75,12 @@ export function buildIdPhotoPrompt(bg: IdChoice, outfit: IdChoice, size: IdSize,
             ? 'Passport composition: the head takes about 70 to 80 percent of the frame height, with even space above the hair.'
             : 'Standard ID composition: the head is centred with comfortable headroom, shoulders squared to the camera.',
         'MUST: straight-on frontal view, head upright and not tilted, both ears visible, eyes open and looking directly at the lens,',
-        'a neutral closed-lip expression, hair away from the eyebrows and eyes, flat even lighting with no harsh shadow on the face.',
+        // 대표 지적 2026-09-15 = 「증명사진이 다 표정이 좀 어두워보여. 무서워」
+        // 관공서 규격은 이를 드러낸 웃음을 반려한다. 그래서 「무표정」이 아니라
+        // 「입은 다물되 편안하고 다정한 얼굴」로 적는다. 규격도 지키고 무섭지도 않다.
+        'a warm and approachable expression with the lips gently closed — the corners of the mouth lifted just slightly and the eyes soft and kind.',
+        'The person must look pleasant and at ease, NOT stern, NOT grim, NOT sad, NOT like a mugshot.',
+        'Hair away from the eyebrows and eyes, flat even lighting with no harsh shadow on the face.',
         'MUST NOT: smiling with teeth, head tilt, hat, sunglasses, coloured lenses, hair covering the eyes, background shadow, filters.',
         'Keep natural skin texture — visible pores and fine lines. Do not smooth or beautify the face.',
         'Shot with even studio lighting on a full-frame camera. It must look like a real photo taken in a photo studio.',
