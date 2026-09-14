@@ -12,11 +12,14 @@ import ToolHero from '@/components/studio/ToolHero'
 import KeepNotice from '@/components/studio/KeepNotice'
 import ShareTool from '@/components/studio/ShareTool'
 import AdSlot from '@/components/AdSlot'
+import { 센다 } from '@/lib/track'
+import { 브라우저표식 } from '@/lib/browser-mark'
+import { use기억 } from '@/components/studio/use기억'
 
 export default function ThumbnailPage() {
     const router = useRouter()
-    const [placeId, setPlaceId] = useState(THUMB_PLACES[0].id)
-    const [lookId, setLookId] = useState<string | null>(null)
+    const [placeId, setPlaceId] = use기억<string>('thumb-place', THUMB_PLACES[0].id)
+    const [lookId, setLookId] = use기억<string | null>('thumb-look', null)
     const [제목, set제목] = useState('')
     const [부제, set부제] = useState('')
     const [result, setResult] = useState<string | null>(null)
@@ -30,11 +33,12 @@ export default function ThumbnailPage() {
     const make = async () => {
         if (!lookId || !제목.trim()) return
         setLoading(true); setErrorMsg(null); setNeedCharge(false); setResult(null)
+        센다('photo_make_click', { tool: 'thumbnail' })
         try {
             const res = await fetch('/api/tools/thumbnail', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ placeId, lookId, title: 제목, subtitle: 부제 }),
+                body: JSON.stringify({ placeId, lookId, title: 제목, subtitle: 부제, 표식: 브라우저표식() }),
             })
             const data = await res.json()
             if (!res.ok) {
@@ -44,7 +48,9 @@ export default function ThumbnailPage() {
             set미리보기(!!data.preview)
             set글자(data.text ?? null)
             set완성본(null)
-            setResult(`data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
+            setResult(data.url ?? `data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
+            if (data.claimToken) { try { sessionStorage.setItem('curi_claim', data.claimToken) } catch {} }
+            센다(data.preview ? 'photo_login_prompt' : 'photo_make_success', { tool: 'thumbnail' })
         } catch (e) {
             setErrorMsg(e instanceof Error ? e.message : '썸네일을 만들지 못했어요.')
         } finally {
@@ -119,7 +125,7 @@ export default function ThumbnailPage() {
                         <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 15, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
                             {errorMsg}
                             {needCharge && (
-                                <button onClick={() => router.push('/charge')} style={{
+                                <button onClick={() => router.push(`/charge?back=${encodeURIComponent(window.location.pathname)}`)} style={{
                                     display: 'block', marginTop: 10, background: '#dc2626', color: '#fff', border: 'none',
                                     borderRadius: 10, padding: '9px 16px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
                                 }}>충전하러 가기</button>

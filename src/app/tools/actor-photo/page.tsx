@@ -20,6 +20,9 @@ import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
 import KeepNotice from '@/components/studio/KeepNotice'
 import ShareTool from '@/components/studio/ShareTool'
 import AdSlot from '@/components/AdSlot'
+import { 센다 } from '@/lib/track'
+import { 브라우저표식 } from '@/lib/browser-mark'
+import { use기억 } from '@/components/studio/use기억'
 
 function ActorPhotoPage안쪽() {
     const router = useRouter()
@@ -28,10 +31,10 @@ function ActorPhotoPage안쪽() {
     const [base64, setBase64] = useState<string | null>(null)
     const [mimeType, setMimeType] = useState('image/jpeg')
     const [modelId, setModelId] = useState(DEFAULT_MODEL_ID)
-    const [ratioId, setRatioId] = useState(DEFAULT_RATIO_ID)
-    const [ageId, setAgeId] = useState(DEFAULT_AGE_ID)
-    const [styleId, setStyleId] = useState<string | null>(null)
-    const [backdropId, setBackdropId] = useState<string | null>(null)
+    const [ratioId, setRatioId] = use기억<string>('actor-ratio', DEFAULT_RATIO_ID)
+    const [ageId, setAgeId] = use기억<string>('age', DEFAULT_AGE_ID)
+    const [styleId, setStyleId] = use기억<string | null>('actor-style', null)
+    const [backdropId, setBackdropId] = use기억<string | null>('actor-bg', null)
     const [result, setResult] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -65,11 +68,12 @@ function ActorPhotoPage안쪽() {
     const make = async () => {
         if (!base64 || !styleId || !backdropId) return
         setLoading(true); setErrorMsg(null); setNeedCharge(false); setResult(null)
+        센다('photo_make_click', { tool: 'actor-photo' })
         try {
             const res = await fetch('/api/tools/profile-photo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64: base64, mimeType, styleId, backdropId, modelId, ratioId, ageId, kind: 'actor' }),
+                body: JSON.stringify({ imageBase64: base64, mimeType, styleId, backdropId, modelId, ratioId, ageId, kind: 'actor', 표식: 브라우저표식() }),
             })
             const data = await res.json()
             if (!res.ok) {
@@ -77,9 +81,12 @@ function ActorPhotoPage안쪽() {
                 throw new Error(data.error || '사진을 만들지 못했어요. 얼굴이 크고 밝게 나온 사진으로 다시 해보세요.')
             }
             set미리보기(!!data.preview)
-            setResult(`data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
+            setResult(data.url ?? `data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
+            if (data.claimToken) { try { sessionStorage.setItem('curi_claim', data.claimToken) } catch {} }
+            센다(data.preview ? 'photo_login_prompt' : 'photo_make_success', { tool: 'actor-photo' })
         } catch (e) {
             setErrorMsg(e instanceof Error ? e.message : '사진을 만들지 못했어요. 얼굴이 크고 밝게 나온 사진으로 다시 해보세요.')
+            센다('photo_make_fail', { tool: 'actor-photo' })
         } finally {
             setLoading(false)
         }
@@ -234,7 +241,7 @@ function ActorPhotoPage안쪽() {
                     <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 15, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
                         {errorMsg}
                         {needCharge && (
-                            <button onClick={() => router.push('/charge')} style={{
+                            <button onClick={() => router.push(`/charge?back=${encodeURIComponent(window.location.pathname)}`)} style={{
                                 display: 'block', marginTop: 10, background: '#dc2626', color: '#fff',
                                 border: 'none', borderRadius: 10, padding: '9px 16px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
                             }}>충전하러 가기</button>

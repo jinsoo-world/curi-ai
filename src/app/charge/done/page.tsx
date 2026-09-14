@@ -76,20 +76,27 @@ function ChargeDoneInner() {
                             </p>
                         )}
                         <button
-                            onClick={() => router.push('/mentors')}
+                            onClick={() => {
+                                let 돌아갈곳 = '/mentors'
+                                try {
+                                    const b = sessionStorage.getItem('curi_back')
+                                    if (b && b.startsWith('/')) { 돌아갈곳 = b; sessionStorage.removeItem('curi_back') }
+                                } catch {}
+                                router.push(돌아갈곳)
+                            }}
                             style={{
                                 width: '100%', padding: '14px', borderRadius: 14, border: 'none',
                                 background: '#1C2321', color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer',
                             }}
                         >
-                            AI와 대화하러 가기
+                            이어서 만들러 가기
                         </button>
                     </>
                 )}
 
                 {state === 'fail' && (
                     <>
-                        <div style={{ fontSize: 40, marginBottom: 14 }}>😢</div>
+
                         <h2 style={{ fontSize: 20, fontWeight: 800, color: '#18181b', margin: '0 0 8px' }}>
                             충전하지 못했어요
                         </h2>

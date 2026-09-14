@@ -8,6 +8,7 @@ import sharp from 'sharp'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getEnhanceMode, isValidEnhanceMode, buildEnhancePrompt, ENHANCE_COST } from '@/domains/studio/enhance'
+import { 사진보관 } from '@/lib/photo-store'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
         const { data: { user } } = await supabase.auth.getUser()
         const 손님 = !user
 
-        const { imageBase64, mimeType, modeId } = await req.json()
+        const { imageBase64, mimeType, modeId, 표식: 받은표식 } = await req.json()
         if (typeof imageBase64 !== 'string' || imageBase64.length < 100) {
             return NextResponse.json({ error: '사진을 올려주세요.' }, { status: 400 })
         }
@@ -39,6 +40,8 @@ export async function POST(req: NextRequest) {
 
         const admin = createAdminClient()
         const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+            // 같은 와이파이의 다른 사람이 막히지 않게, 브라우저 표식도 같이 본다 (전수조사 26번)
+            const 표식 = typeof 받은표식 === 'string' && 받은표식.length > 8 ? 받은표식.slice(0, 64) : null
 
         let 잔액 = 0
         let 차감후 = 0
@@ -48,7 +51,7 @@ export async function POST(req: NextRequest) {
             const { count } = await admin
                 .from('guest_generations')
                 .select('id', { count: 'exact', head: true })
-                .eq('ip', ip)
+                .or(`ip.eq.${ip}${표식 ? `,fingerprint.eq.${표식}` : ''}`)
                 .gte('created_at', 하루전)
             if ((count ?? 0) >= 손님하루한도) {
                 return NextResponse.json(
@@ -56,18 +59,19 @@ export async function POST(req: NextRequest) {
                     { status: 429 },
                 )
             }
-            await admin.from('guest_generations').insert({ ip, kind: 'enhance' })
+            await admin.from('guest_generations').insert({ ip, fingerprint: 표식, kind: 'enhance' })
         } else {
-            const { data: row } = await admin.from('users').select('clovers').eq('id', user!.id).single()
-            잔액 = row?.clovers ?? 0
-            if (잔액 < ENHANCE_COST) {
+            const { data: 남은 } = await admin.rpc('클로버_차감', { 그사람: user!.id, 낼값: ENHANCE_COST })
+            if (남은 === null || 남은 < 0) {
+                const { data: now } = await admin.from('users').select('clovers').eq('id', user!.id).single()
+                잔액 = now?.clovers ?? 0
                 return NextResponse.json(
                     { error: `클로버가 ${ENHANCE_COST}개 필요해요. 지금 ${잔액}개 있습니다.`, needCharge: true },
                     { status: 402 },
                 )
             }
-            차감후 = 잔액 - ENHANCE_COST
-            await admin.from('users').update({ clovers: 차감후 }).eq('id', user!.id)
+            차감후 = 남은 as number
+            잔액 = 차감후 + ENHANCE_COST
             await admin.from('credit_transactions').insert({
                 user_id: user!.id,
                 amount: -ENHANCE_COST,
@@ -96,16 +100,19 @@ export async function POST(req: NextRequest) {
 
             const 원본64 = (imgPart as { inlineData: { data: string } }).inlineData.data
 
+            const 보관 = await 사진보관(원본64, 'enhance', 손님 ? null : user!.id)
+
             if (손님) {
                 return NextResponse.json({
                     success: true,
                     imageBase64: await 흐리게(원본64),
                     preview: true,
                     needLogin: true,
+                    claimToken: 보관?.claimToken ?? null,
                 })
             }
 
-            return NextResponse.json({ success: true, imageBase64: 원본64, preview: false, balance: 차감후 })
+            return NextResponse.json({ success: true, imageBase64: 보관?.url ? undefined : 원본64, url: 보관?.url ?? null, preview: false, balance: 차감후 })
         } catch (genErr) {
             if (!손님) {
                 await admin.from('users').update({ clovers: 잔액 }).eq('id', user!.id)

@@ -19,6 +19,7 @@ import CloverIcon from '@/components/ui/CloverIcon'
 import BeforeAfter from './BeforeAfter'
 import KeepNotice from '@/components/studio/KeepNotice'
 import ShareTool from '@/components/studio/ShareTool'
+import { 센다 } from '@/lib/track'
 
 export interface 견본 { src: string; label: string; /** 누르면 이 옵션이 골라진다 */ pick?: () => void }
 
@@ -181,7 +182,7 @@ export default function PhotoToolShell({
                             </div>
                         ) : (
                             <>
-                            <a href={result} download={downloadName} style={{
+                            <a href={result} download={downloadName} onClick={() => 센다('photo_download', { tool: share.path })} style={{
                                 display: 'block', marginTop: 12, padding: 14, borderRadius: 14,
                                 background: '#18181b', color: '#fff', fontSize: 15, fontWeight: 700,
                                 textAlign: 'center', textDecoration: 'none',

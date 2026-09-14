@@ -10,6 +10,9 @@ import { RATIOS, DEFAULT_RATIO_ID } from '@/domains/studio/ratios'
 import PhotoToolShell from '@/components/studio/PhotoToolShell'
 import AppSidebar from '@/components/AppSidebar'
 import AdSlot from '@/components/AdSlot'
+import { 센다 } from '@/lib/track'
+import { 브라우저표식 } from '@/lib/browser-mark'
+import { use기억 } from '@/components/studio/use기억'
 
 function TeacherPhotoPage안쪽() {
     const router = useRouter()
@@ -17,10 +20,10 @@ function TeacherPhotoPage안쪽() {
     const [preview, setPreview] = useState<string | null>(null)
     const [base64, setBase64] = useState<string | null>(null)
     const [mimeType, setMimeType] = useState('image/jpeg')
-    const [moodId, setMoodId] = useState<string | null>(null)
-    const [placeId, setPlaceId] = useState<string | null>(null)
-    const [ageId, setAgeId] = useState(DEFAULT_AGE_ID)
-    const [ratioId, setRatioId] = useState(DEFAULT_RATIO_ID)
+    const [moodId, setMoodId] = use기억<string | null>('teach-mood', null)
+    const [placeId, setPlaceId] = use기억<string | null>('teach-place', null)
+    const [ageId, setAgeId] = use기억<string>('age', DEFAULT_AGE_ID)
+    const [ratioId, setRatioId] = use기억<string>('teach-ratio', DEFAULT_RATIO_ID)
     const [result, setResult] = useState<string | null>(null)
     const [미리보기, set미리보기] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -38,11 +41,12 @@ function TeacherPhotoPage안쪽() {
     const make = async () => {
         if (!base64 || !moodId || !placeId) return
         setLoading(true); setErrorMsg(null); setNeedCharge(false); setResult(null)
+        센다('photo_make_click', { tool: 'teacher-photo' })
         try {
             const res = await fetch('/api/tools/profile-photo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64: base64, mimeType, styleId: moodId, backdropId: placeId, ratioId, ageId, kind: 'teacher' }),
+                body: JSON.stringify({ imageBase64: base64, mimeType, styleId: moodId, backdropId: placeId, ratioId, ageId, kind: 'teacher', 표식: 브라우저표식() }),
             })
             const data = await res.json()
             if (!res.ok) {
@@ -50,9 +54,12 @@ function TeacherPhotoPage안쪽() {
                 throw new Error(data.error || '사진을 만들지 못했어요. 얼굴이 크고 밝게 나온 사진으로 다시 해보세요.')
             }
             set미리보기(!!data.preview)
-            setResult(`data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
+            setResult(data.url ?? `data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
+            if (data.claimToken) { try { sessionStorage.setItem('curi_claim', data.claimToken) } catch {} }
+            센다(data.preview ? 'photo_login_prompt' : 'photo_make_success', { tool: 'teacher-photo' })
         } catch (e) {
             setErrorMsg(e instanceof Error ? e.message : '사진을 만들지 못했어요. 얼굴이 크고 밝게 나온 사진으로 다시 해보세요.')
+            센다('photo_make_fail', { tool: 'teacher-photo' })
         } finally {
             setLoading(false)
         }
@@ -87,7 +94,7 @@ function TeacherPhotoPage안쪽() {
                 onMake={make}
                 errorMsg={errorMsg}
                 needCharge={needCharge}
-                onCharge={() => router.push('/charge')}
+                onCharge={() => router.push(`/charge?back=${encodeURIComponent(window.location.pathname)}`)}
                 result={result}
                 isPreviewResult={미리보기}
                 onLogin={() => router.push('/login')}

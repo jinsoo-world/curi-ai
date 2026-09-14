@@ -13,6 +13,7 @@ import {
     getThumbPlace, getThumbLook, isValidThumbPlace, isValidThumbLook,
     buildThumbnailPrompt, cleanLine, THUMBNAIL_COST, MAX_TITLE, MAX_SUB,
 } from '@/domains/studio/thumbnail'
+import { 사진보관 } from '@/lib/photo-store'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
         const { data: { user } } = await supabase.auth.getUser()
         const 손님 = !user
 
-        const { placeId, lookId, title, subtitle } = await req.json()
+        const { placeId, lookId, title, subtitle, 표식: 받은표식 } = await req.json()
         if (!isValidThumbPlace(placeId) || !isValidThumbLook(lookId)) {
             return NextResponse.json({ error: '쓸 곳과 느낌을 골라주세요.' }, { status: 400 })
         }
@@ -40,6 +41,8 @@ export async function POST(req: NextRequest) {
 
         const admin = createAdminClient()
         const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+            // 같은 와이파이의 다른 사람이 막히지 않게, 브라우저 표식도 같이 본다 (전수조사 26번)
+            const 표식 = typeof 받은표식 === 'string' && 받은표식.length > 8 ? 받은표식.slice(0, 64) : null
 
         let 잔액 = 0
         let 차감후 = 0
@@ -49,7 +52,7 @@ export async function POST(req: NextRequest) {
             const { count } = await admin
                 .from('guest_generations')
                 .select('id', { count: 'exact', head: true })
-                .eq('ip', ip)
+                .or(`ip.eq.${ip}${표식 ? `,fingerprint.eq.${표식}` : ''}`)
                 .gte('created_at', 하루전)
             if ((count ?? 0) >= 손님하루한도) {
                 return NextResponse.json(
@@ -57,18 +60,19 @@ export async function POST(req: NextRequest) {
                     { status: 429 },
                 )
             }
-            await admin.from('guest_generations').insert({ ip, kind: 'thumbnail' })
+            await admin.from('guest_generations').insert({ ip, fingerprint: 표식, kind: 'thumbnail' })
         } else {
-            const { data: row } = await admin.from('users').select('clovers').eq('id', user!.id).single()
-            잔액 = row?.clovers ?? 0
-            if (잔액 < THUMBNAIL_COST) {
+            const { data: 남은 } = await admin.rpc('클로버_차감', { 그사람: user!.id, 낼값: THUMBNAIL_COST })
+            if (남은 === null || 남은 < 0) {
+                const { data: now } = await admin.from('users').select('clovers').eq('id', user!.id).single()
+                잔액 = now?.clovers ?? 0
                 return NextResponse.json(
                     { error: `클로버가 ${THUMBNAIL_COST}개 필요해요. 지금 ${잔액}개 있습니다.`, needCharge: true },
                     { status: 402 },
                 )
             }
-            차감후 = 잔액 - THUMBNAIL_COST
-            await admin.from('users').update({ clovers: 차감후 }).eq('id', user!.id)
+            차감후 = 남은 as number
+            잔액 = 차감후 + THUMBNAIL_COST
             await admin.from('credit_transactions').insert({
                 user_id: user!.id,
                 amount: -THUMBNAIL_COST,
@@ -113,6 +117,8 @@ export async function POST(req: NextRequest) {
                 shade: look.shade,
             }
 
+            const 보관 = await 사진보관(결과64, 'thumbnail', 손님 ? null : user!.id)
+
             if (손님) {
                 const 흐림 = await sharp(완성).blur(12).jpeg({ quality: 72 }).toBuffer()
                 return NextResponse.json({
@@ -121,10 +127,11 @@ export async function POST(req: NextRequest) {
                     preview: true,
                     needLogin: true,
                     text: 글자값,
+                    claimToken: 보관?.claimToken ?? null,
                 })
             }
 
-            return NextResponse.json({ success: true, imageBase64: 결과64, preview: false, balance: 차감후, text: 글자값 })
+            return NextResponse.json({ success: true, imageBase64: 보관?.url ? undefined : 결과64, url: 보관?.url ?? null, preview: false, balance: 차감후, text: 글자값 })
         } catch (genErr) {
             if (!손님) {
                 await admin.from('users').update({ clovers: 잔액 }).eq('id', user!.id)

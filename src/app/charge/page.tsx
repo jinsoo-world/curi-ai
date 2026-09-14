@@ -18,6 +18,14 @@ export default function ChargePage() {
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
+    // 어디서 충전하러 왔는지 기억했다가 끝나면 그 자리로 돌려보낸다 (전수조사 4번)
+    useEffect(() => {
+        try {
+            const b = new URLSearchParams(window.location.search).get('back')
+            if (b && b.startsWith('/')) sessionStorage.setItem('curi_back', b)
+        } catch {}
+    }, [])
+
     useEffect(() => {
         const supabase = createClient()
         supabase.auth.getUser().then(async ({ data }) => {

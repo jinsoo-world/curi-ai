@@ -15,13 +15,16 @@ import Image from 'next/image'
 import KeepNotice from '@/components/studio/KeepNotice'
 import ShareTool from '@/components/studio/ShareTool'
 import AdSlot from '@/components/AdSlot'
+import { 센다 } from '@/lib/track'
+import { 브라우저표식 } from '@/lib/browser-mark'
+import { use기억 } from '@/components/studio/use기억'
 
 export default function EnhancePage() {
     const router = useRouter()
     const [preview, setPreview] = useState<string | null>(null)
     const [base64, setBase64] = useState<string | null>(null)
     const [mimeType, setMimeType] = useState('image/jpeg')
-    const [modeId, setModeId] = useState<string | null>(null)
+    const [modeId, setModeId] = use기억<string | null>('enhance-mode', null)
     const [result, setResult] = useState<string | null>(null)
     const [미리보기, set미리보기] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -31,11 +34,12 @@ export default function EnhancePage() {
     const make = async () => {
         if (!base64 || !modeId) return
         setLoading(true); setErrorMsg(null); setNeedCharge(false); setResult(null)
+        센다('photo_make_click', { tool: 'enhance' })
         try {
             const res = await fetch('/api/tools/enhance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64: base64, mimeType, modeId }),
+                body: JSON.stringify({ imageBase64: base64, mimeType, modeId, 표식: 브라우저표식() }),
             })
             const data = await res.json()
             if (!res.ok) {
@@ -43,7 +47,9 @@ export default function EnhancePage() {
                 throw new Error(data.error || '사진을 고치지 못했어요.')
             }
             set미리보기(!!data.preview)
-            setResult(`data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
+            setResult(data.url ?? `data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
+            if (data.claimToken) { try { sessionStorage.setItem('curi_claim', data.claimToken) } catch {} }
+            센다(data.preview ? 'photo_login_prompt' : 'photo_make_success', { tool: 'enhance' })
         } catch (e) {
             setErrorMsg(e instanceof Error ? e.message : '사진을 고치지 못했어요.')
         } finally {
@@ -114,7 +120,7 @@ export default function EnhancePage() {
                         <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 15, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
                             {errorMsg}
                             {needCharge && (
-                                <button onClick={() => router.push('/charge')} style={{
+                                <button onClick={() => router.push(`/charge?back=${encodeURIComponent(window.location.pathname)}`)} style={{
                                     display: 'block', marginTop: 10, background: '#dc2626', color: '#fff', border: 'none',
                                     borderRadius: 10, padding: '9px 16px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
                                 }}>충전하러 가기</button>

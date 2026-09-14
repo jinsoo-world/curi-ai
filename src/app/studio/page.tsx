@@ -11,6 +11,7 @@ import WelcomeGift from '@/components/WelcomeGift'
 import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
 import AdSlot from '@/components/AdSlot'
+import ClaimPhoto from '@/components/studio/ClaimPhoto'
 
 function ItemCard({ item, onGo }: { item: ToolItem; onGo: (href: string) => void }) {
     return (
@@ -80,6 +81,7 @@ export default function StudioPage() {
     return (
         <main style={{ minHeight: '100dvh', background: 'var(--종이)' }}>
             <AppSidebar />
+            <div style={{ maxWidth: 1000, margin: "0 auto", padding: "0 18px" }}><ClaimPhoto /></div>
             <WelcomeGift />
             <div style={{ maxWidth: 1000, margin: '0 auto', padding: '36px 18px 90px' }}>
                 {/* 인사 + 잔액 */}
