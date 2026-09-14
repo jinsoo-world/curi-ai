@@ -1,0 +1,101 @@
+'use client'
+
+// 사진 올리는 자리 — 끌어다 놓기 · 눌러서 고르기 · 붙여넣기 세 가지를 다 받는다.
+// 대표 지적 2026-09-14 「파일 끌어다놓는 방식은 왜 안돼」
+// 컴퓨터에서는 끌어다 놓는 게 파일 창을 여는 것보다 빠르고, 화면을 캡처해
+// 바로 붙여넣는 사람도 많다.
+import { useState, useRef, useCallback, useEffect } from 'react'
+
+const MAX_BYTES = 4 * 1024 * 1024
+
+export function PhotoDrop({
+    preview,
+    onPicked,
+    onError,
+}: {
+    preview: string | null
+    /** 고른 사진을 dataURL 과 종류로 돌려준다 */
+    onPicked: (dataUrl: string, mimeType: string) => void
+    onError: (msg: string) => void
+}) {
+    const fileRef = useRef<HTMLInputElement>(null)
+    const [dragging, setDragging] = useState(false)
+
+    const handleFile = useCallback((f: File | null | undefined) => {
+        if (!f) return
+        if (!/^image\//.test(f.type)) { onError('사진 파일만 올릴 수 있어요.'); return }
+        if (f.size > MAX_BYTES) { onError('사진은 4MB 이하만 올려주세요.'); return }
+        const reader = new FileReader()
+        reader.onload = () => onPicked(String(reader.result), f.type || 'image/jpeg')
+        reader.readAsDataURL(f)
+    }, [onPicked, onError])
+
+    // 화면을 캡처해 바로 붙여넣는 경우
+    useEffect(() => {
+        const onPaste = (e: ClipboardEvent) => {
+            const item = Array.from(e.clipboardData?.items || []).find(i => i.type.startsWith('image/'))
+            if (item) handleFile(item.getAsFile())
+        }
+        window.addEventListener('paste', onPaste)
+        return () => window.removeEventListener('paste', onPaste)
+    }, [handleFile])
+
+    return (
+        <div
+            onDragOver={e => { e.preventDefault(); setDragging(true) }}
+            onDragLeave={e => { e.preventDefault(); setDragging(false) }}
+            onDrop={e => {
+                e.preventDefault(); setDragging(false)
+                handleFile(e.dataTransfer.files?.[0])
+            }}
+        >
+            <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; handleFile(f) }}
+                style={{ display: 'none' }}
+            />
+
+            {preview ? (
+                <div style={{
+                    display: 'flex', gap: 14, alignItems: 'center',
+                    padding: 14, borderRadius: 16,
+                    border: dragging ? '2px dashed #22c55e' : '1.5px solid #e4e4e7',
+                    background: dragging ? '#f0fdf4' : '#fff',
+                }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={preview} alt="올린 사진" style={{
+                        width: 84, height: 84, objectFit: 'cover', borderRadius: 14, flexShrink: 0,
+                    }} />
+                    <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#16a34a', marginBottom: 4 }}>사진을 올렸어요</div>
+                        <button onClick={() => fileRef.current?.click()} style={{
+                            background: '#f4f4f5', border: 'none', borderRadius: 10,
+                            padding: '8px 14px', fontSize: 13.5, color: '#3f3f46', cursor: 'pointer', fontWeight: 600,
+                        }}>다른 사진으로</button>
+                    </div>
+                </div>
+            ) : (
+                <button
+                    onClick={() => fileRef.current?.click()}
+                    style={{
+                        width: '100%', padding: '32px 20px', borderRadius: 16,
+                        border: dragging ? '2.5px dashed #22c55e' : '2px dashed #d4d4d8',
+                        background: dragging ? '#f0fdf4' : '#fff',
+                        cursor: 'pointer', transition: 'all 0.15s',
+                    }}
+                >
+                    <div style={{ fontSize: 34, marginBottom: 10 }}>{dragging ? '📥' : '📷'}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: dragging ? '#166534' : '#3f3f46', marginBottom: 6 }}>
+                        {dragging ? '여기에 놓으세요' : '사진을 끌어다 놓으세요'}
+                    </div>
+                    <div style={{ fontSize: 13, color: '#71717a', lineHeight: 1.7, wordBreak: 'keep-all' }}>
+                        눌러서 고르셔도 되고, 복사한 사진을 붙여넣어도 돼요<br />
+                        <span style={{ fontSize: 12, color: '#a1a1aa' }}>얼굴이 잘 보이는 밝은 사진 · 4MB 이하</span>
+                    </div>
+                </button>
+            )}
+        </div>
+    )
+}

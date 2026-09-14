@@ -3,17 +3,17 @@
 // 인스타 프로필 사진 만들기 — 대표 지시 2026-09-14
 // 전문가용과 다른 점 = 정사각형이고 화면에서 동그랗게 잘려 보인다.
 // 그래서 결과를 **동그란 모습으로 미리 보여준다**. 그게 실제로 보이는 모습이다.
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MOODS, TONES } from '@/domains/studio/insta'
 import { CURI_MODELS, DEFAULT_MODEL_ID, getModel } from '@/domains/studio/models'
 import { CLOVER_UNIT_WON } from '@/domains/credit/packs'
 import { PickCard } from '@/components/studio/PickCard'
+import { PhotoDrop } from '@/components/studio/PhotoDrop'
 import AppSidebar from '@/components/AppSidebar'
 
 export default function InstaProfilePage() {
     const router = useRouter()
-    const fileRef = useRef<HTMLInputElement>(null)
     const [preview, setPreview] = useState<string | null>(null)
     const [base64, setBase64] = useState<string | null>(null)
     const [mimeType, setMimeType] = useState('image/jpeg')
@@ -24,21 +24,6 @@ export default function InstaProfilePage() {
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const [needCharge, setNeedCharge] = useState(false)
-
-    const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const f = e.target.files?.[0]
-        e.target.value = ''
-        if (!f) return
-        if (f.size > 4 * 1024 * 1024) { setErrorMsg('사진은 4MB 이하만 올려주세요.'); return }
-        setErrorMsg(null)
-        setMimeType(f.type || 'image/jpeg')
-        const reader = new FileReader()
-        reader.onload = () => {
-            const d = String(reader.result)
-            setPreview(d); setBase64(d.split(',')[1] ?? null)
-        }
-        reader.readAsDataURL(f)
-    }
 
     const make = async () => {
         if (!base64 || !moodId || !toneId) return
@@ -77,25 +62,16 @@ export default function InstaProfilePage() {
 
                 <div style={{ marginBottom: 22 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>1. 내 사진 올리기</div>
-                    <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={pickFile} style={{ display: 'none' }} />
-                    {preview ? (
-                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={preview} alt="올린 사진" style={{ width: 88, height: 88, objectFit: 'cover', borderRadius: '50%', border: '1px solid #e4e4e7' }} />
-                            <button onClick={() => fileRef.current?.click()} style={{
-                                background: '#f4f4f5', border: 'none', borderRadius: 10,
-                                padding: '9px 14px', fontSize: 14, color: '#3f3f46', cursor: 'pointer', fontWeight: 600,
-                            }}>다른 사진으로</button>
-                        </div>
-                    ) : (
-                        <button onClick={() => fileRef.current?.click()} style={{
-                            width: '100%', padding: '26px', borderRadius: 14,
-                            border: '1.5px dashed #d4d4d8', background: '#fff', fontSize: 15, color: '#52525b', cursor: 'pointer',
-                        }}>
-                            📷 사진 고르기<br />
-                            <span style={{ fontSize: 12, color: '#a1a1aa' }}>얼굴이 잘 보이는 밝은 사진이 좋아요</span>
-                        </button>
-                    )}
+                    <PhotoDrop
+                        preview={preview}
+                        onPicked={(dataUrl, mt) => {
+                            setPreview(dataUrl)
+                            setBase64(dataUrl.split(',')[1] ?? null)
+                            setMimeType(mt)
+                            setErrorMsg(null)
+                        }}
+                        onError={setErrorMsg}
+                    />
                 </div>
 
                 <div style={{ opacity: base64 ? 1 : 0.4, pointerEvents: base64 ? 'auto' : 'none' }}>
