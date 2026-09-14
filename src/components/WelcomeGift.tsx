@@ -84,7 +84,7 @@ export default function WelcomeGift() {
                 </div>
 
                 <p style={{ fontSize: 15, color: 'var(--먹연)', margin: '0 0 22px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                    로그인하면 클로버 {TRIAL_CLOVERS}개와 {TRIAL_DAYS}일 무료 체험권을 함께 드려요.
+                    로그인하고 체험권을 받으면 클로버 {TRIAL_CLOVERS}개와 {TRIAL_DAYS}일 무료 체험을 함께 드려요.
                     <br />
                     사진 다섯 장을 그냥 만들어볼 수 있습니다.
                 </p>

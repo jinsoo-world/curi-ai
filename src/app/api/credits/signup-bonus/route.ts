@@ -1,4 +1,10 @@
-// /api/credits/signup-bonus — 가입 시 1만원 크레딧 자동 지급
+// /api/credits/signup-bonus — 잠갔다 (2026-09-15)
+//
+// 여기는 가입만 하면 클로버 10,000개(25만원어치)를 주도록 되어 있었다.
+// 대표 확정은 다르다 — 0915 「무료체험권 넣으면 100클로버 줘」.
+// 실제로 한 번도 지급된 적이 없다(거래 기록 0건). 부르는 곳도 없다.
+// 그래도 살려두면 언젠가 잘못 이어져 큰돈이 나간다. 그래서 막아둔다.
+// 되살리려면 금액부터 대표에게 확인한다.
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
@@ -6,6 +12,13 @@ import { createClient as createAdmin } from '@supabase/supabase-js'
 export const dynamic = 'force-dynamic'
 
 export async function POST() {
+    return NextResponse.json(
+        { error: '지금은 쓰지 않는 길입니다. 체험권을 받으면 클로버를 드립니다.' },
+        { status: 410 },
+    )
+}
+
+async function 옛지급_잠금됨() {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
