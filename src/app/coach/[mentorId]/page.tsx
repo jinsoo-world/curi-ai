@@ -10,7 +10,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getPublicMentorById } from '@/domains/mentor'
+import { getPublicMentorById, MENTOR_IMAGES } from '@/domains/mentor'
 import AppSidebar from '@/components/AppSidebar'
 
 type Props = { params: Promise<{ mentorId: string }> }
@@ -62,6 +62,10 @@ export default async function CoachPage({ params }: Props) {
     const m = await getPublicMentorById(mentorId)
     if (!m) notFound()
 
+    // DB 에 사진이 없는 옛 멘토는 목록과 같은 대체 사진을 쓴다
+    // (대표 지적 0915 「이미지 안뜨는 거 있다」 — 목록엔 보이는데 이 화면만 비어 있었다)
+    const 사진 = m.avatar_url || MENTOR_IMAGES[m.name as string] || null
+
     const 링크 = 링크모으기(m as Record<string, unknown>)
     const 질문: string[] = Array.isArray(m.sample_questions) ? m.sample_questions.slice(0, 4) : []
     const 분야: string[] = Array.isArray(m.expertise) ? m.expertise.slice(0, 5) : []
@@ -89,9 +93,9 @@ export default async function CoachPage({ params }: Props) {
                             background: '#E8F2EC',
                         }}
                     >
-                        {m.avatar_url ? (
+                        {사진 ? (
                             <Image
-                                src={m.avatar_url}
+                                src={사진}
                                 alt={`${m.name} 코치`}
                                 fill
                                 sizes="(max-width: 860px) 100vw, 420px"

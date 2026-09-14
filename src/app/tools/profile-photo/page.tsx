@@ -187,7 +187,7 @@ export default function ProfilePhotoPage() {
                     {/* 비율 — 어디에 쓸 사진인지에 따라 다르다 */}
                     <div style={{ marginBottom: 24 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>6. 사진 모양</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(96px, 1fr))', gap: 8 }}>
                             {RATIOS.map(r => (
                                 <button key={r.id} onClick={() => setRatioId(r.id)} style={{
                                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
