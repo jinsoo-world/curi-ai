@@ -54,11 +54,7 @@ export default function EnhancePage() {
         <main style={{ minHeight: '100dvh', background: 'var(--종이)' }}>
             <AppSidebar />
             <div className="tool-page">
-                <ToolHero
-                    title="사진 화질 개선하기"
-                    desc="흐릿하거나 오래된 사진을 살립니다. 같은 사진을 더 좋은 카메라로 찍은 것처럼요."
-                    samples={[{ src: '/samples/act-m3.webp', label: '흐릿한 사진' }, { src: '/samples/act-w2.webp', label: '오래된 사진' }, { src: '/samples/act-m8.webp', label: '어두운 사진' }, { src: '/samples/act-w1.webp', label: '인쇄용으로' }]}
-                />
+
 
                 <div>
                     <div style={{ marginBottom: 22 }}>
@@ -75,6 +71,14 @@ export default function EnhancePage() {
                             onError={setErrorMsg}
                         />
                     </div>
+
+                    {!preview && (
+                <ToolHero
+                            title="사진 화질 개선하기"
+                            desc="흐릿하거나 오래된 사진을 살립니다. 같은 사진을 더 좋은 카메라로 찍은 것처럼요."
+                            samples={[{ src: '/samples/act-m3.webp', label: '흐릿한 사진' }, { src: '/samples/act-w2.webp', label: '오래된 사진' }, { src: '/samples/act-m8.webp', label: '어두운 사진' }, { src: '/samples/act-w1.webp', label: '인쇄용으로' }]}
+                        />
+                    )}
 
                     <div style={{ opacity: base64 ? 1 : 0.4, pointerEvents: base64 ? 'auto' : 'none', marginBottom: 24 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>2. 어떻게 고칠까요</div>

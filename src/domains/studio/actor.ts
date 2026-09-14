@@ -6,6 +6,7 @@
 // 참고 = jactors.kr · plfil.com 의 실제 배우 프로필
 
 import type { Choice } from './photo'
+import { 나이문장 } from './photo'
 
 /** 결이 되는 분위기 */
 export const ACTOR_MOODS: Choice[] = [
@@ -87,9 +88,7 @@ export function isValidActorBackdrop(v: unknown): v is string { return typeof v 
  * 캐스팅 담당은 매끈한 사진을 반기지 않는다. 실물과 다르면 현장에서 문제가 되기 때문이다.
  */
 export function buildActorPrompt(mood: Choice, backdrop: Choice, ratioLabel = '4:5', ageMinus = 0): string {
-    const 나이줄 = ageMinus > 0
-        ? `Make the subject look about ${ageMinus} years younger while keeping the same face and identity: softer fine lines, firmer skin. Never change the bone structure.`
-        : 'Match the age in the uploaded photo exactly — do not add or remove years.'
+    const 나이줄 = 나이문장(ageMinus)
 
     return [
         'Create a professional Korean casting profile photograph (actor headshot) from this person.',

@@ -1,0 +1,129 @@
+// /api/tools/id-photo — 증명사진 만들기 (대표 확정 2026-09-15)
+import { NextRequest, NextResponse } from 'next/server'
+import { GoogleGenAI } from '@google/genai'
+import sharp from 'sharp'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import {
+    getIdBackground, getIdOutfit, getIdSize,
+    isValidIdBackground, isValidIdOutfit, isValidIdSize,
+    buildIdPhotoPrompt, ID_COST,
+} from '@/domains/studio/idphoto'
+import { getAge, isValidAgeId, DEFAULT_AGE_ID } from '@/domains/studio/photo'
+import { getModel, isValidModelId, DEFAULT_MODEL_ID } from '@/domains/studio/models'
+
+export const dynamic = 'force-dynamic'
+export const maxDuration = 60
+
+const 손님하루한도 = 3
+
+async function 흐리게(base64: string): Promise<string> {
+    const b = await sharp(Buffer.from(base64, 'base64')).blur(14).jpeg({ quality: 72 }).toBuffer()
+    return b.toString('base64')
+}
+
+export async function POST(req: NextRequest) {
+    try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        const 손님 = !user
+
+        const { imageBase64, mimeType, backgroundId, outfitId, sizeId, ageId, modelId } = await req.json()
+        if (typeof imageBase64 !== 'string' || imageBase64.length < 100) {
+            return NextResponse.json({ error: '사진을 올려주세요.' }, { status: 400 })
+        }
+        if (!isValidIdBackground(backgroundId) || !isValidIdOutfit(outfitId) || !isValidIdSize(sizeId)) {
+            return NextResponse.json({ error: '배경·차림새·규격을 골라주세요.' }, { status: 400 })
+        }
+
+        const bg = getIdBackground(backgroundId)!
+        const outfit = getIdOutfit(outfitId)!
+        const size = getIdSize(sizeId)!
+        const model = getModel(isValidModelId(modelId) ? modelId : DEFAULT_MODEL_ID)!
+        const 나이 = getAge(isValidAgeId(ageId) ? ageId : DEFAULT_AGE_ID)!.minus
+
+        const admin = createAdminClient()
+        const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+
+        let 잔액 = 0
+        let 차감후 = 0
+
+        if (손님) {
+            const 하루전 = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+            const { count } = await admin
+                .from('guest_generations')
+                .select('id', { count: 'exact', head: true })
+                .eq('ip', ip)
+                .gte('created_at', 하루전)
+            if ((count ?? 0) >= 손님하루한도) {
+                return NextResponse.json(
+                    { error: `오늘 무료로 만들 수 있는 ${손님하루한도}장을 다 썼어요. 회원가입하면 계속 만들 수 있어요.`, needLogin: true },
+                    { status: 429 },
+                )
+            }
+            await admin.from('guest_generations').insert({ ip, kind: 'id-photo' })
+        } else {
+            const { data: row } = await admin.from('users').select('clovers').eq('id', user!.id).single()
+            잔액 = row?.clovers ?? 0
+            if (잔액 < ID_COST) {
+                return NextResponse.json(
+                    { error: `클로버가 ${ID_COST}개 필요해요. 지금 ${잔액}개 있습니다.`, needCharge: true },
+                    { status: 402 },
+                )
+            }
+            차감후 = 잔액 - ID_COST
+            await admin.from('users').update({ clovers: 차감후 }).eq('id', user!.id)
+            await admin.from('credit_transactions').insert({
+                user_id: user!.id,
+                amount: -ID_COST,
+                balance_after: 차감후,
+                type: 'chat_usage',
+                description: `증명사진 (${size.label} · ${bg.label})`,
+            })
+        }
+
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
+            const r = await ai.models.generateContent({
+                model: model.engine,
+                config: { imageConfig: { aspectRatio: size.ratio } },
+                contents: [{
+                    role: 'user',
+                    parts: [
+                        { inlineData: { mimeType: mimeType || 'image/jpeg', data: imageBase64 } },
+                        { text: buildIdPhotoPrompt(bg, outfit, size, 나이) },
+                    ],
+                }],
+            })
+
+            const parts = r.candidates?.[0]?.content?.parts ?? []
+            const imgPart = parts.find((p: { inlineData?: { data?: string } }) => p.inlineData?.data)
+            if (!imgPart) throw new Error('사진이 만들어지지 않았어요.')
+
+            const 원본64 = (imgPart as { inlineData: { data: string } }).inlineData.data
+
+            if (손님) {
+                return NextResponse.json({ success: true, imageBase64: await 흐리게(원본64), preview: true, needLogin: true })
+            }
+            return NextResponse.json({ success: true, imageBase64: 원본64, preview: false, balance: 차감후 })
+        } catch (genErr) {
+            if (!손님) {
+                await admin.from('users').update({ clovers: 잔액 }).eq('id', user!.id)
+                await admin.from('credit_transactions').insert({
+                    user_id: user!.id,
+                    amount: ID_COST,
+                    balance_after: 잔액,
+                    type: 'refund',
+                    description: '증명사진 만들기 실패 되돌림',
+                })
+            }
+            const msg = genErr instanceof Error ? genErr.message : '사진을 만들지 못했어요.'
+            console.error('[IdPhoto]', msg)
+            return NextResponse.json({ error: msg + (손님 ? '' : ' 클로버는 돌려드렸어요.') }, { status: 502 })
+        }
+    } catch (error) {
+        const msg = error instanceof Error ? error.message : '사진을 만들지 못했어요.'
+        console.error('[IdPhoto] Error:', msg)
+        return NextResponse.json({ error: msg }, { status: 500 })
+    }
+}

@@ -35,7 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         },
         // 만드는 도구 — 대표 지시 0915 「GEO, SEO」
         // 검색으로 사람이 들어오는 문은 「무엇을 해주는 곳인가」가 적힌 화면이다.
-        ...['profile-photo', 'actor-photo', 'enhance', 'thumbnail', 'insta-profile'].map((t) => ({
+        ...['id-photo', 'teacher-photo', 'actor-photo', 'enhance', 'thumbnail'].map((t) => ({
             url: `${baseUrl}/tools/${t}`,
             lastModified: new Date(),
             changeFrequency: 'weekly' as const,

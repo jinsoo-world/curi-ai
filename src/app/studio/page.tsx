@@ -5,13 +5,12 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { STUDIO_ITEMS, GUIDE_ITEM, type StudioItem } from '@/domains/studio/catalog'
-import { CLOVER_UNIT_WON } from '@/domains/credit/packs'
+import { TOOLS, type ToolItem } from '@/domains/studio/tools'
 import AppSidebar from '@/components/AppSidebar'
 import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
 
-function ItemCard({ item, onGo }: { item: StudioItem; onGo: (href: string) => void }) {
+function ItemCard({ item, onGo }: { item: ToolItem; onGo: (href: string) => void }) {
     return (
         <button
             onClick={() => onGo(item.href)}
@@ -32,9 +31,7 @@ function ItemCard({ item, onGo }: { item: StudioItem; onGo: (href: string) => vo
                     <Image src={item.img} alt="" fill sizes="(max-width: 700px) 45vw, 320px"
                         style={{ objectFit: 'cover', objectPosition: 'center 20%' }} />
                 </div>
-            ) : (
-                <div style={{ fontSize: 28, lineHeight: 1 }}>{item.emoji}</div>
-            )}
+            ) : null}
             <div style={{ fontSize: 16, fontWeight: 700, color: '#18181b', wordBreak: 'keep-all' }}>
                 {item.title}
             </div>
@@ -77,7 +74,6 @@ export default function StudioPage() {
         })
     }, [])
 
-    const 만들기 = STUDIO_ITEMS.filter(i => i.group === '만들기')
 
     return (
         <main style={{ minHeight: '100dvh', background: 'var(--종이)' }}>
@@ -101,7 +97,7 @@ export default function StudioPage() {
 
                 {/* 만들기 */}
                 <div className="studio-grid" style={{ marginBottom: 28 }}>
-                    {만들기.map(i => <ItemCard key={i.id} item={i} onGo={router.push} />)}
+                    {TOOLS.map(i => <ItemCard key={i.id} item={i} onGo={router.push} />)}
                 </div>
 
             </div>

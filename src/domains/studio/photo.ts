@@ -144,11 +144,14 @@ export interface AgeOption {
 
 export const AGES: AgeOption[] = [
     { id: 'as-is', label: '그대로', minus: 0 },
+    // 대표 지시 0915 = 「조금 바랜 느낌인데. 아주 살짝만 젊게 해줘도 돼」
+    // 기본값을 이걸로 둔다. 「그대로」가 기본이면 피곤한 날 찍은 사진이 그대로 나온다.
+    { id: 'fresh', label: '살짝 생기있게', minus: 2 },
     { id: 'm5', label: '5살 젊게', minus: 5 },
     { id: 'm10', label: '10살 젊게', minus: 10 },
 ]
 
-export const DEFAULT_AGE_ID = 'as-is'
+export const DEFAULT_AGE_ID = 'fresh'
 
 export function isValidAgeId(v: unknown): v is string {
     return typeof v === 'string' && AGES.some(a => a.id === v)
@@ -158,10 +161,24 @@ export function getAge(id: string): AgeOption | undefined {
     return AGES.find(a => a.id === id)
 }
 
+/**
+ * 나이 문장 만들기
+ *
+ * 2살은 「젊게」가 아니라 「컨디션 좋은 날」이다. 뼈대를 건드리지 않고
+ * 혈색과 피로만 걷는다 — 대표 지시 0915 「아주 살짝만 젊게 해줘도 돼」
+ */
+export function 나이문장(ageMinus: number): string {
+    if (ageMinus <= 0) {
+        return 'Match the age in the uploaded photo exactly — do not add years, do not deepen wrinkles, do not grey the hair, do not hollow the cheeks or eyes.'
+    }
+    if (ageMinus <= 2) {
+        return 'Keep the exact same age and the same lines on the face, but render the person on a good day: rested eyes with no dark circles, healthy blood colour in the skin, hydrated lips, tidy hair. Do not remove wrinkles, do not change the bone structure.'
+    }
+    return `Make the subject look about ${ageMinus} years younger than in the uploaded photo, while keeping the same face and identity: softer fine lines, firmer skin, slightly fuller darker hair. Never change the bone structure or facial features.`
+}
+
 export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '4:5', ageMinus = 0, purpose?: Purpose): string {
-    const 나이줄 = ageMinus > 0
-        ? `Make the subject look about ${ageMinus} years younger than in the uploaded photo, while keeping the same face and identity: softer fine lines, firmer skin, slightly fuller darker hair. Never change the bone structure or facial features.`
-        : 'Match the age in the uploaded photo exactly — do not add years, do not deepen wrinkles, do not grey the hair, do not hollow the cheeks or eyes.'
+    const 나이줄 = 나이문장(ageMinus)
     return [
         'Retouch this person into a professional headshot portrait.',
         purpose ? purpose.prompt : '',
