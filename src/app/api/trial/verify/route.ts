@@ -120,13 +120,8 @@ export async function POST(req: Request) {
 
         // 추천한 사람에게 클로버 — 실패해도 체험권은 이미 줬으니 되돌리지 않는다
         if (추천인) {
-            const { data: 상대 } = await db.from('users').select('clovers').eq('id', 추천인).maybeSingle()
-            if (상대) {
-                await db
-                    .from('users')
-                    .update({ clovers: (상대.clovers ?? 0) + REFERRER_REWARD })
-                    .eq('id', 추천인)
-            }
+            // 잔액은 DB 가 한 걸음으로 더한다 (여러 명이 동시에 가입해도 어긋나지 않게)
+            await db.rpc('클로버_더하기', { 그사람: 추천인, 더할값: REFERRER_REWARD })
         }
 
         return Response.json({

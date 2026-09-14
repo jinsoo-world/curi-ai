@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: true, imageBase64: 보관?.url ? undefined : 결과64, url: 보관?.url ?? null, preview: false, balance: 차감후, text: 글자값 })
         } catch (genErr) {
             if (!손님) {
-                await admin.from('users').update({ clovers: 잔액 }).eq('id', user!.id)
+                await admin.rpc('클로버_더하기', { 그사람: user!.id, 더할값: THUMBNAIL_COST })
                 await admin.from('credit_transactions').insert({
                     user_id: user!.id,
                     amount: THUMBNAIL_COST,

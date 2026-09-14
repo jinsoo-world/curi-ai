@@ -61,11 +61,15 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '결제 금액이 맞지 않아요.' }, { status: 400 })
         }
 
-        // 지급 — 잔액은 DB 에서 더한다(읽고 계산해서 쓰면 동시에 여러 번 눌렀을 때 어긋난다)
-        const { data: 현재 } = await admin
-            .from('users').select('clovers').eq('id', user.id).single()
-        const 이전잔액 = 현재?.clovers ?? 0
-        const 새잔액 = 이전잔액 + pack.clovers
+        // 지급 — 잔액은 DB 가 한 걸음으로 더한다.
+        // 주석은 원래 그렇게 적혀 있었는데 실제 코드는 읽고 계산해서 덮어쓰고 있었다(0915 전수조사에서 발견).
+        // 두 번 충전이 겹치면 한 번치가 사라질 수 있는 자리다. 고객 돈이라 더 위험하다.
+        const { data: 새잔액값 } = await admin.rpc('클로버_더하기', { 그사람: user.id, 더할값: pack.clovers })
+        if (새잔액값 === null || 새잔액값 < 0) {
+            console.error('[Charge] 잔액 반영 실패')
+            return NextResponse.json({ error: '잔액 반영에 실패했어요. 고객센터로 알려주세요.' }, { status: 500 })
+        }
+        const 새잔액 = 새잔액값 as number
 
         const { error: txErr } = await admin.from('credit_transactions').insert({
             user_id: user.id,
@@ -77,13 +81,6 @@ export async function POST(req: NextRequest) {
         if (txErr) {
             console.error('[Charge] 기록 실패:', txErr.message)
             return NextResponse.json({ error: '충전 기록에 실패했어요. 고객센터로 알려주세요.' }, { status: 500 })
-        }
-
-        const { error: balErr } = await admin
-            .from('users').update({ clovers: 새잔액 }).eq('id', user.id)
-        if (balErr) {
-            console.error('[Charge] 잔액 반영 실패:', balErr.message)
-            return NextResponse.json({ error: '잔액 반영에 실패했어요. 고객센터로 알려주세요.' }, { status: 500 })
         }
 
         return NextResponse.json({

@@ -64,10 +64,7 @@ export async function POST() {
         }
 
         // 잔액 업데이트
-        await admin
-            .from('users')
-            .update({ clovers: newBalance })
-            .eq('id', user.id)
+        await admin.rpc('클로버_더하기', { 그사람: user.id, 더할값: MARKETING_BONUS_AMOUNT })
 
         return NextResponse.json({
             success: true,

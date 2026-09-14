@@ -56,8 +56,8 @@ export async function POST() {
             description: `친구에게 공유하기 (${sharesToday + 1}/3)`,
         })
 
-        // users 잔액 동기화
-        await supabaseAdmin.from('users').update({ clovers: newBalance }).eq('id', user.id)
+        // 잔액은 DB 가 한 걸음으로 더한다 (겹쳐 눌러도 어긋나지 않게)
+        await supabaseAdmin.rpc('클로버_더하기', { 그사람: user.id, 더할값: 10 })
 
         return NextResponse.json({
             ok: true,

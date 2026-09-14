@@ -181,7 +181,7 @@ export async function POST(req: NextRequest) {
         } catch (genErr) {
             // 만들기에 실패하면 클로버를 되돌려준다 (손님은 쓴 게 없다)
             if (!손님) {
-                await admin.from('users').update({ clovers: 잔액 }).eq('id', user!.id)
+                await admin.rpc('클로버_더하기', { 그사람: user!.id, 더할값: PHOTO_COST })
                 await admin.from('credit_transactions').insert({
                     user_id: user!.id,
                     amount: PHOTO_COST,

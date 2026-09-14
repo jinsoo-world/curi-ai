@@ -135,9 +135,7 @@ export async function POST(request: Request) {
 
         // users 테이블 잔액 업데이트
         const { error: updateError } = await supabaseAdmin
-            .from('users')
-            .update({ clovers: newBalance })
-            .eq('id', user.id)
+            .rpc('클로버_더하기', { 그사람: user.id, 더할값: totalReward })
 
         if (updateError) {
             console.error('Clover hunt user update error:', updateError)
