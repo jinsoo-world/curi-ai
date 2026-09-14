@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { STUDIO_ITEMS, GUIDE_ITEM, type StudioItem } from '@/domains/studio/catalog'
 import { CLOVER_UNIT_WON } from '@/domains/credit/packs'
 import AppSidebar from '@/components/AppSidebar'
+import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
 
 function ItemCard({ item, onGo }: { item: StudioItem; onGo: (href: string) => void }) {
@@ -50,8 +51,9 @@ function ItemCard({ item, onGo }: { item: StudioItem; onGo: (href: string) => vo
                     <span style={{
                         fontSize: 12, fontWeight: 700, color: '#3f3f46',
                         background: '#f4f4f5', padding: '4px 10px', borderRadius: 8,
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
                     }}>
-                        {(item.cost * CLOVER_UNIT_WON).toLocaleString()}원
+                        <CloverIcon size={13} color="#3f3f46" /> {item.cost}개
                     </span>
                 )}
             </div>
@@ -99,36 +101,29 @@ export default function StudioPage() {
                 </div>
 
                 {/* 만들기 */}
-                <h2 style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', margin: '0 0 10px' }}>만들기</h2>
                 <div className="studio-grid" style={{ marginBottom: 28 }}>
                     {만들기.map(i => <ItemCard key={i.id} item={i} onGo={router.push} />)}
                 </div>
 
-                {/* 배우기 */}
-                <h2 style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', margin: '0 0 10px' }}>배우기</h2>
-                <div className="studio-grid" style={{ marginBottom: 28 }}>
-                    {배우기.map(i => <ItemCard key={i.id} item={i} onGo={router.push} />)}
-                </div>
-
-                {/* 길잡이 */}
+                {/* 배우기는 「대화하기」가 맡는다 — 대표 지적 0914 「만들기인데 왜 대화처럼 보이냐」 */}
                 <button
-                    onClick={() => router.push(GUIDE_ITEM.href)}
+                    onClick={() => router.push('/mentors')}
                     style={{
                         width: '100%', display: 'flex', alignItems: 'center', gap: 12,
                         padding: '16px 18px', borderRadius: 16,
-                        border: '1.5px dashed #d4d4d8', background: '#fff',
+                        border: '1px solid var(--선)', background: '#fff',
                         cursor: 'pointer', textAlign: 'left',
                     }}
                 >
-                    <span style={{ fontSize: 24 }}>{GUIDE_ITEM.emoji}</span>
                     <span>
                         <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: '#18181b' }}>
-                            {GUIDE_ITEM.title}
+                            뭘 만들지 모르겠어요
                         </span>
                         <span style={{ display: 'block', fontSize: 13, color: '#71717a', marginTop: 2 }}>
-                            {GUIDE_ITEM.desc}
+                            코치에게 물어보면 맞는 곳으로 안내해드려요
                         </span>
                     </span>
+                    <span style={{ marginLeft: 'auto', color: 'var(--먹연)', fontSize: 20 }} aria-hidden>›</span>
                 </button>
             </div>
         </main>

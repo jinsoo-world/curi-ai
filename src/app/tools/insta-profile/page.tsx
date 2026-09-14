@@ -12,6 +12,7 @@ import { PickCard } from '@/components/studio/PickCard'
 import { PhotoDrop } from '@/components/studio/PhotoDrop'
 import AppSidebar from '@/components/AppSidebar'
 import MakingBar from '@/components/studio/MakingBar'
+import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
 
 export default function InstaProfilePage() {
@@ -113,7 +114,7 @@ export default function InstaProfilePage() {
                                             </span>
                                         </span>
                                         {!못씀 && (
-                                            <span style={{ fontSize: 13, fontWeight: 700, color: '#3f3f46', flexShrink: 0 }}>{m.cost}개</span>
+                                            <span style={{ fontSize: 13, fontWeight: 700, color: '#3f3f46', flexShrink: 0 }}><CloverIcon size={13} color="#3f3f46" /> {m.cost}개</span>
                                         )}
                                     </button>
                                 )
@@ -158,7 +159,9 @@ export default function InstaProfilePage() {
                         background: !준비됨 ? '#d4d4d8' : '#22c55e',
                         color: '#fff', fontSize: 16, fontWeight: 700, cursor: !준비됨 ? 'default' : 'pointer',
                     }}>
-                        {`사진 만들기 · ${(cost * CLOVER_UNIT_WON).toLocaleString()}원`}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            사진 만들기 <CloverIcon size={17} color="#fff" /> {cost}개
+                        </span>
                     </button>
                 )}
 

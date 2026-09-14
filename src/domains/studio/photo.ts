@@ -45,7 +45,38 @@ export function isValidBackdrop(v: unknown): v is string { return typeof v === '
  * ⚠️ 「같은 사람으로 보이게」와 「젊게 만들지 말 것」을 반드시 넣는다.
  *    안 넣으면 딴사람이 나오거나 20~30대처럼 나온다.
  */
-export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '4:5'): string {
+/**
+ * 나이 손보기 — 대표 지시 2026-09-14 「나이도 조정할 수 있도록」 「-10살까지」
+ *
+ * 위로는 올리지 않는다. 프로필 사진을 실제보다 늙게 만들고 싶은 사람은 없다.
+ */
+export interface AgeOption {
+    id: string
+    label: string
+    /** 몇 살 젊게 */
+    minus: number
+}
+
+export const AGES: AgeOption[] = [
+    { id: 'as-is', label: '그대로', minus: 0 },
+    { id: 'm5', label: '5살 젊게', minus: 5 },
+    { id: 'm10', label: '10살 젊게', minus: 10 },
+]
+
+export const DEFAULT_AGE_ID = 'as-is'
+
+export function isValidAgeId(v: unknown): v is string {
+    return typeof v === 'string' && AGES.some(a => a.id === v)
+}
+
+export function getAge(id: string): AgeOption | undefined {
+    return AGES.find(a => a.id === id)
+}
+
+export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '4:5', ageMinus = 0): string {
+    const 나이줄 = ageMinus > 0
+        ? `Make the subject look about ${ageMinus} years younger than in the uploaded photo, while keeping the same face and identity: softer fine lines, firmer skin, slightly fuller darker hair. Never change the bone structure or facial features.`
+        : 'Match the age in the uploaded photo exactly — do not add years, do not deepen wrinkles, do not grey the hair, do not hollow the cheeks or eyes.'
     return [
         'Retouch this person into a professional headshot portrait.',
         `The subject is ${style.prompt}.`,
@@ -54,7 +85,7 @@ export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '
         // 대표 지적 0914 = 「프로필이 더 나이들어보이는데」
         // 전에는 「더 젊게 만들지 마라」라고 적었는데, 그 한 줄이 모델을 늙는 쪽으로 밀었다.
         // 주름을 지우라는 게 아니라 없던 나이를 더하지 말라고 적는다.
-        'Match the age in the uploaded photo exactly — do not add years, do not deepen wrinkles, do not grey the hair, do not hollow the cheeks or eyes.',
+        나이줄,
         'Keep natural skin texture and pores, but render the subject on their best day: rested, healthy, even skin tone.',
         'Soft diffused key light with gentle fill from below to avoid harsh shadows in the nasolabial folds and under the eyes.',
         'Eye level, looking at the lens, sharp focus on the eyes.',

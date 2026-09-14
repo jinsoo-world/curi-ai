@@ -469,6 +469,7 @@ button, a[role="button"] {
   gap: 10px;
 }
 .app-top-credit {
+  gap: 6px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -505,34 +506,83 @@ button, a[role="button"] {
   padding: 0;
   flex-shrink: 0;
 }
+.app-top-scrim {
+  position: fixed;
+  inset: 0;
+  border: none;
+  background: rgba(0, 0, 0, 0.18);
+  z-index: 45;
+  cursor: default;
+}
 .app-top-sheet {
-  border-top: 1px solid var(--선);
+  position: absolute;
+  right: 16px;
+  top: 58px;
+  z-index: 60;
+  width: 232px;
   background: #fff;
-  padding: 8px;
-  display: grid;
-  gap: 2px;
-  max-width: 1200px;
-  margin: 0 auto;
+  border: 1px solid var(--선);
+  border-radius: 16px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.14);
+  padding: 6px;
+  overflow: hidden;
+}
+.app-top-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+.app-top-sheet-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--먹);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-top-sheet-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--진초록);
+  background: #EAF7EF;
+  padding: 5px 10px;
+  border-radius: 999px;
+  text-decoration: none;
+}
+.app-top-sheet-line {
+  height: 1px;
+  background: var(--선);
+  margin: 6px 12px;
 }
 .app-top-sheet-item {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 14px 16px;
+  padding: 11px 12px;
   border: none;
   background: none;
-  border-radius: 12px;
-  font-size: 16px;
+  border-radius: 10px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--먹);
   text-decoration: none;
   cursor: pointer;
 }
 .app-top-sheet-item:hover { background: var(--종이); }
+.app-top-sheet-item.quiet { color: var(--먹연); font-weight: 600; }
+.app-top-sheet-only-narrow { display: block; }
+@media (min-width: 900px) {
+  .app-top-sheet-only-narrow { display: none; }
+}
 
 @media (min-width: 900px) {
   .app-top-nav { display: flex; }
-  .app-top-sheet { max-width: 320px; margin: 0 0 0 auto; border-radius: 0 0 16px 16px; box-shadow: var(--그림자); }
 }
 
 /* 옛 사이드바가 남긴 왼쪽 여백을 지운다 */

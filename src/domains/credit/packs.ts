@@ -39,7 +39,7 @@ export interface CloverPack {
 export const CLOVER_PACKS: CloverPack[] = [
     { id: 'c500', clovers: 500, won: 12500 },
     { id: 'c1000', clovers: 1000, won: 19000 },
-    { id: 'c3000', clovers: 3000, won: 46000 },
+    { id: 'c3000', clovers: 3000, won: 39000 },
 ]
 
 

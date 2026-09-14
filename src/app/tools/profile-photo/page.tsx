@@ -5,7 +5,7 @@
 // 값(클로버)을 버튼에 그대로 박았다.
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { STYLES, BACKDROPS } from '@/domains/studio/photo'
+import { STYLES, BACKDROPS, AGES, DEFAULT_AGE_ID } from '@/domains/studio/photo'
 import { CURI_MODELS, DEFAULT_MODEL_ID, getModel } from '@/domains/studio/models'
 import { RATIOS, DEFAULT_RATIO_ID } from '@/domains/studio/ratios'
 import { CLOVER_UNIT_WON } from '@/domains/credit/packs'
@@ -13,6 +13,7 @@ import { PickCard } from '@/components/studio/PickCard'
 import { PhotoDrop } from '@/components/studio/PhotoDrop'
 import AppSidebar from '@/components/AppSidebar'
 import MakingBar from '@/components/studio/MakingBar'
+import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
 
@@ -23,6 +24,7 @@ export default function ProfilePhotoPage() {
     const [mimeType, setMimeType] = useState('image/jpeg')
     const [modelId, setModelId] = useState(DEFAULT_MODEL_ID)
     const [ratioId, setRatioId] = useState(DEFAULT_RATIO_ID)
+    const [ageId, setAgeId] = useState(DEFAULT_AGE_ID)
     const [styleId, setStyleId] = useState<string | null>(null)
     const [backdropId, setBackdropId] = useState<string | null>(null)
     const [result, setResult] = useState<string | null>(null)
@@ -53,7 +55,7 @@ export default function ProfilePhotoPage() {
             const res = await fetch('/api/tools/profile-photo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64: base64, mimeType, styleId, backdropId, modelId, ratioId }),
+                body: JSON.stringify({ imageBase64: base64, mimeType, styleId, backdropId, modelId, ratioId, ageId }),
             })
             const data = await res.json()
             if (!res.ok) {
@@ -136,7 +138,7 @@ export default function ProfilePhotoPage() {
                                             </span>
                                         </span>
                                         {!못씀 && (
-                                            <span style={{ fontSize: 13, fontWeight: 700, color: '#3f3f46', flexShrink: 0 }}>{m.cost}개</span>
+                                            <span style={{ fontSize: 13, fontWeight: 700, color: '#3f3f46', flexShrink: 0 }}><CloverIcon size={13} color="#3f3f46" /> {m.cost}개</span>
                                         )}
                                     </button>
                                 )
@@ -160,9 +162,29 @@ export default function ProfilePhotoPage() {
                             ))}
                         </div>
                     </div>
+                    {/* 나이 — 대표 지시 0914 「나이도 조정할 수 있도록」 「-10살까지」 */}
+                    <div style={{ marginBottom: 24 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>5. 나이</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                            {AGES.map(a => (
+                                <button key={a.id} onClick={() => setAgeId(a.id)} style={{
+                                    padding: '14px 8px', borderRadius: 14,
+                                    border: ageId === a.id ? '2.5px solid #22c55e' : '1.5px solid #e4e4e7',
+                                    background: ageId === a.id ? '#f0fdf4' : '#fff', cursor: 'pointer',
+                                    fontSize: 14, fontWeight: 700, color: '#18181b',
+                                }}>
+                                    {a.label}
+                                </button>
+                            ))}
+                        </div>
+                        <p style={{ fontSize: 12.5, color: '#71717a', marginTop: 8, lineHeight: 1.5 }}>
+                            얼굴은 그대로 두고 피부와 머리숱만 손봐요. 너무 티 나지 않게요.
+                        </p>
+                    </div>
+
                     {/* 비율 — 어디에 쓸 사진인지에 따라 다르다 */}
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>5. 사진 모양</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>6. 사진 모양</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                             {RATIOS.map(r => (
                                 <button key={r.id} onClick={() => setRatioId(r.id)} style={{
@@ -206,7 +228,9 @@ export default function ProfilePhotoPage() {
                         color: '#fff', fontSize: 16, fontWeight: 700,
                         cursor: !준비됨 ? 'default' : 'pointer',
                     }}>
-                        {`사진 만들기 · ${(getModel(modelId)!.cost * CLOVER_UNIT_WON).toLocaleString()}원`}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            사진 만들기 <CloverIcon size={17} color="#fff" /> {getModel(modelId)!.cost}개
+                        </span>
                     </button>
                 )}
 

@@ -39,6 +39,17 @@ export const STUDIO_ITEMS: StudioItem[] = [
     },
 
     {
+        id: 'my-ai',
+        title: '내 AI 만들기',
+        desc: '내 경험으로 말하는 AI 를 만들고 팔 수 있어요',
+        emoji: '✨',
+        img: '/samples/look-office.webp',
+        href: '/creator/create',
+        cost: 'free',
+        group: '만들기',
+    },
+
+    {
         id: 'insta-profile',
         title: '인스타 프로필 사진 만들기',
         desc: '동그랗게 잘려도 얼굴이 잘 나오게 만들어요',

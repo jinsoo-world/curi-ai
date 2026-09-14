@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenAI } from '@google/genai'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getStyle, getBackdrop, isValidStyle, isValidBackdrop, buildPhotoPrompt } from '@/domains/studio/photo'
+import { getStyle, getBackdrop, isValidStyle, isValidBackdrop, buildPhotoPrompt, getAge, isValidAgeId, DEFAULT_AGE_ID } from '@/domains/studio/photo'
 import { getMood, getTone, isValidMood, isValidTone, buildInstaPrompt } from '@/domains/studio/insta'
 import { getModel, isValidModelId, DEFAULT_MODEL_ID } from '@/domains/studio/models'
 import { getRatio, isValidRatioId, DEFAULT_RATIO_ID } from '@/domains/studio/ratios'
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '로그인이 필요해요.' }, { status: 401 })
         }
 
-        const { imageBase64, mimeType, styleId, backdropId, modelId, kind, ratioId } = await req.json()
+        const { imageBase64, mimeType, styleId, backdropId, modelId, kind, ratioId, ageId } = await req.json()
 
         if (typeof imageBase64 !== 'string' || imageBase64.length < 100) {
             return NextResponse.json({ error: '사진을 올려주세요.' }, { status: 400 })
@@ -70,7 +70,12 @@ export async function POST(req: NextRequest) {
             const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
             const prompt = isInsta
                 ? buildInstaPrompt(getMood(styleId)!, getTone(backdropId)!)
-                : buildPhotoPrompt(getStyle(styleId)!, getBackdrop(backdropId)!, ratio.label)
+                : buildPhotoPrompt(
+                    getStyle(styleId)!,
+                    getBackdrop(backdropId)!,
+                    ratio.label,
+                    getAge(isValidAgeId(ageId) ? ageId : DEFAULT_AGE_ID)!.minus,
+                  )
 
             const r = await ai.models.generateContent({
                 model: model.engine,

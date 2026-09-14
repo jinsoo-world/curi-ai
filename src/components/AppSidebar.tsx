@@ -15,12 +15,13 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
+import CloverIcon from '@/components/ui/CloverIcon'
 
+// 대표 확정 0914 = 「만들기ㅣ대화하기ㅣ내 AI 로 해」 「내 대화는 없애 굳이 필요 없을듯」
 const 메뉴 = [
     { label: '만들기', href: '/studio' },
-    { label: '코치와 대화', href: '/mentors' },
+    { label: '대화하기', href: '/mentors' },
     { label: '내 AI', href: '/creator/manage' },
-    { label: '내 대화', href: '/chats' },
 ]
 
 export default function AppSidebar() {
@@ -76,7 +77,8 @@ export default function AppSidebar() {
 
                 {/* 오른쪽 — 남은 개수와 나 */}
                 <div className="app-top-right">
-                    <Link href="/charge" className="app-top-credit">
+                    <Link href="/charge" className="app-top-credit" aria-label="클로버 충전하기">
+                        <CloverIcon size={17} />
                         <span className="app-top-credit-num">{잔액 === null ? '–' : 잔액.toLocaleString()}</span>
                         <span className="app-top-credit-plus">충전</span>
                     </Link>
@@ -97,27 +99,50 @@ export default function AppSidebar() {
                 </div>
             </div>
 
-            {/* 펼친 메뉴 — 좁은 화면의 메뉴이자 넓은 화면의 내 메뉴 */}
+            {/* 내 메뉴 — 대표 지적 0914 「나 이렇게 되어있는데 다시 재기획해. 깔끔하게」
+                넓은 화면에서는 위 띠에 이미 있는 메뉴를 또 보여주지 않는다. */}
             {열림 && (
-                <div className="app-top-sheet">
-                    {메뉴.map((m) => (
-                        <Link key={m.href} href={m.href} className="app-top-sheet-item">{m.label}</Link>
-                    ))}
-                    <Link href="/missions" className="app-top-sheet-item">무료로 모으기</Link>
-                    <Link href="/store" className="app-top-sheet-item">스토어</Link>
-                    <Link href="/profile" className="app-top-sheet-item">마이페이지</Link>
+                <>
                     <button
                         type="button"
-                        className="app-top-sheet-item"
-                        onClick={async () => {
-                            await createClient().auth.signOut()
-                            router.push('/login')
-                        }}
-                    >
-                        로그아웃
-                    </button>
-                </div>
+                        aria-label="메뉴 닫기"
+                        className="app-top-scrim"
+                        onClick={() => set열림(false)}
+                    />
+                    <div className="app-top-sheet" role="menu">
+                        <div className="app-top-sheet-head">
+                            <span className="app-top-sheet-name">{이름 ?? '내 계정'}</span>
+                            <Link href="/charge" className="app-top-sheet-credit">
+                                <CloverIcon size={15} />
+                                {잔액 === null ? '–' : 잔액.toLocaleString()}개
+                            </Link>
+                        </div>
+
+                        <div className="app-top-sheet-only-narrow">
+                            {메뉴.map((m) => (
+                                <Link key={m.href} href={m.href} className="app-top-sheet-item">{m.label}</Link>
+                            ))}
+                            <div className="app-top-sheet-line" />
+                        </div>
+
+                        <Link href="/charge" className="app-top-sheet-item">클로버 충전</Link>
+                        <Link href="/missions" className="app-top-sheet-item">무료로 모으기</Link>
+                        <Link href="/profile" className="app-top-sheet-item">마이페이지</Link>
+                        <div className="app-top-sheet-line" />
+                        <button
+                            type="button"
+                            className="app-top-sheet-item quiet"
+                            onClick={async () => {
+                                await createClient().auth.signOut()
+                                router.push('/login')
+                            }}
+                        >
+                            로그아웃
+                        </button>
+                    </div>
+                </>
             )}
+
         </header>
     )
 }
