@@ -34,14 +34,14 @@ const TOOLS = [
 
 export default function ToolTiles() {
     return (
-        <section style={{ background: 'var(--종이)', padding: '44px 16px 8px' }}>
+        <section style={{ background: 'var(--종이)', padding: '28px 16px 8px' }}>
             <div style={{ maxWidth: 1200, margin: '0 auto' }}>
                 <h2
                     style={{
                         fontSize: 'var(--글자-대)',
                         fontWeight: 900,
                         letterSpacing: '-0.04em',
-                        margin: '0 0 18px',
+                        margin: '0 0 14px',
                     }}
                 >
                     오늘 뭘 만들까요

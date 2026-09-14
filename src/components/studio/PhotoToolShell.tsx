@@ -17,6 +17,7 @@ import { PhotoDrop } from './PhotoDrop'
 import MakingBar from './MakingBar'
 import CloverIcon from '@/components/ui/CloverIcon'
 import BeforeAfter from './BeforeAfter'
+import KeepNotice from '@/components/studio/KeepNotice'
 
 export interface 견본 { src: string; label: string }
 
@@ -163,11 +164,14 @@ export default function PhotoToolShell({
                                 }}>로그인하고 원본 받기</button>
                             </div>
                         ) : (
+                            <>
                             <a href={result} download={downloadName} style={{
                                 display: 'block', marginTop: 12, padding: 14, borderRadius: 14,
                                 background: '#18181b', color: '#fff', fontSize: 15, fontWeight: 700,
                                 textAlign: 'center', textDecoration: 'none',
                             }}>사진 내려받기</a>
+                            <KeepNotice />
+                            </>
                         )}
                     </div>
                 )}

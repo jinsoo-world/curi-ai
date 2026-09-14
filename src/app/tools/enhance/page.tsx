@@ -12,6 +12,7 @@ import CloverIcon from '@/components/ui/CloverIcon'
 import AppSidebar from '@/components/AppSidebar'
 import ToolHero from '@/components/studio/ToolHero'
 import Image from 'next/image'
+import KeepNotice from '@/components/studio/KeepNotice'
 
 export default function EnhancePage() {
     const router = useRouter()
@@ -154,11 +155,14 @@ export default function EnhancePage() {
                                     }}>로그인하고 원본 받기</button>
                                 </div>
                             ) : (
+                                <>
                                 <a href={result} download="화질_개선_사진.png" style={{
                                     display: 'block', marginTop: 12, padding: 14, borderRadius: 14,
                                     background: '#18181b', color: '#fff', fontSize: 15, fontWeight: 700,
                                     textAlign: 'center', textDecoration: 'none',
                                 }}>사진 내려받기</a>
+                            <KeepNotice />
+                                </>
                             )}
                         </div>
                     )}

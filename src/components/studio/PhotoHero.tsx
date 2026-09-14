@@ -49,7 +49,7 @@ export default function PhotoHero() {
     }
 
     return (
-        <section style={{ background: 'var(--종이)', padding: '40px 16px 8px' }}>
+        <section style={{ background: 'var(--종이)', padding: '22px 16px 6px' }}>
             <div style={{ maxWidth: 1120, margin: '0 auto' }}>
                 <h1
                     style={{
@@ -58,7 +58,7 @@ export default function PhotoHero() {
                         letterSpacing: '-0.04em',
                         textAlign: 'center',
                         lineHeight: 1.15,
-                        margin: '0 0 12px',
+                        margin: '0 0 8px',
                         wordBreak: 'keep-all',
                     }}
                 >
@@ -69,7 +69,7 @@ export default function PhotoHero() {
                         textAlign: 'center',
                         fontSize: 'var(--글자-본문)',
                         color: 'var(--먹연)',
-                        margin: '0 0 32px',
+                        margin: '0 0 20px',
                         lineHeight: 1.6,
                         wordBreak: 'keep-all',
                     }}

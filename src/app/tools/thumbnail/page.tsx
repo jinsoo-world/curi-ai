@@ -9,6 +9,7 @@ import CloverIcon from '@/components/ui/CloverIcon'
 import ThumbnailCanvas, { type 글자값 } from '@/components/studio/ThumbnailCanvas'
 import AppSidebar from '@/components/AppSidebar'
 import ToolHero from '@/components/studio/ToolHero'
+import KeepNotice from '@/components/studio/KeepNotice'
 
 export default function ThumbnailPage() {
     const router = useRouter()
@@ -160,11 +161,14 @@ export default function ThumbnailPage() {
                                     }}>로그인하고 원본 받기</button>
                                 </div>
                             ) : (
+                                <>
                                 <a href={완성본 ?? result} download="썸네일.png" style={{
                                     display: 'block', marginTop: 12, padding: 14, borderRadius: 14,
                                     background: '#18181b', color: '#fff', fontSize: 15, fontWeight: 700,
                                     textAlign: 'center', textDecoration: 'none',
                                 }}>썸네일 내려받기</a>
+                            <KeepNotice />
+                                </>
                             )}
                         </div>
                     )}

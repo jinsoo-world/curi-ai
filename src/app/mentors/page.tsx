@@ -57,6 +57,9 @@ export default async function MentorsPage() {
         <div style={{ minHeight: '100dvh', background: 'var(--종이)' }} role="document">
 
             {/* ─── Sidebar ─── */}
+            {/* 체험권 띠가 맨 위 — 위 띠보다 먼저 온다 */}
+            <MembershipBanner />
+
             <AppSidebar />
 
             {/* ─── Credit Claim Modal (client, wrapped in Suspense for searchParams) ─── */}
@@ -66,9 +69,6 @@ export default async function MentorsPage() {
 
             {/* ─── Main Content (offset by sidebar on desktop) ─── */}
             <div className="sidebar-content">
-
-                {/* ─── Membership Top Banner ─── */}
-                <MembershipBanner />
 
                 {/* ─── 사진 히로 — 대표 지시 0914 「이게 메인으로」 ─── */}
                 <WelcomeGift />

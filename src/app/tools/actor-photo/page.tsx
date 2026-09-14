@@ -17,6 +17,7 @@ import MakingBar from '@/components/studio/MakingBar'
 import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
+import KeepNotice from '@/components/studio/KeepNotice'
 
 function ActorPhotoPage안쪽() {
     const router = useRouter()
@@ -268,11 +269,14 @@ function ActorPhotoPage안쪽() {
                                 }}>로그인하고 원본 받기</button>
                             </div>
                         ) : (
+                            <>
                             <a href={result} download="배우_프로필_사진.png" style={{
                                 display: 'block', marginTop: 12, padding: '14px', borderRadius: 14,
                                 background: '#18181b', color: '#fff', fontSize: 15, fontWeight: 700,
                                 textAlign: 'center', textDecoration: 'none',
                             }}>사진 내려받기</a>
+                            <KeepNotice />
+                            </>
                         )}
                     </div>
                 )}

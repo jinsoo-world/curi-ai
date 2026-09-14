@@ -14,7 +14,7 @@ export function MembershipBanner() {
             <div style={{
                 background: '#EAF7EF',
                 borderBottom: '1px solid var(--선)',
-                padding: '12px 16px',
+                padding: '9px 16px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

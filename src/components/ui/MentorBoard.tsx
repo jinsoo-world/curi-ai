@@ -35,7 +35,7 @@ export default function MentorBoard({ mentors }: { mentors: BoardMentor[] }) {
 
     return (
         <>
-            <div style={{ maxWidth: 1200, margin: '0 auto', padding: '44px 16px 14px' }}>
+            <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 16px 12px' }}>
                 <h2 style={{ fontSize: 'var(--글자-대)', fontWeight: 900, letterSpacing: '-0.04em', margin: '0 0 6px' }}>
                     물어볼 코치 고르기
                 </h2>
