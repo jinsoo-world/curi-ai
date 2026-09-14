@@ -70,7 +70,7 @@ export default function MentorBoard({ mentors }: { mentors: BoardMentor[] }) {
                         {보일멘토.map((m) => (
                             <MentorBigCard
                                 key={m.id}
-                                href={`/chat/${m.id}`}
+                                href={`/coach/${m.id}`}
                                 name={m.name}
                                 title={m.title}
                                 imageSrc={m.image}

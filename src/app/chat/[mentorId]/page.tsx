@@ -693,7 +693,7 @@ export default function ChatPage() {
                 display: 'flex',
                 flexDirection: 'column',
                 height: '100dvh',
-                background: '#faf8f5',
+                background: 'var(--종이)',
             }}>
                 {/* 스켈레톤 헤더 */}
                 <div style={{
@@ -729,28 +729,8 @@ export default function ChatPage() {
             display: 'flex',
             flexDirection: 'row',
             height: '100dvh',
-            background: '#faf8f5',
+            background: 'var(--종이)',
         }}>
-            {/* 사이드바 */}
-            <ChatSidebar
-                sessions={sidebarSessions.map(s => ({
-                    id: s.id,
-                    title: s.title || '',
-                    last_message_at: s.last_message_at || s.created_at,
-                    message_count: s.message_count || 0,
-                    is_pinned: s.is_pinned || false,
-                    mentors: s.mentors || null,
-                }))}
-                currentSessionId={sessionId}
-                mentorName={mentor.name}
-                isOpen={isSidebarOpen}
-                onClose={() => setIsSidebarOpen(false)}
-                onSelectSession={handleSelectSession}
-                onNewChat={handleNewChat}
-                onUpdateSession={handleUpdateSession}
-                onDeleteSession={handleDeleteSession}
-            />
-
             {/* 메인 채팅 영역 */}
             <div
                 onClick={() => { if (isSidebarOpen) setIsSidebarOpen(false) }}

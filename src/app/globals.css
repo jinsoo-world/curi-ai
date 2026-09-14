@@ -661,3 +661,31 @@ button, a[role="button"] {
 @media (min-width: 760px) {
   .studio-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 }
+
+/* 코치 프로필 */
+.coach-top {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 22px;
+}
+@media (min-width: 860px) {
+  .coach-top {
+    grid-template-columns: 380px 1fr;
+    gap: 36px;
+    align-items: start;
+  }
+}
+.coach-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--연두);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.coach-cta:hover { background: #16a34a; }

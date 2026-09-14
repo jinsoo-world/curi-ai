@@ -586,8 +586,8 @@ export default function ChatMessages({
                                         src={mentorImage}
                                         alt={mentor.name}
                                         style={{
-                                            width: 36,
-                                            height: 36,
+                                            width: 44,
+                                            height: 44,
                                             borderRadius: '50%',
                                             objectFit: 'cover',
                                             flexShrink: 0,
@@ -599,8 +599,8 @@ export default function ChatMessages({
                                         src="/logo.png"
                                         alt="큐리 AI"
                                         style={{
-                                            width: 36,
-                                            height: 36,
+                                            width: 44,
+                                            height: 44,
                                             borderRadius: '50%',
                                             objectFit: 'cover',
                                             flexShrink: 0,
@@ -709,12 +709,12 @@ export default function ChatMessages({
                                                 {/* 배경 글로우 이펙트 */}
                                                 <div style={{
                                                     position: 'absolute', top: -40, right: -40,
-                                                    width: 120, height: 120, borderRadius: '50%',
+                                                    width: 168, height: 168, borderRadius: '50%',
                                                     background: 'radial-gradient(circle, rgba(34,197,94,0.15) 0%, transparent 70%)',
                                                 }} />
                                                 <div style={{
                                                     position: 'absolute', bottom: -30, left: -30,
-                                                    width: 100, height: 100, borderRadius: '50%',
+                                                    width: 148, height: 148, borderRadius: '50%',
                                                     background: 'radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%)',
                                                 }} />
 

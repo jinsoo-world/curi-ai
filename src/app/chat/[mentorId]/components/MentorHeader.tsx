@@ -1,881 +1,123 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useState, useEffect, lazy, Suspense } from 'react'
-import { generateEbookHtml } from './ebookTemplate'
+/**
+ * 대화 화면 맨 위 띠 — 지금 누구와 말하고 있는지만 보여준다
+ *
+ * 대표 지시 2026-09-14 = 「대화창 UI는 더 직관적이고 깔끔하게 해. 지금 채팅 UI 다 걷어내고」
+ * 「대화 창에도 더 이미지 크게 해. 이 사람이랑 대화하는 느낌을 주란말이야. web/MO 둘 다」
+ *
+ * 전에는 이 한 줄에 통화·전자책·보고서·공유·사이드바 여닫기까지 일곱 가지가 붙어 있었다.
+ * 남긴 것은 셋이다. 뒤로 가기 · 상대 얼굴과 이름 · 새 대화.
+ */
+import Image from 'next/image'
+import Link from 'next/link'
 
-/* 로딩 단계별 문구 컴포넌트 */
-function EbookLoadingSteps() {
-    const [step, setStep] = useState(0)
-    const steps = ['대화 내용을 분석하고 있어요...', '목차를 구성하고 있어요...', '표지를 디자인하고 있어요...', '본문을 작성하고 있어요...', '거의 다 됐어요! 마무리 중...']
-    useEffect(() => {
-        const timer = setInterval(() => setStep(s => Math.min(s + 1, steps.length - 1)), 3000)
-        return () => clearInterval(timer)
-    }, [steps.length])
-    return (
-        <div>
-            <p style={{ color: '#4f46e5', fontSize: 15, fontWeight: 600, margin: 0, animation: 'fadeInUp 0.4s ease' }} key={step}>
-                {steps[step]}
-            </p>
-            <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 12 }}>
-                {steps.map((_, i) => (
-                    <div key={i} style={{
-                        width: i <= step ? 20 : 8, height: 4, borderRadius: 2,
-                        background: i <= step ? '#6366f1' : '#e0e7ff',
-                        transition: 'all 0.3s ease',
-                    }} />
-                ))}
-            </div>
-            <p style={{ color: '#94a3b8', fontSize: 11, margin: '8px 0 0' }}>
-                표지 + 5페이지 전자책 생성
-            </p>
-        </div>
-    )
-}
-
-const EbookViewer = lazy(() => import('./EbookViewer'))
-
-interface MentorHeaderProps {
-    mentor: {
-        id: string
-        name: string
-        slug: string
-        title: string
-        avatar_url: string | null
-        sample_questions: string[]
-    }
-    mentorImage: string | undefined
-    mentorEmoji: string
-    isStreaming: boolean
-    onNewChat: () => void
-    /** 전화 버튼 클릭 시 콜백 (없으면 전화 버튼 숨김) */
+interface Props {
+    mentor: { id: string; name: string; title?: string }
+    mentorImage?: string | null
+    mentorEmoji?: string
+    isStreaming?: boolean
+    onNewChat?: () => void
+    // 아래는 예전 화면이 넘기던 것들. 지금 띠에서는 쓰지 않는다.
     onCall?: () => void
-    /** 사이드바 토글 (모바일) */
     onToggleSidebar?: () => void
-    /** 사이드바 열림 상태 (열렸으면 헤더 햄버거 숨김) */
     isSidebarOpen?: boolean
-    /** 현재 세션 ID (내보내기용) */
     sessionId?: string | null
-    /** AI 답변 총 글자수 (원고 버튼 활성화 기준 1500자) */
     aiContentLength?: number
-    /** 원고 버튼 처음 활성화 여부 (NEW 뱃지) */
     isReportNew?: boolean
-    /** PDF 내보내기 활성화 여부 (멘토 설정) */
     pdfExportEnabled?: boolean
-    /** 내보내기 버튼 라벨 (기본: '전자책 원고 보기') */
     exportLabel?: string
-    /** 수정 요청 시 채팅 입력란 프리필 */
     onEditRequest?: (prefill: string) => void
 }
 
-/* ── SVG 아이콘 ── */
-const BackIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M13 4L7 10L13 16" />
-    </svg>
-)
-const PhoneIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M2 3.5C2 2.67 2.67 2 3.5 2H6.12a1 1 0 01.98.76l.68 3.03a1 1 0 01-.29.93L5.78 8.44a11.05 11.05 0 005.78 5.78l1.72-1.71a1 1 0 01.93-.29l3.03.68a1 1 0 01.76.98V16.5a1.5 1.5 0 01-1.5 1.5A14.5 14.5 0 012 3.5z" />
-    </svg>
-)
-const PlusIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <line x1="8" y1="3" x2="8" y2="13" />
-        <line x1="3" y1="8" x2="13" y2="8" />
-    </svg>
-)
-const ShareIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 8V13H12V8" />
-        <polyline points="8,2 8,10" />
-        <polyline points="5.5,4.5 8,2 10.5,4.5" />
-    </svg>
-)
-const ExportIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M8 2v8" />
-        <polyline points="4,6 8,10 12,6" />
-        <path d="M2 13h12" />
-    </svg>
-)
-const KakaoIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <path d="M9 1.5C4.86 1.5 1.5 4.14 1.5 7.38c0 2.08 1.38 3.9 3.45 4.94-.15.56-.55 2.03-.63 2.34-.1.39.14.38.3.28.12-.08 1.94-1.32 2.73-1.86.53.08 1.08.12 1.65.12 4.14 0 7.5-2.64 7.5-5.88S13.14 1.5 9 1.5z" fill="#3C1E1E"/>
-    </svg>
-)
-const LinkIcon = () => (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6.5 8.5a3 3 0 004.24.35l2-2a3 3 0 00-4.24-4.24L7.25 3.86" />
-        <path d="M9.5 7.5a3 3 0 00-4.24-.35l-2 2a3 3 0 004.24 4.24L8.75 12.14" />
-    </svg>
-)
-
-export default function MentorHeader({
-    mentor,
-    mentorImage,
-    mentorEmoji,
-    isStreaming,
-    onNewChat,
-    onCall,
-    onToggleSidebar,
-    isSidebarOpen,
-    sessionId,
-    aiContentLength = 0,
-    isReportNew = false,
-    pdfExportEnabled = false,
-    exportLabel = '전자책 원고 보기',
-    onEditRequest,
-}: MentorHeaderProps) {
-    const router = useRouter()
-    const [showShareMenu, setShowShareMenu] = useState(false)
-    const [showExportModal, setShowExportModal] = useState(false)
-    const [exportLoading, setExportLoading] = useState(false)
-    const [exportError, setExportError] = useState<string | null>(null)
-    const [ebookData, setEbookData] = useState<{ ebook: any; meta: any; ctaLinks?: string[] } | null>(null)
-    const [showEbookViewer, setShowEbookViewer] = useState(false)
-
-    const handleExport = async () => {
-        // 전자책 봇: API로 전체 대화 기반 원고 조립 → 풀스크린 뷰어
-        if (!sessionId || sessionId.startsWith('guest-')) return
-        setShowExportModal(true)
-        setExportLoading(true)
-        setExportError(null)
-        setEbookData(null)
-        try {
-            const res = await fetch('/api/chat/export-ebook', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId }),
-            })
-            if (!res.ok) {
-                const err = await res.json()
-                throw new Error(err.error || '원고 생성 실패')
-            }
-            const data = await res.json()
-            setEbookData(data)
-            setShowExportModal(false) // 모달 닫고
-            setShowEbookViewer(true)  // 풀스크린 뷰어 열기
-        } catch (e: any) {
-            setExportError(e.message)
-        } finally {
-            setExportLoading(false)
-        }
-    }
-
-
-    /** PDF 다운로드 (클라이언트 사이드) */
-    const handleDownloadPdf = async () => {
-        try {
-            const html2pdf = (await import('html2pdf.js')).default
-            let htmlContent: string
-            let filename: string
-
-            if (ebookData) {
-                // 전자책 모드: ebookTemplate 사용
-                htmlContent = generateEbookHtml(ebookData.ebook, ebookData.meta.mentorName)
-                filename = `${ebookData.ebook.cover?.title || mentor.name}_전자책_${new Date().toISOString().split('T')[0]}.pdf`
-            } else {
-                return
-            }
-
-            const container = document.createElement('div')
-            container.innerHTML = htmlContent
-            document.body.appendChild(container)
-
-            await html2pdf()
-                .set({
-                    margin: [0, 0, 0, 0],
-                    filename,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['css', 'legacy'] },
-                } as any)
-                .from(container)
-                .save()
-
-            document.body.removeChild(container)
-        } catch (e) {
-            console.error('PDF 생성 오류:', e)
-            alert('PDF 생성에 실패했습니다. 다시 시도해 주세요.')
-        }
-    }
-
-    const [copied, setCopied] = useState(false)
-
-    const shareUrl = typeof window !== 'undefined'
-        ? `${window.location.origin}/chat/${mentor.id}`
-        : `https://www.curi-ai.com/chat/${mentor.id}`
-    const shareTitle = `${mentor.name} AI ㅣ ${mentor.title}`
-    const shareText = '궁금한 것을 언제든 물어보세요.'
-
-    const shareImageUrl = mentor.avatar_url?.startsWith('http')
-        ? mentor.avatar_url
-        : `https://www.curi-ai.com${mentor.avatar_url || '/icons/icon-512x512.png'}`
-
-    const handleKakaoShare = async () => {
-        const w = window as any
-        // SDK 동적 로딩 보장 (미션 페이지와 동일 패턴)
-        const ensureKakao = (): Promise<boolean> => new Promise((resolve) => {
-            if (w.Kakao) {
-                if (!w.Kakao.isInitialized()) w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
-                resolve(true)
-                return
-            }
-            const s = document.createElement('script')
-            s.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js'
-            s.onload = () => {
-                if (w.Kakao && !w.Kakao.isInitialized()) w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
-                resolve(!!w.Kakao)
-            }
-            s.onerror = () => resolve(false)
-            document.head.appendChild(s)
-        })
-
-        try {
-            const ready = await ensureKakao()
-            if (ready) {
-                const shareParams = {
-                    objectType: 'feed' as const,
-                    content: {
-                        title: shareTitle,
-                        description: shareText,
-                        imageUrl: shareImageUrl,
-                        link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
-                    },
-                    buttons: [
-                        { title: '대화하기', link: { mobileWebUrl: shareUrl, webUrl: shareUrl } },
-                    ],
-                }
-                if (w.Kakao?.Share?.sendDefault) {
-                    w.Kakao.Share.sendDefault(shareParams)
-                } else if (w.Kakao?.Link?.sendDefault) {
-                    w.Kakao.Link.sendDefault(shareParams)
-                }
-            } else {
-                await navigator.clipboard.writeText(shareUrl)
-                alert('링크가 복사되었습니다. 카카오톡에 붙여넣기 해주세요!')
-            }
-        } catch (e) {
-            console.error('[Kakao Share]', e)
-            try { await navigator.clipboard.writeText(shareUrl) } catch {}
-            alert('링크가 복사되었습니다. 카카오톡에 붙여넣기 해주세요!')
-        }
-        setShowShareMenu(false)
-    }
-
-    const handleCopyLink = async () => {
-        try {
-            await navigator.clipboard.writeText(shareUrl)
-            setCopied(true)
-            setTimeout(() => {
-                setCopied(false)
-                setShowShareMenu(false)
-            }, 1500)
-        } catch {
-            // fallback
-            const input = document.createElement('input')
-            input.value = shareUrl
-            document.body.appendChild(input)
-            input.select()
-            document.execCommand('copy')
-            document.body.removeChild(input)
-            setCopied(true)
-            setTimeout(() => {
-                setCopied(false)
-                setShowShareMenu(false)
-            }, 1500)
-        }
-    }
-
-
+export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStreaming, onNewChat }: Props) {
     return (
-        <>
-        <header style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '8px 10px',
-            borderBottom: '1px solid #E8EDE9',
-            background: 'var(--흰)',
-            position: 'sticky',
-            top: 0,
-            zIndex: 10,
-            overflow: 'hidden',
-            gap: 8,
-        }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1, overflow: 'hidden' }}>
-                {/* 모바일 사이드바 토글 */}
-                {onToggleSidebar && !isSidebarOpen && (
-                    <button
-                        onClick={onToggleSidebar}
-                        className="sidebar-toggle-btn"
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            width: 44,
-                            height: 44,
-                            borderRadius: 'var(--둥근-소)',
-                            color: 'var(--먹연)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'background 0.15s',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
-                    >
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                            <line x1="3" y1="5" x2="17" y2="5" />
-                            <line x1="3" y1="10" x2="17" y2="10" />
-                            <line x1="3" y1="15" x2="17" y2="15" />
-                        </svg>
-                    </button>
-                )}
-                <button
-                    onClick={() => {
-                        // 직접 URL 진입 시 (카카오톡 링크 등) back()하면 빈 페이지 → /mentors로 안전하게 이동
-                        const hasHistory = window.history.length > 1
-                        const isSameOrigin = document.referrer && document.referrer.includes(window.location.origin)
-                        if (hasHistory && isSameOrigin) {
-                            router.back()
-                        } else {
-                            router.push('/mentors')
-                        }
-                    }}
+        <header
+            style={{
+                position: 'sticky',
+                top: 0,
+                zIndex: 30,
+                background: 'rgba(255,255,255,0.92)',
+                backdropFilter: 'saturate(180%) blur(12px)',
+                borderBottom: '1px solid var(--선)',
+            }}
+        >
+            <div
+                style={{
+                    maxWidth: 780,
+                    margin: '0 auto',
+                    height: 68,
+                    padding: '0 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                }}
+            >
+                <Link
+                    href={`/coach/${mentor.id}`}
+                    aria-label="코치 소개로 돌아가기"
                     style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: 8,
-                        borderRadius: 10,
-                        color: '#64748b',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'background 0.15s',
+                        width: 38, height: 38, flexShrink: 0,
+                        display: 'grid', placeItems: 'center',
+                        borderRadius: 999, color: 'var(--먹연)',
+                        fontSize: 22, textDecoration: 'none',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
                 >
-                    <BackIcon />
-                </button>
+                    ‹
+                </Link>
 
-                {mentorImage ? (
-                    <img
-                        src={mentorImage}
-                        alt={mentor.name}
+                <Link
+                    href={`/coach/${mentor.id}`}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1, textDecoration: 'none', color: 'inherit' }}
+                >
+                    <span
                         style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: '50%',
-                            objectFit: 'cover',
+                            position: 'relative',
+                            width: 48, height: 48, flexShrink: 0,
+                            borderRadius: 999, overflow: 'hidden',
+                            background: '#E8F2EC',
+                            display: 'grid', placeItems: 'center',
+                            fontSize: 22,
                         }}
-                    />
-                ) : (
-                    <img
-                        src="/logo.png"
-                        alt="큐리 AI"
-                        style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: '50%',
-                            objectFit: 'cover',
-                        }}
-                    />
-                )}
-
-                <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{
-                        fontWeight: 900,
-                        fontSize: 'var(--글자-중)',
-                        color: 'var(--먹)',
-                        lineHeight: 1.3,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        overflow: 'hidden',
-                    }}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mentor.name}</span>
-                        <span style={{
-                            fontSize: 12,
-                            fontWeight: 800,
-                            background: '#EDF7F1',
-                            color: 'var(--진초록)',
-                            padding: '2px 8px',
-                            borderRadius: 6,
-                            letterSpacing: '0.03em',
-                            lineHeight: 1.4,
-                            flexShrink: 0,
-                        }}>AI</span>
-                    </div>
-                    <div style={{
-                        fontSize: 'var(--글자-작)',
-                        color: 'var(--먹연)',
-                        lineHeight: 1.35,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                    }}>
-                        {mentor.title}
-                    </div>
-                </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                {isStreaming && (
-                    <div className="header-streaming-badge" style={{
-                        fontSize: 13,
-                        color: '#22c55e',
-                        fontWeight: 500,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        marginRight: 4,
-                    }}>
-                        <span style={{
-                            display: 'inline-block',
-                            width: 6, height: 6, borderRadius: '50%',
-                            background: '#22c55e',
-                            animation: 'pulseSoft 1.5s ease-in-out infinite',
-                        }} />
-                        <span className="header-text-label">답변 중</span>
-                    </div>
-                )}
-
-                {onCall && (
-                    <button
-                        onClick={onCall}
-                        aria-label="음성 대화 시작"
-                        title="음성 대화"
-                        style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 10,
-                            background: 'transparent',
-                            border: 'none',
-                            color: '#22c55e',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'background 0.15s',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#f0fdf4' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                     >
-                        <PhoneIcon />
-                    </button>
-                )}
-
-                {/* 비회원: 회원가입 버튼 */}
-                {(!sessionId || sessionId.startsWith('guest-')) ? (
-                    <button
-                        onClick={() => router.push('/login')}
-                        style={{
-                            background: 'var(--흰)',
-                            border: '2px solid var(--연두)',
-                            borderRadius: 'var(--둥근-소)',
-                            padding: '0 14px',
-                            height: 44,
-                            fontSize: 'var(--글자-작)',
-                            color: 'var(--진초록)',
-                            cursor: 'pointer',
-                            fontWeight: 800,
-                            display: 'flex',
-                            alignItems: 'center',
-                            transition: 'all 0.15s',
-                            whiteSpace: 'nowrap',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.opacity = '0.9' }}
-                        onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
-                    >
-                        회원가입
-                    </button>
-                ) : (
-                    <>
-                        <button
-                            onClick={onNewChat}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                borderRadius: 10,
-                                padding: '7px 12px',
-                                fontSize: 14,
-                                color: '#64748b',
-                                cursor: 'pointer',
-                                fontWeight: 500,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 5,
-                                transition: 'background 0.15s',
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9' }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-                        >
-                            <PlusIcon />
-                            <span className="header-text-label">새 대화</span>
-                        </button>
-
-                        {/* 내보내기 버튼 — PDF 활성화 + 로그인 세션 + AI 답변 1500자 이상 */}
-                        {pdfExportEnabled && sessionId && !sessionId.startsWith('guest-') && aiContentLength >= 1500 && (
-                            <button
-                                onClick={handleExport}
-                                aria-label="전자책 원고 보기"
-                                title="전자책 원고 보기"
-                                style={{
-                                    position: 'relative',
-                                    background: isReportNew ? '#f0f9ff' : 'transparent',
-                                    border: isReportNew ? '1px solid #bfdbfe' : 'none',
-                                    borderRadius: 10,
-                                    padding: '7px 12px',
-                                    fontSize: 14,
-                                    color: isReportNew ? '#3b82f6' : '#64748b',
-                                    cursor: 'pointer',
-                                    fontWeight: isReportNew ? 600 : 500,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 5,
-                                    transition: 'all 0.3s',
-                                    animation: isReportNew ? 'reportPulse 2s ease-in-out 3' : 'none',
-                                }}
-                                onMouseEnter={e => { e.currentTarget.style.background = '#eff6ff' }}
-                                onMouseLeave={e => { e.currentTarget.style.background = isReportNew ? '#f0f9ff' : 'transparent' }}
-                            >
-                                <ExportIcon />
-                                <span className="header-text-label">{exportLabel}</span>
-                                {isReportNew && (
-                                    <span style={{
-                                        position: 'absolute', top: -4, right: -4,
-                                        background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
-                                        color: '#fff', fontSize: 9, fontWeight: 700,
-                                        padding: '1px 5px', borderRadius: 6,
-                                        lineHeight: 1.5, letterSpacing: '0.05em',
-                                    }}>NEW</span>
-                                )}
-                            </button>
+                        {mentorImage ? (
+                            <Image src={mentorImage} alt="" fill sizes="48px" quality={90} style={{ objectFit: 'cover', objectPosition: 'center 20%' }} />
+                        ) : (
+                            <span aria-hidden>{mentorEmoji || mentor.name.slice(0, 1)}</span>
                         )}
-                        <style>{`
-                            @keyframes reportPulse {
-                                0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
-                                50% { box-shadow: 0 0 0 6px rgba(59,130,246,0.15); }
-                            }
-                        `}</style>
+                    </span>
 
-                        {/* 공유하기 버튼 */}
-                        <button
-                            onClick={() => setShowShareMenu(true)}
-                            aria-label="공유하기"
-                            title="공유하기"
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                borderRadius: 10,
-                                padding: '7px 12px',
-                                fontSize: 14,
-                                color: '#64748b',
-                                cursor: 'pointer',
-                                fontWeight: 500,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 5,
-                                transition: 'background 0.15s',
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9' }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-                        >
-                            <ShareIcon />
-                            <span className="header-text-label">공유하기</span>
-                        </button>
-                    </>
-                )}
+                    <span style={{ minWidth: 0 }}>
+                        <span style={{ display: 'block', fontSize: 17, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--먹)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {mentor.name}
+                        </span>
+                        <span style={{ display: 'block', fontSize: 13, color: isStreaming ? 'var(--연두)' : 'var(--먹연)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {isStreaming ? '쓰는 중…' : (mentor.title || '')}
+                        </span>
+                    </span>
+                </Link>
 
-                {/* 공유 모달 */}
-                {showShareMenu && (
-                    <>
-                        {/* 배경 오버레이 */}
-                        <div
-                            onClick={() => setShowShareMenu(false)}
-                            style={{
-                                position: 'fixed',
-                                inset: 0,
-                                background: 'rgba(0,0,0,0.4)',
-                                zIndex: 1000,
-                                animation: 'shareOverlayIn 0.2s ease',
-                            }}
-                        />
-                        {/* 모달 */}
-                        <div style={{
-                            position: 'fixed',
-                            left: '50%',
-                            top: '50%',
-                            transform: 'translate(-50%, -50%)',
+                {onNewChat && (
+                    <button
+                        type="button"
+                        onClick={onNewChat}
+                        style={{
+                            flexShrink: 0,
+                            height: 38,
+                            padding: '0 14px',
+                            borderRadius: 999,
+                            border: '1px solid var(--선)',
                             background: '#fff',
-                            borderRadius: 20,
-                            padding: '28px 24px 24px',
-                            width: 'min(360px, calc(100vw - 48px))',
-                            zIndex: 1001,
-                            animation: 'shareModalIn 0.2s ease',
-                        }}>
-                            <style>{`
-                                @keyframes shareOverlayIn {
-                                    from { opacity: 0; }
-                                    to { opacity: 1; }
-                                }
-                                @keyframes shareModalIn {
-                                    from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
-                                    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-                                }
-                            `}</style>
-
-                            {/* 모달 헤더 */}
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                marginBottom: 24,
-                            }}>
-                                <h3 style={{
-                                    margin: 0,
-                                    fontSize: 18,
-                                    fontWeight: 700,
-                                    color: '#18181b',
-                                }}>공유하기</h3>
-                                <button
-                                    onClick={() => setShowShareMenu(false)}
-                                    style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        padding: 4,
-                                        color: '#9ca3af',
-                                        fontSize: 20,
-                                        lineHeight: 1,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                    }}
-                                >
-                                    ✕
-                                </button>
-                            </div>
-
-                            {/* 링크 복사하기 */}
-                            <button
-                                onClick={handleCopyLink}
-                                style={{
-                                    width: '100%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: 10,
-                                    padding: '14px 16px',
-                                    border: '1px solid #e5e7eb',
-                                    borderRadius: 12,
-                                    background: '#fff',
-                                    cursor: 'pointer',
-                                    fontSize: 15,
-                                    fontWeight: 600,
-                                    color: copied ? '#16a34a' : '#374151',
-                                    transition: 'background 0.15s, border-color 0.15s',
-                                    marginBottom: 10,
-                                }}
-                                onMouseEnter={e => { e.currentTarget.style.background = '#f9fafb'; e.currentTarget.style.borderColor = '#d1d5db' }}
-                                onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#e5e7eb' }}
-                            >
-                                <LinkIcon />
-                                {copied ? '✓ 복사됨!' : '링크 복사하기'}
-                            </button>
-
-                            {/* 카카오 공유하기 */}
-                            <button
-                                onClick={handleKakaoShare}
-                                style={{
-                                    width: '100%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: 10,
-                                    padding: '14px 16px',
-                                    border: 'none',
-                                    borderRadius: 12,
-                                    background: '#FEE500',
-                                    cursor: 'pointer',
-                                    fontSize: 15,
-                                    fontWeight: 600,
-                                    color: '#3C1E1E',
-                                    transition: 'background 0.15s',
-                                }}
-                                onMouseEnter={e => { e.currentTarget.style.background = '#fdd800' }}
-                                onMouseLeave={e => { e.currentTarget.style.background = '#FEE500' }}
-                            >
-                                <KakaoIcon />
-                                카카오 공유하기
-                            </button>
-                        </div>
-                    </>
-                )}
-
-                {/* 내보내기 모달 */}
-                {showExportModal && (
-                    <>
-                        <div
-                            onClick={() => setShowExportModal(false)}
-                            style={{
-                                position: 'fixed', inset: 0,
-                                background: 'rgba(0,0,0,0.4)',
-                                zIndex: 1000,
-                                animation: 'shareOverlayIn 0.2s ease',
-                            }}
-                        />
-                        <div style={{
-                            position: 'fixed',
-                            left: '50%', top: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            background: '#fff',
-                            borderRadius: 20,
-                            padding: '28px 24px 24px',
-                            width: 'min(480px, calc(100vw - 32px))',
-                            maxHeight: '80vh',
-                            overflowY: 'auto',
-                            zIndex: 1001,
-                            animation: 'shareModalIn 0.2s ease',
-                        }}>
-                            {/* 헤더 */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#18181b' }}>
-                                    📄 원고 다운로드
-                                </h3>
-                                <button
-                                    onClick={() => setShowExportModal(false)}
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#9ca3af', fontSize: 20 }}
-                                >✕</button>
-                            </div>
-
-                            {/* 로딩 (#1: 지루하지 않은 로딩) */}
-                            {exportLoading && (
-                                <div style={{ textAlign: 'center', padding: '36px 0' }}>
-                                    <div style={{
-                                        fontSize: 48, marginBottom: 20,
-                                        animation: 'bookBounce 1.5s ease-in-out infinite',
-                                    }}>📖</div>
-                                    <style>{`
-                                        @keyframes bookBounce {
-                                            0%, 100% { opacity: 1; }
-                                            50% { opacity: 0.6; }
-                                        }
-                                        @keyframes fadeInUp {
-                                            from { opacity: 0; }
-                                            to { opacity: 1; }
-                                        }
-                                    `}</style>
-                                    <EbookLoadingSteps />
-                                </div>
-                            )}
-
-                            {/* 에러 */}
-                            {exportError && (
-                                <div style={{ textAlign: 'center', padding: '30px 0' }}>
-                                    <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
-                                    <p style={{ color: '#dc2626', fontSize: 14, margin: 0 }}>{exportError}</p>
-                                    <button onClick={handleExport} style={{
-                                        marginTop: 16, padding: '8px 20px', borderRadius: 10,
-                                        border: 'none', background: '#6366f1', color: '#fff',
-                                        fontSize: 13, cursor: 'pointer',
-                                    }}>다시 시도</button>
-                                </div>
-                            )}
-
-                            {/* 전자책 원고 (ebook 모드) */}
-                            {ebookData && (
-                                <div>
-                                    {/* 표지 미리보기 */}
-                                    <div style={{
-                                        background: 'linear-gradient(135deg, #0f172a, #2563eb)',
-                                        borderRadius: 12, padding: '24px 20px',
-                                        marginBottom: 16, textAlign: 'center',
-                                    }}>
-                                        <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: '0 0 8px', lineHeight: 1.4, wordBreak: 'keep-all' }}>
-                                            {ebookData.ebook.cover?.title || '전자책'}
-                                        </h2>
-                                        <p style={{ color: 'rgba(186,230,253,0.9)', fontSize: 13, margin: 0 }}>
-                                            {ebookData.ebook.cover?.subtitle || ''}
-                                        </p>
-                                        {ebookData.ebook.cover?.author && (
-                                            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, margin: '12px 0 0' }}>
-                                                by {ebookData.ebook.cover.author}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* 페이지 목록 미리보기 */}
-                                    <div style={{ marginBottom: 16 }}>
-                                        <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 8 }}>📖 구성 ({ebookData.ebook.pages?.length || 0}페이지)</div>
-                                        {ebookData.ebook.pages?.map((page: any, i: number) => (
-                                            <div key={i} style={{
-                                                display: 'flex', gap: 10, alignItems: 'center',
-                                                padding: '8px 12px', borderRadius: 8,
-                                                background: i % 2 === 0 ? '#f8fafc' : '#fff',
-                                                marginBottom: 2,
-                                            }}>
-                                                <span style={{
-                                                    fontSize: 10, color: '#fff', background: '#2563eb',
-                                                    padding: '1px 6px', borderRadius: 8, fontWeight: 600,
-                                                }}>P{page.pageNum}</span>
-                                                <span style={{ fontSize: 13, color: '#334155' }}>{page.title}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {/* 다운로드 버튼 */}
-                                    <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-                                        <button
-                                            onClick={handleDownloadPdf}
-                                            style={{
-                                                flex: 1, padding: '14px 16px', borderRadius: 12,
-                                                border: 'none',
-                                                background: 'linear-gradient(135deg, #0f172a, #2563eb)',
-                                                fontSize: 15, fontWeight: 700, color: '#fff',
-                                                cursor: 'pointer', display: 'flex', alignItems: 'center',
-                                                justifyContent: 'center', gap: 8,
-                                            }}
-                                        >
-                                            📄 전자책 PDF 다운로드
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                        </div>
-                    </>
+                            fontSize: 14,
+                            fontWeight: 700,
+                            color: 'var(--먹)',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        새 대화
+                    </button>
                 )}
             </div>
-            {/* 모바일에서 헤더 텍스트 숨김 — 아이콘만 표시 */}
-            <style>{`
-                @media (max-width: 640px) {
-                    .header-text-label {
-                        display: none !important;
-                    }
-                }
-            `}</style>
         </header>
-
-            {/* 전자책 풀스크린 뷰어 */}
-            {showEbookViewer && ebookData && (
-                <Suspense fallback={null}>
-                    <EbookViewer
-                        ebook={ebookData.ebook}
-                        meta={ebookData.meta}
-                        ctaLinks={ebookData.ctaLinks || []}
-                        sessionId={sessionId || undefined}
-                        onClose={() => setShowEbookViewer(false)}
-                        onEditRequest={onEditRequest}
-                        onEbookUpdate={(newEbook) => setEbookData(prev => prev ? { ...prev, ebook: newEbook } : prev)}
-                    />
-                </Suspense>
-            )}
-        </>
     )
 }
