@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { PLANS as BILLING_PLANS } from '@/domains/subscription'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -9,9 +10,17 @@ import { MembershipBanner } from '@/components/MembershipBanner'
 import AppSidebar from '@/components/AppSidebar'
 import Image from 'next/image'
 
+// 금액은 결제에 실제로 쓰는 가격표에서만 가져온다.
+// 화면에 따로 적어두면 갈라진다 — 실제로 화면 9,900원 / 청구 7,900원으로 갈려 있었다.
 const PLANS = {
-    monthly: { price: 9900, label: '월간', period: '월', badge: '' },
-    annual: { price: 99000, label: '연간', period: '년', badge: '17% 할인', monthly: 8250 },
+    monthly: { price: BILLING_PLANS.monthly.price, label: '월간', period: '월', badge: '' },
+    annual: {
+        price: BILLING_PLANS.annual.price,
+        label: '연간',
+        period: '년',
+        badge: '17% 할인',
+        monthly: Math.round(BILLING_PLANS.annual.price / 12),
+    },
 }
 
 const FREE_FEATURES = [

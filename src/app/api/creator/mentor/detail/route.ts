@@ -1,28 +1,19 @@
 // /api/creator/mentor/detail — 멘토 상세 조회
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createAdmin } from '@supabase/supabase-js'
+import { requireMentorOwner } from '@/lib/mentor-owner'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
     try {
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-
-        if (!user) {
-            return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
-        }
-
         const mentorId = req.nextUrl.searchParams.get('id')
-        if (!mentorId) {
-            return NextResponse.json({ error: '멘토 ID는 필수입니다.' }, { status: 400 })
-        }
 
-        const admin = createAdmin(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        )
+        // 🔒 이 AI 의 주인만 통과. 없으면 로그인한 아무나 남의 AI 를 건드릴 수 있다.
+        const owner = await requireMentorOwner(mentorId)
+        if (!owner.ok) {
+            return NextResponse.json({ error: owner.error }, { status: owner.status })
+        }
+        const admin = owner.admin
 
         const { data: mentor, error } = await admin
             .from('mentors')

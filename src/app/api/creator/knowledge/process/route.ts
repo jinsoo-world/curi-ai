@@ -1,7 +1,6 @@
 // /api/creator/knowledge/process — 업로드된 파일 텍스트 추출 + 임베딩
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createAdmin } from '@supabase/supabase-js'
+import { requireMentorOwner } from '@/lib/mentor-owner'
 import { generateEmbedding, splitIntoChunks } from '@/domains/knowledge/embedding'
 import { GoogleGenAI } from '@google/genai'
 
@@ -209,15 +208,15 @@ function extractTextFromUpstage(pd: Record<string, unknown>): string {
 
 export async function POST(req: NextRequest) {
     try {
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
-
         const { sourceId, mentorId } = await req.json()
-        const admin = createAdmin(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        )
+
+        // 🔒 이 AI 의 주인만 통과. 없으면 남의 AI 지식창고에 내 글을 심어
+        // 그 AI 가 손님에게 그 내용을 말하게 만들 수 있다.
+        const owner = await requireMentorOwner(mentorId)
+        if (!owner.ok) {
+            return NextResponse.json({ error: owner.error }, { status: owner.status })
+        }
+        const admin = owner.admin
 
         const { data: source, error: srcErr } = await admin
             .from('knowledge_sources')

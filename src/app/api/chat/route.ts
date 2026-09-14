@@ -68,7 +68,10 @@ export async function POST(req: Request) {
         const isFreeTrial = FREE_TRIAL_OPEN
 
         // ── 🔒 비로그인 사용자 대화 제한 (isFreeTrial 무관, 항상 적용) ──
-        if (!user && typeof guestMessageCount === 'number' && guestMessageCount >= MAX_DAILY_FREE_GUEST) {
+        // 횟수는 아직 브라우저가 보고한다(서버 집계는 별건). 다만 숫자가 아닌 값을
+        // 보내면 검사 자체를 건너뛰던 구멍은 막는다 — 그게 사실상 무제한이었다.
+        const guestUsed = Number.isFinite(Number(guestMessageCount)) ? Number(guestMessageCount) : MAX_DAILY_FREE_GUEST
+        if (!user && guestUsed >= MAX_DAILY_FREE_GUEST) {
             const encoder = new TextEncoder()
             const guestLimitMsg = '무료 체험 대화를 모두 사용했어요! 😊\n\n회원가입하면 매일 무제한 대화 + 음성 전화가 가능해요 🎁'
             const limitStream = new ReadableStream({
@@ -104,6 +107,23 @@ export async function POST(req: Request) {
         const mentor = (await getMentorById(supabase, mentorId)) ?? (await getPublicMentorById(mentorId))
         if (!mentor) {
             return new Response('Mentor not found', { status: 404 })
+        }
+
+        // 🔒 이 대화방이 정말 이 사람 것인지 확인한다.
+        // 없으면 대화방 번호만 알면 남의 방에 아무 글이나 심을 수 있었다.
+        // 고객이 화면 주소를 캡처해 문의하거나 공유하면 그 번호가 그대로 드러난다.
+        let sessionOwned = false
+        if (user && sessionId && !String(sessionId).startsWith('guest-')) {
+            const ownerDb = createAdminClient()
+            const { data: sessionRow } = await ownerDb
+                .from('chat_sessions')
+                .select('user_id')
+                .eq('id', sessionId)
+                .maybeSingle()
+            sessionOwned = !!sessionRow && sessionRow.user_id === user.id
+            if (sessionRow && !sessionOwned) {
+                return new Response('Forbidden', { status: 403 })
+            }
         }
 
         // 유저 정보 + 메모리 조회 (domains/user + domains/chat)
@@ -337,7 +357,9 @@ export async function POST(req: Request) {
                     fullResponse = stripThinkingPatterns(rawResponse)
 
                     // 완료 시 메시지 저장 (domains/chat)
-                    const isGuestSession = !sessionId || sessionId.startsWith('guest-')
+                    // ⚠️ sessionOwned = 이 대화방이 지금 로그인한 사람 것인지 위에서 확인한 값.
+                    // 확인 없이 저장하면 남의 대화방에 아무 글이나 심을 수 있다.
+                    const isGuestSession = !sessionId || sessionId.startsWith('guest-') || !sessionOwned
                     console.log(`[Chat Save] sessionId=${sessionId}, isGuest=${isGuestSession}, hasResponse=${!!fullResponse}, responseLen=${fullResponse.length}`)
                     if (!isGuestSession && fullResponse && sessionId) {
                         try {

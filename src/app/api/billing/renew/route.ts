@@ -18,7 +18,10 @@ export async function GET(req: Request) {
     const authHeader = req.headers.get('authorization')
     const cronSecret = process.env.CRON_SECRET
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    // 열쇠가 설정돼 있지 않으면 통과시키던 것을 거절로 바꿨다.
+    // 그대로 두면 누구나 이 주소를 반복 호출해 전 구독자에게 실제 카드 결제를
+    // 여러 번 일으킬 수 있다. 열쇠가 없으면 자동결제를 아예 돌리지 않는 쪽이 안전하다.
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

@@ -1,9 +1,18 @@
 // /api/admin/ebook-logs — 어드민용 전자책 로그 조회 API
+import { NextResponse } from 'next/server'
+import { requireAdminAPI } from '@/lib/admin-guard'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
+    // 관리자만. 이 검사가 없어서 주소만 치면 고객 이메일·이름이 그대로 나갔다.
+    // 같은 폴더의 다른 창구 10개에는 처음부터 있었고 여기만 빠져 있었다.
+    const auth = await requireAdminAPI()
+    if (auth.error) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status })
+    }
+
     try {
         const admin = createAdminClient()
 

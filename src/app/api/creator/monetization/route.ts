@@ -1,28 +1,20 @@
 // /api/creator/monetization — 수익화 설정 조회/저장
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createAdmin } from '@supabase/supabase-js'
+import { requireMentorOwner } from '@/lib/mentor-owner'
 
 export const dynamic = 'force-dynamic'
 
 // GET: 수익화 설정 조회
 export async function GET(req: NextRequest) {
     try {
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) {
-            return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
-        }
-
         const mentorId = req.nextUrl.searchParams.get('mentorId')
-        if (!mentorId) {
-            return NextResponse.json({ error: 'mentorId는 필수입니다.' }, { status: 400 })
-        }
 
-        const admin = createAdmin(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        )
+        // 🔒 이 AI 의 주인만 통과
+        const owner = await requireMentorOwner(mentorId)
+        if (!owner.ok) {
+            return NextResponse.json({ error: owner.error }, { status: owner.status })
+        }
+        const admin = owner.admin
 
         const { data, error } = await admin
             .from('mentor_monetization')
@@ -65,23 +57,15 @@ export async function GET(req: NextRequest) {
 // POST: 수익화 설정 저장 (upsert)
 export async function POST(req: NextRequest) {
     try {
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) {
-            return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
-        }
-
         const body = await req.json()
         const { mentorId, isPremium, monthlyPrice, freeTrialChats, freeTrialDays, pdfExportEnabled, handle } = body
 
-        if (!mentorId) {
-            return NextResponse.json({ error: 'mentorId는 필수입니다.' }, { status: 400 })
+        // 🔒 이 AI 의 주인만 통과
+        const owner = await requireMentorOwner(mentorId)
+        if (!owner.ok) {
+            return NextResponse.json({ error: owner.error }, { status: owner.status })
         }
-
-        const admin = createAdmin(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        )
+        const admin = owner.admin
 
         // 기존 데이터 조회 (toggle_count 계산용)
         const { data: existing } = await admin

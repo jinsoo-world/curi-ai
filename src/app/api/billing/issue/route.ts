@@ -1,6 +1,7 @@
 // /api/billing/issue — 빌링키 발급 + 첫 결제
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import { issueBillingKey, chargeBilling, generateOrderId } from '@/lib/toss'
 import { createSubscription, savePayment, PLANS } from '@/domains/subscription'
 import { sendErrorAlert } from '@/lib/slack'
@@ -9,9 +10,18 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
     try {
-        const { authKey, customerKey, planType, userId } = await req.json()
+        const { authKey, customerKey, planType } = await req.json()
 
-        if (!authKey || !customerKey || !planType || !userId) {
+        // 🔒 누구 구독인지는 로그인 정보에서만 정한다.
+        // 브라우저가 보낸 회원번호를 믿으면 남의 계정을 유료로 만들 수 있었다.
+        const authDb = await createServerClient()
+        const { data: { user } } = await authDb.auth.getUser()
+        if (!user) {
+            return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
+        }
+        const userId = user.id
+
+        if (!authKey || !customerKey || !planType) {
             return NextResponse.json(
                 { error: '필수 파라미터가 누락되었습니다.' },
                 { status: 400 },
@@ -32,6 +42,21 @@ export async function POST(req: NextRequest) {
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.SUPABASE_SERVICE_ROLE_KEY!,
         )
+
+        // 🔒 이미 구독 중이면 새로 만들지 않는다.
+        // 확인 없이 만들면 구독이 겹치고, 매일 도는 자동결제가 두 번 긁는다.
+        const { data: existingSub } = await supabase
+            .from('subscriptions')
+            .select('id, status')
+            .eq('user_id', userId)
+            .eq('status', 'active')
+            .maybeSingle()
+        if (existingSub) {
+            return NextResponse.json(
+                { error: '이미 구독 중입니다. 기존 구독을 해지한 뒤 다시 시도해 주세요.' },
+                { status: 409 },
+            )
+        }
 
         // 1. 빌링키 발급
         console.log('[Billing] Issuing billing key for user:', userId)

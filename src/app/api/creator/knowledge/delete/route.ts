@@ -1,23 +1,20 @@
 // 지식 파일 삭제 API
 import { NextResponse } from 'next/server'
-import { createClient as createServerClient } from '@/lib/supabase/server'
-import { createClient as createAdmin } from '@supabase/supabase-js'
+import { requireMentorOwner } from '@/lib/mentor-owner'
 
 export async function DELETE(request: Request) {
     try {
-        const supabase = await createServerClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return NextResponse.json({ error: '인증 필요' }, { status: 401 })
-
         const { sourceId, mentorId } = await request.json()
-        if (!sourceId || !mentorId) {
-            return NextResponse.json({ error: 'sourceId, mentorId 필요' }, { status: 400 })
+        if (!sourceId) {
+            return NextResponse.json({ error: 'sourceId 필요' }, { status: 400 })
         }
 
-        const admin = createAdmin(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        )
+        // 🔒 이 AI 의 주인만 통과
+        const owner = await requireMentorOwner(mentorId)
+        if (!owner.ok) {
+            return NextResponse.json({ error: owner.error }, { status: owner.status })
+        }
+        const admin = owner.admin
 
         // 1) knowledge_sources에서 파일 정보 조회
         const { data: source, error: fetchErr } = await admin

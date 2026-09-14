@@ -1,20 +1,12 @@
 // /api/creator/mentor/update — 멘토 수정 API
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createAdmin } from '@supabase/supabase-js'
+import { requireMentorOwner } from '@/lib/mentor-owner'
 
 export const dynamic = 'force-dynamic'
 
 export async function PATCH(req: NextRequest) {
     try {
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-
-        if (!user) {
-            return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
-        }
-
         const body = await req.json()
         const {
             mentorId,
@@ -33,14 +25,12 @@ export async function PATCH(req: NextRequest) {
             voiceSampleUrl,
         } = body
 
-        if (!mentorId) {
-            return NextResponse.json({ error: '멘토 ID는 필수입니다.' }, { status: 400 })
+        // 🔒 이 AI 의 주인만 통과. 없으면 로그인한 아무나 남의 AI 를 건드릴 수 있다.
+        const owner = await requireMentorOwner(mentorId)
+        if (!owner.ok) {
+            return NextResponse.json({ error: owner.error }, { status: owner.status })
         }
-
-        const admin = createAdmin(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        )
+        const admin = owner.admin
 
         // 업데이트 데이터 구성
         const updateData: Record<string, unknown> = {

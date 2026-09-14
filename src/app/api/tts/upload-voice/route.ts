@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import { requireMentorOwner } from '@/lib/mentor-owner'
 
 export const maxDuration = 60
 
@@ -21,6 +22,15 @@ export async function POST(request: NextRequest) {
         }
         if (file.size > 10 * 1024 * 1024) {
             return NextResponse.json({ error: '파일 크기는 10MB 이하만 가능합니다.' }, { status: 400 })
+        }
+
+        // 🔒 기존 AI 의 목소리를 건드리는 경우엔 주인만 통과.
+        // 'temp' 는 아직 만들기 전 단계라 멘토가 없다(주인 확인 대상 아님).
+        if (mentorId && mentorId !== 'temp') {
+            const owner = await requireMentorOwner(mentorId)
+            if (!owner.ok) {
+                return NextResponse.json({ error: owner.error }, { status: owner.status })
+            }
         }
 
         const admin = createAdmin(

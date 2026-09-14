@@ -18,7 +18,8 @@ export async function POST(req: Request) {
         // 크론 시크릿 검증
         const authHeader = req.headers.get('Authorization')
         const cronSecret = process.env.CRON_SECRET
-        if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+        // 열쇠가 없으면 통과시키던 것을 거절로 (billing/renew 와 같은 병)
+        if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
             return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
