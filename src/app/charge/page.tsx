@@ -75,7 +75,7 @@ export default function ChargePage() {
                     클로버 1개로 AI와 한 번 대화해요. 쓴 만큼만 냅니다.
                 </p>
                 <p style={{ fontSize: 13, color: '#71717a', margin: '0 0 24px' }}>
-                    클로버 1개 = {CLOVER_UNIT_WON}원
+                    클로버 1개 = {CLOVER_UNIT_WON}원 · 많이 담을수록 최대 {Math.max(...CLOVER_PACKS.map(discountPercent))}% 싸집니다
                 </p>
 
                 {/* 지금 잔액 */}
@@ -125,8 +125,20 @@ export default function ChargePage() {
                                     AI와 {p.clovers.toLocaleString()}번 대화 · 1개당 {Math.round(p.won / p.clovers)}원
                                 </div>
                             </div>
-                            <div style={{ fontSize: 18, fontWeight: 800, color: '#18181b', flexShrink: 0 }}>
-                                {p.won.toLocaleString()}원
+                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                {discountPercent(p) > 0 && (
+                                    <div style={{ fontSize: 12, color: '#a1a1aa', textDecoration: 'line-through' }}>
+                                        {(p.clovers * CLOVER_UNIT_WON).toLocaleString()}원
+                                    </div>
+                                )}
+                                <div style={{ fontSize: 18, fontWeight: 800, color: '#18181b' }}>
+                                    {p.won.toLocaleString()}원
+                                </div>
+                                {discountPercent(p) > 0 && (
+                                    <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 700, marginTop: 1 }}>
+                                        {(p.clovers * CLOVER_UNIT_WON - p.won).toLocaleString()}원 아낌
+                                    </div>
+                                )}
                             </div>
                         </button>
                     ))}

@@ -47,7 +47,8 @@ describe('클로버 충전 상품', () => {
             expect(할인들[i], `${CLOVER_PACKS[i].id} 할인이 앞보다 작다`).toBeGreaterThan(할인들[i - 1])
         }
         // 대표 지시 = 「할인율 팍팍」. 가장 큰 묶음은 두 자릿수여야 한다.
-        expect(할인들[할인들.length - 1]).toBeGreaterThanOrEqual(25)
+        // 대표 지시 = 「파격적으로」. 가장 큰 묶음은 35% 이상이어야 한다.
+        expect(할인들[할인들.length - 1]).toBeGreaterThanOrEqual(35)
     })
 
     it('없는 상품을 넣으면 아무것도 주지 않는다', () => {
