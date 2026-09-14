@@ -43,7 +43,7 @@ export function isValidBackdrop(v: unknown): v is string { return typeof v === '
  * ⚠️ 「같은 사람으로 보이게」와 「젊게 만들지 말 것」을 반드시 넣는다.
  *    안 넣으면 딴사람이 나오거나 20~30대처럼 나온다.
  */
-export function buildPhotoPrompt(style: Choice, backdrop: Choice): string {
+export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '4:5'): string {
     return [
         'Retouch this person into a professional headshot portrait.',
         `The subject is ${style.prompt}.`,
@@ -51,7 +51,7 @@ export function buildPhotoPrompt(style: Choice, backdrop: Choice): string {
         'Keep the same face, same age, same identity as the uploaded photo — this must clearly look like the same person.',
         'Do not make the subject look younger. Keep natural skin texture, pores and fine lines.',
         'Professional headshot lighting, eye level, looking at the lens, sharp focus on the eyes.',
-        'Upper body, vertical 4:5 composition suitable for a profile picture.',
+        `Upper body, ${ratioLabel} composition suitable for a profile picture.`,
         'No text, no logos, no watermark, no extra hands. Avoid glossy over-retouched AI look.',
     ].join(' ')
 }

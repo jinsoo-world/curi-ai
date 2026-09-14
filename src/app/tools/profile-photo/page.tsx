@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { STYLES, BACKDROPS } from '@/domains/studio/photo'
 import { CURI_MODELS, DEFAULT_MODEL_ID, getModel } from '@/domains/studio/models'
+import { RATIOS, DEFAULT_RATIO_ID } from '@/domains/studio/ratios'
 import { CLOVER_UNIT_WON } from '@/domains/credit/packs'
 import { PickCard } from '@/components/studio/PickCard'
 import { PhotoDrop } from '@/components/studio/PhotoDrop'
@@ -18,6 +19,7 @@ export default function ProfilePhotoPage() {
     const [base64, setBase64] = useState<string | null>(null)
     const [mimeType, setMimeType] = useState('image/jpeg')
     const [modelId, setModelId] = useState(DEFAULT_MODEL_ID)
+    const [ratioId, setRatioId] = useState(DEFAULT_RATIO_ID)
     const [styleId, setStyleId] = useState<string | null>(null)
     const [backdropId, setBackdropId] = useState<string | null>(null)
     const [result, setResult] = useState<string | null>(null)
@@ -32,7 +34,7 @@ export default function ProfilePhotoPage() {
             const res = await fetch('/api/tools/profile-photo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64: base64, mimeType, styleId, backdropId, modelId }),
+                body: JSON.stringify({ imageBase64: base64, mimeType, styleId, backdropId, modelId, ratioId }),
             })
             const data = await res.json()
             if (!res.ok) {
@@ -132,6 +134,29 @@ export default function ProfilePhotoPage() {
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
                             {BACKDROPS.map(o => (
                                 <PickCard key={o.id} option={o} selected={backdropId === o.id} onSelect={setBackdropId} kind="backdrop" />
+                            ))}
+                        </div>
+                    </div>
+                    {/* 비율 — 어디에 쓸 사진인지에 따라 다르다 */}
+                    <div style={{ marginBottom: 24 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>5. 사진 모양</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                            {RATIOS.map(r => (
+                                <button key={r.id} onClick={() => setRatioId(r.id)} style={{
+                                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
+                                    padding: '14px 8px', borderRadius: 14,
+                                    border: ratioId === r.id ? '2.5px solid #22c55e' : '1.5px solid #e4e4e7',
+                                    background: ratioId === r.id ? '#f0fdf4' : '#fff', cursor: 'pointer',
+                                }}>
+                                    <span style={{
+                                        width: r.w / r.h >= 1 ? 34 : 34 * (r.w / r.h),
+                                        height: r.w / r.h >= 1 ? 34 / (r.w / r.h) : 34,
+                                        background: ratioId === r.id ? '#22c55e' : '#d4d4d8',
+                                        borderRadius: 4, display: 'block',
+                                    }} />
+                                    <span style={{ fontSize: 14, fontWeight: 700, color: '#18181b' }}>{r.label}</span>
+                                    <span style={{ fontSize: 11, color: '#71717a', textAlign: 'center', wordBreak: 'keep-all', lineHeight: 1.4 }}>{r.use}</span>
+                                </button>
                             ))}
                         </div>
                     </div>

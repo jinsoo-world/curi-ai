@@ -11,6 +11,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getStyle, getBackdrop, isValidStyle, isValidBackdrop, buildPhotoPrompt } from '@/domains/studio/photo'
 import { getMood, getTone, isValidMood, isValidTone, buildInstaPrompt } from '@/domains/studio/insta'
 import { getModel, isValidModelId, DEFAULT_MODEL_ID } from '@/domains/studio/models'
+import { getRatio, isValidRatioId, DEFAULT_RATIO_ID } from '@/domains/studio/ratios'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '로그인이 필요해요.' }, { status: 401 })
         }
 
-        const { imageBase64, mimeType, styleId, backdropId, modelId, kind } = await req.json()
+        const { imageBase64, mimeType, styleId, backdropId, modelId, kind, ratioId } = await req.json()
 
         if (typeof imageBase64 !== 'string' || imageBase64.length < 100) {
             return NextResponse.json({ error: '사진을 올려주세요.' }, { status: 400 })
@@ -40,6 +41,8 @@ export async function POST(req: NextRequest) {
 
         // 모델은 우리 목록에 있는 것만. 브라우저가 아무 이름이나 넣지 못하게 한다.
         const model = getModel(isValidModelId(modelId) ? modelId : DEFAULT_MODEL_ID)!
+        // 인스타는 항상 정사각형이다(동그랗게 잘려 보이니까). 나머지는 고른 대로.
+        const ratio = getRatio(kind === 'insta' ? 'square' : (isValidRatioId(ratioId) ? ratioId : DEFAULT_RATIO_ID))!
         const PHOTO_COST = model.cost
 
         const admin = createAdminClient()
@@ -60,17 +63,18 @@ export async function POST(req: NextRequest) {
             amount: -PHOTO_COST,
             balance_after: 차감후,
             type: 'chat_usage',
-            description: `${isInsta ? '인스타' : '전문가'} 프로필 사진 (${model.label} · ${styleId}/${backdropId})`,
+            description: `${isInsta ? '인스타' : '전문가'} 프로필 사진 (${model.label} · ${ratio.label} · ${styleId}/${backdropId})`,
         })
 
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
             const prompt = isInsta
                 ? buildInstaPrompt(getMood(styleId)!, getTone(backdropId)!)
-                : buildPhotoPrompt(getStyle(styleId)!, getBackdrop(backdropId)!)
+                : buildPhotoPrompt(getStyle(styleId)!, getBackdrop(backdropId)!, ratio.label)
 
             const r = await ai.models.generateContent({
                 model: model.engine,
+                config: { imageConfig: { aspectRatio: ratio.value } },
                 contents: [{
                     role: 'user',
                     parts: [
