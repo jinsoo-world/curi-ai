@@ -11,7 +11,7 @@ import {
 } from '@/domains/studio/idphoto'
 import { getAge, isValidAgeId, DEFAULT_AGE_ID } from '@/domains/studio/photo'
 import { getModel, isValidModelId, DEFAULT_MODEL_ID } from '@/domains/studio/models'
-import { 사진보관 } from '@/lib/photo-store'
+import { 사진보관, 마지막오류 } from '@/lib/photo-store'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -117,6 +117,7 @@ export async function POST(req: NextRequest) {
                     preview: true,
                     needLogin: true,
                     claimToken: 보관?.claimToken ?? null,
+                    보관오류: 보관 ? null : 마지막오류,
                 })
             }
             return NextResponse.json({

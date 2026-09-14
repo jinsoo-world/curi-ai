@@ -19,6 +19,8 @@ export const 보관시간 = 48 // 시간
 
 const 버킷 = 'tool-photos'
 
+export let 마지막오류: string | null = null
+
 export interface 보관결과 {
     /** 바로 볼 수 있는 주소 */
     url: string
@@ -50,6 +52,7 @@ export async function 사진보관(
                 upsert: false,
             })
         if (upErr) {
+            마지막오류 = 'upload:' + upErr.message
             console.error('[보관함] 올리기 실패', upErr.message)
             return null
         }
@@ -67,6 +70,7 @@ export async function 사진보관(
             .select('id')
             .single()
         if (dbErr) {
+            마지막오류 = 'db:' + dbErr.message
             console.error('[보관함] 기록 실패', dbErr.message)
             return null
         }
@@ -75,6 +79,7 @@ export async function 사진보관(
         return { url: pub.publicUrl, claimToken: claimToken ?? undefined, id: row.id }
     } catch (e) {
         // 보관에 실패해도 사진은 만들어졌다. 서비스를 막지 않는다.
+        마지막오류 = 'throw:' + (e instanceof Error ? e.message : String(e))
         console.error('[보관함]', e instanceof Error ? e.message : e)
         return null
     }
