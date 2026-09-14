@@ -19,6 +19,71 @@ export interface Choice {
     sample?: string
 }
 
+/**
+ * 어디에 쓸 사진인가 — 대표 질문 0915 「프로필사진, 증명사진, 초상화, 기념사진, 가족사진…
+ * 수렴할것도 있을것같고」
+ *
+ * 도구를 하나씩 늘리면 첫 화면이 열두 칸이 되고 중장년은 거기서 멈춘다.
+ * 그래서 「사진 만들기」 하나로 묶고 안에서 쓰임새를 고르게 한다.
+ */
+export interface Purpose {
+    id: string
+    label: string
+    desc: string
+    /** 이 쓰임새에서 기본으로 잡는 비율 */
+    ratio: string
+    prompt: string
+    sample?: string
+}
+
+export const PURPOSES: Purpose[] = [
+    {
+        id: 'job',
+        label: '재취업·이력서',
+        desc: '이력서·링크드인에 넣는 사진',
+        ratio: 'portrait45',
+        sample: '/samples/act-m5.webp',
+        prompt: 'A professional headshot for a job application: trustworthy, approachable, neat.',
+    },
+    {
+        id: 'id',
+        label: '증명사진',
+        desc: '여권·민원 서류에 쓰는 규격 사진',
+        ratio: 'portrait45',
+        sample: '/samples/act-w1.webp',
+        prompt:
+            'A formal Korean ID photograph: straight-on frontal view, both ears and the full face visible, ' +
+            'neutral closed-lip expression, eyes level and looking directly at the lens, ' +
+            'plain evenly-lit light grey or white background with no shadow, head centred with standard headroom. ' +
+            'No tilt, no smile, no hair covering the eyebrows, no accessories.',
+    },
+    {
+        id: 'portrait',
+        label: '초상 사진',
+        desc: '작품처럼 남기는 인물 사진',
+        ratio: 'portrait23',
+        sample: '/samples/act-m1.webp',
+        prompt:
+            'A fine-art portrait: dramatic directional light with deep shadow falloff, dark muted background, ' +
+            'a quiet contemplative expression, the character of the face is the subject.',
+    },
+    {
+        id: 'memorial',
+        label: '기념 사진',
+        desc: '환갑·정년·기념일에 남기는 사진',
+        ratio: 'portrait45',
+        sample: '/samples/act-w5.webp',
+        prompt:
+            'A warm commemorative portrait for a milestone day: dignified but happy, a genuine soft smile, ' +
+            'clean bright background, gentle even light, the kind of photo a family would frame.',
+    },
+]
+
+export function getPurpose(id: string) { return PURPOSES.find(p => p.id === id) }
+export function isValidPurpose(v: unknown): v is string {
+    return typeof v === 'string' && PURPOSES.some(p => p.id === v)
+}
+
 /** 차림새 */
 export const STYLES: Choice[] = [
     { sample: '/samples/style-suit.webp', id: 'suit', label: '정장', prompt: 'wearing a well-tailored dark navy suit with a crisp white shirt', swatch: '#1e293b' },
@@ -84,12 +149,13 @@ export function getAge(id: string): AgeOption | undefined {
     return AGES.find(a => a.id === id)
 }
 
-export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '4:5', ageMinus = 0): string {
+export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '4:5', ageMinus = 0, purpose?: Purpose): string {
     const 나이줄 = ageMinus > 0
         ? `Make the subject look about ${ageMinus} years younger than in the uploaded photo, while keeping the same face and identity: softer fine lines, firmer skin, slightly fuller darker hair. Never change the bone structure or facial features.`
         : 'Match the age in the uploaded photo exactly — do not add years, do not deepen wrinkles, do not grey the hair, do not hollow the cheeks or eyes.'
     return [
         'Retouch this person into a professional headshot portrait.',
+        purpose ? purpose.prompt : '',
         `The subject is ${style.prompt}.`,
         `Background: ${backdrop.prompt}.`,
         'Keep the same face and the same identity as the uploaded photo — this must clearly look like the same person.',
@@ -108,5 +174,5 @@ export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '
         'Keep visible skin pores, fine lines, uneven natural skin tone, a few stray hair strands and slight facial asymmetry.',
         'It must read as a real photograph of a real person, not a rendering.',
         'No text, no logos, no watermark, no extra hands. Avoid the AI look: no waxy plastic skin, no airbrushed glow, no perfect symmetry, no oversaturated colour, no sharpening halo.',
-    ].join(' ')
+    ].filter(Boolean).join(' ')
 }

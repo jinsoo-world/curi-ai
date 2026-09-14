@@ -5,7 +5,7 @@
 // 값(클로버)을 버튼에 그대로 박았다.
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { STYLES, BACKDROPS, AGES, DEFAULT_AGE_ID } from '@/domains/studio/photo'
+import { STYLES, BACKDROPS, AGES, DEFAULT_AGE_ID, PURPOSES } from '@/domains/studio/photo'
 import { CURI_MODELS, DEFAULT_MODEL_ID, getModel } from '@/domains/studio/models'
 import { RATIOS, DEFAULT_RATIO_ID } from '@/domains/studio/ratios'
 import { PickCard } from '@/components/studio/PickCard'
@@ -25,6 +25,7 @@ export default function ProfilePhotoPage() {
     const [modelId, setModelId] = useState(DEFAULT_MODEL_ID)
     const [ratioId, setRatioId] = useState(DEFAULT_RATIO_ID)
     const [ageId, setAgeId] = useState(DEFAULT_AGE_ID)
+    const [purposeId, setPurposeId] = useState(PURPOSES[0].id)
     const [styleId, setStyleId] = useState<string | null>(null)
     const [backdropId, setBackdropId] = useState<string | null>(null)
     const [result, setResult] = useState<string | null>(null)
@@ -56,7 +57,7 @@ export default function ProfilePhotoPage() {
             const res = await fetch('/api/tools/profile-photo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64: base64, mimeType, styleId, backdropId, modelId, ratioId, ageId }),
+                body: JSON.stringify({ imageBase64: base64, mimeType, styleId, backdropId, modelId, ratioId, ageId, purposeId }),
             })
             const data = await res.json()
             if (!res.ok) {
@@ -85,9 +86,35 @@ export default function ProfilePhotoPage() {
                     samples={[{ src: '/samples/act-m5.webp', label: '정장' }, { src: '/samples/act-w1.webp', label: '단정하게' }, { src: '/samples/act-w6.webp', label: '부드럽게' }, { src: '/samples/act-m2.webp', label: '지적인' }]}
                 />
 
+                {/* 쓰임새를 먼저 고른다 — 대표 질문 0915 「증명사진·초상화·기념사진… 수렴할것도 있을것같고」
+                    도구를 하나씩 늘리면 첫 화면이 열두 칸이 되고 중장년은 거기서 멈춘다. */}
+                <div style={{ marginBottom: 22 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>1. 어디에 쓸 사진인가요</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+                        {PURPOSES.map(p => (
+                            <button key={p.id} onClick={() => { setPurposeId(p.id); setRatioId(p.ratio) }} style={{
+                                display: 'flex', alignItems: 'center', gap: 10, padding: 10, borderRadius: 14,
+                                border: purposeId === p.id ? '2.5px solid #22c55e' : '1.5px solid #e4e4e7',
+                                background: purposeId === p.id ? '#f0fdf4' : '#fff',
+                                cursor: 'pointer', textAlign: 'left',
+                            }}>
+                                {p.sample && (
+                                    <span style={{ position: 'relative', width: 50, height: 50, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: '#f4f4f5' }}>
+                                        <Image src={p.sample} alt="" fill sizes="50px" style={{ objectFit: 'cover', objectPosition: 'center 18%' }} />
+                                    </span>
+                                )}
+                                <span style={{ minWidth: 0 }}>
+                                    <span style={{ display: 'block', fontSize: 15, fontWeight: 800, color: '#18181b' }}>{p.label}</span>
+                                    <span style={{ display: 'block', fontSize: 12.5, color: '#71717a', marginTop: 2, wordBreak: 'keep-all' }}>{p.desc}</span>
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 {/* 1단계 사진 */}
                 <div style={{ marginBottom: 22 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>1. 내 사진 올리기</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>2. 내 사진 올리기</div>
                     <PhotoDrop
                         preview={preview}
                         onPicked={(dataUrl, mt) => {
@@ -148,7 +175,7 @@ export default function ProfilePhotoPage() {
                     </div>
 
                     <div style={{ marginBottom: 22 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>3. 차림새</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>4. 차림새</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                             {STYLES.map(o => (
                                 <PickCard key={o.id} option={o} selected={styleId === o.id} onSelect={setStyleId} kind="outfit" />
@@ -156,7 +183,7 @@ export default function ProfilePhotoPage() {
                         </div>
                     </div>
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>4. 배경</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>5. 배경</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                             {BACKDROPS.map(o => (
                                 <PickCard key={o.id} option={o} selected={backdropId === o.id} onSelect={setBackdropId} kind="backdrop" />
@@ -165,7 +192,7 @@ export default function ProfilePhotoPage() {
                     </div>
                     {/* 나이 — 대표 지시 0914 「나이도 조정할 수 있도록」 「-10살까지」 */}
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>5. 나이</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>6. 나이</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                             {AGES.map(a => (
                                 <button key={a.id} onClick={() => setAgeId(a.id)} style={{
@@ -185,7 +212,7 @@ export default function ProfilePhotoPage() {
 
                     {/* 비율 — 어디에 쓸 사진인지에 따라 다르다 */}
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>6. 사진 모양</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>7. 사진 모양</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(96px, 1fr))', gap: 8 }}>
                             {RATIOS.map(r => (
                                 <button key={r.id} onClick={() => setRatioId(r.id)} style={{

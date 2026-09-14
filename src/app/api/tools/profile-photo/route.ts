@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenAI } from '@google/genai'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getStyle, getBackdrop, isValidStyle, isValidBackdrop, buildPhotoPrompt, getAge, isValidAgeId, DEFAULT_AGE_ID } from '@/domains/studio/photo'
+import { getStyle, getBackdrop, isValidStyle, isValidBackdrop, buildPhotoPrompt, getAge, isValidAgeId, DEFAULT_AGE_ID, getPurpose, isValidPurpose } from '@/domains/studio/photo'
 import { getMood, getTone, isValidMood, isValidTone, buildInstaPrompt } from '@/domains/studio/insta'
 import { getActorMood, getActorBackdrop, isValidActorMood, isValidActorBackdrop, buildActorPrompt } from '@/domains/studio/actor'
 import { getModel, isValidModelId, DEFAULT_MODEL_ID } from '@/domains/studio/models'
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         const { data: { user } } = await supabase.auth.getUser()
         const 손님 = !user
 
-        const { imageBase64, mimeType, styleId, backdropId, modelId, kind, ratioId, ageId, freeText } = await req.json()
+        const { imageBase64, mimeType, styleId, backdropId, modelId, kind, ratioId, ageId, freeText, purposeId } = await req.json()
 
         if (typeof imageBase64 !== 'string' || imageBase64.length < 100) {
             return NextResponse.json({ error: '사진을 올려주세요.' }, { status: 400 })

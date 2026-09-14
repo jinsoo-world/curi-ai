@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import { Noto_Sans_KR } from 'next/font/google'
 import Script from 'next/script'
 import GoogleAnalytics from '@/components/GoogleAnalytics'
+import { Suspense } from 'react'
+import PostHogTracker from '@/components/PostHogTracker'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import dynamic from 'next/dynamic'
@@ -232,6 +234,9 @@ export default function RootLayout({
           </noscript>
         )}
         <GoogleAnalytics />
+        <Suspense fallback={null}>
+          <PostHogTracker />
+        </Suspense>
         <Analytics />
         <SpeedInsights sampleRate={0.3} />
         {children}
