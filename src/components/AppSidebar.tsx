@@ -78,7 +78,7 @@ export default function AppSidebar() {
                 {/* 오른쪽 — 남은 개수와 나 */}
                 <div className="app-top-right">
                     <Link href="/charge" className="app-top-credit" aria-label="클로버 충전하기">
-                        <CloverIcon size={22} />
+                        <CloverIcon size={28} />
                         <span className="app-top-credit-num">{잔액 === null ? '–' : 잔액.toLocaleString()}</span>
                         <span className="app-top-credit-plus">충전</span>
                     </Link>

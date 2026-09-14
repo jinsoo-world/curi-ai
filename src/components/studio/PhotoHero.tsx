@@ -22,6 +22,10 @@ export const HERO_PHOTO_KEY = 'curi.heroPhoto'
 const 짝 = [
     { before: '/samples/before-man.webp', after: '/samples/after-man.webp' },
     { before: '/samples/before-woman.webp', after: '/samples/after-woman.webp' },
+    { before: '/samples/act-m3.webp', after: '/samples/act-m1.webp' },
+    { before: '/samples/act-w3.webp', after: '/samples/act-w7.webp' },
+    { before: '/samples/act-m8.webp', after: '/samples/act-m2.webp' },
+    { before: '/samples/act-w8.webp', after: '/samples/act-w1.webp' },
 ]
 
 export default function PhotoHero() {
@@ -29,9 +33,9 @@ export default function PhotoHero() {
     const [err, setErr] = useState<string | null>(null)
     const [지금, set지금] = useState(0)
 
-    // 5초마다 남녀를 번갈아 보여준다. 한 화면에 넷을 늘어놓으면 작아져서 안 보인다.
+    // 1.5초마다 넘어간다 — 대표 지시 0915. 한 화면에 여럿을 늘어놓으면 작아져서 안 보인다.
     useEffect(() => {
-        const t = setInterval(() => set지금(i => (i + 1) % 짝.length), 5000)
+        const t = setInterval(() => set지금(i => (i + 1) % 짝.length), 1500)
         return () => clearInterval(t)
     }, [])
 

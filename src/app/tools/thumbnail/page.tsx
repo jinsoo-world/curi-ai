@@ -7,6 +7,7 @@ import { THUMB_PLACES, THUMB_LOOKS, THUMBNAIL_COST, MAX_TITLE, MAX_SUB } from '@
 import MakingBar from '@/components/studio/MakingBar'
 import CloverIcon from '@/components/ui/CloverIcon'
 import AppSidebar from '@/components/AppSidebar'
+import ToolHero from '@/components/studio/ToolHero'
 
 export default function ThumbnailPage() {
     const router = useRouter()
@@ -49,12 +50,11 @@ export default function ThumbnailPage() {
         <main style={{ minHeight: '100dvh', background: 'var(--종이)' }}>
             <AppSidebar />
             <div className="tool-page">
-                <h1 style={{ fontSize: 24, fontWeight: 800, color: '#18181b', margin: '0 0 6px', wordBreak: 'keep-all' }}>
-                    썸네일 만들기
-                </h1>
-                <p style={{ fontSize: 14, color: '#71717a', margin: '0 0 24px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                    유튜브·어울림·멤버십·디지털 콘텐츠 표지를 만듭니다. 제목은 또렷하게 얹어드려요.
-                </p>
+                <ToolHero
+                    title="썸네일 만들기"
+                    desc="유튜브·어울림·멤버십·디지털 콘텐츠 표지를 만듭니다. 제목은 또렷하게 얹어드려요."
+                    samples={[{ src: '/samples/act-w7.webp', label: '눈에 띄는' }, { src: '/samples/act-m5.webp', label: '깔끔한' }, { src: '/samples/act-w5.webp', label: '따뜻한' }, { src: '/samples/act-m2.webp', label: '종이 느낌' }]}
+                />
 
                 <div>
                     <div style={{ marginBottom: 22 }}>

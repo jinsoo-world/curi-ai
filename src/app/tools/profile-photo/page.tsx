@@ -11,6 +11,7 @@ import { RATIOS, DEFAULT_RATIO_ID } from '@/domains/studio/ratios'
 import { PickCard } from '@/components/studio/PickCard'
 import { PhotoDrop } from '@/components/studio/PhotoDrop'
 import AppSidebar from '@/components/AppSidebar'
+import ToolHero from '@/components/studio/ToolHero'
 import MakingBar from '@/components/studio/MakingBar'
 import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
@@ -78,12 +79,11 @@ export default function ProfilePhotoPage() {
         <main style={{ minHeight: '100dvh', background: '#fafafa' }}>
             <AppSidebar />
             <div className="tool-page">
-                <h1 style={{ fontSize: 24, fontWeight: 800, color: '#18181b', margin: '0 0 6px', wordBreak: 'keep-all' }}>
-                    재취업 프로필 사진 만들기
-                </h1>
-                <p style={{ fontSize: 14, color: '#71717a', margin: '0 0 24px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                    이력서·링크드인에 넣을 사진을 만듭니다. 얼굴은 그대로 두고 옷과 배경만 바꿔요.
-                </p>
+                <ToolHero
+                    title="재취업 프로필 사진 만들기"
+                    desc="이력서·링크드인에 넣을 사진을 만듭니다. 얼굴은 그대로 두고 옷과 배경만 바꿔요."
+                    samples={[{ src: '/samples/act-m5.webp', label: '정장' }, { src: '/samples/act-w1.webp', label: '단정하게' }, { src: '/samples/act-w6.webp', label: '부드럽게' }, { src: '/samples/act-m2.webp', label: '지적인' }]}
+                />
 
                 {/* 1단계 사진 */}
                 <div style={{ marginBottom: 22 }}>
@@ -149,7 +149,7 @@ export default function ProfilePhotoPage() {
 
                     <div style={{ marginBottom: 22 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>3. 차림새</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                             {STYLES.map(o => (
                                 <PickCard key={o.id} option={o} selected={styleId === o.id} onSelect={setStyleId} kind="outfit" />
                             ))}
@@ -157,7 +157,7 @@ export default function ProfilePhotoPage() {
                     </div>
                     <div style={{ marginBottom: 24 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>4. 배경</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                             {BACKDROPS.map(o => (
                                 <PickCard key={o.id} option={o} selected={backdropId === o.id} onSelect={setBackdropId} kind="backdrop" />
                             ))}

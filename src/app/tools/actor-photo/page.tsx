@@ -12,6 +12,7 @@ import { RATIOS, DEFAULT_RATIO_ID } from '@/domains/studio/ratios'
 import { PickCard } from '@/components/studio/PickCard'
 import { PhotoDrop } from '@/components/studio/PhotoDrop'
 import AppSidebar from '@/components/AppSidebar'
+import ToolHero from '@/components/studio/ToolHero'
 import MakingBar from '@/components/studio/MakingBar'
 import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
@@ -79,12 +80,11 @@ export default function ActorPhotoPage() {
         <main style={{ minHeight: '100dvh', background: '#fafafa' }}>
             <AppSidebar />
             <div className="tool-page">
-                <h1 style={{ fontSize: 24, fontWeight: 800, color: '#18181b', margin: '0 0 6px', wordBreak: 'keep-all' }}>
-                    배우 프로필 사진 만들기
-                </h1>
-                <p style={{ fontSize: 14, color: '#71717a', margin: '0 0 24px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                    캐스팅에 내는 프로필 사진을 만듭니다. 실물과 달라 보이지 않게, 사진관에서 찍은 것처럼요.
-                </p>
+                <ToolHero
+                    title="배우 프로필 사진 만들기"
+                    desc="캐스팅에 내는 프로필 사진을 만듭니다. 실물과 달라 보이지 않게, 사진관에서 찍은 것처럼요."
+                    samples={[{ src: '/samples/act-m1.webp', label: '어두운 스튜디오' }, { src: '/samples/act-w7.webp', label: '에디토리얼' }, { src: '/samples/act-m3.webp', label: '창가 빛' }, { src: '/samples/act-w5.webp', label: '밝고 친근한' }]}
+                />
 
                 {/* 1단계 사진 */}
                 <div style={{ marginBottom: 22 }}>
@@ -150,7 +150,7 @@ export default function ActorPhotoPage() {
 
                     <div style={{ marginBottom: 22 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>3. 어떤 느낌으로</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                             {ACTOR_MOODS.map(o => (
                                 <PickCard key={o.id} option={o} selected={styleId === o.id} onSelect={setStyleId} kind="outfit" />
                             ))}
@@ -158,7 +158,7 @@ export default function ActorPhotoPage() {
                     </div>
                     <div style={{ marginBottom: 24 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>4. 스튜디오 바탕</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                             {ACTOR_BACKDROPS.map(o => (
                                 <PickCard key={o.id} option={o} selected={backdropId === o.id} onSelect={setBackdropId} kind="backdrop" />
                             ))}

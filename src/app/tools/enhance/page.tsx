@@ -10,6 +10,7 @@ import BeforeAfter from '@/components/studio/BeforeAfter'
 import MakingBar from '@/components/studio/MakingBar'
 import CloverIcon from '@/components/ui/CloverIcon'
 import AppSidebar from '@/components/AppSidebar'
+import ToolHero from '@/components/studio/ToolHero'
 import Image from 'next/image'
 
 export default function EnhancePage() {
@@ -53,12 +54,11 @@ export default function EnhancePage() {
         <main style={{ minHeight: '100dvh', background: 'var(--종이)' }}>
             <AppSidebar />
             <div className="tool-page">
-                <h1 style={{ fontSize: 24, fontWeight: 800, color: '#18181b', margin: '0 0 6px', wordBreak: 'keep-all' }}>
-                    사진 화질 개선하기
-                </h1>
-                <p style={{ fontSize: 14, color: '#71717a', margin: '0 0 24px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                    흐릿하거나 오래된 사진을 살립니다. 같은 사진을 더 좋은 카메라로 찍은 것처럼요.
-                </p>
+                <ToolHero
+                    title="사진 화질 개선하기"
+                    desc="흐릿하거나 오래된 사진을 살립니다. 같은 사진을 더 좋은 카메라로 찍은 것처럼요."
+                    samples={[{ src: '/samples/act-m3.webp', label: '흐릿한 사진' }, { src: '/samples/act-w2.webp', label: '오래된 사진' }, { src: '/samples/act-m8.webp', label: '어두운 사진' }, { src: '/samples/act-w1.webp', label: '인쇄용으로' }]}
+                />
 
                 <div>
                     <div style={{ marginBottom: 22 }}>

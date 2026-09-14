@@ -59,20 +59,28 @@ export function PhotoDrop({
 
             {preview ? (
                 <div style={{
-                    display: 'flex', gap: 14, alignItems: 'center',
-                    padding: 14, borderRadius: 16,
+                    padding: 14, borderRadius: 18,
                     border: dragging ? '2px dashed #22c55e' : '1.5px solid #e4e4e7',
                     background: dragging ? '#f0fdf4' : '#fff',
                 }}>
+                    {/* 올린 사진은 크게 보여준다. 작은 네모로 두면 올라갔는지 모르고 다시 누른다
+                        (대표 지시 0915 「업로드 된걸 알아야지. 중장년 인지 규칙 적용해」) */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={preview} alt="올린 사진" style={{
-                        width: 84, height: 84, objectFit: 'cover', borderRadius: 14, flexShrink: 0,
+                        width: '100%', aspectRatio: '1 / 1', objectFit: 'cover',
+                        borderRadius: 14, display: 'block', marginBottom: 12,
                     }} />
-                    <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#16a34a', marginBottom: 4 }}>사진을 올렸어요</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 16, fontWeight: 800, color: '#16a34a' }}>
+                            <span style={{
+                                width: 24, height: 24, borderRadius: 999, background: '#22c55e', color: '#fff',
+                                display: 'grid', placeItems: 'center', fontSize: 14, fontWeight: 900,
+                            }} aria-hidden>✓</span>
+                            사진을 올렸어요
+                        </span>
                         <button onClick={() => fileRef.current?.click()} style={{
-                            background: '#f4f4f5', border: 'none', borderRadius: 10,
-                            padding: '8px 14px', fontSize: 13.5, color: '#3f3f46', cursor: 'pointer', fontWeight: 600,
+                            background: '#f4f4f5', border: 'none', borderRadius: 12,
+                            padding: '12px 18px', fontSize: 15, color: '#3f3f46', cursor: 'pointer', fontWeight: 700,
                         }}>다른 사진으로</button>
                     </div>
                 </div>

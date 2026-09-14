@@ -434,7 +434,7 @@ button, a[role="button"] {
 .app-top-inner {
   max-width: 1200px;
   margin: 0 auto;
-  height: 62px;
+  height: 70px;
   padding: 0 16px;
   display: flex;
   align-items: center;
@@ -487,13 +487,13 @@ button, a[role="button"] {
   text-decoration: none;
   color: var(--먹);
 }
-.app-top-credit-num { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+.app-top-credit-num { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
 .app-top-credit-plus {
   background: var(--연두);
   color: #fff;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
-  padding: 7px 14px;
+  padding: 9px 16px;
   border-radius: 999px;
 }
 .app-top-me {
@@ -523,7 +523,7 @@ button, a[role="button"] {
 .app-top-sheet {
   position: absolute;
   right: 16px;
-  top: 58px;
+  top: 66px;
   z-index: 60;
   width: 232px;
   background: #fff;
@@ -715,5 +715,18 @@ button, a[role="button"] {
   .tool-page > h1,
   .tool-page > p:first-of-type {
     grid-column: 1 / -1;
+  }
+}
+
+/* 도구 첫머리 예시 (대표 지적 0915 「랜딩들 다 어디갔냐」) */
+.tool-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (min-width: 760px) {
+  .tool-hero-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
   }
 }

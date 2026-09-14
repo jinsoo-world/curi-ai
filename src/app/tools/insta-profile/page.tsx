@@ -10,6 +10,7 @@ import { CURI_MODELS, DEFAULT_MODEL_ID, getModel } from '@/domains/studio/models
 import { PickCard } from '@/components/studio/PickCard'
 import { PhotoDrop } from '@/components/studio/PhotoDrop'
 import AppSidebar from '@/components/AppSidebar'
+import ToolHero from '@/components/studio/ToolHero'
 import MakingBar from '@/components/studio/MakingBar'
 import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
@@ -58,12 +59,11 @@ export default function InstaProfilePage() {
         <main style={{ minHeight: '100dvh', background: '#fafafa' }}>
             <AppSidebar />
             <div className="tool-page">
-                <h1 style={{ fontSize: 24, fontWeight: 800, color: '#18181b', margin: '0 0 6px', wordBreak: 'keep-all' }}>
-                    인스타 프로필 사진 만들기
-                </h1>
-                <p style={{ fontSize: 14, color: '#71717a', margin: '0 0 24px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                    인스타에서는 사진이 동그랗게 잘려 보여요. 그에 맞춰 얼굴이 잘 나오게 만들어드립니다.
-                </p>
+                <ToolHero
+                    title="인스타 프로필 사진 만들기"
+                    desc="동그랗게 잘려도 얼굴이 잘 나오게 만듭니다."
+                    samples={[{ src: '/samples/act-w5.webp', label: '밝게' }, { src: '/samples/act-m6.webp', label: '편안하게' }, { src: '/samples/act-w8.webp', label: '야외' }, { src: '/samples/act-m8.webp', label: '카페' }]}
+                />
 
                 <div style={{ marginBottom: 22 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>1. 내 사진 올리기</div>
@@ -125,7 +125,7 @@ export default function InstaProfilePage() {
                     </div>
                     <div style={{ marginBottom: 22 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>3. 분위기</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                             {MOODS.map(o => (
                                 <PickCard key={o.id} option={o} selected={moodId === o.id} onSelect={setMoodId} kind="backdrop" />
                             ))}
@@ -133,7 +133,7 @@ export default function InstaProfilePage() {
                     </div>
                     <div style={{ marginBottom: 24 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>4. 배경색</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                             {TONES.map(o => (
                                 <PickCard key={o.id} option={o} selected={toneId === o.id} onSelect={setToneId} kind="backdrop" />
                             ))}

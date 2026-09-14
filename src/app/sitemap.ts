@@ -33,6 +33,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             changeFrequency: 'monthly',
             priority: 0.5,
         },
+        // 만드는 도구 — 대표 지시 0915 「GEO, SEO」
+        // 검색으로 사람이 들어오는 문은 「무엇을 해주는 곳인가」가 적힌 화면이다.
+        ...['profile-photo', 'actor-photo', 'enhance', 'thumbnail', 'insta-profile'].map((t) => ({
+            url: `${baseUrl}/tools/${t}`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly' as const,
+            priority: 0.9,
+        })),
+        {
+            url: `${baseUrl}/studio`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly',
+            priority: 0.8,
+        },
         {
             url: `${baseUrl}/pricing`,
             lastModified: new Date(),
@@ -62,17 +76,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         )
         const { data: mentors } = await supabase
             .from('mentors')
-            .select('handle, updated_at')
+            .select('id, handle, updated_at')
             .eq('is_active', true)
-            .not('handle', 'is', null)
 
         if (mentors) {
-            mentorPages = mentors.map((m) => ({
-                url: `${baseUrl}/${m.handle}`,
-                lastModified: m.updated_at ? new Date(m.updated_at) : new Date(),
-                changeFrequency: 'weekly' as const,
-                priority: 0.8,
-            }))
+            // 코치 소개 화면은 handle 이 없어도 id 로 열린다. 전에는 handle 있는 것만 넣어서
+            // 대부분의 코치가 검색에 한 번도 안 나왔다(0915 확인).
+            mentorPages = mentors.flatMap((m) => {
+                const 날짜 = m.updated_at ? new Date(m.updated_at) : new Date()
+                const 줄: MetadataRoute.Sitemap = [{
+                    url: `${baseUrl}/coach/${m.id}`,
+                    lastModified: 날짜,
+                    changeFrequency: 'weekly' as const,
+                    priority: 0.8,
+                }]
+                if (m.handle) {
+                    줄.push({
+                        url: `${baseUrl}/${m.handle}`,
+                        lastModified: 날짜,
+                        changeFrequency: 'weekly' as const,
+                        priority: 0.8,
+                    })
+                }
+                return 줄
+            })
         }
     } catch (err) {
         console.error('[Sitemap] Error fetching mentors:', err)
