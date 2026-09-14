@@ -58,7 +58,7 @@ export default function InstaProfilePage() {
     return (
         <main style={{ minHeight: '100dvh', background: '#fafafa' }}>
             <AppSidebar />
-            <div style={{ maxWidth: 520, margin: '0 auto', padding: '32px 18px 90px' }}>
+            <div className="tool-page">
                 <h1 style={{ fontSize: 24, fontWeight: 800, color: '#18181b', margin: '0 0 6px', wordBreak: 'keep-all' }}>
                     인스타 프로필 사진 만들기
                 </h1>

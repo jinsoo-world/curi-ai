@@ -78,7 +78,7 @@ export default function AppSidebar() {
                 {/* 오른쪽 — 남은 개수와 나 */}
                 <div className="app-top-right">
                     <Link href="/charge" className="app-top-credit" aria-label="클로버 충전하기">
-                        <CloverIcon size={17} />
+                        <CloverIcon size={22} />
                         <span className="app-top-credit-num">{잔액 === null ? '–' : 잔액.toLocaleString()}</span>
                         <span className="app-top-credit-plus">충전</span>
                     </Link>
@@ -91,9 +91,12 @@ export default function AppSidebar() {
                         aria-expanded={열림}
                     >
                         {사진 ? (
-                            <Image src={사진} alt="" width={34} height={34} style={{ objectFit: 'cover' }} />
+                            <Image src={사진} alt="" width={38} height={38} style={{ objectFit: 'cover' }} />
                         ) : (
-                            <span>{(이름 ?? '나').slice(0, 1)}</span>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+                                <circle cx="12" cy="8.5" r="3.6" fill="#8A948E" />
+                                <path d="M4.8 20c0-3.4 3.2-5.6 7.2-5.6s7.2 2.2 7.2 5.6" fill="#8A948E" />
+                            </svg>
                         )}
                     </button>
                 </div>
