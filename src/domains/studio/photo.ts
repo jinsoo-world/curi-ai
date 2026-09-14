@@ -90,6 +90,12 @@ export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '
         'Soft diffused key light with gentle fill from below to avoid harsh shadows in the nasolabial folds and under the eyes.',
         'Eye level, looking at the lens, sharp focus on the eyes.',
         `Upper body, ${ratioLabel} composition suitable for a profile picture.`,
-        'No text, no logos, no watermark, no extra hands. Avoid glossy over-retouched AI look.',
+        // 대표 지시 0914 = 「이미지 AI처럼 만들지말고. 더 사람처럼」 (배우 프로필 사진을 보여주며)
+        // 「AI 같지 않게」라고만 적으면 모델이 잘 못 알아듣는다. 카메라와 빛을 구체로 적고,
+        // 사람 얼굴에 원래 있는 것(모공·잔주름·비대칭·흐트러진 머리카락)을 이름으로 불러줘야 한다.
+        'Shot on a full-frame camera with an 85mm f/1.4 lens, single large softbox key light, real shadow falloff, faint film grain.',
+        'Keep visible skin pores, fine lines, uneven natural skin tone, a few stray hair strands and slight facial asymmetry.',
+        'It must read as a real photograph of a real person, not a rendering.',
+        'No text, no logos, no watermark, no extra hands. Avoid the AI look: no waxy plastic skin, no airbrushed glow, no perfect symmetry, no oversaturated colour, no sharpening halo.',
     ].join(' ')
 }

@@ -73,7 +73,9 @@ export function buildInstaPrompt(mood: InstaChoice, tone: InstaChoice, freeText 
         'Keep natural skin texture and pores, but render the subject on their best day: rested, healthy, even skin tone.',
         'Soft diffused light, no harsh shadows under the eyes or around the mouth.',
         'Sharp focus on the eyes, looking at the lens.',
-        'No text, no logos, no watermark, no extra hands. Avoid glossy over-retouched AI look.',
+        'Shot on a full-frame camera with an 85mm lens, soft window light, faint film grain.',
+        'Keep visible skin pores, fine lines and slight facial asymmetry — it must read as a real photograph, not a rendering.',
+        'No text, no logos, no watermark, no extra hands. Avoid the AI look: no waxy plastic skin, no airbrushed glow, no perfect symmetry.',
         // 사람이 적은 주문은 맨 뒤에 둔다. 위 규칙(같은 얼굴·나이 유지)을 이기지 못하게.
         주문
             ? `The person also asked for this, follow it only where it does not conflict with the rules above: "${주문}".`
