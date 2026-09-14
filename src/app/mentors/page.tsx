@@ -15,6 +15,7 @@ import MentorBoard from '@/components/ui/MentorBoard'
 import AppSidebar from '@/components/AppSidebar'
 import CreditClaimWrapper from './CreditClaimWrapper'
 import { Suspense } from 'react'
+import AdSlot from '@/components/AdSlot'
 
 /**
  * 대표 지적 2026-09-15 = 카톡·검색에 나가는 제목이 「멘토 선택 — 큐리 AI — 큐리 AI」였다.
@@ -108,6 +109,9 @@ export default async function MentorsPage() {
 
                 {/* ─── 만들 수 있는 사진 — 대표 지시 0914 「이런 느낌도 좋다」 ─── */}
                 <LookShowcase />
+
+                {/* ─── 광고(애드센스) — 무료 화면에만. 본문 끝난 뒤, 바닥글 앞 ─── */}
+                <AdSlot />
 
                 {/* ─── Footer ─── */}
                 <footer className="mentors-footer" style={{

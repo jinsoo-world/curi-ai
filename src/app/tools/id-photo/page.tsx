@@ -9,6 +9,7 @@ import { ID_BACKGROUNDS, ID_OUTFITS, ID_SIZES, ID_COST } from '@/domains/studio/
 import { AGES, DEFAULT_AGE_ID } from '@/domains/studio/photo'
 import PhotoToolShell from '@/components/studio/PhotoToolShell'
 import AppSidebar from '@/components/AppSidebar'
+import AdSlot from '@/components/AdSlot'
 
 function IdPhotoPage안쪽() {
     const router = useRouter()
@@ -145,6 +146,9 @@ function IdPhotoPage안쪽() {
                     </div>
                 </칸>
             </PhotoToolShell>
+
+            {/* 광고(애드센스) — 무료 화면에만, 본문 끝난 뒤 */}
+            <AdSlot />
         </main>
     )
 }

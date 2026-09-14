@@ -8,6 +8,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserByHandle } from '@/domains/user'
 import { getMentorsByCreator, MENTOR_IMAGES, getPublicMentorByHandle } from '@/domains/mentor'
 import type { MentorCardData } from '@/domains/mentor'
+import AdSlot from '@/components/AdSlot'
 
 interface PageProps {
     params: Promise<{ handle: string }>
@@ -291,6 +292,9 @@ export default async function CreatorProfilePage({ params }: PageProps) {
                         </p>
                     </div>
                 )}
+
+                {/* ── 광고(애드센스) — 무료 화면에만, 본문 끝난 뒤 ── */}
+                <AdSlot />
             </main>
 
             {/* ── Footer ── */}

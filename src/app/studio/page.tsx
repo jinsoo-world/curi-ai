@@ -10,6 +10,7 @@ import AppSidebar from '@/components/AppSidebar'
 import WelcomeGift from '@/components/WelcomeGift'
 import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
+import AdSlot from '@/components/AdSlot'
 
 function ItemCard({ item, onGo }: { item: ToolItem; onGo: (href: string) => void }) {
     return (
@@ -101,6 +102,9 @@ export default function StudioPage() {
                 <div className="studio-grid" style={{ marginBottom: 28 }}>
                     {TOOLS.map(i => <ItemCard key={i.id} item={i} onGo={router.push} />)}
                 </div>
+
+                {/* 광고(애드센스) — 무료 화면에만, 본문 끝난 뒤 */}
+                <AdSlot />
 
             </div>
         </main>

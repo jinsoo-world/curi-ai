@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import AppSidebar from '@/components/AppSidebar'
 import { createClient } from '@/lib/supabase/client'
+import AdSlot from '@/components/AdSlot'
 
 interface StoreItem {
     id: string
@@ -316,6 +317,9 @@ export default function CloverStorePage() {
                             🚧 클로버 스토어는 현재 준비 중입니다. 곧 실제 교환 기능이 오픈됩니다!
                         </div>
                     </div>
+
+                    {/* 광고(애드센스) — 무료 화면에만, 본문 끝난 뒤 */}
+                    <AdSlot />
                 </div>
             </main>
 

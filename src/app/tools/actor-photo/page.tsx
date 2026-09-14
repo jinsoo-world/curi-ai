@@ -18,6 +18,7 @@ import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
 import KeepNotice from '@/components/studio/KeepNotice'
+import AdSlot from '@/components/AdSlot'
 
 function ActorPhotoPage안쪽() {
     const router = useRouter()
@@ -295,6 +296,9 @@ function ActorPhotoPage안쪽() {
                         </div>
                     ))}
                 </div>
+
+                {/* 광고(애드센스) — 무료 화면에만, 본문 끝난 뒤 */}
+                <AdSlot />
             </div>
         </main>
     )

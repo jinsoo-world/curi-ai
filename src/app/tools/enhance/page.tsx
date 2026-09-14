@@ -13,6 +13,7 @@ import AppSidebar from '@/components/AppSidebar'
 import ToolHero from '@/components/studio/ToolHero'
 import Image from 'next/image'
 import KeepNotice from '@/components/studio/KeepNotice'
+import AdSlot from '@/components/AdSlot'
 
 export default function EnhancePage() {
     const router = useRouter()
@@ -167,6 +168,9 @@ export default function EnhancePage() {
                         </div>
                     )}
                 </div>
+
+                {/* 광고(애드센스) — 무료 화면에만, 본문 끝난 뒤 */}
+                <AdSlot />
             </div>
         </main>
     )

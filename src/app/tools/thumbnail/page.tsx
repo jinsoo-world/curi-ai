@@ -10,6 +10,7 @@ import ThumbnailCanvas, { type 글자값 } from '@/components/studio/ThumbnailCa
 import AppSidebar from '@/components/AppSidebar'
 import ToolHero from '@/components/studio/ToolHero'
 import KeepNotice from '@/components/studio/KeepNotice'
+import AdSlot from '@/components/AdSlot'
 
 export default function ThumbnailPage() {
     const router = useRouter()
@@ -173,6 +174,9 @@ export default function ThumbnailPage() {
                         </div>
                     )}
                 </div>
+
+                {/* 광고(애드센스) — 무료 화면에만, 본문 끝난 뒤 */}
+                <AdSlot />
             </div>
         </main>
     )
