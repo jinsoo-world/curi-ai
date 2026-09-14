@@ -242,7 +242,7 @@ export default function ProfilePage() {
     const INTEREST_OPTIONS: { key: string; label: string; emoji: string }[] = [
         { key: 'content', label: '콘텐츠 제작', emoji: '🎬' },
         { key: 'branding', label: '퍼스널 브랜딩', emoji: '' },
-        { key: 'monetize', label: '수익화', emoji: '💰' },
+        { key: 'monetize', label: '수익화', emoji: '' },
         { key: 'career', label: '커리어 전환', emoji: '' },
         { key: 'business', label: '1인 사업', emoji: '🏠' },
         { key: 'marketing', label: '마케팅', emoji: '📢' },
@@ -401,7 +401,7 @@ export default function ProfilePage() {
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                     fontSize: 12,
                                                 }}>
-                                                    {uploadingPhoto ? '⏳' : '📷'}
+                                                    {uploadingPhoto ? '올리는 중' : '사진 바꾸기'}
                                                 </div>
                                                 {/* 로그인 방식 뱃지 (Google/Kakao) */}
                                                 <div style={{
@@ -495,7 +495,7 @@ export default function ProfilePage() {
                                         <div>
                                             <div style={labelStyle}>광고성 정보 수신 동의</div>
                                             <div style={{ fontSize: 15, color: profile?.marketing_consent ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
-                                                {profile?.marketing_consent ? '✅ 동의함 (SMS · 이메일 · 앱 푸시)' : '❌ 미동의'}
+                                                {profile?.marketing_consent ? '동의함 (문자 · 이메일 · 앱 알림)' : '동의하지 않음'}
                                             </div>
                                             {!profile?.marketing_consent && (
                                                 <div style={{
@@ -503,7 +503,7 @@ export default function ProfilePage() {
                                                     background: '#f0fdf4', border: '1px solid #dcfce7',
                                                     fontSize: 13, color: '#16a34a', lineHeight: 1.5,
                                                 }}>
-                                                    🍀 편집에서 수신 동의하면 클로버 10개를 받을 수 있어요!
+                                                    편집에서 수신 동의하면 클로버 10개를 받습니다
                                                 </div>
                                             )}
                                         </div>
@@ -642,7 +642,7 @@ export default function ProfilePage() {
                                                     background: '#f0fdf4', border: '1px solid #dcfce7',
                                                     fontSize: 12, color: '#16a34a', lineHeight: 1.5, fontWeight: 600,
                                                 }}>
-                                                    🍀 동의 시 클로버 10개가 지급됩니다!
+                                                    동의하면 클로버 10개를 드립니다
                                                 </div>
                                             )}
                                         </div>
@@ -736,7 +736,7 @@ export default function ProfilePage() {
                                             }}>
                                                 {profile?.subscription_tier === 'premium' ? '프리미엄'
                                                     : profile?.subscription_tier === 'pro' ? '프로'
-                                                    : profile?.subscription_tier === 'free_trial' ? '🎁 무료체험'
+                                                    : profile?.subscription_tier === 'free_trial' ? '무료체험'
                                                     : 'Free'}
                                             </span>
                                         </div>
@@ -806,7 +806,7 @@ export default function ProfilePage() {
                                                     border: '1px solid #ddd6fe',
                                                 }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                                        <span style={{ fontSize: 18 }}>🎁</span>
+                                                        
                                                         <span style={{ fontSize: 14, fontWeight: 700, color: '#5b21b6' }}>
                                                             무료 체험 기간
                                                         </span>
@@ -865,7 +865,7 @@ export default function ProfilePage() {
                                             borderBottom: '1px solid #f0f0f0',
                                         }}
                                     >
-                                        <span>💬 대화 내역</span>
+                                        <span>대화 내역</span>
                                         <span style={{ color: '#d1d5db' }}>→</span>
                                     </Link>
                                     {/* 결제 내역 */}
@@ -953,7 +953,7 @@ export default function ProfilePage() {
                                                     fontSize: 13, color: '#16a34a',
                                                 }}>
                                                     <div style={{ fontWeight: 600, marginBottom: 4 }}>현재 구독 정보</div>
-                                                    <div>상태: {subscription.status === 'active' ? '✅ 활성' : subscription.status === 'canceled' ? '⏸️ 취소 예정' : subscription.status}</div>
+                                                    <div>상태: {subscription.status === 'active' ? '쓰는 중' : subscription.status === 'canceled' ? '취소 예정' : subscription.status}</div>
                                                     <div>다음 결제일: {new Date(subscription.current_period_end).toLocaleDateString('ko-KR')}</div>
                                                 </div>
                                             )}

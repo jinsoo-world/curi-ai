@@ -187,7 +187,7 @@ export default function PricingPage() {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, position: 'relative' }}>
                                 <div>
                                     <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px' }}>
-                                        ✨ Premium
+                                        Premium
                                     </h3>
                                     {isPremium && (
                                         <span style={{
