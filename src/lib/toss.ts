@@ -111,3 +111,42 @@ export function generateOrderId(planType: string): string {
     const random = Math.random().toString(36).substring(2, 8)
     return `curi-${planType}-${timestamp}-${random}`
 }
+
+/**
+ * 일회성 결제 승인 (클로버 충전용)
+ *
+ * 토스 결제창에서 돌아온 paymentKey·orderId·amount 를 토스에 확인받는다.
+ * ⚠️ 이 단계를 건너뛰고 화면이 주는 금액만 믿으면, 100원 내고 3만원어치를
+ *    받았다고 우길 수 있다. 금액은 반드시 토스가 알려준 값으로 대조한다.
+ */
+export async function confirmPayment(paymentKey: string, orderId: string, amount: number) {
+    const secretKey = process.env.TOSS_SECRET_KEY
+    if (!secretKey) throw new Error('TOSS_SECRET_KEY 환경변수가 설정되지 않았습니다.')
+
+    const res = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
+        method: 'POST',
+        headers: {
+            Authorization: `Basic ${Buffer.from(`${secretKey}:`).toString('base64')}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ paymentKey, orderId, amount }),
+    })
+
+    const data = await res.json()
+    if (!res.ok) {
+        throw new Error(data?.message || '결제 승인에 실패했습니다.')
+    }
+    return data as {
+        paymentKey: string
+        orderId: string
+        totalAmount: number
+        status: string
+        approvedAt: string
+        receipt?: { url?: string }
+    }
+}
+
+/** 충전용 주문번호 — 어떤 상품을 샀는지 알아볼 수 있게 접두사를 붙인다 */
+export function generateChargeOrderId(packId: string): string {
+    return `clover_${packId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+}
