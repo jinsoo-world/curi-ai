@@ -1,5 +1,7 @@
 'use client'
 
+import { useTypewriter } from '@/components/ui/useTypewriter'
+
 import { useState, useCallback, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -789,7 +791,7 @@ export default function ChatMessages({
                                             </div>
                                         </>
                                     ) : (
-                                        <MarkdownContent content={msg.content} />
+                                        <StreamingBody content={msg.content} live={!!isStreaming && idx === messages.length - 1} />
                                     )}
                                 </div>}
 
@@ -831,4 +833,13 @@ export default function ChatMessages({
             `}</style>
         </>
     )
+}
+
+/**
+ * 흐르듯 그리는 본문 — 대표 지시 0914 「부드럽게 차라락 나오게 해」
+ * 지금 오고 있는 마지막 답에만 건다. 지나간 답은 그대로 다 보여준다.
+ */
+function StreamingBody({ content, live }: { content: string; live: boolean }) {
+    const 보임 = useTypewriter(content, live)
+    return <MarkdownContent content={보임} />
 }

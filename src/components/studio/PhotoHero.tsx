@@ -10,7 +10,7 @@
  * 무슨 말을 걸지는 사람이 알아서 생각해야 했다. 사진 올리기는 생각할 게 없다.
  * 왼쪽에 바뀐 결과를 먼저 보여주고 오른쪽에 올릴 자리를 크게 연다.
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { PhotoDrop } from './PhotoDrop'
@@ -18,9 +18,22 @@ import { PhotoDrop } from './PhotoDrop'
 /** 올린 사진을 다음 화면으로 넘기는 열쇠 */
 export const HERO_PHOTO_KEY = 'curi.heroPhoto'
 
+/** 남녀 한 쌍씩 — 대표 지시 0914 「이미지 너무 후킹하고 좋은데, 여자 버전으로도 하나 만들어바」 */
+const 짝 = [
+    { before: '/samples/before-man.webp', after: '/samples/after-man.webp' },
+    { before: '/samples/before-woman.webp', after: '/samples/after-woman.webp' },
+]
+
 export default function PhotoHero() {
     const router = useRouter()
     const [err, setErr] = useState<string | null>(null)
+    const [지금, set지금] = useState(0)
+
+    // 5초마다 남녀를 번갈아 보여준다. 한 화면에 넷을 늘어놓으면 작아져서 안 보인다.
+    useEffect(() => {
+        const t = setInterval(() => set지금(i => (i + 1) % 짝.length), 5000)
+        return () => clearInterval(t)
+    }, [])
 
     const 받았을때 = (dataUrl: string, mimeType: string) => {
         try {
@@ -64,8 +77,8 @@ export default function PhotoHero() {
                     {/* 왼쪽 — 바뀌기 전과 후 */}
                     <div className="photo-hero-samples">
                         {[
-                            { src: '/samples/before-man.webp', label: '올린 사진' },
-                            { src: '/samples/after-man.webp', label: '만든 사진' },
+                            { src: 짝[지금].before, label: '올린 사진' },
+                            { src: 짝[지금].after, label: '만든 사진' },
                         ].map((s) => (
                             <figure
                                 key={s.src}
@@ -84,7 +97,7 @@ export default function PhotoHero() {
                                     fill
                                     sizes="(max-width: 900px) 45vw, 260px"
                     quality={90}
-                                    style={{ objectFit: 'cover' }}
+                                    style={{ objectFit: 'cover', transition: 'opacity 400ms ease' }}
                                 />
                                 <figcaption
                                     style={{
