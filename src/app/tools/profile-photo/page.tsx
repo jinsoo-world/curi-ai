@@ -3,7 +3,7 @@
 // 전문가 프로필 사진 만들기 — 대표 지시 2026-09-14
 // 구조는 ai.pfpmaker.com 을 참고했다. 다만 중장년 대상이라 고를 것을 줄이고,
 // 값(클로버)을 버튼에 그대로 박았다.
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { STYLES, BACKDROPS } from '@/domains/studio/photo'
 import { CURI_MODELS, DEFAULT_MODEL_ID, getModel } from '@/domains/studio/models'
@@ -12,6 +12,7 @@ import { CLOVER_UNIT_WON } from '@/domains/credit/packs'
 import { PickCard } from '@/components/studio/PickCard'
 import { PhotoDrop } from '@/components/studio/PhotoDrop'
 import AppSidebar from '@/components/AppSidebar'
+import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
 
 export default function ProfilePhotoPage() {
     const router = useRouter()
@@ -26,6 +27,22 @@ export default function ProfilePhotoPage() {
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const [needCharge, setNeedCharge] = useState(false)
+
+    // 첫 화면에서 사진을 이미 올렸으면 그대로 받아 온다 (대표 지시 0914 「이게 메인으로」)
+    useEffect(() => {
+        try {
+            const raw = sessionStorage.getItem(HERO_PHOTO_KEY)
+            if (!raw) return
+            sessionStorage.removeItem(HERO_PHOTO_KEY)
+            const { dataUrl, mimeType: mt } = JSON.parse(raw) as { dataUrl: string; mimeType: string }
+            if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return
+            setPreview(dataUrl)
+            setBase64(dataUrl.split(',')[1] ?? null)
+            setMimeType(mt || 'image/jpeg')
+        } catch {
+            // 저장소를 못 읽는 브라우저면 그냥 새로 올리게 둔다
+        }
+    }, [])
 
     const make = async () => {
         if (!base64 || !styleId || !backdropId) return
@@ -99,7 +116,7 @@ export default function ProfilePhotoPage() {
                                             flexShrink: 0, width: 38, height: 38, borderRadius: 11,
                                             background: m.tint, display: 'flex', alignItems: 'center',
                                             justifyContent: 'center', fontSize: 17,
-                                        }}>{m.id === 'curi-v1' ? '🍀' : m.id === 'nano-banana-2' ? '🍌' : '🤖'}</span>
+                                        }}>{m.label.slice(0, 1)}</span>
                                         <span style={{ flex: 1, minWidth: 0 }}>
                                             <span style={{ fontSize: 15, fontWeight: 700, color: '#18181b' }}>{m.label}</span>
                                             <span style={{
@@ -113,7 +130,7 @@ export default function ProfilePhotoPage() {
                                             </span>
                                         </span>
                                         {!못씀 && (
-                                            <span style={{ fontSize: 13, fontWeight: 700, color: '#3f3f46', flexShrink: 0 }}>🍀 {m.cost}</span>
+                                            <span style={{ fontSize: 13, fontWeight: 700, color: '#3f3f46', flexShrink: 0 }}>{m.cost}개</span>
                                         )}
                                     </button>
                                 )
@@ -169,7 +186,7 @@ export default function ProfilePhotoPage() {
                             <button onClick={() => router.push('/charge')} style={{
                                 display: 'block', marginTop: 10, background: '#dc2626', color: '#fff',
                                 border: 'none', borderRadius: 10, padding: '9px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                            }}>클로버 충전하러 가기</button>
+                            }}>충전하러 가기</button>
                         )}
                     </div>
                 )}
@@ -180,7 +197,7 @@ export default function ProfilePhotoPage() {
                     color: '#fff', fontSize: 16, fontWeight: 700,
                     cursor: (!준비됨 || loading) ? 'default' : 'pointer',
                 }}>
-                    {loading ? '만드는 중... (20초쯤 걸려요)' : `사진 만들기 (🍀 ${getModel(modelId)!.cost}개 · ${(getModel(modelId)!.cost * CLOVER_UNIT_WON).toLocaleString()}원)`}
+                    {loading ? '만드는 중... (20초쯤 걸려요)' : `사진 만들기 · ${(getModel(modelId)!.cost * CLOVER_UNIT_WON).toLocaleString()}원`}
                 </button>
 
                 {/* 결과 */}

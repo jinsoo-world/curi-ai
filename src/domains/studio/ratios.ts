@@ -16,9 +16,10 @@ export interface Ratio {
 }
 
 export const RATIOS: Ratio[] = [
-    { id: 'square', label: '1:1', use: '카톡·인스타 프로필', value: '1:1', w: 1, h: 1 },
+    // 대표 지시 0914 = 「1:1 비율은 밑으로 내려」. 세로가 프로필 사진의 기본이다.
     { id: 'portrait45', label: '4:5', use: '링크드인·이력서', value: '4:5', w: 4, h: 5 },
     { id: 'portrait23', label: '2:3', use: '상반신 소개 사진', value: '2:3', w: 2, h: 3 },
+    { id: 'square', label: '1:1', use: '카톡·인스타 프로필', value: '1:1', w: 1, h: 1 },
 ]
 
 export const DEFAULT_RATIO_ID = 'portrait45'

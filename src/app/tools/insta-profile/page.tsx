@@ -93,7 +93,7 @@ export default function InstaProfilePage() {
                                             flexShrink: 0, width: 38, height: 38, borderRadius: 11,
                                             background: m.tint, display: 'flex', alignItems: 'center',
                                             justifyContent: 'center', fontSize: 17,
-                                        }}>{m.id === 'curi-v1' ? '🍀' : m.id === 'nano-banana-2' ? '🍌' : '🤖'}</span>
+                                        }}>{m.label.slice(0, 1)}</span>
                                         <span style={{ flex: 1, minWidth: 0 }}>
                                             <span style={{ fontSize: 15, fontWeight: 700, color: '#18181b' }}>{m.label}</span>
                                             <span style={{
@@ -107,7 +107,7 @@ export default function InstaProfilePage() {
                                             </span>
                                         </span>
                                         {!못씀 && (
-                                            <span style={{ fontSize: 13, fontWeight: 700, color: '#3f3f46', flexShrink: 0 }}>🍀 {m.cost}</span>
+                                            <span style={{ fontSize: 13, fontWeight: 700, color: '#3f3f46', flexShrink: 0 }}>{m.cost}개</span>
                                         )}
                                     </button>
                                 )
@@ -149,7 +149,7 @@ export default function InstaProfilePage() {
                     background: (!준비됨 || loading) ? '#d4d4d8' : '#22c55e',
                     color: '#fff', fontSize: 16, fontWeight: 700, cursor: (!준비됨 || loading) ? 'default' : 'pointer',
                 }}>
-                    {loading ? '만드는 중... (20초쯤 걸려요)' : `사진 만들기 (🍀 ${cost}개 · ${(cost * CLOVER_UNIT_WON).toLocaleString()}원)`}
+                    {loading ? '만드는 중... (20초쯤 걸려요)' : `사진 만들기 · ${(cost * CLOVER_UNIT_WON).toLocaleString()}원`}
                 </button>
 
                 {result && (

@@ -37,7 +37,7 @@ export default function MentorBoard({ mentors }: { mentors: BoardMentor[] }) {
         <>
             <CategoryTabs items={갈래.map(({ key, label }) => ({ key, label }))} active={고른갈래} onPick={set고른갈래} />
 
-            <main style={{ padding: 'var(--틈-대) var(--틈) var(--틈-절)', maxWidth: 900, margin: '0 auto' }}>
+            <main style={{ padding: 'var(--틈-대) var(--틈) var(--틈-절)', maxWidth: 1200, margin: '0 auto' }}>
                 <p style={{ fontSize: 'var(--글자-본문)', color: 'var(--먹연)', marginBottom: 'var(--틈)' }}>
                     {보일멘토.length}명이 기다리고 있어요
                 </p>

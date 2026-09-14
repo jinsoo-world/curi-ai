@@ -2,11 +2,12 @@ import Link from 'next/link'
 import Image from 'next/image'
 
 /**
- * 멘토 카드 — 4열(휴대폰 2열) 배열에 맞춘 세로형
+ * 멘토 카드 — 사진이 카드를 꽉 채운다
  *
- * 하나투어는 큰 여행 사진이 재료였다. 여기는 멘토가 가진 그림이
- * 112px 짜리 작은 프로필뿐이라(실측) 큰 사진 자리에 늘리면 흐려진다.
- * 그래서 색면 위에 원형 프로필을 얹었다.
+ * 대표 지시 2026-09-14 = 「이미지를 겁나 크게 해 다 채워, 원형으로 짜르지말고」
+ * 전에는 84px 짜리 동그란 프로필을 색면 위에 얹었다. 카드 넓이의 3분의 1도
+ * 안 써서 누가 누군지 안 보였다. 지금은 세로 3:4 사진이 카드 전체이고
+ * 이름·설명은 사진 아래쪽 어두운 그늘 위에 얹는다(캐릭터챗과 같은 방식).
  */
 export default function MentorBigCard({
     href,
@@ -25,67 +26,67 @@ export default function MentorBigCard({
         <Link
             href={href}
             aria-label={`${name} 멘토와 대화하기`}
+            className="mentor-big-card"
             style={{
-                display: 'flex',
-                flexDirection: 'column',
-                background: 'var(--흰)',
+                position: 'relative',
+                display: 'block',
+                width: '100%',
+                aspectRatio: '3 / 4',
                 borderRadius: 'var(--둥근)',
                 overflow: 'hidden',
+                background: '#E8F2EC',
                 boxShadow: 'var(--그림자)',
                 textDecoration: 'none',
                 color: 'inherit',
-                height: '100%',
             }}
         >
-            {/* 색면 + 원형 프로필 */}
-            <div
-                style={{
-                    background: '#EDF7F1',
-                    padding: '22px 0',
-                    display: 'grid',
-                    placeItems: 'center',
-                }}
-            >
+            {imageSrc ? (
+                <Image
+                    src={imageSrc}
+                    alt=""
+                    fill
+                    sizes="(max-width: 820px) 50vw, (max-width: 1180px) 33vw, 300px"
+                    style={{ objectFit: 'cover', objectPosition: 'center 22%' }}
+                />
+            ) : (
                 <span
+                    aria-hidden
                     style={{
-                        position: 'relative',
-                        width: 84,
-                        height: 84,
-                        borderRadius: '50%',
-                        overflow: 'hidden',
-                        background: 'var(--흰)',
+                        position: 'absolute',
+                        inset: 0,
                         display: 'grid',
                         placeItems: 'center',
-                        boxShadow: '0 0 0 3px var(--흰)',
+                        fontSize: 64,
+                        color: 'var(--진초록)',
+                        opacity: 0.25,
+                        fontWeight: 900,
                     }}
                 >
-                    {imageSrc ? (
-                        <Image src={imageSrc} alt="" fill sizes="84px" style={{ objectFit: 'cover' }} />
-                    ) : (
-                        <span style={{ fontSize: 36 }} aria-hidden>🍀</span>
-                    )}
+                    {name.slice(0, 1)}
                 </span>
-            </div>
+            )}
 
+            {/* 아래쪽 그늘 — 글자가 사진 위에서도 읽히게 */}
             <div
                 style={{
-                    padding: 'var(--틈)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    flex: 1,
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    padding: '52px 16px 16px',
+                    background:
+                        'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0) 100%)',
+                    color: '#fff',
                 }}
             >
                 <h3
                     style={{
-                        fontSize: 'var(--글자-중)',
+                        fontSize: 22,
                         fontWeight: 900,
                         letterSpacing: '-0.03em',
-                        lineHeight: 1.3,
-                        marginBottom: 6,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
+                        lineHeight: 1.2,
+                        marginBottom: 4,
+                        textShadow: '0 1px 6px rgba(0,0,0,0.4)',
                     }}
                 >
                     {name}
@@ -94,29 +95,31 @@ export default function MentorBigCard({
                 <p
                     style={{
                         fontSize: 'var(--글자-작)',
-                        color: 'var(--먹연)',
-                        lineHeight: 1.5,
+                        lineHeight: 1.45,
+                        opacity: 0.92,
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
+                        textShadow: '0 1px 6px rgba(0,0,0,0.4)',
                     }}
                 >
                     {title}
                 </p>
 
                 {chips.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 'var(--틈-소)' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
                         {chips.slice(0, 2).map((c) => (
                             <span
                                 key={c}
                                 style={{
-                                    background: '#EDF7F1',
-                                    color: 'var(--진초록)',
-                                    fontSize: 13,
+                                    background: 'rgba(255,255,255,0.22)',
+                                    backdropFilter: 'blur(4px)',
+                                    color: '#fff',
+                                    fontSize: 12,
                                     fontWeight: 700,
                                     padding: '4px 10px',
-                                    borderRadius: 'var(--둥근-소)',
+                                    borderRadius: 999,
                                 }}
                             >
                                 {c}
@@ -124,32 +127,6 @@ export default function MentorBigCard({
                         ))}
                     </div>
                 )}
-
-                <span
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginTop: 'auto',
-                        paddingTop: 'var(--틈)',
-                    }}
-                >
-                    <span
-                        style={{
-                            width: '100%',
-                            height: 46,
-                            display: 'grid',
-                            placeItems: 'center',
-                            borderRadius: 'var(--둥근-소)',
-                            background: 'var(--연두)',
-                            color: 'var(--흰)',
-                            fontSize: 'var(--글자-작)',
-                            fontWeight: 800,
-                        }}
-                    >
-                        대화하기
-                    </span>
-                </span>
             </div>
         </Link>
     )

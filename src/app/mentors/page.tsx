@@ -7,7 +7,8 @@ import { getActiveMentors, MENTOR_IMAGES } from '@/domains/mentor'
 import { MembershipBanner } from '@/components/MembershipBanner'
 import type { MentorCardData } from '@/domains/mentor'
 import NotificationBanner from './NotificationBanner'
-import SpeechHero from '@/components/ui/SpeechHero'
+import PhotoHero from '@/components/studio/PhotoHero'
+import LookShowcase from '@/components/studio/LookShowcase'
 import MentorBoard from '@/components/ui/MentorBoard'
 import AppSidebar from '@/components/AppSidebar'
 import CreditClaimWrapper from './CreditClaimWrapper'
@@ -47,111 +48,6 @@ const fallbackMentors = [
     },
 ]
 
-/* ─── Mentor Card (Web: wide, responsive) ─── */
-function MentorCard({
-    name, title, description, questions, imageSrc, index, keywords,
-}: {
-    name: string; title: string; description: string; questions: string[]; imageSrc: string; index: number; keywords?: string[];
-}) {
-    return (
-        <article
-            className="animate-slide-up"
-            style={{
-                background: '#fff',
-                borderRadius: 20,
-                border: '1px solid #f0f0f0',
-                boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
-                overflow: 'hidden',
-                transition: 'transform 250ms ease, box-shadow 250ms ease',
-                animationDelay: `${index * 80}ms`,
-            }}
-        >
-            {/* Mentor Photo */}
-            <div style={{
-                position: 'relative',
-                width: '100%',
-                aspectRatio: '1 / 1',
-                background: 'linear-gradient(135deg, #f0fdf4 0%, #e8f5e9 50%, #f0f9ff 100%)',
-                overflow: 'hidden',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-            }}>
-                {imageSrc && !imageSrc.includes('undefined') ? (
-                    <Image
-                        src={imageSrc}
-                        alt={`${name} 멘토`}
-                        fill
-                        style={{ objectFit: 'cover' }}
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                    />
-                ) : (
-                    /* 이미지 없으면 로고 흐릿하게 */
-                    <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 12,
-                        opacity: 0.25,
-                    }}>
-                        <Image
-                            src="/logo.png"
-                            alt="큐리 AI"
-                            width={80}
-                            height={80}
-                            style={{ borderRadius: 20, filter: 'grayscale(30%)' }}
-                        />
-                        <span style={{ fontSize: 14, color: '#6b7280', fontWeight: 500 }}>AI</span>
-                    </div>
-                )}
-            </div>
-
-            {/* Info */}
-            <div className="mentor-card-info" style={{ padding: '20px 20px 24px' }}>
-                {/* 핵심 키워드 태그 */}
-                {keywords && keywords.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
-                        {keywords.slice(0, 3).map((kw, i) => (
-                            <span key={i} style={{
-                                fontSize: 12, fontWeight: 600,
-                                color: '#6b7280', background: '#f3f4f6',
-                                borderRadius: 6, padding: '3px 10px',
-                                letterSpacing: '-0.01em',
-                            }}>
-                                #{kw}
-                            </span>
-                        ))}
-                    </div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <h2 style={{
-                        fontSize: 24, fontWeight: 800, color: '#18181b',
-                        letterSpacing: '-0.02em', margin: 0,
-                    }}>
-                        {name}
-                    </h2>
-                    <span style={{
-                        fontSize: 13, fontWeight: 600, color: '#16a34a',
-                        background: '#f0fdf4', borderRadius: 100,
-                        padding: '4px 12px',
-                    }}>
-                        AI
-                    </span>
-                </div>
-
-                <p style={{
-                    fontSize: 16, color: '#6b7280', margin: 0,
-                    fontWeight: 500,
-                }}>
-                    {title}
-                </p>
-
-
-            </div>
-        </article>
-    )
-}
-
 export default async function MentorsPage() {
     const mentors = await getActiveMentors()
 
@@ -175,11 +71,8 @@ export default async function MentorsPage() {
                 {/* ─── Membership Top Banner ─── */}
                 <MembershipBanner />
 
-                {/* ─── 말풍선 히로 (전면 개편 0904) ─── */}
-                <SpeechHero
-                    eyebrow="오늘 말 걸 상대 고르기"
-                    title={'오늘은 어떤 이야기를\n나눠볼까요?'}
-                />
+                {/* ─── 사진 히로 — 대표 지시 0914 「이게 메인으로」 ─── */}
+                <PhotoHero />
 
                 {/* ─── 알림 ─── */}
                 <NotificationBanner />
@@ -203,6 +96,9 @@ export default async function MentorsPage() {
                         }))
                     )}
                 />
+
+                {/* ─── 만들 수 있는 사진 — 대표 지시 0914 「이런 느낌도 좋다」 ─── */}
+                <LookShowcase />
 
                 {/* ─── Footer ─── */}
                 <footer className="mentors-footer" style={{

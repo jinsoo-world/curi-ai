@@ -87,7 +87,7 @@ export default function ChargePage() {
                     }}>
                         <span style={{ fontSize: 14, color: '#52525b' }}>지금 가진 클로버</span>
                         <span style={{ fontSize: 16, fontWeight: 700, color: '#18181b' }}>
-                            🍀 {balance.toLocaleString()}개
+                            {balance.toLocaleString()}개
                             <span style={{ fontSize: 13, fontWeight: 500, color: '#71717a' }}>
                                 {' '}({(balance * CLOVER_UNIT_WON).toLocaleString()}원어치)
                             </span>
@@ -113,7 +113,7 @@ export default function ChargePage() {
                         >
                             <div>
                                 <div style={{ fontSize: 17, fontWeight: 700, color: '#18181b' }}>
-                                    🍀 {p.clovers.toLocaleString()}개
+                                    {p.clovers.toLocaleString()}개
                                     {discountPercent(p) > 0 && (
                                         <span style={{
                                             marginLeft: 8, fontSize: 12, fontWeight: 800, color: '#fff',

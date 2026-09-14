@@ -113,7 +113,7 @@ export default function AppSidebar() {
         { label: '내 AI 만들기', href: '/creator/create', icon: '✨' },
         { label: '내 AI 관리', href: '/creator/manage', icon: '📊' },
         { type: 'divider' as const },
-        { label: '클로버 모으기', href: '/missions', icon: '🍀' },
+        { label: '무료로 모으기', href: '/missions', icon: '🎁' },
         { label: '스토어', href: '/store', icon: '🎁' },
         // { label: '멤버십', href: '/pricing', icon: '👑' }, // 무료체험 기간 비공개
         { label: '마이페이지', href: '/profile', icon: '👤' },
@@ -249,7 +249,7 @@ export default function AppSidebar() {
                         onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(34,197,94,0.2)' }}
                         onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}
                     >
-                        🍀 프로필 완성하고 클로버 30개 받기!
+                        프로필 완성하고 30개 받기
                     </Link>
                 )}
 

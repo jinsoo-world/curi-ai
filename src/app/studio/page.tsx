@@ -40,7 +40,7 @@ function ItemCard({ item, onGo }: { item: StudioItem; onGo: (href: string) => vo
                         fontSize: 12, fontWeight: 700, color: '#3f3f46',
                         background: '#f4f4f5', padding: '4px 10px', borderRadius: 8,
                     }}>
-                        🍀 {item.cost}개 · {(item.cost * CLOVER_UNIT_WON).toLocaleString()}원
+                        {(item.cost * CLOVER_UNIT_WON).toLocaleString()}원
                     </span>
                 )}
             </div>
@@ -93,7 +93,7 @@ export default function StudioPage() {
                                 fontSize: 13, fontWeight: 700, color: '#18181b',
                             }}
                         >
-                            🍀 {balance.toLocaleString()}
+                            {balance.toLocaleString()}개
                         </button>
                     )}
                 </div>
