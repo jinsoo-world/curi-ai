@@ -794,7 +794,7 @@ export default function ChatMessages({
                                 </div>}
 
                                 {/* 시간 표시 */}
-                                {timeStr && msg.content && (
+                                {timeStr && (msg.content || msg.imageUrl) && (
                                     <div style={{
                                         fontSize: 11,
                                         color: '#b0b8c1',

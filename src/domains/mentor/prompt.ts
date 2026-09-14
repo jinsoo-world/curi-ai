@@ -308,7 +308,10 @@ export function buildGeminiHistory(
                 if (msg.content) parts.push({ text: msg.content })
                 return { role, parts }
             }
-            return { role, parts: [{ text: msg.content }] }
+            // 사진만 보낸 메시지는 글이 비어 있다. 그게 과거 기록이 되는 다음 턴에
+            // 빈 글자를 그대로 넘기면 Gemini 가 거절해 그 대화방 전체가 멈춘다.
+            const text = msg.content || (role === 'user' ? '(사진)' : '(내용 없음)')
+            return { role, parts: [{ text }] }
         }),
     ]
 }

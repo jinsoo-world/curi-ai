@@ -8,7 +8,7 @@ const MAX_INPUT_LENGTH = 1000
 interface ChatInputProps {
     value: string
     onChange: (value: string) => void
-    onSubmit: (content: string, inputMethod?: 'text' | 'stt', imageUrl?: string) => void
+    onSubmit: (content: string, inputMethod?: 'text' | 'stt', imageUrl?: string) => void | Promise<boolean | void>
     isStreaming: boolean
     /** 로그인 여부 (사진 첨부는 회원만) */
     isLoggedIn?: boolean
@@ -181,14 +181,26 @@ export default function ChatInput({
         e.target.value = '' // 같은 사진을 다시 골라도 반응하게
         if (!file) return
 
+        // 올리기 전에 크기를 먼저 본다. 큰 파일은 서버에 닿기도 전에 끊겨서
+        // 고객이 원인을 알 수 없는 오류만 보게 된다.
+        if (file.size > 4 * 1024 * 1024) {
+            setImageError('사진은 4MB 이하만 보낼 수 있어요.')
+            return
+        }
+
         setImageError(null)
         setImageUploading(true)
         try {
             const form = new FormData()
             form.append('file', file)
             const res = await fetch('/api/chat/upload-image', { method: 'POST', body: form })
+            // 상태를 먼저 본다. 서버가 JSON 이 아닌 오류(413 등)를 줄 때
+            // 먼저 파싱하면 엉뚱한 파싱 오류가 나서 진짜 원인이 안 보인다.
+            if (!res.ok) {
+                const msg = await res.json().catch(() => null)
+                throw new Error(msg?.error || '사진을 올리지 못했어요. 다시 시도해 주세요.')
+            }
             const data = await res.json()
-            if (!res.ok) throw new Error(data.error || '사진을 올리지 못했어요.')
             setImageUrl(data.url)
         } catch (err) {
             setImageError(err instanceof Error ? err.message : '사진을 올리지 못했어요.')
@@ -211,8 +223,9 @@ export default function ChatInput({
         textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px'
     }, [onChange])
 
-    const handleSubmit = useCallback((e: React.FormEvent) => {
-        e.preventDefault()
+    /** 실제로 보내고, 보냈을 때만 고른 사진을 비운다.
+     *  연타 방지·횟수 제한에 걸려 안 나갔는데 비우면 사진이 말없이 사라진다. */
+    const doSend = useCallback(async () => {
         // 사진만 보내는 것도 허용한다
         if ((!value.trim() && !imageUrl) || isStreaming || imageUploading) return
         const method = usedSttRef.current ? 'stt' as const : 'text' as const
@@ -220,27 +233,24 @@ export default function ChatInput({
             recognitionRef.current?.stop()
             setIsListening(false)
         }
-        onSubmit(value, method, imageUrl || undefined)
+        const sent = await onSubmit(value, method, imageUrl || undefined)
+        if (sent === false) return
         usedSttRef.current = false
         setImageUrl(null)
         if (inputRef.current) inputRef.current.style.height = 'auto'
     }, [value, isStreaming, isListening, onSubmit, imageUrl, imageUploading])
 
+    const handleSubmit = useCallback((e: React.FormEvent) => {
+        e.preventDefault()
+        doSend()
+    }, [doSend])
+
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
-            if ((!value.trim() && !imageUrl) || isStreaming || imageUploading) return
-            const method = usedSttRef.current ? 'stt' as const : 'text' as const
-            if (isListening) {
-                recognitionRef.current?.stop()
-                setIsListening(false)
-            }
-            onSubmit(value, method, imageUrl || undefined)
-            usedSttRef.current = false
-            setImageUrl(null)
-            if (inputRef.current) inputRef.current.style.height = 'auto'
+            doSend()
         }
-    }, [value, isStreaming, isListening, onSubmit, imageUrl, imageUploading])
+    }, [doSend])
 
     const canSend = (value.trim() || imageUrl) && !isStreaming && !imageUploading
     const charCount = value.length

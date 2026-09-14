@@ -11,6 +11,32 @@ import { CREDIT_CONSTANTS } from '@/domains/credit/types'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
+/** 대화에 붙일 수 있는 사진 종류 */
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+/** 사진 1장 최대 크기 */
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
+/**
+ * 우리 저장소의 대화 사진 주소가 맞는지 확인한다.
+ *
+ * 앞글자만 비교하면 뚫린다. 우리 주소가 https://abcd.supabase.co 일 때
+ * https://abcd.supabase.co.남의서버.com 도, https://abcd.supabase.co@남의서버.com 도
+ * 「우리 주소로 시작」하기 때문이다. 그러면 서버가 공격자가 찍어준 아무 주소나
+ * 대신 열어주는 꼴이 된다. 주소를 제대로 쪼개서 출처와 경로를 둘 다 본다.
+ */
+function isOurChatImage(url: unknown): boolean {
+    if (typeof url !== 'string' || !url) return false
+    const base = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (!base) return false   // 주소를 모르면 기능을 끈다(아무거나 통과시키지 않는다)
+    try {
+        const u = new URL(url)
+        return u.origin === new URL(base).origin
+            && u.pathname.startsWith('/storage/v1/object/public/chat-images/')
+    } catch {
+        return false
+    }
+}
+
 export async function POST(req: Request) {
     try {
         const supabase = await createClient()
@@ -217,17 +243,20 @@ export async function POST(req: Request) {
 
         // 📷 사진 첨부 — 우리 저장소에 올려둔 사진을 읽어 Gemini 에 같이 넘긴다.
         // Gemini 는 주소만 줘서는 사진을 못 본다. 내용을 직접 실어 보내야 한다.
+        const safeImageUrl = isOurChatImage(imageUrl) ? (imageUrl as string) : null
         let attachedImage: { mimeType: string; data: string } | null = null
-        if (typeof imageUrl === 'string' && imageUrl.startsWith(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://')) {
+        if (safeImageUrl) {
             try {
-                const imgRes = await fetch(imageUrl)
-                if (imgRes.ok) {
+                const imgRes = await fetch(safeImageUrl, {
+                    redirect: 'error',               // 우리 주소에서 딴 데로 튕기는 것 차단
+                    signal: AbortSignal.timeout(10_000),
+                })
+                const declared = Number(imgRes.headers.get('content-length') || '0')
+                const type = (imgRes.headers.get('content-type') || '').split(';')[0].trim()
+                if (imgRes.ok && ALLOWED_IMAGE_TYPES.includes(type) && declared <= MAX_IMAGE_BYTES) {
                     const buf = Buffer.from(await imgRes.arrayBuffer())
-                    if (buf.byteLength <= 5 * 1024 * 1024) {
-                        attachedImage = {
-                            mimeType: imgRes.headers.get('content-type') || 'image/jpeg',
-                            data: buf.toString('base64'),
-                        }
+                    if (buf.byteLength <= MAX_IMAGE_BYTES) {
+                        attachedImage = { mimeType: type, data: buf.toString('base64') }
                     }
                 }
             } catch (imgErr) {
@@ -300,9 +329,10 @@ export async function POST(req: Request) {
                                 session_id: sessionId,
                                 role: 'user',
                                 content: lastUserMessage,
-                                // 사진을 보낸 경우에만 칸을 채운다.
-                                // 항상 넣으면 image_url 칸이 아직 없는 DB 에서 대화 저장이 통째로 실패한다.
-                                ...(typeof imageUrl === 'string' && imageUrl ? { image_url: imageUrl } : {}),
+                                // 검사를 통과한 우리 사진만 저장한다. 검사 없이 저장하면
+                                // 화면에서 그대로 <img src> 로 나가 남의 서버로 접속이 샌다.
+                                // 사진이 없으면 칸 자체를 넣지 않는다(칸이 없는 DB 에서도 안 깨지게).
+                                ...(safeImageUrl ? { image_url: safeImageUrl } : {}),
                                 input_method: inputMethod || 'text',
                                 ip_address: analytics.ip_address,
                                 device_type: analytics.device_type,

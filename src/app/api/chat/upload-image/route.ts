@@ -8,10 +8,26 @@ import { createClient as createAdmin } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
-/** 사진 1장 최대 크기 */
-const MAX_BYTES = 5 * 1024 * 1024
+/** 사진 1장 최대 크기.
+ *  Vercel 이 요청 본문을 4.5MB 에서 잘라버려서, 5MB 로 두면 우리 코드에 닿기도 전에
+ *  끊기고 고객은 원인을 알 수 없는 오류만 본다. 여유를 두고 4MB. */
+const MAX_BYTES = 4 * 1024 * 1024
 /** Gemini 가 읽을 수 있는 형식만 받는다 */
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+
+/** 파일 맨 앞을 보고 진짜 사진인지 판별한다 */
+function looksLikeImage(buf: Buffer): boolean {
+    if (buf.length < 12) return false
+    // JPEG = FF D8 FF
+    if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return true
+    // PNG = 89 50 4E 47 0D 0A 1A 0A
+    if (buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return true
+    // WEBP = 'RIFF' .... 'WEBP'
+    if (buf.subarray(0, 4).toString('ascii') === 'RIFF' && buf.subarray(8, 12).toString('ascii') === 'WEBP') return true
+    // HEIC/HEIF = .... 'ftyp'
+    if (buf.subarray(4, 8).toString('ascii') === 'ftyp') return true
+    return false
+}
 
 export async function POST(req: NextRequest) {
     try {
@@ -30,10 +46,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '사진을 찾지 못했어요.' }, { status: 400 })
         }
         if (!ALLOWED.includes(file.type)) {
-            return NextResponse.json({ error: '사진 파일만 보낼 수 있어요 (JPG·PNG·WEBP).' }, { status: 400 })
+            return NextResponse.json({ error: '사진 파일만 보낼 수 있어요 (JPG·PNG·WEBP·HEIC).' }, { status: 400 })
         }
         if (file.size > MAX_BYTES) {
-            return NextResponse.json({ error: '사진은 5MB 이하만 보낼 수 있어요.' }, { status: 400 })
+            return NextResponse.json({ error: '사진은 4MB 이하만 보낼 수 있어요.' }, { status: 400 })
+        }
+
+        const buffer = Buffer.from(await file.arrayBuffer())
+
+        // 브라우저가 알려주는 종류는 마음대로 적어 보낼 수 있다.
+        // 파일 맨 앞 몇 바이트를 직접 보고 진짜 사진인지 확인한다.
+        if (!looksLikeImage(buffer)) {
+            return NextResponse.json({ error: '사진 파일이 아니에요.' }, { status: 400 })
         }
 
         const admin = createAdmin(
@@ -43,7 +67,6 @@ export async function POST(req: NextRequest) {
 
         const ext = file.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg'
         const filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-        const buffer = Buffer.from(await file.arrayBuffer())
 
         const { error: uploadError } = await admin.storage
             .from('chat-images')

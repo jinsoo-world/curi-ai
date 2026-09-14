@@ -56,3 +56,25 @@ describe('buildGeminiHistory — 사진 첨부', () => {
         expect(결과[3]).toEqual({ role: 'model', parts: [{ text: '반가워요' }] })
     })
 })
+
+describe('buildGeminiHistory — 사진만 보낸 과거 메시지', () => {
+    it('지난 턴에 사진만 보내 글이 비어 있어도 빈 글자를 그대로 넘기지 않는다', () => {
+        // Gemini 는 빈 글자 part 를 거절한다. 사진만 보낸 메시지가 과거 기록이 되는
+        // 다음 턴부터 그 대화방 전체가 실패하던 문제.
+        const 결과 = buildGeminiHistory('안녕하세요!', [
+            { role: 'user', content: '' },            // 지난 턴에 사진만 보냈다
+            { role: 'assistant', content: '사진 잘 봤어요' },
+            { role: 'user', content: '이게 뭐야?' },
+        ])
+        expect(결과[2]).toEqual({ role: 'user', parts: [{ text: '(사진)' }] })
+        expect(결과[4]).toEqual({ role: 'user', parts: [{ text: '이게 뭐야?' }] })
+    })
+
+    it('AI 답변이 비어 있어도 빈 글자를 넘기지 않는다', () => {
+        const 결과 = buildGeminiHistory('안녕하세요!', [
+            { role: 'user', content: '안녕' },
+            { role: 'assistant', content: '' },
+        ])
+        expect(결과[3]).toEqual({ role: 'model', parts: [{ text: '(내용 없음)' }] })
+    })
+})

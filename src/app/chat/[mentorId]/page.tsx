@@ -141,6 +141,8 @@ export default function ChatPage() {
     const [voiceCallOpen, setVoiceCallOpen] = useState(false)
     const [isLoggedIn, setIsLoggedIn] = useState(false)
     const [showLoginGate, setShowLoginGate] = useState(false)
+    /** 로그인 안내를 띄운 이유 — 'limit'=체험 소진, 'photo'=사진 첨부 */
+    const [loginGateReason, setLoginGateReason] = useState<'limit' | 'photo'>('limit')
     const [showVoiceSample, setShowVoiceSample] = useState(false)
     const voiceSampleAudioRef = useRef<HTMLAudioElement | null>(null)
     const [isReportNew, setIsReportNew] = useState(false)
@@ -430,22 +432,24 @@ export default function ChatPage() {
     }, [mentorId])
 
     // ───── 메시지 전송 ─────
-    const sendMessage = useCallback(async (content: string, inputMethod: 'text' | 'stt' = 'text', imageUrl?: string) => {
+    /** 보냈으면 true. false 면 입력창이 글·사진을 그대로 들고 있어야 한다. */
+    const sendMessage = useCallback(async (content: string, inputMethod: 'text' | 'stt' = 'text', imageUrl?: string): Promise<boolean> => {
         // 사진만 보내는 경우도 있다
-        if ((!content.trim() && !imageUrl) || isStreaming) return
+        if ((!content.trim() && !imageUrl) || isStreaming) return false
 
         // 🔒 비회원 턴 제한 체크 (전체 멘토 합산)
         if (!isLoggedIn) {
             const totalGuestMsgs = getGuestMessageCount()
             if (totalGuestMsgs >= MAX_DAILY_FREE_GUEST) {
+                setLoginGateReason('limit')
                 setShowLoginGate(true)
-                return
+                return false
             }
         }
 
         // 0.5초 딜레이 방지
         const now = Date.now()
-        if (now - lastSentAt < SEND_DELAY_MS) return
+        if (now - lastSentAt < SEND_DELAY_MS) return false
         setLastSentAt(now)
 
         const userMessage: ChatMessage = {
@@ -570,6 +574,7 @@ export default function ChatPage() {
             ])
             setIsStreaming(false)
         }
+        return true
     }, [isStreaming, lastSentAt, messages, mentorId, sessionId, fetchSuggestions])
 
     // ───── 멘토 매칭에서 전달된 auto_msg 자동 전송 ─────
@@ -1002,7 +1007,7 @@ export default function ChatPage() {
                             autoTTS={autoTTS}
                             systemPrompt={mentor?.system_prompt}
                             voiceId={mentor.voice_id}
-                            exportLabel="전자책 원고보기"
+                            exportLabel="전자책 원고 보기"
                         />
 
 
@@ -1065,7 +1070,7 @@ export default function ChatPage() {
                     onSubmit={sendMessage}
                     isStreaming={isStreaming}
                     isLoggedIn={isLoggedIn}
-                    onNeedLogin={() => setShowLoginGate(true)}
+                    onNeedLogin={() => { setLoginGateReason('photo'); setShowLoginGate(true) }}
                 />
 
 
@@ -1347,14 +1352,14 @@ export default function ChatPage() {
                             boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
                         }}>
                             {/* 아이콘 */}
-                            <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+                            <div style={{ fontSize: 48, marginBottom: 16 }}>{loginGateReason === 'photo' ? '📷' : '🔒'}</div>
                             <h3 style={{
                                 margin: '0 0 8px',
                                 fontSize: 20,
                                 fontWeight: 700,
                                 color: '#1e293b',
                             }}>
-                                무료 체험이 끝났어요!
+                                {loginGateReason === 'photo' ? '사진은 회원만 보낼 수 있어요' : '무료 체험이 끝났어요!'}
                             </h3>
                             <p style={{
                                 margin: '0 0 24px',
@@ -1362,8 +1367,11 @@ export default function ChatPage() {
                                 color: '#64748b',
                                 lineHeight: 1.6,
                             }}>
-                                회원가입하면 더 많은 AI 멘토와<br />
-                                무제한 대화할 수 있어요 ✨
+                                {loginGateReason === 'photo' ? (
+                                    <>회원가입하면 사진을 보여주고<br />물어볼 수 있어요 📷</>
+                                ) : (
+                                    <>회원가입하면 더 많은 AI 멘토와<br />무제한 대화할 수 있어요 ✨</>
+                                )}
                             </p>
                             {/* 구글 로그인 버튼 */}
                             <button
