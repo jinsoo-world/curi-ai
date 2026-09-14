@@ -16,12 +16,17 @@ import AppSidebar from '@/components/AppSidebar'
 import CreditClaimWrapper from './CreditClaimWrapper'
 import { Suspense } from 'react'
 
+/**
+ * 대표 지적 2026-09-15 = 카톡·검색에 나가는 제목이 「멘토 선택 — 큐리 AI — 큐리 AI」였다.
+ * 겹친 이유 = 바깥 틀(layout)이 이미 「— 큐리 AI」를 붙이는데 여기서 또 적었다.
+ * 그리고 내용이 옛 제품(멘토와 대화)이라 지금 제품(사진 도구)과 어긋났다.
+ */
 export const metadata: Metadata = {
-    title: '멘토 선택 — 큐리 AI',
-    description: 'AI를 선택하고, 콘텐츠 수익화·브랜딩·글쓰기·마케팅에 대해 24시간 대화하세요.',
+    title: 'AI 프로필 사진 만들기',
+    description: '사진 한 장만 올리면 됩니다. 얼굴은 그대로 두고 옷과 배경만 바꿔 증명사진·강사 프로필·배우 프로필을 만들어 드려요.',
     openGraph: {
-        title: '멘토 선택 — 큐리 AI',
-        description: 'AI를 선택하고 24시간 대화하세요. 콘텐츠 수익화, 브랜딩, 글쓰기 전문가가 함께합니다.',
+        title: 'AI 프로필 사진 만들기 — 큐리 AI',
+        description: '사진 한 장만 올리면 됩니다. 얼굴은 그대로 두고 옷과 배경만 바꿔드려요.',
     },
 }
 

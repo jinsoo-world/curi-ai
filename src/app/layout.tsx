@@ -14,11 +14,11 @@ const SITE_URL = 'https://www.curi-ai.com'
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: '큐리 AI — 언제든, 나를 아는 멘토에게 물어보세요',
+    default: '큐리 AI — 사진 한 장으로 만드는 내 프로필 사진',
     template: '%s — 큐리 AI',
   },
   description:
-    'AI 구독 서비스. 콘텐츠 수익화, 브랜딩, 커리어 전환에 대해 24시간 언제든 나만의 AI와 대화하세요.',
+    '사진 한 장만 올리면 증명사진·강사 프로필·배우 프로필을 만들어 드립니다. 사진 화질 개선, 콘텐츠 썸네일, 나를 닮은 AI까지.',
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.ico',
