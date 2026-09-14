@@ -7,22 +7,30 @@
 /** 사진 한 장 만드는 데 드는 클로버 */
 export const PHOTO_COST = 20
 
-export interface Choice { id: string; label: string; prompt: string }
+export interface Choice {
+    id: string
+    label: string
+    prompt: string
+    /** 화면에 보일 색 — 글자만 있으면 무엇이 다른지 안 보인다 */
+    swatch: string
+    /** 배경용 그라데이션 */
+    bg?: string
+}
 
 /** 차림새 */
 export const STYLES: Choice[] = [
-    { id: 'suit', label: '정장', prompt: 'wearing a well-tailored dark navy suit with a crisp white shirt' },
-    { id: 'jacket', label: '재킷', prompt: 'wearing a soft unstructured blazer over a fine knit top, business casual' },
-    { id: 'knit', label: '단정한 니트', prompt: 'wearing a clean solid-color knit sweater, neat and approachable' },
-    { id: 'shirt', label: '셔츠', prompt: 'wearing a crisp button-up shirt, collar open, no tie' },
+    { id: 'suit', label: '정장', prompt: 'wearing a well-tailored dark navy suit with a crisp white shirt', swatch: '#1e293b' },
+    { id: 'jacket', label: '재킷', prompt: 'wearing a soft unstructured blazer over a fine knit top, business casual', swatch: '#475569' },
+    { id: 'knit', label: '단정한 니트', prompt: 'wearing a clean solid-color knit sweater, neat and approachable', swatch: '#92400e' },
+    { id: 'shirt', label: '셔츠', prompt: 'wearing a crisp button-up shirt, collar open, no tie', swatch: '#bfdbfe' },
 ]
 
 /** 배경 */
 export const BACKDROPS: Choice[] = [
-    { id: 'studio', label: '스튜디오', prompt: 'plain light grey studio backdrop, even softbox lighting' },
-    { id: 'office', label: '사무실', prompt: 'modern bright office interior softly blurred in the background' },
-    { id: 'bookshelf', label: '책장', prompt: 'a warm home study with a blurred bookshelf behind' },
-    { id: 'outdoor', label: '야외', prompt: 'soft outdoor daylight with blurred green foliage behind' },
+    { id: 'studio', label: '스튜디오', prompt: 'plain light grey studio backdrop, even softbox lighting', swatch: '#e5e7eb', bg: 'linear-gradient(140deg,#f8fafc,#d1d5db)' },
+    { id: 'office', label: '사무실', prompt: 'modern bright office interior softly blurred in the background', swatch: '#cbd5e1', bg: 'linear-gradient(140deg,#eff6ff,#94a3b8)' },
+    { id: 'bookshelf', label: '책장', prompt: 'a warm home study with a blurred bookshelf behind', swatch: '#b45309', bg: 'linear-gradient(140deg,#fef3c7,#92400e)' },
+    { id: 'outdoor', label: '야외', prompt: 'soft outdoor daylight with blurred green foliage behind', swatch: '#65a30d', bg: 'linear-gradient(140deg,#ecfccb,#4d7c0f)' },
 ]
 
 export function getStyle(id: string) { return STYLES.find(s => s.id === id) }

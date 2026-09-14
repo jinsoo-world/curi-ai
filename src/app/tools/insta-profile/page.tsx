@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { MOODS, TONES } from '@/domains/studio/insta'
 import { CURI_MODELS, DEFAULT_MODEL_ID, getModel } from '@/domains/studio/models'
 import { CLOVER_UNIT_WON } from '@/domains/credit/packs'
+import { PickCard } from '@/components/studio/PickCard'
 import AppSidebar from '@/components/AppSidebar'
 
 export default function InstaProfilePage() {
@@ -62,18 +63,6 @@ export default function InstaProfilePage() {
     const 준비됨 = !!base64 && !!moodId && !!toneId
     const cost = getModel(modelId)!.cost
 
-    const 고르기 = (목록: typeof MOODS, 고른것: string | null, 정하기: (v: string) => void) => (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-            {목록.map(o => (
-                <button key={o.id} onClick={() => 정하기(o.id)} style={{
-                    padding: '13px 10px', borderRadius: 12,
-                    border: 고른것 === o.id ? '2px solid #22c55e' : '1.5px solid #e4e4e7',
-                    background: 고른것 === o.id ? '#f0fdf4' : '#fff',
-                    fontSize: 14.5, fontWeight: 600, color: '#18181b', cursor: 'pointer', wordBreak: 'keep-all',
-                }}>{o.label}</button>
-            ))}
-        </div>
-    )
 
     return (
         <main style={{ minHeight: '100dvh', background: '#fafafa' }}>
@@ -111,32 +100,59 @@ export default function InstaProfilePage() {
 
                 <div style={{ opacity: base64 ? 1 : 0.4, pointerEvents: base64 ? 'auto' : 'none' }}>
                     <div style={{ marginBottom: 22 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>2. 어떤 큐리로 만들까요</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>2. 어떤 모델로 만들까요</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {CURI_MODELS.map(m => (
-                                <button key={m.id} onClick={() => setModelId(m.id)} style={{
-                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-                                    padding: '13px 15px', borderRadius: 12,
-                                    border: modelId === m.id ? '2px solid #22c55e' : '1.5px solid #e4e4e7',
-                                    background: modelId === m.id ? '#f0fdf4' : '#fff', cursor: 'pointer', textAlign: 'left',
-                                }}>
-                                    <span>
-                                        <span style={{ fontSize: 15, fontWeight: 700, color: '#18181b' }}>{m.label}</span>
-                                        <span style={{ marginLeft: 7, fontSize: 11, fontWeight: 700, color: '#166534', background: '#dcfce7', padding: '2px 7px', borderRadius: 7 }}>{m.badge}</span>
-                                        <span style={{ display: 'block', fontSize: 12.5, color: '#71717a', marginTop: 3 }}>{m.desc}</span>
-                                    </span>
-                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#3f3f46', flexShrink: 0 }}>🍀 {m.cost}</span>
-                                </button>
-                            ))}
+                            {CURI_MODELS.map(m => {
+                                const 못씀 = !!m.comingSoon
+                                return (
+                                    <button key={m.id} onClick={() => !못씀 && setModelId(m.id)} disabled={못씀} style={{
+                                        display: 'flex', alignItems: 'center', gap: 12,
+                                        padding: '12px 14px', borderRadius: 14,
+                                        border: modelId === m.id ? '2.5px solid #22c55e' : '1.5px solid #e4e4e7',
+                                        background: 못씀 ? '#fafafa' : '#fff',
+                                        cursor: 못씀 ? 'default' : 'pointer', textAlign: 'left',
+                                        opacity: 못씀 ? 0.6 : 1,
+                                    }}>
+                                        <span style={{
+                                            flexShrink: 0, width: 38, height: 38, borderRadius: 11,
+                                            background: m.tint, display: 'flex', alignItems: 'center',
+                                            justifyContent: 'center', fontSize: 17,
+                                        }}>{m.id === 'curi-v1' ? '🍀' : m.id === 'nano-banana-2' ? '🍌' : '🤖'}</span>
+                                        <span style={{ flex: 1, minWidth: 0 }}>
+                                            <span style={{ fontSize: 15, fontWeight: 700, color: '#18181b' }}>{m.label}</span>
+                                            <span style={{
+                                                marginLeft: 6, fontSize: 11, fontWeight: 700,
+                                                color: 못씀 ? '#71717a' : '#166534',
+                                                background: 못씀 ? '#f4f4f5' : '#dcfce7',
+                                                padding: '2px 7px', borderRadius: 7,
+                                            }}>{m.badge}</span>
+                                            <span style={{ display: 'block', fontSize: 12.5, color: '#71717a', marginTop: 3, wordBreak: 'keep-all' }}>
+                                                {m.comingSoon || m.desc}
+                                            </span>
+                                        </span>
+                                        {!못씀 && (
+                                            <span style={{ fontSize: 13, fontWeight: 700, color: '#3f3f46', flexShrink: 0 }}>🍀 {m.cost}</span>
+                                        )}
+                                    </button>
+                                )
+                            })}
                         </div>
                     </div>
                     <div style={{ marginBottom: 22 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>3. 분위기</div>
-                        {고르기(MOODS, moodId, setMoodId)}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                            {MOODS.map(o => (
+                                <PickCard key={o.id} option={o} selected={moodId === o.id} onSelect={setMoodId} kind="backdrop" />
+                            ))}
+                        </div>
                     </div>
                     <div style={{ marginBottom: 24 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>4. 배경색</div>
-                        {고르기(TONES, toneId, setToneId)}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                            {TONES.map(o => (
+                                <PickCard key={o.id} option={o} selected={toneId === o.id} onSelect={setToneId} kind="backdrop" />
+                            ))}
+                        </div>
                     </div>
                 </div>
 

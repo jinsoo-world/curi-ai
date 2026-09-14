@@ -1,41 +1,52 @@
-// 큐리AI 자체 사진 모델 — 대표 지시 2026-09-14 「우리 모델명도 하나 만들자. 우리 모델은 커스텀해서 제공하는거야」
+// 사진 만드는 모델 — 대표 지시 2026-09-14
+// 「우리 모델명도 하나 만들자. 우리 모델은 커스텀해서 제공하는거야」
+// 「어떤 모델로 만들까요? 여야지. GPT, 나노바나나 모델도 추가하고」
 //
-// 참고 = pfpmaker 는 「PFPMaker v1 (균형 잡힌)」이라는 자기 이름을 붙여 판다.
-// 우리도 같은 방식이다. 속은 구글 모델이지만, 중장년 얼굴이 딴사람이 되지 않게
-// 우리가 손본 지시문을 얹은 것이라 우리 이름으로 부른다.
-//
-// ⚠️ engine 은 화면에 절대 내보내지 않는다. 고객에게는 「큐리」라는 이름만 보인다.
+// pfpmaker 도 자기 이름(PFPMaker v1)과 남의 모델(GPT Image 2.5, 나노바나나)을 같이 판다.
+// 우리도 같다. 큐리 v1 은 우리가 지시문을 손본 것이고, 나머지는 원본 그대로다.
 
 export interface CuriModel {
     id: string
-    /** 화면에 보일 이름 */
     label: string
-    /** 이름 옆 작은 딱지 */
     badge: string
-    /** 한 줄 설명 */
     desc: string
-    /** 실제로 부르는 구글 모델 (화면 노출 금지) */
+    /** 실제로 부르는 모델 이름 (화면 노출 금지) */
     engine: string
-    /** 한 장에 드는 클로버 */
     cost: number
+    /** 아직 못 쓰는 모델이면 이유 */
+    comingSoon?: string
+    /** 카드에 보일 색 (미리보기 느낌) */
+    tint: string
 }
 
 export const CURI_MODELS: CuriModel[] = [
     {
         id: 'curi-v1',
         label: '큐리 v1',
-        badge: '기본',
-        desc: '얼굴을 그대로 살리면서 빠르게 만들어요',
+        badge: '우리 모델',
+        desc: '중장년 얼굴이 딴사람이 되지 않게 우리가 손봤어요',
         engine: 'gemini-3-pro-image-preview',
         cost: 20,
+        tint: '#22c55e',
     },
     {
-        id: 'curi-v1-light',
-        label: '큐리 v1 라이트',
+        id: 'nano-banana-2',
+        label: '나노바나나 2',
         badge: '빠름',
-        desc: '조금 더 빠르고 값이 쌉니다',
+        desc: '구글 모델 그대로. 값이 싸고 빨라요',
         engine: 'gemini-2.5-flash-image',
         cost: 12,
+        tint: '#eab308',
+    },
+    {
+        id: 'gpt-image',
+        label: 'GPT 이미지',
+        badge: '준비 중',
+        desc: '곧 쓸 수 있게 준비하고 있어요',
+        engine: '',
+        cost: 25,
+        comingSoon: '아직 연결 전이에요. 조금만 기다려 주세요.',
+        tint: '#a1a1aa',
     },
 ]
 
@@ -45,7 +56,7 @@ export function getModel(id: string): CuriModel | undefined {
     return CURI_MODELS.find(m => m.id === id)
 }
 
-/** 브라우저가 보낸 모델 이름이 우리 것인지 확인한다 */
+/** 지금 실제로 쓸 수 있는 모델만 통과시킨다 */
 export function isValidModelId(v: unknown): v is string {
-    return typeof v === 'string' && CURI_MODELS.some(m => m.id === v)
+    return typeof v === 'string' && CURI_MODELS.some(m => m.id === v && !m.comingSoon)
 }

@@ -5,22 +5,29 @@
 //  · 인스타용 = **정사각형**이고 화면에서 **동그랗게 잘려 보인다**. 그래서 얼굴을 조금 크게
 //    잡고, 가장자리에 중요한 것이 걸리지 않게 해야 한다. 분위기도 밝고 개성 있게.
 
-export interface InstaChoice { id: string; label: string; prompt: string }
+export interface InstaChoice {
+    id: string
+    label: string
+    prompt: string
+    /** 화면에 보일 색 */
+    swatch: string
+    bg?: string
+}
 
 /** 분위기 */
 export const MOODS: InstaChoice[] = [
-    { id: 'bright', label: '밝고 환하게', prompt: 'bright cheerful mood, soft high-key lighting, warm genuine smile' },
-    { id: 'calm', label: '차분하고 단정하게', prompt: 'calm composed mood, soft even lighting, gentle closed-mouth smile' },
-    { id: 'chic', label: '세련되게', prompt: 'modern chic mood, clean directional light with soft contrast, confident relaxed expression' },
-    { id: 'warm', label: '따뜻하고 친근하게', prompt: 'warm friendly mood, golden soft light, open approachable smile' },
+    { id: 'bright', label: '밝고 환하게', prompt: 'bright cheerful mood, soft high-key lighting, warm genuine smile', swatch: '#fde68a', bg: 'linear-gradient(140deg,#fffbeb,#fcd34d)' },
+    { id: 'calm', label: '차분하고 단정하게', prompt: 'calm composed mood, soft even lighting, gentle closed-mouth smile', swatch: '#cbd5e1', bg: 'linear-gradient(140deg,#f8fafc,#94a3b8)' },
+    { id: 'chic', label: '세련되게', prompt: 'modern chic mood, clean directional light with soft contrast, confident relaxed expression', swatch: '#334155', bg: 'linear-gradient(140deg,#64748b,#0f172a)' },
+    { id: 'warm', label: '따뜻하고 친근하게', prompt: 'warm friendly mood, golden soft light, open approachable smile', swatch: '#fdba74', bg: 'linear-gradient(140deg,#fff7ed,#fb923c)' },
 ]
 
 /** 배경 색 */
 export const TONES: InstaChoice[] = [
-    { id: 'cream', label: '크림색', prompt: 'smooth solid cream beige background' },
-    { id: 'grey', label: '연회색', prompt: 'smooth solid light grey background' },
-    { id: 'green', label: '연한 초록', prompt: 'smooth solid soft sage green background' },
-    { id: 'blue', label: '연한 하늘', prompt: 'smooth solid pastel sky blue background' },
+    { id: 'cream', label: '크림색', prompt: 'smooth solid cream beige background', swatch: '#f5e6d3', bg: '#f5e6d3' },
+    { id: 'grey', label: '연회색', prompt: 'smooth solid light grey background', swatch: '#e5e7eb', bg: '#e5e7eb' },
+    { id: 'green', label: '연한 초록', prompt: 'smooth solid soft sage green background', swatch: '#cfe0d0', bg: '#cfe0d0' },
+    { id: 'blue', label: '연한 하늘', prompt: 'smooth solid pastel sky blue background', swatch: '#d5e6f5', bg: '#d5e6f5' },
 ]
 
 export function getMood(id: string) { return MOODS.find(m => m.id === id) }
