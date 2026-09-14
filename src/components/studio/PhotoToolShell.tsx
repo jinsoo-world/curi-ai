@@ -19,7 +19,7 @@ import CloverIcon from '@/components/ui/CloverIcon'
 import BeforeAfter from './BeforeAfter'
 import KeepNotice from '@/components/studio/KeepNotice'
 
-export interface 견본 { src: string; label: string }
+export interface 견본 { src: string; label: string; /** 누르면 이 옵션이 골라진다 */ pick?: () => void }
 
 export default function PhotoToolShell({
     title,
@@ -89,17 +89,29 @@ export default function PhotoToolShell({
                         </div>
                         <div className="photo-marquee">
                             <div className="photo-marquee-track">
-                                {[...samples, ...samples].map((s, i) => (
-                                    <figure key={`${s.src}-${i}`} className="photo-marquee-item">
-                                        <div style={{ position: 'relative', width: '100%', aspectRatio: '4 / 5', borderRadius: 14, overflow: 'hidden', background: '#E8E8E4' }}>
-                                            <Image src={s.src} alt={s.label} fill sizes="200px" quality={90}
-                                                style={{ objectFit: 'cover', objectPosition: 'center 26%' }} />
-                                        </div>
-                                        <figcaption style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--먹연)', marginTop: 7, textAlign: 'center' }}>
-                                            {s.label}
-                                        </figcaption>
-                                    </figure>
-                                ))}
+                                {[...samples, ...samples].map((s, i) => {
+                                    const 속 = (
+                                        <>
+                                            <div style={{ position: 'relative', width: '100%', aspectRatio: '4 / 5', borderRadius: 14, overflow: 'hidden', background: '#E8E8E4' }}>
+                                                <Image src={s.src} alt={s.label} fill sizes="200px" quality={90}
+                                                    style={{ objectFit: 'cover', objectPosition: 'center 26%' }} />
+                                            </div>
+                                            <figcaption style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--먹연)', marginTop: 7, textAlign: 'center' }}>
+                                                {s.label}
+                                            </figcaption>
+                                        </>
+                                    )
+                                    // 누르면 그 옵션이 골라진다 — 대표 지시 0915
+                                    return s.pick ? (
+                                        <button key={`${s.src}-${i}`} type="button" onClick={s.pick}
+                                            className="photo-marquee-item"
+                                            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'block' }}>
+                                            {속}
+                                        </button>
+                                    ) : (
+                                        <figure key={`${s.src}-${i}`} className="photo-marquee-item">{속}</figure>
+                                    )
+                                })}
                             </div>
                         </div>
                     </section>

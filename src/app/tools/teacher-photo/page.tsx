@@ -65,10 +65,14 @@ function TeacherPhotoPage안쪽() {
                 title="강사 프로필 만들기"
                 desc="강의 소개에 거는 사진을 만듭니다. 믿음직하면서도 말 걸기 편해 보이게요."
                 samples={[
-                    { src: '/samples/teach-w1.webp', label: '믿음직하게' },
-                    { src: '/samples/teach-m1.webp', label: '편안하게' },
-                    { src: '/samples/teach-w2.webp', label: '따뜻하게' },
-                    { src: '/samples/teach-m2.webp', label: '전문가답게' },
+                    { src: '/samples/teach-w1.webp', label: '믿음직하게', pick: () => { setMoodId('trust'); setPlaceId('bright') } },
+                    { src: '/samples/teach-m1.webp', label: '편안하게', pick: () => { setMoodId('easy'); setPlaceId('room') } },
+                    { src: '/samples/teach-w2.webp', label: '따뜻하게', pick: () => { setMoodId('warm'); setPlaceId('pastel') } },
+                    { src: '/samples/teach-m2.webp', label: '전문가답게', pick: () => { setMoodId('expert'); setPlaceId('study') } },
+                    { src: '/samples/teach-m3.webp', label: '편안하게', pick: () => { setMoodId('easy'); setPlaceId('bright') } },
+                    { src: '/samples/teach-w3.webp', label: '따뜻하게', pick: () => { setMoodId('warm'); setPlaceId('pastel') } },
+                    { src: '/samples/teach-m4.webp', label: '믿음직하게', pick: () => { setMoodId('trust'); setPlaceId('room') } },
+                    { src: '/samples/teach-w4.webp', label: '전문가답게', pick: () => { setMoodId('expert'); setPlaceId('bright') } },
                 ]}
                 preview={preview}
                 onPicked={(dataUrl, mt) => {

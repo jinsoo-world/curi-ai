@@ -115,16 +115,6 @@ export default function ChargePage() {
                                 overflow: 'hidden',
                             }}
                         >
-                            {discountPercent(p) > 0 && (
-                                <span style={{
-                                    position: 'absolute', top: 0, right: 0,
-                                    background: '#1C2321', color: '#fff',
-                                    fontSize: 12.5, fontWeight: 800,
-                                    padding: '5px 12px', borderRadius: '0 14px 0 12px',
-                                }}>
-                                    {discountPercent(p)}% 할인
-                                </span>
-                            )}
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                                 <CloverIcon size={34} />
                                 <div style={{ minWidth: 0 }}>

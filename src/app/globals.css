@@ -717,9 +717,16 @@ button, a[role="button"] {
     max-width: 1100px;
     padding: 40px 24px 90px;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    /* minmax(0, …) 가 없으면 안에 있는 「옆으로 흐르는 사진 띠」의 실제 너비(사진 16장)가
+       칸 너비를 밀어낸다. 대표 지적 2026-09-15 「이거 존나 깨진다」 = 왼쪽 칸이 화면 밖으로
+       넘치고 오른쪽 고르기 칸이 글자 한 자 폭으로 찌그러졌다. */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 40px;
     align-items: start;
+  }
+  /* 칸 안의 내용이 칸을 넓히지 못하게 한다 */
+  .tool-page > * {
+    min-width: 0;
   }
   /* 제목은 두 칸을 가로지른다 */
   .tool-page > h1,
@@ -746,6 +753,8 @@ button, a[role="button"] {
 .photo-marquee {
   overflow: hidden;
   mask-image: linear-gradient(90deg, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%);
+  min-width: 0;
+  max-width: 100%;
 }
 .photo-marquee-track {
   display: flex;

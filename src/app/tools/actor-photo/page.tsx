@@ -94,7 +94,16 @@ function ActorPhotoPage안쪽() {
                 <ToolHero
                     title="배우 프로필 사진 만들기"
                     desc="캐스팅에 내는 프로필 사진을 만듭니다. 실물과 달라 보이지 않게, 사진관에서 찍은 것처럼요."
-                    samples={[{ src: '/samples/act-m1.webp', label: '어두운 스튜디오' }, { src: '/samples/act-w7.webp', label: '에디토리얼' }, { src: '/samples/act-m3.webp', label: '창가 빛' }, { src: '/samples/act-w5.webp', label: '밝고 친근한' }]}
+                    samples={[
+                        { src: '/samples/act-m1.webp', label: '단단한 인물', pick: () => { setStyleId('strong'); setBackdropId('dark') } },
+                        { src: '/samples/act-w1.webp', label: '기품 있는', pick: () => { setStyleId('elegant'); setBackdropId('dark') } },
+                        { src: '/samples/act-m3.webp', label: '창가 빛', pick: () => { setStyleId('warm'); setBackdropId('window') } },
+                        { src: '/samples/act-w5.webp', label: '따뜻한 어른', pick: () => { setStyleId('warm'); setBackdropId('white') } },
+                        { src: '/samples/act-m7.webp', label: '기품 있는', pick: () => { setStyleId('elegant'); setBackdropId('grey') } },
+                        { src: '/samples/act-w7.webp', label: '검은 배경', pick: () => { setStyleId('strong'); setBackdropId('dark') } },
+                        { src: '/samples/act-m5.webp', label: '밝고 친근한', pick: () => { setStyleId('bright'); setBackdropId('white') } },
+                        { src: '/samples/act-w3.webp', label: '밝고 친근한', pick: () => { setStyleId('bright'); setBackdropId('grey') } },
+                    ]}
                 />
 
                 {/* 1단계 사진 */}
