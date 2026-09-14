@@ -10,6 +10,8 @@ import Image from 'next/image'
 
 import { MembershipBanner } from '@/components/MembershipBanner'
 import AppSidebar from '@/components/AppSidebar'
+import ShareInvite from '@/components/ui/ShareInvite'
+import CloverIcon from '@/components/ui/CloverIcon'
 
 export default function ProfilePage() {
     const router = useRouter()
@@ -239,9 +241,9 @@ export default function ProfilePage() {
 
     const INTEREST_OPTIONS: { key: string; label: string; emoji: string }[] = [
         { key: 'content', label: '콘텐츠 제작', emoji: '🎬' },
-        { key: 'branding', label: '퍼스널 브랜딩', emoji: '✨' },
+        { key: 'branding', label: '퍼스널 브랜딩', emoji: '' },
         { key: 'monetize', label: '수익화', emoji: '💰' },
-        { key: 'career', label: '커리어 전환', emoji: '🚀' },
+        { key: 'career', label: '커리어 전환', emoji: '' },
         { key: 'business', label: '1인 사업', emoji: '🏠' },
         { key: 'marketing', label: '마케팅', emoji: '📢' },
         { key: 'writing', label: '글쓰기', emoji: '✍️' },
@@ -330,11 +332,10 @@ export default function ProfilePage() {
                                     display: 'inline-block',
                                     padding: '14px 32px',
                                     borderRadius: 14,
-                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                    background: '#22c55e',
                                     color: '#fff', textDecoration: 'none',
                                     fontWeight: 600, fontSize: 16,
-                                    boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
-                                }}
+                                                                    }}
                             >
                                 로그인하기
                             </Link>
@@ -384,7 +385,7 @@ export default function ProfilePage() {
                                                 ) : (
                                                     <div style={{
                                                         width: 64, height: 64, borderRadius: '50%',
-                                                        background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                                        background: '#22c55e',
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                         fontSize: 28, color: '#fff', fontWeight: 800,
                                                         opacity: uploadingPhoto ? 0.5 : 1,
@@ -667,12 +668,11 @@ export default function ProfilePage() {
                                                 style={{
                                                     flex: 2, padding: '14px 0',
                                                     borderRadius: 14, border: 'none',
-                                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                                    background: '#22c55e',
                                                     fontSize: 16, fontWeight: 700, color: '#fff',
                                                     cursor: isSaving ? 'not-allowed' : 'pointer',
                                                     opacity: isSaving ? 0.7 : 1,
-                                                    boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
-                                                    transition: 'opacity 200ms',
+                                                                                                        transition: 'opacity 200ms',
                                                 }}
                                             >
                                                 {isSaving ? '저장 중...' : '저장하기'}
@@ -682,12 +682,36 @@ export default function ProfilePage() {
                                 )}
                             </div>
 
+                            {/* 클로버와 친구초대 — 대표 지시 0915 「추천코드는 어딨어?」
+                                마이페이지에 들어와서 가장 먼저 궁금한 것 둘을 맨 위에 둔다. */}
+                            {!isEditing && (
+                                <div style={sectionStyle}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 17, fontWeight: 700, color: '#3f3f46' }}>
+                                            <CloverIcon size={24} /> 내 클로버
+                                        </span>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                                            <span style={{ fontSize: 24, fontWeight: 900, color: '#18181b' }}>
+                                                {(profile?.clovers ?? 0).toLocaleString()}개
+                                            </span>
+                                            <button onClick={() => router.push('/charge')} style={{
+                                                background: '#22c55e', color: '#fff', border: 'none',
+                                                borderRadius: 999, padding: '10px 18px',
+                                                fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                                            }}>충전</button>
+                                        </span>
+                                    </div>
+
+                                    {profile?.referral_code && <ShareInvite code={profile.referral_code} compact />}
+                                </div>
+                            )}
+
                             {/* 계정 정보 */}
                             {!isEditing && (
                                 <div style={sectionStyle}>
                                     <div style={labelStyle}>계정 정보</div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 17 }}>
                                             <span style={{ color: '#6b7280' }}>가입일</span>
                                             <span style={{ color: '#18181b', fontWeight: 500 }}>
                                                 {new Date(user.created_at).toLocaleDateString('ko-KR', {
@@ -695,7 +719,7 @@ export default function ProfilePage() {
                                                 })}
                                             </span>
                                         </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 17 }}>
                                             <span style={{ color: '#6b7280' }}>구독</span>
                                             <span style={{
                                                 color: profile?.subscription_tier === 'premium' ? '#16a34a'
@@ -710,8 +734,8 @@ export default function ProfilePage() {
                                                 borderRadius: 100,
                                                 padding: '2px 12px',
                                             }}>
-                                                {profile?.subscription_tier === 'premium' ? '✨ Premium'
-                                                    : profile?.subscription_tier === 'pro' ? '🚀 Pro'
+                                                {profile?.subscription_tier === 'premium' ? '프리미엄'
+                                                    : profile?.subscription_tier === 'pro' ? '프로'
                                                     : profile?.subscription_tier === 'free_trial' ? '🎁 무료체험'
                                                     : 'Free'}
                                             </span>
@@ -778,7 +802,7 @@ export default function ProfilePage() {
                                                 </div>
                                                 <div style={{
                                                     padding: '14px 16px', borderRadius: 12, marginTop: 4,
-                                                    background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)',
+                                                    background: '#22c55e',
                                                     border: '1px solid #ddd6fe',
                                                 }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -789,7 +813,7 @@ export default function ProfilePage() {
                                                     </div>
                                                     <div style={{ fontSize: 13, color: '#6d28d9', lineHeight: 1.5 }}>
                                                         체험권을 <strong>받은 날부터 7일</strong> 동안 모든 기능을 무료로 이용할 수 있습니다.
-                                                        대화 횟수 제한 없이 마음껏 사용하세요! ✨
+                                                        대화 횟수 제한 없이 쓸 수 있어요
                                                     </div>
                                                 </div>
                                             </>
@@ -815,7 +839,7 @@ export default function ProfilePage() {
                                             borderBottom: '1px solid #f0f0f0',
                                         }}
                                     >
-                                        <span>✨ 내 AI 만들기</span>
+                                        <span>내 AI 만들기</span>
                                         <span style={{ color: '#d1d5db' }}>→</span>
                                     </Link>
                                     <Link
@@ -985,7 +1009,7 @@ export default function ProfilePage() {
                                         textAlign: 'center', margin: '0 0 8px',
                                     }}>구독을 취소하시겠어요?</h3>
                                     <p style={{
-                                        fontSize: 14, color: '#6b7280', textAlign: 'center',
+                                        fontSize: 16, color: '#6b7280', textAlign: 'center',
                                         margin: '0 0 20px', lineHeight: 1.6,
                                     }}>
                                         취소해도 현재 결제 기간이 끝날 때까지<br />
@@ -1048,7 +1072,7 @@ export default function ProfilePage() {
                                         textAlign: 'center', margin: '0 0 12px',
                                     }}>{cancelResult.success ? '구독이 취소되었습니다' : '취소 실패'}</h3>
                                     <p style={{
-                                        fontSize: 14, color: '#6b7280', textAlign: 'center',
+                                        fontSize: 16, color: '#6b7280', textAlign: 'center',
                                         margin: '0 0 24px', lineHeight: 1.6,
                                     }}>{cancelResult.message}</p>
                                     <button

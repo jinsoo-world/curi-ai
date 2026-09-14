@@ -434,7 +434,7 @@ button, a[role="button"] {
 .app-top-inner {
   max-width: 1200px;
   margin: 0 auto;
-  height: 70px;
+  height: 78px;
   padding: 0 16px;
   display: flex;
   align-items: center;
@@ -487,18 +487,18 @@ button, a[role="button"] {
   text-decoration: none;
   color: var(--먹);
 }
-.app-top-credit-num { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+.app-top-credit-num { font-size: 23px; font-weight: 800; letter-spacing: -0.02em; }
 .app-top-credit-plus {
   background: var(--연두);
   color: #fff;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
-  padding: 9px 16px;
+  padding: 11px 18px;
   border-radius: 999px;
 }
 .app-top-me {
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   border-radius: 999px;
   border: 1px solid var(--선);
   background: var(--종이);
@@ -523,7 +523,7 @@ button, a[role="button"] {
 .app-top-sheet {
   position: absolute;
   right: 16px;
-  top: 66px;
+  top: 74px;
   z-index: 60;
   width: 232px;
   background: #fff;

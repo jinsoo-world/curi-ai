@@ -19,24 +19,6 @@ export const maxDuration = 60
 
 const 손님하루한도 = 3
 
-/** &, <, > 가 그대로 들어가면 SVG 가 깨진다 */
-function 안전하게(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-
-/** 글자가 길면 줄을 나눈다. 한글은 글자폭이 고르게 넓어서 글자 수로 끊어도 된다 */
-function 줄나눔(s: string, 한줄: number): string[] {
-    const 낱말 = s.split(' ')
-    const 줄: string[] = []
-    let 지금 = ''
-    for (const w of 낱말) {
-        const 붙임 = 지금 ? `${지금} ${w}` : w
-        if (붙임.length > 한줄 && 지금) { 줄.push(지금); 지금 = w } else { 지금 = 붙임 }
-    }
-    if (지금) 줄.push(지금)
-    return 줄.slice(0, 3)
-}
-
 export async function POST(req: NextRequest) {
     try {
         const supabase = await createClient()
@@ -110,40 +92,26 @@ export async function POST(req: NextRequest) {
 
             const 배경 = Buffer.from((imgPart as { inlineData: { data: string } }).inlineData.data, 'base64')
 
-            // 글자 얹기
-            const W = place.w, H = place.h
-            const 제목줄 = 줄나눔(제목, W > H ? 14 : 10)
-            const 제목크기 = Math.round(W * (W > H ? 0.085 : 0.105))
-            const 부제크기 = Math.round(제목크기 * 0.42)
-            const 줄간격 = Math.round(제목크기 * 1.24)
-            const 시작Y = Math.round(H * 0.5 - ((제목줄.length - 1) * 줄간격) / 2 + 제목크기 * 0.34)
-
-            const svg = `
-<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="${look.shade}" stop-opacity="0"/>
-      <stop offset="28%" stop-color="${look.shade}" stop-opacity="1"/>
-      <stop offset="100%" stop-color="${look.shade}" stop-opacity="1"/>
-    </linearGradient>
-  </defs>
-  <rect x="0" y="${Math.round(H * 0.24)}" width="${W}" height="${H}" fill="url(#g)"/>
-  ${제목줄.map((l, i) => `<text x="${W / 2}" y="${시작Y + i * 줄간격}" text-anchor="middle"
-      font-family="Apple SD Gothic Neo, Noto Sans KR, Malgun Gothic, sans-serif"
-      font-size="${제목크기}" font-weight="900" fill="${look.text}"
-      letter-spacing="-${Math.round(제목크기 * 0.035)}">${안전하게(l)}</text>`).join('')}
-  ${부제 ? `<text x="${W / 2}" y="${시작Y + 제목줄.length * 줄간격 + Math.round(부제크기 * 0.5)}" text-anchor="middle"
-      font-family="Apple SD Gothic Neo, Noto Sans KR, Malgun Gothic, sans-serif"
-      font-size="${부제크기}" font-weight="700" fill="${look.sub}">${안전하게(부제)}</text>` : ''}
-</svg>`
-
+            // ⚠️ 글자는 여기서 얹지 않는다.
+            // 2026-09-15 배포 서버에서 「가나다라마바사」가 네모 한 덩어리로 찍혔다.
+            // Vercel 리눅스에 한글 폰트가 없고, sharp 의 SVG 렌더러는 시스템 폰트만 본다.
+            // 그래서 배경만 만들어 보내고 제목은 브라우저 canvas 로 얹는다(거기엔 한글 폰트가 있다).
             const 완성 = await sharp(배경)
-                .resize(W, H, { fit: 'cover' })
-                .composite([{ input: Buffer.from(svg), top: 0, left: 0 }])
+                .resize(place.w, place.h, { fit: 'cover' })
                 .png()
                 .toBuffer()
 
             const 결과64 = 완성.toString('base64')
+
+            const 글자값 = {
+                title: 제목,
+                subtitle: 부제,
+                width: place.w,
+                height: place.h,
+                textColor: look.text,
+                subColor: look.sub,
+                shade: look.shade,
+            }
 
             if (손님) {
                 const 흐림 = await sharp(완성).blur(12).jpeg({ quality: 72 }).toBuffer()
@@ -152,10 +120,11 @@ export async function POST(req: NextRequest) {
                     imageBase64: 흐림.toString('base64'),
                     preview: true,
                     needLogin: true,
+                    text: 글자값,
                 })
             }
 
-            return NextResponse.json({ success: true, imageBase64: 결과64, preview: false, balance: 차감후 })
+            return NextResponse.json({ success: true, imageBase64: 결과64, preview: false, balance: 차감후, text: 글자값 })
         } catch (genErr) {
             if (!손님) {
                 await admin.from('users').update({ clovers: 잔액 }).eq('id', user!.id)

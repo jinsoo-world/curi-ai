@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { THUMB_PLACES, THUMB_LOOKS, THUMBNAIL_COST, MAX_TITLE, MAX_SUB } from '@/domains/studio/thumbnail'
 import MakingBar from '@/components/studio/MakingBar'
 import CloverIcon from '@/components/ui/CloverIcon'
+import ThumbnailCanvas, { type 글자값 } from '@/components/studio/ThumbnailCanvas'
 import AppSidebar from '@/components/AppSidebar'
 import ToolHero from '@/components/studio/ToolHero'
 
@@ -17,6 +18,8 @@ export default function ThumbnailPage() {
     const [부제, set부제] = useState('')
     const [result, setResult] = useState<string | null>(null)
     const [미리보기, set미리보기] = useState(false)
+    const [글자, set글자] = useState<글자값 | null>(null)
+    const [완성본, set완성본] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const [needCharge, setNeedCharge] = useState(false)
@@ -36,6 +39,8 @@ export default function ThumbnailPage() {
                 throw new Error(data.error || '썸네일을 만들지 못했어요.')
             }
             set미리보기(!!data.preview)
+            set글자(data.text ?? null)
+            set완성본(null)
             setResult(`data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
         } catch (e) {
             setErrorMsg(e instanceof Error ? e.message : '썸네일을 만들지 못했어요.')
@@ -137,8 +142,12 @@ export default function ThumbnailPage() {
                     {result && (
                         <div style={{ marginTop: 26 }}>
                             <div style={{ fontSize: 15, fontWeight: 700, color: '#18181b', marginBottom: 10 }}>다 됐어요</div>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={result} alt="만든 썸네일" style={{ width: '100%', borderRadius: 16, border: '1px solid #e4e4e7' }} />
+                            {글자 ? (
+                                <ThumbnailCanvas background={result} text={글자} onReady={set완성본} />
+                            ) : (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={result} alt="만든 썸네일" style={{ width: '100%', borderRadius: 16, border: '1px solid #e4e4e7' }} />
+                            )}
                             {미리보기 ? (
                                 <div style={{ marginTop: 12, background: '#fff', border: '1px solid #e4e4e7', borderRadius: 14, padding: '18px 18px 16px', textAlign: 'center' }}>
                                     <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>선명한 그림은 회원만 받을 수 있어요</div>
@@ -151,7 +160,7 @@ export default function ThumbnailPage() {
                                     }}>로그인하고 원본 받기</button>
                                 </div>
                             ) : (
-                                <a href={result} download="썸네일.png" style={{
+                                <a href={완성본 ?? result} download="썸네일.png" style={{
                                     display: 'block', marginTop: 12, padding: 14, borderRadius: 14,
                                     background: '#18181b', color: '#fff', fontSize: 15, fontWeight: 700,
                                     textAlign: 'center', textDecoration: 'none',

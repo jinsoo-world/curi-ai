@@ -22,6 +22,8 @@ const 메뉴 = [
     { label: '만들기', href: '/studio' },
     { label: '대화하기', href: '/mentors' },
     { label: '내 AI', href: '/creator/manage' },
+    // 대표 지시 0915 = 「친구초대로 이름 바꿔. 그리고 친구초대를 상단 띠에 띄워」
+    { label: '친구초대', href: '/invite' },
 ]
 
 export default function AppSidebar() {
@@ -31,6 +33,8 @@ export default function AppSidebar() {
     const [잔액, set잔액] = useState<number | null>(null)
     const [사진, set사진] = useState<string | null>(null)
     const [이름, set이름] = useState<string | null>(null)
+    const [추천코드, set추천코드] = useState<string | null>(null)
+    const [복사됨, set복사됨] = useState(false)
 
     const 불러오기 = useCallback(async () => {
         const supabase = createClient()
@@ -38,12 +42,13 @@ export default function AppSidebar() {
         if (!user) return
         const { data: row } = await supabase
             .from('users')
-            .select('name, clovers, avatar_url')
+            .select('name, clovers, avatar_url, referral_code')
             .eq('id', user.id)
             .single()
         set잔액(row?.clovers ?? 0)
         set사진(row?.avatar_url ?? null)
         set이름(row?.name ?? null)
+        set추천코드(row?.referral_code ?? null)
     }, [])
 
     useEffect(() => { void 불러오기() }, [불러오기])
@@ -78,7 +83,7 @@ export default function AppSidebar() {
                 {/* 오른쪽 — 남은 개수와 나 */}
                 <div className="app-top-right">
                     <Link href="/charge" className="app-top-credit" aria-label="클로버 충전하기">
-                        <CloverIcon size={28} />
+                        <CloverIcon size={34} />
                         <span className="app-top-credit-num">{잔액 === null ? '–' : 잔액.toLocaleString()}</span>
                         <span className="app-top-credit-plus">충전</span>
                     </Link>
@@ -129,7 +134,7 @@ export default function AppSidebar() {
                         </div>
 
                         <Link href="/charge" className="app-top-sheet-item">클로버 충전</Link>
-                        <Link href="/invite" className="app-top-sheet-item">친구 부르기</Link>
+                        <Link href="/invite" className="app-top-sheet-item">친구초대</Link>
                         <Link href="/missions" className="app-top-sheet-item">무료로 모으기</Link>
                         <Link href="/profile" className="app-top-sheet-item">마이페이지</Link>
                         <div className="app-top-sheet-line" />
