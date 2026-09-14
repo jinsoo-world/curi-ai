@@ -2,7 +2,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { CreateSubscriptionInput } from './types'
-import { PLANS } from './types'
+import { PLANS, getPlan } from './types'
 
 /**
  * 구독 생성 + users 테이블 업데이트
@@ -11,7 +11,11 @@ export async function createSubscription(
     db: SupabaseClient,
     input: CreateSubscriptionInput,
 ) {
-    const plan = PLANS[input.planType]
+    const plan = getPlan(input.planType)
+    if (!plan) {
+        console.error('[Subscription] 모르는 요금제:', input.planType)
+        return null
+    }
     const now = new Date()
     const periodEnd = new Date(now)
     periodEnd.setDate(periodEnd.getDate() + plan.periodDays)

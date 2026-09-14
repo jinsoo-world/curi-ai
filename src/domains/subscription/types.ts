@@ -1,9 +1,15 @@
 // domains/subscription — 타입 정의
 
+/** 우리가 파는 요금제 전부 */
+export type PlanType = 'monthly' | 'annual' | 'starter' | 'pro'
+
+/** 리더(크리에이터)가 자기 AI 를 운영하려고 내는 요금제 */
+export const LEADER_PLAN_TYPES = ['starter', 'pro'] as const
+
 export interface Subscription {
     id: string
     user_id: string
-    plan_type: 'monthly' | 'annual'
+    plan_type: PlanType
     status: 'active' | 'canceled' | 'expired' | 'past_due'
     billing_key: string
     customer_key: string
@@ -30,7 +36,7 @@ export interface Payment {
 
 export interface CreateSubscriptionInput {
     userId: string
-    planType: 'monthly' | 'annual'
+    planType: PlanType
     billingKey: string
     customerKey: string
 }
@@ -59,8 +65,32 @@ export const CREATOR_PLANS: Record<'starter' | 'pro', PlanInfo> = {
     pro: { price: 19900, label: '크리에이터 프로', periodDays: 30, discount: 'RAG + 보이스' },
 }
 
+/**
+ * 요금제 하나를 찾는다. **값을 묻는 곳은 전부 이 함수를 쓴다.**
+ * 가격표가 여러 군데 흩어져 화면 9,900원 / 실제 청구 7,900원으로 갈렸던 적이 있다(0914).
+ */
+export function getPlan(planType: PlanType): PlanInfo | undefined {
+    return ALL_PLANS[planType]
+}
+
+/**
+ * 브라우저가 보낸 요금제 이름이 진짜 우리 것인지 확인한다.
+ * 이걸 안 보면 아무 이름이나 보내 공짜 구독을 만들 수 있다.
+ */
+export function isValidPlanType(v: unknown): v is PlanType {
+    return typeof v === 'string' && Object.prototype.hasOwnProperty.call(ALL_PLANS, v)
+}
+
 /** 레거시 호환 (기존 monthly/annual → basic으로 매핑) */
 export const PLANS: Record<'monthly' | 'annual', PlanInfo> = {
     monthly: { price: 7900, label: '월간 구독', periodDays: 30 },
     annual: { price: 79000, label: '연간 구독', periodDays: 365, discount: '17% 할인' },
+}
+
+/** 요금제 전부를 한 곳에 모은 표 (getPlan 이 여기서만 읽는다) */
+const ALL_PLANS: Record<PlanType, PlanInfo> = {
+    monthly: PLANS.monthly,
+    annual: PLANS.annual,
+    starter: CREATOR_PLANS.starter,
+    pro: CREATOR_PLANS.pro,
 }

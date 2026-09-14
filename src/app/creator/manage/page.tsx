@@ -193,6 +193,35 @@ export default function CreatorManagePage() {
                         </button>
                     </div>
 
+                    {/* 구독 안내 — 리더가 값을 내고 시작하는 자리 */}
+                    <button
+                        onClick={() => router.push('/creator/pricing')}
+                        style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 12,
+                            padding: '16px 20px',
+                            marginBottom: 20,
+                            borderRadius: 16,
+                            border: '1.5px solid #bbf7d0',
+                            background: 'linear-gradient(135deg, #f0fdf4, #ffffff)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                        }}
+                    >
+                        <div>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: '#166534', marginBottom: 3 }}>
+                                내 AI 로 수익 내기
+                            </div>
+                            <div style={{ fontSize: 13, color: '#52525b', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                                내 자료로 AI 를 가르치고, 수강생에게 값을 매겨 열 수 있어요
+                            </div>
+                        </div>
+                        <span style={{ fontSize: 20, color: '#22c55e', flexShrink: 0 }}>›</span>
+                    </button>
+
                     {/* 통계 카드 */}
                     <div style={{
                         display: 'grid',

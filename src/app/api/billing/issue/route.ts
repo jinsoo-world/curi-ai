@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { issueBillingKey, chargeBilling, generateOrderId } from '@/lib/toss'
-import { createSubscription, savePayment, PLANS } from '@/domains/subscription'
+import { createSubscription, savePayment, getPlan, isValidPlanType } from '@/domains/subscription'
 import { sendErrorAlert } from '@/lib/slack'
 
 export const dynamic = 'force-dynamic'
@@ -28,14 +28,15 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        if (!['monthly', 'annual'].includes(planType)) {
+        // 브라우저가 보낸 이름을 그대로 믿지 않는다. 우리 표에 있는 것만 통과.
+        if (!isValidPlanType(planType)) {
             return NextResponse.json(
                 { error: '잘못된 플랜 타입입니다.' },
                 { status: 400 },
             )
         }
 
-        const plan = PLANS[planType as 'monthly' | 'annual']
+        const plan = getPlan(planType)!
 
         // Supabase 서비스 롤 클라이언트 (RLS 우회)
         const supabase = createClient(
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
         // 3. 구독 생성
         const subscription = await createSubscription(supabase, {
             userId,
-            planType: planType as 'monthly' | 'annual',
+            planType,
             billingKey: billingResult.billingKey,
             customerKey,
         })
