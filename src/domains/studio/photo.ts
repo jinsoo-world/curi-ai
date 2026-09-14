@@ -17,6 +17,8 @@ export interface Choice {
     bg?: string
     /** 실제로 만들어본 예시 사진 */
     sample?: string
+    /** 남성을 고르면 보여줄 예시 (대표 지시 0915 「남성 / 여성 클릭하게 해」) */
+    sampleMale?: string
 }
 
 /**

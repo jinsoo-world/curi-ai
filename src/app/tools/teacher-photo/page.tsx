@@ -137,7 +137,7 @@ function 그림칸({ 목록, 고른, 고르기 }: {
                 <button key={o.id} onClick={() => 고르기(o.id)} style={고름(고른 === o.id)}>
                     {o.sample ? (
                         <span style={{ position: 'relative', display: 'block', width: '100%', aspectRatio: '3 / 4', borderRadius: 12, overflow: 'hidden', marginBottom: 8, background: '#f4f4f5' }}>
-                            <Image src={o.sample} alt="" fill sizes="160px" style={{ objectFit: 'cover', objectPosition: 'center 18%' }} />
+                            <Image src={o.sample} alt="" fill sizes="160px" style={{ objectFit: 'cover', objectPosition: 'center 26%' }} />
                         </span>
                     ) : (
                         <span style={{ display: 'block', width: '100%', height: 64, borderRadius: 12, background: o.bg || o.swatch, marginBottom: 8 }} />

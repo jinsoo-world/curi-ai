@@ -80,24 +80,26 @@ export default function PhotoToolShell({
                     <PhotoDrop preview={preview} onPicked={onPicked} onError={onError} />
                 </div>
 
-                {/* 2. 이 도구가 만드는 것 */}
+                {/* 2. 이 도구가 만드는 것 — 옆으로 흐른다 (대표 지시 0915 「이미지 쑉쑉 지나가게해」) */}
                 {!preview && (
                     <section style={{ marginBottom: 8 }}>
                         <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--먹연)', marginBottom: 10 }}>
                             이런 사진이 나와요
                         </div>
-                        <div className="tool-hero-grid">
-                            {samples.map((s) => (
-                                <figure key={s.src} style={{ margin: 0 }}>
-                                    <div style={{ position: 'relative', aspectRatio: '3 / 4', borderRadius: 14, overflow: 'hidden', background: '#E8E8E4' }}>
-                                        <Image src={s.src} alt={s.label} fill sizes="(max-width: 700px) 45vw, 220px" quality={90}
-                                            style={{ objectFit: 'cover', objectPosition: 'center 18%' }} />
-                                    </div>
-                                    <figcaption style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--먹연)', marginTop: 7, textAlign: 'center' }}>
-                                        {s.label}
-                                    </figcaption>
-                                </figure>
-                            ))}
+                        <div className="photo-marquee">
+                            <div className="photo-marquee-track">
+                                {[...samples, ...samples].map((s, i) => (
+                                    <figure key={`${s.src}-${i}`} className="photo-marquee-item">
+                                        <div style={{ position: 'relative', width: '100%', aspectRatio: '4 / 5', borderRadius: 14, overflow: 'hidden', background: '#E8E8E4' }}>
+                                            <Image src={s.src} alt={s.label} fill sizes="200px" quality={90}
+                                                style={{ objectFit: 'cover', objectPosition: 'center 26%' }} />
+                                        </div>
+                                        <figcaption style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--먹연)', marginTop: 7, textAlign: 'center' }}>
+                                            {s.label}
+                                        </figcaption>
+                                    </figure>
+                                ))}
+                            </div>
                         </div>
                     </section>
                 )}

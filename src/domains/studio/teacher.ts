@@ -6,6 +6,15 @@
 import type { Choice } from './photo'
 import { 나이문장 } from './photo'
 
+/** 성별 — 대표 지시 0915 「남성 / 여성 클릭하게 해」
+ *  견본이 남녀 섞여 있으면 「나랑 다른 사람」 사진을 보고 고르게 된다. */
+export type 성별 = 'male' | 'female'
+
+export const GENDERS: { id: 성별; label: string }[] = [
+    { id: 'female', label: '여성' },
+    { id: 'male', label: '남성' },
+]
+
 export const TEACHER_COST = 20
 
 /** 어떤 선생으로 보이고 싶은가 */
@@ -16,6 +25,7 @@ export const TEACHER_MOODS: Choice[] = [
         prompt: 'a warm inviting expression with a genuine open smile and relaxed shoulders, wearing a soft knit or cardigan in a light tone',
         swatch: '#e7c9a9',
         sample: '/samples/teach-w2.webp',
+        sampleMale: '/samples/teach-m1.webp',
     },
     {
         id: 'trust',
@@ -23,20 +33,23 @@ export const TEACHER_MOODS: Choice[] = [
         prompt: 'a calm credible expression with a light closed-lip smile, wearing a clean blazer over a plain top',
         swatch: '#475569',
         sample: '/samples/teach-w1.webp',
+        sampleMale: '/samples/teach-m2.webp',
     },
     {
         id: 'easy',
         label: '편안하게',
         prompt: 'a relaxed everyday expression with an easy laugh, wearing a plain shirt with sleeves rolled up',
         swatch: '#93c5fd',
-        sample: '/samples/teach-m1.webp',
+        sample: '/samples/teach-w3.webp',
+        sampleMale: '/samples/teach-m1.webp',
     },
     {
         id: 'expert',
         label: '전문가답게',
         prompt: 'a composed expert expression with steady eye contact, wearing a tidy jacket or cardigan, glasses kept if present in the photo',
         swatch: '#1e293b',
-        sample: '/samples/teach-m2.webp',
+        sample: '/samples/teach-w1.webp',
+        sampleMale: '/samples/teach-m2.webp',
     },
 ]
 
@@ -53,11 +66,12 @@ export function getTeacherPlace(id: string) { return TEACHER_PLACES.find(p => p.
 export function isValidTeacherMood(v: unknown): v is string { return typeof v === 'string' && TEACHER_MOODS.some(m => m.id === v) }
 export function isValidTeacherPlace(v: unknown): v is string { return typeof v === 'string' && TEACHER_PLACES.some(p => p.id === v) }
 
-export function buildTeacherPrompt(mood: Choice, place: Choice, ratioLabel = '4:5', ageMinus = 0): string {
+export function buildTeacherPrompt(mood: Choice, place: Choice, ratioLabel = '4:5', ageMinus = 0, gender?: 성별): string {
     const 나이줄 = 나이문장(ageMinus)
 
     return [
         'Create a friendly instructor profile photograph for a Korean online course page.',
+        gender === 'male' ? 'The subject is a man.' : gender === 'female' ? 'The subject is a woman.' : '',
         'Keep the same face and the same identity as the uploaded photo — students must recognise this person in the classroom.',
         나이줄,
         `Expression and clothing: ${mood.prompt}.`,
@@ -74,5 +88,5 @@ export function buildTeacherPrompt(mood: Choice, place: Choice, ratioLabel = '4:
         `Chest-up framing, ${ratioLabel} composition, sharp focus on the eyes, looking at the lens.`,
         'No text, no logos, no watermark, no extra hands.',
         'Avoid the AI look: no waxy plastic skin, no perfect symmetry, no artificial glow halo.',
-    ].join(' ')
+    ].filter(Boolean).join(' ')
 }

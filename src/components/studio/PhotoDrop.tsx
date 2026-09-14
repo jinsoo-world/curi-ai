@@ -65,11 +65,31 @@ export function PhotoDrop({
                 }}>
                     {/* 올린 사진은 크게 보여준다. 작은 네모로 두면 올라갔는지 모르고 다시 누른다
                         (대표 지시 0915 「업로드 된걸 알아야지. 중장년 인지 규칙 적용해」) */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={preview} alt="올린 사진" style={{
-                        width: '100%', aspectRatio: '1 / 1', objectFit: 'cover',
-                        borderRadius: 14, display: 'block', marginBottom: 12,
-                    }} />
+                    {/* 사진을 눌러도 바꿀 수 있다. 아래 단추는 그대로 둔다 */}
+                    <button
+                        type="button"
+                        onClick={() => fileRef.current?.click()}
+                        aria-label="다른 사진으로 바꾸기"
+                        style={{
+                            position: 'relative', display: 'block', width: '100%',
+                            padding: 0, border: 'none', background: 'none',
+                            cursor: 'pointer', marginBottom: 12,
+                        }}
+                    >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={preview} alt="올린 사진" style={{
+                            width: '100%', aspectRatio: '1 / 1', objectFit: 'cover',
+                            borderRadius: 14, display: 'block',
+                        }} />
+                        <span style={{
+                            position: 'absolute', right: 10, bottom: 10,
+                            background: 'rgba(0,0,0,0.62)', color: '#fff',
+                            fontSize: 13.5, fontWeight: 700,
+                            padding: '8px 14px', borderRadius: 999,
+                        }}>
+                            눌러서 바꾸기
+                        </span>
+                    </button>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 16, fontWeight: 800, color: '#16a34a' }}>
                             <span style={{

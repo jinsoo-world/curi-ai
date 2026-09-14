@@ -26,11 +26,11 @@ function ItemCard({ item, onGo }: { item: ToolItem; onGo: (href: string) => void
         >
             {item.img ? (
                 <div style={{
-                    position: 'relative', width: '100%', aspectRatio: '4 / 3',
+                    position: 'relative', width: '100%', aspectRatio: '4 / 5',
                     borderRadius: 12, overflow: 'hidden', background: '#f4f4f5', marginBottom: 4,
                 }}>
                     <Image src={item.img} alt="" fill sizes="(max-width: 700px) 45vw, 320px"
-                        style={{ objectFit: 'cover', objectPosition: 'center 20%' }} />
+                        style={{ objectFit: 'cover', objectPosition: 'center 28%' }} />
                 </div>
             ) : null}
             <div style={{ fontSize: 16, fontWeight: 700, color: '#18181b', wordBreak: 'keep-all' }}>

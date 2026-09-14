@@ -378,7 +378,7 @@ export default function ChatInput({
                         style={{
                             border: 'none',
                             background: 'transparent',
-                            fontSize: 15,
+                            fontSize: 17,
                             color: '#1e293b',
                             resize: 'none',
                             outline: 'none',

@@ -123,8 +123,8 @@ function IdPhotoPage안쪽() {
                         {ID_OUTFITS.map(o => (
                             <button key={o.id} onClick={() => setOutfitId(o.id)} style={고름(outfitId === o.id)}>
                                 {o.sample ? (
-                                    <span style={{ position: 'relative', display: 'block', width: '100%', aspectRatio: '1 / 1', borderRadius: 10, overflow: 'hidden', marginBottom: 8, background: '#f4f4f5' }}>
-                                        <Image src={o.sample} alt="" fill sizes="130px" style={{ objectFit: 'cover', objectPosition: 'center 20%' }} />
+                                    <span style={{ position: 'relative', display: 'block', width: '100%', aspectRatio: '4 / 5', borderRadius: 10, overflow: 'hidden', marginBottom: 8, background: '#f4f4f5' }}>
+                                        <Image src={o.sample} alt="" fill sizes="130px" style={{ objectFit: 'cover', objectPosition: 'center 26%' }} />
                                     </span>
                                 ) : (
                                     <span style={{ display: 'block', width: '100%', height: 46, borderRadius: 10, background: o.swatch, marginBottom: 8 }} />

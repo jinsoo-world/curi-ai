@@ -670,8 +670,8 @@ export default function ChatMessages({
                                     } : {
                                         padding: '4px 0',
                                         color: '#1e293b',
-                                        fontSize: 15,
-                                        lineHeight: 1.8,
+                                        fontSize: 17.5,
+                                        lineHeight: 1.85,
                                         wordBreak: 'break-word' as const,
                                     }),
                                 }}>

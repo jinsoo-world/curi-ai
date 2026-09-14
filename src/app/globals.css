@@ -740,3 +740,30 @@ button, a[role="button"] {
     gap: 16px;
   }
 }
+
+/* ─── 예시 사진이 옆으로 흐른다 (대표 지시 0915 「이미지 쑉쑉 지나가게해」) ───
+   같은 목록을 두 벌 붙여놓고 절반만큼 밀면 끊김 없이 이어진다. */
+.photo-marquee {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%);
+}
+.photo-marquee-track {
+  display: flex;
+  gap: 12px;
+  width: max-content;
+  animation: photo-marquee 26s linear infinite;
+}
+.photo-marquee:hover .photo-marquee-track { animation-play-state: paused; }
+.photo-marquee-item {
+  flex: 0 0 auto;
+  width: 176px;
+  margin: 0;
+}
+@keyframes photo-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-50% - 6px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .photo-marquee-track { animation: none; }
+  .photo-marquee { overflow-x: auto; }
+}
