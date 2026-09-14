@@ -79,7 +79,7 @@ function ChargeDoneInner() {
                             onClick={() => router.push('/mentors')}
                             style={{
                                 width: '100%', padding: '14px', borderRadius: 14, border: 'none',
-                                background: '#22c55e', color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer',
+                                background: '#1C2321', color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer',
                             }}
                         >
                             AI와 대화하러 가기

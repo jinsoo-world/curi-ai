@@ -157,7 +157,7 @@ export default function PhotoToolShell({
                                 </p>
                                 <button onClick={onLogin} style={{
                                     width: '100%', padding: 14, borderRadius: 14, border: 'none',
-                                    background: '#22c55e', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                                    background: '#1C2321', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
                                 }}>로그인하고 원본 받기</button>
                             </div>
                         ) : (

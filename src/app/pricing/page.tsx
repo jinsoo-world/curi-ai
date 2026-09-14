@@ -140,7 +140,7 @@ export default function PricingPage() {
                                 {PLANS[type].badge && (
                                     <span style={{
                                         position: 'absolute', top: -8, right: -4,
-                                        background: '#22c55e', color: '#fff',
+                                        background: '#1C2321', color: '#fff',
                                         fontSize: 10, fontWeight: 700, padding: '2px 6px',
                                         borderRadius: 20,
                                     }}>
@@ -191,7 +191,7 @@ export default function PricingPage() {
                                     </h3>
                                     {isPremium && (
                                         <span style={{
-                                            fontSize: 11, background: '#22c55e', color: '#fff',
+                                            fontSize: 11, background: '#1C2321', color: '#fff',
                                             padding: '2px 8px', borderRadius: 20, fontWeight: 600,
                                         }}>
                                             현재 구독 중

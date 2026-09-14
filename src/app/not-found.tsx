@@ -39,7 +39,7 @@ export default function NotFound() {
                     style={{
                         padding: '12px 28px',
                         borderRadius: 12,
-                        background: '#22c55e',
+                        background: '#1C2321',
                         color: '#fff',
                         fontWeight: 700,
                         fontSize: 15,

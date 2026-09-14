@@ -332,7 +332,7 @@ export default function ProfilePage() {
                                     display: 'inline-block',
                                     padding: '14px 32px',
                                     borderRadius: 14,
-                                    background: '#22c55e',
+                                    background: '#1C2321',
                                     color: '#fff', textDecoration: 'none',
                                     fontWeight: 600, fontSize: 16,
                                                                     }}
@@ -385,7 +385,7 @@ export default function ProfilePage() {
                                                 ) : (
                                                     <div style={{
                                                         width: 64, height: 64, borderRadius: '50%',
-                                                        background: '#22c55e',
+                                                        background: '#1C2321',
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                         fontSize: 28, color: '#fff', fontWeight: 800,
                                                         opacity: uploadingPhoto ? 0.5 : 1,
@@ -668,7 +668,7 @@ export default function ProfilePage() {
                                                 style={{
                                                     flex: 2, padding: '14px 0',
                                                     borderRadius: 14, border: 'none',
-                                                    background: '#22c55e',
+                                                    background: '#1C2321',
                                                     fontSize: 16, fontWeight: 700, color: '#fff',
                                                     cursor: isSaving ? 'not-allowed' : 'pointer',
                                                     opacity: isSaving ? 0.7 : 1,
@@ -695,7 +695,7 @@ export default function ProfilePage() {
                                                 {(profile?.clovers ?? 0).toLocaleString()}개
                                             </span>
                                             <button onClick={() => router.push('/charge')} style={{
-                                                background: '#22c55e', color: '#fff', border: 'none',
+                                                background: '#1C2321', color: '#fff', border: 'none',
                                                 borderRadius: 999, padding: '10px 18px',
                                                 fontSize: 15, fontWeight: 800, cursor: 'pointer',
                                             }}>충전</button>
@@ -802,7 +802,7 @@ export default function ProfilePage() {
                                                 </div>
                                                 <div style={{
                                                     padding: '14px 16px', borderRadius: 12, marginTop: 4,
-                                                    background: '#22c55e',
+                                                    background: '#1C2321',
                                                     border: '1px solid #ddd6fe',
                                                 }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>

@@ -264,7 +264,7 @@ function ActorPhotoPage안쪽() {
                                 </p>
                                 <button onClick={() => router.push('/login')} style={{
                                     width: '100%', padding: '14px', borderRadius: 14, border: 'none',
-                                    background: '#22c55e', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                                    background: '#1C2321', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
                                 }}>로그인하고 원본 받기</button>
                             </div>
                         ) : (
@@ -284,7 +284,7 @@ function ActorPhotoPage안쪽() {
                         <div key={i} style={{ display: 'flex', gap: 10, marginBottom: i === 2 ? 0 : 8 }}>
                             <span style={{
                                 flexShrink: 0, width: 20, height: 20, borderRadius: '50%',
-                                background: '#22c55e', color: '#fff', fontSize: 12, fontWeight: 700,
+                                background: '#1C2321', color: '#fff', fontSize: 12, fontWeight: 700,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>{i + 1}</span>
                             <span style={{ fontSize: 14, color: '#52525b', lineHeight: 1.6, wordBreak: 'keep-all' }}>{t}</span>

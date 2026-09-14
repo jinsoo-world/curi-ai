@@ -1635,7 +1635,7 @@ export default function CreatorCreatePage() {
                                                     ...(m.role === 'user' ? {
                                                         padding: '12px 18px',
                                                         borderRadius: '20px 20px 6px 20px',
-                                                        background: '#22c55e',
+                                                        background: '#1C2321',
                                                         color: '#fff',
                                                         fontSize: 14,
                                                         lineHeight: 1.7,
@@ -1711,7 +1711,7 @@ export default function CreatorCreatePage() {
                                         disabled={previewLoading || !previewInput.trim()}
                                         style={{
                                             width: 40, height: 40, borderRadius: '50%',
-                                            border: 'none', background: '#22c55e', color: '#fff',
+                                            border: 'none', background: '#1C2321', color: '#fff',
                                             fontSize: 18, cursor: 'pointer',
                                             opacity: previewLoading || !previewInput.trim() ? 0.5 : 1,
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1865,7 +1865,7 @@ export default function CreatorCreatePage() {
                                     onClick={() => setPreviewSource(null)}
                                     style={{
                                         padding: '8px 20px', borderRadius: 10,
-                                        border: 'none', background: '#22c55e', color: '#fff',
+                                        border: 'none', background: '#1C2321', color: '#fff',
                                         fontSize: 14, fontWeight: 600, cursor: 'pointer',
                                     }}
                                 >닫기</button>
@@ -2179,7 +2179,7 @@ const styles: Record<string, React.CSSProperties> = {
         padding: '16px 24px',
         borderRadius: 14,
         border: 'none',
-        background: '#22c55e',
+        background: '#1C2321',
         color: '#fff',
         fontSize: 16,
         fontWeight: 700,

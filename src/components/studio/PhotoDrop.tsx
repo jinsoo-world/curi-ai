@@ -73,7 +73,7 @@ export function PhotoDrop({
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 16, fontWeight: 800, color: '#16a34a' }}>
                             <span style={{
-                                width: 24, height: 24, borderRadius: 999, background: '#22c55e', color: '#fff',
+                                width: 24, height: 24, borderRadius: 999, background: '#1C2321', color: '#fff',
                                 display: 'grid', placeItems: 'center', fontSize: 14, fontWeight: 900,
                             }} aria-hidden>✓</span>
                             사진을 올렸어요
@@ -88,19 +88,20 @@ export function PhotoDrop({
                 <button
                     onClick={() => fileRef.current?.click()}
                     style={{
-                        width: '100%', padding: '32px 20px', borderRadius: 16,
-                        border: dragging ? '2.5px dashed #22c55e' : '2px dashed #d4d4d8',
+                        width: '100%', minHeight: 320, padding: '48px 24px', borderRadius: 20,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        border: dragging ? '3px dashed #22c55e' : '2.5px dashed #d4d4d8',
                         background: dragging ? '#f0fdf4' : '#fff',
                         cursor: 'pointer', transition: 'all 0.15s',
                     }}
                 >
-                    <div style={{ fontSize: 34, marginBottom: 10 }}>{dragging ? '📥' : '📷'}</div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: dragging ? '#166534' : '#3f3f46', marginBottom: 6 }}>
+                    <div style={{ fontSize: 52, marginBottom: 16 }}>{dragging ? '📥' : '📷'}</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: dragging ? '#166534' : '#18181b', marginBottom: 10 }}>
                         {dragging ? '여기에 놓으세요' : '사진을 끌어다 놓으세요'}
                     </div>
-                    <div style={{ fontSize: 13, color: '#71717a', lineHeight: 1.7, wordBreak: 'keep-all' }}>
+                    <div style={{ fontSize: 15.5, color: '#71717a', lineHeight: 1.7, wordBreak: 'keep-all' }}>
                         눌러서 고르셔도 되고, 복사한 사진을 붙여넣어도 돼요<br />
-                        <span style={{ fontSize: 12, color: '#a1a1aa' }}>얼굴이 잘 보이는 밝은 사진 · 4MB 이하</span>
+                        <span style={{ fontSize: 14, color: '#a1a1aa' }}>얼굴이 잘 보이는 밝은 사진 · 4MB 이하</span>
                     </div>
                 </button>
             )}

@@ -278,7 +278,7 @@ export default function ElevenLabsWidget({
                             {isConnected && !errorMsg && (
                                 <span style={{
                                     display: 'inline-block', width: 6, height: 6,
-                                    borderRadius: '50%', background: '#22c55e',
+                                    borderRadius: '50%', background: '#1C2321',
                                     animation: 'pulseSoft 1.5s ease-in-out infinite',
                                 }} />
                             )}
@@ -349,7 +349,7 @@ export default function ElevenLabsWidget({
                         }}
                         style={{
                             padding: '10px 24px', borderRadius: 50,
-                            background: '#22c55e', border: 'none',
+                            background: '#1C2321', border: 'none',
                             color: '#fff', fontSize: 15, fontWeight: 600,
                             cursor: 'pointer',
                         }}

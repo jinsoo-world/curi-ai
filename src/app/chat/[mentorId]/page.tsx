@@ -816,7 +816,7 @@ export default function ChatPage() {
                                         width: 18,
                                         height: 18,
                                         borderRadius: '50%',
-                                        background: '#22c55e',
+                                        background: '#1C2321',
                                         border: '3px solid #fff',
                                     }} />
                                 </div>
@@ -869,7 +869,7 @@ export default function ChatPage() {
                                             padding: '10px 24px',
                                             borderRadius: 100,
                                             border: 'none',
-                                            background: '#22c55e',
+                                            background: '#1C2321',
                                             color: '#fff',
                                             fontSize: 15,
                                             fontWeight: 600,
@@ -904,7 +904,7 @@ export default function ChatPage() {
                                             padding: '10px 24px',
                                             borderRadius: 100,
                                             border: 'none',
-                                            background: '#16a34a',
+                                            background: '#0E1412',
                                             color: '#fff',
                                             fontSize: 15,
                                             fontWeight: 600,

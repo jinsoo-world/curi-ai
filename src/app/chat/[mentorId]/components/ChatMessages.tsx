@@ -662,7 +662,7 @@ export default function ChatMessages({
                                     ...(isUser ? {
                                         padding: '12px 18px',
                                         borderRadius: '20px 20px 6px 20px',
-                                        background: '#22c55e',
+                                        background: '#1C2321',
                                         color: '#fff',
                                         fontSize: 15,
                                         lineHeight: 1.7,

@@ -300,7 +300,7 @@ export default function CreatorManagePage() {
                                         padding: '10px 20px',
                                         borderRadius: 10,
                                         border: 'none',
-                                        background: '#22c55e',
+                                        background: '#1C2321',
                                         color: '#fff',
                                         fontSize: 14,
                                         fontWeight: 600,

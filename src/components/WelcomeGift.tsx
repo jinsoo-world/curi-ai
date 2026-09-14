@@ -93,7 +93,7 @@ export default function WelcomeGift() {
                     onClick={() => router.push('/login')}
                     style={{
                         width: '100%', height: 58, borderRadius: 16, border: 'none',
-                        background: 'var(--연두)', color: '#fff',
+                        background: 'var(--단추)', color: '#fff',
                         fontSize: 17.5, fontWeight: 800, cursor: 'pointer',
                     }}
                 >

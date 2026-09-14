@@ -53,7 +53,7 @@ function BillingFailContent() {
                         style={{
                             width: '100%', padding: '14px 24px', borderRadius: 12,
                             border: 'none', fontSize: 16, fontWeight: 700,
-                            background: '#22c55e', color: '#fff', cursor: 'pointer',
+                            background: '#1C2321', color: '#fff', cursor: 'pointer',
                         }}
                     >
                         다시 시도하기

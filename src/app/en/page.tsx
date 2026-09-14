@@ -182,7 +182,7 @@ export default function EnglishLandingPage() {
                             justifyContent: 'center',
                             minHeight: 'var(--손가락)',
                             padding: '0 28px',
-                            background: 'var(--연두)',
+                            background: 'var(--단추)',
                             color: 'var(--흰)',
                             fontSize: 'var(--글자-본문)',
                             fontWeight: 700,

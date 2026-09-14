@@ -23,11 +23,43 @@ export default function BottomTabs() {
     const pathname = usePathname()
 
     return (
-        <nav className="bottom-tabs" aria-label="아래 메뉴">
+        <nav
+            aria-label="아래 메뉴"
+            className="bottom-tabs"
+            style={{
+                position: 'fixed',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 55,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                background: 'rgba(255,255,255,0.97)',
+                backdropFilter: 'saturate(180%) blur(12px)',
+                borderTop: '1px solid var(--선)',
+                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            }}
+        >
             {탭.map((t) => {
                 const on = pathname === t.href || pathname.startsWith(t.href + '/')
                 return (
-                    <Link key={t.href} href={t.href} className={on ? 'bottom-tab on' : 'bottom-tab'} aria-current={on ? 'page' : undefined}>
+                    <Link
+                        key={t.href}
+                        href={t.href}
+                        aria-current={on ? 'page' : undefined}
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 3,
+                            height: 64,
+                            textDecoration: 'none',
+                            color: on ? 'var(--먹)' : '#9aa39d',
+                            fontSize: 12,
+                            fontWeight: on ? 800 : 700,
+                        }}
+                    >
                         <t.icon on={on} />
                         <span>{t.label}</span>
                     </Link>

@@ -117,7 +117,7 @@ export default function ChargePage() {
                             {discountPercent(p) > 0 && (
                                 <span style={{
                                     position: 'absolute', top: 0, right: 0,
-                                    background: '#22c55e', color: '#fff',
+                                    background: '#1C2321', color: '#fff',
                                     fontSize: 12.5, fontWeight: 800,
                                     padding: '5px 12px', borderRadius: '0 14px 0 12px',
                                 }}>

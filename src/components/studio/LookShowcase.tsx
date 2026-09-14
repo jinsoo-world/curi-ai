@@ -103,7 +103,7 @@ export default function LookShowcase() {
                         href="/tools/profile-photo"
                         style={{
                             display: 'inline-block',
-                            background: 'var(--연두)',
+                            background: 'var(--단추)',
                             color: '#fff',
                             fontSize: 'var(--글자-본문)',
                             fontWeight: 800,

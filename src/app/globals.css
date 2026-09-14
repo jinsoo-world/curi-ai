@@ -18,7 +18,11 @@ html, body, button, input, textarea, select {
     /* 색 — 6개로 끝낸다 */
     --먹      : #111813;   /* 글씨. 검정이지만 초록빛이 도는 중성 */
     --먹연    : #5C6660;   /* 부제·설명 */
-    --연두    : #22c55e;   /* 브랜드. 버튼·강조 */
+    --연두    : #22c55e;   /* 브랜드 초록. 아이콘·강조에만 쓴다 */
+    /* 단추 색 — 대표 지시 2026-09-15 「버튼 검정으로 바꿔. 색깔은 살짝 탁검색」
+       순검정(#000)은 화면에서 너무 세다. 초록이 아주 조금 도는 탁한 검정으로 간다. */
+    --단추    : #1C2321;
+    --단추진  : #0E1412;
     --진초록  : #0B4A2A;   /* 히로 색면. 흰 글씨를 얹는다 */
     --형광    : #D8F94A;   /* 카테고리 탭. 연두와 채도가 달라 붙어도 안 섞인다 */
     --종이    : #F6F7F4;   /* 배경 */
@@ -694,13 +698,13 @@ button, a[role="button"] {
   width: 100%;
   height: 56px;
   border-radius: 16px;
-  background: var(--연두);
+  background: var(--단추);
   color: #fff;
   font-size: 17px;
   font-weight: 800;
   text-decoration: none;
 }
-.coach-cta:hover { background: #16a34a; }
+.coach-cta:hover { background: var(--단추진); }
 
 /* ─── 만들기 도구 화면 폭 (대표 지시 0915 「PC/MO 다르게 해… 웹 기준으로는 넓게 써」) ─── */
 .tool-page {
@@ -737,39 +741,12 @@ button, a[role="button"] {
   }
 }
 
-/* ─── 아래 탭바 (대표 지시 0915 「탭바 추가해」 · 비글루 참고) ───
-   휴대폰에서만 보인다. 넓은 화면은 위 띠가 이미 다 보여준다. */
-.bottom-tabs {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 55;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: saturate(180%) blur(12px);
-  border-top: 1px solid var(--선);
-  padding-bottom: env(safe-area-inset-bottom, 0);
-}
-.bottom-tab {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  height: 62px;
-  text-decoration: none;
-  color: #9aa39d;
-  font-size: 12px;
-  font-weight: 700;
-}
-.bottom-tab.on { color: var(--먹); font-weight: 800; }
-
-/* 탭바에 가리지 않게 아래 여백 */
+/* ─── 아래 탭바 ───
+   모양은 컴포넌트 안에 인라인으로 적었다(2026-09-15 배포본에서 이 파일의 규칙이
+   실리지 않아 탭바가 세로로 쌓였다). 여기서는 숨기고 여백 주는 것만 한다. */
 @media (max-width: 899px) {
-  body { padding-bottom: 62px; }
+  body { padding-bottom: 64px; }
 }
 @media (min-width: 900px) {
-  .bottom-tabs { display: none; }
+  .bottom-tabs { display: none !important; }
 }
