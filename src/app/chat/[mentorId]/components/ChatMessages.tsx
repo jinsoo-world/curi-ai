@@ -9,6 +9,8 @@ export interface ChatMessage {
     id: string
     role: 'user' | 'assistant' | 'system'
     content: string
+    /** 사용자가 함께 보낸 사진 주소 */
+    imageUrl?: string
     createdAt?: string
 }
 
@@ -506,7 +508,7 @@ export default function ChatMessages({
     return (
         <>
             {messages.map((msg, idx) => {
-                // 시스템 메시지: 리포트 프롬프트 카드
+                // 시스템 메시지: 전자책 원고 안내 카드
                 if (msg.role === 'system' && msg.content === '__REPORT_PROMPT__') {
                     return (
                         <div key={msg.id} style={{
@@ -528,10 +530,10 @@ export default function ChatMessages({
                                 </div>
                                 <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>
                                     지금까지 나눈 핵심 내용을 정리한<br />
-                                    <strong style={{ color: '#3b82f6' }}>{exportLabel === '리포트' || !exportLabel ? 'AI 요약 리포트' : '전자책 원고'}</strong>를 받아보세요
+                                    <strong style={{ color: '#3b82f6' }}>전자책 원고</strong>를 받아보세요
                                 </div>
                                 <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
-                                    상단의 <strong>{exportLabel || '리포트'}</strong> 버튼을 눌러보세요 ↗
+                                    상단의 <strong>{exportLabel || '전자책 원고 보기'}</strong> 버튼을 눌러보세요 ↗
                                 </div>
                             </div>
                         </div>
@@ -628,8 +630,33 @@ export default function ChatMessages({
                                     </div>
                                 )}
 
-                                {/* 메시지 본문 */}
-                                <div style={{
+                                {/* 함께 보낸 사진 */}
+                                {msg.imageUrl && (
+                                    <a
+                                        href={msg.imageUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{
+                                            display: 'block',
+                                            marginBottom: msg.content ? 6 : 0,
+                                            borderRadius: 16,
+                                            overflow: 'hidden',
+                                            maxWidth: 260,
+                                            marginLeft: isUser ? 'auto' : 0,
+                                            border: '1px solid #e2e8f0',
+                                        }}
+                                    >
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={msg.imageUrl}
+                                            alt="보낸 사진"
+                                            style={{ display: 'block', width: '100%', height: 'auto' }}
+                                        />
+                                    </a>
+                                )}
+
+                                {/* 메시지 본문 — 사진만 보낸 경우엔 빈 말풍선을 띄우지 않는다 */}
+                                {!(isUser && !msg.content) && <div style={{
                                     ...(isUser ? {
                                         padding: '12px 18px',
                                         borderRadius: '20px 20px 6px 20px',
@@ -764,7 +791,7 @@ export default function ChatMessages({
                                     ) : (
                                         <MarkdownContent content={msg.content} />
                                     )}
-                                </div>
+                                </div>}
 
                                 {/* 시간 표시 */}
                                 {timeStr && msg.content && (

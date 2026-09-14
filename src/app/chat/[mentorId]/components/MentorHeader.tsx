@@ -5,11 +5,9 @@ import { useState, useEffect, lazy, Suspense } from 'react'
 import { generateEbookHtml } from './ebookTemplate'
 
 /* 로딩 단계별 문구 컴포넌트 */
-function EbookLoadingSteps({ isRaw }: { isRaw: boolean }) {
+function EbookLoadingSteps() {
     const [step, setStep] = useState(0)
-    const steps = isRaw
-        ? ['대화 내용을 분석하고 있어요...', '목차를 구성하고 있어요...', '표지를 디자인하고 있어요...', '본문을 작성하고 있어요...', '거의 다 됐어요! 마무리 중...']
-        : ['대화를 분석하고 있어요...', '핵심 인사이트를 추출 중...', '리포트를 구성하고 있어요...']
+    const steps = ['대화 내용을 분석하고 있어요...', '목차를 구성하고 있어요...', '표지를 디자인하고 있어요...', '본문을 작성하고 있어요...', '거의 다 됐어요! 마무리 중...']
     useEffect(() => {
         const timer = setInterval(() => setStep(s => Math.min(s + 1, steps.length - 1)), 3000)
         return () => clearInterval(timer)
@@ -29,7 +27,7 @@ function EbookLoadingSteps({ isRaw }: { isRaw: boolean }) {
                 ))}
             </div>
             <p style={{ color: '#94a3b8', fontSize: 11, margin: '8px 0 0' }}>
-                {isRaw ? '표지 + 5페이지 전자책 생성' : '핵심 요약 추출'}
+                표지 + 5페이지 전자책 생성
             </p>
         </div>
     )
@@ -58,16 +56,14 @@ interface MentorHeaderProps {
     isSidebarOpen?: boolean
     /** 현재 세션 ID (내보내기용) */
     sessionId?: string | null
-    /** AI 답변 총 글자수 (리포트 활성화 기준 1500자) */
+    /** AI 답변 총 글자수 (원고 버튼 활성화 기준 1500자) */
     aiContentLength?: number
-    /** 리포트 버튼 처음 활성화 여부 (NEW 뱃지) */
+    /** 원고 버튼 처음 활성화 여부 (NEW 뱃지) */
     isReportNew?: boolean
     /** PDF 내보내기 활성화 여부 (멘토 설정) */
     pdfExportEnabled?: boolean
-    /** 내보내기 버튼 라벨 (기본: '리포트') */
+    /** 내보내기 버튼 라벨 (기본: '전자책 원고 보기') */
     exportLabel?: string
-    /** 내보내기 모드: 'report'=AI요약, 'raw'=전자책 원고 조립 */
-    exportMode?: 'report' | 'raw'
     /** 수정 요청 시 채팅 입력란 프리필 */
     onEditRequest?: (prefill: string) => void
 }
@@ -128,67 +124,38 @@ export default function MentorHeader({
     aiContentLength = 0,
     isReportNew = false,
     pdfExportEnabled = false,
-    exportLabel = '리포트',
-    exportMode = 'report',
+    exportLabel = '전자책 원고 보기',
     onEditRequest,
 }: MentorHeaderProps) {
     const router = useRouter()
     const [showShareMenu, setShowShareMenu] = useState(false)
     const [showExportModal, setShowExportModal] = useState(false)
     const [exportLoading, setExportLoading] = useState(false)
-    const [exportData, setExportData] = useState<{ report: any; markdown: string; meta: any } | null>(null)
     const [exportError, setExportError] = useState<string | null>(null)
     const [ebookData, setEbookData] = useState<{ ebook: any; meta: any; ctaLinks?: string[] } | null>(null)
     const [showEbookViewer, setShowEbookViewer] = useState(false)
 
     const handleExport = async () => {
-        if (exportMode === 'raw') {
-            // 전자책 봇: API로 전체 대화 기반 원고 조립 → 풀스크린 뷰어
-            if (!sessionId || sessionId.startsWith('guest-')) return
-            setShowExportModal(true)
-            setExportLoading(true)
-            setExportError(null)
-            setEbookData(null)
-            setExportData(null)
-            try {
-                const res = await fetch('/api/chat/export-ebook', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId }),
-                })
-                if (!res.ok) {
-                    const err = await res.json()
-                    throw new Error(err.error || '원고 생성 실패')
-                }
-                const data = await res.json()
-                setEbookData(data)
-                setShowExportModal(false) // 모달 닫고
-                setShowEbookViewer(true)  // 풀스크린 뷰어 열기
-            } catch (e: any) {
-                setExportError(e.message)
-            } finally {
-                setExportLoading(false)
-            }
-            return
-        }
-
+        // 전자책 봇: API로 전체 대화 기반 원고 조립 → 풀스크린 뷰어
         if (!sessionId || sessionId.startsWith('guest-')) return
         setShowExportModal(true)
         setExportLoading(true)
         setExportError(null)
-        setExportData(null)
+        setEbookData(null)
         try {
-            const res = await fetch('/api/chat/export', {
+            const res = await fetch('/api/chat/export-ebook', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sessionId }),
             })
             if (!res.ok) {
                 const err = await res.json()
-                throw new Error(err.error || '리포트 생성 실패')
+                throw new Error(err.error || '원고 생성 실패')
             }
             const data = await res.json()
-            setExportData(data)
+            setEbookData(data)
+            setShowExportModal(false) // 모달 닫고
+            setShowEbookViewer(true)  // 풀스크린 뷰어 열기
         } catch (e: any) {
             setExportError(e.message)
         } finally {
@@ -196,21 +163,6 @@ export default function MentorHeader({
         }
     }
 
-    /** 마크다운 → HTML 변환 (간이) */
-    function markdownToHtml(md: string): string {
-        return md
-            .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-            .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-            .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-            .replace(/^---$/gm, '<hr/>')
-            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.+?)\*/g, '<em>$1</em>')
-            .replace(/^- \[ \] (.+)$/gm, '<p>☐ $1</p>')
-            .replace(/^- (.+)$/gm, '<p>• $1</p>')
-            .replace(/^> (.+)$/gm, '<blockquote style="border-left:3px solid #6366f1;padding:8px 16px;margin:12px 0;background:#f8fafc;">$1</blockquote>')
-            .replace(/\n\n/g, '<br/><br/>')
-            .replace(/\n/g, '<br/>')
-    }
 
     /** PDF 다운로드 (클라이언트 사이드) */
     const handleDownloadPdf = async () => {
@@ -223,14 +175,6 @@ export default function MentorHeader({
                 // 전자책 모드: ebookTemplate 사용
                 htmlContent = generateEbookHtml(ebookData.ebook, ebookData.meta.mentorName)
                 filename = `${ebookData.ebook.cover?.title || mentor.name}_전자책_${new Date().toISOString().split('T')[0]}.pdf`
-            } else if (exportData) {
-                // 리포트 모드: 기존 마크다운 변환
-                htmlContent = `
-                    <div style="font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;padding:20px;line-height:1.8;color:#1e293b;max-width:600px;">
-                        ${markdownToHtml(exportData.markdown)}
-                    </div>
-                `
-                filename = `${mentor.name}_${new Date().toISOString().split('T')[0]}.pdf`
             } else {
                 return
             }
@@ -241,7 +185,7 @@ export default function MentorHeader({
 
             await html2pdf()
                 .set({
-                    margin: ebookData ? [0, 0, 0, 0] : [15, 15, 15, 15],
+                    margin: [0, 0, 0, 0],
                     filename,
                     image: { type: 'jpeg', quality: 0.98 },
                     html2canvas: { scale: 2, useCORS: true },
@@ -258,22 +202,6 @@ export default function MentorHeader({
         }
     }
 
-    const handleDownloadMarkdown = () => {
-        if (!exportData) return
-        const blob = new Blob([exportData.markdown], { type: 'text/markdown;charset=utf-8' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${exportData.meta.mentorName}_리포트_${new Date().toISOString().split('T')[0]}.md`
-        a.click()
-        URL.revokeObjectURL(url)
-    }
-
-    const handleCopyReport = async () => {
-        if (!exportData) return
-        await navigator.clipboard.writeText(exportData.markdown)
-        alert('리포트가 클립보드에 복사되었습니다!')
-    }
     const [copied, setCopied] = useState(false)
 
     const shareUrl = typeof window !== 'undefined'
@@ -595,8 +523,8 @@ export default function MentorHeader({
                         {pdfExportEnabled && sessionId && !sessionId.startsWith('guest-') && aiContentLength >= 1500 && (
                             <button
                                 onClick={handleExport}
-                                aria-label="대화 리포트"
-                                title="AI 요약 리포트"
+                                aria-label="전자책 원고 보기"
+                                title="전자책 원고 보기"
                                 style={{
                                     position: 'relative',
                                     background: isReportNew ? '#f0f9ff' : 'transparent',
@@ -790,7 +718,7 @@ export default function MentorHeader({
                     </>
                 )}
 
-                {/* 내보내기 리포트 모달 */}
+                {/* 내보내기 모달 */}
                 {showExportModal && (
                     <>
                         <div
@@ -818,7 +746,7 @@ export default function MentorHeader({
                             {/* 헤더 */}
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                                 <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#18181b' }}>
-                                    {exportMode === 'raw' ? '📄 원고 다운로드' : '📋 AI 요약 리포트'}
+                                    📄 원고 다운로드
                                 </h3>
                                 <button
                                     onClick={() => setShowExportModal(false)}
@@ -843,7 +771,7 @@ export default function MentorHeader({
                                             to { opacity: 1; }
                                         }
                                     `}</style>
-                                    <EbookLoadingSteps isRaw={exportMode === 'raw'} />
+                                    <EbookLoadingSteps />
                                 </div>
                             )}
 
@@ -920,108 +848,6 @@ export default function MentorHeader({
                                 </div>
                             )}
 
-                            {/* 리포트 내용 */}
-                            {exportData && (
-                                <div>
-                                    {/* 메타 */}
-                                    <div style={{
-                                        background: '#f8fafc', borderRadius: 12, padding: '14px 16px', marginBottom: 16,
-                                        border: '1px solid #f1f5f9',
-                                    }}>
-                                        <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>
-                                            {exportData.report.title}
-                                        </div>
-                                        <div style={{ fontSize: 12, color: '#94a3b8' }}>
-                                            {exportData.meta.mentorName} 멘토 · {exportData.meta.createdDate} · {exportData.meta.messageCount}개 메시지
-                                        </div>
-                                    </div>
-
-                                    {/* 요약 */}
-                                    <div style={{ marginBottom: 16 }}>
-                                        <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>📝 요약</div>
-                                        <p style={{ fontSize: 14, color: '#334155', lineHeight: 1.7, margin: 0 }}>{exportData.report.summary}</p>
-                                    </div>
-
-                                    {/* 핵심 결정 */}
-                                    {exportData.report.keyDecisions?.length > 0 && (
-                                        <div style={{ marginBottom: 16 }}>
-                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>📌 핵심 결정 사항</div>
-                                            {exportData.report.keyDecisions.map((d: string, i: number) => (
-                                                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 4, fontSize: 14, color: '#334155' }}>
-                                                    <span>✅</span><span>{d}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* 인사이트 */}
-                                    {exportData.report.insights?.length > 0 && (
-                                        <div style={{ marginBottom: 16 }}>
-                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>💡 주요 인사이트</div>
-                                            {exportData.report.insights.map((ins: string, i: number) => (
-                                                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 4, fontSize: 14, color: '#334155' }}>
-                                                    <span>•</span><span>{ins}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* 할 일 */}
-                                    {exportData.report.actionItems?.length > 0 && (
-                                        <div style={{ marginBottom: 16 }}>
-                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>✅ 다음 할 일</div>
-                                            {exportData.report.actionItems.map((a: string, i: number) => (
-                                                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 4, fontSize: 14, color: '#334155' }}>
-                                                    <span>☐</span><span>{a}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* 목차 */}
-                                    {exportData.report.outline && (
-                                        <div style={{ marginBottom: 16 }}>
-                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>📚 확정된 구조</div>
-                                            <div style={{
-                                                background: '#f8fafc', borderRadius: 10, padding: '12px 16px',
-                                                fontSize: 13, lineHeight: 1.8, color: '#334155',
-                                                whiteSpace: 'pre-wrap', border: '1px solid #f1f5f9',
-                                            }}>
-                                                {exportData.report.outline}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* 액션 버튼 */}
-                                    <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-                                        <button
-                                            onClick={handleDownloadPdf}
-                                            style={{
-                                                flex: 2, padding: '12px 16px', borderRadius: 12,
-                                                border: 'none',
-                                                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                                                fontSize: 14, fontWeight: 600, color: '#fff',
-                                                cursor: 'pointer', display: 'flex', alignItems: 'center',
-                                                justifyContent: 'center', gap: 6,
-                                            }}
-                                        >
-                                            📄 PDF 다운로드
-                                        </button>
-                                        <button
-                                            onClick={handleCopyReport}
-                                            style={{
-                                                flex: 1, padding: '12px 16px', borderRadius: 12,
-                                                border: '1px solid #e5e7eb', background: '#fff',
-                                                fontSize: 14, fontWeight: 600, color: '#374151',
-                                                cursor: 'pointer', display: 'flex', alignItems: 'center',
-                                                justifyContent: 'center', gap: 6,
-                                            }}
-                                        >
-                                            📋 복사하기
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </>
                 )}

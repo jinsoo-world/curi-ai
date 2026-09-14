@@ -33,6 +33,7 @@ export async function GET(
                 id: m.id,
                 role: m.role,
                 content: m.content,
+                imageUrl: m.image_url || undefined,
                 createdAt: m.created_at,
             })),
         })

@@ -430,8 +430,9 @@ export default function ChatPage() {
     }, [mentorId])
 
     // ───── 메시지 전송 ─────
-    const sendMessage = useCallback(async (content: string, inputMethod: 'text' | 'stt' = 'text') => {
-        if (!content.trim() || isStreaming) return
+    const sendMessage = useCallback(async (content: string, inputMethod: 'text' | 'stt' = 'text', imageUrl?: string) => {
+        // 사진만 보내는 경우도 있다
+        if ((!content.trim() && !imageUrl) || isStreaming) return
 
         // 🔒 비회원 턴 제한 체크 (전체 멘토 합산)
         if (!isLoggedIn) {
@@ -451,6 +452,7 @@ export default function ChatPage() {
             id: `user-${now}`,
             role: 'user',
             content: content.trim(),
+            imageUrl,
             createdAt: new Date().toISOString(),
         }
 
@@ -484,6 +486,7 @@ export default function ChatPage() {
                     mentorId,
                     sessionId,
                     inputMethod,
+                    imageUrl,
                     visitorId: isGuest ? getVisitorId() : undefined,
                     ...(isGuest ? { guestMessageCount: getGuestMessageCount() } : {}),
                 }),
@@ -581,10 +584,13 @@ export default function ChatPage() {
         setTimeout(() => sendMessage(decoded), 500)
     }, [mentor, sessionId, searchParams, mentorId, sendMessage])
 
-    // ───── 리포트 안내: AI 답변 1500자 넘으면 인챗 안내 카드 1회 삽입 ─────
+    // ───── 원고 안내: AI 답변 1500자 넘으면 인챗 안내 카드 1회 삽입 ─────
+    // 버튼이 실제로 보이는 조건(전자책 봇 + 멘토 설정 ON)과 똑같이 건다.
+    // 안 그러면 버튼이 없는 화면에서 "상단 버튼을 눌러보세요"만 떠서 고객이 헤맨다.
     useEffect(() => {
         if (reportShownRef.current) return
         if (!isLoggedIn || !sessionId || sessionId.startsWith('guest-')) return
+        if (!isEbookBot || !mentor?.pdf_export_enabled) return
         if (aiContentLength >= 1500 && !isStreaming) {
             reportShownRef.current = true
             setIsReportNew(true)
@@ -600,7 +606,7 @@ export default function ChatPage() {
             // 10초 후 NEW 뱃지 자동 해제
             setTimeout(() => setIsReportNew(false), 10000)
         }
-    }, [aiContentLength, isStreaming, isLoggedIn, sessionId])
+    }, [aiContentLength, isStreaming, isLoggedIn, sessionId, isEbookBot, mentor?.pdf_export_enabled])
 
     // ───── 마수동 2차 터치: 대화 3회 후 미동의 유저에게 팝업 ─────
     useEffect(() => {
@@ -768,9 +774,8 @@ export default function ChatPage() {
                     sessionId={sessionId}
                     aiContentLength={aiContentLength}
                     isReportNew={isReportNew}
-                    pdfExportEnabled={mentor.pdf_export_enabled || false}
-                    exportLabel={isEbookBot ? '전자책 원고 보기' : '리포트'}
-                    exportMode={isEbookBot ? 'raw' : 'report'}
+                    pdfExportEnabled={isEbookBot && (mentor.pdf_export_enabled || false)}
+                    exportLabel="전자책 원고 보기"
                     onEditRequest={isEbookBot ? (prefill: string) => setInput(prefill) : undefined}
                 />
 
@@ -997,7 +1002,7 @@ export default function ChatPage() {
                             autoTTS={autoTTS}
                             systemPrompt={mentor?.system_prompt}
                             voiceId={mentor.voice_id}
-                            exportLabel={isEbookBot ? '전자책 원고보기' : '리포트'}
+                            exportLabel="전자책 원고보기"
                         />
 
 
@@ -1059,6 +1064,8 @@ export default function ChatPage() {
                     onChange={setInput}
                     onSubmit={sendMessage}
                     isStreaming={isStreaming}
+                    isLoggedIn={isLoggedIn}
+                    onNeedLogin={() => setShowLoginGate(true)}
                 />
 
 

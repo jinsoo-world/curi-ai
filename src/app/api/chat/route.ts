@@ -16,7 +16,7 @@ export async function POST(req: Request) {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
 
-        const { messages, mentorId, sessionId, guestMessageCount, inputMethod, visitorId } = await req.json()
+        const { messages, mentorId, sessionId, guestMessageCount, inputMethod, visitorId, imageUrl } = await req.json()
         const lastUserMessage = messages[messages.length - 1]?.content || ''
 
         // 📊 분석 데이터 수집 (헤더에서 추출)
@@ -215,8 +215,29 @@ export async function POST(req: Request) {
             // RAG 검색 실패는 대화에 영향 없음 — 지식 없이 일반 대화 진행
         }
 
+        // 📷 사진 첨부 — 우리 저장소에 올려둔 사진을 읽어 Gemini 에 같이 넘긴다.
+        // Gemini 는 주소만 줘서는 사진을 못 본다. 내용을 직접 실어 보내야 한다.
+        let attachedImage: { mimeType: string; data: string } | null = null
+        if (typeof imageUrl === 'string' && imageUrl.startsWith(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://')) {
+            try {
+                const imgRes = await fetch(imageUrl)
+                if (imgRes.ok) {
+                    const buf = Buffer.from(await imgRes.arrayBuffer())
+                    if (buf.byteLength <= 5 * 1024 * 1024) {
+                        attachedImage = {
+                            mimeType: imgRes.headers.get('content-type') || 'image/jpeg',
+                            data: buf.toString('base64'),
+                        }
+                    }
+                }
+            } catch (imgErr) {
+                // 사진을 못 읽어도 대화는 글만으로 이어간다
+                console.error('[Chat Image] fetch failed:', imgErr instanceof Error ? imgErr.message : imgErr)
+            }
+        }
+
         // Gemini 대화 히스토리 구성 (domains/mentor)
-        const geminiMessages = buildGeminiHistory(mentor.greeting_message, messages)
+        const geminiMessages = buildGeminiHistory(mentor.greeting_message, messages, attachedImage)
 
         // 스트리밍 응답 (domains/chat)
         const response = await generateChatStream(systemPrompt, geminiMessages)
@@ -279,6 +300,9 @@ export async function POST(req: Request) {
                                 session_id: sessionId,
                                 role: 'user',
                                 content: lastUserMessage,
+                                // 사진을 보낸 경우에만 칸을 채운다.
+                                // 항상 넣으면 image_url 칸이 아직 없는 DB 에서 대화 저장이 통째로 실패한다.
+                                ...(typeof imageUrl === 'string' && imageUrl ? { image_url: imageUrl } : {}),
                                 input_method: inputMethod || 'text',
                                 ip_address: analytics.ip_address,
                                 device_type: analytics.device_type,

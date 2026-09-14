@@ -12,7 +12,8 @@ export interface ChatRequest {
 /** Gemini에 전달할 메시지 형식 */
 export interface GeminiMessage {
     role: 'user' | 'model'
-    parts: { text: string }[]
+    /** 글 한 조각, 또는 사용자가 올린 사진 한 장 */
+    parts: ({ text: string } | { inlineData: { mimeType: string; data: string } })[]
 }
 
 /** 스트리밍 SSE 이벤트 데이터 */

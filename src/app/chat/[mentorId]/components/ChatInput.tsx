@@ -8,8 +8,12 @@ const MAX_INPUT_LENGTH = 1000
 interface ChatInputProps {
     value: string
     onChange: (value: string) => void
-    onSubmit: (content: string, inputMethod?: 'text' | 'stt') => void
+    onSubmit: (content: string, inputMethod?: 'text' | 'stt', imageUrl?: string) => void
     isStreaming: boolean
+    /** 로그인 여부 (사진 첨부는 회원만) */
+    isLoggedIn?: boolean
+    /** 비회원이 사진을 누를 때 로그인 안내를 띄운다 */
+    onNeedLogin?: () => void
 }
 
 // Web Speech API 타입
@@ -31,6 +35,13 @@ const StopIcon = () => (
         <rect x="4" y="4" width="10" height="10" rx="2" />
     </svg>
 )
+const PhotoIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2.5" y="3.5" width="15" height="13" rx="2.5" />
+        <circle cx="7" cy="8" r="1.5" />
+        <path d="M3 14l4-4 3.5 3.5L13 11l4 4" />
+    </svg>
+)
 const SendIcon = () => (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M9 14V4" />
@@ -43,14 +54,21 @@ export default function ChatInput({
     onChange,
     onSubmit,
     isStreaming,
+    isLoggedIn = false,
+    onNeedLogin,
 }: ChatInputProps) {
     const inputRef = useRef<HTMLTextAreaElement>(null)
     const recognitionRef = useRef<any>(null)
+    const fileRef = useRef<HTMLInputElement>(null)
 
     const [isListening, setIsListening] = useState(false)
     const [sttSupported, setSttSupported] = useState(false)
     const [sttError, setSttError] = useState<string | null>(null)
     const [isFocused, setIsFocused] = useState(false)
+    /** 올리기가 끝나 대화에 붙일 준비가 된 사진 주소 */
+    const [imageUrl, setImageUrl] = useState<string | null>(null)
+    const [imageUploading, setImageUploading] = useState(false)
+    const [imageError, setImageError] = useState<string | null>(null)
     const interimRef = useRef('')
     /** STT로 입력이 들어왔는지 추적 */
     const usedSttRef = useRef(false)
@@ -139,7 +157,49 @@ export default function ChatInput({
     }, [sttError])
 
     useEffect(() => {
+        if (!imageError) return
+        const timer = setTimeout(() => setImageError(null), 4000)
+        return () => clearTimeout(timer)
+    }, [imageError])
+
+    useEffect(() => {
         return () => { recognitionRef.current?.stop() }
+    }, [])
+
+    /** 사진 버튼 — 회원이 아니면 로그인 안내로 넘긴다 */
+    const handlePhotoClick = useCallback(() => {
+        if (!isLoggedIn) {
+            onNeedLogin?.()
+            return
+        }
+        fileRef.current?.click()
+    }, [isLoggedIn, onNeedLogin])
+
+    /** 고른 사진을 바로 올리고 주소를 받아둔다 (보내기는 따로) */
+    const handleFilePick = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        e.target.value = '' // 같은 사진을 다시 골라도 반응하게
+        if (!file) return
+
+        setImageError(null)
+        setImageUploading(true)
+        try {
+            const form = new FormData()
+            form.append('file', file)
+            const res = await fetch('/api/chat/upload-image', { method: 'POST', body: form })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || '사진을 올리지 못했어요.')
+            setImageUrl(data.url)
+        } catch (err) {
+            setImageError(err instanceof Error ? err.message : '사진을 올리지 못했어요.')
+        } finally {
+            setImageUploading(false)
+        }
+    }, [])
+
+    const clearImage = useCallback(() => {
+        setImageUrl(null)
+        setImageError(null)
     }, [])
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -153,33 +213,36 @@ export default function ChatInput({
 
     const handleSubmit = useCallback((e: React.FormEvent) => {
         e.preventDefault()
-        if (!value.trim() || isStreaming) return
+        // 사진만 보내는 것도 허용한다
+        if ((!value.trim() && !imageUrl) || isStreaming || imageUploading) return
         const method = usedSttRef.current ? 'stt' as const : 'text' as const
         if (isListening) {
             recognitionRef.current?.stop()
             setIsListening(false)
         }
-        onSubmit(value, method)
+        onSubmit(value, method, imageUrl || undefined)
         usedSttRef.current = false
+        setImageUrl(null)
         if (inputRef.current) inputRef.current.style.height = 'auto'
-    }, [value, isStreaming, isListening, onSubmit])
+    }, [value, isStreaming, isListening, onSubmit, imageUrl, imageUploading])
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
-            if (!value.trim() || isStreaming) return
+            if ((!value.trim() && !imageUrl) || isStreaming || imageUploading) return
             const method = usedSttRef.current ? 'stt' as const : 'text' as const
             if (isListening) {
                 recognitionRef.current?.stop()
                 setIsListening(false)
             }
-            onSubmit(value, method)
+            onSubmit(value, method, imageUrl || undefined)
             usedSttRef.current = false
+            setImageUrl(null)
             if (inputRef.current) inputRef.current.style.height = 'auto'
         }
-    }, [value, isStreaming, isListening, onSubmit])
+    }, [value, isStreaming, isListening, onSubmit, imageUrl, imageUploading])
 
-    const canSend = value.trim() && !isStreaming
+    const canSend = (value.trim() || imageUrl) && !isStreaming && !imageUploading
     const charCount = value.length
     const isNearLimit = charCount > MAX_INPUT_LENGTH * 0.9
 
@@ -210,6 +273,25 @@ export default function ChatInput({
                 </div>
             )}
 
+            {/* 사진 오류 토스트 */}
+            {imageError && (
+                <div style={{
+                    background: '#fef2f2',
+                    color: '#dc2626',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    padding: '8px 16px',
+                    borderRadius: 12,
+                    margin: '0 16px 8px',
+                    maxWidth: 720,
+                    width: 'calc(100% - 32px)',
+                    textAlign: 'center',
+                    animation: 'msgFadeIn 0.2s ease',
+                }}>
+                    🖼 {imageError}
+                </div>
+            )}
+
             <form
                 onSubmit={handleSubmit}
                 style={{
@@ -234,6 +316,43 @@ export default function ChatInput({
                     flexDirection: 'column',
                     gap: 8,
                 }}>
+                    {/* 고른 사진 미리보기 */}
+                    {(imageUrl || imageUploading) && (
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '6px 8px 2px',
+                        }}>
+                            <div style={{
+                                position: 'relative',
+                                width: 64, height: 64,
+                                borderRadius: 12,
+                                overflow: 'hidden',
+                                background: '#f1f5f9',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                flexShrink: 0,
+                            }}>
+                                {imageUploading ? (
+                                    <span style={{ fontSize: 11, color: '#64748b' }}>올리는 중</span>
+                                ) : (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={imageUrl!} alt="보낼 사진" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                )}
+                            </div>
+                            {!imageUploading && (
+                                <button
+                                    type="button"
+                                    onClick={clearImage}
+                                    aria-label="사진 빼기"
+                                    style={{
+                                        background: '#f1f5f9', border: 'none', borderRadius: 10,
+                                        padding: '6px 12px', fontSize: 13, color: '#475569',
+                                        cursor: 'pointer', fontWeight: 500,
+                                    }}
+                                >사진 빼기</button>
+                            )}
+                        </div>
+                    )}
+
                     {/* 텍스트 입력 */}
                     <textarea
                         ref={inputRef}
@@ -302,6 +421,41 @@ export default function ChatInput({
                                 녹음 중
                             </span>
                         )}
+
+                        {/* 사진 첨부 버튼 */}
+                        <input
+                            ref={fileRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                            onChange={handleFilePick}
+                            style={{ display: 'none' }}
+                            aria-hidden="true"
+                            tabIndex={-1}
+                        />
+                        <button
+                            type="button"
+                            onClick={handlePhotoClick}
+                            disabled={isStreaming || imageUploading}
+                            aria-label="사진 첨부"
+                            title="사진 보내기"
+                            style={{
+                                width: 48,
+                                height: 48,
+                                borderRadius: '50%',
+                                background: '#EDF7F1',
+                                border: 'none',
+                                color: 'var(--진초록)',
+                                cursor: (isStreaming || imageUploading) ? 'default' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s',
+                                flexShrink: 0,
+                                opacity: (isStreaming || imageUploading) ? 0.4 : 1,
+                            }}
+                        >
+                            <PhotoIcon />
+                        </button>
 
                         {/* 마이크 버튼 */}
                         {sttSupported && (

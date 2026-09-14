@@ -273,20 +273,42 @@ ${lines.join('\n')}
     return parts.join('\n')
 }
 
+/** 사용자가 방금 올린 사진 (Gemini 가 바로 읽을 수 있는 형태) */
+export interface AttachedImage {
+    mimeType: string
+    /** base64 로 바꾼 사진 내용 */
+    data: string
+}
+
 /**
  * Gemini 대화 히스토리 형식으로 변환
  * (시스템 설정 + 인사말 + 유저 대화)
+ *
+ * 사진은 **마지막 사용자 메시지에만** 붙인다.
+ * 지난 대화의 사진까지 매번 다시 실어 보내면 응답이 느려지고 요금도 그만큼 더 나간다.
  */
 export function buildGeminiHistory(
     greetingMessage: string,
     messages: { role: string; content: string }[],
+    attachedImage?: AttachedImage | null,
 ) {
+    const lastIndex = messages.length - 1
+    const attachToLast = !!attachedImage && messages[lastIndex]?.role === 'user'
+
     return [
         { role: 'user' as const, parts: [{ text: '(시스템 설정 완료. 첫 인사를 기다리고 있습니다.)' }] },
         { role: 'model' as const, parts: [{ text: greetingMessage }] },
-        ...messages.map(msg => ({
-            role: msg.role === 'user' ? 'user' as const : 'model' as const,
-            parts: [{ text: msg.content }],
-        })),
+        ...messages.map((msg, i) => {
+            const role = msg.role === 'user' ? 'user' as const : 'model' as const
+            if (attachToLast && i === lastIndex) {
+                const parts: ({ inlineData: AttachedImage } | { text: string })[] = [
+                    { inlineData: attachedImage! },
+                ]
+                // 사진만 보내는 경우도 있다. 빈 글자를 넣으면 Gemini 가 거절한다.
+                if (msg.content) parts.push({ text: msg.content })
+                return { role, parts }
+            }
+            return { role, parts: [{ text: msg.content }] }
+        }),
     ]
 }
