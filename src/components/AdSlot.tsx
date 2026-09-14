@@ -35,7 +35,7 @@ export default function AdSlot({ slot, className }: AdSlotProps) {
     }, [])
 
     return (
-        <div className={className} style={{ width: '100%', textAlign: 'center' }}>
+        <div className={`curi-ad-slot ${className ?? ''}`} style={{ width: '100%', textAlign: 'center' }}>
             {/* "광고" 라벨 — 5060 고객이 우리 콘텐츠와 헷갈리지 않게. 작고 연한 회색으로 눈에 안 띄게 */}
             <div style={{ fontSize: 11, color: '#a1a1aa', marginBottom: 4, textAlign: 'left' }}>광고</div>
             <ins
@@ -47,11 +47,15 @@ export default function AdSlot({ slot, className }: AdSlotProps) {
                 data-full-width-responsive="true"
             />
             {/*
-              심사 대기 중이라 광고가 안 뜰 수 있다. 그럴 때 구글이 ins 태그에
-              data-ad-status="unfilled" 를 스스로 붙이는데, 이 규칙이 그 태그의 자리를 0으로 접어
-              화면에 빈 사각형이 흉하게 남지 않게 한다(구글 공식 권장 방식).
+              심사 대기 중이거나 채울 광고가 없으면 구글이 ins 태그에 data-ad-status="unfilled" 를 붙인다.
+              ⚠️ 이때 ins 만 접으면 "광고" 라벨 글자만 덩그러니 남는다(2026-09-15에 실제로 그럴 뻔했다).
+              그래서 ins 가 아니라 **라벨을 포함한 상자 전체**를 접는다.
             */}
             <style>{`
+                .curi-ad-slot:has(ins.adsbygoogle[data-ad-status="unfilled"]) {
+                    display: none !important;
+                }
+                /* :has() 를 모르는 낡은 브라우저 대비 — 최소한 빈 사각형은 안 남게 */
                 ins.adsbygoogle[data-ad-status="unfilled"] {
                     display: none !important;
                 }
