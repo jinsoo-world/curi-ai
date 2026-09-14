@@ -16,6 +16,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import CloverIcon from '@/components/ui/CloverIcon'
+import BottomTabs from '@/components/BottomTabs'
 
 // 대표 확정 0914 = 「만들기ㅣ대화하기ㅣ내 AI 로 해」 「내 대화는 없애 굳이 필요 없을듯」
 const 메뉴 = [
@@ -53,12 +54,10 @@ export default function AppSidebar() {
 
     useEffect(() => { void 불러오기() }, [불러오기])
 
-    // 화면을 옮기면 펼친 메뉴를 닫는다
-    useEffect(() => { set열림(false) }, [pathname])
-
     const 지금 = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
     return (
+        <>
         <header className="app-top">
             <div className="app-top-inner">
                 {/* 왼쪽 — 이름표 */}
@@ -117,7 +116,7 @@ export default function AppSidebar() {
                         className="app-top-scrim"
                         onClick={() => set열림(false)}
                     />
-                    <div className="app-top-sheet" role="menu">
+                    <div className="app-top-sheet" role="menu" onClick={() => set열림(false)}>
                         <div className="app-top-sheet-head">
                             <span className="app-top-sheet-name">{이름 ?? '내 계정'}</span>
                             <Link href="/charge" className="app-top-sheet-credit">
@@ -132,6 +131,28 @@ export default function AppSidebar() {
                             ))}
                             <div className="app-top-sheet-line" />
                         </div>
+
+                        {추천코드 && (
+                            <button
+                                type="button"
+                                className="app-top-sheet-item"
+                                onClick={async () => {
+                                    try {
+                                        await navigator.clipboard.writeText(`${window.location.origin}/mentors?ref=${추천코드}`)
+                                        set복사됨(true)
+                                        setTimeout(() => set복사됨(false), 2000)
+                                    } catch {
+                                        // 복사가 막힌 브라우저면 친구초대 화면에서 길게 눌러 복사한다
+                                    }
+                                }}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}
+                            >
+                                <span>내 추천코드 {추천코드}</span>
+                                <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--진초록)' }}>
+                                    {복사됨 ? '복사됨' : '복사'}
+                                </span>
+                            </button>
+                        )}
 
                         <Link href="/charge" className="app-top-sheet-item">클로버 충전</Link>
                         <Link href="/invite" className="app-top-sheet-item">친구초대</Link>
@@ -153,5 +174,12 @@ export default function AppSidebar() {
             )}
 
         </header>
+        <BottomTabs />
+        </>
     )
 }
+
+/**
+ * 위 띠와 아래 탭바를 같이 내보낸다.
+ * 화면 13개가 이미 AppSidebar 를 부르고 있어서, 여기 붙이면 한 번에 다 적용된다.
+ */

@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* 글꼴 — 프리텐다드 (대표 확인 0915 = 비글루가 쓰는 글꼴) */
+html, body, button, input, textarea, select {
+  font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+}
+
 /* ============================================
    큐리 AI — 디자인 토대 (2026-09-04 전면 개편)
 
@@ -729,4 +735,41 @@ button, a[role="button"] {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
   }
+}
+
+/* ─── 아래 탭바 (대표 지시 0915 「탭바 추가해」 · 비글루 참고) ───
+   휴대폰에서만 보인다. 넓은 화면은 위 띠가 이미 다 보여준다. */
+.bottom-tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 55;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: saturate(180%) blur(12px);
+  border-top: 1px solid var(--선);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.bottom-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 62px;
+  text-decoration: none;
+  color: #9aa39d;
+  font-size: 12px;
+  font-weight: 700;
+}
+.bottom-tab.on { color: var(--먹); font-weight: 800; }
+
+/* 탭바에 가리지 않게 아래 여백 */
+@media (max-width: 899px) {
+  body { padding-bottom: 62px; }
+}
+@media (min-width: 900px) {
+  .bottom-tabs { display: none; }
 }

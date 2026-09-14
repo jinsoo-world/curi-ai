@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next'
-import { Noto_Sans_KR } from 'next/font/google'
 import Script from 'next/script'
 import GoogleAnalytics from '@/components/GoogleAnalytics'
 import { Suspense } from 'react'
@@ -9,13 +8,6 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import dynamic from 'next/dynamic'
 const CloverHunt = dynamic(() => import('@/components/CloverHunt'), { loading: () => null })
 import './globals.css'
-
-const notoSansKr = Noto_Sans_KR({
-  variable: '--font-noto-sans-kr',
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '700'],
-  display: 'swap',
-})
 
 const SITE_URL = 'https://www.curi-ai.com'
 
@@ -187,8 +179,17 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ko" className={notoSansKr.variable}>
+    <html lang="ko">
       <head>
+        {/* 글꼴 = 프리텐다드. 비글루가 쓰는 그 글꼴이다(대표 확인 0915).
+            한글 자간이 고르고 굵기가 9단계라 중장년용으로 크게 키워도 뭉개지지 않는다.
+            구글 폰트(Noto Sans KR)는 굵게 했을 때 획이 붙어 보였다. */}
+        <link
+          rel="stylesheet"
+          as="style"
+          crossOrigin="anonymous"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+        />
         <link
           rel="preload"
           as="style"
