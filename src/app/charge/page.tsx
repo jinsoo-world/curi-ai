@@ -104,8 +104,9 @@ export default function ChargePage() {
                             onClick={() => setSelected(p.id)}
                             style={{
                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                padding: '18px 20px',
+                                padding: '20px 20px',
                                 borderRadius: 16,
+                                gap: 12,
                                 border: selected === p.id ? '2px solid #22c55e' : '1.5px solid #e4e4e7',
                                 background: selected === p.id ? '#f0fdf4' : '#fff',
                                 cursor: 'pointer',
@@ -137,8 +138,17 @@ export default function ChargePage() {
                             </div>
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
                                 {discountPercent(p) > 0 && (
-                                    <div style={{ fontSize: 12.5, color: '#a1a1aa', textDecoration: 'line-through' }}>
-                                        {(p.clovers * CLOVER_UNIT_WON).toLocaleString()}원
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 7, marginBottom: 2 }}>
+                                        <span style={{
+                                            background: '#22c55e', color: '#fff',
+                                            fontSize: 12, fontWeight: 800,
+                                            padding: '3px 8px', borderRadius: 7,
+                                        }}>
+                                            {discountPercent(p)}%
+                                        </span>
+                                        <span style={{ fontSize: 13, color: '#a1a1aa', textDecoration: 'line-through' }}>
+                                            {(p.clovers * CLOVER_UNIT_WON).toLocaleString()}원
+                                        </span>
                                     </div>
                                 )}
                                 <div style={{ fontSize: 21, fontWeight: 900, color: '#18181b', letterSpacing: '-0.02em' }}>

@@ -740,13 +740,3 @@ button, a[role="button"] {
     gap: 16px;
   }
 }
-
-/* ─── 아래 탭바 ───
-   모양은 컴포넌트 안에 인라인으로 적었다(2026-09-15 배포본에서 이 파일의 규칙이
-   실리지 않아 탭바가 세로로 쌓였다). 여기서는 숨기고 여백 주는 것만 한다. */
-@media (max-width: 899px) {
-  body { padding-bottom: 64px; }
-}
-@media (min-width: 900px) {
-  .bottom-tabs { display: none !important; }
-}
