@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import CreditClaimModal from '@/components/CreditClaimModal'
+import CloverIcon from '@/components/ui/CloverIcon'
 
 export function MembershipBanner() {
     const [visible, setVisible] = useState(true)
@@ -35,7 +36,7 @@ export function MembershipBanner() {
                         cursor: 'pointer',
                     }}
                 >
-                    <span style={{ fontSize: 18 }}>🎁</span>
+                    <CloverIcon size={18} />
                     <span>무료 체험권 받기</span>
                 </button>
 

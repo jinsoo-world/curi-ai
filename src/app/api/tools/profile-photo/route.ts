@@ -182,12 +182,12 @@ export async function POST(req: NextRequest) {
                     description: '프로필 사진 만들기 실패 되돌림',
                 })
             }
-            const msg = genErr instanceof Error ? genErr.message : '사진을 만들지 못했어요.'
+            const msg = genErr instanceof Error ? genErr.message : '사진을 만들지 못했어요. 얼굴이 크고 밝게 나온 사진으로 다시 해보세요.'
             console.error('[ProfilePhoto]', msg)
             return NextResponse.json({ error: msg + (손님 ? '' : ' 클로버는 돌려드렸어요.') }, { status: 502 })
         }
     } catch (error) {
-        const msg = error instanceof Error ? error.message : '사진을 만들지 못했어요.'
+        const msg = error instanceof Error ? error.message : '사진을 만들지 못했어요. 얼굴이 크고 밝게 나온 사진으로 다시 해보세요.'
         console.error('[ProfilePhoto] Error:', msg)
         return NextResponse.json({ error: msg }, { status: 500 })
     }

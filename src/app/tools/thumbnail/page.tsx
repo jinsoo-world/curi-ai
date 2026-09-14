@@ -10,6 +10,7 @@ import ThumbnailCanvas, { type 글자값 } from '@/components/studio/ThumbnailCa
 import AppSidebar from '@/components/AppSidebar'
 import ToolHero from '@/components/studio/ToolHero'
 import KeepNotice from '@/components/studio/KeepNotice'
+import ShareTool from '@/components/studio/ShareTool'
 import AdSlot from '@/components/AdSlot'
 
 export default function ThumbnailPage() {
@@ -65,7 +66,7 @@ export default function ThumbnailPage() {
 
                 <div>
                     <div style={{ marginBottom: 22 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>1. 어디에 쓸까요</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>1. 어디에 쓸까요</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 8 }}>
                             {THUMB_PLACES.map(p => (
                                 <button key={p.id} onClick={() => setPlaceId(p.id)} style={{
@@ -81,7 +82,7 @@ export default function ThumbnailPage() {
                     </div>
 
                     <div style={{ marginBottom: 22 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>2. 제목</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>2. 제목</div>
                         <input
                             value={제목}
                             onChange={(e) => set제목(e.target.value.slice(0, MAX_TITLE))}
@@ -97,7 +98,7 @@ export default function ThumbnailPage() {
                     </div>
 
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>3. 느낌</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>3. 느낌</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 8 }}>
                             {THUMB_LOOKS.map(l => (
                                 <button key={l.id} onClick={() => setLookId(l.id)} style={{
@@ -115,12 +116,12 @@ export default function ThumbnailPage() {
 
                 <div>
                     {errorMsg && (
-                        <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 14, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
+                        <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 15, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
                             {errorMsg}
                             {needCharge && (
                                 <button onClick={() => router.push('/charge')} style={{
                                     display: 'block', marginTop: 10, background: '#dc2626', color: '#fff', border: 'none',
-                                    borderRadius: 10, padding: '9px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                                    borderRadius: 10, padding: '9px 16px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
                                 }}>충전하러 가기</button>
                             )}
                         </div>
@@ -153,7 +154,7 @@ export default function ThumbnailPage() {
                             {미리보기 ? (
                                 <div style={{ marginTop: 12, background: '#fff', border: '1px solid #e4e4e7', borderRadius: 14, padding: '18px 18px 16px', textAlign: 'center' }}>
                                     <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>선명한 그림은 회원만 받을 수 있어요</div>
-                                    <p style={{ fontSize: 13.5, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6 }}>
+                                    <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6 }}>
                                         지금 보이는 건 미리보기라 흐릿해요. 로그인하면 원본을 바로 내려받습니다.
                                     </p>
                                     <button onClick={() => router.push('/login')} style={{
@@ -169,6 +170,7 @@ export default function ThumbnailPage() {
                                     textAlign: 'center', textDecoration: 'none',
                                 }}>썸네일 내려받기</a>
                             <KeepNotice />
+                                <ShareTool path="/tools/thumbnail" title="콘텐츠 썸네일 만들기" description="유튜브·강의 소개에 거는 썸네일을 만듭니다." image="/og/thumbnail.png" />
                                 </>
                             )}
                         </div>

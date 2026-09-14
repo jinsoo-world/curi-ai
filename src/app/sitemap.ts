@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { TOOLS } from '@/domains/studio/tools'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 3600 // 1시간마다 재생성
@@ -35,8 +36,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         },
         // 만드는 도구 — 대표 지시 0915 「GEO, SEO」
         // 검색으로 사람이 들어오는 문은 「무엇을 해주는 곳인가」가 적힌 화면이다.
-        ...['id-photo', 'teacher-photo', 'actor-photo', 'enhance', 'thumbnail'].map((t) => ({
-            url: `${baseUrl}/tools/${t}`,
+        // 손으로 적지 않는다. 서비스 목록 표(tools.ts)가 유일한 정본이다.
+        ...TOOLS.filter((t) => t.href.startsWith('/tools/')).map((t) => ({
+            url: `${baseUrl}${t.href}`,
             lastModified: new Date(),
             changeFrequency: 'weekly' as const,
             priority: 0.9,

@@ -13,6 +13,7 @@ import AppSidebar from '@/components/AppSidebar'
 import ToolHero from '@/components/studio/ToolHero'
 import Image from 'next/image'
 import KeepNotice from '@/components/studio/KeepNotice'
+import ShareTool from '@/components/studio/ShareTool'
 import AdSlot from '@/components/AdSlot'
 
 export default function EnhancePage() {
@@ -60,7 +61,7 @@ export default function EnhancePage() {
 
                 <div>
                     <div style={{ marginBottom: 22 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>1. 고칠 사진 올리기</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>1. 고칠 사진 올리기</div>
                         <PhotoDrop
                             preview={preview}
                             onPicked={(dataUrl, mt) => {
@@ -83,7 +84,7 @@ export default function EnhancePage() {
                     )}
 
                     <div style={{ opacity: base64 ? 1 : 0.4, pointerEvents: base64 ? 'auto' : 'none', marginBottom: 24 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>2. 어떻게 고칠까요</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>2. 어떻게 고칠까요</div>
                         <div style={{ display: 'grid', gap: 10 }}>
                             {ENHANCE_MODES.map(m => (
                                 <button key={m.id} onClick={() => setModeId(m.id)} style={{
@@ -100,7 +101,7 @@ export default function EnhancePage() {
                                     )}
                                     <span style={{ minWidth: 0 }}>
                                         <span style={{ display: 'block', fontSize: 15.5, fontWeight: 800, color: '#18181b' }}>{m.label}</span>
-                                        <span style={{ display: 'block', fontSize: 13, color: '#71717a', marginTop: 2, wordBreak: 'keep-all' }}>{m.desc}</span>
+                                        <span style={{ display: 'block', fontSize: 15, color: '#71717a', marginTop: 2, wordBreak: 'keep-all' }}>{m.desc}</span>
                                     </span>
                                 </button>
                             ))}
@@ -110,12 +111,12 @@ export default function EnhancePage() {
 
                 <div>
                     {errorMsg && (
-                        <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 14, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
+                        <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 15, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
                             {errorMsg}
                             {needCharge && (
                                 <button onClick={() => router.push('/charge')} style={{
                                     display: 'block', marginTop: 10, background: '#dc2626', color: '#fff', border: 'none',
-                                    borderRadius: 10, padding: '9px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                                    borderRadius: 10, padding: '9px 16px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
                                 }}>충전하러 가기</button>
                             )}
                         </div>
@@ -139,7 +140,7 @@ export default function EnhancePage() {
                     {result && preview && (
                         <div style={{ marginTop: 26 }}>
                             <div style={{ fontSize: 15, fontWeight: 700, color: '#18181b', marginBottom: 4 }}>다 됐어요</div>
-                            <p style={{ fontSize: 13, color: '#71717a', margin: '0 0 12px' }}>
+                            <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 12px' }}>
                                 가운데 손잡이를 좌우로 끌어보세요.
                             </p>
                             <BeforeAfter before={preview} after={result} ratio="1 / 1" />
@@ -147,7 +148,7 @@ export default function EnhancePage() {
                             {미리보기 ? (
                                 <div style={{ marginTop: 12, background: '#fff', border: '1px solid #e4e4e7', borderRadius: 14, padding: '18px 18px 16px', textAlign: 'center' }}>
                                     <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>선명한 사진은 회원만 받을 수 있어요</div>
-                                    <p style={{ fontSize: 13.5, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6 }}>
+                                    <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6 }}>
                                         지금 보이는 건 미리보기라 흐릿해요. 로그인하면 원본을 바로 내려받습니다.
                                     </p>
                                     <button onClick={() => router.push('/login')} style={{
@@ -163,6 +164,7 @@ export default function EnhancePage() {
                                     textAlign: 'center', textDecoration: 'none',
                                 }}>사진 내려받기</a>
                             <KeepNotice />
+                                <ShareTool path="/tools/enhance" title="사진 화질 개선하기" description="흐릿하고 오래된 사진을 또렷하게 되살립니다." image="/og/enhance.png" />
                                 </>
                             )}
                         </div>

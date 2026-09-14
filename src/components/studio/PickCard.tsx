@@ -66,7 +66,7 @@ export function PickCard({
                 )}
             </div>
             <div style={{
-                padding: '9px 10px', fontSize: 14, fontWeight: 700,
+                padding: '9px 10px', fontSize: 15, fontWeight: 700,
                 color: selected ? '#166534' : '#18181b', textAlign: 'center', wordBreak: 'keep-all',
             }}>
                 {option.label}

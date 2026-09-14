@@ -10,7 +10,7 @@ export default function KeepNotice() {
         <p
             style={{
                 margin: '10px 0 0',
-                fontSize: 13.5,
+                fontSize: 15,
                 lineHeight: 1.6,
                 color: '#71717a',
                 textAlign: 'center',

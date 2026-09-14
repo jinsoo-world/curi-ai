@@ -18,6 +18,7 @@ import MakingBar from './MakingBar'
 import CloverIcon from '@/components/ui/CloverIcon'
 import BeforeAfter from './BeforeAfter'
 import KeepNotice from '@/components/studio/KeepNotice'
+import ShareTool from '@/components/studio/ShareTool'
 
 export interface 견본 { src: string; label: string; /** 누르면 이 옵션이 골라진다 */ pick?: () => void }
 
@@ -41,6 +42,7 @@ export default function PhotoToolShell({
     isPreviewResult,
     onLogin,
     downloadName,
+    share,
     compareWithOriginal = false,
 }: {
     title: string
@@ -63,6 +65,8 @@ export default function PhotoToolShell({
     isPreviewResult: boolean
     onLogin: () => void
     downloadName: string
+    /** 공유 버튼에 쓸 것 — 이 도구 주소·제목·카톡 그림 */
+    share: { path: string; title: string; description: string; image: string }
     /** 화질 개선처럼 전후를 견줘야 하는 도구 */
     compareWithOriginal?: boolean
 }) {
@@ -84,7 +88,7 @@ export default function PhotoToolShell({
                 {/* 2. 이 도구가 만드는 것 — 옆으로 흐른다 (대표 지시 0915 「이미지 쑉쑉 지나가게해」) */}
                 {!preview && (
                     <section style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--먹연)', marginBottom: 10 }}>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--먹연)', marginBottom: 10 }}>
                             이런 사진이 나와요
                         </div>
                         <div className="photo-marquee">
@@ -96,7 +100,7 @@ export default function PhotoToolShell({
                                                 <Image src={s.src} alt={s.label} fill sizes="200px" quality={90}
                                                     style={{ objectFit: 'cover', objectPosition: 'center 26%' }} />
                                             </div>
-                                            <figcaption style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--먹연)', marginTop: 7, textAlign: 'center' }}>
+                                            <figcaption style={{ fontSize: 15, fontWeight: 700, color: 'var(--먹연)', marginTop: 7, textAlign: 'center' }}>
                                                 {s.label}
                                             </figcaption>
                                         </>
@@ -125,12 +129,12 @@ export default function PhotoToolShell({
                 </div>
 
                 {errorMsg && (
-                    <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 14, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
+                    <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 15, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
                         {errorMsg}
                         {needCharge && (
                             <button onClick={onCharge} style={{
                                 display: 'block', marginTop: 10, background: '#dc2626', color: '#fff', border: 'none',
-                                borderRadius: 10, padding: '9px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                                borderRadius: 10, padding: '9px 16px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
                             }}>충전하러 가기</button>
                         )}
                     </div>
@@ -156,7 +160,7 @@ export default function PhotoToolShell({
                         <div style={{ fontSize: 16, fontWeight: 800, color: '#18181b', marginBottom: 10 }}>다 됐어요</div>
                         {compareWithOriginal && preview ? (
                             <>
-                                <p style={{ fontSize: 13, color: '#71717a', margin: '0 0 12px' }}>가운데 손잡이를 좌우로 끌어보세요.</p>
+                                <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 12px' }}>가운데 손잡이를 좌우로 끌어보세요.</p>
                                 <BeforeAfter before={preview} after={result} ratio="1 / 1" />
                             </>
                         ) : (
@@ -167,7 +171,7 @@ export default function PhotoToolShell({
                         {isPreviewResult ? (
                             <div style={{ marginTop: 12, background: '#fff', border: '1px solid #e4e4e7', borderRadius: 14, padding: '18px 18px 16px', textAlign: 'center' }}>
                                 <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>선명한 사진은 회원만 받을 수 있어요</div>
-                                <p style={{ fontSize: 13.5, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6 }}>
+                                <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6 }}>
                                     지금 보이는 건 미리보기라 흐릿해요. 로그인하면 원본을 바로 내려받습니다.
                                 </p>
                                 <button onClick={onLogin} style={{
@@ -183,6 +187,7 @@ export default function PhotoToolShell({
                                 textAlign: 'center', textDecoration: 'none',
                             }}>사진 내려받기</a>
                             <KeepNotice />
+                            <ShareTool {...share} />
                             </>
                         )}
                     </div>

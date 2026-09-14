@@ -18,8 +18,9 @@ const 단계 = [
     '마지막으로 다듬는 중이에요',
 ]
 
-export default function MakingBar({ 예상초 = 20 }: { 예상초?: number }) {
+export default function MakingBar({ 예상초 = 30 }: { 예상초?: number }) {
     const [퍼센트, set퍼센트] = useState(3)
+    const [남은초, set남은초] = useState(예상초)
 
     useEffect(() => {
         const 시작 = Date.now()
@@ -29,6 +30,7 @@ export default function MakingBar({ 예상초 = 20 }: { 예상초?: number }) {
             const 기본 = Math.min(92, (지난 / 예상초) * 92)
             const 덤 = 지난 > 예상초 ? Math.min(6, (지난 - 예상초) * 0.4) : 0
             set퍼센트(Math.max(3, 기본 + 덤))
+            set남은초(Math.max(0, Math.ceil(예상초 - 지난)))
         }, 200)
         return () => clearInterval(t)
     }, [예상초])
@@ -63,8 +65,12 @@ export default function MakingBar({ 예상초 = 20 }: { 예상초?: number }) {
                 />
             </div>
 
-            <p style={{ fontSize: 13, color: 'var(--먹연)', marginTop: 10, lineHeight: 1.5 }}>
-                20초쯤 걸려요. 이 화면을 닫지 말고 기다려 주세요.
+            {/* 대표 지적 0915 「중장년은 20초면 고장난 줄 안다」 — 남은 시간을 숫자로 센다 */}
+            <p style={{ fontSize: 15, color: 'var(--먹연)', marginTop: 10, lineHeight: 1.5 }}>
+                {남은초 > 0
+                    ? `보통 ${예상초}초쯤 걸려요. 약 ${남은초}초 남았습니다.`
+                    : '거의 다 됐어요. 조금만 더 기다려 주세요.'}
+                <br />이 화면을 닫지 말아 주세요.
             </p>
         </div>
     )

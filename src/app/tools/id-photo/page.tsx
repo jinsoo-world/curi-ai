@@ -49,12 +49,12 @@ function IdPhotoPage안쪽() {
             const data = await res.json()
             if (!res.ok) {
                 if (data.needCharge) setNeedCharge(true)
-                throw new Error(data.error || '사진을 만들지 못했어요.')
+                throw new Error(data.error || '사진을 만들지 못했어요. 얼굴이 크고 밝게 나온 사진으로 다시 해보세요.')
             }
             set미리보기(!!data.preview)
             setResult(`data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
         } catch (e) {
-            setErrorMsg(e instanceof Error ? e.message : '사진을 만들지 못했어요.')
+            setErrorMsg(e instanceof Error ? e.message : '사진을 만들지 못했어요. 얼굴이 크고 밝게 나온 사진으로 다시 해보세요.')
         } finally {
             setLoading(false)
         }
@@ -76,6 +76,7 @@ function IdPhotoPage안쪽() {
                     { src: '/samples/id-m4.webp', label: '회색 배경·정장', pick: () => { setBackgroundId('lightgrey'); setOutfitId('suit') } },
                     { src: '/samples/id-w4.webp', label: '회색 배경·셔츠', pick: () => { setBackgroundId('lightgrey'); setOutfitId('shirt') } },
                 ]}
+                share={{ path: "/tools/id-photo", title: "증명사진 만들기", description: "여권·이력서에 내는 규격 사진을 사진 한 장으로 만듭니다.", image: "/og/profile-photo.png" }}
                 preview={preview}
                 onPicked={(dataUrl, mt) => {
                     setPreview(dataUrl)
@@ -102,7 +103,7 @@ function IdPhotoPage안쪽() {
                         {ID_SIZES.map(s => (
                             <button key={s.id} onClick={() => setSizeId(s.id)} style={고름(sizeId === s.id, true)}>
                                 <span style={{ display: 'block', fontSize: 15.5, fontWeight: 800, color: '#18181b' }}>{s.label}</span>
-                                <span style={{ display: 'block', fontSize: 12.5, color: '#71717a', marginTop: 2, wordBreak: 'keep-all' }}>{s.use}</span>
+                                <span style={{ display: 'block', fontSize: 13.5, color: '#71717a', marginTop: 2, wordBreak: 'keep-all' }}>{s.use}</span>
                             </button>
                         ))}
                     </div>
@@ -160,7 +161,7 @@ function IdPhotoPage안쪽() {
 function 칸({ 제목, children }: { 제목: string; children: React.ReactNode }) {
     return (
         <div style={{ marginBottom: 22 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>{제목}</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>{제목}</div>
             {children}
         </div>
     )

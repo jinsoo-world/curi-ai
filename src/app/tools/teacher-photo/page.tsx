@@ -47,12 +47,12 @@ function TeacherPhotoPage안쪽() {
             const data = await res.json()
             if (!res.ok) {
                 if (data.needCharge) setNeedCharge(true)
-                throw new Error(data.error || '사진을 만들지 못했어요.')
+                throw new Error(data.error || '사진을 만들지 못했어요. 얼굴이 크고 밝게 나온 사진으로 다시 해보세요.')
             }
             set미리보기(!!data.preview)
             setResult(`data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
         } catch (e) {
-            setErrorMsg(e instanceof Error ? e.message : '사진을 만들지 못했어요.')
+            setErrorMsg(e instanceof Error ? e.message : '사진을 만들지 못했어요. 얼굴이 크고 밝게 나온 사진으로 다시 해보세요.')
         } finally {
             setLoading(false)
         }
@@ -74,6 +74,7 @@ function TeacherPhotoPage안쪽() {
                     { src: '/samples/teach-m4.webp', label: '믿음직하게', pick: () => { setMoodId('trust'); setPlaceId('room') } },
                     { src: '/samples/teach-w4.webp', label: '전문가답게', pick: () => { setMoodId('expert'); setPlaceId('bright') } },
                 ]}
+                share={{ path: "/tools/teacher-photo", title: "강사 프로필 만들기", description: "강의 소개에 거는 사진을 사진 한 장으로 만듭니다.", image: "/og/profile-photo.png" }}
                 preview={preview}
                 onPicked={(dataUrl, mt) => {
                     setPreview(dataUrl); setBase64(dataUrl.split(',')[1] ?? null)
@@ -128,7 +129,7 @@ function TeacherPhotoPage안쪽() {
 function 칸({ 제목, children }: { 제목: string; children: React.ReactNode }) {
     return (
         <div style={{ marginBottom: 22 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>{제목}</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>{제목}</div>
             {children}
         </div>
     )

@@ -114,7 +114,7 @@ function 딱지(여백: number, 쪽: 'left' | 'right'): React.CSSProperties {
         [쪽]: 여백,
         background: 'rgba(0,0,0,0.62)',
         color: '#fff',
-        fontSize: 12.5,
+        fontSize: 13.5,
         fontWeight: 700,
         padding: '5px 11px',
         borderRadius: 999,

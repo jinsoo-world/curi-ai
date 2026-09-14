@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import CloverIcon from '@/components/ui/CloverIcon'
 
 export default function WelcomeModal() {
     const searchParams = useSearchParams()
@@ -60,14 +61,14 @@ export default function WelcomeModal() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     margin: '0 auto 20px',
                 }}>
-                    <span style={{ fontSize: 36 }}>✅</span>
+                    <CloverIcon size={36} />
                 </div>
 
                 <h2 style={{
                     fontSize: 22, fontWeight: 800, color: '#18181b',
                     margin: '0 0 24px',
                 }}>
-                    🎉 무료 체험이 시작되었습니다!
+                    무료 체험이 시작되었습니다
                 </h2>
 
                 {/* Duration highlight */}

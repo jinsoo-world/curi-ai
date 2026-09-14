@@ -110,7 +110,7 @@ export default function PhotoHero() {
                                         bottom: 10,
                                         background: 'rgba(0,0,0,0.62)',
                                         color: '#fff',
-                                        fontSize: 13,
+                                        fontSize: 15,
                                         fontWeight: 700,
                                         padding: '5px 11px',
                                         borderRadius: 999,
@@ -132,7 +132,7 @@ export default function PhotoHero() {
                         )}
                         <p
                             style={{
-                                fontSize: 13,
+                                fontSize: 15,
                                 color: 'var(--먹연)',
                                 textAlign: 'center',
                                 marginTop: 12,

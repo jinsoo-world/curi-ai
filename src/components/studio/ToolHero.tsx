@@ -43,7 +43,7 @@ export default function ToolHero({
                 {desc}
             </p>
 
-            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--먹연)', marginBottom: 10 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--먹연)', marginBottom: 10 }}>
                 이런 사진이 나와요
             </div>
             <div className="photo-marquee">
@@ -55,7 +55,7 @@ export default function ToolHero({
                                     <Image src={s.src} alt={s.label} fill sizes="200px" quality={90}
                                         style={{ objectFit: 'cover', objectPosition: 'center 26%' }} />
                                 </div>
-                                <figcaption style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--먹연)', marginTop: 7, textAlign: 'center' }}>
+                                <figcaption style={{ fontSize: 15, fontWeight: 700, color: 'var(--먹연)', marginTop: 7, textAlign: 'center' }}>
                                     {s.label}
                                 </figcaption>
                             </>
@@ -74,7 +74,7 @@ export default function ToolHero({
                 </div>
             </div>
 
-            <p style={{ fontSize: 14, color: 'var(--먹연)', margin: '14px 0 0', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 15, color: 'var(--먹연)', margin: '14px 0 0', lineHeight: 1.6 }}>
                 전부 이 도구로 만든 사진입니다. 마음에 드는 것을 누르면 그대로 골라집니다.
             </p>
         </section>

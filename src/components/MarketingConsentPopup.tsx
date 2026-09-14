@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import CloverIcon from '@/components/ui/CloverIcon'
 
 interface MarketingConsentPopupProps {
     onAccept: () => void
@@ -69,7 +70,7 @@ export default function MarketingConsentPopup({ onAccept, onDismiss }: Marketing
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 32, margin: '0 auto 16px',
                     }}>
-                        🍀
+                        <CloverIcon size={40} />
                     </div>
 
                     {/* 제목 */}
@@ -95,7 +96,7 @@ export default function MarketingConsentPopup({ onAccept, onDismiss }: Marketing
                         display: 'flex', justifyContent: 'center', gap: 8,
                         marginBottom: 24,
                     }}>
-                        {['🎁 이벤트 소식', '🤖 새 AI 알림', '💰 할인 혜택'].map((tag, i) => (
+                        {['이벤트 소식', '새 AI 알림', '할인 혜택'].map((tag, i) => (
                             <span key={i} style={{
                                 fontSize: 12, fontWeight: 600,
                                 color: '#16a34a', background: '#f0fdf4',
@@ -120,7 +121,7 @@ export default function MarketingConsentPopup({ onAccept, onDismiss }: Marketing
                             marginBottom: 10,
                         }}
                     >
-                        🍀 받을래요! (+10 클로버)
+                        받을래요 · 클로버 10개
                     </button>
 
                     <button

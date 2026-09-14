@@ -776,3 +776,19 @@ button, a[role="button"] {
   .photo-marquee-track { animation: none; }
   .photo-marquee { overflow-x: auto; }
 }
+
+/* 카메라로 찍기 — 휴대폰에서만 보인다 (대표 지시 0915: 중장년은 카메라가 더 쉽다) */
+.photo-drop-camera { display: block; }
+@media (min-width: 760px) {
+  .photo-drop-camera { display: none; }
+}
+
+/* 화면 넘길 때 도는 점 (전수조사 28번) */
+.curi-loading-dot {
+  width: 34px; height: 34px; margin: 0 auto;
+  border-radius: 999px;
+  border: 3px solid #E4E4E7;
+  border-top-color: var(--연두, #22c55e);
+  animation: curi-spin 0.8s linear infinite;
+}
+@keyframes curi-spin { to { transform: rotate(360deg); } }

@@ -19,6 +19,7 @@ export function PhotoDrop({
     onError: (msg: string) => void
 }) {
     const fileRef = useRef<HTMLInputElement>(null)
+    const cameraRef = useRef<HTMLInputElement>(null)
     const [dragging, setDragging] = useState(false)
 
     const handleFile = useCallback((f: File | null | undefined) => {
@@ -56,6 +57,15 @@ export function PhotoDrop({
                 onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; handleFile(f) }}
                 style={{ display: 'none' }}
             />
+            {/* 휴대폰에서 바로 찍기 — 중장년은 파일 창보다 카메라가 쉽다 */}
+            <input
+                ref={cameraRef}
+                type="file"
+                accept="image/*"
+                capture="user"
+                onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; handleFile(f) }}
+                style={{ display: 'none' }}
+            />
 
             {preview ? (
                 <div style={{
@@ -84,7 +94,7 @@ export function PhotoDrop({
                         <span style={{
                             position: 'absolute', right: 10, bottom: 10,
                             background: 'rgba(0,0,0,0.62)', color: '#fff',
-                            fontSize: 13.5, fontWeight: 700,
+                            fontSize: 15, fontWeight: 700,
                             padding: '8px 14px', borderRadius: 999,
                         }}>
                             눌러서 바꾸기
@@ -94,7 +104,7 @@ export function PhotoDrop({
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 16, fontWeight: 800, color: '#16a34a' }}>
                             <span style={{
                                 width: 24, height: 24, borderRadius: 999, background: '#1C2321', color: '#fff',
-                                display: 'grid', placeItems: 'center', fontSize: 14, fontWeight: 900,
+                                display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 900,
                             }} aria-hidden>✓</span>
                             사진을 올렸어요
                         </span>
@@ -115,15 +125,40 @@ export function PhotoDrop({
                         cursor: 'pointer', transition: 'all 0.15s',
                     }}
                 >
-                    <div style={{ fontSize: 52, marginBottom: 16 }}>{dragging ? '📥' : '📷'}</div>
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke={dragging ? '#166534' : '#3f3f46'}
+                        strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 16 }} aria-hidden>
+                        <path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.7a1 1 0 0 0 .83-.45l.94-1.4A1 1 0 0 1 9.8 3.7h4.4a1 1 0 0 1 .83.45l.94 1.4a1 1 0 0 0 .83.45h1.7A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5z" />
+                        <circle cx="12" cy="13" r="3.6" />
+                    </svg>
                     <div style={{ fontSize: 22, fontWeight: 800, color: dragging ? '#166534' : '#18181b', marginBottom: 10 }}>
-                        {dragging ? '여기에 놓으세요' : '사진을 끌어다 놓으세요'}
+                        {dragging ? '여기에 놓으세요' : '사진을 올려주세요'}
                     </div>
-                    <div style={{ fontSize: 15.5, color: '#71717a', lineHeight: 1.7, wordBreak: 'keep-all' }}>
-                        눌러서 고르셔도 되고, 복사한 사진을 붙여넣어도 돼요<br />
-                        <span style={{ fontSize: 14, color: '#a1a1aa' }}>얼굴이 잘 보이는 밝은 사진 · 4MB 이하</span>
+                    <div style={{ fontSize: 16, color: '#71717a', lineHeight: 1.7, wordBreak: 'keep-all' }}>
+                        눌러서 고르셔도 되고, 끌어다 놓거나 붙여넣어도 돼요<br />
+                        <span style={{ fontSize: 15, color: '#a1a1aa' }}>얼굴이 잘 보이는 밝은 사진 · 4MB 이하</span>
                     </div>
                 </button>
+            )}
+
+            {!preview && (
+                <>
+                    <button
+                        type="button"
+                        onClick={() => cameraRef.current?.click()}
+                        className="photo-drop-camera"
+                        style={{
+                            width: '100%', marginTop: 10, padding: '15px 12px', borderRadius: 14,
+                            border: '1px solid #e4e4e7', background: '#fff',
+                            fontSize: 16, fontWeight: 800, color: '#18181b', cursor: 'pointer',
+                        }}
+                    >
+                        휴대폰 카메라로 찍기
+                    </button>
+                    {/* 얼굴 사진을 올리는 서비스라 가장 무서운 지점이다. 올리는 칸 바로 밑에 적는다 */}
+                    <p style={{ fontSize: 15, color: '#71717a', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                        올린 사진은 이 사진을 만드는 데에만 씁니다. AI 학습에 쓰지 않고, 만든 뒤 48시간 안에 지웁니다.
+                    </p>
+                </>
             )}
         </div>
     )
