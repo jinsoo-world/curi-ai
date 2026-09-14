@@ -61,6 +61,18 @@ export const STUDIO_ITEMS: StudioItem[] = [
         group: '만들기',
     },
     {
+        // 대표 확정 0915 목록에 있었는데 빠져 있었다 (내 누락)
+        id: 'thumbnail',
+        title: '썸네일 만들기',
+        desc: '유튜브·어울림·멤버십·디지털 콘텐츠 표지',
+        emoji: '🖼',
+        img: '/samples/act-w7.webp',
+        href: '/tools/thumbnail',
+        cost: 15,
+        group: '만들기',
+    },
+
+    {
         id: 'insta-profile',
         title: '인스타 프로필 사진 만들기',
         desc: '동그랗게 잘려도 얼굴이 잘 나오게 만들어요',
@@ -81,13 +93,14 @@ export const STUDIO_ITEMS: StudioItem[] = [
         group: '만들기',
     },
     {
-        id: 'second-act',
-        title: '인생 2막 준비하기',
-        desc: '큐리어스에서 강의를 열고 수입을 만들어요',
-        emoji: '🌱',
-        img: '/samples/act-w8.webp',
-        href: 'https://curious-500.com',
-        cost: 'free',
+        // 대표 지시 0915 = 「화질 개선도 하나 넣자. 인생 2막 준비하기 대신 이거 넣어」
+        id: 'enhance',
+        title: '사진 화질 개선하기',
+        desc: '흐릿하거나 오래된 사진을 살려요',
+        emoji: '✨',
+        img: '/samples/act-m3.webp',
+        href: '/tools/enhance',
+        cost: 12,
         group: '만들기',
     },
 ]
