@@ -50,9 +50,14 @@ export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '
         'Retouch this person into a professional headshot portrait.',
         `The subject is ${style.prompt}.`,
         `Background: ${backdrop.prompt}.`,
-        'Keep the same face, same age, same identity as the uploaded photo — this must clearly look like the same person.',
-        'Do not make the subject look younger. Keep natural skin texture, pores and fine lines.',
-        'Professional headshot lighting, eye level, looking at the lens, sharp focus on the eyes.',
+        'Keep the same face and the same identity as the uploaded photo — this must clearly look like the same person.',
+        // 대표 지적 0914 = 「프로필이 더 나이들어보이는데」
+        // 전에는 「더 젊게 만들지 마라」라고 적었는데, 그 한 줄이 모델을 늙는 쪽으로 밀었다.
+        // 주름을 지우라는 게 아니라 없던 나이를 더하지 말라고 적는다.
+        'Match the age in the uploaded photo exactly — do not add years, do not deepen wrinkles, do not grey the hair, do not hollow the cheeks or eyes.',
+        'Keep natural skin texture and pores, but render the subject on their best day: rested, healthy, even skin tone.',
+        'Soft diffused key light with gentle fill from below to avoid harsh shadows in the nasolabial folds and under the eyes.',
+        'Eye level, looking at the lens, sharp focus on the eyes.',
         `Upper body, ${ratioLabel} composition suitable for a profile picture.`,
         'No text, no logos, no watermark, no extra hands. Avoid glossy over-retouched AI look.',
     ].join(' ')

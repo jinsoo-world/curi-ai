@@ -83,6 +83,7 @@ export default function PhotoHero() {
                                     alt={s.label}
                                     fill
                                     sizes="(max-width: 900px) 45vw, 260px"
+                    quality={90}
                                     style={{ objectFit: 'cover' }}
                                 />
                                 <figcaption

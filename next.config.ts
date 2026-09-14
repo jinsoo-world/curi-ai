@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   // 이미지 최적화
   images: {
     formats: ['image/avif', 'image/webp'],
+    // 대표 지시 0914 「AI 화질 좀 더 좋게해」 — 기본값 75 는 얼굴 사진에서 눈가가 뭉갠다
+    qualities: [75, 90],
     minimumCacheTTL: 60 * 60 * 24, // 24시간 캐시
     remotePatterns: [
       {

@@ -51,6 +51,7 @@ export default function LookShowcase() {
                                 alt={`${l.label} 느낌 사진`}
                                 fill
                                 sizes="(max-width: 700px) 50vw, 260px"
+                    quality={90}
                                 style={{ objectFit: 'cover' }}
                             />
                             <figcaption

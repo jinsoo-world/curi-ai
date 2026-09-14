@@ -17,6 +17,8 @@ export interface CuriModel {
     comingSoon?: string
     /** 카드에 보일 색 (미리보기 느낌) */
     tint: string
+    /** 카드에 걸 그림. 우리 모델은 큐리 로고를 쓴다 (대표 지시 0914 「이거 로고로 하고」) */
+    logo?: string
 }
 
 export const CURI_MODELS: CuriModel[] = [
@@ -28,6 +30,7 @@ export const CURI_MODELS: CuriModel[] = [
         engine: 'gemini-3-pro-image-preview',
         cost: 20,
         tint: '#22c55e',
+        logo: '/logo.png',
     },
     {
         id: 'nano-banana-2',

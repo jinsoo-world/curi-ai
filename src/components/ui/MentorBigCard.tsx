@@ -46,6 +46,7 @@ export default function MentorBigCard({
                     alt=""
                     fill
                     sizes="(max-width: 820px) 50vw, (max-width: 1180px) 33vw, 300px"
+                    quality={90}
                     style={{ objectFit: 'cover', objectPosition: 'center 22%' }}
                 />
             ) : (

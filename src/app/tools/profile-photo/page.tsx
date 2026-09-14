@@ -12,6 +12,8 @@ import { CLOVER_UNIT_WON } from '@/domains/credit/packs'
 import { PickCard } from '@/components/studio/PickCard'
 import { PhotoDrop } from '@/components/studio/PhotoDrop'
 import AppSidebar from '@/components/AppSidebar'
+import MakingBar from '@/components/studio/MakingBar'
+import Image from 'next/image'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
 
 export default function ProfilePhotoPage() {
@@ -116,7 +118,11 @@ export default function ProfilePhotoPage() {
                                             flexShrink: 0, width: 38, height: 38, borderRadius: 11,
                                             background: m.tint, display: 'flex', alignItems: 'center',
                                             justifyContent: 'center', fontSize: 17,
-                                        }}>{m.label.slice(0, 1)}</span>
+                                        }}>
+                                            {m.logo ? (
+                                                <Image src={m.logo} alt="" width={26} height={26} style={{ borderRadius: 7 }} />
+                                            ) : m.label.slice(0, 1)}
+                                        </span>
                                         <span style={{ flex: 1, minWidth: 0 }}>
                                             <span style={{ fontSize: 15, fontWeight: 700, color: '#18181b' }}>{m.label}</span>
                                             <span style={{
@@ -191,14 +197,18 @@ export default function ProfilePhotoPage() {
                     </div>
                 )}
 
-                <button onClick={make} disabled={!준비됨 || loading} style={{
-                    width: '100%', padding: '16px', borderRadius: 16, border: 'none',
-                    background: (!준비됨 || loading) ? '#d4d4d8' : '#22c55e',
-                    color: '#fff', fontSize: 16, fontWeight: 700,
-                    cursor: (!준비됨 || loading) ? 'default' : 'pointer',
-                }}>
-                    {loading ? '만드는 중... (20초쯤 걸려요)' : `사진 만들기 · ${(getModel(modelId)!.cost * CLOVER_UNIT_WON).toLocaleString()}원`}
-                </button>
+                {loading ? (
+                    <MakingBar />
+                ) : (
+                    <button onClick={make} disabled={!준비됨} style={{
+                        width: '100%', padding: '16px', borderRadius: 16, border: 'none',
+                        background: !준비됨 ? '#d4d4d8' : '#22c55e',
+                        color: '#fff', fontSize: 16, fontWeight: 700,
+                        cursor: !준비됨 ? 'default' : 'pointer',
+                    }}>
+                        {`사진 만들기 · ${(getModel(modelId)!.cost * CLOVER_UNIT_WON).toLocaleString()}원`}
+                    </button>
+                )}
 
                 {/* 결과 */}
                 {result && (
