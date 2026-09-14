@@ -1,0 +1,34 @@
+/**
+ * 무료 체험권 — 받은 날부터 7일
+ *
+ * 대표 지시 2026-09-14 = 「무료체험권은 휴대폰 인증하게 해. 받은날로부터 7일은 세고 똑바로」
+ *
+ * 전에는 users.subscription_tier 를 'free_trial' 로 바꾸기만 하고 끝나는 날을
+ * 어디에도 적지 않았다. 그래서 한 번 받으면 영원히 체험 중이었다.
+ */
+export const TRIAL_DAYS = 7
+
+/** 추천한 사람에게 주는 클로버 */
+export const REFERRER_REWARD = 100
+
+/** 체험을 시작하면 끝나는 시각을 정확히 계산한다 */
+export function trialEndsAt(from: Date = new Date()): Date {
+    const end = new Date(from.getTime())
+    end.setDate(end.getDate() + TRIAL_DAYS)
+    return end
+}
+
+/** 지금 체험 중인가 */
+export function isTrialActive(trialEnds: string | null | undefined, now: Date = new Date()): boolean {
+    if (!trialEnds) return false
+    const t = new Date(trialEnds).getTime()
+    return Number.isFinite(t) && t > now.getTime()
+}
+
+/** 며칠 남았나 — 화면에 쓴다. 0.1일도 「1일 남음」으로 센다 */
+export function trialDaysLeft(trialEnds: string | null | undefined, now: Date = new Date()): number {
+    if (!trialEnds) return 0
+    const ms = new Date(trialEnds).getTime() - now.getTime()
+    if (!Number.isFinite(ms) || ms <= 0) return 0
+    return Math.ceil(ms / (24 * 60 * 60 * 1000))
+}

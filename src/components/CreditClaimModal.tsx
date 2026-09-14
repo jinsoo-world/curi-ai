@@ -1,482 +1,313 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+/**
+ * 무료 체험권 받기 — 휴대폰 인증 · 받은 날부터 7일 · 추천 공유
+ *
+ * 대표 지시 2026-09-14
+ * 「무료체험권은 휴대폰 인증하게 해. 받은날로부터 7일은 세고 똑바로」
+ * 「체험권은 추천해서 공유되게 해. 회원추천코드」
+ *
+ * 전에는 누르면 바로 subscription_tier 를 바꿔줬다. 끝나는 날을 적지 않아
+ * 한 번 받으면 영원히 체험 중이었고, 한 사람이 계정을 여러 개 만들면 막을 길이 없었다.
+ */
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { TRIAL_DAYS, REFERRER_REWARD, trialDaysLeft } from '@/domains/trial'
+import CloverIcon from '@/components/ui/CloverIcon'
 
 interface CreditClaimModalProps {
     isOpen: boolean
     onClose: () => void
-    onComplete: () => void
+    onComplete?: () => void
 }
 
+type 단계 = '확인중' | '번호입력' | '인증번호' | '이미받음' | '끝'
+
 export default function CreditClaimModal({ isOpen, onClose, onComplete }: CreditClaimModalProps) {
+    const [단계, set단계] = useState<단계>('확인중')
     const [phone, setPhone] = useState('')
-    const [gender, setGender] = useState('')
-    const [marketingAgreed, setMarketingAgreed] = useState(true)
-    const [isSubmitting, setIsSubmitting] = useState(false)
-    const [error, setError] = useState('')
-    const [alreadyClaimed, setAlreadyClaimed] = useState(false)
-    const [checkingStatus, setCheckingStatus] = useState(true)
+    const [code, setCode] = useState('')
+    const [보내는중, set보내는중] = useState(false)
+    const [오류, set오류] = useState<string | null>(null)
+    const [남은초, set남은초] = useState(0)
+    const [끝나는날, set끝나는날] = useState<string | null>(null)
+    const [추천코드, set추천코드] = useState<string | null>(null)
+    const [복사됨, set복사됨] = useState(false)
 
-    // 인증 관련 상태 (번호 입력 → [인증] 클릭 → 완료)
-    const [verifyStep, setVerifyStep] = useState<'idle' | 'sending' | 'done'>('idle')
-
-    // 이미 체험권을 받았는지 체크
+    // 이미 체험 중인지 먼저 본다
     useEffect(() => {
         if (!isOpen) return
-        setCheckingStatus(true)
-        const checkStatus = async () => {
-            try {
-                const supabase = createClient()
-                const { data: { user } } = await supabase.auth.getUser()
-                if (!user) { setCheckingStatus(false); return }
-
-                const { data: profile } = await supabase
-                    .from('users')
-                    .select('subscription_tier')
-                    .eq('id', user.id)
-                    .single()
-
-                if (profile?.subscription_tier === 'free_trial' || profile?.subscription_tier === 'premium') {
-                    setAlreadyClaimed(true)
-                }
-            } catch {
-                // 체크 실패시 폼 표시
-            } finally {
-                setCheckingStatus(false)
+        let 살아있음 = true
+        ;(async () => {
+            set단계('확인중')
+            const supabase = createClient()
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) {
+                if (살아있음) set단계('번호입력')
+                return
             }
-        }
-        checkStatus()
+            const { data } = await supabase
+                .from('users')
+                .select('trial_ends_at, referral_code')
+                .eq('id', user.id)
+                .maybeSingle()
+            if (!살아있음) return
+            if (data?.referral_code) set추천코드(data.referral_code)
+            if (data?.trial_ends_at && new Date(data.trial_ends_at).getTime() > Date.now()) {
+                set끝나는날(data.trial_ends_at)
+                set단계('이미받음')
+            } else {
+                set단계('번호입력')
+            }
+        })()
+        return () => { 살아있음 = false }
     }, [isOpen])
+
+    // 남은 시간 세기
+    useEffect(() => {
+        if (남은초 <= 0) return
+        const t = setInterval(() => set남은초(s => (s > 0 ? s - 1 : 0)), 1000)
+        return () => clearInterval(t)
+    }, [남은초])
+
+    const 번호보내기 = useCallback(async () => {
+        set오류(null); set보내는중(true)
+        try {
+            const res = await fetch('/api/trial/send-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone }),
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || '문자를 보내지 못했어요.')
+            set남은초(data.expiresInSec ?? 180)
+            set단계('인증번호')
+        } catch (e) {
+            set오류(e instanceof Error ? e.message : '문자를 보내지 못했어요.')
+        } finally {
+            set보내는중(false)
+        }
+    }, [phone])
+
+    const 확인하기 = useCallback(async () => {
+        set오류(null); set보내는중(true)
+        try {
+            const ref = new URLSearchParams(window.location.search).get('ref')
+            const res = await fetch('/api/trial/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, code, referralCode: ref }),
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || '인증하지 못했어요.')
+            set끝나는날(data.trialEndsAt)
+            set단계('끝')
+            onComplete?.()
+        } catch (e) {
+            set오류(e instanceof Error ? e.message : '인증하지 못했어요.')
+        } finally {
+            set보내는중(false)
+        }
+    }, [phone, code, onComplete])
+
+    const 나눔주소 = 추천코드
+        ? `${typeof window !== 'undefined' ? window.location.origin : 'https://curi-ai.com'}/mentors?ref=${추천코드}`
+        : null
+
+    const 나누기 = useCallback(async () => {
+        if (!나눔주소) return
+        const 글 = `큐리 AI 무료 체험권 ${TRIAL_DAYS}일\n${나눔주소}`
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: '큐리 AI 무료 체험권', text: 글, url: 나눔주소 })
+                return
+            }
+        } catch {
+            // 공유 창을 닫은 것뿐이면 아래 복사로 넘어가지 않는다
+            return
+        }
+        try {
+            await navigator.clipboard.writeText(나눔주소)
+            set복사됨(true)
+            setTimeout(() => set복사됨(false), 2000)
+        } catch {
+            set오류('주소를 복사하지 못했어요.')
+        }
+    }, [나눔주소])
 
     if (!isOpen) return null
 
-    const formatPhone = (value: string) => {
-        const nums = value.replace(/\D/g, '').slice(0, 11)
-        if (nums.length <= 3) return nums
-        if (nums.length <= 7) return `${nums.slice(0, 3)}-${nums.slice(3)}`
-        return `${nums.slice(0, 3)}-${nums.slice(3, 7)}-${nums.slice(7)}`
-    }
-
-    const phoneDigits = phone.replace(/\D/g, '')
-    const canSubmit = verifyStep === 'done' && gender
-
-    // 인증 버튼 클릭 → 바로 완료
-    const handleVerify = () => {
-        if (phoneDigits.length < 10) return
-        setVerifyStep('sending')
-        setTimeout(() => {
-            setVerifyStep('done')
-        }, 800)
-    }
-
-    const handleSubmit = async () => {
-        if (!canSubmit) return
-        setIsSubmitting(true)
-        setError('')
-
-        try {
-            const supabase = createClient()
-            const { data: { user } } = await supabase.auth.getUser()
-
-            if (!user) {
-                setError('로그인 정보를 찾을 수 없습니다.')
-                setIsSubmitting(false)
-                return
-            }
-
-            // CRM 데이터 저장 + 구독 상태를 무료체험으로 변경
-            const updateData: Record<string, unknown> = {
-                phone: phone.replace(/\D/g, ''),
-                gender,
-                marketing_consent: marketingAgreed,
-                subscription_tier: 'free_trial',
-            }
-
-            const { error: updateError } = await supabase
-                .from('users')
-                .update(updateData)
-                .eq('id', user.id)
-
-            if (updateError) {
-                console.error('Update error (full):', updateError.message)
-                // phone/marketing_agreed 컬럼이 아직 없을 수 있음 → gender + tier만
-                const { error: fallback1 } = await supabase
-                    .from('users')
-                    .update({
-                        gender,
-                        subscription_tier: 'free_trial',
-                    })
-                    .eq('id', user.id)
-
-                if (fallback1) {
-                    console.error('Update error (fallback1):', fallback1.message)
-                    // gender 컬럼도 없을 수 있음 → tier만
-                    const { error: fallback2 } = await supabase
-                        .from('users')
-                        .update({ subscription_tier: 'free_trial' })
-                        .eq('id', user.id)
-
-                    if (fallback2) {
-                        console.error('Update error (fallback2):', fallback2.message)
-                        // 그래도 실패하면 무시하고 진행 (온보딩은 완료 처리)
-                    }
-                }
-            }
-
-            onComplete()
-        } catch (err: unknown) {
-            console.error('Submit error:', err)
-            // 에러가 나도 온보딩은 완료 처리 (UX 우선)
-            onComplete()
-        }
-    }
-
-
+    const 남은분초 = `${String(Math.floor(남은초 / 60)).padStart(1, '0')}:${String(남은초 % 60).padStart(2, '0')}`
 
     return (
-        <div style={{
-            position: 'fixed', inset: 0, zIndex: 100,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0,0,0,0.5)',
-            backdropFilter: 'blur(4px)',
-            padding: 24,
-        }}>
-            {checkingStatus ? (
-                <div style={{
-                    width: '100%', maxWidth: 420,
-                    background: '#fff', borderRadius: 24,
-                    padding: '60px 28px', textAlign: 'center',
-                    boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
-                }}>
-                    <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
-                    <p style={{ color: '#9ca3af', fontSize: 14 }}>확인 중...</p>
-                </div>
-            ) : alreadyClaimed ? (
-                <div style={{
-                    width: '100%', maxWidth: 420,
-                    background: '#fff', borderRadius: 24,
-                    overflow: 'hidden',
-                    boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
-                    animation: 'modalIn 0.3s ease',
-                    position: 'relative',
-                }}>
-                    {/* X 닫기 버튼 */}
-                    <button
-                        onClick={onClose}
-                        aria-label="닫기"
-                        style={{
-                            position: 'absolute', top: 16, right: 16, zIndex: 10,
-                            width: 32, height: 32, borderRadius: '50%',
-                            background: 'rgba(0,0,0,0.06)', border: 'none',
-                            fontSize: 16, color: '#6b7280', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}
-                    >✕</button>
-
-                    <div style={{
-                        background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
-                        padding: '40px 28px 32px', textAlign: 'center',
-                    }}>
-                        <div style={{ fontSize: 56, marginBottom: 12 }}>✅</div>
-                        <h2 style={{
-                            fontSize: 22, fontWeight: 800, color: '#15803d',
-                            letterSpacing: '-0.02em', marginBottom: 8,
-                        }}>
-                            이미 무료 체험 중입니다!
-                        </h2>
-                        <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6 }}>
-                            무료 체험권이 이미 적용되어 있습니다.
-                        </p>
-                    </div>
-
-                    <div style={{ padding: '24px 28px 28px', textAlign: 'center' }}>
-                        <div style={{
-                            padding: '16px 20px', marginBottom: 20,
-                            background: '#f0fdf4', borderRadius: 14,
-                            border: '1px solid #dcfce7',
-                        }}>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: '#15803d', marginBottom: 4 }}>
-                                🎁 무료 이용 기간
-                            </div>
-                            <div style={{ fontSize: 24, fontWeight: 800, color: '#16a34a' }}>
-                                받은 날부터 7일
-                            </div>
-                            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 6 }}>
-                                기간 내 모든 AI 상담을 무제한으로 이용할 수 있습니다
-                            </div>
-                        </div>
-
-                        <button
-                            onClick={onClose}
-                            style={{
-                                width: '100%', padding: '16px',
-                                fontSize: 17, fontWeight: 700,
-                                borderRadius: 14, border: 'none',
-                                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                                color: '#fff', cursor: 'pointer',
-                                boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
-                            }}
-                        >
-                            확인
-                        </button>
-                    </div>
-                </div>
-            ) : (
-            <div style={{
-                width: '100%', maxWidth: 420,
-                background: '#fff',
-                borderRadius: 24,
-                overflow: 'hidden',
-                boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
-                animation: 'modalIn 0.3s ease',
-                position: 'relative',
-            }}>
-                {/* X 닫기 버튼 */}
+        <>
+            <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000 }} />
+            <div
+                role="dialog"
+                aria-modal="true"
+                style={{
+                    position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+                    background: '#fff', borderRadius: 22, padding: '28px 24px 24px',
+                    width: 'min(400px, calc(100vw - 32px))', zIndex: 2001,
+                    boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
+                }}
+            >
                 <button
                     onClick={onClose}
                     aria-label="닫기"
                     style={{
-                        position: 'absolute',
-                        top: 16,
-                        right: 16,
-                        zIndex: 10,
-                        width: 32, height: 32,
-                        borderRadius: '50%',
-                        background: 'rgba(0,0,0,0.06)',
-                        border: 'none',
-                        fontSize: 16,
-                        color: '#6b7280',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'background 150ms',
+                        position: 'absolute', right: 14, top: 14, width: 34, height: 34,
+                        borderRadius: 999, border: 'none', background: 'var(--종이)',
+                        fontSize: 17, color: 'var(--먹연)', cursor: 'pointer',
                     }}
                 >
                     ✕
                 </button>
 
-                {/* Header */}
-                <div style={{
-                    background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
-                    padding: '32px 28px 24px',
-                    textAlign: 'center',
-                }}>
-                    <div style={{ fontSize: 48, marginBottom: 8 }}>🎁</div>
-                    <h2 style={{
-                        fontSize: 22, fontWeight: 800, color: '#15803d',
-                        letterSpacing: '-0.02em', marginBottom: 6,
-                    }}>
-                        무료 체험권을 받으세요!
-                    </h2>
-                    <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.5 }}>
-                        간단한 정보를 입력하시면<br />
-                        받은 날부터 7일 동안 무료로 이용할 수 있습니다
-                    </p>
-                </div>
+                {단계 === '확인중' && (
+                    <p style={{ textAlign: 'center', color: 'var(--먹연)', padding: '32px 0' }}>잠시만요…</p>
+                )}
 
-                {/* Form */}
-                <div style={{ padding: '24px 28px 28px' }}>
-                    {error && (
-                        <div style={{
-                            padding: '10px 14px', marginBottom: 16,
-                            background: '#fef2f2', color: '#991b1b',
-                            borderRadius: 10, fontSize: 13,
-                        }}>
-                            {error}
-                        </div>
-                    )}
+                {단계 === '번호입력' && (
+                    <>
+                        <h3 style={{ fontSize: 21, fontWeight: 900, margin: '4px 0 6px', letterSpacing: '-0.03em' }}>
+                            무료 체험권 {TRIAL_DAYS}일
+                        </h3>
+                        <p style={{ fontSize: 14.5, color: 'var(--먹연)', margin: '0 0 20px', lineHeight: 1.6 }}>
+                            휴대폰 번호로 한 번만 받을 수 있어요. 받은 날부터 {TRIAL_DAYS}일 동안 코치와 마음껏 대화합니다.
+                        </p>
 
-                    {/* 안내 */}
-                    <div style={{
-                        padding: '10px 14px', marginBottom: 18,
-                        background: '#f0fdf4', borderRadius: 10,
-                        fontSize: 13, color: '#16a34a', lineHeight: 1.5,
-                        border: '1px solid #dcfce7',
-                    }}>
-                        💡 입력하신 정보는 맞춤형 AI 추천에 활용됩니다.
-                    </div>
-
-                    {/* 휴대폰 번호 + 인증 */}
-                    <div style={{ marginBottom: 18 }}>
-                        <label style={{
-                            display: 'block', fontSize: 14, fontWeight: 600,
-                            color: '#374151', marginBottom: 6,
-                        }}>
-                            📱 휴대폰 번호 <span style={{ color: '#dc2626' }}>*</span>
-                        </label>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            <input
-                                type="tel"
-                                placeholder="010-0000-0000"
-                                value={phone}
-                                onChange={(e) => {
-                                    if (verifyStep === 'idle') setPhone(formatPhone(e.target.value))
-                                }}
-                                disabled={verifyStep !== 'idle'}
-                                style={{
-                                    flex: 1, padding: '14px 16px',
-                                    fontSize: 16, borderRadius: 12,
-                                    border: `1.5px solid ${verifyStep === 'done' ? '#22c55e' : '#e5e7eb'}`,
-                                    outline: 'none', transition: 'border-color 200ms',
-                                    boxSizing: 'border-box',
-                                    background: verifyStep !== 'idle' ? '#f9fafb' : '#fff',
-                                    color: verifyStep === 'done' ? '#16a34a' : '#18181b',
-                                }}
-                                onFocus={(e) => { if (verifyStep === 'idle') e.target.style.borderColor = '#22c55e' }}
-                                onBlur={(e) => { if (verifyStep === 'idle') e.target.style.borderColor = '#e5e7eb' }}
-                            />
-                            {verifyStep === 'idle' && (
-                                <button
-                                    type="button"
-                                    onClick={handleVerify}
-                                    disabled={phoneDigits.length < 10}
-                                    style={{
-                                        padding: '14px 16px',
-                                        fontSize: 13, fontWeight: 600,
-                                        borderRadius: 12, border: 'none',
-                                        background: phoneDigits.length >= 10 ? '#22c55e' : '#e5e7eb',
-                                        color: phoneDigits.length >= 10 ? '#fff' : '#9ca3af',
-                                        cursor: phoneDigits.length >= 10 ? 'pointer' : 'not-allowed',
-                                        whiteSpace: 'nowrap',
-                                        transition: 'all 150ms',
-                                    }}
-                                >
-                                    인증
-                                </button>
-                            )}
-                            {verifyStep === 'sending' && (
-                                <div style={{
-                                    padding: '14px 16px', fontSize: 13, fontWeight: 600,
-                                    color: '#16a34a', display: 'flex', alignItems: 'center', gap: 6,
-                                }}>
-                                    <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span>
-                                    전송 중
-                                </div>
-                            )}
-                            {verifyStep === 'done' && (
-                                <div style={{
-                                    padding: '14px 12px', fontSize: 13, fontWeight: 700,
-                                    color: '#16a34a', display: 'flex', alignItems: 'center',
-                                }}>
-                                    ✅ 인증완료
-                                </div>
-                            )}
-                        </div>
-
-
-                    </div>
-
-                    {/* 성별 */}
-                    <div style={{ marginBottom: 20 }}>
-                        <label style={{
-                            display: 'block', fontSize: 14, fontWeight: 600,
-                            color: '#374151', marginBottom: 6,
-                        }}>
-                            👤 성별 <span style={{ color: '#dc2626' }}>*</span>
-                        </label>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            {[
-                                { value: 'male', label: '남성' },
-                                { value: 'female', label: '여성' }
-                            ].map((opt) => (
-                                <button
-                                    key={opt.value}
-                                    type="button"
-                                    onClick={() => setGender(opt.value)}
-                                    style={{
-                                        flex: 1, padding: '12px 0',
-                                        borderRadius: 10, fontSize: 14, fontWeight: 600,
-                                        border: `1.5px solid ${gender === opt.value ? '#22c55e' : '#e5e7eb'}`,
-                                        background: gender === opt.value ? '#f0fdf4' : '#fff',
-                                        color: gender === opt.value ? '#15803d' : '#6b7280',
-                                        cursor: 'pointer',
-                                        transition: 'all 150ms',
-                                    }}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* 마케팅 수신 동의 */}
-                    <label style={{
-                        display: 'flex', alignItems: 'flex-start', gap: 8,
-                        marginBottom: 20, cursor: 'pointer', userSelect: 'none',
-                    }}>
                         <input
-                            type="checkbox"
-                            checked={marketingAgreed}
-                            onChange={() => setMarketingAgreed(!marketingAgreed)}
-                            style={{
-                                width: 16, height: 16, marginTop: 2,
-                                accentColor: '#16a34a', cursor: 'pointer',
-                            }}
+                            type="tel"
+                            inputMode="numeric"
+                            autoComplete="tel"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="010 1234 5678"
+                            style={입력칸}
                         />
-                        <span style={{ fontSize: 13, color: '#9ca3af', lineHeight: 1.5 }}>
-                            (선택) 마케팅 정보 수신에 동의합니다.
-                            <br />
-                            <span style={{ fontSize: 12, color: '#d1d5db' }}>
-                                새로운 AI, 이벤트, 할인 등의 소식을 받아보세요.
-                            </span>
-                        </span>
-                    </label>
 
-                    {/* 무료 체험 시작하기 버튼 */}
-                    <button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={!canSubmit || isSubmitting}
-                        style={{
-                            width: '100%', padding: '16px',
-                            fontSize: 17, fontWeight: 700,
-                            borderRadius: 14, border: 'none',
-                            background: canSubmit
-                                ? 'linear-gradient(135deg, #22c55e, #16a34a)'
-                                : '#e5e7eb',
-                            color: canSubmit ? '#fff' : '#9ca3af',
-                            cursor: canSubmit ? 'pointer' : 'not-allowed',
-                            transition: 'all 200ms',
-                            boxShadow: canSubmit ? '0 4px 14px rgba(34,197,94,0.3)' : 'none',
-                        }}
-                    >
-                        {isSubmitting ? '처리 중...' : '🎉 무료 체험 시작하기'}
-                    </button>
+                        {오류 && <p style={오류칸}>{오류}</p>}
 
-                    {/* 나중에 받기 */}
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        style={{
-                            width: '100%', padding: 14,
-                            marginTop: 8,
-                            fontSize: 14, fontWeight: 500,
-                            background: 'transparent', border: 'none',
-                            color: '#9ca3af', cursor: 'pointer',
-                        }}
-                    >
-                        나중에 받기
-                    </button>
-                </div>
+                        <button
+                            onClick={번호보내기}
+                            disabled={보내는중 || phone.replace(/[^0-9]/g, '').length < 10}
+                            style={큰단추(보내는중 || phone.replace(/[^0-9]/g, '').length < 10)}
+                        >
+                            {보내는중 ? '보내는 중…' : '인증번호 받기'}
+                        </button>
+                    </>
+                )}
+
+                {단계 === '인증번호' && (
+                    <>
+                        <h3 style={{ fontSize: 21, fontWeight: 900, margin: '4px 0 6px', letterSpacing: '-0.03em' }}>
+                            문자로 온 6자리
+                        </h3>
+                        <p style={{ fontSize: 14.5, color: 'var(--먹연)', margin: '0 0 20px', lineHeight: 1.6 }}>
+                            {phone} 로 보냈어요. {남은초 > 0 ? `${남은분초} 안에 입력해주세요.` : '시간이 지났어요. 다시 받아주세요.'}
+                        </p>
+
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            maxLength={6}
+                            value={code}
+                            onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ''))}
+                            placeholder="123456"
+                            style={{ ...입력칸, letterSpacing: '0.3em', textAlign: 'center', fontSize: 22 }}
+                        />
+
+                        {오류 && <p style={오류칸}>{오류}</p>}
+
+                        <button
+                            onClick={확인하기}
+                            disabled={보내는중 || code.length !== 6}
+                            style={큰단추(보내는중 || code.length !== 6)}
+                        >
+                            {보내는중 ? '확인 중…' : '체험권 받기'}
+                        </button>
+
+                        <button
+                            onClick={() => { set단계('번호입력'); setCode(''); set오류(null) }}
+                            style={작은단추}
+                        >
+                            번호 다시 입력
+                        </button>
+                    </>
+                )}
+
+                {(단계 === '끝' || 단계 === '이미받음') && (
+                    <>
+                        <h3 style={{ fontSize: 21, fontWeight: 900, margin: '4px 0 6px', letterSpacing: '-0.03em' }}>
+                            {단계 === '끝' ? '체험권을 받았어요' : '이미 체험 중이에요'}
+                        </h3>
+                        <p style={{ fontSize: 14.5, color: 'var(--먹연)', margin: '0 0 16px', lineHeight: 1.6 }}>
+                            {끝나는날
+                                ? `${new Date(끝나는날).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}까지 (${trialDaysLeft(끝나는날)}일 남음)`
+                                : `받은 날부터 ${TRIAL_DAYS}일`}
+                        </p>
+
+                        {나눔주소 && (
+                            <div style={{ background: 'var(--종이)', borderRadius: 14, padding: '16px 16px 14px', marginBottom: 16 }}>
+                                <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 6 }}>친구에게 체험권 보내기</div>
+                                <p style={{ fontSize: 13, color: 'var(--먹연)', margin: '0 0 12px', lineHeight: 1.6 }}>
+                                    이 주소로 친구가 체험권을 받으면 나에게 클로버 {REFERRER_REWARD}개를 드려요.
+                                </p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <code style={{
+                                        flex: 1, minWidth: 0, fontSize: 12.5, color: 'var(--먹연)',
+                                        background: '#fff', border: '1px solid var(--선)', borderRadius: 10,
+                                        padding: '10px 12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                    }}>
+                                        {나눔주소}
+                                    </code>
+                                    <button onClick={나누기} style={{
+                                        flexShrink: 0, height: 40, padding: '0 14px', borderRadius: 10, border: 'none',
+                                        background: 'var(--연두)', color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer',
+                                    }}>
+                                        {복사됨 ? '복사됨' : '공유'}
+                                    </button>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 10, fontSize: 12.5, color: 'var(--진초록)', fontWeight: 700 }}>
+                                    <CloverIcon size={14} /> 친구 한 명당 {REFERRER_REWARD}개
+                                </div>
+                            </div>
+                        )}
+
+                        {오류 && <p style={오류칸}>{오류}</p>}
+
+                        <button onClick={onClose} style={큰단추(false)}>확인</button>
+                    </>
+                )}
             </div>
-            )}
-
-            <style>{`
-                @keyframes modalIn {
-                    from { opacity: 0; transform: scale(0.95) translateY(10px); }
-                    to { opacity: 1; transform: scale(1) translateY(0); }
-                }
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(-4px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-            `}</style>
-        </div>
+        </>
     )
+}
+
+const 입력칸: React.CSSProperties = {
+    width: '100%', height: 54, borderRadius: 14,
+    border: '1.5px solid var(--선)', background: '#fff',
+    padding: '0 16px', fontSize: 17, fontWeight: 600,
+    color: 'var(--먹)', marginBottom: 12, outline: 'none',
+}
+
+const 오류칸: React.CSSProperties = {
+    background: '#fef2f2', color: '#dc2626', fontSize: 13.5,
+    padding: '10px 14px', borderRadius: 10, margin: '0 0 12px', lineHeight: 1.5,
+}
+
+function 큰단추(막힘: boolean): React.CSSProperties {
+    return {
+        width: '100%', height: 54, borderRadius: 14, border: 'none',
+        background: 막힘 ? '#d4d4d8' : 'var(--연두)', color: '#fff',
+        fontSize: 16.5, fontWeight: 800, cursor: 막힘 ? 'default' : 'pointer',
+    }
+}
+
+const 작은단추: React.CSSProperties = {
+    width: '100%', height: 44, marginTop: 8, borderRadius: 12,
+    border: 'none', background: 'none', color: 'var(--먹연)',
+    fontSize: 14, fontWeight: 700, cursor: 'pointer',
 }

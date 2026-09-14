@@ -31,6 +31,7 @@ export default function ProfilePhotoPage() {
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const [needCharge, setNeedCharge] = useState(false)
+    const [미리보기, set미리보기] = useState(false)   // 손님에게 준 흐린 그림인가
 
     // 첫 화면에서 사진을 이미 올렸으면 그대로 받아 온다 (대표 지시 0914 「이게 메인으로」)
     useEffect(() => {
@@ -62,7 +63,8 @@ export default function ProfilePhotoPage() {
                 if (data.needCharge) setNeedCharge(true)
                 throw new Error(data.error || '사진을 만들지 못했어요.')
             }
-            setResult(`data:image/png;base64,${data.imageBase64}`)
+            set미리보기(!!data.preview)
+            setResult(`data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
         } catch (e) {
             setErrorMsg(e instanceof Error ? e.message : '사진을 만들지 못했어요.')
         } finally {
@@ -240,11 +242,29 @@ export default function ProfilePhotoPage() {
                         <div style={{ fontSize: 15, fontWeight: 700, color: '#18181b', marginBottom: 10 }}>완성됐어요</div>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={result} alt="만든 프로필 사진" style={{ width: '100%', borderRadius: 16, border: '1px solid #e4e4e7' }} />
-                        <a href={result} download="내_프로필_사진.png" style={{
-                            display: 'block', marginTop: 12, padding: '14px', borderRadius: 14,
-                            background: '#18181b', color: '#fff', fontSize: 15, fontWeight: 700,
-                            textAlign: 'center', textDecoration: 'none',
-                        }}>사진 내려받기</a>
+                        {미리보기 ? (
+                            <div style={{
+                                marginTop: 12, background: '#fff', border: '1px solid #e4e4e7',
+                                borderRadius: 14, padding: '18px 18px 16px', textAlign: 'center',
+                            }}>
+                                <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>
+                                    선명한 사진은 회원만 받을 수 있어요
+                                </div>
+                                <p style={{ fontSize: 13.5, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6 }}>
+                                    지금 보이는 건 미리보기라 흐릿해요. 로그인하면 원본을 바로 내려받습니다.
+                                </p>
+                                <button onClick={() => router.push('/login')} style={{
+                                    width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+                                    background: '#22c55e', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                                }}>로그인하고 원본 받기</button>
+                            </div>
+                        ) : (
+                            <a href={result} download="내_프로필_사진.png" style={{
+                                display: 'block', marginTop: 12, padding: '14px', borderRadius: 14,
+                                background: '#18181b', color: '#fff', fontSize: 15, fontWeight: 700,
+                                textAlign: 'center', textDecoration: 'none',
+                            }}>사진 내려받기</a>
+                        )}
                     </div>
                 )}
 

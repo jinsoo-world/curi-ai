@@ -30,7 +30,7 @@ export async function getUserChatContext(
 ) {
     const { data } = await db
         .from('users')
-        .select('display_name, interests, birth_year, gender, concern, daily_free_used')
+        .select('display_name, interests, birth_year, gender, concern, daily_free_used, subscription_tier, trial_ends_at')
         .eq('id', userId)
         .single()
 

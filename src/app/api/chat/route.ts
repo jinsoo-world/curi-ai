@@ -4,6 +4,7 @@ import { getMentorById, getPublicMentorById, buildSystemPrompt, buildGeminiHisto
 import { getUserChatContext } from '@/domains/user'
 import { generateChatStream, getUserMemories, saveUserMessage, saveAssistantMessage, updateSessionActivity, incrementDailyFreeUsage, detectCrisisKeywords, CRISIS_RESPONSE, ERROR_MESSAGES, extractAndSaveMemories, extractAndUpdateTopic } from '@/domains/chat'
 import { MAX_DAILY_FREE, MAX_DAILY_FREE_GUEST, FREE_TRIAL_OPEN } from '@/domains/chat/constants'
+import { isTrialActive } from '@/domains/trial'
 import { generateEmbedding, matchKnowledge } from '@/domains/knowledge'
 import { deductCredit, getCreditBalance } from '@/domains/credit'
 import { CREDIT_CONSTANTS } from '@/domains/credit/types'
@@ -65,7 +66,8 @@ export async function POST(req: Request) {
         // 예전엔 2026-04-30 이 하드코딩돼 있었다. 그 날이 지나자
         // 로그인한 회원은 전원 '클로버가 부족합니다'만 보게 됐고 아무도 몰랐다.
         // 유료로 전환할 때는 이 값을 false 로 바꾼다(날짜를 다시 박지 않는다).
-        const isFreeTrial = FREE_TRIAL_OPEN
+        // 개인 체험권은 프로필을 읽은 뒤에 더한다(아래 「내 체험권」 자리).
+        let isFreeTrial = FREE_TRIAL_OPEN
 
         // ── 🔒 비로그인 사용자 대화 제한 (isFreeTrial 무관, 항상 적용) ──
         // 횟수는 아직 브라우저가 보고한다(서버 집계는 별건). 다만 숫자가 아닌 값을
@@ -136,6 +138,12 @@ export async function POST(req: Request) {
         }
 
         // ── 🔒 무료 대화 제한 체크 (무료 체험 기간에는 스킵) ──
+        // ── 🎁 내 체험권 — 대표 지시 0914 「받은날로부터 7일은 세고 똑바로」 ──
+        // 전체 개방(FREE_TRIAL_OPEN)을 끄는 날, 체험권이 살아 있는 사람만 그대로 무료가 된다.
+        if (isTrialActive((userProfile as Record<string, unknown> | null)?.trial_ends_at as string | null)) {
+            isFreeTrial = true
+        }
+
         const dailyUsed = (userProfile as any)?.daily_free_used || 0
         const isPremium = (userProfile as any)?.subscription_tier === 'premium'
         if (user && !isPremium && !isFreeTrial && dailyUsed >= MAX_DAILY_FREE) {

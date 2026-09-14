@@ -5,7 +5,7 @@
 // 그래서 결과를 **동그란 모습으로 미리 보여준다**. 그게 실제로 보이는 모습이다.
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { MOODS, TONES } from '@/domains/studio/insta'
+import { MOODS, TONES, MAX_FREE_TEXT } from '@/domains/studio/insta'
 import { CURI_MODELS, DEFAULT_MODEL_ID, getModel } from '@/domains/studio/models'
 import { CLOVER_UNIT_WON } from '@/domains/credit/packs'
 import { PickCard } from '@/components/studio/PickCard'
@@ -27,6 +27,8 @@ export default function InstaProfilePage() {
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const [needCharge, setNeedCharge] = useState(false)
+    const [주문, set주문] = useState('')
+    const [미리보기, set미리보기] = useState(false)   // 손님에게 준 흐린 그림인가
 
     const make = async () => {
         if (!base64 || !moodId || !toneId) return
@@ -35,14 +37,15 @@ export default function InstaProfilePage() {
             const res = await fetch('/api/tools/profile-photo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64: base64, mimeType, styleId: moodId, backdropId: toneId, modelId, kind: 'insta' }),
+                body: JSON.stringify({ imageBase64: base64, mimeType, styleId: moodId, backdropId: toneId, modelId, kind: 'insta', freeText: 주문 }),
             })
             const data = await res.json()
             if (!res.ok) {
                 if (data.needCharge) setNeedCharge(true)
                 throw new Error(data.error || '사진을 만들지 못했어요.')
             }
-            setResult(`data:image/png;base64,${data.imageBase64}`)
+            set미리보기(!!data.preview)
+            setResult(`data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
         } catch (e) {
             setErrorMsg(e instanceof Error ? e.message : '사진을 만들지 못했어요.')
         } finally { setLoading(false) }
@@ -137,6 +140,28 @@ export default function InstaProfilePage() {
                             ))}
                         </div>
                     </div>
+
+                    {/* 직접 적기 — 대표 지시 0914 「인스타 프로필 사진은 자유도가 있어야지 이미지 편집하고 등등」 */}
+                    <div style={{ marginBottom: 24 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>
+                            5. 더 바라는 것 <span style={{ fontWeight: 600, color: '#a1a1aa' }}>(안 써도 돼요)</span>
+                        </div>
+                        <textarea
+                            value={주문}
+                            onChange={(e) => set주문(e.target.value.slice(0, MAX_FREE_TEXT))}
+                            placeholder="예) 안경 빼주세요 · 머리 조금 단정하게 · 배경을 조금 더 밝게"
+                            rows={3}
+                            style={{
+                                width: '100%', borderRadius: 14, border: '1.5px solid #e4e4e7',
+                                padding: '12px 14px', fontSize: 15, lineHeight: 1.6,
+                                color: '#18181b', resize: 'none', outline: 'none', fontFamily: 'inherit',
+                            }}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                            <span style={{ fontSize: 12.5, color: '#71717a' }}>얼굴은 바꾸지 않아요. 옷·머리·배경만 손봅니다.</span>
+                            <span style={{ fontSize: 12.5, color: '#a1a1aa' }}>{주문.length}/{MAX_FREE_TEXT}</span>
+                        </div>
+                    </div>
                 </div>
 
                 {errorMsg && (
@@ -182,10 +207,28 @@ export default function InstaProfilePage() {
                         </div>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={result} alt="만든 프로필 사진" style={{ width: '100%', borderRadius: 16, border: '1px solid #e4e4e7' }} />
-                        <a href={result} download="인스타_프로필_사진.png" style={{
-                            display: 'block', marginTop: 12, padding: '14px', borderRadius: 14,
-                            background: '#18181b', color: '#fff', fontSize: 15, fontWeight: 700, textAlign: 'center', textDecoration: 'none',
-                        }}>사진 내려받기</a>
+                        {미리보기 ? (
+                            <div style={{
+                                marginTop: 12, background: '#fff', border: '1px solid #e4e4e7',
+                                borderRadius: 14, padding: '18px 18px 16px', textAlign: 'center',
+                            }}>
+                                <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>
+                                    선명한 사진은 회원만 받을 수 있어요
+                                </div>
+                                <p style={{ fontSize: 13.5, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6 }}>
+                                    지금 보이는 건 미리보기라 흐릿해요. 로그인하면 원본을 바로 내려받습니다.
+                                </p>
+                                <button onClick={() => router.push('/login')} style={{
+                                    width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+                                    background: '#22c55e', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                                }}>로그인하고 원본 받기</button>
+                            </div>
+                        ) : (
+                            <a href={result} download="인스타_프로필_사진.png" style={{
+                                display: 'block', marginTop: 12, padding: '14px', borderRadius: 14,
+                                background: '#18181b', color: '#fff', fontSize: 15, fontWeight: 700, textAlign: 'center', textDecoration: 'none',
+                            }}>사진 내려받기</a>
+                        )}
                     </div>
                 )}
             </div>
