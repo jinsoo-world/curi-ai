@@ -9,6 +9,7 @@ import { GoogleGenAI } from '@google/genai'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getStyle, getBackdrop, isValidStyle, isValidBackdrop, buildPhotoPrompt } from '@/domains/studio/photo'
+import { getMood, getTone, isValidMood, isValidTone, buildInstaPrompt } from '@/domains/studio/insta'
 import { getModel, isValidModelId, DEFAULT_MODEL_ID } from '@/domains/studio/models'
 
 export const dynamic = 'force-dynamic'
@@ -22,12 +23,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '로그인이 필요해요.' }, { status: 401 })
         }
 
-        const { imageBase64, mimeType, styleId, backdropId, modelId } = await req.json()
+        const { imageBase64, mimeType, styleId, backdropId, modelId, kind } = await req.json()
 
         if (typeof imageBase64 !== 'string' || imageBase64.length < 100) {
             return NextResponse.json({ error: '사진을 올려주세요.' }, { status: 400 })
         }
-        if (!isValidStyle(styleId) || !isValidBackdrop(backdropId)) {
+        // 두 가지를 만든다 — 전문가용(기본)과 인스타용
+        const isInsta = kind === 'insta'
+        if (isInsta) {
+            if (!isValidMood(styleId) || !isValidTone(backdropId)) {
+                return NextResponse.json({ error: '분위기와 배경색을 골라주세요.' }, { status: 400 })
+            }
+        } else if (!isValidStyle(styleId) || !isValidBackdrop(backdropId)) {
             return NextResponse.json({ error: '차림새와 배경을 골라주세요.' }, { status: 400 })
         }
 
@@ -53,12 +60,14 @@ export async function POST(req: NextRequest) {
             amount: -PHOTO_COST,
             balance_after: 차감후,
             type: 'chat_usage',
-            description: `프로필 사진 만들기 (${model.label} · ${styleId}/${backdropId})`,
+            description: `${isInsta ? '인스타' : '전문가'} 프로필 사진 (${model.label} · ${styleId}/${backdropId})`,
         })
 
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
-            const prompt = buildPhotoPrompt(getStyle(styleId)!, getBackdrop(backdropId)!)
+            const prompt = isInsta
+                ? buildInstaPrompt(getMood(styleId)!, getTone(backdropId)!)
+                : buildPhotoPrompt(getStyle(styleId)!, getBackdrop(backdropId)!)
 
             const r = await ai.models.generateContent({
                 model: model.engine,

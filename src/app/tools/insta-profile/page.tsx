@@ -1,0 +1,189 @@
+'use client'
+
+// 인스타 프로필 사진 만들기 — 대표 지시 2026-09-14
+// 전문가용과 다른 점 = 정사각형이고 화면에서 동그랗게 잘려 보인다.
+// 그래서 결과를 **동그란 모습으로 미리 보여준다**. 그게 실제로 보이는 모습이다.
+import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import { MOODS, TONES } from '@/domains/studio/insta'
+import { CURI_MODELS, DEFAULT_MODEL_ID, getModel } from '@/domains/studio/models'
+import { CLOVER_UNIT_WON } from '@/domains/credit/packs'
+import AppSidebar from '@/components/AppSidebar'
+
+export default function InstaProfilePage() {
+    const router = useRouter()
+    const fileRef = useRef<HTMLInputElement>(null)
+    const [preview, setPreview] = useState<string | null>(null)
+    const [base64, setBase64] = useState<string | null>(null)
+    const [mimeType, setMimeType] = useState('image/jpeg')
+    const [modelId, setModelId] = useState(DEFAULT_MODEL_ID)
+    const [moodId, setMoodId] = useState<string | null>(null)
+    const [toneId, setToneId] = useState<string | null>(null)
+    const [result, setResult] = useState<string | null>(null)
+    const [loading, setLoading] = useState(false)
+    const [errorMsg, setErrorMsg] = useState<string | null>(null)
+    const [needCharge, setNeedCharge] = useState(false)
+
+    const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const f = e.target.files?.[0]
+        e.target.value = ''
+        if (!f) return
+        if (f.size > 4 * 1024 * 1024) { setErrorMsg('사진은 4MB 이하만 올려주세요.'); return }
+        setErrorMsg(null)
+        setMimeType(f.type || 'image/jpeg')
+        const reader = new FileReader()
+        reader.onload = () => {
+            const d = String(reader.result)
+            setPreview(d); setBase64(d.split(',')[1] ?? null)
+        }
+        reader.readAsDataURL(f)
+    }
+
+    const make = async () => {
+        if (!base64 || !moodId || !toneId) return
+        setLoading(true); setErrorMsg(null); setNeedCharge(false); setResult(null)
+        try {
+            const res = await fetch('/api/tools/profile-photo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageBase64: base64, mimeType, styleId: moodId, backdropId: toneId, modelId, kind: 'insta' }),
+            })
+            const data = await res.json()
+            if (!res.ok) {
+                if (data.needCharge) setNeedCharge(true)
+                throw new Error(data.error || '사진을 만들지 못했어요.')
+            }
+            setResult(`data:image/png;base64,${data.imageBase64}`)
+        } catch (e) {
+            setErrorMsg(e instanceof Error ? e.message : '사진을 만들지 못했어요.')
+        } finally { setLoading(false) }
+    }
+
+    const 준비됨 = !!base64 && !!moodId && !!toneId
+    const cost = getModel(modelId)!.cost
+
+    const 고르기 = (목록: typeof MOODS, 고른것: string | null, 정하기: (v: string) => void) => (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+            {목록.map(o => (
+                <button key={o.id} onClick={() => 정하기(o.id)} style={{
+                    padding: '13px 10px', borderRadius: 12,
+                    border: 고른것 === o.id ? '2px solid #22c55e' : '1.5px solid #e4e4e7',
+                    background: 고른것 === o.id ? '#f0fdf4' : '#fff',
+                    fontSize: 14.5, fontWeight: 600, color: '#18181b', cursor: 'pointer', wordBreak: 'keep-all',
+                }}>{o.label}</button>
+            ))}
+        </div>
+    )
+
+    return (
+        <main style={{ minHeight: '100dvh', background: '#fafafa' }}>
+            <AppSidebar />
+            <div style={{ maxWidth: 520, margin: '0 auto', padding: '32px 18px 90px' }}>
+                <h1 style={{ fontSize: 24, fontWeight: 800, color: '#18181b', margin: '0 0 6px', wordBreak: 'keep-all' }}>
+                    인스타 프로필 사진 만들기
+                </h1>
+                <p style={{ fontSize: 14, color: '#71717a', margin: '0 0 24px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                    인스타에서는 사진이 동그랗게 잘려 보여요. 그에 맞춰 얼굴이 잘 나오게 만들어드립니다.
+                </p>
+
+                <div style={{ marginBottom: 22 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>1. 내 사진 올리기</div>
+                    <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={pickFile} style={{ display: 'none' }} />
+                    {preview ? (
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={preview} alt="올린 사진" style={{ width: 88, height: 88, objectFit: 'cover', borderRadius: '50%', border: '1px solid #e4e4e7' }} />
+                            <button onClick={() => fileRef.current?.click()} style={{
+                                background: '#f4f4f5', border: 'none', borderRadius: 10,
+                                padding: '9px 14px', fontSize: 14, color: '#3f3f46', cursor: 'pointer', fontWeight: 600,
+                            }}>다른 사진으로</button>
+                        </div>
+                    ) : (
+                        <button onClick={() => fileRef.current?.click()} style={{
+                            width: '100%', padding: '26px', borderRadius: 14,
+                            border: '1.5px dashed #d4d4d8', background: '#fff', fontSize: 15, color: '#52525b', cursor: 'pointer',
+                        }}>
+                            📷 사진 고르기<br />
+                            <span style={{ fontSize: 12, color: '#a1a1aa' }}>얼굴이 잘 보이는 밝은 사진이 좋아요</span>
+                        </button>
+                    )}
+                </div>
+
+                <div style={{ opacity: base64 ? 1 : 0.4, pointerEvents: base64 ? 'auto' : 'none' }}>
+                    <div style={{ marginBottom: 22 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>2. 어떤 큐리로 만들까요</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {CURI_MODELS.map(m => (
+                                <button key={m.id} onClick={() => setModelId(m.id)} style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                                    padding: '13px 15px', borderRadius: 12,
+                                    border: modelId === m.id ? '2px solid #22c55e' : '1.5px solid #e4e4e7',
+                                    background: modelId === m.id ? '#f0fdf4' : '#fff', cursor: 'pointer', textAlign: 'left',
+                                }}>
+                                    <span>
+                                        <span style={{ fontSize: 15, fontWeight: 700, color: '#18181b' }}>{m.label}</span>
+                                        <span style={{ marginLeft: 7, fontSize: 11, fontWeight: 700, color: '#166534', background: '#dcfce7', padding: '2px 7px', borderRadius: 7 }}>{m.badge}</span>
+                                        <span style={{ display: 'block', fontSize: 12.5, color: '#71717a', marginTop: 3 }}>{m.desc}</span>
+                                    </span>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#3f3f46', flexShrink: 0 }}>🍀 {m.cost}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div style={{ marginBottom: 22 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>3. 분위기</div>
+                        {고르기(MOODS, moodId, setMoodId)}
+                    </div>
+                    <div style={{ marginBottom: 24 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>4. 배경색</div>
+                        {고르기(TONES, toneId, setToneId)}
+                    </div>
+                </div>
+
+                {errorMsg && (
+                    <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 14, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
+                        {errorMsg}
+                        {needCharge && (
+                            <button onClick={() => router.push('/charge')} style={{
+                                display: 'block', marginTop: 10, background: '#dc2626', color: '#fff', border: 'none',
+                                borderRadius: 10, padding: '9px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                            }}>클로버 충전하러 가기</button>
+                        )}
+                    </div>
+                )}
+
+                <button onClick={make} disabled={!준비됨 || loading} style={{
+                    width: '100%', padding: '16px', borderRadius: 16, border: 'none',
+                    background: (!준비됨 || loading) ? '#d4d4d8' : '#22c55e',
+                    color: '#fff', fontSize: 16, fontWeight: 700, cursor: (!준비됨 || loading) ? 'default' : 'pointer',
+                }}>
+                    {loading ? '만드는 중... (20초쯤 걸려요)' : `사진 만들기 (🍀 ${cost}개 · ${(cost * CLOVER_UNIT_WON).toLocaleString()}원)`}
+                </button>
+
+                {result && (
+                    <div style={{ marginTop: 26 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#18181b', marginBottom: 12 }}>완성됐어요</div>
+                        {/* 실제로 보이는 모습 = 동그랗게 잘린 것 */}
+                        <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 14 }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={result} alt="인스타에서 보이는 모습" style={{
+                                width: 104, height: 104, objectFit: 'cover', borderRadius: '50%',
+                                border: '3px solid #fff', boxShadow: '0 0 0 2px #e4e4e7', flexShrink: 0,
+                            }} />
+                            <div style={{ fontSize: 13, color: '#71717a', lineHeight: 1.7, wordBreak: 'keep-all' }}>
+                                인스타에서는 이렇게 동그랗게 보여요.<br />
+                                아래는 원본 정사각형입니다.
+                            </div>
+                        </div>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={result} alt="만든 프로필 사진" style={{ width: '100%', borderRadius: 16, border: '1px solid #e4e4e7' }} />
+                        <a href={result} download="인스타_프로필_사진.png" style={{
+                            display: 'block', marginTop: 12, padding: '14px', borderRadius: 14,
+                            background: '#18181b', color: '#fff', fontSize: 15, fontWeight: 700, textAlign: 'center', textDecoration: 'none',
+                        }}>사진 내려받기</a>
+                    </div>
+                )}
+            </div>
+        </main>
+    )
+}

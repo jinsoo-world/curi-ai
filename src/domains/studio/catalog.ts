@@ -35,6 +35,16 @@ export const STUDIO_ITEMS: StudioItem[] = [
         group: '만들기',
     },
 
+    {
+        id: 'insta-profile',
+        title: '인스타 프로필 사진 만들기',
+        desc: '동그랗게 잘려도 얼굴이 잘 나오게 만들어요',
+        emoji: '🟢',
+        href: '/tools/insta-profile',
+        cost: 20,
+        group: '만들기',
+    },
+
     // ── 배우기 (코치) ── slug 는 멘토 등록 후 실제 id 로 바꾼다
     { id: 'youtube', title: '유튜브 시작하기', desc: '얼굴 안 나와도 영상은 됩니다', emoji: '🎬', href: '/mentors?c=유튜브', cost: 'free', group: '배우기' },
     { id: 'insta', title: '인스타 올리기', desc: '사진 한 장이면 충분해요', emoji: '📷', href: '/mentors?c=인스타그램', cost: 'free', group: '배우기' },
