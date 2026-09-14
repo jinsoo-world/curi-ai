@@ -15,22 +15,24 @@ export interface Choice {
     swatch: string
     /** 배경용 그라데이션 */
     bg?: string
+    /** 실제로 만들어본 예시 사진 */
+    sample?: string
 }
 
 /** 차림새 */
 export const STYLES: Choice[] = [
-    { id: 'suit', label: '정장', prompt: 'wearing a well-tailored dark navy suit with a crisp white shirt', swatch: '#1e293b' },
-    { id: 'jacket', label: '재킷', prompt: 'wearing a soft unstructured blazer over a fine knit top, business casual', swatch: '#475569' },
-    { id: 'knit', label: '단정한 니트', prompt: 'wearing a clean solid-color knit sweater, neat and approachable', swatch: '#92400e' },
-    { id: 'shirt', label: '셔츠', prompt: 'wearing a crisp button-up shirt, collar open, no tie', swatch: '#bfdbfe' },
+    { sample: '/samples/style-suit.webp', id: 'suit', label: '정장', prompt: 'wearing a well-tailored dark navy suit with a crisp white shirt', swatch: '#1e293b' },
+    { sample: '/samples/style-jacket.webp', id: 'jacket', label: '재킷', prompt: 'wearing a soft unstructured blazer over a fine knit top, business casual', swatch: '#475569' },
+    { sample: '/samples/style-knit.webp', id: 'knit', label: '단정한 니트', prompt: 'wearing a clean solid-color knit sweater, neat and approachable', swatch: '#92400e' },
+    { sample: '/samples/style-shirt.webp', id: 'shirt', label: '셔츠', prompt: 'wearing a crisp button-up shirt, collar open, no tie', swatch: '#bfdbfe' },
 ]
 
 /** 배경 */
 export const BACKDROPS: Choice[] = [
-    { id: 'studio', label: '스튜디오', prompt: 'plain light grey studio backdrop, even softbox lighting', swatch: '#e5e7eb', bg: 'linear-gradient(140deg,#f8fafc,#d1d5db)' },
-    { id: 'office', label: '사무실', prompt: 'modern bright office interior softly blurred in the background', swatch: '#cbd5e1', bg: 'linear-gradient(140deg,#eff6ff,#94a3b8)' },
-    { id: 'bookshelf', label: '책장', prompt: 'a warm home study with a blurred bookshelf behind', swatch: '#b45309', bg: 'linear-gradient(140deg,#fef3c7,#92400e)' },
-    { id: 'outdoor', label: '야외', prompt: 'soft outdoor daylight with blurred green foliage behind', swatch: '#65a30d', bg: 'linear-gradient(140deg,#ecfccb,#4d7c0f)' },
+    { sample: '/samples/bg-studio.webp', id: 'studio', label: '스튜디오', prompt: 'plain light grey studio backdrop, even softbox lighting', swatch: '#e5e7eb', bg: 'linear-gradient(140deg,#f8fafc,#d1d5db)' },
+    { sample: '/samples/bg-office.webp', id: 'office', label: '사무실', prompt: 'modern bright office interior softly blurred in the background', swatch: '#cbd5e1', bg: 'linear-gradient(140deg,#eff6ff,#94a3b8)' },
+    { sample: '/samples/bg-bookshelf.webp', id: 'bookshelf', label: '책장', prompt: 'a warm home study with a blurred bookshelf behind', swatch: '#b45309', bg: 'linear-gradient(140deg,#fef3c7,#92400e)' },
+    { sample: '/samples/bg-outdoor.webp', id: 'outdoor', label: '야외', prompt: 'soft outdoor daylight with blurred green foliage behind', swatch: '#65a30d', bg: 'linear-gradient(140deg,#ecfccb,#4d7c0f)' },
 ]
 
 export function getStyle(id: string) { return STYLES.find(s => s.id === id) }

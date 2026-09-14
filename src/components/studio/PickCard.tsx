@@ -8,6 +8,8 @@ export interface PickOption {
     label: string
     swatch: string
     bg?: string
+    /** 실제로 만들어본 예시 사진. 있으면 이걸 먼저 보여준다 */
+    sample?: string
 }
 
 /** 옷 모양 — 어깨선과 깃으로 차림새를 구분해 보여준다 */
@@ -52,10 +54,16 @@ export function PickCard({
                 boxShadow: selected ? '0 0 0 3px rgba(34,197,94,0.12)' : 'none',
             }}
         >
-            <div style={{ width: '100%', aspectRatio: '4 / 3', overflow: 'hidden' }}>
-                {kind === 'outfit'
-                    ? <OutfitShape color={option.swatch} />
-                    : <BackdropShape bg={option.bg || option.swatch} />}
+            <div style={{ width: '100%', aspectRatio: '4 / 5', overflow: 'hidden', background: '#f4f4f5' }}>
+                {option.sample ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={option.sample} alt={option.label} loading="lazy"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                ) : kind === 'outfit' ? (
+                    <OutfitShape color={option.swatch} />
+                ) : (
+                    <BackdropShape bg={option.bg || option.swatch} />
+                )}
             </div>
             <div style={{
                 padding: '9px 10px', fontSize: 14, fontWeight: 700,
