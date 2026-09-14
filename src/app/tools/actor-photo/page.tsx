@@ -3,8 +3,8 @@
 // 배우 프로필 사진 만들기 — 대표 확정 2026-09-15
 // 재취업용과 고르는 것이 다르다. 옷·배경이 아니라 「어떤 역할이 보이는가」를 고른다.
 // 참고 = jactors.kr · plfil.com
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { AGES, DEFAULT_AGE_ID } from '@/domains/studio/photo'
 import { ACTOR_MOODS, ACTOR_BACKDROPS } from '@/domains/studio/actor'
 import { CURI_MODELS, DEFAULT_MODEL_ID, getModel } from '@/domains/studio/models'
@@ -18,8 +18,9 @@ import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
 
-export default function ActorPhotoPage() {
+function ActorPhotoPage안쪽() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const [preview, setPreview] = useState<string | null>(null)
     const [base64, setBase64] = useState<string | null>(null)
     const [mimeType, setMimeType] = useState('image/jpeg')
@@ -49,6 +50,14 @@ export default function ActorPhotoPage() {
             // 저장소를 못 읽는 브라우저면 그냥 새로 올리게 둔다
         }
     }, [])
+
+    // 쇼케이스에서 고르고 온 것을 미리 골라둔다
+    useEffect(() => {
+        const m = searchParams?.get('mood')
+        if (m && ACTOR_MOODS.some(x => x.id === m)) setStyleId(m)
+        const b = searchParams?.get('bg')
+        if (b && ACTOR_BACKDROPS.some(x => x.id === b)) setBackdropId(b)
+    }, [searchParams])
 
     const make = async () => {
         if (!base64 || !styleId || !backdropId) return
@@ -284,5 +293,17 @@ export default function ActorPhotoPage() {
                 </div>
             </div>
         </main>
+    )
+}
+
+/**
+ * 주소에 붙은 값(?mood=…)을 읽으려면 useSearchParams 가 필요하고,
+ * 그건 Suspense 안에 있어야 한다(없으면 빌드가 이 화면에서 멈춘다).
+ */
+export default function Page() {
+    return (
+        <Suspense fallback={null}>
+            <ActorPhotoPage안쪽 />
+        </Suspense>
     )
 }

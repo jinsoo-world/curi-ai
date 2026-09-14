@@ -1,8 +1,8 @@
 'use client'
 
 // 강사 프로필 만들기 — 대표 확정 2026-09-15
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { TEACHER_MOODS, TEACHER_PLACES, TEACHER_COST } from '@/domains/studio/teacher'
 import { AGES, DEFAULT_AGE_ID } from '@/domains/studio/photo'
@@ -10,8 +10,9 @@ import { RATIOS, DEFAULT_RATIO_ID } from '@/domains/studio/ratios'
 import PhotoToolShell from '@/components/studio/PhotoToolShell'
 import AppSidebar from '@/components/AppSidebar'
 
-export default function TeacherPhotoPage() {
+function TeacherPhotoPage안쪽() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const [preview, setPreview] = useState<string | null>(null)
     const [base64, setBase64] = useState<string | null>(null)
     const [mimeType, setMimeType] = useState('image/jpeg')
@@ -24,6 +25,14 @@ export default function TeacherPhotoPage() {
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const [needCharge, setNeedCharge] = useState(false)
+
+    // 쇼케이스에서 고르고 온 것을 미리 골라둔다 (대표 지적 0915 「저 버튼 누르면」)
+    useEffect(() => {
+        const m = searchParams?.get('mood')
+        if (m && TEACHER_MOODS.some(x => x.id === m)) setMoodId(m)
+        const p = searchParams?.get('bg')
+        if (p && TEACHER_PLACES.some(x => x.id === p)) setPlaceId(p)
+    }, [searchParams])
 
     const make = async () => {
         if (!base64 || !moodId || !placeId) return
@@ -147,4 +156,16 @@ function 고름(on: boolean): React.CSSProperties {
         background: on ? '#f0fdf4' : '#fff',
         cursor: 'pointer', textAlign: 'center', width: '100%',
     }
+}
+
+/**
+ * 주소에 붙은 값(?mood=…)을 읽으려면 useSearchParams 가 필요하고,
+ * 그건 Suspense 안에 있어야 한다(없으면 빌드가 이 화면에서 멈춘다).
+ */
+export default function Page() {
+    return (
+        <Suspense fallback={null}>
+            <TeacherPhotoPage안쪽 />
+        </Suspense>
+    )
 }

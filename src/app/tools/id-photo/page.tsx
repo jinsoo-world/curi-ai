@@ -2,16 +2,17 @@
 
 // 증명사진 만들기 — 대표 확정 2026-09-15
 // 「사진 넣는 곳은 페이지 접속하면 바로 있게」 → PhotoToolShell 이 그 차례를 맡는다.
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { ID_BACKGROUNDS, ID_OUTFITS, ID_SIZES, ID_COST } from '@/domains/studio/idphoto'
 import { AGES, DEFAULT_AGE_ID } from '@/domains/studio/photo'
 import PhotoToolShell from '@/components/studio/PhotoToolShell'
 import AppSidebar from '@/components/AppSidebar'
 
-export default function IdPhotoPage() {
+function IdPhotoPage안쪽() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const [preview, setPreview] = useState<string | null>(null)
     const [base64, setBase64] = useState<string | null>(null)
     const [mimeType, setMimeType] = useState('image/jpeg')
@@ -24,6 +25,16 @@ export default function IdPhotoPage() {
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const [needCharge, setNeedCharge] = useState(false)
+
+    // 쇼케이스에서 고르고 온 것을 미리 골라둔다
+    useEffect(() => {
+        const b = searchParams?.get('bg')
+        if (b && ID_BACKGROUNDS.some(x => x.id === b)) setBackgroundId(b)
+        const o = searchParams?.get('outfit')
+        if (o && ID_OUTFITS.some(x => x.id === o)) setOutfitId(o)
+        const z = searchParams?.get('size')
+        if (z && ID_SIZES.some(x => x.id === z)) setSizeId(z)
+    }, [searchParams])
 
     const make = async () => {
         if (!base64) return
@@ -154,4 +165,16 @@ function 고름(on: boolean, 왼쪽 = false): React.CSSProperties {
         background: on ? '#f0fdf4' : '#fff',
         cursor: 'pointer', textAlign: 왼쪽 ? 'left' : 'center', width: '100%',
     }
+}
+
+/**
+ * 주소에 붙은 값(?mood=…)을 읽으려면 useSearchParams 가 필요하고,
+ * 그건 Suspense 안에 있어야 한다(없으면 빌드가 이 화면에서 멈춘다).
+ */
+export default function Page() {
+    return (
+        <Suspense fallback={null}>
+            <IdPhotoPage안쪽 />
+        </Suspense>
+    )
 }

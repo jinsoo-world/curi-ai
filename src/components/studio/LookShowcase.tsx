@@ -12,23 +12,27 @@ import Link from 'next/link'
  * 대표 지시 2026-09-15 = 「예쁘고 멋진 중장년들 더 깔아봐」 「플필도 참고해. 이미지 셋을 더 다양하게 해봐」
  * 배우 프로필 사이트(jactors·plfil)처럼 어두운 스튜디오부터 밝은 증명사진형·야외까지 섞는다.
  */
-const LOOKS = [
-    { src: '/samples/act-m1.webp', label: '스튜디오' },
-    { src: '/samples/act-w1.webp', label: '단정하게' },
-    { src: '/samples/act-m5.webp', label: '정장' },
-    { src: '/samples/act-w5.webp', label: '밝게' },
-    { src: '/samples/act-m2.webp', label: '지적인' },
-    { src: '/samples/act-w2.webp', label: '세련되게' },
-    { src: '/samples/act-m6.webp', label: '편안하게' },
-    { src: '/samples/act-w6.webp', label: '부드럽게' },
-    { src: '/samples/act-m3.webp', label: '창가 빛' },
-    { src: '/samples/act-w3.webp', label: '웃는 얼굴' },
-    { src: '/samples/act-m7.webp', label: '클래식' },
-    { src: '/samples/act-w7.webp', label: '에디토리얼' },
-    { src: '/samples/act-m4.webp', label: '서재' },
-    { src: '/samples/act-w4.webp', label: '강한 조명' },
-    { src: '/samples/act-m8.webp', label: '카페' },
-    { src: '/samples/act-w8.webp', label: '야외' },
+/**
+ * 실제로 고를 수 있는 것만 보여준다 — 대표 지적 2026-09-15
+ * 「이거 다 설정에 있어? 옵션에서 할 수 있냐고. 저 버튼 누르면」
+ *
+ * 전에는 견본 사진 16장을 늘어놓고 「에디토리얼·서재·카페」 같은 이름을 붙였는데,
+ * 도구 안에는 그런 선택지가 없었다. 눌러도 그렇게 안 나온다 = 거짓말이다.
+ * 지금은 도구가 실제로 가진 것만 적고, 누르면 그 도구로 간다.
+ */
+const LOOKS: { src: string; label: string; sub: string; href: string }[] = [
+    { src: '/samples/teach-w1.webp', label: '믿음직하게', sub: '강사 프로필', href: '/tools/teacher-photo?mood=trust' },
+    { src: '/samples/teach-m1.webp', label: '편안하게', sub: '강사 프로필', href: '/tools/teacher-photo?mood=easy' },
+    { src: '/samples/teach-w2.webp', label: '따뜻하게', sub: '강사 프로필', href: '/tools/teacher-photo?mood=warm' },
+    { src: '/samples/teach-m2.webp', label: '전문가답게', sub: '강사 프로필', href: '/tools/teacher-photo?mood=expert' },
+    { src: '/samples/act-m1.webp', label: '단단한 인물', sub: '배우 프로필', href: '/tools/actor-photo?mood=strong' },
+    { src: '/samples/act-w2.webp', label: '기품 있는', sub: '배우 프로필', href: '/tools/actor-photo?mood=elegant' },
+    { src: '/samples/act-m3.webp', label: '창가 빛', sub: '배우 프로필', href: '/tools/actor-photo?bg=window' },
+    { src: '/samples/act-w5.webp', label: '밝고 친근한', sub: '배우 프로필', href: '/tools/actor-photo?mood=bright' },
+    { src: '/samples/id-m1.webp', label: '흰 배경', sub: '증명사진', href: '/tools/id-photo?bg=white' },
+    { src: '/samples/id-w1.webp', label: '재킷', sub: '증명사진', href: '/tools/id-photo?outfit=jacket' },
+    { src: '/samples/id-m2.webp', label: '회색 배경', sub: '증명사진', href: '/tools/id-photo?bg=lightgrey' },
+    { src: '/samples/id-w2.webp', label: '반명함', sub: '증명사진', href: '/tools/id-photo?size=half' },
 ]
 
 export default function LookShowcase() {
@@ -49,13 +53,14 @@ export default function LookShowcase() {
                     만들 수 있는 인물 사진
                 </h2>
                 <p style={{ color: 'rgba(255,255,255,0.62)', textAlign: 'center', fontSize: 'var(--글자-본문)', margin: '-24px 0 32px', lineHeight: 1.6 }}>
-                    사진관에서 찍은 것처럼. 내 사진 한 장만 올리면 됩니다.
+                    전부 지금 고를 수 있는 것들입니다. 누르면 바로 만들러 갑니다.
                 </p>
 
                 <div className="look-grid">
                     {LOOKS.map((l) => (
-                        <figure
+                        <Link
                             key={l.src}
+                            href={l.href}
                             style={{
                                 position: 'relative',
                                 margin: 0,
@@ -63,6 +68,8 @@ export default function LookShowcase() {
                                 borderRadius: 16,
                                 overflow: 'hidden',
                                 background: '#18181B',
+                                display: 'block',
+                                textDecoration: 'none',
                             }}
                         >
                             <Image
@@ -73,22 +80,21 @@ export default function LookShowcase() {
                     quality={90}
                                 style={{ objectFit: 'cover' }}
                             />
-                            <figcaption
+                            <span
                                 style={{
                                     position: 'absolute',
                                     left: 0,
                                     right: 0,
                                     bottom: 0,
-                                    padding: '38px 14px 14px',
-                                    background: 'linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0))',
+                                    padding: '38px 12px 12px',
+                                    background: 'linear-gradient(to top, rgba(0,0,0,0.78), rgba(0,0,0,0))',
                                     color: '#fff',
-                                    fontSize: 'var(--글자-작)',
-                                    fontWeight: 700,
                                 }}
                             >
-                                {l.label}
-                            </figcaption>
-                        </figure>
+                                <span style={{ display: 'block', fontSize: 'var(--글자-작)', fontWeight: 800 }}>{l.label}</span>
+                                <span style={{ display: 'block', fontSize: 12, opacity: 0.75, marginTop: 2 }}>{l.sub}</span>
+                            </span>
+                        </Link>
                     ))}
                 </div>
 

@@ -63,10 +63,16 @@ export function buildTeacherPrompt(mood: Choice, place: Choice, ratioLabel = '4:
         `Expression and clothing: ${mood.prompt}.`,
         `Background: ${place.prompt}.`,
         'The photo should feel approachable and credible at the same time — someone you would want to learn from.',
-        'Shot on a full-frame camera with an 85mm lens, soft key light, real shadow falloff, faint film grain.',
-        'Keep visible skin pores, fine lines, uneven natural skin tone and slight facial asymmetry.',
+        'A genuine confident smile showing teeth, direct eye contact with the lens, shoulders squared, upright posture.',
+        // 대표 지적 0915 = 「사진이 바랬다니까」
+        // 다른 도구와 달리 여기서는 film grain·muted 를 쓰지 않는다. 강사 프로필은
+        // 밝고 선명한 것이 규범이다(대표가 준 한국 강사 프로필 견본 전부가 그랬다).
+        'Bright even beauty-dish lighting from the front with soft fill — the face is fully lit with no dark areas.',
+        'Rich saturated colour, high clarity, sharp focus across the face, crisp edges.',
+        'Keep natural skin texture (pores and fine lines visible), but the skin must look healthy, rested and well lit.',
+        'NO film grain, NO muted or faded tone, NO grey cast, NO dark shadow on the face.',
         `Chest-up framing, ${ratioLabel} composition, sharp focus on the eyes, looking at the lens.`,
         'No text, no logos, no watermark, no extra hands.',
-        'Avoid the AI look: no waxy plastic skin, no airbrushed glow, no perfect symmetry, no oversaturated colour.',
+        'Avoid the AI look: no waxy plastic skin, no perfect symmetry, no artificial glow halo.',
     ].join(' ')
 }
