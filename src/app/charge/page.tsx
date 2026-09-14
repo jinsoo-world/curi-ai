@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { CLOVER_PACKS, CLOVER_UNIT_WON, discountPercent } from '@/domains/credit/packs'
 import AppSidebar from '@/components/AppSidebar'
+import CloverIcon from '@/components/ui/CloverIcon'
 
 export default function ChargePage() {
     const router = useRouter()
@@ -109,29 +110,38 @@ export default function ChargePage() {
                                 background: selected === p.id ? '#f0fdf4' : '#fff',
                                 cursor: 'pointer',
                                 textAlign: 'left',
+                                position: 'relative',
+                                overflow: 'hidden',
                             }}
                         >
-                            <div>
-                                <div style={{ fontSize: 17, fontWeight: 700, color: '#18181b' }}>
-                                    {p.clovers.toLocaleString()}개
-                                    {discountPercent(p) > 0 && (
-                                        <span style={{
-                                            marginLeft: 8, fontSize: 12, fontWeight: 800, color: '#fff',
-                                            background: '#ef4444', padding: '3px 9px', borderRadius: 8,
-                                        }}>{discountPercent(p)}% 할인</span>
-                                    )}
-                                </div>
-                                <div style={{ fontSize: 13, color: '#71717a', marginTop: 3 }}>
-                                    AI와 {p.clovers.toLocaleString()}번 대화 · 1개당 {Math.round(p.won / p.clovers)}원
+                            {discountPercent(p) > 0 && (
+                                <span style={{
+                                    position: 'absolute', top: 0, right: 0,
+                                    background: '#22c55e', color: '#fff',
+                                    fontSize: 12.5, fontWeight: 800,
+                                    padding: '5px 12px', borderRadius: '0 14px 0 12px',
+                                }}>
+                                    {discountPercent(p)}% 할인
+                                </span>
+                            )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                                <CloverIcon size={34} />
+                                <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontSize: 21, fontWeight: 900, color: '#18181b', letterSpacing: '-0.02em' }}>
+                                        {p.clovers.toLocaleString()}개
+                                    </div>
+                                    <div style={{ fontSize: 13.5, color: '#71717a', marginTop: 3 }}>
+                                        사진 {Math.floor(p.clovers / 20).toLocaleString()}장 · 1개당 {Math.round(p.won / p.clovers)}원
+                                    </div>
                                 </div>
                             </div>
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
                                 {discountPercent(p) > 0 && (
-                                    <div style={{ fontSize: 12, color: '#a1a1aa', textDecoration: 'line-through' }}>
+                                    <div style={{ fontSize: 12.5, color: '#a1a1aa', textDecoration: 'line-through' }}>
                                         {(p.clovers * CLOVER_UNIT_WON).toLocaleString()}원
                                     </div>
                                 )}
-                                <div style={{ fontSize: 18, fontWeight: 800, color: '#18181b' }}>
+                                <div style={{ fontSize: 21, fontWeight: 900, color: '#18181b', letterSpacing: '-0.02em' }}>
                                     {p.won.toLocaleString()}원
                                 </div>
                                 {discountPercent(p) > 0 && (

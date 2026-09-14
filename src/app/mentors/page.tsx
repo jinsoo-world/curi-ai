@@ -8,6 +8,7 @@ import { MembershipBanner } from '@/components/MembershipBanner'
 import type { MentorCardData } from '@/domains/mentor'
 import NotificationBanner from './NotificationBanner'
 import PhotoHero from '@/components/studio/PhotoHero'
+import WelcomeGift from '@/components/WelcomeGift'
 import LookShowcase from '@/components/studio/LookShowcase'
 import ToolTiles from '@/components/studio/ToolTiles'
 import MentorBoard from '@/components/ui/MentorBoard'
@@ -70,6 +71,8 @@ export default async function MentorsPage() {
                 <MembershipBanner />
 
                 {/* ─── 사진 히로 — 대표 지시 0914 「이게 메인으로」 ─── */}
+                <WelcomeGift />
+
                 <PhotoHero />
 
                 {/* ─── 알림 ─── */}

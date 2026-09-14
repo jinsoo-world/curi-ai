@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { TOOLS, type ToolItem } from '@/domains/studio/tools'
 import AppSidebar from '@/components/AppSidebar'
+import WelcomeGift from '@/components/WelcomeGift'
 import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
 
@@ -78,6 +79,7 @@ export default function StudioPage() {
     return (
         <main style={{ minHeight: '100dvh', background: 'var(--종이)' }}>
             <AppSidebar />
+            <WelcomeGift />
             <div style={{ maxWidth: 1000, margin: '0 auto', padding: '36px 18px 90px' }}>
                 {/* 인사 + 잔액 */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 22 }}>
