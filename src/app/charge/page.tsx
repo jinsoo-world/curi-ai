@@ -6,12 +6,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { CLOVER_PACKS, CLOVER_UNIT_WON } from '@/domains/credit/packs'
+import { CLOVER_PACKS, CLOVER_UNIT_WON, discountPercent } from '@/domains/credit/packs'
 import AppSidebar from '@/components/AppSidebar'
 
 export default function ChargePage() {
     const router = useRouter()
-    const [selected, setSelected] = useState(CLOVER_PACKS[1].id)
+    const [selected, setSelected] = useState(CLOVER_PACKS[2].id)
     const [userId, setUserId] = useState<string | null>(null)
     const [balance, setBalance] = useState<number | null>(null)
     const [loading, setLoading] = useState(false)
@@ -114,15 +114,15 @@ export default function ChargePage() {
                             <div>
                                 <div style={{ fontSize: 17, fontWeight: 700, color: '#18181b' }}>
                                     🍀 {p.clovers.toLocaleString()}개
-                                    {p.bonusLabel && (
+                                    {discountPercent(p) > 0 && (
                                         <span style={{
-                                            marginLeft: 8, fontSize: 12, fontWeight: 700, color: '#166534',
-                                            background: '#dcfce7', padding: '3px 8px', borderRadius: 8,
-                                        }}>{p.bonusLabel}</span>
+                                            marginLeft: 8, fontSize: 12, fontWeight: 800, color: '#fff',
+                                            background: '#ef4444', padding: '3px 9px', borderRadius: 8,
+                                        }}>{discountPercent(p)}% 할인</span>
                                     )}
                                 </div>
                                 <div style={{ fontSize: 13, color: '#71717a', marginTop: 3 }}>
-                                    AI와 약 {p.clovers.toLocaleString()}번 대화할 수 있어요
+                                    AI와 {p.clovers.toLocaleString()}번 대화 · 1개당 {Math.round(p.won / p.clovers)}원
                                 </div>
                             </div>
                             <div style={{ fontSize: 18, fontWeight: 800, color: '#18181b', flexShrink: 0 }}>

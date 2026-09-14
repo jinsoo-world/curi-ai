@@ -8,25 +8,47 @@
 //    중장년은 「지금 얼마 쓰는지 모르는 상태」를 가장 싫어한다(시장 조사 0914).
 
 /** 클로버 1개의 기준 값(원). 대화 1번에 1개가 든다.
- *  원가는 대화 1번 7.5원, 2027-01 부터 15.1원. 그때도 남도록 잡았다. */
-export const CLOVER_UNIT_WON = 20
+ *
+ *  원가 = 대화 1번 7.5원. **2027-01-01 부터 Gemini 단가가 2배가 돼 15.1원이 된다.**
+ *  큰 묶음일수록 할인이 커지므로, 2027년이 오기 전에 이 표를 다시 봐야 한다.
+ *  지금은 가장 싼 묶음(5,000개)도 개당 15.6원이라 그때도 아슬아슬하게 남는다. */
+export const CLOVER_UNIT_WON = 22
 
 export interface CloverPack {
     id: string
+    /** 받는 클로버 */
+    clovers: number
     /** 고객이 내는 돈 */
     won: number
-    /** 받는 클로버 (덤 포함) */
-    clovers: number
-    /** 화면에 붙일 덤 표시 */
-    bonusLabel?: string
 }
 
-/** 충전 상품. 많이 살수록 1개당 값이 싸진다. */
+/**
+ * 충전 상품 — 대표 지시 2026-09-14 「500개, 1000개, 2000개 등 옵션 별 할인율 팍팍 매겨」
+ *
+ * 많이 살수록 클로버 1개 값이 싸진다. 할인율은 화면에서 계산해 보여준다
+ * (여기 적어두면 값과 따로 놀다가 어긋난다).
+ *
+ * 개당 값과 2027년 마진
+ *   300개  22.0원 · 31.4%
+ *   500개  20.0원 · 24.5%
+ *   1,000개 18.0원 · 16.1%
+ *   2,000개 16.0원 · 5.6%
+ *   5,000개 15.6원 · 3.2%   ← 여기가 마지노선. 더 깎으면 2027년에 적자다.
+ */
 export const CLOVER_PACKS: CloverPack[] = [
-    { id: 'c5000', won: 5000, clovers: 250 },
-    { id: 'c10000', won: 10000, clovers: 550, bonusLabel: '10% 더' },
-    { id: 'c30000', won: 30000, clovers: 1800, bonusLabel: '20% 더' },
+    { id: 'c300', clovers: 300, won: 6600 },
+    { id: 'c500', clovers: 500, won: 10000 },
+    { id: 'c1000', clovers: 1000, won: 18000 },
+    { id: 'c2000', clovers: 2000, won: 32000 },
+    { id: 'c5000', clovers: 5000, won: 78000 },
 ]
+
+/** 가장 작은 묶음보다 몇 % 싼지 (화면 표시용) */
+export function discountPercent(pack: CloverPack): number {
+    const 기준개당 = CLOVER_PACKS[0].won / CLOVER_PACKS[0].clovers
+    const 개당 = pack.won / pack.clovers
+    return Math.round((1 - 개당 / 기준개당) * 100)
+}
 
 export type PackId = (typeof CLOVER_PACKS)[number]['id']
 

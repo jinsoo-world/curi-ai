@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { CLOVER_PACKS, getPack, isValidPackId, CLOVER_UNIT_WON, type PackId } from '../packs'
+import { CLOVER_PACKS, getPack, isValidPackId, CLOVER_UNIT_WON, discountPercent, type PackId } from '../packs'
 
 /**
  * 클로버 충전 — 대표 확정 2026-09-14 「이거 충전식이면 좋을듯해. 클로버 충전 이런거.」
@@ -27,9 +27,27 @@ describe('클로버 충전 상품', () => {
         expect(첫상품.won / 첫상품.clovers).toBe(CLOVER_UNIT_WON)
     })
 
-    it('원가보다 비싸게 판다 (대화 1번 원가 7.5원, 2027년 15.1원)', () => {
-        // 클로버 1개 = 대화 1번. 단가가 2배가 되는 2027년에도 남아야 한다.
-        expect(CLOVER_UNIT_WON).toBeGreaterThan(15.1)
+    it('가장 싼 묶음도 2027년 원가를 넘는다 (적자 방지선)', () => {
+        // 2027-01-01 부터 Gemini 단가가 2배가 돼 대화 1번 원가가 15.1원이 된다.
+        // 할인을 더 키우면 그 시점에 팔수록 손해다.
+        const 가장싼개당 = Math.min(...CLOVER_PACKS.map(p => p.won / p.clovers))
+        expect(가장싼개당, '가장 큰 묶음이 2027년 원가보다 싸다 = 적자').toBeGreaterThan(15.1)
+    })
+
+    it('지금 원가(7.5원)보다는 모든 묶음이 확실히 비싸다', () => {
+        for (const p of CLOVER_PACKS) {
+            expect(p.won / p.clovers, `${p.id} 가 원가 이하다`).toBeGreaterThan(7.5)
+        }
+    })
+
+    it('할인율은 큰 묶음일수록 커진다', () => {
+        const 할인들 = CLOVER_PACKS.map(discountPercent)
+        expect(할인들[0]).toBe(0)
+        for (let i = 1; i < 할인들.length; i++) {
+            expect(할인들[i], `${CLOVER_PACKS[i].id} 할인이 앞보다 작다`).toBeGreaterThan(할인들[i - 1])
+        }
+        // 대표 지시 = 「할인율 팍팍」. 가장 큰 묶음은 두 자릿수여야 한다.
+        expect(할인들[할인들.length - 1]).toBeGreaterThanOrEqual(25)
     })
 
     it('없는 상품을 넣으면 아무것도 주지 않는다', () => {
