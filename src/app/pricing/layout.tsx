@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 // 검색·카톡 공유 — 대표 지적 2026-09-15 「GEO·SEO 이거 페이지별로 다 심었어??」
 // 안 심긴 곳이 11 군데였다. 화면 파일이 'use client' 면 거기서 metadata 를 못 내보내서 이 자리에 둔다.
 export const metadata: Metadata = {
-    title: '이용 요금 — 큐리 AI',
+    title: '이용 요금',
     description: '큐리 AI 이용 요금과 클로버 값을 안내합니다.',
     keywords: ['큐리 AI 요금', 'AI 프로필 사진 가격'],
     openGraph: {

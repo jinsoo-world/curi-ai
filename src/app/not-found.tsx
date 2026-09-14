@@ -13,9 +13,9 @@ export default function NotFound() {
             background: '#f8f9fa',
             padding: '20px',
             textAlign: 'center',
-            fontFamily: 'var(--font-noto-sans-kr), Pretendard, sans-serif',
+            fontFamily: 'Pretendard, -apple-system, sans-serif',
         }}>
-            <div style={{ fontSize: 80, marginBottom: 8 }}>🔍</div>
+            
             <h1 style={{
                 fontSize: 28,
                 fontWeight: 800,

@@ -5,7 +5,7 @@ import type { Metadata } from 'next'
 // 화면 파일이 'use client' 라 거기서는 metadata 를 내보낼 수 없다. 그래서 이 자리에 둔다.
 // 우리 회원의 90%가 카카오톡을 타고 들어온다(0908 실측). 공유 그림이 없으면 그 길이 죽는다.
 export const metadata: Metadata = {
-    title: '썸네일 만들기 — 큐리 AI',
+    title: '썸네일 만들기',
     description: '유튜브·강의·멤버십·전자책 표지를 만듭니다. 제목은 또렷하게 얹어드려요.',
     keywords: ['유튜브 썸네일 만들기', '강의 썸네일', '전자책 표지', '썸네일 제작', '무료 썸네일'],
     openGraph: {

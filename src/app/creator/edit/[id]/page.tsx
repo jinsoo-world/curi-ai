@@ -1905,7 +1905,7 @@ export default function CreatorEditPage() {
                                 </div>
                                 <pre style={{
                                     margin: 0, whiteSpace: 'pre-wrap' as const, wordBreak: 'break-word' as const,
-                                    fontFamily: 'var(--font-noto-sans-kr), Pretendard, monospace',
+                                    fontFamily: 'Pretendard, ui-monospace, monospace',
                                     fontSize: 13, lineHeight: 1.7, color: '#374151',
                                 }}>
                                     {previewSource.content.length > 5000

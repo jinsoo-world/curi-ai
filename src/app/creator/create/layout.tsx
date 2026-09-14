@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 // 검색·카톡 공유 — 대표 지적 2026-09-15 「GEO·SEO 이거 페이지별로 다 심었어??」
 // 안 심긴 곳이 11 군데였다. 화면 파일이 'use client' 면 거기서 metadata 를 못 내보내서 이 자리에 둔다.
 export const metadata: Metadata = {
-    title: '나를 닮은 AI 만들기 — 큐리 AI',
+    title: '나를 닮은 AI 만들기',
     description: '내 경험으로 말하는 AI 를 만들고 팔 수 있어요. 코딩은 필요 없습니다.',
     keywords: ['나만의 AI 만들기', 'AI 캐릭터 제작', 'AI 수익화', '챗봇 만들기'],
     openGraph: {

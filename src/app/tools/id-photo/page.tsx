@@ -72,7 +72,7 @@ function IdPhotoPage안쪽() {
             <AppSidebar />
             <PhotoToolShell
                 title="증명사진 만들기"
-                desc="여권·이력서·주민등록에 내는 규격 사진을 만듭니다. 정면·무표정·그림자 없는 배경까지 규격에 맞춰드려요."
+                desc="여권·이력서·주민등록에 내는 규격 사진을 만듭니다. 정면·바른 자세·그림자 없는 배경까지 규격에 맞추고, 표정은 굳지 않게 해 드려요."
                 samples={[
                     { src: '/samples/id-m1.webp', label: '흰 배경·정장', pick: () => { setBackgroundId('white'); setOutfitId('suit') } },
                     { src: '/samples/id-w1.webp', label: '흰 배경·재킷', pick: () => { setBackgroundId('white'); setOutfitId('jacket') } },

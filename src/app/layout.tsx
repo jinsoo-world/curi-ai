@@ -42,7 +42,7 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: '큐리 AI — 나만의 AI 멘토',
+        alt: '큐리 AI — 사진 한 장으로 만드는 내 프로필 사진',
       },
     ],
   },

@@ -161,7 +161,7 @@ export default function CreatorManagePage() {
                     maxWidth: 900,
                     margin: '0 auto',
                     padding: '28px 24px 80px',
-                    fontFamily: 'var(--font-noto-sans-kr), Pretendard, sans-serif',
+                    fontFamily: 'Pretendard, -apple-system, sans-serif',
                 }}>
                     {/* 헤더 */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>

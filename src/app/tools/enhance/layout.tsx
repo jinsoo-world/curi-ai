@@ -5,7 +5,7 @@ import type { Metadata } from 'next'
 // 화면 파일이 'use client' 라 거기서는 metadata 를 내보낼 수 없다. 그래서 이 자리에 둔다.
 // 우리 회원의 90%가 카카오톡을 타고 들어온다(0908 실측). 공유 그림이 없으면 그 길이 죽는다.
 export const metadata: Metadata = {
-    title: '사진 화질 개선하기 — 큐리 AI',
+    title: '사진 화질 개선하기',
     description: '흐릿한 사진, 오래된 사진, 어두운 사진을 살립니다. 같은 사진을 더 좋은 카메라로 찍은 것처럼요.',
     keywords: ['사진 화질 개선', '오래된 사진 복원', '흐린 사진 선명하게', '옛날 사진 복원', '사진 확대'],
     openGraph: {
