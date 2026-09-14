@@ -33,9 +33,9 @@ export default function PhotoHero() {
     const [err, setErr] = useState<string | null>(null)
     const [지금, set지금] = useState(0)
 
-    // 1.5초마다 넘어간다 — 대표 지시 0915. 한 화면에 여럿을 늘어놓으면 작아져서 안 보인다.
+    // 2.5초마다 넘어간다 — 대표 지시 0915 「1.5초는 너무 빠르다. 2.5초로」. 한 화면에 여럿을 늘어놓으면 작아져서 안 보인다.
     useEffect(() => {
-        const t = setInterval(() => set지금(i => (i + 1) % 짝.length), 1500)
+        const t = setInterval(() => set지금(i => (i + 1) % 짝.length), 2500)
         return () => clearInterval(t)
     }, [])
 

@@ -78,25 +78,102 @@ export const viewport: Viewport = {
 }
 
 // JSON-LD 구조화 데이터
+/**
+ * AI 검색·구글이 읽는 구조화 데이터 — 대표 지적 2026-09-15 「GEO·SEO 이거 페이지별로 다 심었어??」
+ *
+ * 전에는 「AI 구독 서비스」 한 줄뿐이라 로봇이 우리가 무엇을 해주는 곳인지 알 수 없었다.
+ * AI 로봇은 화면을 그리지 않는다. 여기 적힌 글이 사실상 우리 소개서다.
+ * (0910 전수점검 = 큐리어스 본체는 4,617쪽 중 54%가 로봇에게 빈 종이였다)
+ */
 const jsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'WebApplication',
-  name: '큐리 AI',
-  url: SITE_URL,
-  description: 'AI 구독 서비스. 콘텐츠 수익화, 브랜딩, 커리어 전환에 대해 24시간 AI 멘토와 대화하세요.',
-  applicationCategory: 'BusinessApplication',
-  operatingSystem: 'Web',
-  offers: {
-    '@type': 'Offer',
-    price: '0',
-    priceCurrency: 'KRW',
-    description: '무료 체험 가능',
-  },
-  creator: {
-    '@type': 'Organization',
-    name: '큐리 AI',
-    url: SITE_URL,
-  },
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: '큐리 AI',
+      inLanguage: 'ko-KR',
+      description: '사진 한 장으로 프로필 사진을 만들고, 나를 닮은 AI 를 만들어 파는 곳',
+    },
+    {
+      '@type': 'Organization',
+      '@id': `${SITE_URL}/#org`,
+      name: '큐리 AI',
+      url: SITE_URL,
+      logo: `${SITE_URL}/logo.png`,
+      parentOrganization: { '@type': 'Organization', name: '미션드리븐', url: 'https://curious-500.com' },
+    },
+    {
+      '@type': 'SoftwareApplication',
+      name: '큐리 AI',
+      url: SITE_URL,
+      applicationCategory: 'MultimediaApplication',
+      operatingSystem: 'Web',
+      inLanguage: 'ko-KR',
+      description:
+        '중장년을 위한 AI 사진 도구. 사진 한 장으로 재취업·배우 프로필 사진을 만들고, 오래된 사진의 화질을 살리고, 유튜브·강의 썸네일을 만듭니다. 얼굴과 나이를 그대로 두어 실물과 달라 보이지 않습니다.',
+      featureList: [
+        '재취업 프로필 사진 만들기',
+        '배우 프로필 사진 만들기',
+        '사진 화질 개선하기',
+        '썸네일 만들기',
+        '인스타 프로필 사진 만들기',
+        '나를 닮은 AI 만들기',
+      ],
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'KRW',
+        description: '무료 체험권 7일 + 클로버 100개. 그 뒤에는 사진 한 장에 500원',
+      },
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: [
+        {
+          '@type': 'Question',
+          name: '사진 몇 장이 필요한가요?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: '한 장이면 됩니다. 얼굴이 잘 보이는 밝은 사진 한 장만 올리면 옷과 배경을 바꿔 드립니다.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: '실물과 다르게 나오지 않나요?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: '얼굴과 나이를 그대로 둡니다. 모공과 잔주름을 지우지 않아서 사진관에서 찍은 것처럼 나옵니다. 원하면 5살이나 10살 젊게 손볼 수도 있습니다.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: '값은 얼마인가요?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: '무료 체험권을 받으면 7일 동안 쓸 수 있고 클로버 100개를 드립니다. 그 뒤에는 사진 한 장에 클로버 20개(500원), 화질 개선은 12개(300원)입니다.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: '오래된 사진도 살릴 수 있나요?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: '됩니다. 빛바래거나 긁힌 옛날 사진, 초점이 안 맞는 사진, 어두운 사진을 고칠 수 있습니다. 옷차림과 배경은 그 시절 그대로 둡니다.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: '회원가입을 해야 쓸 수 있나요?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: '가입 없이도 하루 세 장까지 만들어볼 수 있습니다. 다만 선명한 원본을 내려받으려면 로그인해야 합니다.',
+          },
+        },
+      ],
+    },
+  ],
 }
 
 const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID
