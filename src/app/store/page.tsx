@@ -65,7 +65,7 @@ export default function CloverStorePage() {
         <>
             <AppSidebar />
             <main style={{
-                marginLeft: 240,
+                
                 minHeight: '100dvh',
                 background: '#fafafa',
                 padding: '32px 24px 80px',

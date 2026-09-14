@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { STUDIO_ITEMS, GUIDE_ITEM, type StudioItem } from '@/domains/studio/catalog'
 import { CLOVER_UNIT_WON } from '@/domains/credit/packs'
 import AppSidebar from '@/components/AppSidebar'
+import Image from 'next/image'
 
 function ItemCard({ item, onGo }: { item: StudioItem; onGo: (href: string) => void }) {
     return (
@@ -15,14 +16,24 @@ function ItemCard({ item, onGo }: { item: StudioItem; onGo: (href: string) => vo
             onClick={() => onGo(item.href)}
             style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-                gap: 6, padding: '18px 18px 16px',
+                gap: 6, padding: 14,
                 borderRadius: 16,
                 border: '1px solid #e4e4e7',
                 background: '#fff',
                 cursor: 'pointer', textAlign: 'left', width: '100%', height: '100%',
             }}
         >
-            <div style={{ fontSize: 28, lineHeight: 1 }}>{item.emoji}</div>
+            {item.img ? (
+                <div style={{
+                    position: 'relative', width: '100%', aspectRatio: '4 / 3',
+                    borderRadius: 12, overflow: 'hidden', background: '#f4f4f5', marginBottom: 4,
+                }}>
+                    <Image src={item.img} alt="" fill sizes="(max-width: 700px) 45vw, 320px"
+                        style={{ objectFit: 'cover', objectPosition: 'center 20%' }} />
+                </div>
+            ) : (
+                <div style={{ fontSize: 28, lineHeight: 1 }}>{item.emoji}</div>
+            )}
             <div style={{ fontSize: 16, fontWeight: 700, color: '#18181b', wordBreak: 'keep-all' }}>
                 {item.title}
             </div>
@@ -68,9 +79,9 @@ export default function StudioPage() {
     const 배우기 = STUDIO_ITEMS.filter(i => i.group === '배우기')
 
     return (
-        <main style={{ minHeight: '100dvh', background: '#fafafa' }}>
+        <main style={{ minHeight: '100dvh', background: 'var(--종이)' }}>
             <AppSidebar />
-            <div style={{ maxWidth: 720, margin: '0 auto', padding: '36px 18px 90px' }}>
+            <div style={{ maxWidth: 1000, margin: '0 auto', padding: '36px 18px 90px' }}>
                 {/* 인사 + 잔액 */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 22 }}>
                     <div>
@@ -84,29 +95,18 @@ export default function StudioPage() {
                             하고 싶은 것을 고르면 바로 시작합니다.
                         </p>
                     </div>
-                    {balance !== null && (
-                        <button
-                            onClick={() => router.push('/charge')}
-                            style={{
-                                flexShrink: 0, background: '#fff', border: '1px solid #e4e4e7',
-                                borderRadius: 12, padding: '8px 12px', cursor: 'pointer',
-                                fontSize: 13, fontWeight: 700, color: '#18181b',
-                            }}
-                        >
-                            {balance.toLocaleString()}개
-                        </button>
-                    )}
+
                 </div>
 
                 {/* 만들기 */}
                 <h2 style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', margin: '0 0 10px' }}>만들기</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 28 }}>
+                <div className="studio-grid" style={{ marginBottom: 28 }}>
                     {만들기.map(i => <ItemCard key={i.id} item={i} onGo={router.push} />)}
                 </div>
 
                 {/* 배우기 */}
                 <h2 style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', margin: '0 0 10px' }}>배우기</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 28 }}>
+                <div className="studio-grid" style={{ marginBottom: 28 }}>
                     {배우기.map(i => <ItemCard key={i.id} item={i} onGo={router.push} />)}
                 </div>
 

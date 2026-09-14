@@ -413,3 +413,201 @@ button, a[role="button"] {
     gap: 18px;
   }
 }
+
+/* ============================================
+   위쪽 띠 (전면 개편 2026-09-14 — 대표 지시 「UI 전체적으로 다시 잡아」)
+   ============================================ */
+.app-top {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--선);
+}
+.app-top-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 62px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.app-top-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+  color: var(--먹);
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  flex-shrink: 0;
+}
+.app-top-nav {
+  display: none;
+  gap: 4px;
+  margin-left: 18px;
+  flex: 1;
+}
+.app-top-link {
+  padding: 9px 14px;
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--먹연);
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.app-top-link:hover { background: var(--종이); color: var(--먹); }
+.app-top-link.on { background: var(--먹); color: #fff; }
+.app-top-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.app-top-credit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 6px 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--선);
+  background: #fff;
+  text-decoration: none;
+  color: var(--먹);
+}
+.app-top-credit-num { font-size: 15px; font-weight: 800; letter-spacing: -0.02em; }
+.app-top-credit-plus {
+  background: var(--연두);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 5px 11px;
+  border-radius: 999px;
+}
+.app-top-me {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--선);
+  background: var(--종이);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--먹);
+  padding: 0;
+  flex-shrink: 0;
+}
+.app-top-sheet {
+  border-top: 1px solid var(--선);
+  background: #fff;
+  padding: 8px;
+  display: grid;
+  gap: 2px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.app-top-sheet-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border: none;
+  background: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--먹);
+  text-decoration: none;
+  cursor: pointer;
+}
+.app-top-sheet-item:hover { background: var(--종이); }
+
+@media (min-width: 900px) {
+  .app-top-nav { display: flex; }
+  .app-top-sheet { max-width: 320px; margin: 0 0 0 auto; border-radius: 0 0 16px 16px; box-shadow: var(--그림자); }
+}
+
+/* 옛 사이드바가 남긴 왼쪽 여백을 지운다 */
+.sidebar-content { margin-left: 0 !important; }
+
+/* 갈래 알약 단추 */
+.cat-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 4px 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.cat-tabs::-webkit-scrollbar { display: none; }
+.cat-tab {
+  flex: 0 0 auto;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid var(--선);
+  background: #fff;
+  color: var(--먹연);
+  font-size: var(--글자-작);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cat-tab:hover { border-color: #C9CFCB; color: var(--먹); }
+.cat-tab.on {
+  background: var(--먹);
+  border-color: var(--먹);
+  color: #fff;
+  font-weight: 800;
+}
+
+/* 도구 타일 */
+.tool-tiles {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+.tool-tile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #fff;
+  border: 1px solid var(--선);
+  border-radius: var(--둥근);
+  padding: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 180ms ease, transform 180ms ease;
+}
+.tool-tile:hover { border-color: var(--연두); transform: translateY(-2px); }
+.tool-tile-img {
+  position: relative;
+  flex-shrink: 0;
+  width: 74px;
+  height: 74px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--종이);
+}
+@media (min-width: 860px) {
+  .tool-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+}
+
+/* 만들기 화면 카드 */
+.studio-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (min-width: 760px) {
+  .studio-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+}

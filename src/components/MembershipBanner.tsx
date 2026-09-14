@@ -12,7 +12,8 @@ export function MembershipBanner() {
     return (
         <>
             <div style={{
-                background: 'var(--형광)',
+                background: '#EAF7EF',
+                borderBottom: '1px solid var(--선)',
                 padding: '12px 16px',
                 display: 'flex',
                 alignItems: 'center',

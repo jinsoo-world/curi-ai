@@ -588,7 +588,7 @@ export default function CreatorCreatePage() {
         <div style={{ minHeight: '100dvh', background: '#f8f9fa' }}>
             <AppSidebar />
 
-            <div className="sidebar-content" style={{ marginLeft: 240, minHeight: '100dvh' }}>
+            <div className="sidebar-content" style={{  minHeight: '100dvh' }}>
                 {/* ── 2컬럼 레이아웃 ── */}
                 <div className="creator-layout" style={{
                     display: 'flex',

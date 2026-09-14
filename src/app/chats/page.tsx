@@ -239,7 +239,7 @@ export default function ChatsPage() {
         <div style={{ minHeight: '100dvh', background: 'var(--종이)' }}>
             <AppSidebar />
 
-            <div className="sidebar-content" style={{ marginLeft: 240, minHeight: '100dvh' }}>
+            <div className="sidebar-content" style={{  minHeight: '100dvh' }}>
                 <MembershipBanner />
 
                 <SpeechHero

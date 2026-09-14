@@ -99,7 +99,7 @@ export default function PricingPage() {
         }}>
             <AppSidebar />
 
-            <div className="sidebar-content" style={{ marginLeft: 240, minHeight: '100dvh' }}>
+            <div className="sidebar-content" style={{  minHeight: '100dvh' }}>
                 <MembershipBanner />
 
                 {/* Content */}

@@ -156,7 +156,7 @@ export default function CreatorManagePage() {
     return (
         <div style={{ minHeight: '100dvh', background: '#f8f9fa' }}>
             <AppSidebar />
-            <div className="sidebar-content" style={{ marginLeft: 240, minHeight: '100dvh' }}>
+            <div className="sidebar-content" style={{  minHeight: '100dvh' }}>
                 <div style={{
                     maxWidth: 900,
                     margin: '0 auto',

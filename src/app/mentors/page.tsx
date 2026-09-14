@@ -9,6 +9,7 @@ import type { MentorCardData } from '@/domains/mentor'
 import NotificationBanner from './NotificationBanner'
 import PhotoHero from '@/components/studio/PhotoHero'
 import LookShowcase from '@/components/studio/LookShowcase'
+import ToolTiles from '@/components/studio/ToolTiles'
 import MentorBoard from '@/components/ui/MentorBoard'
 import AppSidebar from '@/components/AppSidebar'
 import CreditClaimWrapper from './CreditClaimWrapper'
@@ -63,10 +64,7 @@ export default async function MentorsPage() {
             </Suspense>
 
             {/* ─── Main Content (offset by sidebar on desktop) ─── */}
-            <div className="sidebar-content" style={{
-                marginLeft: 240, /* desktop: offset by sidebar */
-                minHeight: '100dvh',
-            }}>
+            <div className="sidebar-content">
 
                 {/* ─── Membership Top Banner ─── */}
                 <MembershipBanner />
@@ -76,6 +74,9 @@ export default async function MentorsPage() {
 
                 {/* ─── 알림 ─── */}
                 <NotificationBanner />
+
+                {/* ─── 지금 쓸 수 있는 도구 ─── */}
+                <ToolTiles />
 
                 {/* ─── 관심사 탭 + 멘토 목록 ─── */}
                 <MentorBoard
@@ -102,11 +103,11 @@ export default async function MentorsPage() {
 
                 {/* ─── Footer ─── */}
                 <footer className="mentors-footer" style={{
-                    borderTop: '1px solid #e5e7eb',
-                    background: '#f9fafb',
-                    padding: '36px 40px 100px',
+                    borderTop: '1px solid var(--선)',
+                    background: 'var(--흰)',
+                    padding: '36px 20px 60px',
                 }}>
-                    <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+                    <div style={{ maxWidth: 1200, margin: '0 auto' }}>
                         {/* 로고 + 회사명 */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
                             <Image src="/logo.png" alt="큐리 AI" width={28} height={28} style={{ borderRadius: 6 }} />
