@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/sms'
-import { trialEndsAt, isTrialActive, REFERRER_REWARD, TRIAL_DAYS } from '@/domains/trial'
+import { trialEndsAt, isTrialActive, REFERRER_REWARD, TRIAL_DAYS, TRIAL_CLOVERS } from '@/domains/trial'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
         // 이미 체험 중이면 두 번 주지 않는다
         const { data: 나 } = await db
             .from('users')
-            .select('trial_ends_at, trial_phone')
+            .select('trial_ends_at, trial_phone, clovers')
             .eq('id', user.id)
             .maybeSingle()
         if (나?.trial_ends_at && isTrialActive(나.trial_ends_at)) {
@@ -89,6 +89,9 @@ export async function POST(req: Request) {
         const 시작 = new Date()
         const 끝 = trialEndsAt(시작)
 
+        // 체험권과 함께 클로버도 준다 — 대표 확정 0915 「무료체험권 넣으면 100클로버 줘」
+        const 새잔액 = (나?.clovers ?? 0) + TRIAL_CLOVERS
+
         const { error: 갱신오류 } = await db
             .from('users')
             .update({
@@ -97,6 +100,7 @@ export async function POST(req: Request) {
                 trial_ends_at: 끝.toISOString(),
                 trial_phone: phone,
                 trial_referrer_id: 추천인,
+                clovers: 새잔액,
             })
             .eq('id', user.id)
         if (갱신오류) {
@@ -105,6 +109,14 @@ export async function POST(req: Request) {
         }
 
         await db.from('phone_codes').update({ used_at: new Date().toISOString() }).eq('id', 표.id)
+
+        await db.from('credit_transactions').insert({
+            user_id: user.id,
+            amount: TRIAL_CLOVERS,
+            balance_after: 새잔액,
+            type: 'bonus',
+            description: '무료 체험권 받기',
+        })
 
         // 추천한 사람에게 클로버 — 실패해도 체험권은 이미 줬으니 되돌리지 않는다
         if (추천인) {
@@ -121,6 +133,8 @@ export async function POST(req: Request) {
             ok: true,
             trialEndsAt: 끝.toISOString(),
             days: TRIAL_DAYS,
+            clovers: TRIAL_CLOVERS,
+            balance: 새잔액,
             referrerRewarded: !!추천인,
         })
     } catch (e) {

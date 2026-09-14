@@ -25,48 +25,71 @@ export interface StudioItem {
 }
 
 /** 클로버 없이 되는 것을 앞에 둔다 (pfpmaker 도 무료를 먼저 깐다) */
+/**
+ * 만들 수 있는 것 — 대표 확정 2026-09-15
+ * 재취업 사진 · 배우 사진 · 나를 닮은 AI · 썸네일 · 전자책 · 인생 2막
+ */
 export const STUDIO_ITEMS: StudioItem[] = [
-    // ── 만들기 (도구) ──
     {
         id: 'profile-photo',
-        title: '전문가 프로필 사진 만들기',
-        desc: '내 사진 한 장으로 증명사진처럼 반듯한 사진을 만들어요',
+        title: '재취업 프로필 사진 만들기',
+        desc: '이력서·링크드인에 넣을 반듯한 사진을 만들어요',
         emoji: '📸',
-        img: '/samples/after-man.webp',
+        img: '/samples/act-m5.webp',
         href: '/tools/profile-photo',
         cost: 20,
         group: '만들기',
     },
-
+    {
+        id: 'actor-photo',
+        title: '배우 프로필 사진 만들기',
+        desc: '캐스팅에 내는 사진을 사진관에서 찍은 것처럼',
+        emoji: '🎬',
+        img: '/samples/act-m1.webp',
+        href: '/tools/actor-photo',
+        cost: 20,
+        group: '만들기',
+    },
     {
         id: 'my-ai',
-        title: '내 AI 만들기',
+        title: '나를 닮은 AI 만들기',
         desc: '내 경험으로 말하는 AI 를 만들고 팔 수 있어요',
         emoji: '✨',
-        img: '/samples/look-office.webp',
+        img: '/samples/act-w1.webp',
         href: '/creator/create',
         cost: 'free',
         group: '만들기',
     },
-
     {
         id: 'insta-profile',
         title: '인스타 프로필 사진 만들기',
         desc: '동그랗게 잘려도 얼굴이 잘 나오게 만들어요',
         emoji: '🟢',
-        img: '/samples/look-outdoor.webp',
+        img: '/samples/act-w5.webp',
         href: '/tools/insta-profile',
         cost: 20,
         group: '만들기',
     },
-
-    // ── 배우기 (코치) ── slug 는 멘토 등록 후 실제 id 로 바꾼다
-    { id: 'youtube', img: '/mentors/youtube-coach.webp', title: '유튜브 시작하기', desc: '얼굴 안 나와도 영상은 됩니다', emoji: '🎬', href: '/mentors?c=유튜브', cost: 'free', group: '배우기' },
-    { id: 'insta', img: '/mentors/insta-coach.webp', title: '인스타 올리기', desc: '사진 한 장이면 충분해요', emoji: '📷', href: '/mentors?c=인스타그램', cost: 'free', group: '배우기' },
-    { id: 'blog', img: '/mentors/blog-coach.webp', title: '블로그 글쓰기', desc: '검색으로 손님이 찾아오게', emoji: '✒️', href: '/mentors?c=블로그', cost: 'free', group: '배우기' },
-    { id: 'threads', img: '/mentors/threads-coach.webp', title: '스레드 세 줄 쓰기', desc: '하루 세 줄로 시작해요', emoji: '✨', href: '/mentors?c=스레드', cost: 'free', group: '배우기' },
-    { id: 'ebook', img: '/mentors/ebook-coach.webp', title: '전자책 만들기', desc: '내 경험을 한 권으로 묶어요', emoji: '📖', href: '/mentors?c=전자책', cost: 'free', group: '배우기' },
-    { id: 'openchat', img: '/mentors/openchat-coach.webp', title: '오픈채팅방 열기', desc: '단톡방 하나가 내 무대', emoji: '🙌', href: '/mentors?c=오픈채팅', cost: 'free', group: '배우기' },
+    {
+        id: 'ebook',
+        title: '전자책 만들기',
+        desc: '내 경험을 한 권으로 묶어요',
+        emoji: '📖',
+        img: '/mentors/ebook-coach.webp',
+        href: '/mentors?c=전자책',
+        cost: 'free',
+        group: '만들기',
+    },
+    {
+        id: 'second-act',
+        title: '인생 2막 준비하기',
+        desc: '큐리어스에서 강의를 열고 수입을 만들어요',
+        emoji: '🌱',
+        img: '/samples/act-w8.webp',
+        href: 'https://curious-500.com',
+        cost: 'free',
+        group: '만들기',
+    },
 ]
 
 /** 무엇부터 할지 모를 때 가는 곳 */

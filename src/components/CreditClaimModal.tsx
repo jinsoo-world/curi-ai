@@ -12,8 +12,8 @@
  */
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { TRIAL_DAYS, REFERRER_REWARD, trialDaysLeft } from '@/domains/trial'
-import CloverIcon from '@/components/ui/CloverIcon'
+import { TRIAL_DAYS, TRIAL_CLOVERS, trialDaysLeft } from '@/domains/trial'
+import ShareInvite from '@/components/ui/ShareInvite'
 
 interface CreditClaimModalProps {
     isOpen: boolean
@@ -31,13 +31,17 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
     const [오류, set오류] = useState<string | null>(null)
     const [남은초, set남은초] = useState(0)
     const [끝나는날, set끝나는날] = useState<string | null>(null)
+    const [추천입력, set추천입력] = useState('')
     const [추천코드, set추천코드] = useState<string | null>(null)
-    const [복사됨, set복사됨] = useState(false)
 
     // 이미 체험 중인지 먼저 본다
     useEffect(() => {
         if (!isOpen) return
         let 살아있음 = true
+        try {
+            const fromUrl = new URLSearchParams(window.location.search).get('ref')
+            if (fromUrl) set추천입력(fromUrl)
+        } catch { /* 주소를 못 읽어도 그냥 넘어간다 */ }
         ;(async () => {
             set단계('확인중')
             const supabase = createClient()
@@ -92,11 +96,10 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
     const 확인하기 = useCallback(async () => {
         set오류(null); set보내는중(true)
         try {
-            const ref = new URLSearchParams(window.location.search).get('ref')
             const res = await fetch('/api/trial/verify', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone, code, referralCode: ref }),
+                body: JSON.stringify({ phone, code, referralCode: 추천입력.trim() || null }),
             })
             const data = await res.json()
             if (!res.ok) throw new Error(data.error || '인증하지 못했어요.')
@@ -108,32 +111,7 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
         } finally {
             set보내는중(false)
         }
-    }, [phone, code, onComplete])
-
-    const 나눔주소 = 추천코드
-        ? `${typeof window !== 'undefined' ? window.location.origin : 'https://curi-ai.com'}/mentors?ref=${추천코드}`
-        : null
-
-    const 나누기 = useCallback(async () => {
-        if (!나눔주소) return
-        const 글 = `큐리 AI 무료 체험권 ${TRIAL_DAYS}일\n${나눔주소}`
-        try {
-            if (navigator.share) {
-                await navigator.share({ title: '큐리 AI 무료 체험권', text: 글, url: 나눔주소 })
-                return
-            }
-        } catch {
-            // 공유 창을 닫은 것뿐이면 아래 복사로 넘어가지 않는다
-            return
-        }
-        try {
-            await navigator.clipboard.writeText(나눔주소)
-            set복사됨(true)
-            setTimeout(() => set복사됨(false), 2000)
-        } catch {
-            set오류('주소를 복사하지 못했어요.')
-        }
-    }, [나눔주소])
+    }, [phone, code, 추천입력, onComplete])
 
     if (!isOpen) return null
 
@@ -174,7 +152,7 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                             무료 체험권 {TRIAL_DAYS}일
                         </h3>
                         <p style={{ fontSize: 14.5, color: 'var(--먹연)', margin: '0 0 20px', lineHeight: 1.6 }}>
-                            휴대폰 번호로 한 번만 받을 수 있어요. 받은 날부터 {TRIAL_DAYS}일 동안 코치와 마음껏 대화합니다.
+                            휴대폰 번호로 한 번만 받을 수 있어요. 받은 날부터 {TRIAL_DAYS}일 동안 마음껏 쓰고, 클로버 {TRIAL_CLOVERS}개도 같이 드려요.
                         </p>
 
                         <input
@@ -219,6 +197,15 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                             style={{ ...입력칸, letterSpacing: '0.3em', textAlign: 'center', fontSize: 22 }}
                         />
 
+                        {/* 대표 지시 0915 「무료체험권 입력에 코드 입력하게 하고」 */}
+                        <input
+                            type="text"
+                            value={추천입력}
+                            onChange={(e) => set추천입력(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12))}
+                            placeholder="추천코드 (없으면 비워두세요)"
+                            style={{ ...입력칸, fontSize: 15, letterSpacing: '0.08em' }}
+                        />
+
                         {오류 && <p style={오류칸}>{오류}</p>}
 
                         <button
@@ -249,32 +236,7 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                                 : `받은 날부터 ${TRIAL_DAYS}일`}
                         </p>
 
-                        {나눔주소 && (
-                            <div style={{ background: 'var(--종이)', borderRadius: 14, padding: '16px 16px 14px', marginBottom: 16 }}>
-                                <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 6 }}>친구에게 체험권 보내기</div>
-                                <p style={{ fontSize: 13, color: 'var(--먹연)', margin: '0 0 12px', lineHeight: 1.6 }}>
-                                    이 주소로 친구가 체험권을 받으면 나에게 클로버 {REFERRER_REWARD}개를 드려요.
-                                </p>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <code style={{
-                                        flex: 1, minWidth: 0, fontSize: 12.5, color: 'var(--먹연)',
-                                        background: '#fff', border: '1px solid var(--선)', borderRadius: 10,
-                                        padding: '10px 12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                    }}>
-                                        {나눔주소}
-                                    </code>
-                                    <button onClick={나누기} style={{
-                                        flexShrink: 0, height: 40, padding: '0 14px', borderRadius: 10, border: 'none',
-                                        background: 'var(--연두)', color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer',
-                                    }}>
-                                        {복사됨 ? '복사됨' : '공유'}
-                                    </button>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 10, fontSize: 12.5, color: 'var(--진초록)', fontWeight: 700 }}>
-                                    <CloverIcon size={14} /> 친구 한 명당 {REFERRER_REWARD}개
-                                </div>
-                            </div>
-                        )}
+                        {추천코드 && <div style={{ marginBottom: 16 }}><ShareInvite code={추천코드} compact /></div>}
 
                         {오류 && <p style={오류칸}>{오류}</p>}
 

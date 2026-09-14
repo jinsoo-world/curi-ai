@@ -78,7 +78,6 @@ export default function StudioPage() {
     }, [])
 
     const 만들기 = STUDIO_ITEMS.filter(i => i.group === '만들기')
-    const 배우기 = STUDIO_ITEMS.filter(i => i.group === '배우기')
 
     return (
         <main style={{ minHeight: '100dvh', background: 'var(--종이)' }}>
@@ -105,26 +104,6 @@ export default function StudioPage() {
                     {만들기.map(i => <ItemCard key={i.id} item={i} onGo={router.push} />)}
                 </div>
 
-                {/* 배우기는 「대화하기」가 맡는다 — 대표 지적 0914 「만들기인데 왜 대화처럼 보이냐」 */}
-                <button
-                    onClick={() => router.push('/mentors')}
-                    style={{
-                        width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                        padding: '16px 18px', borderRadius: 16,
-                        border: '1px solid var(--선)', background: '#fff',
-                        cursor: 'pointer', textAlign: 'left',
-                    }}
-                >
-                    <span>
-                        <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: '#18181b' }}>
-                            뭘 만들지 모르겠어요
-                        </span>
-                        <span style={{ display: 'block', fontSize: 13, color: '#71717a', marginTop: 2 }}>
-                            코치에게 물어보면 맞는 곳으로 안내해드려요
-                        </span>
-                    </span>
-                    <span style={{ marginLeft: 'auto', color: 'var(--먹연)', fontSize: 20 }} aria-hidden>›</span>
-                </button>
             </div>
         </main>
     )

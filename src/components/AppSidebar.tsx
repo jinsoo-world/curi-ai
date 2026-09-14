@@ -129,6 +129,7 @@ export default function AppSidebar() {
                         </div>
 
                         <Link href="/charge" className="app-top-sheet-item">클로버 충전</Link>
+                        <Link href="/invite" className="app-top-sheet-item">친구 부르기</Link>
                         <Link href="/missions" className="app-top-sheet-item">무료로 모으기</Link>
                         <Link href="/profile" className="app-top-sheet-item">마이페이지</Link>
                         <div className="app-top-sheet-line" />

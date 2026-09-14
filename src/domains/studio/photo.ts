@@ -27,12 +27,23 @@ export const STYLES: Choice[] = [
     { sample: '/samples/style-shirt.webp', id: 'shirt', label: '셔츠', prompt: 'wearing a crisp button-up shirt, collar open, no tie', swatch: '#bfdbfe' },
 ]
 
-/** 배경 */
+/**
+ * 배경
+ *
+ * 대표 지시 2026-09-15 = 「큐리어스 이미지셋도 참고해. 강사프로필이 있으니」
+ * 큐리어스 리더 프로필을 훑어보면 회색 스튜디오만큼이나 파스텔 단색 배경이 많다.
+ * 중장년이 실제로 쓰는 사진이 그쪽이라 선택지에 같이 둔다.
+ */
 export const BACKDROPS: Choice[] = [
     { sample: '/samples/bg-studio.webp', id: 'studio', label: '스튜디오', prompt: 'plain light grey studio backdrop, even softbox lighting', swatch: '#e5e7eb', bg: 'linear-gradient(140deg,#f8fafc,#d1d5db)' },
     { sample: '/samples/bg-office.webp', id: 'office', label: '사무실', prompt: 'modern bright office interior softly blurred in the background', swatch: '#cbd5e1', bg: 'linear-gradient(140deg,#eff6ff,#94a3b8)' },
     { sample: '/samples/bg-bookshelf.webp', id: 'bookshelf', label: '책장', prompt: 'a warm home study with a blurred bookshelf behind', swatch: '#b45309', bg: 'linear-gradient(140deg,#fef3c7,#92400e)' },
     { sample: '/samples/bg-outdoor.webp', id: 'outdoor', label: '야외', prompt: 'soft outdoor daylight with blurred green foliage behind', swatch: '#65a30d', bg: 'linear-gradient(140deg,#ecfccb,#4d7c0f)' },
+    // 큐리어스 강사 프로필에서 많이 쓰는 파스텔 단색
+    { id: 'pastel-pink', label: '분홍 단색', prompt: 'a smooth solid soft pink studio backdrop, even lighting, the clean single-colour look used on Korean instructor profiles', swatch: '#f7c9cf', bg: 'linear-gradient(140deg,#fde7ea,#f0a8b4)' },
+    { id: 'pastel-mint', label: '민트 단색', prompt: 'a smooth solid soft mint green studio backdrop, even lighting', swatch: '#b8ddd0', bg: 'linear-gradient(140deg,#e2f5ee,#8fc9b6)' },
+    { id: 'pastel-lavender', label: '라벤더 단색', prompt: 'a smooth solid soft lavender studio backdrop, even lighting', swatch: '#cdc4ea', bg: 'linear-gradient(140deg,#ece8f8,#a99ed6)' },
+    { id: 'clean-white', label: '흰 배경', prompt: 'a clean pure white studio backdrop with even lighting, the standard Korean instructor profile look', swatch: '#f4f4f5', bg: 'linear-gradient(140deg,#ffffff,#d4d4d8)' },
 ]
 
 export function getStyle(id: string) { return STYLES.find(s => s.id === id) }

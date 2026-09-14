@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getStyle, getBackdrop, isValidStyle, isValidBackdrop, buildPhotoPrompt, getAge, isValidAgeId, DEFAULT_AGE_ID } from '@/domains/studio/photo'
 import { getMood, getTone, isValidMood, isValidTone, buildInstaPrompt } from '@/domains/studio/insta'
+import { getActorMood, getActorBackdrop, isValidActorMood, isValidActorBackdrop, buildActorPrompt } from '@/domains/studio/actor'
 import { getModel, isValidModelId, DEFAULT_MODEL_ID } from '@/domains/studio/models'
 import { getRatio, isValidRatioId, DEFAULT_RATIO_ID } from '@/domains/studio/ratios'
 import sharp from 'sharp'
@@ -48,11 +49,16 @@ export async function POST(req: NextRequest) {
         if (typeof imageBase64 !== 'string' || imageBase64.length < 100) {
             return NextResponse.json({ error: '사진을 올려주세요.' }, { status: 400 })
         }
-        // 두 가지를 만든다 — 전문가용(기본)과 인스타용
+        // 세 가지를 만든다 — 재취업용(기본) · 인스타용 · 배우용
         const isInsta = kind === 'insta'
+        const isActor = kind === 'actor'
         if (isInsta) {
             if (!isValidMood(styleId) || !isValidTone(backdropId)) {
                 return NextResponse.json({ error: '분위기와 배경색을 골라주세요.' }, { status: 400 })
+            }
+        } else if (isActor) {
+            if (!isValidActorMood(styleId) || !isValidActorBackdrop(backdropId)) {
+                return NextResponse.json({ error: '느낌과 바탕을 골라주세요.' }, { status: 400 })
             }
         } else if (!isValidStyle(styleId) || !isValidBackdrop(backdropId)) {
             return NextResponse.json({ error: '차림새와 배경을 골라주세요.' }, { status: 400 })
@@ -102,14 +108,17 @@ export async function POST(req: NextRequest) {
                 amount: -PHOTO_COST,
                 balance_after: 차감후,
                 type: 'chat_usage',
-                description: `${isInsta ? '인스타' : '전문가'} 프로필 사진 (${model.label} · ${ratio.label} · ${styleId}/${backdropId})`,
+                description: `${isInsta ? '인스타' : isActor ? '배우' : '재취업'} 프로필 사진 (${model.label} · ${ratio.label} · ${styleId}/${backdropId})`,
             })
         }
 
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
+            const 나이 = getAge(isValidAgeId(ageId) ? ageId : DEFAULT_AGE_ID)!.minus
             const prompt = isInsta
                 ? buildInstaPrompt(getMood(styleId)!, getTone(backdropId)!, typeof freeText === 'string' ? freeText : '')
+                : isActor
+                ? buildActorPrompt(getActorMood(styleId)!, getActorBackdrop(backdropId)!, ratio.label, 나이)
                 : buildPhotoPrompt(
                     getStyle(styleId)!,
                     getBackdrop(backdropId)!,

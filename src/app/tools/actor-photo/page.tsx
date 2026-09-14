@@ -1,11 +1,12 @@
 'use client'
 
-// 전문가 프로필 사진 만들기 — 대표 지시 2026-09-14
-// 구조는 ai.pfpmaker.com 을 참고했다. 다만 중장년 대상이라 고를 것을 줄이고,
-// 값(클로버)을 버튼에 그대로 박았다.
+// 배우 프로필 사진 만들기 — 대표 확정 2026-09-15
+// 재취업용과 고르는 것이 다르다. 옷·배경이 아니라 「어떤 역할이 보이는가」를 고른다.
+// 참고 = jactors.kr · plfil.com
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { STYLES, BACKDROPS, AGES, DEFAULT_AGE_ID } from '@/domains/studio/photo'
+import { AGES, DEFAULT_AGE_ID } from '@/domains/studio/photo'
+import { ACTOR_MOODS, ACTOR_BACKDROPS } from '@/domains/studio/actor'
 import { CURI_MODELS, DEFAULT_MODEL_ID, getModel } from '@/domains/studio/models'
 import { RATIOS, DEFAULT_RATIO_ID } from '@/domains/studio/ratios'
 import { CLOVER_UNIT_WON } from '@/domains/credit/packs'
@@ -17,7 +18,7 @@ import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
 
-export default function ProfilePhotoPage() {
+export default function ActorPhotoPage() {
     const router = useRouter()
     const [preview, setPreview] = useState<string | null>(null)
     const [base64, setBase64] = useState<string | null>(null)
@@ -56,7 +57,7 @@ export default function ProfilePhotoPage() {
             const res = await fetch('/api/tools/profile-photo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64: base64, mimeType, styleId, backdropId, modelId, ratioId, ageId }),
+                body: JSON.stringify({ imageBase64: base64, mimeType, styleId, backdropId, modelId, ratioId, ageId, kind: 'actor' }),
             })
             const data = await res.json()
             if (!res.ok) {
@@ -80,10 +81,10 @@ export default function ProfilePhotoPage() {
             <AppSidebar />
             <div className="tool-page">
                 <h1 style={{ fontSize: 24, fontWeight: 800, color: '#18181b', margin: '0 0 6px', wordBreak: 'keep-all' }}>
-                    재취업 프로필 사진 만들기
+                    배우 프로필 사진 만들기
                 </h1>
                 <p style={{ fontSize: 14, color: '#71717a', margin: '0 0 24px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                    이력서·링크드인에 넣을 사진을 만듭니다. 얼굴은 그대로 두고 옷과 배경만 바꿔요.
+                    캐스팅에 내는 프로필 사진을 만듭니다. 실물과 달라 보이지 않게, 사진관에서 찍은 것처럼요.
                 </p>
 
                 {/* 1단계 사진 */}
@@ -149,17 +150,17 @@ export default function ProfilePhotoPage() {
                     </div>
 
                     <div style={{ marginBottom: 22 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>3. 차림새</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>3. 어떤 느낌으로</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                            {STYLES.map(o => (
+                            {ACTOR_MOODS.map(o => (
                                 <PickCard key={o.id} option={o} selected={styleId === o.id} onSelect={setStyleId} kind="outfit" />
                             ))}
                         </div>
                     </div>
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>4. 배경</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>4. 스튜디오 바탕</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                            {BACKDROPS.map(o => (
+                            {ACTOR_BACKDROPS.map(o => (
                                 <PickCard key={o.id} option={o} selected={backdropId === o.id} onSelect={setBackdropId} kind="backdrop" />
                             ))}
                         </div>
@@ -259,7 +260,7 @@ export default function ProfilePhotoPage() {
                                 }}>로그인하고 원본 받기</button>
                             </div>
                         ) : (
-                            <a href={result} download="내_프로필_사진.png" style={{
+                            <a href={result} download="배우_프로필_사진.png" style={{
                                 display: 'block', marginTop: 12, padding: '14px', borderRadius: 14,
                                 background: '#18181b', color: '#fff', fontSize: 15, fontWeight: 700,
                                 textAlign: 'center', textDecoration: 'none',
@@ -271,7 +272,7 @@ export default function ProfilePhotoPage() {
                 {/* 어떻게 되나 */}
                 <div style={{ marginTop: 30, background: '#fff', border: '1px solid #e4e4e7', borderRadius: 16, padding: '18px 20px' }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#3f3f46', marginBottom: 10 }}>어떻게 되나요</div>
-                    {['얼굴이 잘 보이는 사진 한 장을 올려요', '옷과 배경을 고릅니다', '얼굴은 그대로 두고 나머지만 바뀌어요'].map((t, i) => (
+                    {['얼굴이 잘 보이는 사진 한 장을 올려요', '느낌과 바탕을 고릅니다', '실물과 같은 얼굴로 나옵니다'].map((t, i) => (
                         <div key={i} style={{ display: 'flex', gap: 10, marginBottom: i === 2 ? 0 : 8 }}>
                             <span style={{
                                 flexShrink: 0, width: 20, height: 20, borderRadius: '50%',

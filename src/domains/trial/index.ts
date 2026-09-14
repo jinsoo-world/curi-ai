@@ -11,6 +11,9 @@ export const TRIAL_DAYS = 7
 /** 추천한 사람에게 주는 클로버 */
 export const REFERRER_REWARD = 100
 
+/** 체험권을 받은 사람에게 바로 주는 클로버 — 대표 확정 2026-09-15 「무료체험권 넣으면 100클로버 줘」 */
+export const TRIAL_CLOVERS = 100
+
 /** 체험을 시작하면 끝나는 시각을 정확히 계산한다 */
 export function trialEndsAt(from: Date = new Date()): Date {
     const end = new Date(from.getTime())
