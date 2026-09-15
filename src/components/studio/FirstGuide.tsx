@@ -14,6 +14,7 @@
  *  - 한 번 보고 나면 다시 안 뜬다(이 브라우저에 기억)
  */
 import { useEffect, useState, useCallback } from 'react'
+import { GUEST_CLOVERS, SIGNUP_CLOVERS } from '@/domains/trial'
 
 const 본적있음키 = 'curi_first_guide_done'
 
@@ -37,7 +38,7 @@ const 걸음들: 걸음[] = [
     {
         표: 'guide-clover',
         제목: '클로버로 만듭니다',
-        설명: '가입하시면 클로버 100개를 드려요. 사진 다섯 장을 만들 수 있습니다.',
+        설명: `지금도 클로버 ${GUEST_CLOVERS}개로 사진 세 장을 만들 수 있어요. 가입하시면 ${SIGNUP_CLOVERS}개를 더 드립니다.`,
     },
 ]
 

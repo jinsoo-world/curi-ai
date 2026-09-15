@@ -10,6 +10,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getEnhanceMode, isValidEnhanceMode, buildEnhancePrompt, ENHANCE_COST } from '@/domains/studio/enhance'
 import { 사진보관 } from '@/lib/photo-store'
 import { 손님잔액 } from '@/lib/guest-clover'
+import { SIGNUP_CLOVERS } from '@/domains/trial'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
             남은값 = await 손님잔액(ip, 표식)
             if (남은값 < ENHANCE_COST) {
                 return NextResponse.json(
-                    { error: `오늘 쓸 수 있는 클로버를 다 쓰셨어요. 회원가입하시면 100개를 더 드립니다.`, needLogin: true },
+                    { error: `오늘 쓸 수 있는 클로버를 다 쓰셨어요. 회원가입하시면 ${SIGNUP_CLOVERS}개를 더 드립니다.`, needLogin: true },
                     { status: 429 },
                 )
             }
