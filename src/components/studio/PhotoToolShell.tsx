@@ -138,15 +138,30 @@ export default function PhotoToolShell({
                     {children}
                 </div>
 
-                {errorMsg && (
+                {errorMsg && !needCharge && (
                     <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 15, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
                         {errorMsg}
-                        {needCharge && (
-                            <button onClick={onCharge} style={{
-                                display: 'block', marginTop: 10, background: '#dc2626', color: '#fff', border: 'none',
-                                borderRadius: 10, padding: '9px 16px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-                            }}>충전하러 가기</button>
-                        )}
+                    </div>
+                )}
+
+                {/* 클로버가 모자랄 때 — 손님과 회원에게 할 말이 다르다. 2026-09-15
+                    손님에게 「충전하러 가기」는 막다른 길이다. 계정이 없으면 충전도 못 한다. */}
+                {needCharge && (
+                    <div style={{ background: '#fff', border: '1.5px solid #e4e4e7', borderRadius: 14, padding: '16px 18px', marginBottom: 14, textAlign: 'center' }}>
+                        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6 }}>
+                            {손님 ? '오늘 몫을 다 쓰셨어요' : '클로버가 모자라요'}
+                        </div>
+                        <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                            {손님
+                                ? `로그인하시면 클로버 ${SIGNUP_CLOVERS}개를 바로 드려요. 만드신 사진도 그대로 받으실 수 있습니다.`
+                                : '클로버를 채우시면 바로 이어서 만드실 수 있어요.'}
+                        </p>
+                        <button onClick={손님 ? onLogin : onCharge} style={{
+                            width: '100%', padding: 14, borderRadius: 14, border: 'none',
+                            background: '#1C2321', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                        }}>
+                            {손님 ? `로그인하고 클로버 ${SIGNUP_CLOVERS}개 받기` : '클로버 충전하기'}
+                        </button>
                     </div>
                 )}
 
@@ -167,7 +182,7 @@ export default function PhotoToolShell({
 
                 {/* 손님에게는 클로버 대신 「오늘 몇 장까지 공짜」를 알려준다 — 대표 지적 0915
                     「클로버가 안보이는데 사진은 만들어지네?」 */}
-                {!loading && 손님 && (
+                {!loading && 손님 && !needCharge && (
                     <p style={{ fontSize: 15, color: '#71717a', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.6, wordBreak: 'keep-all' }}>
                         가입 안 하셔도 클로버 {GUEST_CLOVERS}개로 한 장 만들어 보실 수 있어요.{' '}
                         <Link href="/login" style={{ color: 'var(--진초록)', fontWeight: 800, textDecoration: 'underline' }}>로그인하시면 {SIGNUP_CLOVERS}개를 더 드립니다.</Link>
@@ -209,6 +224,10 @@ export default function PhotoToolShell({
                             <ShareTool {...share} />
                             </>
                         )}
+
+                        {/* 손님이 만든 뒤에도 공유할 수 있게 — 2026-09-15
+                            여기가 가장 퍼지기 좋은 순간인데 미리보기일 때만 공유 칸이 없었다 */}
+                        {isPreviewResult && <ShareTool {...share} />}
                     </div>
                 )}
             </div>

@@ -54,7 +54,7 @@ export default function AppSidebar() {
                 const 표식 = 브라우저표식()
                 const r = await fetch(`/api/guest/balance${표식 ? `?mark=${encodeURIComponent(표식)}` : ''}`)
                 const d = await r.json()
-                if (d?.손님) set잔액(d.balance ?? 0)
+                if (d?.손님) { set잔액(d.balance ?? 0); 클로버알림(d.balance ?? 0) }
             } catch {
                 // 못 물어보면 그냥 비워둔다
             }
@@ -73,6 +73,7 @@ export default function AppSidebar() {
             .single()
         if (잔액오류) console.error('[띠] 잔액을 못 읽었다:', 잔액오류.message)
         set잔액(잔액행?.clovers ?? 0)
+        클로버알림(잔액행?.clovers ?? 0)
 
         // 가입 선물을 아직 못 받았으면 여기서 받는다 — 대표 지적 2026-09-15 「왜 클로버가 0개임」
         //

@@ -9,8 +9,22 @@
  */
 const 이름 = 'curi:clover'
 
+/**
+ * 지금 잔액을 여기 한 곳에 들고 있는다 — 2026-09-15
+ * 손님 상태로 처음부터 끝까지 돌려보다 찾았다. 잔액이 0인데 만들기가 눌려서
+ * 서버까지 갔다가 거절당했고, 그 바람에 애써 만든 사진이 화면에서 지워졌다.
+ * 이제 누르기 전에 여기서 먼저 보고 막는다.
+ */
+let 지금값: number | null = null
+
+/** 지금 잔액. 아직 모르면 null */
+export function 지금클로버(): number | null {
+    return 지금값
+}
+
 /** 잔액이 바뀌었다고 알린다 */
 export function 클로버알림(새잔액: number) {
+    지금값 = 새잔액
     if (typeof window === 'undefined') return
     try {
         window.dispatchEvent(new CustomEvent(이름, { detail: 새잔액 }))
@@ -43,6 +57,7 @@ const 씀이름 = 'curi:clover-spend'
 
 /** 방금 쓴 만큼 화면에서 뺀다 (음수를 주면 되돌림) */
 export function 클로버썼다(얼마: number) {
+    if (지금값 !== null) 지금값 = Math.max(0, 지금값 - 얼마)
     if (typeof window === 'undefined') return
     try {
         window.dispatchEvent(new CustomEvent(씀이름, { detail: 얼마 }))

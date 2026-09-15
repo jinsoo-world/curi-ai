@@ -19,7 +19,7 @@ import { 센다 } from '@/lib/track'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { useSticky } from '@/components/studio/useSticky'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
-import { 클로버알림, 클로버썼다, 클로버되돌림 } from '@/lib/clover-bus'
+import { 클로버알림, 클로버썼다, 클로버되돌림, 지금클로버 } from '@/lib/clover-bus'
 
 export default function EnhancePage() {
     const router = useRouter()
@@ -51,6 +51,11 @@ export default function EnhancePage() {
 
     const make = async () => {
         if (!base64 || !modeId) return
+        // 클로버가 모자라면 서버까지 가지 않는다 — 2026-09-15 손님으로 끝까지 돌려보다 찾았다.
+        // 서버에 갔다 거절당하면 그 사이 애써 만든 사진이 화면에서 지워진다.
+        const 있는값 = 지금클로버()
+        if (있는값 !== null && 있는값 < ENHANCE_COST) { setNeedCharge(true); return }
+
         setLoading(true); setErrorMsg(null); setNeedCharge(false); setResult(null)
         센다('photo_make_click', { tool: 'enhance' })
         // 누른 순간 위 띠에서 먼저 뺀다 — 대표 지적 2026-09-15 「만들기 누르면 애니메이션 효과로 차감되어야지」
