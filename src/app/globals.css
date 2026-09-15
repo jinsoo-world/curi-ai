@@ -497,7 +497,7 @@ button, a[role="button"] {
   text-decoration: none;
   color: var(--먹);
 }
-.app-top-credit-num { font-size: 23px; font-weight: 800; letter-spacing: -0.02em; }
+.app-top-credit-num { font-size: 23px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; }
 .app-top-credit-plus {
   background: var(--연두);
   color: #fff;
@@ -505,6 +505,9 @@ button, a[role="button"] {
   font-weight: 800;
   padding: 11px 18px;
   border-radius: 999px;
+  /* 좁은 화면에서 「충전」이 「충 / 전」으로 갈라졌다 — 대표 지적 2026-09-15 「모바일로 돌려봐」 */
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .app-top-me {
   width: 48px;
