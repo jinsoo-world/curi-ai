@@ -1,24 +1,17 @@
-// /api/credits/signup-bonus — 잠갔다 (2026-09-15)
+// /api/credits/signup-bonus — 가입 선물 100 클로버
 //
-// 여기는 가입만 하면 클로버 10,000개(25만원어치)를 주도록 되어 있었다.
-// 대표 확정은 다르다 — 0915 「무료체험권 넣으면 100클로버 줘」.
-// 실제로 한 번도 지급된 적이 없다(거래 기록 0건). 부르는 곳도 없다.
-// 그래도 살려두면 언젠가 잘못 이어져 큰돈이 나간다. 그래서 막아둔다.
-// 되살리려면 금액부터 대표에게 확인한다.
+// 대표 확정 2026-09-15 「가입 보너스는 100개로 통일」.
+// 전에는 여기가 10,000개(25만원어치)를 주도록 되어 있었다. 실제 지급은 0건이었고,
+// 값을 100 으로 맞춰 다시 연다. 금액은 SIGNUP_CLOVERS 한 곳에서만 읽는다.
+// 같은 사람에게 두 번 주지 않는다(거래 기록에 signup_bonus 가 있으면 건너뛴다).
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import { SIGNUP_CLOVERS } from '@/domains/trial'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST() {
-    return NextResponse.json(
-        { error: '지금은 쓰지 않는 길입니다. 체험권을 받으면 클로버를 드립니다.' },
-        { status: 410 },
-    )
-}
-
-async function 옛지급_잠금됨() {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -52,7 +45,7 @@ async function 옛지급_잠금됨() {
             .single()
 
         const currentBalance = userData?.clovers ?? 0
-        const bonusAmount = 10000
+        const bonusAmount = SIGNUP_CLOVERS
         const newBalance = currentBalance + bonusAmount
 
         // 거래 기록 삽입

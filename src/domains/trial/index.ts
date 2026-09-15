@@ -14,6 +14,14 @@ export const REFERRER_REWARD = 100
 /** 체험권을 받은 사람에게 바로 주는 클로버 — 대표 확정 2026-09-15 「무료체험권 넣으면 100클로버 줘」 */
 export const TRIAL_CLOVERS = 100
 
+/**
+ * 가입 선물 — 대표 확정 2026-09-15 「가입 보너스는 100개로 통일」
+ *
+ * 전에는 가입 창구가 10,000개(25만원어치)를 주도록 되어 있었다. 실제로 나간 적은 없지만
+ * 값이 두 개로 갈려 있었다. 이제 선물은 전부 여기 숫자 하나를 본다.
+ */
+export const SIGNUP_CLOVERS = 100
+
 /** 체험을 시작하면 끝나는 시각을 정확히 계산한다 */
 export function trialEndsAt(from: Date = new Date()): Date {
     const end = new Date(from.getTime())

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { SIGNUP_CLOVERS, REFERRER_REWARD } from '@/domains/trial'
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
@@ -77,6 +78,34 @@ export async function GET(request: Request) {
                         console.error('[Auth Callback] User create error:', JSON.stringify(insertError))
                     }
 
+                    // 가입 선물 — 대표 확정 2026-09-15 「가입 보너스는 100개로 통일」
+                    // 값은 SIGNUP_CLOVERS 한 곳에서만 읽는다. 같은 사람에게 두 번 주지 않는다.
+                    try {
+                        const { data: 이미받음 } = await db
+                            .from('credit_transactions')
+                            .select('id')
+                            .eq('user_id', user.id)
+                            .eq('type', 'signup_bonus')
+                            .limit(1)
+
+                        if (!이미받음?.length) {
+                            const { data: 새잔액 } = await db.rpc('클로버_더하기', {
+                                그사람: user.id,
+                                더할값: SIGNUP_CLOVERS,
+                            })
+                            await db.from('credit_transactions').insert({
+                                user_id: user.id,
+                                amount: SIGNUP_CLOVERS,
+                                balance_after: 새잔액 ?? SIGNUP_CLOVERS,
+                                type: 'signup_bonus',
+                                description: '가입 선물',
+                            })
+                        }
+                    } catch (선물오류) {
+                        // 선물에 실패해도 가입은 막지 않는다
+                        console.error('[Auth Callback] 가입 선물 실패:', 선물오류)
+                    }
+
                     // 추천인에게 100 클로버 지급
                     if (refCode) {
                         try {
@@ -88,15 +117,13 @@ export async function GET(request: Request) {
                                 .single()
 
                             if (referrer) {
-                                await db.from('users')
-                                    .update({ clovers: (referrer.clovers || 0) + 100 })
-                                    .eq('id', referrer.id)
+                                await db.rpc('클로버_더하기', { 그사람: referrer.id, 더할값: REFERRER_REWARD })
 
                                 // 클로버 적립 기록
                                 await db.from('credit_transactions').insert({
                                     user_id: referrer.id,
-                                    amount: 100,
-                                    balance_after: (referrer.clovers || 0) + 100,
+                                    amount: REFERRER_REWARD,
+                                    balance_after: (referrer.clovers || 0) + REFERRER_REWARD,
                                     type: 'referral_invite',
                                     description: `${displayName || user.email || '새 유저'} 님이 초대로 가입`,
                                 })
