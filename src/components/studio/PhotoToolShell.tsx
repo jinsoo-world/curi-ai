@@ -207,6 +207,8 @@ export default function PhotoToolShell({
                                 <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>선명한 사진은 회원만 받을 수 있어요</div>
                                 <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6 }}>
                                     지금 보이는 건 미리보기라 흐릿해요. 로그인하면 원본을 바로 내려받습니다.
+                                    <br />
+                                    만드신 사진은 48시간 동안 보관해 드려요. 그 안에 받으시면 됩니다.
                                 </p>
                                 <button onClick={onLogin} style={{
                                     width: '100%', padding: 14, borderRadius: 14, border: 'none',
