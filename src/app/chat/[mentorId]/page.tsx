@@ -782,7 +782,9 @@ export default function ChatPage() {
                         width: '100%',
                         // PC 에서 너무 좁고 작았다 — 대표 지적 2026-09-15 「대화 UI가 너무 작아. 조금 더 키워줘. PC」
                         maxWidth: 900,
-                        padding: '24px clamp(16px, 4vw, 40px)',
+                        // 아래쪽을 넉넉히 둔다 — 대표 지적 2026-09-15 「입력창 위 여백 살짝 조정해」
+                        // 마지막 추천 질문이 입력창에 가려 세 개뿐인 줄 알았다
+                        padding: '24px clamp(16px, 4vw, 40px) 40px',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: 28,
