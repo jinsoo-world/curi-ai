@@ -16,11 +16,16 @@ export async function 손님이쓴값(ip: string, 표식: string | null): Promis
     try {
         const admin = createAdminClient()
         const 하루전 = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-        const { data } = await admin
+        // 표식이 있으면 그 브라우저만 센다.
+        // 주소(IP)로 묶으면 같은 와이파이·같은 통신사를 쓰는 사람들이 한 사람으로 합쳐진다.
+        // 휴대폰 통신사는 수천 명이 한 주소를 같이 쓴다(2026-09-15 홍보 직전에 발견).
+        const 조회 = admin
             .from('guest_generations')
             .select('cost')
-            .or(`ip.eq.${ip}${표식 ? `,fingerprint.eq.${표식}` : ''}`)
             .gte('created_at', 하루전)
+        const { data } = 표식
+            ? await 조회.eq('fingerprint', 표식)
+            : await 조회.eq('ip', ip)
         return (data ?? []).reduce((합, r) => 합 + (r.cost ?? 20), 0)
     } catch {
         // 못 세면 안 쓴 것으로 본다(손님에게 불리하지 않게)
