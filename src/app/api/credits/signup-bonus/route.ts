@@ -37,43 +37,33 @@ export async function POST() {
             return NextResponse.json({ message: '이미 지급됨', alreadyGranted: true })
         }
 
-        // 현재 잔액 조회
-        const { data: userData } = await admin
-            .from('users')
-            .select('clovers')
-            .eq('id', user.id)
-            .single()
+        // 더하기는 DB 가 한다. 읽어서 덮어쓰면 겹쳐 눌렀을 때 한쪽이 통째로 사라진다.
+        const { data: 새잔액, error: 더하기오류 } = await admin.rpc('클로버_더하기', {
+            그사람: user.id,
+            더할값: SIGNUP_CLOVERS,
+        })
+        if (더하기오류) {
+            console.error('[Signup Bonus] 지급 실패:', 더하기오류.message)
+            return NextResponse.json({ error: '클로버 지급 실패' }, { status: 500 })
+        }
 
-        const currentBalance = userData?.clovers ?? 0
-        const bonusAmount = SIGNUP_CLOVERS
-        const newBalance = currentBalance + bonusAmount
-
-        // 거래 기록 삽입
         const { error: txError } = await admin
             .from('credit_transactions')
             .insert({
                 user_id: user.id,
-                amount: bonusAmount,
-                balance_after: newBalance,
+                amount: SIGNUP_CLOVERS,
+                balance_after: 새잔액 ?? SIGNUP_CLOVERS,
                 type: 'signup_bonus',
-                description: '🍀 가입 축하 클로버 10,000개',
+                description: '가입 선물',
             })
-
         if (txError) {
-            console.error('[Signup Bonus] Transaction error:', txError.message)
-            return NextResponse.json({ error: '클로버 지급 실패' }, { status: 500 })
+            console.error('[Signup Bonus] 기록 실패:', txError.message)
         }
-
-        // 잔액 업데이트
-        await admin
-            .from('users')
-            .update({ clovers: newBalance })
-            .eq('id', user.id)
 
         return NextResponse.json({
             success: true,
-            amount: bonusAmount,
-            balance: newBalance,
+            amount: SIGNUP_CLOVERS,
+            balance: 새잔액 ?? SIGNUP_CLOVERS,
         })
     } catch (error: unknown) {
         console.error('[Signup Bonus] Error:', error)

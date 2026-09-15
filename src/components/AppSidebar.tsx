@@ -17,7 +17,7 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import CloverIcon from '@/components/ui/CloverIcon'
 import { 브라우저표식 } from '@/lib/browser-mark'
-import { 클로버듣기 } from '@/lib/clover-bus'
+import { 클로버듣기, 클로버알림 } from '@/lib/clover-bus'
 
 // 대표 확정 0914 = 「만들기ㅣ대화하기ㅣ내 AI 로 해」 「내 대화는 없애 굳이 필요 없을듯」
 const 메뉴 = [
@@ -66,6 +66,25 @@ export default function AppSidebar() {
             .single()
         if (잔액오류) console.error('[띠] 잔액을 못 읽었다:', 잔액오류.message)
         set잔액(잔액행?.clovers ?? 0)
+
+        // 가입 선물을 아직 못 받았으면 여기서 받는다 — 대표 지적 2026-09-15 「왜 클로버가 0개임」
+        //
+        // 원래는 로그인 콜백에서만 줬는데, 그 자리는 「users 행이 아직 없을 때」 안에 있었고
+        // Supabase 는 가입 순간 그 행을 먼저 만든다. 그래서 아무도 못 받았다.
+        // 콜백도 고쳤지만 그 길은 구글·카카오 로그인만 지난다. 여기서 한 번 더 확인해
+        // 이미 가입한 분들도 화면을 열면 받게 한다. 두 번 주는 것은 서버가 막는다.
+        if (!잔액행?.clovers) {
+            try {
+                const r = await fetch('/api/credits/signup-bonus', { method: 'POST' })
+                const j = await r.json()
+                if (j?.success && typeof j.balance === 'number') {
+                    set잔액(j.balance)
+                    클로버알림(j.balance)
+                }
+            } catch {
+                // 못 받아도 화면은 그대로 둔다
+            }
+        }
 
         // 나머지는 못 읽어도 잔액 표시를 막지 않는다
         const { data: row } = await supabase
