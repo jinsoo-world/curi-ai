@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) return NextResponse.json({ 손님: false })
 
-    const 표식 = req.nextUrl.searchParams.get('표식')
+    const 표식 = req.nextUrl.searchParams.get('mark')
     const 남은값 = await 손님잔액(주소꺼내기(req.headers), 표식 && 표식.length > 8 ? 표식.slice(0, 64) : null)
     return NextResponse.json({ 손님: true, balance: 남은값, 전체: GUEST_CLOVERS })
 }

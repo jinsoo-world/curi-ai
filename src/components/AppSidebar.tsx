@@ -46,7 +46,7 @@ export default function AppSidebar() {
         if (!user) {
             try {
                 const 표식 = 브라우저표식()
-                const r = await fetch(`/api/guest/balance${표식 ? `?표식=${encodeURIComponent(표식)}` : ''}`)
+                const r = await fetch(`/api/guest/balance${표식 ? `?mark=${encodeURIComponent(표식)}` : ''}`)
                 const d = await r.json()
                 if (d?.손님) set잔액(d.balance ?? 0)
             } catch {
