@@ -15,7 +15,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import AppSidebar from '@/components/AppSidebar'
 import CloverIcon from '@/components/ui/CloverIcon'
-import { CLOVER_PACKS, CLOVER_UNIT_WON, discountPercent } from '@/domains/credit/packs'
+import { CLOVER_PACKS, discountPercent } from '@/domains/credit/packs'
 import { ID_COST } from '@/domains/studio/idphoto'
 import { TEACHER_COST } from '@/domains/studio/teacher'
 import { PHOTO_COST } from '@/domains/studio/photo'
@@ -62,7 +62,7 @@ export default function PricingPage() {
                 <section style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '20px 18px', marginBottom: 16 }}>
                     <h2 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 4px' }}>사진 한 장에 얼마</h2>
                     <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 16px' }}>
-                        클로버 1개 = {CLOVER_UNIT_WON}원
+                        사진을 만들 때 클로버를 씁니다.
                     </p>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
                         {값표.map((v) => (
@@ -78,9 +78,7 @@ export default function PricingPage() {
                                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                                         <CloverIcon size={16} />
                                         <span style={{ fontSize: 16, fontWeight: 800 }}>{v.클로버}개</span>
-                                        <span style={{ fontSize: 15, color: '#71717a' }}>
-                                            ({(v.클로버 * CLOVER_UNIT_WON).toLocaleString()}원)
-                                        </span>
+
                                     </span>
                                 </Link>
                             </li>
@@ -138,7 +136,7 @@ export default function PricingPage() {
                                         클로버 {p.clovers.toLocaleString()}개
                                     </div>
                                     <div style={{ fontSize: 14.5, color: '#71717a', marginTop: 2 }}>
-                                        사진 {Math.floor(p.clovers / ID_COST).toLocaleString()}장 · 한 장에 {Math.round((p.won / p.clovers) * ID_COST).toLocaleString()}원
+                                        사진 {Math.floor(p.clovers / ID_COST).toLocaleString()}장을 만들 수 있어요
                                     </div>
                                 </div>
                                 <div style={{ textAlign: 'right', flexShrink: 0 }}>

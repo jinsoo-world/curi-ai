@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { CLOVER_PACKS, CLOVER_UNIT_WON, discountPercent } from '@/domains/credit/packs'
+import { CLOVER_PACKS, discountPercent } from '@/domains/credit/packs'
 import AppSidebar from '@/components/AppSidebar'
 import CloverIcon from '@/components/ui/CloverIcon'
 
@@ -81,10 +81,10 @@ export default function ChargePage() {
                     클로버 충전
                 </h1>
                 <p style={{ fontSize: 15, color: '#52525b', lineHeight: 1.7, margin: '0 0 8px', wordBreak: 'keep-all' }}>
-                    클로버 1개로 AI와 한 번 대화해요. 쓴 만큼만 냅니다.
+                    사진을 만들 때 클로버를 씁니다. 쓴 만큼만 냅니다.
                 </p>
-                <p style={{ fontSize: 13, color: '#71717a', margin: '0 0 24px' }}>
-                    클로버 1개 = {CLOVER_UNIT_WON}원 · 많이 담을수록 최대 {Math.max(...CLOVER_PACKS.map(discountPercent))}% 싸집니다
+                <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 24px' }}>
+                    많이 담을수록 최대 {Math.max(...CLOVER_PACKS.map(discountPercent))}% 싸집니다
                 </p>
 
                 {/* 지금 잔액 */}
@@ -97,9 +97,6 @@ export default function ChargePage() {
                         <span style={{ fontSize: 14, color: '#52525b' }}>지금 가진 클로버</span>
                         <span style={{ fontSize: 16, fontWeight: 700, color: '#18181b' }}>
                             {balance.toLocaleString()}개
-                            <span style={{ fontSize: 13, fontWeight: 500, color: '#71717a' }}>
-                                {' '}({(balance * CLOVER_UNIT_WON).toLocaleString()}원어치)
-                            </span>
                         </span>
                     </div>
                 )}
@@ -130,7 +127,7 @@ export default function ChargePage() {
                                         {p.clovers.toLocaleString()}개
                                     </div>
                                     <div style={{ fontSize: 13.5, color: '#71717a', marginTop: 3 }}>
-                                        사진 {Math.floor(p.clovers / 20).toLocaleString()}장 · 1개당 {Math.round(p.won / p.clovers)}원
+                                        사진 {Math.floor(p.clovers / 20).toLocaleString()}장을 만들 수 있어요
                                     </div>
                                 </div>
                             </div>
@@ -144,19 +141,11 @@ export default function ChargePage() {
                                         }}>
                                             {discountPercent(p)}%
                                         </span>
-                                        <span style={{ fontSize: 13, color: '#a1a1aa', textDecoration: 'line-through' }}>
-                                            {(p.clovers * CLOVER_UNIT_WON).toLocaleString()}원
-                                        </span>
                                     </div>
                                 )}
                                 <div style={{ fontSize: 21, fontWeight: 900, color: '#18181b', letterSpacing: '-0.02em' }}>
                                     {p.won.toLocaleString()}원
                                 </div>
-                                {discountPercent(p) > 0 && (
-                                    <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 700, marginTop: 1 }}>
-                                        {(p.clovers * CLOVER_UNIT_WON - p.won).toLocaleString()}원 아낌
-                                    </div>
-                                )}
                             </div>
                         </button>
                     ))}

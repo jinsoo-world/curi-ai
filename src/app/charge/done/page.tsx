@@ -4,7 +4,6 @@
 // 여기서 서버에 확인을 받아야 클로버가 들어간다(화면이 아니라 서버가 토스에 직접 묻는다).
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { CLOVER_UNIT_WON } from '@/domains/credit/packs'
 
 function ChargeDoneInner() {
     const router = useRouter()
@@ -72,7 +71,6 @@ function ChargeDoneInner() {
                         {balance !== null && (
                             <p style={{ fontSize: 13, color: '#71717a', margin: '0 0 28px' }}>
                                 지금 가진 클로버 {balance.toLocaleString()}개
-                                ({(balance * CLOVER_UNIT_WON).toLocaleString()}원어치)
                             </p>
                         )}
                         <button
