@@ -1,5 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { TOOLS } from '@/domains/studio/tools'
+import CloverIcon from '@/components/ui/CloverIcon'
 
 /**
  * 지금 쓸 수 있는 도구 — 사진 한 장이 곧 설명이다
@@ -7,30 +9,11 @@ import Link from 'next/link'
  * 대표 지시 2026-09-14 = 「UI 전체적으로 다시 잡아」
  * pfpmaker 는 이모지 타일을 쓰지만 이모지는 결과물을 안 보여준다.
  * 결과 사진 자체를 타일로 쓴다.
+ *
+ * 2026-09-15 = 목록을 손으로 적어두고 있었다(전문가 프로필·인스타 프로필·내 AI).
+ * 대표가 확정한 서비스 여섯 개와 달라서 첫 화면만 옛 이름을 보여주고 있었다.
+ * 이제 tools.ts 한 표만 본다.
  */
-const TOOLS = [
-    {
-        href: '/tools/profile-photo',
-        img: '/samples/after-man.webp',
-        title: '전문가 프로필 사진',
-        desc: '얼굴은 그대로, 옷과 배경만 바꿔요',
-        badge: '가장 많이 씀',
-    },
-    {
-        href: '/tools/insta-profile',
-        img: '/samples/look-outdoor.webp',
-        title: '인스타 프로필 사진',
-        desc: '동그랗게 잘려도 얼굴이 잘 나오게',
-        badge: null,
-    },
-    {
-        href: '/creator/create',
-        img: '/samples/look-office.webp',
-        title: '내 AI 만들기',
-        desc: '내 경험으로 말하는 AI 를 만들고 팔아요',
-        badge: null,
-    },
-]
 
 export default function ToolTiles() {
     return (
@@ -49,7 +32,7 @@ export default function ToolTiles() {
 
                 <div className="tool-tiles">
                     {TOOLS.map((t) => (
-                        <Link key={t.href} href={t.href} className="tool-tile">
+                        <Link key={t.id} href={t.href} className="tool-tile">
                             <span className="tool-tile-img">
                                 <Image
                                     src={t.img}
@@ -64,20 +47,20 @@ export default function ToolTiles() {
                                     <span style={{ fontSize: 'var(--글자-중)', fontWeight: 800, letterSpacing: '-0.03em' }}>
                                         {t.title}
                                     </span>
-                                    {t.badge && (
-                                        <span
-                                            style={{
-                                                background: '#EAF7EF',
-                                                color: 'var(--진초록)',
-                                                fontSize: 11,
-                                                fontWeight: 800,
-                                                padding: '3px 8px',
-                                                borderRadius: 999,
-                                            }}
-                                        >
-                                            {t.badge}
-                                        </span>
-                                    )}
+                                    <span
+                                        style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                                            background: '#F4F6F3',
+                                            color: 'var(--먹연)',
+                                            fontSize: 12,
+                                            fontWeight: 800,
+                                            padding: '3px 8px',
+                                            borderRadius: 999,
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        {t.cost === 'free' ? '무료' : (<><CloverIcon size={11} />{t.cost}개</>)}
+                                    </span>
                                 </span>
                                 <span
                                     style={{
