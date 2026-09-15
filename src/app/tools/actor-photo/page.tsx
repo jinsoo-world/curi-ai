@@ -25,6 +25,7 @@ import { useGuest } from '@/components/studio/useGuest'
 import { GUEST_CLOVERS } from '@/domains/trial'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { useSticky } from '@/components/studio/useSticky'
+import { HAIRS, DEFAULT_HAIR } from '@/domains/studio/hair'
 import { 클로버알림 } from '@/lib/clover-bus'
 
 function ActorPhotoPage안쪽() {
@@ -38,6 +39,9 @@ function ActorPhotoPage안쪽() {
     const [ageId, setAgeId] = useSticky<string>('age', DEFAULT_AGE_ID)
     const [styleId, setStyleId] = useSticky<string | null>('actor-style', null)
     const [backdropId, setBackdropId] = useSticky<string | null>('actor-bg', null)
+    // 대표 지적 2026-09-15 「성별 고르기도 넣고 머리 지시문도 넣어」
+    const [성별, set성별] = useSticky<string>('gender', 'male')
+    const [hairId, setHairId] = useSticky<string>('hair', DEFAULT_HAIR)
     const [result, setResult] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -76,7 +80,7 @@ function ActorPhotoPage안쪽() {
             const res = await fetch('/api/tools/profile-photo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64: base64, mimeType, styleId, backdropId, modelId, ratioId, ageId, kind: 'actor', 표식: 브라우저표식() }),
+                body: JSON.stringify({ imageBase64: base64, mimeType, styleId, backdropId, modelId, ratioId, ageId, kind: 'actor', hairId, gender: 성별, 표식: 브라우저표식() }),
             })
             const data = await res.json()
             if (!res.ok) {
@@ -185,8 +189,23 @@ function ActorPhotoPage안쪽() {
                         </div>
                     </div>
 
+                    {/* 성별 — 대표 지적 2026-09-15 「남잔데 왜 여자가 있냐」 */}
                     <div style={{ marginBottom: 22 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>3. 어떤 느낌으로</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>3. 남성 여성</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                            {[{ id: 'male', label: '남성' }, { id: 'female', label: '여성' }].map(g => (
+                                <button key={g.id} onClick={() => set성별(g.id)} style={{
+                                    padding: '14px 8px', borderRadius: 14,
+                                    border: 성별 === g.id ? '2.5px solid #22c55e' : '1.5px solid #e4e4e7',
+                                    background: 성별 === g.id ? '#f0fdf4' : '#fff', cursor: 'pointer',
+                                    fontSize: 16, fontWeight: 800, color: '#18181b',
+                                }}>{g.label}</button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: 22 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>4. 어떤 느낌으로</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                             {ACTOR_MOODS.map(o => (
                                 <PickCard key={o.id} option={o} selected={styleId === o.id} onSelect={setStyleId} kind="outfit" />
@@ -194,16 +213,33 @@ function ActorPhotoPage안쪽() {
                         </div>
                     </div>
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>4. 스튜디오 바탕</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>5. 스튜디오 바탕</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                             {ACTOR_BACKDROPS.map(o => (
                                 <PickCard key={o.id} option={o} selected={backdropId === o.id} onSelect={setBackdropId} kind="backdrop" />
                             ))}
                         </div>
                     </div>
+
+                    {/* 머리 — 대표 지적 2026-09-15 「머리를 왜 까는거야」 「옵션으로 하게 해」 */}
+                    <div style={{ marginBottom: 24 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>6. 머리 모양</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
+                            {HAIRS.map(h => (
+                                <button key={h.id} onClick={() => setHairId(h.id)} style={{
+                                    padding: '12px 10px', borderRadius: 14, textAlign: 'left',
+                                    border: hairId === h.id ? '2.5px solid #22c55e' : '1.5px solid #e4e4e7',
+                                    background: hairId === h.id ? '#f0fdf4' : '#fff', cursor: 'pointer',
+                                }}>
+                                    <span style={{ display: 'block', fontSize: 15, fontWeight: 800, color: '#18181b' }}>{h.label}</span>
+                                    <span style={{ display: 'block', fontSize: 13, color: '#71717a', marginTop: 2, wordBreak: 'keep-all' }}>{h.desc}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                     {/* 나이 — 대표 지시 0914 「나이도 조정할 수 있도록」 「-10살까지」 */}
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>5. 나이</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>7. 나이</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                             {AGES.map(a => (
                                 <button key={a.id} onClick={() => setAgeId(a.id)} style={{
@@ -223,7 +259,7 @@ function ActorPhotoPage안쪽() {
 
                     {/* 비율 — 어디에 쓸 사진인지에 따라 다르다 */}
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>6. 사진 모양</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>8. 사진 모양</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(96px, 1fr))', gap: 8 }}>
                             {RATIOS.map(r => (
                                 <button key={r.id} onClick={() => setRatioId(r.id)} style={{

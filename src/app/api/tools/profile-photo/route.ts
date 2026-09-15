@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
                 : isTeacher
                 ? buildTeacherPrompt(getTeacherMood(styleId)!, getTeacherPlace(backdropId)!, ratio.label, 나이, 성별값, 머리)
                 : isActor
-                ? buildActorPrompt(getActorMood(styleId)!, getActorBackdrop(backdropId)!, ratio.label, 나이, 머리)
+                ? buildActorPrompt(getActorMood(styleId)!, getActorBackdrop(backdropId)!, ratio.label, 나이, 머리, 성별값)
                 : buildPhotoPrompt(
                     getStyle(styleId)!,
                     getBackdrop(backdropId)!,
