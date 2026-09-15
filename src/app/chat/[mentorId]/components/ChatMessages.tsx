@@ -616,13 +616,13 @@ export default function ChatMessages({
                             <div style={{
                                 display: 'flex',
                                 flexDirection: 'column',
-                                maxWidth: isUser ? '75%' : '80%',
+                                maxWidth: isUser ? '78%' : '88%',
                                 minWidth: 0,
                             }}>
                                 {/* 멘토 이름 — 간결하게 */}
                                 {!isUser && (
                                     <div style={{
-                                        fontSize: 14,
+                                        fontSize: 'clamp(14px, 1.2vw, 16px)',
                                         fontWeight: 600,
                                         color: '#64748b',
                                         marginBottom: 6,
@@ -660,17 +660,18 @@ export default function ChatMessages({
                                 {/* 메시지 본문 — 사진만 보낸 경우엔 빈 말풍선을 띄우지 않는다 */}
                                 {!(isUser && !msg.content) && <div style={{
                                     ...(isUser ? {
-                                        padding: '12px 18px',
+                                        padding: 'clamp(13px, 1.1vw, 17px) clamp(18px, 1.5vw, 24px)',
                                         borderRadius: '20px 20px 6px 20px',
                                         background: '#1C2321',
                                         color: '#fff',
-                                        fontSize: 15,
+                                        // PC 에서 글씨가 작았다 — 대표 지적 2026-09-15
+                                        fontSize: 'clamp(16px, 1.35vw, 18px)',
                                         lineHeight: 1.7,
                                         wordBreak: 'break-word' as const,
                                     } : {
                                         padding: '4px 0',
                                         color: '#1e293b',
-                                        fontSize: 17.5,
+                                        fontSize: 'clamp(17.5px, 1.5vw, 20px)',
                                         lineHeight: 1.85,
                                         wordBreak: 'break-word' as const,
                                     }),

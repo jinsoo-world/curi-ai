@@ -780,8 +780,9 @@ export default function ChatPage() {
                 >
                     <div className="chat-messages-inner" style={{
                         width: '100%',
-                        maxWidth: 720,
-                        padding: '24px clamp(16px, 4vw, 32px)',
+                        // PC 에서 너무 좁고 작았다 — 대표 지적 2026-09-15 「대화 UI가 너무 작아. 조금 더 키워줘. PC」
+                        maxWidth: 900,
+                        padding: '24px clamp(16px, 4vw, 40px)',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: 28,
@@ -800,8 +801,8 @@ export default function ChatPage() {
                                         src={mentorImage || '/logo.png'}
                                         alt={mentor.name}
                                         style={{
-                                            width: 96,
-                                            height: 96,
+                                            width: 'clamp(96px, 9vw, 128px)',
+                                            height: 'clamp(96px, 9vw, 128px)',
                                             borderRadius: '50%',
                                             objectFit: 'cover',
                                             border: '3px solid #fff',
@@ -824,7 +825,7 @@ export default function ChatPage() {
                                 {/* 이름 + AI 배지 */}
                                 <h2 style={{
                                     margin: 0,
-                                    fontSize: 28,
+                                    fontSize: 'clamp(28px, 2.6vw, 36px)',
                                     fontWeight: 800,
                                     color: '#18181b',
                                     marginBottom: 4,
@@ -835,7 +836,7 @@ export default function ChatPage() {
                                 }}>
                                     {mentor.name}
                                     <span style={{
-                                        fontSize: 12,
+                                        fontSize: 'clamp(12px, 1.1vw, 14px)',
                                         fontWeight: 600,
                                         color: '#22c55e',
                                         background: '#f0fdf4',
@@ -845,7 +846,7 @@ export default function ChatPage() {
                                 </h2>
                                 <p style={{
                                     margin: 0,
-                                    fontSize: 14,
+                                    fontSize: 'clamp(15px, 1.35vw, 18px)',
                                     color: '#6b7280',
                                     marginBottom: 24,
                                 }}>
@@ -866,12 +867,12 @@ export default function ChatPage() {
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: 8,
-                                            padding: '10px 24px',
+                                            padding: 'clamp(11px, 1vw, 15px) clamp(24px, 2.2vw, 34px)',
                                             borderRadius: 100,
                                             border: 'none',
                                             background: '#1C2321',
                                             color: '#fff',
-                                            fontSize: 15,
+                                            fontSize: 'clamp(15px, 1.4vw, 18px)',
                                             fontWeight: 600,
                                             cursor: 'pointer',
                                             transition: 'all 0.2s',
@@ -928,9 +929,9 @@ export default function ChatPage() {
 
                                 {/* 추천 질문 — Lenny 스타일 리스트 */}
                                 {showSuggestions && suggestions.length > 0 && (
-                                    <div style={{ width: '100%', maxWidth: 520 }}>
+                                    <div style={{ width: '100%', maxWidth: 680 }}>
                                         <h3 style={{
-                                            fontSize: 16,
+                                            fontSize: 'clamp(16px, 1.45vw, 19px)',
                                             fontWeight: 700,
                                             color: '#1e293b',
                                             margin: '0 0 14px 0',
@@ -946,12 +947,12 @@ export default function ChatPage() {
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         gap: 12,
-                                                        padding: '14px 18px',
+                                                        padding: 'clamp(14px, 1.3vw, 20px) clamp(18px, 1.7vw, 24px)',
                                                         borderRadius: 14,
                                                         border: '1px solid #e5e7eb',
                                                         background: '#fff',
                                                         color: '#374151',
-                                                        fontSize: 14,
+                                                        fontSize: 'clamp(15px, 1.35vw, 18px)',
                                                         fontWeight: 500,
                                                         cursor: 'pointer',
                                                         textAlign: 'left',

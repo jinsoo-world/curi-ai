@@ -306,8 +306,9 @@ export default function ChatInput({
                 onSubmit={handleSubmit}
                 style={{
                     width: '100%',
-                    maxWidth: 720,
-                    padding: '8px clamp(12px, 4vw, 24px)',
+                    // 대화 칸과 같은 폭으로 — 대표 지적 2026-09-15 「대화 UI가 너무 작아」
+                    maxWidth: 900,
+                    padding: '8px clamp(12px, 4vw, 40px)',
                 }}
             >
                 {/* 제미나이 스타일: 큰 pill 안에 textarea + 버튼들 */}
@@ -321,7 +322,7 @@ export default function ChatInput({
                         ? '0 0 0 3px rgba(34,197,94,0.08), 0 4px 16px rgba(0,0,0,0.06)'
                         : '0 2px 12px rgba(0,0,0,0.04)',
                     transition: 'border-color 0.2s, box-shadow 0.2s',
-                    padding: '12px 16px',
+                    padding: 'clamp(12px, 1.1vw, 18px) clamp(16px, 1.4vw, 22px)',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 8,
@@ -378,7 +379,7 @@ export default function ChatInput({
                         style={{
                             border: 'none',
                             background: 'transparent',
-                            fontSize: 17,
+                            fontSize: 'clamp(17px, 1.45vw, 19px)',
                             color: '#1e293b',
                             resize: 'none',
                             outline: 'none',
@@ -449,8 +450,8 @@ export default function ChatInput({
                             aria-label="사진 첨부"
                             title="사진 보내기"
                             style={{
-                                width: 48,
-                                height: 48,
+                                width: 'clamp(48px, 3.6vw, 56px)',
+                                height: 'clamp(48px, 3.6vw, 56px)',
                                 borderRadius: '50%',
                                 background: '#EDF7F1',
                                 border: 'none',
@@ -475,8 +476,8 @@ export default function ChatInput({
                                 disabled={isStreaming}
                                 aria-label={isListening ? '음성 입력 중지' : '음성으로 입력'}
                                 style={{
-                                    width: 48,
-                                    height: 48,
+                                    width: 'clamp(48px, 3.6vw, 56px)',
+                                    height: 'clamp(48px, 3.6vw, 56px)',
                                     borderRadius: '50%',
                                     background: isListening ? '#ef4444' : '#EDF7F1',
                                     border: 'none',

@@ -44,7 +44,7 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
         >
             <div
                 style={{
-                    maxWidth: 780,
+                    maxWidth: 960,   // 대화 칸과 맞춘다 — 대표 지적 2026-09-15
                     margin: '0 auto',
                     height: 68,
                     padding: '0 12px',
@@ -73,7 +73,7 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                     <span
                         style={{
                             position: 'relative',
-                            width: 48, height: 48, flexShrink: 0,
+                            width: 'clamp(48px, 3.6vw, 58px)', height: 'clamp(48px, 3.6vw, 58px)', flexShrink: 0,
                             borderRadius: 999, overflow: 'hidden',
                             background: '#E8F2EC',
                             display: 'grid', placeItems: 'center',
@@ -88,10 +88,10 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                     </span>
 
                     <span style={{ minWidth: 0 }}>
-                        <span style={{ display: 'block', fontSize: 17, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--먹)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ display: 'block', fontSize: 'clamp(17px, 1.45vw, 20px)', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--먹)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {mentor.name}
                         </span>
-                        <span style={{ display: 'block', fontSize: 13, color: isStreaming ? 'var(--연두)' : 'var(--먹연)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ display: 'block', fontSize: 'clamp(13px, 1.15vw, 15.5px)', color: isStreaming ? 'var(--연두)' : 'var(--먹연)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {isStreaming ? '쓰는 중…' : (mentor.title || '')}
                         </span>
                     </span>
@@ -108,7 +108,7 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                             borderRadius: 999,
                             border: '1px solid var(--선)',
                             background: '#fff',
-                            fontSize: 14,
+                            fontSize: 'clamp(14px, 1.2vw, 16px)',
                             fontWeight: 700,
                             color: 'var(--먹)',
                             cursor: 'pointer',
