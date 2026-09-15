@@ -795,7 +795,8 @@ export default function ChatPage() {
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                padding: '48px 20px 32px',
+                                // 위를 줄여 추천 질문이 한 화면에 더 들어오게 — 대표 지적 2026-09-15
+                                padding: '28px 20px 24px',
                             }}>
                                 {/* 아바타 + 온라인 표시 */}
                                 <div style={{ position: 'relative', marginBottom: 16 }}>
@@ -850,7 +851,7 @@ export default function ChatPage() {
                                     margin: 0,
                                     fontSize: 'clamp(15px, 1.35vw, 18px)',
                                     color: '#6b7280',
-                                    marginBottom: 24,
+                                    marginBottom: 18,
                                 }}>
                                     {mentor.title}
                                 </p>
@@ -859,7 +860,7 @@ export default function ChatPage() {
                                 <div style={{
                                     display: 'flex',
                                     gap: 12,
-                                    marginBottom: 36,
+                                    marginBottom: 26,
                                 }}>
                                     <button
                                         onClick={() => {
