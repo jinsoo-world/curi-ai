@@ -15,7 +15,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import CloverIcon from '@/components/ui/CloverIcon'
-import { TRIAL_CLOVERS } from '@/domains/trial'
+import { TRIAL_CLOVERS, SIGNUP_CLOVERS } from '@/domains/trial'
+import { TEACHER_COST } from '@/domains/studio/teacher'
 
 const 오늘열쇠 = 'curi.welcomeGift.closedOn'
 /** 처음 오신 분 안내(FirstGuide)를 마쳤는지 — 그 안내가 끝난 뒤에 띄운다 */
@@ -100,9 +101,9 @@ export default function WelcomeGift() {
                 </div>
 
                 <p style={{ fontSize: 15, color: 'var(--먹연)', margin: '0 0 22px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                    로그인하고 휴대폰 인증을 하시면 클로버 {TRIAL_CLOVERS}개를 더 드려요.
+                    로그인하면 클로버 {SIGNUP_CLOVERS}개, 휴대폰 인증까지 하시면 {TRIAL_CLOVERS}개를 더 드려요.
                     <br />
-                    사진 다섯 장을 그냥 만들어볼 수 있습니다.
+                    사진 {Math.floor((SIGNUP_CLOVERS + TRIAL_CLOVERS) / TEACHER_COST)}장을 그냥 만들어볼 수 있습니다.
                 </p>
 
                 <button

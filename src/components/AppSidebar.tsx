@@ -56,14 +56,25 @@ export default function AppSidebar() {
             return
         }
 
-        const { data: row } = await supabase
+        // 잔액은 따로 읽는다 — 대표 지적 2026-09-15 「왜 클로버가 0개임」
+        // 한 번에 여러 칸을 물으면 그중 하나만 없어도 통째로 실패해 잔액이 0으로 보인다.
+        // 돈에 해당하는 숫자라 이것만은 따로, 먼저 읽는다.
+        const { data: 잔액행, error: 잔액오류 } = await supabase
             .from('users')
-            .select('name, clovers, avatar_url, referral_code')
+            .select('clovers')
             .eq('id', user.id)
             .single()
-        set잔액(row?.clovers ?? 0)
+        if (잔액오류) console.error('[띠] 잔액을 못 읽었다:', 잔액오류.message)
+        set잔액(잔액행?.clovers ?? 0)
+
+        // 나머지는 못 읽어도 잔액 표시를 막지 않는다
+        const { data: row } = await supabase
+            .from('users')
+            .select('display_name, avatar_url, referral_code')
+            .eq('id', user.id)
+            .maybeSingle()
         set사진(row?.avatar_url ?? null)
-        set이름(row?.name ?? null)
+        set이름(row?.display_name ?? null)
         set추천코드(row?.referral_code ?? null)
     }, [])
 

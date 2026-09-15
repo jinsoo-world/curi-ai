@@ -8,6 +8,9 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import dynamic from 'next/dynamic'
 const CloverHunt = dynamic(() => import('@/components/CloverHunt'), { loading: () => null })
 import './globals.css'
+import { GUEST_CLOVERS, SIGNUP_CLOVERS, TRIAL_CLOVERS } from '@/domains/trial'
+import { TEACHER_COST } from '@/domains/studio/teacher'
+import { ENHANCE_COST } from '@/domains/studio/enhance'
 
 const SITE_URL = 'https://www.curi-ai.com'
 
@@ -119,7 +122,7 @@ const jsonLd = {
         '@type': 'Offer',
         price: '0',
         priceCurrency: 'KRW',
-        description: '가입하면 클로버 40개. 사진 한 장에 클로버 20개',
+        description: `가입하면 클로버 ${SIGNUP_CLOVERS}개. 사진 한 장에 클로버 ${TEACHER_COST}개`,
       },
     },
     {
@@ -146,7 +149,7 @@ const jsonLd = {
           name: '값은 얼마인가요?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: '가입 안 해도 클로버 40개로 사진 두 장을 만들어 볼 수 있습니다. 가입하면 40개를 더 드립니다. 사진 한 장을 만들 때 클로버 20개, 화질 개선은 12개가 듭니다.',
+            text: `가입 안 해도 클로버 ${GUEST_CLOVERS}개로 사진 ${Math.floor(GUEST_CLOVERS / TEACHER_COST)}장을 만들어 볼 수 있습니다. 가입하면 ${SIGNUP_CLOVERS}개, 휴대폰 인증까지 하면 ${TRIAL_CLOVERS}개를 더 드립니다. 사진 한 장을 만들 때 클로버 ${TEACHER_COST}개, 화질 개선은 ${ENHANCE_COST}개가 듭니다.`,
           },
         },
         {
@@ -162,7 +165,7 @@ const jsonLd = {
           name: '회원가입을 해야 쓸 수 있나요?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: '가입 없이도 하루 세 장까지 만들어볼 수 있습니다. 다만 선명한 원본을 내려받으려면 로그인해야 합니다.',
+            text: `가입 없이도 클로버 ${GUEST_CLOVERS}개로 사진 ${Math.floor(GUEST_CLOVERS / TEACHER_COST)}장까지 만들어볼 수 있습니다. 다만 선명한 원본을 내려받으려면 로그인해야 합니다.`,
           },
         },
       ],

@@ -15,6 +15,7 @@
  */
 import { useEffect, useState, useCallback } from 'react'
 import { GUEST_CLOVERS, SIGNUP_CLOVERS } from '@/domains/trial'
+import { TEACHER_COST } from '@/domains/studio/teacher'
 
 const 본적있음키 = 'curi_first_guide_done'
 
@@ -38,7 +39,7 @@ const 걸음들: 걸음[] = [
     {
         표: 'guide-clover',
         제목: '클로버로 만듭니다',
-        설명: `지금도 클로버 ${GUEST_CLOVERS}개로 사진 세 장을 만들 수 있어요. 가입하시면 ${SIGNUP_CLOVERS}개를 더 드립니다.`,
+        설명: `지금도 클로버 ${GUEST_CLOVERS}개로 사진 ${Math.floor(GUEST_CLOVERS / TEACHER_COST)}장을 만들 수 있어요. 가입하시면 ${SIGNUP_CLOVERS}개를 더 드립니다.`,
     },
 ]
 

@@ -74,8 +74,9 @@ export default function StudioPage() {
         supabase.auth.getUser().then(async ({ data }) => {
             const uid = data.user?.id
             if (!uid) return
-            const { data: row } = await supabase.from('users').select('name, clovers').eq('id', uid).single()
-            setName(row?.name ?? null)
+            // 한 번에 여러 칸을 물으면 그중 하나만 없어도 통째로 실패한다(0915 잔액 0 사고)
+            const { data: row } = await supabase.from('users').select('display_name, clovers').eq('id', uid).maybeSingle()
+            setName(row?.display_name ?? null)
             setBalance(row?.clovers ?? 0)
         })
     }, [])
