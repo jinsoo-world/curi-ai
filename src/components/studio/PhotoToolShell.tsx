@@ -168,14 +168,16 @@ export default function PhotoToolShell({
                 {loading ? (
                     <MakingBar 예상초={makingSeconds} />
                 ) : (
-                    <button onClick={onMake} disabled={!canMake} style={{
+                    <button onClick={onMake} disabled={!canMake || needCharge} style={{
                         width: '100%', padding: 17, borderRadius: 16, border: 'none',
-                        background: !canMake ? '#d4d4d8' : '#22c55e',
+                        // 클로버가 모자라면 초록으로 두지 않는다 — 대표 지적 2026-09-15 「모바일도 확인해봐」
+                        // 0 인데 단추가 초록이면 눌러도 되는 줄 알고 누른다
+                        background: (!canMake || needCharge) ? '#d4d4d8' : '#22c55e',
                         color: '#fff', fontSize: 17, fontWeight: 800,
-                        cursor: !canMake ? 'default' : 'pointer',
+                        cursor: (!canMake || needCharge) ? 'default' : 'pointer',
                     }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-                            만들기 <CloverIcon size={18} color="#fff" /> {cost}개
+                            {needCharge ? '클로버가 모자라요' : <>만들기 <CloverIcon size={18} color="#fff" /> {cost}개</>}
                         </span>
                     </button>
                 )}

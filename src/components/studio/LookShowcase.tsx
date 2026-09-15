@@ -103,7 +103,7 @@ export default function LookShowcase() {
                                 }}
                             >
                                 <span style={{ display: 'block', fontSize: 'var(--글자-작)', fontWeight: 800 }}>{l.label}</span>
-                                <span style={{ display: 'block', fontSize: 12, opacity: 0.75, marginTop: 2 }}>{l.sub}</span>
+                                <span style={{ display: 'block', fontSize: 13.5, opacity: 0.8, marginTop: 2 }}>{l.sub}</span>
                             </span>
                         </Link>
                     ))}

@@ -117,9 +117,9 @@ export default function MentorBigCard({
                                     background: 'rgba(255,255,255,0.22)',
                                     backdropFilter: 'blur(4px)',
                                     color: '#fff',
-                                    fontSize: 12,
+                                    fontSize: 13.5,
                                     fontWeight: 700,
-                                    padding: '4px 10px',
+                                    padding: '5px 11px',
                                     borderRadius: 999,
                                 }}
                             >
