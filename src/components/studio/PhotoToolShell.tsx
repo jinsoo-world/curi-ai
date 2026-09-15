@@ -20,6 +20,8 @@ import BeforeAfter from './BeforeAfter'
 import KeepNotice from '@/components/studio/KeepNotice'
 import ShareTool from '@/components/studio/ShareTool'
 import { 센다 } from '@/lib/track'
+import { useGuest } from '@/components/studio/useGuest'
+import { GUEST_CLOVERS } from '@/domains/trial'
 
 export interface 견본 { src: string; label: string; /** 누르면 이 옵션이 골라진다 */ pick?: () => void }
 
@@ -71,6 +73,8 @@ export default function PhotoToolShell({
     /** 화질 개선처럼 전후를 견줘야 하는 도구 */
     compareWithOriginal?: boolean
 }) {
+    const { 손님 } = useGuest()
+
     return (
         <div className="tool-page">
             <div>
@@ -154,6 +158,14 @@ export default function PhotoToolShell({
                             만들기 <CloverIcon size={18} color="#fff" /> {cost}개
                         </span>
                     </button>
+                )}
+
+                {/* 손님에게는 클로버 대신 「오늘 몇 장까지 공짜」를 알려준다 — 대표 지적 0915
+                    「클로버가 안보이는데 사진은 만들어지네?」 */}
+                {!loading && 손님 && (
+                    <p style={{ fontSize: 15, color: '#71717a', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                        가입 안 하셔도 클로버 {GUEST_CLOVERS}개를 드려요. 선명한 사진을 받으시려면 로그인하시면 됩니다.
+                    </p>
                 )}
 
                 {result && (

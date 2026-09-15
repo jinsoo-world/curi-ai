@@ -12,7 +12,7 @@ import AppSidebar from '@/components/AppSidebar'
 import AdSlot from '@/components/AdSlot'
 import { 센다 } from '@/lib/track'
 import { 브라우저표식 } from '@/lib/browser-mark'
-import { use기억 } from '@/components/studio/use기억'
+import { useSticky } from '@/components/studio/useSticky'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
 
 function IdPhotoPage안쪽() {
@@ -21,10 +21,10 @@ function IdPhotoPage안쪽() {
     const [preview, setPreview] = useState<string | null>(null)
     const [base64, setBase64] = useState<string | null>(null)
     const [mimeType, setMimeType] = useState('image/jpeg')
-    const [sizeId, setSizeId] = use기억<string>('id-size', ID_SIZES[0].id)
-    const [backgroundId, setBackgroundId] = use기억<string>('id-bg', ID_BACKGROUNDS[0].id)
-    const [outfitId, setOutfitId] = use기억<string>('id-outfit', ID_OUTFITS[0].id)
-    const [ageId, setAgeId] = use기억<string>('age', DEFAULT_AGE_ID)
+    const [sizeId, setSizeId] = useSticky<string>('id-size', ID_SIZES[0].id)
+    const [backgroundId, setBackgroundId] = useSticky<string>('id-bg', ID_BACKGROUNDS[0].id)
+    const [outfitId, setOutfitId] = useSticky<string>('id-outfit', ID_OUTFITS[0].id)
+    const [ageId, setAgeId] = useSticky<string>('age', DEFAULT_AGE_ID)
     const [result, setResult] = useState<string | null>(null)
     const [미리보기, set미리보기] = useState(false)
     const [loading, setLoading] = useState(false)

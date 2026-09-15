@@ -16,6 +16,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import CloverIcon from '@/components/ui/CloverIcon'
+import { 브라우저표식 } from '@/lib/browser-mark'
 
 // 대표 확정 0914 = 「만들기ㅣ대화하기ㅣ내 AI 로 해」 「내 대화는 없애 굳이 필요 없을듯」
 const 메뉴 = [
@@ -39,7 +40,21 @@ export default function AppSidebar() {
     const 불러오기 = useCallback(async () => {
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
+
+        // 손님도 클로버를 갖는다 — 대표 확정 2026-09-15 「클로버 60개를 주면 되잖아」
+        // 계정이 없으니 서버가 「하루 동안 쓴 값」을 빼서 알려준다.
+        if (!user) {
+            try {
+                const 표식 = 브라우저표식()
+                const r = await fetch(`/api/guest/balance${표식 ? `?표식=${encodeURIComponent(표식)}` : ''}`)
+                const d = await r.json()
+                if (d?.손님) set잔액(d.balance ?? 0)
+            } catch {
+                // 못 물어보면 그냥 비워둔다
+            }
+            return
+        }
+
         const { data: row } = await supabase
             .from('users')
             .select('name, clovers, avatar_url, referral_code')

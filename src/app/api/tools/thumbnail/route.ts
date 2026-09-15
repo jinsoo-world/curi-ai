@@ -14,11 +14,11 @@ import {
     buildThumbnailPrompt, cleanLine, THUMBNAIL_COST, MAX_TITLE, MAX_SUB,
 } from '@/domains/studio/thumbnail'
 import { 사진보관 } from '@/lib/photo-store'
+import { 손님잔액 } from '@/lib/guest-clover'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const 손님하루한도 = 3
 
 export async function POST(req: NextRequest) {
     try {
@@ -46,21 +46,17 @@ export async function POST(req: NextRequest) {
 
         let 잔액 = 0
         let 차감후 = 0
+        let 남은값 = 0
 
         if (손님) {
-            const 하루전 = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-            const { count } = await admin
-                .from('guest_generations')
-                .select('id', { count: 'exact', head: true })
-                .or(`ip.eq.${ip}${표식 ? `,fingerprint.eq.${표식}` : ''}`)
-                .gte('created_at', 하루전)
-            if ((count ?? 0) >= 손님하루한도) {
+            남은값 = await 손님잔액(ip, 표식)
+            if (남은값 < THUMBNAIL_COST) {
                 return NextResponse.json(
-                    { error: `오늘 무료로 만들 수 있는 ${손님하루한도}장을 다 썼어요. 회원가입하면 계속 만들 수 있어요.`, needLogin: true },
+                    { error: `오늘 쓸 수 있는 클로버를 다 쓰셨어요. 회원가입하시면 100개를 더 드립니다.`, needLogin: true },
                     { status: 429 },
                 )
             }
-            await admin.from('guest_generations').insert({ ip, fingerprint: 표식, kind: 'thumbnail' })
+            await admin.from('guest_generations').insert({ ip, fingerprint: 표식, kind: 'thumbnail', cost: THUMBNAIL_COST })
         } else {
             const { data: 남은 } = await admin.rpc('클로버_차감', { 그사람: user!.id, 낼값: THUMBNAIL_COST })
             if (남은 === null || 남은 < 0) {
@@ -128,6 +124,7 @@ export async function POST(req: NextRequest) {
                     needLogin: true,
                     text: 글자값,
                     claimToken: 보관?.claimToken ?? null,
+                    balance: Math.max(0, 남은값 - THUMBNAIL_COST),
                 })
             }
 

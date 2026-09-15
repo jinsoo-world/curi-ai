@@ -12,7 +12,7 @@ import AppSidebar from '@/components/AppSidebar'
 import AdSlot from '@/components/AdSlot'
 import { 센다 } from '@/lib/track'
 import { 브라우저표식 } from '@/lib/browser-mark'
-import { use기억 } from '@/components/studio/use기억'
+import { useSticky } from '@/components/studio/useSticky'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
 
 function TeacherPhotoPage안쪽() {
@@ -21,10 +21,10 @@ function TeacherPhotoPage안쪽() {
     const [preview, setPreview] = useState<string | null>(null)
     const [base64, setBase64] = useState<string | null>(null)
     const [mimeType, setMimeType] = useState('image/jpeg')
-    const [moodId, setMoodId] = use기억<string | null>('teach-mood', null)
-    const [placeId, setPlaceId] = use기억<string | null>('teach-place', null)
-    const [ageId, setAgeId] = use기억<string>('age', DEFAULT_AGE_ID)
-    const [ratioId, setRatioId] = use기억<string>('teach-ratio', DEFAULT_RATIO_ID)
+    const [moodId, setMoodId] = useSticky<string | null>('teach-mood', null)
+    const [placeId, setPlaceId] = useSticky<string | null>('teach-place', null)
+    const [ageId, setAgeId] = useSticky<string>('age', DEFAULT_AGE_ID)
+    const [ratioId, setRatioId] = useSticky<string>('teach-ratio', DEFAULT_RATIO_ID)
     const [result, setResult] = useState<string | null>(null)
     const [미리보기, set미리보기] = useState(false)
     const [loading, setLoading] = useState(false)

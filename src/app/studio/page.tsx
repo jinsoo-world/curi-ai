@@ -12,6 +12,7 @@ import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
 import AdSlot from '@/components/AdSlot'
 import ClaimPhoto from '@/components/studio/ClaimPhoto'
+import UploadedPeek from '@/components/studio/UploadedPeek'
 
 function ItemCard({ item, onGo }: { item: ToolItem; onGo: (href: string) => void }) {
     return (
@@ -87,6 +88,8 @@ export default function StudioPage() {
             <WelcomeGift />
             <div style={{ maxWidth: 1000, margin: '0 auto', padding: '36px 18px 90px' }}>
                 {/* 인사 + 잔액 */}
+                {사진들고옴 && <UploadedPeek />}
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 22 }}>
                     <div>
                         <h1 style={{

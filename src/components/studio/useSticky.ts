@@ -8,12 +8,14 @@
  */
 import { useEffect, useState } from 'react'
 
-export function use기억<T extends string | null>(키: string, 처음: T): [T, (v: T) => void] {
+export function useSticky<T extends string | null>(키: string, 처음: T): [T, (v: T) => void] {
     const [값, set값] = useState<T>(처음)
 
     useEffect(() => {
         try {
             const v = localStorage.getItem(`curi_pick_${키}`)
+            // 저장소는 React 바깥이라 여기서 한 번 읽어 맞춘다
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             if (v) set값(v as T)
         } catch {
             // 사생활 보호 모드 등에서 막힐 수 있다. 기본값으로 간다.

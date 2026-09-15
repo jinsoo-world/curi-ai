@@ -16,9 +16,9 @@ import { getModel, isValidModelId, DEFAULT_MODEL_ID } from '@/domains/studio/mod
 import { getRatio, isValidRatioId, DEFAULT_RATIO_ID } from '@/domains/studio/ratios'
 import sharp from 'sharp'
 import { 사진보관 } from '@/lib/photo-store'
+import { 손님잔액 } from '@/lib/guest-clover'
 
 /** 로그인 안 한 사람이 하루에 만들 수 있는 장수 (같은 인터넷 주소 기준) */
-const 손님하루한도 = 3
 
 /**
  * 손님에게 주는 사진은 흐리게 만든다 — 대표 지시 2026-09-14
@@ -84,18 +84,14 @@ export async function POST(req: NextRequest) {
 
         let 잔액 = 0
         let 차감후 = 0
+        let 남은값 = 0
 
         if (손님) {
             // 손님은 클로버를 쓰지 않는다. 대신 같은 인터넷 주소로 하루 몇 장까지만.
-            const 하루전 = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-            const { count } = await admin
-                .from('guest_generations')
-                .select('id', { count: 'exact', head: true })
-                .or(`ip.eq.${ip}${표식 ? `,fingerprint.eq.${표식}` : ''}`)
-                .gte('created_at', 하루전)
-            if ((count ?? 0) >= 손님하루한도) {
+            남은값 = await 손님잔액(ip, 표식)
+            if (남은값 < PHOTO_COST) {
                 return NextResponse.json(
-                    { error: `오늘 무료로 만들 수 있는 ${손님하루한도}장을 다 썼어요. 회원가입하면 계속 만들 수 있어요.`, needLogin: true },
+                    { error: `오늘 쓸 수 있는 클로버를 다 쓰셨어요. 회원가입하시면 100개를 더 드립니다.`, needLogin: true },
                     { status: 429 },
                 )
             }
@@ -168,6 +164,7 @@ export async function POST(req: NextRequest) {
                     preview: true,
                     needLogin: true,
                     claimToken: 보관?.claimToken ?? null,
+                    balance: Math.max(0, 남은값 - PHOTO_COST),
                 })
             }
 

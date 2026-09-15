@@ -17,7 +17,7 @@ import ShareTool from '@/components/studio/ShareTool'
 import AdSlot from '@/components/AdSlot'
 import { 센다 } from '@/lib/track'
 import { 브라우저표식 } from '@/lib/browser-mark'
-import { use기억 } from '@/components/studio/use기억'
+import { useSticky } from '@/components/studio/useSticky'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
 
 export default function EnhancePage() {
@@ -25,7 +25,7 @@ export default function EnhancePage() {
     const [preview, setPreview] = useState<string | null>(null)
     const [base64, setBase64] = useState<string | null>(null)
     const [mimeType, setMimeType] = useState('image/jpeg')
-    const [modeId, setModeId] = use기억<string | null>('enhance-mode', null)
+    const [modeId, setModeId] = useSticky<string | null>('enhance-mode', null)
     const [result, setResult] = useState<string | null>(null)
     const [미리보기, set미리보기] = useState(false)
     const [loading, setLoading] = useState(false)

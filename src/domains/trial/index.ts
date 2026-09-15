@@ -22,6 +22,16 @@ export const TRIAL_CLOVERS = 100
  */
 export const SIGNUP_CLOVERS = 100
 
+/**
+ * 가입 안 한 손님에게 주는 클로버 — 대표 확정 2026-09-15
+ * 「클로버 60개를 주면 되잖아. 20개씩 3개 소진하면 끝나게끔」
+ *
+ * 전에는 「하루 3장」이라는 따로 도는 셈을 썼다. 그래서 화면에 클로버가 0으로 보이는데
+ * 사진은 만들어져 헷갈렸다. 이제 손님도 회원과 같은 자로 잰다.
+ * 하루가 지나면 다시 채워진다.
+ */
+export const GUEST_CLOVERS = 60
+
 /** 체험을 시작하면 끝나는 시각을 정확히 계산한다 */
 export function trialEndsAt(from: Date = new Date()): Date {
     const end = new Date(from.getTime())

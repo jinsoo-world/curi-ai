@@ -13,13 +13,15 @@ import KeepNotice from '@/components/studio/KeepNotice'
 import ShareTool from '@/components/studio/ShareTool'
 import AdSlot from '@/components/AdSlot'
 import { 센다 } from '@/lib/track'
+import { useGuest } from '@/components/studio/useGuest'
+import { GUEST_CLOVERS } from '@/domains/trial'
 import { 브라우저표식 } from '@/lib/browser-mark'
-import { use기억 } from '@/components/studio/use기억'
+import { useSticky } from '@/components/studio/useSticky'
 
 export default function ThumbnailPage() {
     const router = useRouter()
-    const [placeId, setPlaceId] = use기억<string>('thumb-place', THUMB_PLACES[0].id)
-    const [lookId, setLookId] = use기억<string | null>('thumb-look', null)
+    const [placeId, setPlaceId] = useSticky<string>('thumb-place', THUMB_PLACES[0].id)
+    const [lookId, setLookId] = useSticky<string | null>('thumb-look', null)
     const [제목, set제목] = useState('')
     const [부제, set부제] = useState('')
     const [result, setResult] = useState<string | null>(null)
@@ -59,6 +61,8 @@ export default function ThumbnailPage() {
     }
 
     const 준비됨 = !!lookId && !!제목.trim()
+
+    const { 손님 } = useGuest()
 
     return (
         <main style={{ minHeight: '100dvh', background: 'var(--종이)' }}>

@@ -21,8 +21,10 @@ import KeepNotice from '@/components/studio/KeepNotice'
 import ShareTool from '@/components/studio/ShareTool'
 import AdSlot from '@/components/AdSlot'
 import { 센다 } from '@/lib/track'
+import { useGuest } from '@/components/studio/useGuest'
+import { GUEST_CLOVERS } from '@/domains/trial'
 import { 브라우저표식 } from '@/lib/browser-mark'
-import { use기억 } from '@/components/studio/use기억'
+import { useSticky } from '@/components/studio/useSticky'
 
 function ActorPhotoPage안쪽() {
     const router = useRouter()
@@ -31,10 +33,10 @@ function ActorPhotoPage안쪽() {
     const [base64, setBase64] = useState<string | null>(null)
     const [mimeType, setMimeType] = useState('image/jpeg')
     const [modelId, setModelId] = useState(DEFAULT_MODEL_ID)
-    const [ratioId, setRatioId] = use기억<string>('actor-ratio', DEFAULT_RATIO_ID)
-    const [ageId, setAgeId] = use기억<string>('age', DEFAULT_AGE_ID)
-    const [styleId, setStyleId] = use기억<string | null>('actor-style', null)
-    const [backdropId, setBackdropId] = use기억<string | null>('actor-bg', null)
+    const [ratioId, setRatioId] = useSticky<string>('actor-ratio', DEFAULT_RATIO_ID)
+    const [ageId, setAgeId] = useSticky<string>('age', DEFAULT_AGE_ID)
+    const [styleId, setStyleId] = useSticky<string | null>('actor-style', null)
+    const [backdropId, setBackdropId] = useSticky<string | null>('actor-bg', null)
     const [result, setResult] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -94,6 +96,8 @@ function ActorPhotoPage안쪽() {
 
     const 준비됨 = !!base64 && !!styleId && !!backdropId
 
+
+    const { 손님 } = useGuest()
 
     return (
         <main style={{ minHeight: '100dvh', background: '#fafafa' }}>
@@ -262,6 +266,12 @@ function ActorPhotoPage안쪽() {
                             사진 만들기 <CloverIcon size={17} color="#fff" /> {getModel(modelId)!.cost}개
                         </span>
                     </button>
+                )}
+
+                {!loading && 손님 && (
+                    <p style={{ fontSize: 15, color: '#71717a', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                        가입 안 하셔도 클로버 {GUEST_CLOVERS}개를 드려요. 선명한 사진을 받으시려면 로그인하시면 됩니다.
+                    </p>
                 )}
 
                 {/* 결과 */}
