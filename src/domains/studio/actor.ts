@@ -7,6 +7,7 @@
 
 import type { Choice } from './photo'
 import { 나이문장 } from './photo'
+import { HAIRS, 모자규칙, type HairChoice } from '@/domains/studio/hair'
 
 /** 결이 되는 분위기 */
 export const ACTOR_MOODS: Choice[] = [
@@ -87,12 +88,15 @@ export function isValidActorBackdrop(v: unknown): v is string { return typeof v 
  * 재취업용과 갈리는 곳 = 「반듯함」 대신 「사람으로 보이는가」에 무게를 둔다.
  * 캐스팅 담당은 매끈한 사진을 반기지 않는다. 실물과 다르면 현장에서 문제가 되기 때문이다.
  */
-export function buildActorPrompt(mood: Choice, backdrop: Choice, ratioLabel = '4:5', ageMinus = 0): string {
+export function buildActorPrompt(mood: Choice, backdrop: Choice, ratioLabel = '4:5', ageMinus = 0, hair?: HairChoice): string {
     const 나이줄 = 나이문장(ageMinus)
 
     return [
         'Create a professional Korean casting profile photograph (actor headshot) from this person.',
         'Keep the same face and the same identity as the uploaded photo — a casting director must recognise this person in the room.',
+        // 머리 — 대표 지적 2026-09-15 「머리를 왜 까는거야」. 모자를 벗기면서 머리까지 지어냈다.
+        (hair ?? HAIRS[0]).prompt,
+        모자규칙,
         'If the person wears glasses in the uploaded photo, keep the exact same glasses on — the same frame shape and colour. Glasses are part of how this person looks. If the person wears no glasses, do not add any.',
         나이줄,
         `Expression and clothing: ${mood.prompt}.`,

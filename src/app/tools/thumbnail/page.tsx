@@ -17,6 +17,7 @@ import { useGuest } from '@/components/studio/useGuest'
 import { GUEST_CLOVERS } from '@/domains/trial'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { useSticky } from '@/components/studio/useSticky'
+import { 클로버알림 } from '@/lib/clover-bus'
 
 export default function ThumbnailPage() {
     const router = useRouter()
@@ -52,6 +53,7 @@ export default function ThumbnailPage() {
             set완성본(null)
             setResult(data.url ?? `data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
             if (data.claimToken) { try { sessionStorage.setItem('curi_claim', data.claimToken) } catch {} }
+            if (typeof data.balance === 'number') 클로버알림(data.balance)
             센다(data.preview ? 'photo_login_prompt' : 'photo_make_success', { tool: 'thumbnail' })
         } catch (e) {
             setErrorMsg(e instanceof Error ? e.message : '썸네일을 만들지 못했어요.')

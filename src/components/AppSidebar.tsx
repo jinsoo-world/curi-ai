@@ -17,6 +17,7 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import CloverIcon from '@/components/ui/CloverIcon'
 import { 브라우저표식 } from '@/lib/browser-mark'
+import { 클로버듣기 } from '@/lib/clover-bus'
 
 // 대표 확정 0914 = 「만들기ㅣ대화하기ㅣ내 AI 로 해」 「내 대화는 없애 굳이 필요 없을듯」
 const 메뉴 = [
@@ -67,6 +68,9 @@ export default function AppSidebar() {
     }, [])
 
     useEffect(() => { void 불러오기() }, [불러오기])
+
+    // 클로버가 바뀌면 바로 반영한다 (받기·사진 만들기·충전)
+    useEffect(() => 클로버듣기(v => set잔액(v)), [])
 
     const 지금 = (href: string) => pathname === href || pathname.startsWith(href + '/')
 

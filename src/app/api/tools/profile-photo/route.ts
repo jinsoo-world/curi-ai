@@ -18,6 +18,7 @@ import sharp from 'sharp'
 import { 사진보관 } from '@/lib/photo-store'
 import { 손님잔액 } from '@/lib/guest-clover'
 import { SIGNUP_CLOVERS } from '@/domains/trial'
+import { getHair, isValidHair, DEFAULT_HAIR } from '@/domains/studio/hair'
 
 /** 로그인 안 한 사람이 하루에 만들 수 있는 장수 (같은 인터넷 주소 기준) */
 
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
         const { data: { user } } = await supabase.auth.getUser()
         const 손님 = !user
 
-        const { imageBase64, mimeType, styleId, backdropId, modelId, kind, ratioId, ageId, freeText, purposeId, 표식: 받은표식 } = await req.json()
+        const { imageBase64, mimeType, styleId, backdropId, modelId, kind, ratioId, ageId, freeText, purposeId, hairId, gender, 표식: 받은표식 } = await req.json()
 
         if (typeof imageBase64 !== 'string' || imageBase64.length < 100) {
             return NextResponse.json({ error: '사진을 올려주세요.' }, { status: 400 })
@@ -122,12 +123,14 @@ export async function POST(req: NextRequest) {
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
             const 나이 = getAge(isValidAgeId(ageId) ? ageId : DEFAULT_AGE_ID)!.minus
+            const 머리 = getHair(isValidHair(hairId) ? hairId : DEFAULT_HAIR)
+            const 성별값 = gender === 'male' || gender === 'female' ? gender : undefined
             const prompt = isInsta
                 ? buildInstaPrompt(getMood(styleId)!, getTone(backdropId)!, typeof freeText === 'string' ? freeText : '')
                 : isTeacher
-                ? buildTeacherPrompt(getTeacherMood(styleId)!, getTeacherPlace(backdropId)!, ratio.label, 나이)
+                ? buildTeacherPrompt(getTeacherMood(styleId)!, getTeacherPlace(backdropId)!, ratio.label, 나이, 성별값, 머리)
                 : isActor
-                ? buildActorPrompt(getActorMood(styleId)!, getActorBackdrop(backdropId)!, ratio.label, 나이)
+                ? buildActorPrompt(getActorMood(styleId)!, getActorBackdrop(backdropId)!, ratio.label, 나이, 머리)
                 : buildPhotoPrompt(
                     getStyle(styleId)!,
                     getBackdrop(backdropId)!,

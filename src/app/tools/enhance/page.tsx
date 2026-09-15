@@ -19,6 +19,7 @@ import { 센다 } from '@/lib/track'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { useSticky } from '@/components/studio/useSticky'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
+import { 클로버알림 } from '@/lib/clover-bus'
 
 export default function EnhancePage() {
     const router = useRouter()
@@ -66,6 +67,7 @@ export default function EnhancePage() {
             set미리보기(!!data.preview)
             setResult(data.url ?? `data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
             if (data.claimToken) { try { sessionStorage.setItem('curi_claim', data.claimToken) } catch {} }
+            if (typeof data.balance === 'number') 클로버알림(data.balance)
             센다(data.preview ? 'photo_login_prompt' : 'photo_make_success', { tool: 'enhance' })
         } catch (e) {
             setErrorMsg(e instanceof Error ? e.message : '사진을 고치지 못했어요.')

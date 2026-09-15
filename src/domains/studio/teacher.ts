@@ -5,6 +5,7 @@
 
 import type { Choice } from './photo'
 import { 나이문장 } from './photo'
+import { HAIRS, 모자규칙, type HairChoice } from '@/domains/studio/hair'
 
 /** 성별 — 대표 지시 0915 「남성 / 여성 클릭하게 해」
  *  견본이 남녀 섞여 있으면 「나랑 다른 사람」 사진을 보고 고르게 된다. */
@@ -29,14 +30,14 @@ export const TEACHER_MOODS: Choice[] = [
         prompt: 'a warm inviting expression with a gentle closed-lip smile and relaxed shoulders, wearing a soft jacket or knit in a light tone',
         swatch: '#e7c9a9',
         sample: '/samples/style-warm.webp',
-        sampleMale: '/samples/style-warm.webp',
+        sampleMale: '/samples/style-warm-m.webp',
     },
     {
         id: 'trust',
         label: '믿음직하게',
         prompt: 'a calm credible expression with steady eye contact and a light closed-lip smile, wearing a clean blazer over a crisp shirt',
         swatch: '#475569',
-        sample: '/samples/style-trust.webp',
+        sample: '/samples/style-trust-w.webp',
         sampleMale: '/samples/style-trust.webp',
     },
     {
@@ -45,14 +46,14 @@ export const TEACHER_MOODS: Choice[] = [
         prompt: 'a relaxed everyday expression with an easy natural smile, leaning slightly forward as if mid-conversation, wearing a soft jacket',
         swatch: '#93c5fd',
         sample: '/samples/style-easy.webp',
-        sampleMale: '/samples/style-easy.webp',
+        sampleMale: '/samples/style-easy-m.webp',
     },
     {
         id: 'expert',
         label: '전문가답게',
         prompt: 'a composed expert expression with steady eye contact and a light smile, wearing a tidy blazer, as if explaining a point',
         swatch: '#1e293b',
-        sample: '/samples/style-expert.webp',
+        sample: '/samples/style-expert-w.webp',
         sampleMale: '/samples/style-expert.webp',
     },
     {
@@ -60,7 +61,7 @@ export const TEACHER_MOODS: Choice[] = [
         label: '활기차게',
         prompt: 'a bright animated expression with an open friendly smile and energetic upright posture, wearing a neat suit or jacket',
         swatch: '#f59e0b',
-        sample: '/samples/style-lively.webp',
+        sample: '/samples/style-lively-w.webp',
         sampleMale: '/samples/style-lively.webp',
     },
     {
@@ -69,7 +70,7 @@ export const TEACHER_MOODS: Choice[] = [
         prompt: 'a poised sophisticated expression with a subtle confident smile, wearing elegant dark clothing, soft rim light on the hair and shoulders',
         swatch: '#27272a',
         sample: '/samples/style-chic.webp',
-        sampleMale: '/samples/style-chic.webp',
+        sampleMale: '/samples/style-chic-m.webp',
     },
 ]
 
@@ -78,12 +79,12 @@ export const TEACHER_MOODS: Choice[] = [
  * 대표 지시 2026-09-15 「배경을 6개정도 표기해줘야지」
  */
 export const TEACHER_PLACES: Choice[] = [
-    { id: 'bright', label: '밝은 스튜디오', prompt: 'a clean bright studio background with soft even light', swatch: '#f4f4f5', bg: 'linear-gradient(140deg,#ffffff,#d4d4d8)', sample: '/samples/style-trust.webp' },
-    { id: 'room', label: '환한 방', prompt: 'a bright airy room softly blurred behind, natural window light', swatch: '#e7eee9', bg: 'linear-gradient(140deg,#f0f7f3,#a8c4b5)', sample: '/samples/teach-m1.webp' },
-    { id: 'study', label: '서재', prompt: 'a warm study with blurred bookshelves behind and a desk lamp', swatch: '#b45309', bg: 'linear-gradient(140deg,#fef3c7,#92400e)', sample: '/samples/teach-m2.webp' },
-    { id: 'pastel', label: '파스텔 단색', prompt: 'a smooth solid pastel studio backdrop in a soft warm tone, the clean look used on Korean instructor profiles', swatch: '#f7d9c9', bg: 'linear-gradient(140deg,#fdeee6,#e8b39a)', sample: '/samples/style-easy.webp' },
-    { id: 'dark', label: '어두운 단색', prompt: 'a deep charcoal studio backdrop with soft rim light separating the hair and shoulders from the background', swatch: '#27272a', bg: 'linear-gradient(140deg,#3f3f46,#18181b)', sample: '/samples/style-chic.webp' },
-    { id: 'office', label: '사무실', prompt: 'a modern office softly blurred behind, clean lines and natural daylight', swatch: '#cbd5e1', bg: 'linear-gradient(140deg,#e2e8f0,#94a3b8)', sample: '/samples/bg-office.webp' },
+    { id: 'bright', label: '밝은 스튜디오', prompt: 'a clean bright studio background with soft even light', swatch: '#f4f4f5', bg: 'linear-gradient(140deg,#ffffff,#d4d4d8)', sample: '/samples/place-studio.webp' },
+    { id: 'room', label: '환한 방', prompt: 'a bright airy room softly blurred behind, natural window light', swatch: '#e7eee9', bg: 'linear-gradient(140deg,#f0f7f3,#a8c4b5)', sample: '/samples/place-room.webp' },
+    { id: 'study', label: '서재', prompt: 'a warm study with blurred bookshelves behind and a desk lamp', swatch: '#b45309', bg: 'linear-gradient(140deg,#fef3c7,#92400e)', sample: '/samples/place-study.webp' },
+    { id: 'pastel', label: '파스텔 단색', prompt: 'a smooth solid pastel studio backdrop in a soft warm tone, the clean look used on Korean instructor profiles', swatch: '#f7d9c9', bg: 'linear-gradient(140deg,#fdeee6,#e8b39a)', sample: '/samples/place-pastel.webp' },
+    { id: 'dark', label: '어두운 단색', prompt: 'a deep charcoal studio backdrop with soft rim light separating the hair and shoulders from the background', swatch: '#27272a', bg: 'linear-gradient(140deg,#3f3f46,#18181b)', sample: '/samples/place-dark.webp' },
+    { id: 'office', label: '사무실', prompt: 'a modern office softly blurred behind, clean lines and natural daylight', swatch: '#cbd5e1', bg: 'linear-gradient(140deg,#e2e8f0,#94a3b8)', sample: '/samples/place-office.webp' },
 ]
 
 export function getTeacherMood(id: string) { return TEACHER_MOODS.find(m => m.id === id) }
@@ -91,13 +92,16 @@ export function getTeacherPlace(id: string) { return TEACHER_PLACES.find(p => p.
 export function isValidTeacherMood(v: unknown): v is string { return typeof v === 'string' && TEACHER_MOODS.some(m => m.id === v) }
 export function isValidTeacherPlace(v: unknown): v is string { return typeof v === 'string' && TEACHER_PLACES.some(p => p.id === v) }
 
-export function buildTeacherPrompt(mood: Choice, place: Choice, ratioLabel = '4:5', ageMinus = 0, gender?: 성별): string {
+export function buildTeacherPrompt(mood: Choice, place: Choice, ratioLabel = '4:5', ageMinus = 0, gender?: 성별, hair?: HairChoice): string {
     const 나이줄 = 나이문장(ageMinus)
 
     return [
         'Create a friendly instructor profile photograph for a Korean online course page.',
         gender === 'male' ? 'The subject is a man.' : gender === 'female' ? 'The subject is a woman.' : '',
         'Keep the same face and the same identity as the uploaded photo — students must recognise this person in the classroom.',
+        // 머리 — 대표 지적 2026-09-15 「머리를 왜 까는거야」. 모자를 벗기면서 머리까지 지어냈다.
+        (hair ?? HAIRS[0]).prompt,
+        모자규칙,
         나이줄,
         `Expression and clothing: ${mood.prompt}.`,
         `Background: ${place.prompt}.`,

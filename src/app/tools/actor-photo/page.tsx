@@ -25,6 +25,7 @@ import { useGuest } from '@/components/studio/useGuest'
 import { GUEST_CLOVERS } from '@/domains/trial'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { useSticky } from '@/components/studio/useSticky'
+import { 클로버알림 } from '@/lib/clover-bus'
 
 function ActorPhotoPage안쪽() {
     const router = useRouter()
@@ -85,6 +86,7 @@ function ActorPhotoPage안쪽() {
             set미리보기(!!data.preview)
             setResult(data.url ?? `data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
             if (data.claimToken) { try { sessionStorage.setItem('curi_claim', data.claimToken) } catch {} }
+            if (typeof data.balance === 'number') 클로버알림(data.balance)
             센다(data.preview ? 'photo_login_prompt' : 'photo_make_success', { tool: 'actor-photo' })
         } catch (e) {
             setErrorMsg(e instanceof Error ? e.message : '사진을 만들지 못했어요. 얼굴이 크고 밝게 나온 사진으로 다시 해보세요.')

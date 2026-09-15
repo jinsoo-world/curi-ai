@@ -1,3 +1,4 @@
+import { HAIRS, 모자규칙, type HairChoice } from '@/domains/studio/hair'
 // 전문가 프로필 사진 만들기 — 고르는 값과 프롬프트 조립
 //
 // 대표 지시 2026-09-14 = 「전문가 수준의 프로필 사진 제작하는 기능도 넣어줘」
@@ -179,7 +180,7 @@ export function 나이문장(ageMinus: number): string {
     return `Make the subject look about ${ageMinus} years younger than in the uploaded photo, while keeping the same face and identity: softer fine lines, firmer skin, slightly fuller darker hair. Never change the bone structure or facial features.`
 }
 
-export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '4:5', ageMinus = 0, purpose?: Purpose): string {
+export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '4:5', ageMinus = 0, purpose?: Purpose, hair?: HairChoice): string {
     const 나이줄 = 나이문장(ageMinus)
     return [
         'Retouch this person into a professional headshot portrait.',
@@ -187,6 +188,9 @@ export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '
         `The subject is ${style.prompt}.`,
         `Background: ${backdrop.prompt}.`,
         'Keep the same face and the same identity as the uploaded photo — this must clearly look like the same person.',
+        // 머리 — 대표 지적 2026-09-15 「머리를 왜 까는거야」. 모자를 벗기면서 머리까지 지어냈다.
+        (hair ?? HAIRS[0]).prompt,
+        모자규칙,
         'If the person wears glasses in the uploaded photo, keep the exact same glasses on — the same frame shape and colour. Glasses are part of how this person looks. If the person wears no glasses, do not add any.',
         // 대표 지적 0914 = 「프로필이 더 나이들어보이는데」
         // 전에는 「더 젊게 만들지 마라」라고 적었는데, 그 한 줄이 모델을 늙는 쪽으로 밀었다.

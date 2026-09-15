@@ -14,6 +14,8 @@ import { 센다 } from '@/lib/track'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { useSticky } from '@/components/studio/useSticky'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
+import { HAIRS, DEFAULT_HAIR } from '@/domains/studio/hair'
+import { 클로버알림 } from '@/lib/clover-bus'
 
 function TeacherPhotoPage안쪽() {
     const router = useRouter()
@@ -25,6 +27,8 @@ function TeacherPhotoPage안쪽() {
     const [placeId, setPlaceId] = useSticky<string | null>('teach-place', null)
     const [ageId, setAgeId] = useSticky<string>('age', DEFAULT_AGE_ID)
     const [ratioId, setRatioId] = useSticky<string>('teach-ratio', DEFAULT_RATIO_ID)
+    const [성별, set성별] = useSticky<string>('gender', 'male')
+    const [hairId, setHairId] = useSticky<string>('hair', DEFAULT_HAIR)
     const [result, setResult] = useState<string | null>(null)
     const [미리보기, set미리보기] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -63,7 +67,7 @@ function TeacherPhotoPage안쪽() {
             const res = await fetch('/api/tools/profile-photo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64: base64, mimeType, styleId: moodId, backdropId: placeId, ratioId, ageId, kind: 'teacher', 표식: 브라우저표식() }),
+                body: JSON.stringify({ imageBase64: base64, mimeType, styleId: moodId, backdropId: placeId, ratioId, ageId, kind: 'teacher', hairId, gender: 성별, 표식: 브라우저표식() }),
             })
             const data = await res.json()
             if (!res.ok) {
@@ -73,6 +77,7 @@ function TeacherPhotoPage안쪽() {
             set미리보기(!!data.preview)
             setResult(data.url ?? `data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
             if (data.claimToken) { try { sessionStorage.setItem('curi_claim', data.claimToken) } catch {} }
+            if (typeof data.balance === 'number') 클로버알림(data.balance)
             센다(data.preview ? 'photo_login_prompt' : 'photo_make_success', { tool: 'teacher-photo' })
         } catch (e) {
             setErrorMsg(e instanceof Error ? e.message : '사진을 만들지 못했어요. 얼굴이 크고 밝게 나온 사진으로 다시 해보세요.')
@@ -117,13 +122,34 @@ function TeacherPhotoPage안쪽() {
                 onLogin={() => router.push('/login')}
                 downloadName="강사_프로필.png"
             >
-                <칸 제목="1. 어떤 이미지로 보이고 싶나요">
-                    <그림칸 목록={TEACHER_MOODS} 고른={moodId} 고르기={setMoodId} />
+                <칸 제목="1. 남성 · 여성">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                        {[{ id: 'male', label: '남성' }, { id: 'female', label: '여성' }].map(g => (
+                            <button key={g.id} onClick={() => set성별(g.id)} style={{ ...고름(성별 === g.id), textAlign: 'center' }}>
+                                <span style={{ fontSize: 16, fontWeight: 800, color: '#18181b' }}>{g.label}</span>
+                            </button>
+                        ))}
+                    </div>
                 </칸>
-                <칸 제목="2. 어디서 찍은 것처럼">
+
+                <칸 제목="2. 어떤 이미지로 보이고 싶나요">
+                    <그림칸 목록={TEACHER_MOODS} 고른={moodId} 고르기={setMoodId} 남성={성별 === 'male'} />
+                </칸>
+                <칸 제목="3. 어디서 찍은 것처럼">
                     <그림칸 목록={TEACHER_PLACES} 고른={placeId} 고르기={setPlaceId} />
                 </칸>
-                <칸 제목="3. 나이">
+                <칸 제목="4. 머리 모양">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
+                        {HAIRS.map(h => (
+                            <button key={h.id} onClick={() => setHairId(h.id)} style={고름(hairId === h.id)}>
+                                <span style={{ display: 'block', fontSize: 15, fontWeight: 800, color: '#18181b' }}>{h.label}</span>
+                                <span style={{ display: 'block', fontSize: 13, color: '#71717a', marginTop: 2, wordBreak: 'keep-all' }}>{h.desc}</span>
+                            </button>
+                        ))}
+                    </div>
+                </칸>
+
+                <칸 제목="5. 나이">
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                         {AGES.map(a => (
                             <button key={a.id} onClick={() => setAgeId(a.id)} style={고름(ageId === a.id)}>
@@ -132,7 +158,7 @@ function TeacherPhotoPage안쪽() {
                         ))}
                     </div>
                 </칸>
-                <칸 제목="4. 사진 모양">
+                <칸 제목="6. 사진 모양">
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(96px, 1fr))', gap: 8 }}>
                         {RATIOS.map(r => (
                             <button key={r.id} onClick={() => setRatioId(r.id)} style={고름(ratioId === r.id)}>
@@ -159,18 +185,20 @@ function 칸({ 제목, children }: { 제목: string; children: React.ReactNode }
     )
 }
 
-function 그림칸({ 목록, 고른, 고르기 }: {
-    목록: { id: string; label: string; swatch: string; bg?: string; sample?: string }[]
+function 그림칸({ 목록, 고른, 고르기, 남성 }: {
+    목록: { id: string; label: string; swatch: string; bg?: string; sample?: string; sampleMale?: string }[]
     고른: string | null
     고르기: (id: string) => void
+    /** 남성이면 남성 견본을 보여준다 — 대표 지적 0915 「남잔데 왜 여자가 있냐」 */
+    남성?: boolean
 }) {
     return (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
             {목록.map(o => (
                 <button key={o.id} onClick={() => 고르기(o.id)} style={고름(고른 === o.id)}>
-                    {o.sample ? (
+                    {(남성 && o.sampleMale) || o.sample ? (
                         <span style={{ position: 'relative', display: 'block', width: '100%', aspectRatio: '3 / 4', borderRadius: 12, overflow: 'hidden', marginBottom: 8, background: '#f4f4f5' }}>
-                            <Image src={o.sample} alt="" fill sizes="160px" style={{ objectFit: 'cover', objectPosition: 'center 26%' }} />
+                            <Image src={((남성 && o.sampleMale) || o.sample)!} alt="" fill sizes="160px" style={{ objectFit: 'cover', objectPosition: 'center 22%' }} />
                         </span>
                     ) : (
                         <span style={{ display: 'block', width: '100%', height: 64, borderRadius: 12, background: o.bg || o.swatch, marginBottom: 8 }} />

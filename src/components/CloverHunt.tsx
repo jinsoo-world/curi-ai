@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import CloverIcon from '@/components/ui/CloverIcon'
+import { 클로버알림 } from '@/lib/clover-bus'
 
 /**
  * 🍀 CloverHunt — 네잎클로버 보물찾기 글로벌 컴포넌트
@@ -225,6 +226,7 @@ export default function CloverHunt() {
                 setTodayCount(data.todayCount)
                 setDailyLimit(data.dailyLimit)
                 setTotalClovers(data.clovers)
+                클로버알림(data.clovers)   // 위 띠가 바로 올라가게
                 setEarnedAmount(data.earned)
                 setBonusAmount(data.bonusEarned || 0)
                 setIsAllClear(data.isAllClear)
