@@ -28,6 +28,44 @@ export async function GET(request: Request) {
                     })
                 }
 
+                // 가입 선물 — 대표 확정 2026-09-15
+                //
+                // 🚨 2026-09-15 수리 = 이 블록이 원래 「users 행이 아직 없을 때」 안에만 있었다.
+                // 그런데 Supabase 는 가입하는 순간 users 행을 먼저 만든다. 그래서 여기 도착했을 땐
+                // 이미 행이 있고, 선물 블록을 통째로 건너뛰었다. 실제로 받은 사람이 한 명도 없었다
+                // (대표 지적 「jin 구글 계정에는 왜 클로버가 0개임」).
+                // 이제 프로필이 있든 없든 돈다. 두 번 주는 것은 credit_transactions 기록이 막는다.
+                // 이미 가입한 분들도 다음 로그인 때 자동으로 받는다.
+                try {
+                    const { data: 이미받음 } = await db
+                        .from('credit_transactions')
+                        .select('id')
+                        .eq('user_id', user.id)
+                        .eq('type', 'signup_bonus')
+                        .limit(1)
+
+                    if (!이미받음?.length) {
+                        const { data: 새잔액, error: 더하기오류 } = await db.rpc('클로버_더하기', {
+                            그사람: user.id,
+                            더할값: SIGNUP_CLOVERS,
+                        })
+                        if (더하기오류) {
+                            console.error('[Auth Callback] 가입 선물 지급 실패:', 더하기오류.message)
+                        } else {
+                            await db.from('credit_transactions').insert({
+                                user_id: user.id,
+                                amount: SIGNUP_CLOVERS,
+                                balance_after: 새잔액 ?? SIGNUP_CLOVERS,
+                                type: 'signup_bonus',
+                                description: '가입 선물',
+                            })
+                        }
+                    }
+                } catch (선물오류) {
+                    // 선물에 실패해도 로그인은 막지 않는다
+                    console.error('[Auth Callback] 가입 선물 실패:', 선물오류)
+                }
+
                 // 기존 프로필 확인
                 const { data: profile, error: profileError } = await db
                     .from('users')
@@ -76,34 +114,6 @@ export async function GET(request: Request) {
 
                     if (insertError) {
                         console.error('[Auth Callback] User create error:', JSON.stringify(insertError))
-                    }
-
-                    // 가입 선물 — 대표 확정 2026-09-15 「가입 보너스는 100개로 통일」
-                    // 값은 SIGNUP_CLOVERS 한 곳에서만 읽는다. 같은 사람에게 두 번 주지 않는다.
-                    try {
-                        const { data: 이미받음 } = await db
-                            .from('credit_transactions')
-                            .select('id')
-                            .eq('user_id', user.id)
-                            .eq('type', 'signup_bonus')
-                            .limit(1)
-
-                        if (!이미받음?.length) {
-                            const { data: 새잔액 } = await db.rpc('클로버_더하기', {
-                                그사람: user.id,
-                                더할값: SIGNUP_CLOVERS,
-                            })
-                            await db.from('credit_transactions').insert({
-                                user_id: user.id,
-                                amount: SIGNUP_CLOVERS,
-                                balance_after: 새잔액 ?? SIGNUP_CLOVERS,
-                                type: 'signup_bonus',
-                                description: '가입 선물',
-                            })
-                        }
-                    } catch (선물오류) {
-                        // 선물에 실패해도 가입은 막지 않는다
-                        console.error('[Auth Callback] 가입 선물 실패:', 선물오류)
                     }
 
                     // 추천인에게 100 클로버 지급
