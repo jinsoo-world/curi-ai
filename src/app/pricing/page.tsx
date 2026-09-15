@@ -24,7 +24,6 @@ import { THUMBNAIL_COST } from '@/domains/studio/thumbnail'
 import { TRIAL_CLOVERS, TRIAL_DAYS, SIGNUP_CLOVERS } from '@/domains/trial'
 
 const 값표: { 이름: string; 클로버: number; 어디: string }[] = [
-    { 이름: '증명사진 만들기', 클로버: ID_COST, 어디: '/tools/id-photo' },
     { 이름: '강사 프로필 만들기', 클로버: TEACHER_COST, 어디: '/tools/teacher-photo' },
     { 이름: '배우 프로필 만들기', 클로버: PHOTO_COST, 어디: '/tools/actor-photo' },
     { 이름: '콘텐츠 썸네일 만들기', 클로버: THUMBNAIL_COST, 어디: '/tools/thumbnail' },

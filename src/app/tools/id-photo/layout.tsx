@@ -1,21 +1,11 @@
 import type { Metadata } from 'next'
 
-// 검색·카톡 공유 (대표 확정 0915 — 서비스 여섯 개 체제)
+// 2026-09-15 내림 — 행정안전부가 신분증에 AI 사진을 못 쓰게 했다.
+// 검색에서도 뺀다. 들어온 분께는 사정을 말하고 다른 도구로 안내한다.
 export const metadata: Metadata = {
-    title: '증명사진 만들기',
-    description: '여권·이력서·주민등록에 내는 규격 증명사진을 사진 한 장으로 만듭니다. 정면·바른 자세·그림자 없는 배경까지 규격대로, 표정은 굳지 않게.',
-    keywords: ['증명사진 만들기', '여권사진', 'AI 증명사진', '반명함 사진', '이력서 사진', '증명사진 배경 바꾸기'],
-    openGraph: {
-        title: '증명사진 만들기 — 큐리 AI',
-        description: '여권·이력서·주민등록에 내는 규격 증명사진을 사진 한 장으로 만듭니다. 정면·바른 자세·그림자 없는 배경까지 규격대로, 표정은 굳지 않게.',
-        type: 'website',
-        url: 'https://www.curi-ai.com/tools/id-photo',
-        siteName: '큐리 AI',
-        locale: 'ko_KR',
-        images: [{ url: '/og/profile-photo.png', width: 1200, height: 630, alt: '증명사진 만들기 — 큐리 AI' }],
-    },
-    twitter: { card: 'summary_large_image', title: '증명사진 만들기 — 큐리 AI', description: '여권·이력서·주민등록에 내는 규격 증명사진을 사진 한 장으로 만듭니다. 정면·바른 자세·그림자 없는 배경까지 규격대로, 표정은 굳지 않게.', images: ['/og/profile-photo.png'] },
-    alternates: { canonical: 'https://www.curi-ai.com/tools/id-photo' },
+    title: '증명사진 안내',
+    description: '신분증에는 AI로 만든 사진을 쓸 수 없습니다. 강사 프로필·배우 프로필·화질 개선은 그대로 이용하실 수 있어요.',
+    robots: { index: false, follow: true },
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {

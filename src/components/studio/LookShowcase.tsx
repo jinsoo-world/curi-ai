@@ -26,14 +26,12 @@ const LOOKS: { src: string; label: string; sub: string; href: string }[] = [
     { src: '/samples/teach-w1.webp', label: '믿음직하게', sub: '강사 프로필', href: '/tools/teacher-photo?mood=trust' },
     { src: '/samples/act-m3.webp', label: '창가 빛', sub: '배우 프로필', href: '/tools/actor-photo?bg=window' },
     { src: '/samples/act-w3.webp', label: '밝고 친근한', sub: '배우 프로필', href: '/tools/actor-photo?mood=bright' },
-    { src: '/samples/id-m1.webp', label: '흰 배경', sub: '증명사진', href: '/tools/id-photo?bg=white' },
     { src: '/samples/act-m7.webp', label: '기품 있는', sub: '배우 프로필', href: '/tools/actor-photo?mood=elegant' },
     { src: '/samples/act-w5.webp', label: '따뜻한 어른', sub: '배우 프로필', href: '/tools/actor-photo?mood=warm' },
 
     { src: '/samples/teach-m1.webp', label: '편안하게', sub: '강사 프로필', href: '/tools/teacher-photo?mood=easy' },
     { src: '/samples/act-w4.webp', label: '단단한 인물', sub: '배우 프로필', href: '/tools/actor-photo?mood=strong' },
     { src: '/samples/act-m5.webp', label: '밝고 친근한', sub: '배우 프로필', href: '/tools/actor-photo?mood=bright' },
-    { src: '/samples/id-w1.webp', label: '재킷', sub: '증명사진', href: '/tools/id-photo?outfit=jacket' },
     { src: '/samples/act-m2.webp', label: '밝은 회색 배경', sub: '배우 프로필', href: '/tools/actor-photo?bg=grey' },
     { src: '/samples/act-w7.webp', label: '검은 배경', sub: '배우 프로필', href: '/tools/actor-photo?bg=dark' },
     { src: '/samples/teach-w2.webp', label: '따뜻하게', sub: '강사 프로필', href: '/tools/teacher-photo?mood=warm' },
@@ -41,11 +39,9 @@ const LOOKS: { src: string; label: string; sub: string; href: string }[] = [
 
     { src: '/samples/act-w2.webp', label: '밝은 배경', sub: '배우 프로필', href: '/tools/actor-photo?bg=white' },
     { src: '/samples/act-m4.webp', label: '서재', sub: '강사 프로필', href: '/tools/teacher-photo?bg=study' },
-    { src: '/samples/id-m2.webp', label: '회색 배경', sub: '증명사진', href: '/tools/id-photo?bg=lightgrey' },
     { src: '/samples/act-w6.webp', label: '따뜻한 어른', sub: '배우 프로필', href: '/tools/actor-photo?mood=warm' },
     { src: '/samples/teach-m2.webp', label: '전문가답게', sub: '강사 프로필', href: '/tools/teacher-photo?mood=expert' },
     { src: '/samples/act-m8.webp', label: '밝고 친근한', sub: '배우 프로필', href: '/tools/actor-photo?mood=bright' },
-    { src: '/samples/id-w2.webp', label: '반명함', sub: '증명사진', href: '/tools/id-photo?size=half' },
     { src: '/samples/act-w8.webp', label: '밝고 친근한', sub: '배우 프로필', href: '/tools/actor-photo?mood=bright' },
 ]
 

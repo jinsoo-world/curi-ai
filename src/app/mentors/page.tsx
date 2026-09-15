@@ -26,7 +26,7 @@ import FirstGuide from '@/components/studio/FirstGuide'
  */
 export const metadata: Metadata = {
     title: 'AI 프로필 사진 만들기',
-    description: '사진 한 장만 올리면 됩니다. 얼굴은 그대로 두고 옷과 배경만 바꿔 증명사진·강사 프로필·배우 프로필을 만들어 드려요.',
+    description: '사진 한 장만 올리면 됩니다. 얼굴은 그대로 두고 옷과 배경만 바꿔 강사 프로필·배우 프로필을 만들어 드려요.',
     openGraph: {
         title: 'AI 프로필 사진 만들기 — 큐리 AI',
         description: '사진 한 장만 올리면 됩니다. 얼굴은 그대로 두고 옷과 배경만 바꿔드려요.',

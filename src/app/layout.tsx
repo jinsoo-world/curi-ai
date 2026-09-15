@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: '%s — 큐리 AI',
   },
   description:
-    '사진 한 장만 올리면 증명사진·강사 프로필·배우 프로필을 만들어 드립니다. 사진 화질 개선, 콘텐츠 썸네일, 나를 닮은 AI까지.',
+    '사진 한 장만 올리면 강사 프로필·배우 프로필을 만들어 드립니다. 사진 화질 개선, 콘텐츠 썸네일, 나를 닮은 AI까지.',
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.ico',

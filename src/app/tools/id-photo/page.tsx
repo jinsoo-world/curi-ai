@@ -1,257 +1,63 @@
 'use client'
 
-// 증명사진 만들기 — 대표 확정 2026-09-15
-// 「사진 넣는 곳은 페이지 접속하면 바로 있게」 → PhotoToolShell 이 그 차례를 맡는다.
-import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import Image from 'next/image'
-import { ID_BACKGROUNDS, ID_OUTFITS, ID_SIZES, ID_COST, ID_HAIRS, ID_GENDERS, DEFAULT_HAIR_ID } from '@/domains/studio/idphoto'
-import { AGES, DEFAULT_AGE_ID } from '@/domains/studio/photo'
-import PhotoToolShell from '@/components/studio/PhotoToolShell'
+/**
+ * 증명사진 — 2026-09-15 내림
+ *
+ * 대표 확정 「증명사진 빼자 그럼」
+ *
+ * 왜 = 행정안전부가 「AI 프로필 사진은 주민등록증에 사용할 수 없습니다」라는 공문을
+ * 전국 지자체에 두 차례(6/27 · 7/27) 보냈고, AI 사진앱에 「신분증 용도로 사용할 수 없다」는
+ * 안내 문구를 넣는 방안을 협의 중이다(네이버 스노우는 이미 표출 중).
+ * 신분증에 못 쓰는 증명사진을 팔면 고객이 주민센터에서 반려당한다.
+ *
+ * 주소는 죽이지 않는다. 카톡·검색으로 이미 나간 링크가 있다.
+ * 들어온 분께 사정을 말하고 쓸 수 있는 도구로 안내한다.
+ */
+import Link from 'next/link'
 import AppSidebar from '@/components/AppSidebar'
-import AdSlot from '@/components/AdSlot'
-import { 센다 } from '@/lib/track'
-import { 브라우저표식 } from '@/lib/browser-mark'
-import { useSticky } from '@/components/studio/useSticky'
-import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
 
-function IdPhotoPage안쪽() {
-    const router = useRouter()
-    const searchParams = useSearchParams()
-    const [preview, setPreview] = useState<string | null>(null)
-    const [base64, setBase64] = useState<string | null>(null)
-    const [mimeType, setMimeType] = useState('image/jpeg')
-    const [sizeId, setSizeId] = useSticky<string>('id-size', ID_SIZES[0].id)
-    const [backgroundId, setBackgroundId] = useSticky<string>('id-bg', ID_BACKGROUNDS[0].id)
-    const [outfitId, setOutfitId] = useSticky<string>('id-outfit', ID_OUTFITS[0].id)
-    const [ageId, setAgeId] = useSticky<string>('age', DEFAULT_AGE_ID)
-    const [성별, set성별] = useSticky<string>('id-gender', 'male')
-    const [hairId, setHairId] = useSticky<string>('id-hair', DEFAULT_HAIR_ID)
-    const [result, setResult] = useState<string | null>(null)
-    const [미리보기, set미리보기] = useState(false)
-    const [loading, setLoading] = useState(false)
-    const [errorMsg, setErrorMsg] = useState<string | null>(null)
-    const [needCharge, setNeedCharge] = useState(false)
-
-    // 첫 화면에서 사진을 이미 올렸으면 그대로 받아 온다 — 다시 올리게 하지 않는다
-    useEffect(() => {
-        try {
-            const raw = sessionStorage.getItem(HERO_PHOTO_KEY)
-            if (!raw) return
-            sessionStorage.removeItem(HERO_PHOTO_KEY)
-            const { dataUrl, mimeType: mt } = JSON.parse(raw) as { dataUrl: string; mimeType: string }
-            if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return
-            setPreview(dataUrl)
-            setBase64(dataUrl.split(',')[1] ?? null)
-            setMimeType(mt || 'image/jpeg')
-        } catch {
-            // 저장소를 못 읽는 브라우저면 그냥 새로 올리게 둔다
-        }
-    }, [])
-
-    // 쇼케이스에서 고르고 온 것을 미리 골라둔다
-    useEffect(() => {
-        const b = searchParams?.get('bg')
-        if (b && ID_BACKGROUNDS.some(x => x.id === b)) setBackgroundId(b)
-        const o = searchParams?.get('outfit')
-        if (o && ID_OUTFITS.some(x => x.id === o)) setOutfitId(o)
-        const z = searchParams?.get('size')
-        if (z && ID_SIZES.some(x => x.id === z)) setSizeId(z)
-    }, [searchParams])
-
-    const make = async () => {
-        if (!base64) return
-        setLoading(true); setErrorMsg(null); setNeedCharge(false); setResult(null)
-        센다('photo_make_click', { tool: 'id-photo' })
-        try {
-            const res = await fetch('/api/tools/id-photo', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64: base64, mimeType, backgroundId, outfitId, sizeId, ageId, hairId, 표식: 브라우저표식() }),
-            })
-            const data = await res.json()
-            if (!res.ok) {
-                if (data.needCharge) setNeedCharge(true)
-                throw new Error(data.error || '사진을 만들지 못했어요. 얼굴이 크고 밝게 나온 사진으로 다시 해보세요.')
-            }
-            set미리보기(!!data.preview)
-            setResult(data.url ?? `data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
-            if (data.claimToken) { try { sessionStorage.setItem('curi_claim', data.claimToken) } catch {} }
-            센다(data.preview ? 'photo_login_prompt' : 'photo_make_success', { tool: 'id-photo' })
-        } catch (e) {
-            setErrorMsg(e instanceof Error ? e.message : '사진을 만들지 못했어요. 얼굴이 크고 밝게 나온 사진으로 다시 해보세요.')
-            센다('photo_make_fail', { tool: 'id-photo' })
-        } finally {
-            setLoading(false)
-        }
-    }
-
+export default function Page() {
     return (
         <main style={{ minHeight: '100dvh', background: 'var(--종이)' }}>
             <AppSidebar />
-            <PhotoToolShell
-                title="증명사진 만들기"
-                desc="여권·이력서·주민등록에 내는 규격 사진을 만듭니다. 정면·바른 자세·그림자 없는 배경까지 규격에 맞추고, 표정은 굳지 않게 해 드려요."
-                samples={[
-                    { src: '/samples/id-m1.webp', label: '흰 배경·정장', pick: () => { setBackgroundId('white'); setOutfitId('suit') } },
-                    { src: '/samples/id-w1.webp', label: '흰 배경·재킷', pick: () => { setBackgroundId('white'); setOutfitId('jacket') } },
-                    { src: '/samples/id-m2.webp', label: '회색 배경·정장', pick: () => { setBackgroundId('lightgrey'); setOutfitId('suit') } },
-                    { src: '/samples/id-w2.webp', label: '회색 배경·재킷', pick: () => { setBackgroundId('lightgrey'); setOutfitId('jacket') } },
-                    { src: '/samples/id-m3.webp', label: '흰 배경·재킷', pick: () => { setBackgroundId('white'); setOutfitId('jacket') } },
-                    { src: '/samples/id-w3.webp', label: '흰 배경·셔츠', pick: () => { setBackgroundId('white'); setOutfitId('shirt') } },
-                    { src: '/samples/id-m4.webp', label: '회색 배경·정장', pick: () => { setBackgroundId('lightgrey'); setOutfitId('suit') } },
-                    { src: '/samples/id-w4.webp', label: '회색 배경·셔츠', pick: () => { setBackgroundId('lightgrey'); setOutfitId('shirt') } },
-                ]}
-                share={{ path: "/tools/id-photo", title: "증명사진 만들기", description: "여권·이력서에 내는 규격 사진을 사진 한 장으로 만듭니다.", image: "/og/profile-photo.png" }}
-                preview={preview}
-                onPicked={(dataUrl, mt) => {
-                    setPreview(dataUrl)
-                    setBase64(dataUrl.split(',')[1] ?? null)
-                    setMimeType(mt)
-                    setResult(null)
-                    setErrorMsg(null)
-                }}
-                onError={setErrorMsg}
-                cost={ID_COST}
-                canMake={!!base64}
-                loading={loading}
-                onMake={make}
-                errorMsg={errorMsg}
-                needCharge={needCharge}
-                onCharge={() => router.push(`/charge?back=${encodeURIComponent(window.location.pathname)}`)}
-                result={result}
-                isPreviewResult={미리보기}
-                onLogin={() => router.push('/login')}
-                downloadName="증명사진.png"
-            >
-                <칸 제목="1. 어느 쪽 견본을 볼까요">
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-                        {ID_GENDERS.map(g => (
-                            <button key={g.id} onClick={() => set성별(g.id)} style={{ ...고름(성별 === g.id), textAlign: 'center' }}>
-                                <span style={{ fontSize: 16, fontWeight: 800, color: '#18181b' }}>{g.label}</span>
-                            </button>
+            <div style={{ maxWidth: 560, margin: '0 auto', padding: '40px 18px 90px' }}>
+                <h1 style={{ fontSize: 'var(--글자-대)', fontWeight: 900, letterSpacing: '-0.04em', margin: '0 0 14px', wordBreak: 'keep-all' }}>
+                    증명사진은 지금 만들어 드리지 않습니다
+                </h1>
+                <p style={{ fontSize: 17, color: 'var(--먹연)', lineHeight: 1.7, margin: '0 0 12px', wordBreak: 'keep-all' }}>
+                    행정안전부가 주민등록증·운전면허증 같은 신분증에는 AI로 만든 사진을 쓸 수 없다고 정했습니다.
+                    만들어 드려도 주민센터에서 돌려보내기 때문에, 저희가 먼저 내렸습니다.
+                </p>
+                <p style={{ fontSize: 17, color: 'var(--먹연)', lineHeight: 1.7, margin: '0 0 26px', wordBreak: 'keep-all' }}>
+                    신분증 사진은 사진관에서 찍으시는 것이 확실합니다.
+                </p>
+
+                <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '20px 18px' }}>
+                    <div style={{ fontSize: 16.5, fontWeight: 800, marginBottom: 12 }}>이런 사진은 만들어 드려요</div>
+                    <div style={{ display: 'grid', gap: 10 }}>
+                        {[
+                            { href: '/tools/teacher-photo', label: '강사 프로필 만들기', desc: '강의 소개에 거는 밝고 믿음직한 사진' },
+                            { href: '/tools/actor-photo', label: '배우 프로필 만들기', desc: '캐스팅에 내는 사진, 사진관에서 찍은 것처럼' },
+                            { href: '/tools/enhance', label: '사진 화질 개선하기', desc: '흐릿하거나 오래된 사진을 살려요' },
+                        ].map(t => (
+                            <Link key={t.href} href={t.href} style={{
+                                display: 'block', padding: '15px 16px', borderRadius: 14,
+                                border: '1px solid #e4e4e7', textDecoration: 'none', color: 'inherit',
+                            }}>
+                                <span style={{ display: 'block', fontSize: 16.5, fontWeight: 800 }}>{t.label}</span>
+                                <span style={{ display: 'block', fontSize: 15, color: '#71717a', marginTop: 3 }}>{t.desc}</span>
+                            </Link>
                         ))}
                     </div>
-                    <p style={{ fontSize: 14, color: '#a1a1aa', margin: '8px 0 0', lineHeight: 1.5 }}>
-                        아래 견본 사진만 바뀝니다. 만들어지는 사진은 올리신 사진 그대로예요.
-                    </p>
-                </칸>
-
-                <칸 제목="2. 규격">
-                    <div style={{ display: 'grid', gap: 8 }}>
-                        {ID_SIZES.map(s => (
-                            <button key={s.id} onClick={() => setSizeId(s.id)} style={{ ...고름(sizeId === s.id, true), display: 'flex', alignItems: 'center', gap: 14 }}>
-                                {/* 규격을 눈으로 — 대표 지적 0915 「규격도 이미지화 해야지」. 실제 비율 그대로 그린다 */}
-                                <span style={{
-                                    display: 'block', flexShrink: 0,
-                                    width: s.w * 1.5, height: s.h * 1.5,
-                                    borderRadius: 4,
-                                    border: `2px solid ${sizeId === s.id ? 'var(--연두)' : '#d4d4d8'}`,
-                                    background: '#fff',
-                                    position: 'relative',
-                                }} aria-hidden>
-                                    <span style={{
-                                        position: 'absolute', left: '50%', top: '22%', transform: 'translateX(-50%)',
-                                        width: s.id === 'kr-passport' ? '58%' : '46%',
-                                        aspectRatio: '1 / 1', borderRadius: 999,
-                                        background: sizeId === s.id ? '#BBE5C8' : '#e4e4e7',
-                                    }} />
-                                </span>
-                                <span style={{ minWidth: 0 }}>
-                                    <span style={{ display: 'block', fontSize: 15.5, fontWeight: 800, color: '#18181b' }}>{s.label}</span>
-                                    <span style={{ display: 'block', fontSize: 13.5, color: '#71717a', marginTop: 2, wordBreak: 'keep-all' }}>{s.use}</span>
-                                </span>
-                            </button>
-                        ))}
-                    </div>
-                </칸>
-
-                <칸 제목="3. 배경">
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
-                        {ID_BACKGROUNDS.map(b => (
-                            <button key={b.id} onClick={() => setBackgroundId(b.id)} style={고름(backgroundId === b.id)}>
-                                <span style={{
-                                    display: 'block', width: '100%', height: 46, borderRadius: 10,
-                                    background: b.swatch, border: '1px solid #e4e4e7', marginBottom: 8,
-                                }} />
-                                <span style={{ display: 'block', fontSize: 14.5, fontWeight: 800, color: '#18181b' }}>{b.label}</span>
-                                {b.desc && <span style={{ display: 'block', fontSize: 12, color: '#71717a', marginTop: 2 }}>{b.desc}</span>}
-                            </button>
-                        ))}
-                    </div>
-                </칸>
-
-                <칸 제목="4. 차림새">
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
-                        {ID_OUTFITS.map(o => (
-                            <button key={o.id} onClick={() => setOutfitId(o.id)} style={고름(outfitId === o.id)}>
-                                {(성별 === 'female' ? o.sampleW : o.sample) ? (
-                                    <span style={{ position: 'relative', display: 'block', width: '100%', aspectRatio: '4 / 5', borderRadius: 10, overflow: 'hidden', marginBottom: 8, background: '#f4f4f5' }}>
-                                        <Image src={(성별 === 'female' ? o.sampleW : o.sample)!} alt="" fill sizes="130px" style={{ objectFit: 'cover', objectPosition: 'center 22%' }} />
-                                    </span>
-                                ) : (
-                                    <span style={{ display: 'block', width: '100%', height: 46, borderRadius: 10, background: o.swatch, marginBottom: 8 }} />
-                                )}
-                                <span style={{ display: 'block', fontSize: 14.5, fontWeight: 800, color: '#18181b' }}>{o.label}</span>
-                            </button>
-                        ))}
-                    </div>
-                </칸>
-
-                <칸 제목="5. 머리 모양">
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
-                        {ID_HAIRS.map(h => (
-                            <button key={h.id} onClick={() => setHairId(h.id)} style={고름(hairId === h.id)}>
-                                <span style={{ display: 'block', fontSize: 15, fontWeight: 800, color: '#18181b' }}>{h.label}</span>
-                                <span style={{ display: 'block', fontSize: 13, color: '#71717a', marginTop: 2, wordBreak: 'keep-all' }}>{h.desc}</span>
-                            </button>
-                        ))}
-                    </div>
-                </칸>
-
-                <칸 제목="6. 나이">
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                        {AGES.map(a => (
-                            <button key={a.id} onClick={() => setAgeId(a.id)} style={{ ...고름(ageId === a.id), textAlign: 'center' }}>
-                                <span style={{ fontSize: 14.5, fontWeight: 800, color: '#18181b' }}>{a.label}</span>
-                            </button>
-                        ))}
-                    </div>
-                </칸>
-            </PhotoToolShell>
-
-            {/* 광고(애드센스) — 무료 화면에만, 본문 끝난 뒤 */}
-            <AdSlot />
+                    <Link href="/studio" style={{
+                        display: 'block', marginTop: 14, padding: 15, borderRadius: 14,
+                        background: '#1C2321', color: '#fff', fontSize: 16.5, fontWeight: 800,
+                        textAlign: 'center', textDecoration: 'none',
+                    }}>
+                        전체 보기
+                    </Link>
+                </div>
+            </div>
         </main>
-    )
-}
-
-function 칸({ 제목, children }: { 제목: string; children: React.ReactNode }) {
-    return (
-        <div style={{ marginBottom: 22 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>{제목}</div>
-            {children}
-        </div>
-    )
-}
-
-function 고름(on: boolean, 왼쪽 = false): React.CSSProperties {
-    return {
-        padding: 12, borderRadius: 14,
-        border: on ? '2.5px solid #22c55e' : '1.5px solid #e4e4e7',
-        background: on ? '#f0fdf4' : '#fff',
-        cursor: 'pointer', textAlign: 왼쪽 ? 'left' : 'center', width: '100%',
-    }
-}
-
-/**
- * 주소에 붙은 값(?mood=…)을 읽으려면 useSearchParams 가 필요하고,
- * 그건 Suspense 안에 있어야 한다(없으면 빌드가 이 화면에서 멈춘다).
- */
-export default function Page() {
-    return (
-        <Suspense fallback={null}>
-            <IdPhotoPage안쪽 />
-        </Suspense>
     )
 }
