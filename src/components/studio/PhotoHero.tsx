@@ -11,7 +11,6 @@
  * 왼쪽에 바뀐 결과를 먼저 보여주고 오른쪽에 올릴 자리를 크게 연다.
  */
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { PhotoDrop } from './PhotoDrop'
 
@@ -29,8 +28,8 @@ const 짝 = [
 ]
 
 export default function PhotoHero() {
-    const router = useRouter()
     const [err, setErr] = useState<string | null>(null)
+    const [올린사진, set올린사진] = useState<string | null>(null)
     const [지금, set지금] = useState(0)
 
     // 2.5초마다 넘어간다 — 대표 지시 0915 「1.5초는 너무 빠르다. 2.5초로」. 한 화면에 여럿을 늘어놓으면 작아져서 안 보인다.
@@ -39,14 +38,21 @@ export default function PhotoHero() {
         return () => clearInterval(t)
     }, [])
 
+    // 대표 지적 2026-09-15 「첨부하면 이 UI는 그대로 있고 사진만 업로드 되게 해야지」
+    //
+    // 전에는 사진을 올리는 순간 화면을 통째로 넘겼다. 내가 뭘 올렸는지 보지도 못한 채
+    // 「뭘 만들까요」를 받으니 당황스럽다. 이제 이 자리에 그대로 두고 올린 사진만 칸에 띄운다.
     const 받았을때 = (dataUrl: string, mimeType: string) => {
         try {
             sessionStorage.setItem(HERO_PHOTO_KEY, JSON.stringify({ dataUrl, mimeType }))
         } catch {
-            // 저장이 막힌 브라우저면 그냥 빈 화면으로 넘긴다
+            // 저장이 막힌 브라우저면 그래도 화면에는 보여준다
         }
-        // 무엇을 만들지 먼저 고르게 한다. 올린 사진은 위에 저장해 두었고 각 도구가 이어받는다.
-        router.push('/studio?사진=올림')
+        set올린사진(dataUrl)
+        // 다음에 할 일(무엇을 만들지)이 아래에 있다는 걸 알려준다
+        setTimeout(() => {
+            document.querySelector('[data-guide="guide-tools"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 500)
     }
 
     return (
@@ -127,7 +133,7 @@ export default function PhotoHero() {
                     {/* 오른쪽 — 올리는 자리 */}
                     <div className="photo-hero-drop">
                         <div data-guide="guide-upload">
-                            <PhotoDrop preview={null} onPicked={받았을때} onError={setErr} />
+                            <PhotoDrop preview={올린사진} onPicked={받았을때} onError={setErr} />
                         </div>
                         {err && (
                             <p style={{ color: '#dc2626', fontSize: 'var(--글자-작)', marginTop: 10, textAlign: 'center' }}>
