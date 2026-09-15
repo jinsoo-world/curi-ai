@@ -3,7 +3,7 @@
 // 큐리AI 첫 화면 — 「오늘 뭘 만들까요?」
 // 대표 확정 2026-09-14. 지금까지의 「누구와 대화할래」(AI 목록)를 대신한다.
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { TOOLS, type ToolItem } from '@/domains/studio/tools'
 import AppSidebar from '@/components/AppSidebar'
@@ -63,6 +63,8 @@ function ItemCard({ item, onGo }: { item: ToolItem; onGo: (href: string) => void
 
 export default function StudioPage() {
     const router = useRouter()
+    // 첫 화면에서 사진을 올리고 왔으면 주소에 표가 붙어 온다 (PhotoHero 가 붙인다)
+    const 사진들고옴 = useSearchParams()?.get('사진') === '올림'
     const [name, setName] = useState<string | null>(null)
     const [balance, setBalance] = useState<number | null>(null)
 
@@ -91,10 +93,14 @@ export default function StudioPage() {
                             fontSize: 26, fontWeight: 800, color: '#18181b',
                             margin: '0 0 6px', lineHeight: 1.35, wordBreak: 'keep-all',
                         }}>
-                            {name ? `${name}님, 오늘 뭘 만들까요?` : '오늘 뭘 만들까요?'}
+                            {사진들고옴
+                                ? '올리신 사진으로 뭘 만들까요?'
+                                : name ? `${name}님, 오늘 뭘 만들까요?` : '오늘 뭘 만들까요?'}
                         </h1>
-                        <p style={{ fontSize: 14, color: '#71717a', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                            하고 싶은 것을 고르면 바로 시작합니다.
+                        <p style={{ fontSize: 15, color: '#71717a', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                            {사진들고옴
+                                ? '고르시면 그 사진이 그대로 넘어갑니다. 다시 올리지 않으셔도 돼요.'
+                                : '하고 싶은 것을 고르면 바로 시작합니다.'}
                         </p>
                     </div>
 

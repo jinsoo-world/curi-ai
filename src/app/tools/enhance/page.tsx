@@ -2,7 +2,7 @@
 
 // 사진 화질 개선하기 — 대표 확정 2026-09-15
 // 「화질 개선도 하나 넣자… 사용자가 마우스나 드래그 하면 되도록」 (remini.ai 참고)
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ENHANCE_MODES, ENHANCE_COST } from '@/domains/studio/enhance'
 import { PhotoDrop } from '@/components/studio/PhotoDrop'
@@ -18,6 +18,7 @@ import AdSlot from '@/components/AdSlot'
 import { 센다 } from '@/lib/track'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { use기억 } from '@/components/studio/use기억'
+import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
 
 export default function EnhancePage() {
     const router = useRouter()
@@ -30,6 +31,22 @@ export default function EnhancePage() {
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const [needCharge, setNeedCharge] = useState(false)
+
+    // 첫 화면에서 사진을 이미 올렸으면 그대로 받아 온다 — 다시 올리게 하지 않는다
+    useEffect(() => {
+        try {
+            const raw = sessionStorage.getItem(HERO_PHOTO_KEY)
+            if (!raw) return
+            sessionStorage.removeItem(HERO_PHOTO_KEY)
+            const { dataUrl, mimeType: mt } = JSON.parse(raw) as { dataUrl: string; mimeType: string }
+            if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return
+            setPreview(dataUrl)
+            setBase64(dataUrl.split(',')[1] ?? null)
+            setMimeType(mt || 'image/jpeg')
+        } catch {
+            // 저장소를 못 읽는 브라우저면 그냥 새로 올리게 둔다
+        }
+    }, [])
 
     const make = async () => {
         if (!base64 || !modeId) return

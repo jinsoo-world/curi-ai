@@ -34,7 +34,7 @@ const TOOLS = [
 
 export default function ToolTiles() {
     return (
-        <section style={{ background: 'var(--종이)', padding: '28px 16px 8px' }}>
+        <section data-guide="guide-tools" style={{ background: 'var(--종이)', padding: '28px 16px 8px' }}>
             <div style={{ maxWidth: 1200, margin: '0 auto' }}>
                 <h2
                     style={{

@@ -17,6 +17,7 @@ import CreditClaimWrapper from './CreditClaimWrapper'
 import { Suspense } from 'react'
 import AdSlot from '@/components/AdSlot'
 import ClaimPhoto from '@/components/studio/ClaimPhoto'
+import FirstGuide from '@/components/studio/FirstGuide'
 
 /**
  * 대표 지적 2026-09-15 = 카톡·검색에 나가는 제목이 「멘토 선택 — 큐리 AI — 큐리 AI」였다.
@@ -68,6 +69,7 @@ export default async function MentorsPage() {
             <MembershipBanner />
 
             <AppSidebar />
+            <FirstGuide />
             <div style={{ maxWidth: 1000, margin: "0 auto", padding: "0 18px" }}><ClaimPhoto /></div>
 
             {/* ─── Credit Claim Modal (client, wrapped in Suspense for searchParams) ─── */}

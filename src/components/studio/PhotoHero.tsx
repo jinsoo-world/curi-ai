@@ -45,7 +45,8 @@ export default function PhotoHero() {
         } catch {
             // 저장이 막힌 브라우저면 그냥 빈 화면으로 넘긴다
         }
-        router.push('/tools/profile-photo')
+        // 무엇을 만들지 먼저 고르게 한다. 올린 사진은 위에 저장해 두었고 각 도구가 이어받는다.
+        router.push('/studio?사진=올림')
     }
 
     return (
@@ -125,7 +126,9 @@ export default function PhotoHero() {
 
                     {/* 오른쪽 — 올리는 자리 */}
                     <div className="photo-hero-drop">
-                        <PhotoDrop preview={null} onPicked={받았을때} onError={setErr} />
+                        <div data-guide="guide-upload">
+                            <PhotoDrop preview={null} onPicked={받았을때} onError={setErr} />
+                        </div>
                         {err && (
                             <p style={{ color: '#dc2626', fontSize: 'var(--글자-작)', marginTop: 10, textAlign: 'center' }}>
                                 {err}
