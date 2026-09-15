@@ -135,7 +135,11 @@ export default function AppSidebar() {
                     />
                     <div className="app-top-sheet" role="menu" onClick={() => set열림(false)}>
                         <div className="app-top-sheet-head">
-                            <Link href="/profile" className="app-top-sheet-name" style={{ textDecoration: 'none', color: 'inherit' }}>
+                            <Link
+                                href="/profile"
+                                className="app-top-sheet-name"
+                                style={{ textDecoration: 'none', color: 'inherit', flex: 1, padding: '4px 0' }}
+                            >
                                 {이름 ?? '내 계정'}
                             </Link>
                             <Link href="/charge" className="app-top-sheet-credit">
@@ -144,7 +148,7 @@ export default function AppSidebar() {
                             </Link>
                         </div>
 
-                        <div className="app-top-sheet-only-narrow">
+                        <div>
                             {메뉴.map((m) => (
                                 <Link key={m.href} href={m.href} className="app-top-sheet-item">{m.label}</Link>
                             ))}

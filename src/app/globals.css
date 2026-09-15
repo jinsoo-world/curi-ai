@@ -592,10 +592,8 @@ button, a[role="button"] {
 }
 .app-top-sheet-item:hover { background: var(--종이); }
 .app-top-sheet-item.quiet { color: var(--먹연); font-weight: 600; }
-.app-top-sheet-only-narrow { display: block; }
-@media (min-width: 900px) {
-  .app-top-sheet-only-narrow { display: none; }
-}
+/* 2026-09-15 = 화면 크기에 따라 내 메뉴 내용이 달라져 대표가 「두개 다 다르게 생김」이라 했다.
+   이제 넓든 좁든 같은 메뉴를 보여준다. */
 
 @media (min-width: 900px) {
   .app-top-nav { display: flex; }
