@@ -81,10 +81,15 @@ export function buildIdPhotoPrompt(bg: IdChoice, outfit: IdChoice, size: IdSize,
         // 대표 지적 2026-09-15 = 「증명사진이 다 표정이 좀 어두워보여. 무서워」
         // 관공서 규격은 이를 드러낸 웃음을 반려한다. 그래서 「무표정」이 아니라
         // 「입은 다물되 편안하고 다정한 얼굴」로 적는다. 규격도 지키고 무섭지도 않다.
-        'a warm and approachable expression with the lips gently closed — the corners of the mouth lifted just slightly and the eyes soft and kind.',
-        'The person must look pleasant and at ease, NOT stern, NOT grim, NOT sad, NOT like a mugshot.',
+        // 표정 균형 (2026-09-15 두 번 고쳤다)
+        //  ① 처음엔 「무표정」이라 대표가 「무서워」라고 했다
+        //  ② 밝게 바꿨더니 이를 드러내고 웃어 규격 위반이 됐다(관공서 반려 사유)
+        // 그래서 「입은 확실히 다물고, 눈만 부드럽게」로 못을 박는다.
+        'The mouth is CLOSED with the lips together — absolutely no teeth visible, no grin, no open-mouth smile.',
+        'Within that closed mouth, the expression is still gentle and relaxed: the eyes are soft and kind,',
+        'the face is at ease rather than stiff. The person looks calm and pleasant, NOT stern, NOT grim, NOT like a mugshot.',
         'Hair away from the eyebrows and eyes, flat even lighting with no harsh shadow on the face.',
-        'MUST NOT: smiling with teeth, head tilt, hat, sunglasses, coloured lenses, hair covering the eyes, background shadow, filters.',
+        'MUST NOT: any visible teeth, a grin, an open mouth, head tilt, hat, sunglasses, coloured lenses, hair covering the eyes, background shadow, filters.',
         'Keep natural skin texture — visible pores and fine lines. Do not smooth or beautify the face.',
         'Shot with even studio lighting on a full-frame camera. It must look like a real photo taken in a photo studio.',
         'No text, no logos, no watermark.',
