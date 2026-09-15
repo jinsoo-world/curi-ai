@@ -5,10 +5,12 @@
 //    중장년은 「지금 얼마 쓰는지 모르는 상태」를 가장 싫어한다(시장 조사 0914).
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { CLOVER_PACKS, discountPercent } from '@/domains/credit/packs'
 import AppSidebar from '@/components/AppSidebar'
 import CloverIcon from '@/components/ui/CloverIcon'
+import BizFooter from '@/components/BizFooter'
 
 export default function ChargePage() {
     const router = useRouter()
@@ -172,6 +174,16 @@ export default function ChargePage() {
                 <p style={{ fontSize: 12, color: '#a1a1aa', textAlign: 'center', margin: '12px 0 0', lineHeight: 1.6 }}>
                     한 번 사면 끝입니다. 정기 결제가 아니고, 산 클로버는 사라지지 않아요.
                 </p>
+
+                {/* 환불 안내 — 전자상거래법 + 토스 카드사 심사(환불규정 노출) 요건 */}
+                <p style={{ fontSize: 12, color: '#a1a1aa', textAlign: 'center', margin: '8px 0 0', lineHeight: 1.6 }}>
+                    산 날부터 7일 안에 한 개도 안 쓰셨으면 전액 돌려드려요. 일부만 쓰셨다면 남은 만큼 돌려드립니다.{' '}
+                    <Link href="/refund" style={{ color: '#16a34a', fontWeight: 600, textDecoration: 'none' }}>
+                        자세히 보기
+                    </Link>
+                </p>
+
+                <BizFooter maxWidth={520} marginTop={28} />
             </div>
         </main>
     )

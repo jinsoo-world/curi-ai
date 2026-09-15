@@ -137,8 +137,8 @@ export default async function MentorsPage() {
                         }}>
                             <div>미션드리븐 (대표 : 김진수) ㅣ curious@mission-driven.kr</div>
                             <div>사업자등록번호 : 277-88-02697 ㅣ 통신판매번호 : 2023-서울마포-2003</div>
-                            <div>유선번호 : 1533-0701</div>
-                            <div>사무실 : 서울특별시 마포구 신촌로2길 19 플랫폼D 서울디자인창업센터 4층</div>
+                            <div>전화번호 : 010-9716-6015</div>
+                            <div>사무실 : 서울특별시 마포구 성지길 25-11 3층 비123호</div>
                         </div>
 
                         {/* 정책 링크 */}
@@ -153,6 +153,10 @@ export default async function MentorsPage() {
                             <span style={{ color: '#d1d5db' }}>ㅣ</span>
                             <Link href="/terms" style={{ color: '#6b7280', textDecoration: 'none' }}>
                                 서비스이용약관
+                            </Link>
+                            <span style={{ color: '#d1d5db' }}>ㅣ</span>
+                            <Link href="/refund" style={{ color: '#6b7280', textDecoration: 'none' }}>
+                                취소·환불정책
                             </Link>
                         </div>
 
