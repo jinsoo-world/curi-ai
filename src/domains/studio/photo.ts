@@ -187,6 +187,7 @@ export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '
         `The subject is ${style.prompt}.`,
         `Background: ${backdrop.prompt}.`,
         'Keep the same face and the same identity as the uploaded photo — this must clearly look like the same person.',
+        'If the person wears glasses in the uploaded photo, keep the exact same glasses on — the same frame shape and colour. Glasses are part of how this person looks. If the person wears no glasses, do not add any.',
         // 대표 지적 0914 = 「프로필이 더 나이들어보이는데」
         // 전에는 「더 젊게 만들지 마라」라고 적었는데, 그 한 줄이 모델을 늙는 쪽으로 밀었다.
         // 주름을 지우라는 게 아니라 없던 나이를 더하지 말라고 적는다.

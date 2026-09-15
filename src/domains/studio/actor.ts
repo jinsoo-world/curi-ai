@@ -93,6 +93,7 @@ export function buildActorPrompt(mood: Choice, backdrop: Choice, ratioLabel = '4
     return [
         'Create a professional Korean casting profile photograph (actor headshot) from this person.',
         'Keep the same face and the same identity as the uploaded photo — a casting director must recognise this person in the room.',
+        'If the person wears glasses in the uploaded photo, keep the exact same glasses on — the same frame shape and colour. Glasses are part of how this person looks. If the person wears no glasses, do not add any.',
         나이줄,
         `Expression and clothing: ${mood.prompt}.`,
         `Background: ${backdrop.prompt}.`,

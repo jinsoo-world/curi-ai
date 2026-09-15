@@ -71,6 +71,7 @@ export function buildEnhancePrompt(mode: EnhanceMode): string {
     return [
         'This is a photo restoration task, not a photo generation task.',
         'Keep the exact same person, the same face, the same expression and the same moment as the original.',
+        'If the person wears glasses in the uploaded photo, keep the exact same glasses on — the same frame shape and colour. Glasses are part of how this person looks. If the person wears no glasses, do not add any.',
         mode.prompt,
         'Keep natural skin texture — visible pores and fine lines must remain. Do not smooth, airbrush or beautify the face.',
         'Do not change the age, weight, hairstyle, clothing, background or composition.',

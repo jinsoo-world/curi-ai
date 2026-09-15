@@ -37,7 +37,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         // 만드는 도구 — 대표 지시 0915 「GEO, SEO」
         // 검색으로 사람이 들어오는 문은 「무엇을 해주는 곳인가」가 적힌 화면이다.
         // 손으로 적지 않는다. 서비스 목록 표(tools.ts)가 유일한 정본이다.
-        ...TOOLS.filter((t) => t.href.startsWith('/tools/')).map((t) => ({
+        ...TOOLS.map((t) => ({
             url: `${baseUrl}${t.href}`,
             lastModified: new Date(),
             changeFrequency: 'weekly' as const,

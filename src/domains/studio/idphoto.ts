@@ -68,6 +68,9 @@ export function buildIdPhotoPrompt(bg: IdChoice, outfit: IdChoice, size: IdSize,
     return [
         'Create a formal Korean ID photograph from this person.',
         'Keep the same face and the same identity as the uploaded photo — an official photo that does not look like the person is useless.',
+        // 안경 — 2026-09-15 대조 시험에서 발견. 안경 쓴 5060 얼굴을 넣으면 둘 다 안경을 벗겨 놓았다.
+        // 한국 증명사진은 안경을 써도 된다(선글라스·색렌즈만 안 된다). 안경은 그 사람의 얼굴이다.
+        'If the person wears glasses in the uploaded photo, keep the exact same glasses on — Korean ID photographs allow clear prescription glasses. Keep the same frame shape and colour. The lenses must be clear with no glare or reflection, and the frame must not cover the eyes or eyebrows. If the person wears no glasses, do not add any.',
         나이줄,
         `Clothing: ${outfit.prompt}.`,
         `Background: ${bg.prompt}, perfectly even, with no shadow cast behind the head or shoulders.`,

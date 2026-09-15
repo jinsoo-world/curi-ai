@@ -68,6 +68,7 @@ export function buildInstaPrompt(mood: InstaChoice, tone: InstaChoice, freeText 
         'Square 1:1 composition. Head and shoulders centered, with comfortable margin around the head',
         'so the image still looks right when cropped into a circle.',
         'Keep the same face and the same identity as the uploaded photo — this must clearly look like the same person.',
+        'If the person wears glasses in the uploaded photo, keep the exact same glasses on — the same frame shape and colour. Glasses are part of how this person looks. If the person wears no glasses, do not add any.',
         // 대표 지적 0914 = 「프로필이 더 나이들어보이는데」. 프로필 사진 쪽과 같은 병이었다.
         'Match the age in the uploaded photo exactly — do not add years, do not deepen wrinkles, do not grey the hair.',
         'Keep natural skin texture and pores, but render the subject on their best day: rested, healthy, even skin tone.',
