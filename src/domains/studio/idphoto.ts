@@ -7,6 +7,57 @@ import { 나이문장 } from './photo'
 
 export const ID_COST = 20
 
+/**
+ * 머리 모양 — 대표 지적 2026-09-15 「머리는 왜 까냐. 머리 스타일도 지정할 수 있게 해야지」
+ *
+ * 모자를 쓴 사진을 넣었더니 모자를 벗기면서 머리까지 지어냈다(이마를 까고 뒤로 넘김).
+ * 머리는 그 사람 얼굴의 일부다. 기본은 「그대로」이고, 바꾸고 싶은 사람만 고른다.
+ */
+export interface IdHair {
+    id: string
+    label: string
+    desc: string
+    prompt: string
+}
+
+export const ID_HAIRS: IdHair[] = [
+    {
+        id: 'keep',
+        label: '지금 머리 그대로',
+        desc: '올린 사진과 똑같이',
+        prompt: 'Keep the hair EXACTLY as it is in the uploaded photo — the same length, the same parting, the same volume and the same hairline. Do not restyle, do not slick it back, do not expose more forehead than the original, do not add or remove hair.',
+    },
+    {
+        id: 'tidy',
+        label: '단정하게',
+        desc: '흐트러진 곳만 정리',
+        prompt: 'Keep the same hairstyle, length and parting as the uploaded photo, but tidy stray hairs and flyaways so it looks neatly groomed. Do not change the hairline or the amount of forehead shown.',
+    },
+    {
+        id: 'back',
+        label: '이마 보이게',
+        desc: '앞머리를 넘겨서',
+        prompt: 'Comb the hair back so the forehead and eyebrows are clearly visible, keeping the same hair length and colour as the uploaded photo.',
+    },
+    {
+        id: 'down',
+        label: '앞머리 내리고',
+        desc: '이마를 덮게',
+        prompt: 'Let the front hair fall naturally over the forehead, keeping the same hair length and colour as the uploaded photo. The eyebrows and eyes must still be fully visible.',
+    },
+]
+
+export function getIdHair(id: string) { return ID_HAIRS.find(h => h.id === id) }
+export function isValidIdHair(v: unknown): v is string { return typeof v === 'string' && ID_HAIRS.some(h => h.id === v) }
+export const DEFAULT_HAIR_ID = 'keep'
+
+/** 견본을 남녀 어느 쪽으로 보여줄지 — 대표 지적 2026-09-15 「남잔데 왜 여자가 있냐」 */
+export const ID_GENDERS = [
+    { id: 'male', label: '남성' },
+    { id: 'female', label: '여성' },
+] as const
+export type IdGender = (typeof ID_GENDERS)[number]['id']
+
 export interface IdChoice {
     id: string
     label: string
@@ -14,6 +65,8 @@ export interface IdChoice {
     prompt: string
     swatch: string
     sample?: string
+    /** 여성 견본 */
+    sampleW?: string
 }
 
 /** 배경 — 기관마다 받는 색이 다르다 */
@@ -26,10 +79,11 @@ export const ID_BACKGROUNDS: IdChoice[] = [
 
 /** 차림새 */
 export const ID_OUTFITS: IdChoice[] = [
-    { id: 'suit', label: '정장', prompt: 'a well-fitted dark navy suit jacket with a crisp white shirt', swatch: '#1e293b', sample: '/samples/id-m1.webp' },
-    { id: 'jacket', label: '재킷', prompt: 'a clean tailored jacket over a plain top, business casual', swatch: '#475569', sample: '/samples/id-w1.webp' },
-    { id: 'shirt', label: '셔츠', prompt: 'a crisp plain button-up shirt with the collar closed, no tie', swatch: '#bfdbfe' },
-    { id: 'keep', label: '지금 옷 그대로', prompt: 'the clothing from the uploaded photo, tidied and wrinkle-free', swatch: '#a3a3a3' },
+    // 견본을 남녀 둘 다 둔다 — 대표 지적 2026-09-15 「남잔데 왜 여자가 있냐」
+    { id: 'suit', label: '정장', prompt: 'a well-fitted dark navy suit jacket with a crisp white shirt', swatch: '#1e293b', sample: '/samples/id-m1.webp', sampleW: '/samples/id-w2.webp' },
+    { id: 'jacket', label: '재킷', prompt: 'a clean tailored jacket over a plain top, business casual', swatch: '#475569', sample: '/samples/id-m3.webp', sampleW: '/samples/id-w1.webp' },
+    { id: 'shirt', label: '셔츠', prompt: 'a crisp plain button-up shirt with the collar closed, no tie', swatch: '#bfdbfe', sample: '/samples/id-shirt.webp', sampleW: '/samples/id-shirt-w.webp' },
+    { id: 'keep', label: '지금 옷 그대로', prompt: 'the clothing from the uploaded photo, tidied and wrinkle-free', swatch: '#a3a3a3', sample: '/samples/id-keep-m.webp', sampleW: '/samples/id-keep.webp' },
 ]
 
 /** 규격 — 나라·용도마다 크기가 다르다 */
@@ -62,7 +116,7 @@ export function isValidIdSize(v: unknown): v is string { return typeof v === 'st
  * ⚠️ 규격을 어기면 관공서에서 반려된다. 그래서 「하지 말 것」을 길게 적는다.
  *    웃는 얼굴·기울어진 고개·머리카락이 눈썹을 덮는 것·그림자가 대표적인 반려 사유다.
  */
-export function buildIdPhotoPrompt(bg: IdChoice, outfit: IdChoice, size: IdSize, ageMinus = 0): string {
+export function buildIdPhotoPrompt(bg: IdChoice, outfit: IdChoice, size: IdSize, ageMinus = 0, hair?: IdHair): string {
     const 나이줄 = 나이문장(ageMinus)
 
     return [
@@ -70,6 +124,9 @@ export function buildIdPhotoPrompt(bg: IdChoice, outfit: IdChoice, size: IdSize,
         'Keep the same face and the same identity as the uploaded photo — an official photo that does not look like the person is useless.',
         // 안경 — 2026-09-15 대조 시험에서 발견. 안경 쓴 5060 얼굴을 넣으면 둘 다 안경을 벗겨 놓았다.
         // 한국 증명사진은 안경을 써도 된다(선글라스·색렌즈만 안 된다). 안경은 그 사람의 얼굴이다.
+        // 머리 — 대표 지적 2026-09-15 「머리는 왜 까냐」. 모자를 벗기면서 머리까지 지어냈다.
+        (hair ?? ID_HAIRS[0]).prompt,
+        'If the person wears a hat or cap in the uploaded photo, remove it, but keep the hair that the hat was covering as close to the original as possible — do not invent a different hairstyle.',
         'If the person wears glasses in the uploaded photo, keep the exact same glasses on — Korean ID photographs allow clear prescription glasses. Keep the same frame shape and colour. The lenses must be clear with no glare or reflection, and the frame must not cover the eyes or eyebrows. If the person wears no glasses, do not add any.',
         나이줄,
         `Clothing: ${outfit.prompt}.`,

@@ -5,7 +5,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
-import { ID_BACKGROUNDS, ID_OUTFITS, ID_SIZES, ID_COST } from '@/domains/studio/idphoto'
+import { ID_BACKGROUNDS, ID_OUTFITS, ID_SIZES, ID_COST, ID_HAIRS, ID_GENDERS, DEFAULT_HAIR_ID } from '@/domains/studio/idphoto'
 import { AGES, DEFAULT_AGE_ID } from '@/domains/studio/photo'
 import PhotoToolShell from '@/components/studio/PhotoToolShell'
 import AppSidebar from '@/components/AppSidebar'
@@ -25,6 +25,8 @@ function IdPhotoPage안쪽() {
     const [backgroundId, setBackgroundId] = useSticky<string>('id-bg', ID_BACKGROUNDS[0].id)
     const [outfitId, setOutfitId] = useSticky<string>('id-outfit', ID_OUTFITS[0].id)
     const [ageId, setAgeId] = useSticky<string>('age', DEFAULT_AGE_ID)
+    const [성별, set성별] = useSticky<string>('id-gender', 'male')
+    const [hairId, setHairId] = useSticky<string>('id-hair', DEFAULT_HAIR_ID)
     const [result, setResult] = useState<string | null>(null)
     const [미리보기, set미리보기] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -65,7 +67,7 @@ function IdPhotoPage안쪽() {
             const res = await fetch('/api/tools/id-photo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64: base64, mimeType, backgroundId, outfitId, sizeId, ageId, 표식: 브라우저표식() }),
+                body: JSON.stringify({ imageBase64: base64, mimeType, backgroundId, outfitId, sizeId, ageId, hairId, 표식: 브라우저표식() }),
             })
             const data = await res.json()
             if (!res.ok) {
@@ -122,18 +124,49 @@ function IdPhotoPage안쪽() {
                 onLogin={() => router.push('/login')}
                 downloadName="증명사진.png"
             >
-                <칸 제목="1. 규격">
+                <칸 제목="1. 어느 쪽 견본을 볼까요">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                        {ID_GENDERS.map(g => (
+                            <button key={g.id} onClick={() => set성별(g.id)} style={{ ...고름(성별 === g.id), textAlign: 'center' }}>
+                                <span style={{ fontSize: 16, fontWeight: 800, color: '#18181b' }}>{g.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                    <p style={{ fontSize: 14, color: '#a1a1aa', margin: '8px 0 0', lineHeight: 1.5 }}>
+                        아래 견본 사진만 바뀝니다. 만들어지는 사진은 올리신 사진 그대로예요.
+                    </p>
+                </칸>
+
+                <칸 제목="2. 규격">
                     <div style={{ display: 'grid', gap: 8 }}>
                         {ID_SIZES.map(s => (
-                            <button key={s.id} onClick={() => setSizeId(s.id)} style={고름(sizeId === s.id, true)}>
-                                <span style={{ display: 'block', fontSize: 15.5, fontWeight: 800, color: '#18181b' }}>{s.label}</span>
-                                <span style={{ display: 'block', fontSize: 13.5, color: '#71717a', marginTop: 2, wordBreak: 'keep-all' }}>{s.use}</span>
+                            <button key={s.id} onClick={() => setSizeId(s.id)} style={{ ...고름(sizeId === s.id, true), display: 'flex', alignItems: 'center', gap: 14 }}>
+                                {/* 규격을 눈으로 — 대표 지적 0915 「규격도 이미지화 해야지」. 실제 비율 그대로 그린다 */}
+                                <span style={{
+                                    display: 'block', flexShrink: 0,
+                                    width: s.w * 1.5, height: s.h * 1.5,
+                                    borderRadius: 4,
+                                    border: `2px solid ${sizeId === s.id ? 'var(--연두)' : '#d4d4d8'}`,
+                                    background: '#fff',
+                                    position: 'relative',
+                                }} aria-hidden>
+                                    <span style={{
+                                        position: 'absolute', left: '50%', top: '22%', transform: 'translateX(-50%)',
+                                        width: s.id === 'kr-passport' ? '58%' : '46%',
+                                        aspectRatio: '1 / 1', borderRadius: 999,
+                                        background: sizeId === s.id ? '#BBE5C8' : '#e4e4e7',
+                                    }} />
+                                </span>
+                                <span style={{ minWidth: 0 }}>
+                                    <span style={{ display: 'block', fontSize: 15.5, fontWeight: 800, color: '#18181b' }}>{s.label}</span>
+                                    <span style={{ display: 'block', fontSize: 13.5, color: '#71717a', marginTop: 2, wordBreak: 'keep-all' }}>{s.use}</span>
+                                </span>
                             </button>
                         ))}
                     </div>
                 </칸>
 
-                <칸 제목="2. 배경">
+                <칸 제목="3. 배경">
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
                         {ID_BACKGROUNDS.map(b => (
                             <button key={b.id} onClick={() => setBackgroundId(b.id)} style={고름(backgroundId === b.id)}>
@@ -148,13 +181,13 @@ function IdPhotoPage안쪽() {
                     </div>
                 </칸>
 
-                <칸 제목="3. 차림새">
+                <칸 제목="4. 차림새">
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
                         {ID_OUTFITS.map(o => (
                             <button key={o.id} onClick={() => setOutfitId(o.id)} style={고름(outfitId === o.id)}>
-                                {o.sample ? (
+                                {(성별 === 'female' ? o.sampleW : o.sample) ? (
                                     <span style={{ position: 'relative', display: 'block', width: '100%', aspectRatio: '4 / 5', borderRadius: 10, overflow: 'hidden', marginBottom: 8, background: '#f4f4f5' }}>
-                                        <Image src={o.sample} alt="" fill sizes="130px" style={{ objectFit: 'cover', objectPosition: 'center 26%' }} />
+                                        <Image src={(성별 === 'female' ? o.sampleW : o.sample)!} alt="" fill sizes="130px" style={{ objectFit: 'cover', objectPosition: 'center 22%' }} />
                                     </span>
                                 ) : (
                                     <span style={{ display: 'block', width: '100%', height: 46, borderRadius: 10, background: o.swatch, marginBottom: 8 }} />
@@ -165,7 +198,18 @@ function IdPhotoPage안쪽() {
                     </div>
                 </칸>
 
-                <칸 제목="4. 나이">
+                <칸 제목="5. 머리 모양">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
+                        {ID_HAIRS.map(h => (
+                            <button key={h.id} onClick={() => setHairId(h.id)} style={고름(hairId === h.id)}>
+                                <span style={{ display: 'block', fontSize: 15, fontWeight: 800, color: '#18181b' }}>{h.label}</span>
+                                <span style={{ display: 'block', fontSize: 13, color: '#71717a', marginTop: 2, wordBreak: 'keep-all' }}>{h.desc}</span>
+                            </button>
+                        ))}
+                    </div>
+                </칸>
+
+                <칸 제목="6. 나이">
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                         {AGES.map(a => (
                             <button key={a.id} onClick={() => setAgeId(a.id)} style={{ ...고름(ageId === a.id), textAlign: 'center' }}>

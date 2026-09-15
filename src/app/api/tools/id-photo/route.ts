@@ -5,7 +5,7 @@ import sharp from 'sharp'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
-    getIdBackground, getIdOutfit, getIdSize,
+    getIdBackground, getIdOutfit, getIdSize, getIdHair, isValidIdHair, DEFAULT_HAIR_ID,
     isValidIdBackground, isValidIdOutfit, isValidIdSize,
     buildIdPhotoPrompt, ID_COST,
 } from '@/domains/studio/idphoto'
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
         const { data: { user } } = await supabase.auth.getUser()
         const 손님 = !user
 
-        const { imageBase64, mimeType, backgroundId, outfitId, sizeId, ageId, modelId, 표식: 받은표식 } = await req.json()
+        const { imageBase64, mimeType, backgroundId, outfitId, sizeId, ageId, modelId, hairId, 표식: 받은표식 } = await req.json()
         if (typeof imageBase64 !== 'string' || imageBase64.length < 100) {
             return NextResponse.json({ error: '사진을 올려주세요.' }, { status: 400 })
         }
@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
         const size = getIdSize(sizeId)!
         const model = getModel(isValidModelId(modelId) ? modelId : DEFAULT_MODEL_ID)!
         const 나이 = getAge(isValidAgeId(ageId) ? ageId : DEFAULT_AGE_ID)!.minus
+        const 머리 = getIdHair(isValidIdHair(hairId) ? hairId : DEFAULT_HAIR_ID)
 
         const admin = createAdminClient()
         const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
                     role: 'user',
                     parts: [
                         { inlineData: { mimeType: mimeType || 'image/jpeg', data: imageBase64 } },
-                        { text: buildIdPhotoPrompt(bg, outfit, size, 나이) },
+                        { text: buildIdPhotoPrompt(bg, outfit, size, 나이, 머리) },
                     ],
                 }],
             })
