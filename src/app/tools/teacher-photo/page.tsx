@@ -117,7 +117,7 @@ function TeacherPhotoPage안쪽() {
                 onLogin={() => router.push('/login')}
                 downloadName="강사_프로필.png"
             >
-                <칸 제목="1. 어떤 선생으로 보이고 싶나요">
+                <칸 제목="1. 어떤 이미지로 보이고 싶나요">
                     <그림칸 목록={TEACHER_MOODS} 고른={moodId} 고르기={setMoodId} />
                 </칸>
                 <칸 제목="2. 어디서 찍은 것처럼">

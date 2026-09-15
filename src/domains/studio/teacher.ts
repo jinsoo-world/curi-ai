@@ -17,48 +17,73 @@ export const GENDERS: { id: 성별; label: string }[] = [
 
 export const TEACHER_COST = 20
 
-/** 어떤 선생으로 보이고 싶은가 */
+/**
+ * 어떤 이미지로 보이고 싶은가 — 여섯 가지
+ * 대표 지시 2026-09-15 「어떤 이미지로 보이고 싶나요로 바꾸고. 스타일도 6개로 표기해주고」
+ * 참고로 주신 사진 = 손동작 있는 정장 · 앉은 편안한 자세 · 펜 든 설명 · 격식 있는 어두운 톤 등
+ */
 export const TEACHER_MOODS: Choice[] = [
     {
         id: 'warm',
         label: '따뜻하게',
-        prompt: 'a warm inviting expression with a genuine open smile and relaxed shoulders, wearing a soft knit or cardigan in a light tone',
+        prompt: 'a warm inviting expression with a gentle closed-lip smile and relaxed shoulders, wearing a soft jacket or knit in a light tone',
         swatch: '#e7c9a9',
-        sample: '/samples/teach-w2.webp',
-        sampleMale: '/samples/teach-m1.webp',
+        sample: '/samples/style-warm.webp',
+        sampleMale: '/samples/style-warm.webp',
     },
     {
         id: 'trust',
         label: '믿음직하게',
-        prompt: 'a calm credible expression with a light closed-lip smile, wearing a clean blazer over a plain top',
+        prompt: 'a calm credible expression with steady eye contact and a light closed-lip smile, wearing a clean blazer over a crisp shirt',
         swatch: '#475569',
-        sample: '/samples/teach-w1.webp',
-        sampleMale: '/samples/teach-m2.webp',
+        sample: '/samples/style-trust.webp',
+        sampleMale: '/samples/style-trust.webp',
     },
     {
         id: 'easy',
         label: '편안하게',
-        prompt: 'a relaxed everyday expression with an easy laugh, wearing a plain shirt with sleeves rolled up',
+        prompt: 'a relaxed everyday expression with an easy natural smile, leaning slightly forward as if mid-conversation, wearing a soft jacket',
         swatch: '#93c5fd',
-        sample: '/samples/teach-w3.webp',
-        sampleMale: '/samples/teach-m1.webp',
+        sample: '/samples/style-easy.webp',
+        sampleMale: '/samples/style-easy.webp',
     },
     {
         id: 'expert',
         label: '전문가답게',
-        prompt: 'a composed expert expression with steady eye contact, wearing a tidy jacket or cardigan, glasses kept if present in the photo',
+        prompt: 'a composed expert expression with steady eye contact and a light smile, wearing a tidy blazer, as if explaining a point',
         swatch: '#1e293b',
-        sample: '/samples/teach-w1.webp',
-        sampleMale: '/samples/teach-m2.webp',
+        sample: '/samples/style-expert.webp',
+        sampleMale: '/samples/style-expert.webp',
+    },
+    {
+        id: 'lively',
+        label: '활기차게',
+        prompt: 'a bright animated expression with an open friendly smile and energetic upright posture, wearing a neat suit or jacket',
+        swatch: '#f59e0b',
+        sample: '/samples/style-lively.webp',
+        sampleMale: '/samples/style-lively.webp',
+    },
+    {
+        id: 'chic',
+        label: '세련되게',
+        prompt: 'a poised sophisticated expression with a subtle confident smile, wearing elegant dark clothing, soft rim light on the hair and shoulders',
+        swatch: '#27272a',
+        sample: '/samples/style-chic.webp',
+        sampleMale: '/samples/style-chic.webp',
     },
 ]
 
-/** 어디서 찍은 것처럼 */
+/**
+ * 어디서 찍은 것처럼 — 여섯 가지
+ * 대표 지시 2026-09-15 「배경을 6개정도 표기해줘야지」
+ */
 export const TEACHER_PLACES: Choice[] = [
-    { id: 'bright', label: '밝은 스튜디오', prompt: 'a clean bright studio background with soft even light', swatch: '#f4f4f5', bg: 'linear-gradient(140deg,#ffffff,#d4d4d8)', sample: '/samples/teach-w1.webp' },
+    { id: 'bright', label: '밝은 스튜디오', prompt: 'a clean bright studio background with soft even light', swatch: '#f4f4f5', bg: 'linear-gradient(140deg,#ffffff,#d4d4d8)', sample: '/samples/style-trust.webp' },
     { id: 'room', label: '환한 방', prompt: 'a bright airy room softly blurred behind, natural window light', swatch: '#e7eee9', bg: 'linear-gradient(140deg,#f0f7f3,#a8c4b5)', sample: '/samples/teach-m1.webp' },
     { id: 'study', label: '서재', prompt: 'a warm study with blurred bookshelves behind and a desk lamp', swatch: '#b45309', bg: 'linear-gradient(140deg,#fef3c7,#92400e)', sample: '/samples/teach-m2.webp' },
-    { id: 'pastel', label: '파스텔 단색', prompt: 'a smooth solid pastel studio backdrop in a soft warm tone, the clean look used on Korean instructor profiles', swatch: '#f7d9c9', bg: 'linear-gradient(140deg,#fdeee6,#e8b39a)', sample: '/samples/teach-w2.webp' },
+    { id: 'pastel', label: '파스텔 단색', prompt: 'a smooth solid pastel studio backdrop in a soft warm tone, the clean look used on Korean instructor profiles', swatch: '#f7d9c9', bg: 'linear-gradient(140deg,#fdeee6,#e8b39a)', sample: '/samples/style-easy.webp' },
+    { id: 'dark', label: '어두운 단색', prompt: 'a deep charcoal studio backdrop with soft rim light separating the hair and shoulders from the background', swatch: '#27272a', bg: 'linear-gradient(140deg,#3f3f46,#18181b)', sample: '/samples/style-chic.webp' },
+    { id: 'office', label: '사무실', prompt: 'a modern office softly blurred behind, clean lines and natural daylight', swatch: '#cbd5e1', bg: 'linear-gradient(140deg,#e2e8f0,#94a3b8)', sample: '/samples/bg-office.webp' },
 ]
 
 export function getTeacherMood(id: string) { return TEACHER_MOODS.find(m => m.id === id) }
