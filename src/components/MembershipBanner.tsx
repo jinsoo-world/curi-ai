@@ -37,7 +37,7 @@ export function MembershipBanner() {
                     }}
                 >
                     <CloverIcon size={18} />
-                    <span>무료 체험권 받기</span>
+                    <span>클로버 받기</span>
                 </button>
 
                 {/* 닫기 버튼 */}

@@ -12,7 +12,7 @@
  */
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { TRIAL_DAYS, TRIAL_CLOVERS, trialDaysLeft } from '@/domains/trial'
+import { TRIAL_CLOVERS } from '@/domains/trial'
 import ShareInvite from '@/components/ui/ShareInvite'
 
 interface CreditClaimModalProps {
@@ -149,10 +149,10 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                 {단계 === '번호입력' && (
                     <>
                         <h3 style={{ fontSize: 21, fontWeight: 900, margin: '4px 0 6px', letterSpacing: '-0.03em' }}>
-                            무료 체험권 {TRIAL_DAYS}일
+                            클로버 {TRIAL_CLOVERS}개 받기
                         </h3>
-                        <p style={{ fontSize: 14.5, color: 'var(--먹연)', margin: '0 0 20px', lineHeight: 1.6 }}>
-                            휴대폰 번호로 한 번만 받을 수 있어요. 받은 날부터 {TRIAL_DAYS}일 동안 마음껏 쓰고, 클로버 {TRIAL_CLOVERS}개도 같이 드려요.
+                        <p style={{ fontSize: 15, color: 'var(--먹연)', margin: '0 0 20px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                            휴대폰 번호로 한 번만 받을 수 있어요. 번호를 확인하면 클로버 {TRIAL_CLOVERS}개를 바로 드립니다.
                         </p>
 
                         <input
@@ -213,7 +213,7 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                             disabled={보내는중 || code.length !== 6}
                             style={큰단추(보내는중 || code.length !== 6)}
                         >
-                            {보내는중 ? '확인 중…' : '체험권 받기'}
+                            {보내는중 ? '확인 중…' : '클로버 받기'}
                         </button>
 
                         <button
@@ -228,12 +228,10 @@ export default function CreditClaimModal({ isOpen, onClose, onComplete }: Credit
                 {(단계 === '끝' || 단계 === '이미받음') && (
                     <>
                         <h3 style={{ fontSize: 21, fontWeight: 900, margin: '4px 0 6px', letterSpacing: '-0.03em' }}>
-                            {단계 === '끝' ? '체험권을 받았어요' : '이미 체험 중이에요'}
+                            {단계 === '끝' ? '클로버를 받았어요' : '이미 받으셨어요'}
                         </h3>
-                        <p style={{ fontSize: 14.5, color: 'var(--먹연)', margin: '0 0 16px', lineHeight: 1.6 }}>
-                            {끝나는날
-                                ? `${new Date(끝나는날).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}까지 (${trialDaysLeft(끝나는날)}일 남음)`
-                                : `받은 날부터 ${TRIAL_DAYS}일`}
+                        <p style={{ fontSize: 15, color: 'var(--먹연)', margin: '0 0 16px', lineHeight: 1.6 }}>
+                            클로버 {TRIAL_CLOVERS}개가 들어갔어요. 사진을 만들 때 씁니다.
                         </p>
 
                         {추천코드 && <div style={{ marginBottom: 16 }}><ShareInvite code={추천코드} compact /></div>}

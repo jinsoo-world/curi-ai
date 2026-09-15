@@ -63,7 +63,7 @@ export default function InvitePage() {
                     친구 부르기
                 </h1>
                 <p style={{ fontSize: 'var(--글자-본문)', color: 'var(--먹연)', margin: '0 0 24px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                    내 주소로 친구가 무료 체험권을 받으면 클로버 {REFERRER_REWARD}개를 드려요. 몇 명이든 괜찮습니다.
+                    내 주소로 친구가 들어와 휴대폰 인증을 하면 클로버 {REFERRER_REWARD}개를 드려요. 몇 명이든 괜찮습니다.
                 </p>
 
                 {부른수 !== null && (

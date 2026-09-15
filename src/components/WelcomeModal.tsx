@@ -68,7 +68,7 @@ export default function WelcomeModal() {
                     fontSize: 22, fontWeight: 800, color: '#18181b',
                     margin: '0 0 24px',
                 }}>
-                    무료 체험이 시작되었습니다
+                    클로버를 받았습니다
                 </h2>
 
                 {/* Duration highlight */}

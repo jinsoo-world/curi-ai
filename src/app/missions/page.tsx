@@ -113,7 +113,7 @@ export default function MissionsPage() {
             const labels: Record<string, string> = {
                 ai_create: '내 AI 만들기를 마쳤습니다',
                 questions_10: '10번 질문을 마쳤습니다',
-                profile_update: '무료 체험권을 받았습니다',
+                profile_update: '휴대폰 인증을 마쳤습니다',
             }
             setTimeout(() => {
                 showCloverAnimation(amount, labels[rewardType] || '미션 완료!')
@@ -259,15 +259,15 @@ export default function MissionsPage() {
         {
             id: 'profile-update',
             icon: '',
-            title: '무료 체험권 받기',
-            description: '간단한 정보 입력으로 무료 체험을 시작하세요',
+            title: '휴대폰 인증하기',
+            description: '번호를 확인하면 클로버를 드려요',
             reward: 30,
             rewardLabel: '+30',
             progress: missionStatus.profileUpdated ? 1 : 0,
             goal: 1,
             completed: missionStatus.profileUpdated,
             action: () => setShowTrialModal(true),
-            actionLabel: '체험권 받기',
+            actionLabel: '인증하기',
         },
     ]
 
