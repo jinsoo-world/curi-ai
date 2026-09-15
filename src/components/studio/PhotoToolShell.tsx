@@ -12,6 +12,7 @@
  * 중장년은 스크롤을 내리다 멈춘다(0914 실측 = 채팅 화면 473번 중 308번이 한 마디도 없이 끝났다).
  */
 import Image from 'next/image'
+import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { PhotoDrop } from './PhotoDrop'
 import MakingBar from './MakingBar'
@@ -21,7 +22,7 @@ import KeepNotice from '@/components/studio/KeepNotice'
 import ShareTool from '@/components/studio/ShareTool'
 import { 센다 } from '@/lib/track'
 import { useGuest } from '@/components/studio/useGuest'
-import { GUEST_CLOVERS } from '@/domains/trial'
+import { GUEST_CLOVERS, SIGNUP_CLOVERS } from '@/domains/trial'
 
 export interface 견본 { src: string; label: string; /** 누르면 이 옵션이 골라진다 */ pick?: () => void }
 
@@ -168,7 +169,8 @@ export default function PhotoToolShell({
                     「클로버가 안보이는데 사진은 만들어지네?」 */}
                 {!loading && 손님 && (
                     <p style={{ fontSize: 15, color: '#71717a', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                        가입 안 하셔도 클로버 {GUEST_CLOVERS}개를 드려요. 선명한 사진을 받으시려면 로그인하시면 됩니다.
+                        가입 안 하셔도 클로버 {GUEST_CLOVERS}개로 한 장 만들어 보실 수 있어요.{' '}
+                        <Link href="/login" style={{ color: 'var(--진초록)', fontWeight: 800, textDecoration: 'underline' }}>로그인하시면 {SIGNUP_CLOVERS}개를 더 드립니다.</Link>
                     </p>
                 )}
 

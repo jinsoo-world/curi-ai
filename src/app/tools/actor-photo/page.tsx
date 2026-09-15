@@ -16,13 +16,14 @@ import ToolHero from '@/components/studio/ToolHero'
 import MakingBar from '@/components/studio/MakingBar'
 import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
+import Link from 'next/link'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
 import KeepNotice from '@/components/studio/KeepNotice'
 import ShareTool from '@/components/studio/ShareTool'
 import AdSlot from '@/components/AdSlot'
 import { 센다 } from '@/lib/track'
 import { useGuest } from '@/components/studio/useGuest'
-import { GUEST_CLOVERS } from '@/domains/trial'
+import { GUEST_CLOVERS, SIGNUP_CLOVERS } from '@/domains/trial'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { useSticky } from '@/components/studio/useSticky'
 import { HAIRS, DEFAULT_HAIR } from '@/domains/studio/hair'
@@ -315,7 +316,8 @@ function ActorPhotoPage안쪽() {
 
                 {!loading && 손님 && (
                     <p style={{ fontSize: 15, color: '#71717a', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                        가입 안 하셔도 클로버 {GUEST_CLOVERS}개를 드려요. 선명한 사진을 받으시려면 로그인하시면 됩니다.
+                        가입 안 하셔도 클로버 {GUEST_CLOVERS}개로 한 장 만들어 보실 수 있어요.{' '}
+                        <Link href="/login" style={{ color: 'var(--진초록)', fontWeight: 800, textDecoration: 'underline' }}>로그인하시면 {SIGNUP_CLOVERS}개를 더 드립니다.</Link>
                     </p>
                 )}
 

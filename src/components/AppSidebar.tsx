@@ -18,6 +18,7 @@ import { createClient } from '@/lib/supabase/client'
 import CloverIcon from '@/components/ui/CloverIcon'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { 클로버듣기, 클로버알림, 클로버씀듣기 } from '@/lib/clover-bus'
+import { SIGNUP_CLOVERS } from '@/domains/trial'
 import CloverCount from '@/components/studio/CloverCount'
 
 // 대표 확정 0914 = 「만들기ㅣ대화하기ㅣ내 AI 로 해」 「내 대화는 없애 굳이 필요 없을듯」
@@ -38,6 +39,8 @@ export default function AppSidebar() {
     const [이름, set이름] = useState<string | null>(null)
     const [추천코드, set추천코드] = useState<string | null>(null)
     const [복사됨, set복사됨] = useState(false)
+    // 로그인했는지 — 대표 지적 2026-09-15 「로그인도 안했는데 뭔 로그아웃이야」
+    const [로그인함, set로그인함] = useState<boolean | null>(null)
 
     const 불러오기 = useCallback(async () => {
         const supabase = createClient()
@@ -46,6 +49,7 @@ export default function AppSidebar() {
         // 손님도 클로버를 갖는다 — 대표 확정 2026-09-15 「클로버 60개를 주면 되잖아」
         // 계정이 없으니 서버가 「하루 동안 쓴 값」을 빼서 알려준다.
         if (!user) {
+            set로그인함(false)
             try {
                 const 표식 = 브라우저표식()
                 const r = await fetch(`/api/guest/balance${표식 ? `?mark=${encodeURIComponent(표식)}` : ''}`)
@@ -56,6 +60,8 @@ export default function AppSidebar() {
             }
             return
         }
+
+        set로그인함(true)
 
         // 잔액은 따로 읽는다 — 대표 지적 2026-09-15 「왜 클로버가 0개임」
         // 한 번에 여러 칸을 물으면 그중 하나만 없어도 통째로 실패해 잔액이 0으로 보인다.
@@ -171,11 +177,11 @@ export default function AppSidebar() {
                     <div className="app-top-sheet" role="menu" onClick={() => set열림(false)}>
                         <div className="app-top-sheet-head">
                             <Link
-                                href="/profile"
+                                href={로그인함 ? '/profile' : '/login'}
                                 className="app-top-sheet-name"
                                 style={{ textDecoration: 'none', color: 'inherit', flex: 1, padding: '4px 0' }}
                             >
-                                {이름 ?? '내 계정'}
+                                {로그인함 ? (이름 ?? '내 계정') : '로그인하기'}
                             </Link>
                             <Link href="/charge" className="app-top-sheet-credit">
                                 <CloverIcon size={15} />
@@ -215,19 +221,38 @@ export default function AppSidebar() {
                         <Link href="/charge" className="app-top-sheet-item">클로버 충전</Link>
                         <Link href="/invite" className="app-top-sheet-item">친구초대</Link>
                         <Link href="/photos" className="app-top-sheet-item">내가 만든 사진</Link>
-                        <Link href="/missions" className="app-top-sheet-item">무료로 모으기</Link>
-                        <Link href="/profile" className="app-top-sheet-item">마이페이지</Link>
-                        <div className="app-top-sheet-line" />
-                        <button
-                            type="button"
-                            className="app-top-sheet-item quiet"
-                            onClick={async () => {
-                                await createClient().auth.signOut()
-                                router.push('/login')
-                            }}
-                        >
-                            로그아웃
-                        </button>
+
+                        {/* 로그인한 분에게만 보이는 칸 — 대표 지적 2026-09-15 「로그인도 안했는데 뭔 로그아웃이야」 */}
+                        {로그인함 && (
+                            <>
+                                <Link href="/missions" className="app-top-sheet-item">무료로 모으기</Link>
+                                <Link href="/profile" className="app-top-sheet-item">마이페이지</Link>
+                                <div className="app-top-sheet-line" />
+                                <button
+                                    type="button"
+                                    className="app-top-sheet-item quiet"
+                                    onClick={async () => {
+                                        await createClient().auth.signOut()
+                                        router.push('/login')
+                                    }}
+                                >
+                                    로그아웃
+                                </button>
+                            </>
+                        )}
+
+                        {로그인함 === false && (
+                            <>
+                                <div className="app-top-sheet-line" />
+                                <Link
+                                    href="/login"
+                                    className="app-top-sheet-item"
+                                    style={{ fontWeight: 800, color: 'var(--진초록)' }}
+                                >
+                                    로그인하고 클로버 {SIGNUP_CLOVERS}개 받기
+                                </Link>
+                            </>
+                        )}
                     </div>
                 </>
             )}

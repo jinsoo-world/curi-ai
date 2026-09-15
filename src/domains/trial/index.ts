@@ -37,8 +37,11 @@ export const SIGNUP_CLOVERS = 40
  * 전에는 「하루 3장」이라는 따로 도는 셈을 썼다. 그래서 화면에 클로버가 0으로 보이는데
  * 사진은 만들어져 헷갈렸다. 이제 손님도 회원과 같은 자로 잰다.
  * 하루가 지나면 다시 채워진다.
+ *
+ * 🔻 2026-09-15 40 → 20 (대표 지시 「비로그인 상태에서는 20으로만 해. 그리고 로그인 유도하고」)
+ *    손님은 딱 한 장만 만들어 보고, 더 만들려면 로그인하게 한다.
  */
-export const GUEST_CLOVERS = 40
+export const GUEST_CLOVERS = 20
 
 /** 체험을 시작하면 끝나는 시각을 정확히 계산한다 */
 export function trialEndsAt(from: Date = new Date()): Date {
