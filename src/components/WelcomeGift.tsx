@@ -18,6 +18,8 @@ import CloverIcon from '@/components/ui/CloverIcon'
 import { TRIAL_CLOVERS, TRIAL_DAYS } from '@/domains/trial'
 
 const 오늘열쇠 = 'curi.welcomeGift.closedOn'
+/** 처음 오신 분 안내(FirstGuide)를 마쳤는지 — 그 안내가 끝난 뒤에 띄운다 */
+const 안내끝열쇠 = 'curi_first_guide_done'
 
 export default function WelcomeGift() {
     const router = useRouter()
@@ -38,6 +40,20 @@ export default function WelcomeGift() {
             const { data: { user } } = await supabase.auth.getUser()
             if (!살아있음) return
             if (user) return          // 로그인한 사람에게는 안 띄운다
+
+            // 처음 오신 분 안내가 도는 중이면 기다린다. 둘이 겹치면 무엇을 짚는지 안 보인다.
+            const 안내중 = () => {
+                try { return !localStorage.getItem(안내끝열쇠) } catch { return false }
+            }
+            if (안내중()) {
+                const 지켜보기 = setInterval(() => {
+                    if (!살아있음 || !안내중()) {
+                        clearInterval(지켜보기)
+                        if (살아있음) setTimeout(() => 살아있음 && set보임(true), 400)
+                    }
+                }, 500)
+                return
+            }
             setTimeout(() => 살아있음 && set보임(true), 600)
         })()
         return () => { 살아있음 = false }
