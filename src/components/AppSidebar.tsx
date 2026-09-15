@@ -218,13 +218,12 @@ export default function AppSidebar() {
                             </button>
                         )}
 
-                        <Link href="/charge" className="app-top-sheet-item">클로버 충전</Link>
-                        <Link href="/invite" className="app-top-sheet-item">친구초대</Link>
-                        <Link href="/photos" className="app-top-sheet-item">내가 만든 사진</Link>
-
                         {/* 로그인한 분에게만 보이는 칸 — 대표 지적 2026-09-15 「로그인도 안했는데 뭔 로그아웃이야」 */}
                         {로그인함 && (
                             <>
+                                <Link href="/charge" className="app-top-sheet-item">클로버 충전</Link>
+                                <Link href="/invite" className="app-top-sheet-item">친구초대</Link>
+                                <Link href="/photos" className="app-top-sheet-item">내가 만든 사진</Link>
                                 <Link href="/missions" className="app-top-sheet-item">무료로 모으기</Link>
                                 <Link href="/profile" className="app-top-sheet-item">마이페이지</Link>
                                 <div className="app-top-sheet-line" />
