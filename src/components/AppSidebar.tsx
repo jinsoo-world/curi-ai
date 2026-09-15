@@ -17,7 +17,8 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import CloverIcon from '@/components/ui/CloverIcon'
 import { 브라우저표식 } from '@/lib/browser-mark'
-import { 클로버듣기, 클로버알림 } from '@/lib/clover-bus'
+import { 클로버듣기, 클로버알림, 클로버씀듣기 } from '@/lib/clover-bus'
+import CloverCount from '@/components/studio/CloverCount'
 
 // 대표 확정 0914 = 「만들기ㅣ대화하기ㅣ내 AI 로 해」 「내 대화는 없애 굳이 필요 없을듯」
 const 메뉴 = [
@@ -102,6 +103,10 @@ export default function AppSidebar() {
     // 클로버가 바뀌면 바로 반영한다 (받기·사진 만들기·충전)
     useEffect(() => 클로버듣기(v => set잔액(v)), [])
 
+    // 방금 쓴 만큼 화면에서 바로 뺀다 — 대표 지적 2026-09-15 「만들기 누르면 애니메이션 효과로 차감되어야지」
+    // 서버는 누르는 순간 빼지만 사진이 나오기까지 20초가 걸려 숫자가 그대로였다.
+    useEffect(() => 클로버씀듣기(얼마 => set잔액(v => (v === null ? v : Math.max(0, v - 얼마)))), [])
+
     const 지금 = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
     return (
@@ -130,7 +135,7 @@ export default function AppSidebar() {
                 <div className="app-top-right">
                     <Link data-guide="guide-clover" href="/charge" className="app-top-credit" aria-label="클로버 충전하기">
                         <CloverIcon size={34} />
-                        <span className="app-top-credit-num">{잔액 === null ? '–' : 잔액.toLocaleString()}</span>
+                        <CloverCount 값={잔액} />
                         <span className="app-top-credit-plus">충전</span>
                     </Link>
 

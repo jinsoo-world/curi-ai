@@ -26,7 +26,7 @@ import { GUEST_CLOVERS } from '@/domains/trial'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { useSticky } from '@/components/studio/useSticky'
 import { HAIRS, DEFAULT_HAIR } from '@/domains/studio/hair'
-import { 클로버알림 } from '@/lib/clover-bus'
+import { 클로버알림, 클로버썼다, 클로버되돌림 } from '@/lib/clover-bus'
 
 function ActorPhotoPage안쪽() {
     const router = useRouter()
@@ -76,6 +76,9 @@ function ActorPhotoPage안쪽() {
         if (!base64 || !styleId || !backdropId) return
         setLoading(true); setErrorMsg(null); setNeedCharge(false); setResult(null)
         센다('photo_make_click', { tool: 'actor-photo' })
+        // 누른 순간 위 띠에서 먼저 뺀다 — 대표 지적 2026-09-15 「만들기 누르면 애니메이션 효과로 차감되어야지」
+        const 낸값 = getModel(modelId)!.cost
+        클로버썼다(낸값)
         try {
             const res = await fetch('/api/tools/profile-photo', {
                 method: 'POST',
@@ -95,6 +98,7 @@ function ActorPhotoPage안쪽() {
         } catch (e) {
             setErrorMsg(e instanceof Error ? e.message : '사진을 만들지 못했어요. 얼굴이 크고 밝게 나온 사진으로 다시 해보세요.')
             센다('photo_make_fail', { tool: 'actor-photo' })
+            클로버되돌림(낸값)  // 서버가 되돌려준다. 화면도 같이
         } finally {
             setLoading(false)
         }

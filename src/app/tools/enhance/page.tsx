@@ -19,7 +19,7 @@ import { 센다 } from '@/lib/track'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { useSticky } from '@/components/studio/useSticky'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
-import { 클로버알림 } from '@/lib/clover-bus'
+import { 클로버알림, 클로버썼다, 클로버되돌림 } from '@/lib/clover-bus'
 
 export default function EnhancePage() {
     const router = useRouter()
@@ -53,6 +53,9 @@ export default function EnhancePage() {
         if (!base64 || !modeId) return
         setLoading(true); setErrorMsg(null); setNeedCharge(false); setResult(null)
         센다('photo_make_click', { tool: 'enhance' })
+        // 누른 순간 위 띠에서 먼저 뺀다 — 대표 지적 2026-09-15 「만들기 누르면 애니메이션 효과로 차감되어야지」
+        const 낸값 = ENHANCE_COST
+        클로버썼다(낸값)
         try {
             const res = await fetch('/api/tools/enhance', {
                 method: 'POST',
@@ -71,6 +74,7 @@ export default function EnhancePage() {
             센다(data.preview ? 'photo_login_prompt' : 'photo_make_success', { tool: 'enhance' })
         } catch (e) {
             setErrorMsg(e instanceof Error ? e.message : '사진을 고치지 못했어요.')
+            클로버되돌림(낸값)  // 서버가 되돌려준다. 화면도 같이
         } finally {
             setLoading(false)
         }

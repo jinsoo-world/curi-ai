@@ -17,7 +17,7 @@ import { useGuest } from '@/components/studio/useGuest'
 import { GUEST_CLOVERS } from '@/domains/trial'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { useSticky } from '@/components/studio/useSticky'
-import { 클로버알림 } from '@/lib/clover-bus'
+import { 클로버알림, 클로버썼다, 클로버되돌림 } from '@/lib/clover-bus'
 
 export default function ThumbnailPage() {
     const router = useRouter()
@@ -37,6 +37,9 @@ export default function ThumbnailPage() {
         if (!lookId || !제목.trim()) return
         setLoading(true); setErrorMsg(null); setNeedCharge(false); setResult(null)
         센다('photo_make_click', { tool: 'thumbnail' })
+        // 누른 순간 위 띠에서 먼저 뺀다 — 대표 지적 2026-09-15 「만들기 누르면 애니메이션 효과로 차감되어야지」
+        const 낸값 = THUMBNAIL_COST
+        클로버썼다(낸값)
         try {
             const res = await fetch('/api/tools/thumbnail', {
                 method: 'POST',
@@ -57,6 +60,7 @@ export default function ThumbnailPage() {
             센다(data.preview ? 'photo_login_prompt' : 'photo_make_success', { tool: 'thumbnail' })
         } catch (e) {
             setErrorMsg(e instanceof Error ? e.message : '썸네일을 만들지 못했어요.')
+            클로버되돌림(낸값)  // 서버가 되돌려준다. 화면도 같이
         } finally {
             setLoading(false)
         }
