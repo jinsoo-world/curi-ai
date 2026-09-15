@@ -122,7 +122,7 @@ function TeacherPhotoPage안쪽() {
                 onLogin={() => router.push('/login')}
                 downloadName="강사_프로필.png"
             >
-                <칸 제목="1. 남성 · 여성">
+                <칸 제목="1. 남성 여성">
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                         {[{ id: 'male', label: '남성' }, { id: 'female', label: '여성' }].map(g => (
                             <button key={g.id} onClick={() => set성별(g.id)} style={{ ...고름(성별 === g.id), textAlign: 'center' }}>
