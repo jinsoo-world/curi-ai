@@ -22,6 +22,7 @@ import KeepNotice from '@/components/studio/KeepNotice'
 import ShareTool from '@/components/studio/ShareTool'
 import { 센다 } from '@/lib/track'
 import { useGuest } from '@/components/studio/useGuest'
+import { useClover } from '@/components/studio/useClover'
 import { GUEST_CLOVERS, SIGNUP_CLOVERS } from '@/domains/trial'
 
 export interface 견본 { src: string; label: string; /** 누르면 이 옵션이 골라진다 */ pick?: () => void }
@@ -75,6 +76,8 @@ export default function PhotoToolShell({
     compareWithOriginal?: boolean
 }) {
     const { 손님 } = useGuest()
+    const 있는클로버 = useClover()
+    const 모자람 = needCharge || (있는클로버 !== null && 있는클로버 < cost)
 
     return (
         <div className="tool-page">
@@ -138,7 +141,7 @@ export default function PhotoToolShell({
                     {children}
                 </div>
 
-                {errorMsg && !needCharge && (
+                {errorMsg && !모자람 && (
                     <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 15, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
                         {errorMsg}
                     </div>
@@ -146,7 +149,7 @@ export default function PhotoToolShell({
 
                 {/* 클로버가 모자랄 때 — 손님과 회원에게 할 말이 다르다. 2026-09-15
                     손님에게 「충전하러 가기」는 막다른 길이다. 계정이 없으면 충전도 못 한다. */}
-                {needCharge && (
+                {모자람 && (
                     <div style={{ background: '#fff', border: '1.5px solid #e4e4e7', borderRadius: 14, padding: '16px 18px', marginBottom: 14, textAlign: 'center' }}>
                         <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6 }}>
                             {손님 ? '오늘 몫을 다 쓰셨어요' : '클로버가 모자라요'}
@@ -168,23 +171,23 @@ export default function PhotoToolShell({
                 {loading ? (
                     <MakingBar 예상초={makingSeconds} />
                 ) : (
-                    <button onClick={onMake} disabled={!canMake || needCharge} style={{
+                    <button onClick={onMake} disabled={!canMake || 모자람} style={{
                         width: '100%', padding: 17, borderRadius: 16, border: 'none',
                         // 클로버가 모자라면 초록으로 두지 않는다 — 대표 지적 2026-09-15 「모바일도 확인해봐」
                         // 0 인데 단추가 초록이면 눌러도 되는 줄 알고 누른다
-                        background: (!canMake || needCharge) ? '#d4d4d8' : '#22c55e',
+                        background: (!canMake || 모자람) ? '#d4d4d8' : '#22c55e',
                         color: '#fff', fontSize: 17, fontWeight: 800,
-                        cursor: (!canMake || needCharge) ? 'default' : 'pointer',
+                        cursor: (!canMake || 모자람) ? 'default' : 'pointer',
                     }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-                            {needCharge ? '클로버가 모자라요' : <>만들기 <CloverIcon size={18} color="#fff" /> {cost}개</>}
+                            {모자람 ? '클로버가 모자라요' : <>만들기 <CloverIcon size={18} color="#fff" /> {cost}개</>}
                         </span>
                     </button>
                 )}
 
                 {/* 손님에게는 클로버 대신 「오늘 몇 장까지 공짜」를 알려준다 — 대표 지적 0915
                     「클로버가 안보이는데 사진은 만들어지네?」 */}
-                {!loading && 손님 && !needCharge && (
+                {!loading && 손님 && !모자람 && (
                     <p style={{ fontSize: 15, color: '#71717a', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.6, wordBreak: 'keep-all' }}>
                         가입 안 하셔도 클로버 {GUEST_CLOVERS}개로 한 장 만들어 보실 수 있어요.{' '}
                         <Link href="/login" style={{ color: 'var(--진초록)', fontWeight: 800, textDecoration: 'underline' }}>로그인하시면 {SIGNUP_CLOVERS}개를 더 드립니다.</Link>

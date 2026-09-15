@@ -23,6 +23,7 @@ import ShareTool from '@/components/studio/ShareTool'
 import AdSlot from '@/components/AdSlot'
 import { 센다 } from '@/lib/track'
 import { useGuest } from '@/components/studio/useGuest'
+import { useClover } from '@/components/studio/useClover'
 import { GUEST_CLOVERS, SIGNUP_CLOVERS } from '@/domains/trial'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { useSticky } from '@/components/studio/useSticky'
@@ -47,6 +48,7 @@ function ActorPhotoPage안쪽() {
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const [needCharge, setNeedCharge] = useState(false)
+    const 있는클로버 = useClover()
     const [미리보기, set미리보기] = useState(false)   // 손님에게 준 흐린 그림인가
 
     // 첫 화면에서 사진을 이미 올렸으면 그대로 받아 온다 (대표 지시 0914 「이게 메인으로」)
@@ -114,6 +116,7 @@ function ActorPhotoPage안쪽() {
 
 
     const { 손님 } = useGuest()
+    const 모자람 = needCharge || (있는클로버 !== null && 있는클로버 < getModel(modelId)!.cost)
 
     return (
         <main style={{ minHeight: '100dvh', background: '#fafafa' }}>
@@ -292,29 +295,43 @@ function ActorPhotoPage안쪽() {
                     </div>
                 </div>
 
-                {errorMsg && (
+                {errorMsg && !모자람 && (
                     <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 15, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
                         {errorMsg}
-                        {needCharge && (
-                            <button onClick={() => router.push(`/charge?back=${encodeURIComponent(window.location.pathname)}`)} style={{
-                                display: 'block', marginTop: 10, background: '#dc2626', color: '#fff',
-                                border: 'none', borderRadius: 10, padding: '9px 16px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-                            }}>충전하러 가기</button>
-                        )}
+                    </div>
+                )}
+
+                {/* 클로버가 모자랄 때 — 손님에게 「충전하러 가기」는 막다른 길이다. 2026-09-15 */}
+                {모자람 && (
+                    <div style={{ background: '#fff', border: '1.5px solid #e4e4e7', borderRadius: 14, padding: '16px 18px', marginBottom: 14, textAlign: 'center' }}>
+                        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6 }}>
+                            {손님 ? '오늘 몫을 다 쓰셨어요' : '클로버가 모자라요'}
+                        </div>
+                        <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                            {손님
+                                ? `로그인하시면 클로버 ${SIGNUP_CLOVERS}개를 바로 드려요. 만드신 사진도 그대로 받으실 수 있습니다.`
+                                : '클로버를 채우시면 바로 이어서 만드실 수 있어요.'}
+                        </p>
+                        <button onClick={() => (손님 ? router.push('/login') : router.push(`/charge?back=${encodeURIComponent(window.location.pathname)}`))} style={{
+                            width: '100%', padding: 14, borderRadius: 14, border: 'none',
+                            background: '#1C2321', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                        }}>
+                            {손님 ? `로그인하고 클로버 ${SIGNUP_CLOVERS}개 받기` : '클로버 충전하기'}
+                        </button>
                     </div>
                 )}
 
                 {loading ? (
                     <MakingBar />
                 ) : (
-                    <button onClick={make} disabled={!준비됨} style={{
+                    <button onClick={make} disabled={!준비됨 || 모자람} style={{
                         width: '100%', padding: '16px', borderRadius: 16, border: 'none',
-                        background: !준비됨 ? '#d4d4d8' : '#22c55e',
+                        background: (!준비됨 || 모자람) ? '#d4d4d8' : '#22c55e',
                         color: '#fff', fontSize: 16, fontWeight: 700,
-                        cursor: !준비됨 ? 'default' : 'pointer',
+                        cursor: (!준비됨 || 모자람) ? 'default' : 'pointer',
                     }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            사진 만들기 <CloverIcon size={17} color="#fff" /> {getModel(modelId)!.cost}개
+                            {모자람 ? '클로버가 모자라요' : <>사진 만들기 <CloverIcon size={17} color="#fff" /> {getModel(modelId)!.cost}개</>}
                         </span>
                     </button>
                 )}
