@@ -43,9 +43,14 @@ export async function sendSms(to: string, text: string): Promise<{ ok: true } | 
             body: JSON.stringify({ message: { to, from: SENDER, text } }),
             signal: AbortSignal.timeout(10_000),
         })
+        const body = await res.text().catch(() => '')
         if (!res.ok) {
-            const body = await res.text().catch(() => '')
-            console.error('[sms] 실패', res.status, body.slice(0, 200))
+            console.error('[sms] 실패', res.status, SENDER, body.slice(0, 300))
+            return { ok: false, error: '문자를 보내지 못했어요. 잠시 뒤 다시 해주세요.' }
+        }
+        // 200이 와도 실패로 잡히는 건이 있다(발신번호 미승인 등). 그건 본문에만 적힌다.
+        if (/failedMessageList"?\s*:\s*\[\s*\{/.test(body)) {
+            console.error('[sms] 접수는 됐는데 발송 실패', SENDER, body.slice(0, 300))
             return { ok: false, error: '문자를 보내지 못했어요. 잠시 뒤 다시 해주세요.' }
         }
         return { ok: true }

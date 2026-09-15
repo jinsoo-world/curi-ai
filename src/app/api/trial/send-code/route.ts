@@ -16,14 +16,17 @@ function 해시(code: string, phone: string) {
 
 export async function POST(req: Request) {
     try {
+        // 열쇠부터 본다 — 로그인보다 먼저.
+        // 2026-09-15에 「인증번호가 안 온다」를 쫓는 데 시간이 걸린 이유가 이 순서였다.
+        // 로그인 검사가 앞에 있으면 열쇠가 빠졌는지를 밖에서 알 길이 없다(열쇠 유무만 드러나고 값은 안 나간다).
+        if (!smsReady()) {
+            return Response.json({ error: '문자 보내는 준비가 아직 안 됐어요. 잠시 뒤 다시 해주세요.' }, { status: 503 })
+        }
+
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) {
             return Response.json({ error: '로그인이 필요해요.' }, { status: 401 })
-        }
-
-        if (!smsReady()) {
-            return Response.json({ error: '문자 보내는 준비가 아직 안 됐어요. 잠시 뒤 다시 해주세요.' }, { status: 503 })
         }
 
         const { phone: raw } = await req.json()
