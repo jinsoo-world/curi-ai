@@ -120,6 +120,9 @@ function ActorPhotoPage안쪽() {
                     ]}
                 />
 
+                {/* 만들기 전에도 공유할 수 있게 — 대표 지적 2026-09-15 「여기 왜 카톡공유 없냐?」 */}
+                {!result && <ShareTool path="/tools/actor-photo" title="배우 프로필 사진 만들기" description="캐스팅에 내는 프로필 사진을 사진 한 장으로 만듭니다." image="/og/actor-photo.png" />}
+
                 {/* 1단계 사진 */}
                 <div style={{ marginBottom: 22 }}>
                     <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>1. 내 사진 올리기</div>

@@ -76,6 +76,9 @@ export default function ThumbnailPage() {
                     samples={[{ src: '/samples/act-w7.webp', label: '눈에 띄는' }, { src: '/samples/act-m5.webp', label: '깔끔한' }, { src: '/samples/act-w5.webp', label: '따뜻한' }, { src: '/samples/act-m2.webp', label: '종이 느낌' }]}
                 />
 
+                {/* 만들기 전에도 공유할 수 있게 — 대표 지적 2026-09-15 「여기 왜 카톡공유 없냐?」 */}
+                {!result && <ShareTool path="/tools/thumbnail" title="콘텐츠 썸네일 만들기" description="유튜브·강의 소개에 거는 썸네일을 만듭니다." image="/og/thumbnail.png" />}
+
                 <div>
                     <div style={{ marginBottom: 22 }}>
                         <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>1. 어디에 쓸까요</div>

@@ -125,6 +125,10 @@ export default function PhotoToolShell({
                         </div>
                     </section>
                 )}
+
+                {/* 만들기 전에도 공유할 수 있게 — 대표 지적 2026-09-15 「여기 왜 카톡공유 없냐?」
+                    전에는 사진을 다 만든 뒤에만 보였다. 친구에게 먼저 알리고 같이 하는 사람이 많다 */}
+                {!preview && <ShareTool {...share} />}
             </div>
 
             <div>

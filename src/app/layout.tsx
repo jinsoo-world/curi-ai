@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     locale: 'ko_KR',
     images: [
       {
-        url: '/og-image.png',
+        url: '/og/main.png',
         width: 1200,
         height: 630,
         alt: '큐리 AI — 사진 한 장으로 만드는 내 프로필 사진',
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: '큐리AI — 나만의 AI를 만들고 수익화해보세요!',
     description: '나만의 AI를 만들고 수익화해보세요! 콘텐츠 수익화, 브랜딩, 커리어 전환까지.',
-    images: ['/og-image.png'],
+    images: ['/og/main.png'],
   },
   robots: {
     index: true,

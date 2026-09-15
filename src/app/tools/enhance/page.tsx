@@ -108,6 +108,9 @@ export default function EnhancePage() {
                         />
                     )}
 
+                {/* 만들기 전에도 공유할 수 있게 — 대표 지적 2026-09-15 「여기 왜 카톡공유 없냐?」 */}
+                {!result && <ShareTool path="/tools/enhance" title="사진 화질 개선하기" description="흐릿하고 오래된 사진을 또렷하게 되살립니다." image="/og/enhance.png" />}
+
                     <div style={{ opacity: base64 ? 1 : 0.4, pointerEvents: base64 ? 'auto' : 'none', marginBottom: 24 }}>
                         <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>2. 어떻게 고칠까요</div>
                         <div style={{ display: 'grid', gap: 10 }}>

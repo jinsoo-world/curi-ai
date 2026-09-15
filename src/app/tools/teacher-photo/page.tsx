@@ -103,7 +103,7 @@ function TeacherPhotoPage안쪽() {
                     { src: '/samples/teach-m4.webp', label: '믿음직하게', pick: () => { setMoodId('trust'); setPlaceId('room') } },
                     { src: '/samples/teach-w4.webp', label: '전문가답게', pick: () => { setMoodId('expert'); setPlaceId('bright') } },
                 ]}
-                share={{ path: "/tools/teacher-photo", title: "강사 프로필 만들기", description: "강의 소개에 거는 사진을 사진 한 장으로 만듭니다.", image: "/og/profile-photo.png" }}
+                share={{ path: "/tools/teacher-photo", title: "강사 프로필 만들기", description: "사진 한 장만 올리면 얼굴은 그대로 두고 옷과 배경만 바꿔 드려요.", image: "/og/teacher-photo.png" }}
                 preview={preview}
                 onPicked={(dataUrl, mt) => {
                     setPreview(dataUrl); setBase64(dataUrl.split(',')[1] ?? null)
