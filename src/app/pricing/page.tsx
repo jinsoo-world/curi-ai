@@ -53,7 +53,7 @@ export default function PricingPage() {
                     얼마인가요
                 </h1>
                 <p style={{ fontSize: 16, color: 'var(--먹연)', margin: '0 0 26px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                    쓴 만큼만 냅니다. 달마다 나가는 돈은 없습니다.
+                    필요할 때 한 번만 사면 됩니다. 정기 결제가 아니라 달마다 나가는 돈이 없습니다.
                 </p>
 
                 {/* 사진 한 장에 얼마 */}

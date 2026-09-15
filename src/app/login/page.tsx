@@ -161,9 +161,9 @@ export default function LoginPage() {
                     fontSize: 17, fontWeight: 800, color: '#15803d',
                     letterSpacing: '-0.02em',
                 }}>
-                    체험권을 받은 날부터 7일 무료
+                    가입하면 클로버 40개를 드려요
                 </div>
-                <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+                <div style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
                     사진 한 장으로 내 프로필 사진을 만들어 보세요
                 </div>
             </div>

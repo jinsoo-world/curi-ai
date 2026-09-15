@@ -81,7 +81,7 @@ export default function ChargePage() {
                     클로버 충전
                 </h1>
                 <p style={{ fontSize: 15, color: '#52525b', lineHeight: 1.7, margin: '0 0 8px', wordBreak: 'keep-all' }}>
-                    사진을 만들 때 클로버를 씁니다. 쓴 만큼만 냅니다.
+                    사진을 만들 때 클로버를 씁니다. 필요할 때 한 번만 사면 되고, 달마다 나가는 돈은 없습니다.
                 </p>
                 <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 24px' }}>
                     많이 담을수록 최대 {Math.max(...CLOVER_PACKS.map(discountPercent))}% 싸집니다
@@ -170,7 +170,7 @@ export default function ChargePage() {
                     {loading ? '결제창을 여는 중...' : `${pack.won.toLocaleString()}원 결제하기`}
                 </button>
                 <p style={{ fontSize: 12, color: '#a1a1aa', textAlign: 'center', margin: '12px 0 0', lineHeight: 1.6 }}>
-                    충전한 클로버는 사라지지 않아요. 쓸 때마다 하나씩 줄어듭니다.
+                    한 번 사면 끝입니다. 정기 결제가 아니고, 산 클로버는 사라지지 않아요.
                 </p>
             </div>
         </main>

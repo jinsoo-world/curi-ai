@@ -1,12 +1,20 @@
 'use client'
 
+/**
+ * 위 띠 — 대표 확정 2026-09-15 「클로버 최대 70퍼센트 할인 중」
+ *
+ * 전에는 「무료 체험권 받기」였다. 7일 무료 체험은 사진에 아무 혜택이 없어 걷어냈다.
+ * 지금 파는 것은 클로버 충전 하나뿐이고 1회성 결제다(구독이 아니다).
+ * 그래서 띠도 바로 살 수 있는 것을 가리킨다.
+ */
 import { useState } from 'react'
-import CreditClaimModal from '@/components/CreditClaimModal'
+import Link from 'next/link'
 import CloverIcon from '@/components/ui/CloverIcon'
+import { CLOVER_PACKS, discountPercent } from '@/domains/credit/packs'
 
 export function MembershipBanner() {
     const [visible, setVisible] = useState(true)
-    const [showModal, setShowModal] = useState(false)
+    const 최대할인 = Math.max(...CLOVER_PACKS.map(discountPercent))
 
     if (!visible) return null
 
@@ -22,9 +30,10 @@ export function MembershipBanner() {
                 position: 'relative',
                 zIndex: 60,
             }}>
-                <button
-                    onClick={() => setShowModal(true)}
+                <Link
+                    href="/charge"
                     style={{
+                        textDecoration: 'none',
                         display: 'flex',
                         alignItems: 'center',
                         gap: 8,
@@ -37,8 +46,8 @@ export function MembershipBanner() {
                     }}
                 >
                     <CloverIcon size={18} />
-                    <span>클로버 받기</span>
-                </button>
+                    <span>클로버 최대 {최대할인}퍼센트 할인 중</span>
+                </Link>
 
                 {/* 닫기 버튼 */}
                 <button
@@ -65,12 +74,6 @@ export function MembershipBanner() {
                 </button>
             </div>
 
-            {/* 정보 수취 모달 */}
-            <CreditClaimModal
-                isOpen={showModal}
-                onClose={() => setShowModal(false)}
-                onComplete={() => setShowModal(false)}
-            />
         </>
     )
 }
