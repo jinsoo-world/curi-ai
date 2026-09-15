@@ -16,7 +16,6 @@ import Link from 'next/link'
 import AppSidebar from '@/components/AppSidebar'
 import CloverIcon from '@/components/ui/CloverIcon'
 import { CLOVER_PACKS, discountPercent } from '@/domains/credit/packs'
-import { ID_COST } from '@/domains/studio/idphoto'
 import { TEACHER_COST } from '@/domains/studio/teacher'
 import { PHOTO_COST } from '@/domains/studio/photo'
 import { ENHANCE_COST } from '@/domains/studio/enhance'
@@ -94,7 +93,7 @@ export default function PricingPage() {
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {[
                             '가입 안 해도 하루 3장까지 만들어 볼 수 있어요 (흐린 미리보기)',
-                            `가입하면 클로버 ${SIGNUP_CLOVERS}개를 드려요 (사진 ${Math.floor(SIGNUP_CLOVERS / ID_COST)}장)`,
+                            `가입하면 클로버 ${SIGNUP_CLOVERS}개를 드려요 (사진 ${Math.floor(SIGNUP_CLOVERS / TEACHER_COST)}장)`,
                             `무료 체험권을 받으면 ${TRIAL_DAYS}일 동안 쓸 수 있고 클로버 ${TRIAL_CLOVERS}개를 더 드려요`,
                             '친구가 내 링크로 가입하면 클로버 100개를 받아요',
                         ].map((t) => (
@@ -132,10 +131,10 @@ export default function PricingPage() {
                             >
                                 <div style={{ minWidth: 0 }}>
                                     <div style={{ fontSize: 17, fontWeight: 800 }}>
-                                        클로버 {p.clovers.toLocaleString()}개
+                                        사진 {Math.floor(p.clovers / TEACHER_COST).toLocaleString()}장
                                     </div>
                                     <div style={{ fontSize: 14.5, color: '#71717a', marginTop: 2 }}>
-                                        사진 {Math.floor(p.clovers / ID_COST).toLocaleString()}장을 만들 수 있어요
+                                        클로버 {p.clovers.toLocaleString()}개
                                     </div>
                                 </div>
                                 <div style={{ textAlign: 'right', flexShrink: 0 }}>

@@ -123,11 +123,12 @@ export default function ChargePage() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                                 <CloverIcon size={34} />
                                 <div style={{ minWidth: 0 }}>
+                                    {/* 대표 확정 0915 「10장 50장 100장 만드는 걸로 가자」 — 장수를 앞에 크게 */}
                                     <div style={{ fontSize: 21, fontWeight: 900, color: '#18181b', letterSpacing: '-0.02em' }}>
-                                        {p.clovers.toLocaleString()}개
+                                        사진 {Math.floor(p.clovers / 20).toLocaleString()}장
                                     </div>
-                                    <div style={{ fontSize: 13.5, color: '#71717a', marginTop: 3 }}>
-                                        사진 {Math.floor(p.clovers / 20).toLocaleString()}장을 만들 수 있어요
+                                    <div style={{ fontSize: 15, color: '#71717a', marginTop: 3 }}>
+                                        클로버 {p.clovers.toLocaleString()}개
                                     </div>
                                 </div>
                             </div>

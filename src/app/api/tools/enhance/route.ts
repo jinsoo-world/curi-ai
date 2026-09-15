@@ -81,7 +81,9 @@ export async function POST(req: NextRequest) {
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
             const r = await ai.models.generateContent({
-                model: 'gemini-3-pro-image-preview',
+                // 대표 확정 2026-09-15 「화질개선은 싼 모델로 바꾸고」
+                // 비싼 모델(장당 약 180원)을 쓰면서 12클로버만 받아 얇았다. 싼 모델은 약 52원.
+                model: 'gemini-2.5-flash-image',
                 contents: [{
                     role: 'user',
                     parts: [
