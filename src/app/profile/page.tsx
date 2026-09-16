@@ -46,10 +46,14 @@ export default function ProfilePage() {
             // 대표 지시 2026-09-16 = 「마이페이지 로딩속도는 빠르게 해」
             // 전에는 ①내가 누군지 묻고 ②그 답을 기다렸다가 ③프로필을 불렀다. 두 번을 줄 세운 셈이다.
             // 서버(/api/profile)는 스스로 누군지 알아내므로 둘을 같이 보낸다.
-            const [{ data: { user } }, res] = await Promise.all([
-                supabase.auth.getUser(),
+            // getUser() 는 물어볼 때마다 서버에 토큰을 확인하러 간다(실측 수 초).
+            // 화면에 쓰는 값(가입일·메일·이름)은 이미 내 브라우저에 있는 session 에 다 들어 있고,
+            // 진짜 확인은 서버(/api/profile)가 다시 한다. 그래서 여기서는 즉시 답하는 getSession 을 쓴다.
+            const [{ data: { session } }, res] = await Promise.all([
+                supabase.auth.getSession(),
                 fetch('/api/profile'),
             ])
+            const user = session?.user ?? null
             setUser(user)
 
             if (user) {
