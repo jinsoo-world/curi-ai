@@ -157,10 +157,21 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                         padding: 24, cursor: 'zoom-out',
                     }}
                 >
-                    <div style={{ position: 'relative', width: 'min(86vw, 520px)', aspectRatio: '1 / 1' }}>
-                        <Image src={mentorImage} alt={mentor.name} fill sizes="520px" quality={95}
-                            style={{ objectFit: 'cover', borderRadius: 24 }} />
-                    </div>
+                    {/* next/image 의 fill 은 부모 높이가 잡히지 않으면 아무것도 안 보인다(2026-09-16 실측).
+                        큰 사진은 일반 img 로 확실히 띄운다. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src={mentorImage}
+                        alt={mentor.name}
+                        style={{
+                            width: 'min(86vw, 520px)',
+                            maxHeight: '68vh',
+                            objectFit: 'cover',
+                            borderRadius: 24,
+                            display: 'block',
+                            background: '#E8F2EC',
+                        }}
+                    />
                     <p style={{ color: '#fff', fontSize: 17, fontWeight: 800, marginTop: 18 }}>{mentor.name}</p>
                     <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 6 }}>아무 데나 누르면 닫혀요</p>
                 </div>
