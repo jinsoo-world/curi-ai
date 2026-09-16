@@ -12,6 +12,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getPublicMentorById, MENTOR_IMAGES } from '@/domains/mentor'
 import AppSidebar from '@/components/AppSidebar'
+import LinkIcon from '@/components/creator/LinkIcon'
+import { 링크정리, 주소정리, 종류추측, 보일이름, getLinkKind, type CreatorLink } from '@/domains/creator/links'
 
 type Props = { params: Promise<{ mentorId: string }> }
 
@@ -30,31 +32,36 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
 }
 
-/** 링크가 될 만한 칸을 모은다. 없는 칸은 그냥 건너뛴다 */
-function 링크모으기(m: Record<string, unknown>) {
-    const 후보: { label: string; url: string }[] = []
-    const 넣기 = (label: string, v: unknown) => {
-        if (typeof v !== 'string') return
-        const t = v.trim()
-        if (!t) return
-        const url = /^https?:\/\//.test(t) ? t : `https://${t.replace(/^\/+/, '')}`
-        try {
-            new URL(url)
-        } catch {
-            return
-        }
-        후보.push({ label, url })
+/**
+ * 링크가 될 만한 칸을 모은다. 없는 칸은 그냥 건너뛴다.
+ *
+ * 2026-09-16 = 리더가 직접 넣는 links 칸이 생겼다(대표 지시 「개인 SNS 링크도 넣을 수 있으면 좋겠다」).
+ * 옛 칸(youtube_url 등)도 그대로 읽는다 — 이미 들어 있는 값이 사라지면 안 된다.
+ */
+function 링크모으기(m: Record<string, unknown>): CreatorLink[] {
+    const 후보: CreatorLink[] = []
+    const 넣기 = (kind: string, v: unknown) => {
+        const url = 주소정리(v)
+        if (!url) return
+        if (후보.some(x => x.url === url)) return
+        후보.push({ kind: getLinkKind(kind) ? kind : 종류추측(url), url })
     }
-    넣기('유튜브', m.youtube_url)
-    넣기('인스타그램', m.instagram_url)
-    넣기('블로그', m.blog_url)
-    넣기('스레드', m.threads_url)
-    넣기('홈페이지', m.website_url ?? m.homepage_url)
+
+    // 리더가 직접 넣은 것이 먼저다
+    for (const l of 링크정리(m.links)) {
+        if (!후보.some(x => x.url === l.url)) 후보.push(l)
+    }
+
+    넣기('youtube', m.youtube_url)
+    넣기('instagram', m.instagram_url)
+    넣기('blog', m.blog_url)
+    넣기('threads', m.threads_url)
+    넣기('home', m.website_url ?? m.homepage_url)
     const sns = m.sns_links
     if (sns && typeof sns === 'object' && !Array.isArray(sns)) {
         for (const [k, v] of Object.entries(sns as Record<string, unknown>)) 넣기(k, v)
     }
-    return 후보
+    return 후보.slice(0, 8)
 }
 
 export default async function CoachPage({ params }: Props) {
@@ -137,24 +144,31 @@ export default async function CoachPage({ params }: Props) {
                             </p>
                         )}
 
+                        {/* 리더의 다른 채널 — 대표 지시 2026-09-16
+                            둥근 아이콘을 나란히 둔다. 글자 칩보다 알아보기 쉽고 자리도 적게 쓴다. */}
                         {링크.length > 0 && (
                             <div style={{ marginBottom: 22 }}>
-                                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--먹연)', marginBottom: 8 }}>가는 곳</div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--먹연)', marginBottom: 9 }}>
+                                    {m.name}님의 다른 곳
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                                     {링크.map((l) => (
                                         <a
                                             key={l.url}
                                             href={l.url}
                                             target="_blank"
                                             rel="noopener noreferrer nofollow"
+                                            title={보일이름(l)}
+                                            aria-label={보일이름(l)}
                                             style={{
-                                                display: 'inline-flex', alignItems: 'center', gap: 6,
+                                                display: 'inline-flex', alignItems: 'center', gap: 8,
                                                 background: '#fff', border: '1px solid var(--선)',
-                                                borderRadius: 999, padding: '9px 15px',
-                                                fontSize: 14, fontWeight: 700, color: 'var(--먹)', textDecoration: 'none',
+                                                borderRadius: 999, padding: '5px 14px 5px 5px',
+                                                fontSize: 14.5, fontWeight: 700, color: 'var(--먹)', textDecoration: 'none',
                                             }}
                                         >
-                                            {l.label} ↗
+                                            <LinkIcon kind={l.kind} />
+                                            {보일이름(l)}
                                         </a>
                                     ))}
                                 </div>

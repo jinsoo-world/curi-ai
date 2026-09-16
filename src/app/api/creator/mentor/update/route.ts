@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { requireMentorOwner } from '@/lib/mentor-owner'
+import { 링크정리 } from '@/domains/creator/links'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,6 +24,7 @@ export async function PATCH(req: NextRequest) {
             organization,
             personaTemplate,
             voiceSampleUrl,
+            links,
         } = body
 
         // 🔒 이 AI 의 주인만 통과. 없으면 로그인한 아무나 남의 AI 를 건드릴 수 있다.
@@ -49,6 +51,10 @@ export async function PATCH(req: NextRequest) {
         if (organization !== undefined) updateData.organization = organization
         if (personaTemplate !== undefined) updateData.persona_template = personaTemplate
         if (voiceSampleUrl !== undefined) updateData.voice_sample_url = voiceSampleUrl
+        // 개인 SNS 링크 — 대표 지시 2026-09-16
+        // ⚠️ 화면에서 한 번 걸렀더라도 서버에서 다시 거른다. 화면을 건너뛰고 직접 부를 수 있다.
+        //    javascript: 같은 주소가 통과하면 그 링크를 누른 사람 브라우저에서 코드가 돈다.
+        if (links !== undefined) updateData.links = 링크정리(links)
         if (isActive !== undefined) {
             updateData.is_active = isActive
             // 비활성화는 is_active 컬럼으로만 관리

@@ -1,5 +1,7 @@
 'use client'
 
+import LinkIcon from '@/components/creator/LinkIcon'
+import { 링크정리, 주소정리, 종류추측, getLinkKind, type CreatorLink } from '@/domains/creator/links'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -47,6 +49,8 @@ export default function CreatorEditPage() {
     const [expertise, setExpertise] = useState<string[]>([])
     const [personaTemplate, setPersonaTemplate] = useState<string | null>(null)
     const [organization, setOrganization] = useState('')
+    // 개인 SNS 링크 — 대표 지시 2026-09-16 「리더는 입력할 수 있고, 사람들은 볼 수 있고」
+    const [links, setLinks] = useState<CreatorLink[]>([])
     const [avatarFile, setAvatarFile] = useState<File | null>(null)
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
     const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null)
@@ -207,6 +211,7 @@ export default function CreatorEditPage() {
             setExpertise(m.expertise || [])
             setPersonaTemplate(m.persona_template || null)
             setOrganization(m.organization || '')
+            setLinks(링크정리(m.links))
             if (m.avatar_url) {
                 setCurrentAvatarUrl(m.avatar_url)
                 setAvatarPreview(m.avatar_url)
@@ -482,6 +487,7 @@ export default function CreatorEditPage() {
                     expertise,
                     personaTemplate,
                     organization,
+                    links: 링크정리(links),
                     ...(avatarUrl !== undefined && { avatarUrl }),
                     ...(voiceSampleUrl !== undefined && { voiceSampleUrl }),
                 }),
@@ -685,6 +691,65 @@ export default function CreatorEditPage() {
                                 onChange={e => setTitle(e.target.value)}
                                 placeholder="멘토 카드에 표시될 소개"
                             />
+                        </div>
+
+                        {/* 내 채널 링크 — 대표 지시 2026-09-16
+                            「개인 SNS 링크도 넣을 수 있으면 좋겠다. 리더는 입력할 수 있고, 사람들은 볼 수 있고」
+                            종류는 주소를 보고 알아서 고른다. 리더가 고를 것을 하나라도 줄인다. */}
+                        <div style={styles.field}>
+                            <label style={styles.label}>🔗 내 채널 링크</label>
+                            <p style={styles.hint}>
+                                블로그·인스타·유튜브 주소를 넣으면 내 AI 소개 화면에 아이콘으로 붙습니다. 최대 8개
+                            </p>
+
+                            <div style={{ display: 'grid', gap: 8 }}>
+                                {links.map((l, i) => (
+                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <LinkIcon kind={l.kind} size={30} />
+                                        <input
+                                            style={{ ...styles.input, flex: 1 }}
+                                            value={l.url}
+                                            onChange={e => {
+                                                const v = e.target.value
+                                                setLinks(이전 => 이전.map((x, j) => j === i
+                                                    ? { url: v, kind: 종류추측(주소정리(v) ?? v) }
+                                                    : x))
+                                            }}
+                                            placeholder={getLinkKind(l.kind)?.placeholder ?? 'https://'}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setLinks(이전 => 이전.filter((_, j) => j !== i))}
+                                            style={{
+                                                border: '1px solid #e4e4e7', background: '#fff', borderRadius: 10,
+                                                padding: '9px 12px', fontSize: 13, fontWeight: 700, color: '#71717a', cursor: 'pointer',
+                                            }}
+                                        >
+                                            지우기
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {links.length < 8 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setLinks(이전 => [...이전, { kind: 'home', url: '' }])}
+                                    style={{
+                                        marginTop: links.length ? 8 : 0,
+                                        border: '1px dashed #c4c4c8', background: '#fff', borderRadius: 10,
+                                        padding: '10px 14px', fontSize: 14, fontWeight: 700, color: '#3f3f46', cursor: 'pointer',
+                                    }}
+                                >
+                                    + 링크 추가
+                                </button>
+                            )}
+
+                            {links.some(l => l.url.trim() && !주소정리(l.url)) && (
+                                <p style={{ margin: '8px 0 0', fontSize: 13, color: '#dc2626', lineHeight: 1.5 }}>
+                                    주소 모양이 아닌 줄이 있습니다. 저장할 때 그 줄은 빠집니다.
+                                </p>
+                            )}
                         </div>
                     </div>
 
