@@ -11,6 +11,7 @@
  * 왼쪽에 바뀐 결과를 먼저 보여주고 오른쪽에 올릴 자리를 크게 연다.
  */
 import { useState, useEffect } from 'react'
+import MadeCount from '@/components/studio/MadeCount'
 import Image from 'next/image'
 import { PhotoDrop } from './PhotoDrop'
 
@@ -71,6 +72,7 @@ export default function PhotoHero() {
                 >
                     <span style={{ color: 'var(--진초록)' }}>AI 프로필 사진</span> 만들기
                 </h1>
+                <MadeCount 가운데 />
                 <p
                     style={{
                         textAlign: 'center',
