@@ -401,15 +401,32 @@ export default function ProfilePage() {
                                                         {displayName[0]?.toUpperCase() || '?'}
                                                     </div>
                                                 )}
-                                                {/* 프로필 사진 변경 아이콘 */}
-                                                <div style={{
-                                                    position: 'absolute', bottom: -2, right: -2,
-                                                    width: 24, height: 24, borderRadius: '50%',
-                                                    background: '#fff', border: '2px solid #e4e4e7',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    fontSize: 12,
-                                                }}>
-                                                    {uploadingPhoto ? '올리는 중' : '사진 바꾸기'}
+                                                {/* 사진 바꾸기 — 대표 지적 2026-09-16 「마이페이지에 사진바꾸기도 깨진다」
+                                                    지름 24px 동그라미 안에 여섯 글자를 넣어 글자가 세로로 쏟아졌다. 사진기 그림으로 바꾼다. */}
+                                                <div
+                                                    title={uploadingPhoto ? '올리는 중' : '사진 바꾸기'}
+                                                    aria-label={uploadingPhoto ? '올리는 중' : '사진 바꾸기'}
+                                                    style={{
+                                                        position: 'absolute', bottom: -2, right: -2,
+                                                        width: 28, height: 28, borderRadius: '50%',
+                                                        background: '#fff', border: '2px solid #e4e4e7',
+                                                        display: 'grid', placeItems: 'center',
+                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                                                    }}
+                                                >
+                                                    {uploadingPhoto ? (
+                                                        <span style={{
+                                                            width: 12, height: 12, borderRadius: '50%',
+                                                            border: '2px solid #e4e4e7', borderTopColor: '#22c55e',
+                                                            animation: 'curi-spin 0.8s linear infinite', display: 'block',
+                                                        }} />
+                                                    ) : (
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                            stroke="#52525b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                                            <path d="M3 8.5h3l1.5-2h9L18 8.5h3v11H3z" />
+                                                            <circle cx="12" cy="13.5" r="3.4" />
+                                                        </svg>
+                                                    )}
                                                 </div>
                                                 {/* 로그인 방식 뱃지 (Google/Kakao) */}
                                                 <div style={{
@@ -459,7 +476,7 @@ export default function ProfilePage() {
                                                 flexShrink: 0,
                                             }}
                                         >
-                                            ✏️ 편집
+                                            편집
                                         </button>
                                     )}
                                 </div>
@@ -487,7 +504,7 @@ export default function ProfilePage() {
                                         <div style={{ marginBottom: 20 }}>
                                             <div style={labelStyle}>성별</div>
                                             <div style={{ fontSize: 15, color: '#18181b' }}>
-                                                {profile?.gender === 'female' ? '👩 여성' : profile?.gender === 'male' ? '👨 남성' : profile?.gender === 'other' ? '😊 기타' : <span style={{ color: '#d1d5db' }}>미설정</span>}
+                                                {profile?.gender === 'female' ? '여성' : profile?.gender === 'male' ? '남성' : profile?.gender === 'other' ? '😊 기타' : <span style={{ color: '#d1d5db' }}>미설정</span>}
                                             </div>
                                         </div>
 
