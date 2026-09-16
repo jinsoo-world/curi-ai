@@ -603,18 +603,8 @@ export default function MissionsPage() {
                                     </div>
                                 )}
 
-                                <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
-                                    <Link href="/store" style={{
-                                        flex: 1, textAlign: 'center',
-                                        padding: '12px 14px',
-                                        background: '#1C2321',
-                                        borderRadius: 10, fontSize: 14, fontWeight: 600,
-                                        color: '#fff', textDecoration: 'none',
-                                        boxShadow: '0 2px 8px rgba(34,197,94,0.3)',
-                                    }}>
-                                        클로버 상점 바로가기
-                                    </Link>
-                                </div>
+                                {/* 클로버 상점 바로가기 — 대표 지시 2026-09-16 「상점은 잠시 숨겨놓자」
+                                    상점이 아직 준비 중이라 가는 길을 잠시 닫았다. 다시 열 때 이 블록을 되살린다. */}
                             </div>
                         </div>
                     )}

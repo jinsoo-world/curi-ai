@@ -760,7 +760,7 @@ export default function CreatorCreatePage() {
                                 <label style={styles.label}>AI 이름 *</label>
                                 <input
                                     style={styles.input}
-                                    placeholder="예: 커피마스터, 영어코치"
+                                    placeholder="예: 커피마스터, 영어선생님"
                                     value={name}
                                     onChange={e => setName(e.target.value)}
                                     maxLength={20}

@@ -20,7 +20,7 @@ type Props = { params: Promise<{ mentorId: string }> }
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { mentorId } = await params
     const m = await getPublicMentorById(mentorId)
-    if (!m) return { title: '코치' }
+    if (!m) return { title: '소개' }
     return {
         // 맨 위 layout 이 '— 큐리 AI' 를 붙인다. 여기서 또 붙이면 두 번 나온다(2026-09-16 실측)
         title: m.name,
@@ -87,7 +87,7 @@ export default async function CoachPage({ params }: Props) {
                     href="/mentors"
                     style={{ display: 'inline-block', fontSize: 15, fontWeight: 700, color: 'var(--먹연)', textDecoration: 'none', marginBottom: 16 }}
                 >
-                    ‹ 코치 목록
+                    ‹ 목록으로
                 </Link>
 
                 <div className="coach-top">
@@ -104,7 +104,7 @@ export default async function CoachPage({ params }: Props) {
                         {사진 ? (
                             <Image
                                 src={사진}
-                                alt={`${m.name} 코치`}
+                                alt={m.name}
                                 fill
                                 sizes="(max-width: 860px) 100vw, 420px"
                                 quality={90}

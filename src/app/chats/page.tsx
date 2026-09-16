@@ -92,7 +92,7 @@ export default function ChatsPage() {
         const 첫판: 대화[] = 산것.map((s: any) => ({
             id: s.id,
             mentor_id: s.mentor_id,
-            mentor_name: s.mentors?.name || '코치',
+            mentor_name: s.mentors?.name || '상대',
             mentor_avatar_url: s.mentors?.avatar_url || null,
             last_message_at: s.last_message_at || s.created_at,
             message_count: s.message_count || 0,
@@ -139,7 +139,7 @@ export default function ChatsPage() {
                     채팅
                 </h1>
                 <p style={{ fontSize: 'var(--글자-작)', color: 'var(--먹연)', margin: '0 0 20px', lineHeight: 1.6 }}>
-                    코치와 나눈 이야기가 여기 쌓입니다. 누르면 그 자리에서 이어서 물어볼 수 있어요.
+                    나눈 이야기가 여기 쌓입니다. 누르면 그 자리에서 이어서 물어볼 수 있어요.
                 </p>
 
                 {부르는중 && (
@@ -158,8 +158,8 @@ export default function ChatsPage() {
                 {!부르는중 && 로그인함 && 대화들.length === 0 && (
                     <빈칸
                         제목="아직 나눈 이야기가 없어요"
-                        설명="코치에게 한 가지만 물어보세요. 여기에 그대로 남아 이어집니다."
-                        단추="코치 고르러 가기"
+                        설명="한 가지만 물어보세요. 여기에 그대로 남아 이어집니다."
+                        단추="누구에게 물어볼지 고르기"
                         주소="/mentors"
                     />
                 )}

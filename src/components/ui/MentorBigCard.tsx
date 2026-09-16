@@ -25,7 +25,7 @@ export default function MentorBigCard({
     return (
         <Link
             href={href}
-            aria-label={`${name} 코치 소개 보기`}
+            aria-label={`${name} 소개 보기`}
             className="mentor-big-card"
             style={{
                 position: 'relative',
