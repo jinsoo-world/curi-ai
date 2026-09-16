@@ -21,6 +21,7 @@ import { useSticky } from '@/components/studio/useSticky'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
 import { useStickyPhoto } from '@/components/studio/useStickyPhoto'
 import { 클로버알림, 클로버썼다, 클로버되돌림, 지금클로버 } from '@/lib/clover-bus'
+import { 옵션기억, 요약만들기 } from '@/lib/photo-opts'
 
 export default function EnhancePage() {
     const router = useRouter()
@@ -76,6 +77,9 @@ export default function EnhancePage() {
             }
             set미리보기(!!data.preview)
             setResult(data.url ?? `data:image/${data.preview ? 'jpeg' : 'png'};base64,${data.imageBase64}`)
+            옵션기억(data.url, 요약만들기(
+                ENHANCE_MODES.find(x => x.id === modeId)?.label,
+            ))
             if (data.claimToken) { try { sessionStorage.setItem('curi_claim', data.claimToken) } catch {} }
             if (typeof data.balance === 'number') 클로버알림(data.balance)
             센다(data.preview ? 'photo_login_prompt' : 'photo_make_success', { tool: 'enhance' })

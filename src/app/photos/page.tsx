@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import AppSidebar from '@/components/AppSidebar'
+import { 옵션읽기 } from '@/lib/photo-opts'
 
 interface 사진 { id: string; kind: string; url: string; createdAt: string; expiresAt: string }
 
@@ -41,13 +42,18 @@ function 남은시간(expiresAt: string) {
 
 export default function Page() {
     const [사진들, set사진들] = useState<사진[] | null>(null)
+    const [옵션, set옵션] = useState<Record<string, string>>({})
 
     useEffect(() => {
         void (async () => {
             try {
                 const r = await fetch('/api/photos/list')
                 const d = await r.json()
-                set사진들(d.photos ?? [])
+                const 목록 = d.photos ?? []
+                set사진들(목록)
+                const 표: Record<string, string> = {}
+                for (const p of 목록) { const t = 옵션읽기(p.url); if (t) 표[p.url] = t }
+                set옵션(표)
             } catch {
                 set사진들([])
             }
@@ -86,6 +92,14 @@ export default function Page() {
                                 <img src={p.url} alt={이름[p.kind] ?? '만든 사진'} style={{ width: '100%', display: 'block', aspectRatio: '4 / 5', objectFit: 'cover' }} />
                                 <div style={{ padding: '10px 12px 12px' }}>
                                     <div style={{ fontSize: 15, fontWeight: 800 }}>{이름[p.kind] ?? '만든 사진'}</div>
+                                    {/* 어떤 옵션으로 만들었는지 — 대표 지시 2026-09-16 「간략 표기 더해줘」
+                                        만든 그 브라우저에만 적어둔 값이라 없을 수도 있다. 없으면 줄 자체가 안 나온다. */}
+                                    {옵션[p.url] && (
+                                        <div style={{
+                                            fontSize: 13, color: 'var(--먹연)', marginTop: 3,
+                                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                        }}>{옵션[p.url]}</div>
+                                    )}
                                     <div style={{ fontSize: 13.5, color: '#a1a1aa', marginTop: 2 }}>{남은시간(p.expiresAt)}</div>
                                     <a href={p.url} download style={{
                                         display: 'block', marginTop: 8, padding: '10px 8px', borderRadius: 11,
