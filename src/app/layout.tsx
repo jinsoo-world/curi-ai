@@ -7,6 +7,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import dynamic from 'next/dynamic'
 const CloverHunt = dynamic(() => import('@/components/CloverHunt'), { loading: () => null })
+import BottomTabs from '@/components/BottomTabs'
 import './globals.css'
 import { GUEST_CLOVERS, SIGNUP_CLOVERS, TRIAL_CLOVERS } from '@/domains/trial'
 import { TEACHER_COST } from '@/domains/studio/teacher'
@@ -245,6 +246,7 @@ export default function RootLayout({
         <SpeedInsights sampleRate={0.3} />
         {children}
         <CloverHunt />
+        <BottomTabs />
         <script
           dangerouslySetInnerHTML={{
             __html: `
