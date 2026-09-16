@@ -11,7 +11,8 @@
  */
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 interface Props {
     mentor: { id: string; name: string; title?: string }
@@ -35,6 +36,8 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
     // 대표 지시 2026-09-16 = 「코치 사진 더 키우고, 클릭하면 사진 크게 볼 수 있게 해.
     //                        말할 때는 살짝 떨리게 해서 말하는 것처럼 효과 주고」
     const [사진크게, set사진크게] = useState(false)
+    const [붙었나, set붙었나] = useState(false)
+    useEffect(() => { set붙었나(true) }, [])
 
     return (
         <header
@@ -140,8 +143,9 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                 )}
             </div>
 
-            {/* 사진 크게 보기 */}
-            {사진크게 && mentorImage && (
+            {/* 사진 크게 보기 — 띠(header) 밖에 그린다.
+                띠에 걸린 흐림 효과가 자기 안의 fixed 를 띠 높이 안에 가두기 때문이다(2026-09-16 실측). */}
+            {붙었나 && 사진크게 && mentorImage && createPortal((
                 <div
                     role="dialog"
                     aria-label={`${mentor.name} 사진`}
@@ -160,7 +164,7 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                     <p style={{ color: '#fff', fontSize: 17, fontWeight: 800, marginTop: 18 }}>{mentor.name}</p>
                     <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 6 }}>아무 데나 누르면 닫혀요</p>
                 </div>
-            )}
+            ), document.body)}
 
             <style>{`
                 /* 말하는 동안 아주 살짝 흔들린다. 중장년 화면이라 크게 흔들지 않는다(움직임 3px 이내) */
