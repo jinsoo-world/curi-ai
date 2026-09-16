@@ -633,7 +633,7 @@ export default function ProfilePage() {
                                                     background: '#fef3c7', border: '1px solid #fde68a',
                                                     fontSize: 12, color: '#92400e', lineHeight: 1.5,
                                                 }}>
-                                                    ⚠️ 수신 거부 시 즉시 효력이 발생하며, 더 이상 광고성 정보를 받지 않습니다.
+                                                    수신 거부 시 즉시 효력이 발생하며, 더 이상 광고성 정보를 받지 않습니다.
                                                 </div>
                                             )}
                                             {editMarketingConsent && !profile?.marketing_consent && (
@@ -830,7 +830,7 @@ export default function ProfilePage() {
                                             borderBottom: '1px solid #f0f0f0',
                                         }}
                                     >
-                                        <span>📊 내 AI 관리</span>
+                                        <span>내 AI 관리</span>
                                         <span style={{ color: '#d1d5db' }}>→</span>
                                     </Link>
                                     <Link
@@ -870,7 +870,7 @@ export default function ProfilePage() {
                                             borderBottom: '1px solid #f0f0f0',
                                         }}
                                     >
-                                        <span>🧾 결제 내역</span>
+                                        <span>결제 내역</span>
                                         <span style={{ color: '#d1d5db', transform: showPayments ? 'rotate(90deg)' : 'none', transition: 'transform 200ms' }}>→</span>
                                     </button>
                                     {showPayments && (
@@ -948,7 +948,7 @@ export default function ProfilePage() {
                                             textAlign: 'left',
                                         }}
                                     >
-                                        🚪 로그아웃
+                                        로그아웃
                                     </button>
                                 </div>
                             )}
