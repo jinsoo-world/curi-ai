@@ -130,7 +130,8 @@ export default function ChatsPage() {
             <MembershipBanner />
             <AppSidebar />
 
-            <div style={{ maxWidth: 640, margin: '0 auto', padding: '24px 18px 40px' }}>
+            {/* 대화방(헤더 960·입력창 900)과 폭을 맞춘다 — 대표 지시 2026-09-16 「클릭 시 들어가는 대화랑 UI 크기 싱크 맞춰」 */}
+            <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 18px 40px' }}>
                 <h1 style={{ fontSize: 'var(--글자-대)', fontWeight: 900, letterSpacing: '-0.04em', margin: '0 0 6px' }}>
                     채팅
                 </h1>
@@ -169,25 +170,25 @@ export default function ChatsPage() {
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: 13,
                                     background: '#fff', border: '1px solid var(--선)', borderRadius: 16,
-                                    padding: '14px 44px 14px 14px', textDecoration: 'none', color: 'inherit',
+                                    padding: '16px 48px 16px 16px', textDecoration: 'none', color: 'inherit',
                                 }}
                             >
                                 <span style={{
-                                    width: 48, height: 48, borderRadius: '50%', overflow: 'hidden',
+                                    width: 54, height: 54, borderRadius: '50%', overflow: 'hidden',
                                     background: 'var(--종이)', flexShrink: 0, display: 'block',
                                 }}>
                                     {/* 코치 사진은 여러 곳에서 오고 주소가 우리 저장소 밖일 수도 있다.
                                         next/image 로 바꿨더니 허용 목록 밖 주소가 통째로 안 떴다(2026-09-16). 원래대로 되돌린다. */}
                                     {사진 && (
                                         // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={사진} alt="" width={48} height={48}
+                                        <img src={사진} alt="" width={54} height={54}
                                             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                                     )}
                                 </span>
 
                                 <span style={{ flex: 1, minWidth: 0 }}>
                                     <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                                        <span style={{ fontSize: 15.5, fontWeight: 800, letterSpacing: '-0.03em' }}>
+                                        <span style={{ fontSize: 16.5, fontWeight: 800, letterSpacing: '-0.03em' }}>
                                             {s.mentor_name}
                                         </span>
                                         <span style={{ fontSize: 12.5, color: '#9AA3A0', fontWeight: 600, flexShrink: 0 }}>
@@ -196,7 +197,7 @@ export default function ChatsPage() {
                                     </span>
                                     <span style={{
                                         display: 'block', marginTop: 3,
-                                        fontSize: 14, color: 'var(--먹연)', lineHeight: 1.45,
+                                        fontSize: 14.5, color: 'var(--먹연)', lineHeight: 1.45,
                                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                     }}>
                                         {줄임(s.topic) || `이야기 ${s.message_count}개`}

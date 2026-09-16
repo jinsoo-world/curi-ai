@@ -43,7 +43,13 @@ export default function ProfilePage() {
 
     useEffect(() => {
         async function loadProfile() {
-            const { data: { user } } = await supabase.auth.getUser()
+            // 대표 지시 2026-09-16 = 「마이페이지 로딩속도는 빠르게 해」
+            // 전에는 ①내가 누군지 묻고 ②그 답을 기다렸다가 ③프로필을 불렀다. 두 번을 줄 세운 셈이다.
+            // 서버(/api/profile)는 스스로 누군지 알아내므로 둘을 같이 보낸다.
+            const [{ data: { user } }, res] = await Promise.all([
+                supabase.auth.getUser(),
+                fetch('/api/profile'),
+            ])
             setUser(user)
 
             if (user) {
@@ -51,9 +57,7 @@ export default function ProfilePage() {
                 setGoogleName(user.user_metadata?.full_name || user.user_metadata?.name || '')
                 setGoogleAvatar(user.user_metadata?.avatar_url || '')
 
-                // 서버 API로 프로필 조회
                 try {
-                    const res = await fetch('/api/profile')
                     const data = await res.json()
                     if (data.profile) {
                         setProfile(data.profile)
@@ -719,56 +723,6 @@ export default function ProfilePage() {
                                                 })}
                                             </span>
                                         </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 17 }}>
-                                            <span style={{ color: '#6b7280' }}>구독</span>
-                                            <span style={{
-                                                color: profile?.subscription_tier === 'premium' ? '#16a34a'
-                                                    : profile?.subscription_tier === 'free' ? '#3b82f6'
-                                                    : profile?.subscription_tier === 'free_trial' ? '#7c3aed'
-                                                    : '#6b7280',
-                                                fontWeight: 600,
-                                                background: profile?.subscription_tier === 'premium' ? '#f0fdf4'
-                                                    : profile?.subscription_tier === 'free' ? '#eff6ff'
-                                                    : profile?.subscription_tier === 'free_trial' ? '#f5f3ff'
-                                                    : '#f4f4f5',
-                                                borderRadius: 100,
-                                                padding: '2px 12px',
-                                            }}>
-                                                {profile?.subscription_tier === 'premium' ? '프리미엄'
-                                                    : profile?.subscription_tier === 'pro' ? '프로'
-                                                    : profile?.subscription_tier === 'free_trial' ? '무료체험'
-                                                    : 'Free'}
-                                            </span>
-                                        </div>
-                                        {/* 프리미엄 구독 상세 */}
-                                        {profile?.subscription_tier === 'premium' && (
-                                            <>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                                                    <span style={{ color: '#9ca3af' }}>구독 플랜</span>
-                                                    <span style={{ color: '#18181b', fontWeight: 600 }}>
-                                                        {subscription?.plan_type === 'annual' ? '연간 플랜' : '월간 플랜'}
-                                                    </span>
-                                                </div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                                                    <span style={{ color: '#9ca3af' }}>구독료</span>
-                                                    <span style={{ color: '#18181b', fontWeight: 600 }}>
-                                                        {subscription?.plan_type === 'annual' ? '₩99,000/년' : '₩9,900/월'}
-                                                    </span>
-                                                </div>
-                                                {subscription?.status === 'active' && (
-                                                    <button
-                                                        onClick={() => setShowCancelModal(true)}
-                                                        style={{
-                                                            padding: '10px', borderRadius: 10, border: '1px solid #e4e4e7',
-                                                            background: '#fff', color: '#6b7280', fontSize: 14,
-                                                            fontWeight: 500, cursor: 'pointer', marginTop: 4,
-                                                        }}
-                                                    >
-                                                        구독 취소
-                                                    </button>
-                                                )}
-                                            </>
-                                        )}
                                         {/* 무료 체험 사용자 */}
                                         {profile?.subscription_tier === 'free_trial' && (
                                             <>
@@ -922,16 +876,6 @@ export default function ProfilePage() {
                                                             </div>
                                                         </div>
                                                     ))}
-                                                </div>
-                                            )}
-                                            {subscription && (
-                                                <div style={{
-                                                    marginTop: 12, padding: '12px 14px', borderRadius: 10,
-                                                    background: '#f0fdf4', border: '1px solid #dcfce7',
-                                                    fontSize: 13, color: '#16a34a',
-                                                }}>
-                                                    <div style={{ fontWeight: 600, marginBottom: 4 }}>현재 구독 정보</div>
-                                                    <div>상태: {subscription.status === 'active' ? '쓰는 중' : subscription.status === 'canceled' ? '해지됨' : subscription.status}</div>
                                                 </div>
                                             )}
                                         </div>

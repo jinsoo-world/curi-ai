@@ -123,23 +123,9 @@ export async function GET() {
             }
         }
 
-        // 구독 정보도 함께 조회
-        let subscriptionInfo = null
-        try {
-            const { data: sub } = await db
-                .from('subscriptions')
-                .select('*')
-                .eq('user_id', user.id)
-                .in('status', ['active', 'canceled'])
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle()
-            if (sub) {
-                subscriptionInfo = sub
-            }
-        } catch (e) {
-            console.error('[Profile GET] subscription query error:', e)
-        }
+        // 구독 조회는 뺐다 — 대표 지시 2026-09-16 「구독은 워딩 다 빼」
+        // 지금은 정기구독 상품이 아니라 화면에 쓸 곳이 없다. 한 번의 조회가 통째로 줄어 그만큼 빨라진다.
+        const subscriptionInfo = null
 
         return new Response(JSON.stringify({
             profile: profile || null,

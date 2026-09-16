@@ -484,13 +484,15 @@ button, a[role="button"] {
   align-items: center;
   gap: 10px;
 }
+/* 대표 지적 2026-09-16 = 「충전 오른쪽 살짝 여백 + 내 프로필 여백이 있네」
+   충전 단추(높이 약 40px)가 알약(38px)보다 커서 오른쪽에 흰 틈이 남고 아바타(48px)와도 높이가 어긋났다.
+   알약·단추·아바타 높이를 한 줄로 맞춘다. */
 .app-top-credit {
-  gap: 6px;
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 38px;
-  padding: 0 6px 0 14px;
+  height: 42px;
+  padding: 0 4px 0 16px;
   border-radius: 999px;
   border: 1px solid var(--선);
   background: #fff;
@@ -503,15 +505,18 @@ button, a[role="button"] {
   color: #fff;
   font-size: 16px;
   font-weight: 800;
-  padding: 11px 18px;
+  height: 34px;
+  padding: 0 18px;
+  display: grid;
+  place-items: center;
   border-radius: 999px;
   /* 좁은 화면에서 「충전」이 「충 / 전」으로 갈라졌다 — 대표 지적 2026-09-15 「모바일로 돌려봐」 */
   white-space: nowrap;
   flex-shrink: 0;
 }
 .app-top-me {
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   border-radius: 999px;
   border: 1px solid var(--선);
   background: var(--종이);
