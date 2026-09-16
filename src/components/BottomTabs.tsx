@@ -54,6 +54,7 @@ export default function BottomTabs() {
     if (숨김.some((s) => pathname.startsWith(s))) return null
 
     return (
+        <>
         <nav className="btm-tabs" aria-label="주요 메뉴">
             {칸들.map((c) => {
                 const 지금 = c.match(pathname)
@@ -70,5 +71,32 @@ export default function BottomTabs() {
                 )
             })}
         </nav>
+                        <style>{`
+                .btm-tabs {
+                    position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+                    display: flex;
+                    background: rgba(255,255,255,0.96);
+                    -webkit-backdrop-filter: saturate(180%) blur(8px);
+                    backdrop-filter: saturate(180%) blur(8px);
+                    border-top: 1px solid var(--선, #E5E7EB);
+                    padding-bottom: env(safe-area-inset-bottom, 0px);
+                }
+                .btm-tab {
+                    flex: 1 1 0;
+                    display: flex; flex-direction: column;
+                    align-items: center; justify-content: center; gap: 3px;
+                    padding: 9px 2px 8px;
+                    text-decoration: none;
+                    color: var(--먹연, #5C6660);
+                    font-size: 11.5px; font-weight: 700; letter-spacing: -0.03em;
+                    min-height: 56px;
+                    -webkit-tap-highlight-color: transparent;
+                }
+                .btm-tab.on { color: var(--진초록, #0B4A2A); }
+                .btm-tab.on svg { stroke-width: 2.2; }
+                @media (min-width: 900px) { .btm-tabs { display: none; } }
+                @media (max-width: 899px) { body { padding-bottom: 60px; } }
+            `}</style>
+        </>
     )
 }
