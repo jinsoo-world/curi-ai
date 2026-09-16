@@ -28,7 +28,8 @@ export default function InvitePage() {
         let 살아있음 = true
         ;(async () => {
             const supabase = createClient()
-            const { data: { user } } = await supabase.auth.getUser()
+            const { data: { session } } = await supabase.auth.getSession()
+            const user = session?.user ?? null
             if (!user) {
                 if (살아있음) set오류('로그인하면 내 추천코드를 받을 수 있어요.')
                 return

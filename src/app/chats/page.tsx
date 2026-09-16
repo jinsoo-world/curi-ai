@@ -70,7 +70,10 @@ export default function ChatsPage() {
 
     const 불러오기 = useCallback(async () => {
         const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        // getUser() 는 부를 때마다 서버에 토큰을 확인하러 간다. 화면을 여는 데는 session 이면 충분하고
+        // 남의 대화가 새지 않는 것은 데이터베이스 규칙(RLS)이 막는다 — 2026-09-16
+        const { data: { session } } = await supabase.auth.getSession()
+        const user = session?.user ?? null
         set로그인함(!!user)
         if (!user) { set부르는중(false); return }
 
