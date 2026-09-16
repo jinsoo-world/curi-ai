@@ -1,7 +1,8 @@
 'use client'
 
 /**
- * 내가 만든 사진 — 전수조사 29번 「다시 올 이유가 없다」
+ * 보관함(내가 만든 사진) — 전수조사 29번 「다시 올 이유가 없다」
+ * 대표 지시 2026-09-16 = 「보관함으로 이름 바꿔」. 아래 고정 메뉴와 같은 말을 쓴다.
  *
  * 대표 지시 2026-09-15 = 「48시간 이내까지 다운 가능. 그 이후에는 없어진다고 해」
  * 사진이 남아 있으니 다시 와서 받을 수 있고, 사라지기 전에 알아볼 수도 있다.
@@ -12,15 +13,22 @@ import AppSidebar from '@/components/AppSidebar'
 
 interface 사진 { id: string; kind: string; url: string; createdAt: string; expiresAt: string }
 
+// 대표 지적 2026-09-16 = 「만든 사진이라고만 되어있네」
+// 강사 도구는 kind 를 'teacher' 로 보내는데 여기 표에는 'teacher-photo' 만 있었다.
+// 표에 없는 값이 오면 「만든 사진」으로 떨어져 이름이 사라졌다. 도구가 실제로 보내는 값을 전부 적는다.
 const 이름 : Record<string, string> = {
-    'id-photo': '증명사진',
+    teacher: '강사 프로필',
     'teacher-photo': '강사 프로필',
-    'actor-photo': '배우 프로필',
     actor: '배우 프로필',
+    'actor-photo': '배우 프로필',
+    'id-photo': '증명사진',
+    id: '증명사진',
     enhance: '화질 개선',
     thumbnail: '썸네일',
     insta: '인스타 프로필',
+    photo: '프로필 사진',
     'profile-photo': '프로필 사진',
+    reemploy: '재취업 프로필',
 }
 
 function 남은시간(expiresAt: string) {
@@ -51,7 +59,7 @@ export default function Page() {
             <AppSidebar />
             <div style={{ maxWidth: 1000, margin: '0 auto', padding: '30px 18px 90px' }}>
                 <h1 style={{ fontSize: 'var(--글자-대)', fontWeight: 900, letterSpacing: '-0.04em', margin: '0 0 8px' }}>
-                    내가 만든 사진
+                    보관함
                 </h1>
                 <p style={{ fontSize: 16, color: 'var(--먹연)', margin: '0 0 24px', lineHeight: 1.6 }}>
                     만든 사진은 48시간 동안 여기 있습니다. 그 뒤에는 지워지니 미리 내려받아 두세요.

@@ -21,13 +21,17 @@ import { 클로버듣기, 클로버알림, 클로버씀듣기 } from '@/lib/clov
 import { SIGNUP_CLOVERS } from '@/domains/trial'
 import CloverCount from '@/components/studio/CloverCount'
 
-// 대표 확정 0914 = 「만들기ㅣ대화하기ㅣ내 AI 로 해」 「내 대화는 없애 굳이 필요 없을듯」
+// 대표 지시 2026-09-16 = 「중복인 거 정리하고, 깔끔하게 직관적으로 하라」
+//                      「대화하기에 만들기가 들어가있어」
+//
+// 같은 곳으로 가는 길이 위·아래·서랍 세 군데에 흩어져 있었고, 친구초대는 서랍에만 두 번 있었다.
+// 이제 위 띠와 아래 고정 메뉴가 **같은 다섯 칸**을 말한다. 서랍에는 그 다섯에 없는 것만 둔다.
+// 「대화하기」가 첫 화면(/mentors)으로 가 사진 만들기가 열리던 것도 여기서 끊는다 — 채팅은 /chats 다.
 const 메뉴 = [
+    { label: '홈', href: '/mentors' },
     { label: '만들기', href: '/studio' },
-    { label: '대화하기', href: '/mentors' },
-    { label: '내 AI', href: '/creator/manage' },
-    // 대표 지시 0915 = 「친구초대로 이름 바꿔. 그리고 친구초대를 상단 띠에 띄워」
-    { label: '친구초대', href: '/invite' },
+    { label: '보관함', href: '/photos' },
+    { label: '채팅', href: '/chats' },
 ]
 
 export default function AppSidebar() {
@@ -197,13 +201,6 @@ export default function AppSidebar() {
                             </Link>
                         </div>
 
-                        <div>
-                            {메뉴.map((m) => (
-                                <Link key={m.href} href={m.href} className="app-top-sheet-item">{m.label}</Link>
-                            ))}
-                            <div className="app-top-sheet-line" />
-                        </div>
-
                         {추천코드 && (
                             <button
                                 type="button"
@@ -229,9 +226,9 @@ export default function AppSidebar() {
                         {/* 로그인한 분에게만 보이는 칸 — 대표 지적 2026-09-15 「로그인도 안했는데 뭔 로그아웃이야」 */}
                         {로그인함 && (
                             <>
-                                <Link href="/charge" className="app-top-sheet-item">클로버 충전</Link>
+                                <Link href="/creator/manage" className="app-top-sheet-item">내 AI</Link>
                                 <Link href="/invite" className="app-top-sheet-item">친구초대</Link>
-                                <Link href="/photos" className="app-top-sheet-item">내가 만든 사진</Link>
+                                <Link href="/charge" className="app-top-sheet-item">클로버 충전</Link>
                                 <Link href="/missions" className="app-top-sheet-item">무료로 모으기</Link>
                                 <Link href="/profile" className="app-top-sheet-item">마이페이지</Link>
                                 <div className="app-top-sheet-line" />

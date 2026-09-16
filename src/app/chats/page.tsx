@@ -1,16 +1,32 @@
 'use client'
 
+/**
+ * 채팅 — 렌트리 채팅 화면을 본떠 다시 짰다 (대표 지시 2026-09-16)
+ *
+ * 대표 지시 = 「채팅은 이 UI가 아니잖아. 렌트리처럼 만들어」 「중복인 거 정리하고, 깔끔하게 직관적으로 하라」
+ *
+ * 전에는 —
+ *   화면 절반을 초록 큰 띠가 먹고, 그 아래 코치별로 접혔다 펴지는 서랍이 또 있었다.
+ *   한 대화를 열려면 코치를 펴고(한 번) 대화를 고르고(두 번) 들어가야 했다.
+ *   지우는 단추도 코치마다 하나, 대화마다 하나 두 벌이었다.
+ *
+ * 렌트리는 —
+ *   제목 한 줄, 그 아래 방 카드가 최신순으로 쭉. 한 번 누르면 바로 들어간다.
+ *   방이 없으면 빈 화면에 「다음에 할 일」 단추가 하나 있다.
+ *
+ * 그래서 접는 서랍과 코치별 묶음을 걷고 **대화 한 개 = 카드 한 장**으로 폈다.
+ * 지우기는 대화마다 하나만 남긴다(코치별 일괄 지우기는 뺐다. 같은 일을 두 벌로 하던 것).
+ */
+
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import Image from 'next/image'
 import { MembershipBanner } from '@/components/MembershipBanner'
 import AppSidebar from '@/components/AppSidebar'
-import SpeechHero from '@/components/ui/SpeechHero'
 
-// 하드코딩 fallback
 const MENTOR_IMAGES: Record<string, string> = {
     '열정진': '/mentors/passion-jjin.png',
     '글담쌤': '/mentors/geuldam.jpg',
@@ -19,506 +35,212 @@ const MENTOR_IMAGES: Record<string, string> = {
     '신사임당': '/mentors/shin-saimdang.png',
 }
 
-interface FlatSession {
+interface 대화 {
     id: string
     mentor_id: string
     mentor_name: string
-    mentor_slug: string
     mentor_avatar_url: string | null
     last_message_at: string
-    created_at: string
     message_count: number
     topic: string
 }
 
-interface MentorGroup {
-    mentor_id: string
-    mentor_name: string
-    mentor_avatar_url: string | null
-    sessions: FlatSession[]
-    total_messages: number
-    latest_at: string
+function 지난시간(값: string) {
+    const 그때 = new Date(값).getTime()
+    const 분 = Math.floor((Date.now() - 그때) / 60000)
+    if (분 < 1) return '방금 전'
+    if (분 < 60) return `${분}분 전`
+    const 시간 = Math.floor(분 / 60)
+    if (시간 < 24) return `${시간}시간 전`
+    const 날 = Math.floor(시간 / 24)
+    if (날 < 30) return `${날}일 전`
+    if (날 < 365) return `${Math.floor(날 / 30)}개월 전`
+    return `${Math.floor(날 / 365)}년 전`
+}
+
+function 줄임(글: string, 최대 = 42) {
+    if (!글) return ''
+    const 깨끗 = 글.replace(/\n/g, ' ').replace(/\*\*/g, '').trim()
+    return 깨끗.length <= 최대 ? 깨끗 : 깨끗.slice(0, 최대) + '…'
 }
 
 export default function ChatsPage() {
-    const router = useRouter()
-    const supabase = createClient()
-    const [sessions, setSessions] = useState<FlatSession[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-    const [user, setUser] = useState<any>(null)
-    const [expandedMentors, setExpandedMentors] = useState<Set<string>>(new Set())
+    const [대화들, set대화들] = useState<대화[]>([])
+    const [부르는중, set부르는중] = useState(true)
+    const [로그인함, set로그인함] = useState<boolean | null>(null)
 
-    useEffect(() => {
-        async function loadSessions() {
-            const { data: { user } } = await supabase.auth.getUser()
-            setUser(user)
+    const 불러오기 = useCallback(async () => {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        set로그인함(!!user)
+        if (!user) { set부르는중(false); return }
 
-            if (!user) {
-                setIsLoading(false)
-                return
-            }
+        const { data } = await supabase
+            .from('chat_sessions')
+            .select('id, mentor_id, created_at, last_message_at, message_count, title, mentors ( name, avatar_url, is_active )')
+            .eq('user_id', user.id)
+            .is('deleted_at', null)
+            .gt('message_count', 0)
+            .order('last_message_at', { ascending: false, nullsFirst: false })
+            .limit(50)
 
-            const { data } = await supabase
-                .from('chat_sessions')
-                .select(`
-                    id,
-                    mentor_id,
-                    created_at,
-                    last_message_at,
-                    message_count,
-                    title,
-                    mentors ( name, slug, avatar_url, is_active )
-                `)
-                .eq('user_id', user.id)
-                .is('deleted_at', null)
-                .gt('message_count', 0)
-                .order('last_message_at', { ascending: false, nullsFirst: false })
-                .limit(50)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const 산것 = (data ?? []).filter((s: any) => s.mentors != null && s.mentors.is_active !== false)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const 첫판: 대화[] = 산것.map((s: any) => ({
+            id: s.id,
+            mentor_id: s.mentor_id,
+            mentor_name: s.mentors?.name || '코치',
+            mentor_avatar_url: s.mentors?.avatar_url || null,
+            last_message_at: s.last_message_at || s.created_at,
+            message_count: s.message_count || 0,
+            topic: !s.title || s.title.endsWith('와의 대화') ? '' : s.title,
+        }))
+        set대화들(첫판)
+        set부르는중(false)
 
-            if (data) {
-                const activeSessions = data.filter((s: any) => s.mentors != null && s.mentors.is_active !== false)
-
-                // 즉시 렌더링 (title 있으면 바로, 없으면 빈 채로)
-                const initialSessions = activeSessions.map((s: any) => {
-                    const isGenericTitle = !s.title || s.title.endsWith('와의 대화')
-                    return {
-                        id: s.id,
-                        mentor_id: s.mentor_id,
-                        mentor_name: s.mentors?.name || '멘토',
-                        mentor_slug: s.mentors?.slug || s.mentor_id,
-                        mentor_avatar_url: s.mentors?.avatar_url || null,
-                        last_message_at: s.last_message_at || s.created_at,
-                        created_at: s.created_at,
-                        message_count: s.message_count || 0,
-                        topic: isGenericTitle ? '' : s.title,
-                    }
-                })
-
-                setSessions(initialSessions)
-                setIsLoading(false)
-
-                // 자동으로 첫 번째 멘토 펼침
-                if (initialSessions.length > 0) {
-                    setExpandedMentors(new Set([initialSessions[0].mentor_id]))
-                }
-
-                // 백그라운드: title 없는 세션들의 topic 조회 (lazy fill)
-                const missingTopicSessions = initialSessions.filter(s => !s.topic)
-                if (missingTopicSessions.length > 0) {
-                    // 한 번에 최대 10개씩 병렬 조회
-                    const batchSize = 10
-                    for (let i = 0; i < missingTopicSessions.length; i += batchSize) {
-                        const batch = missingTopicSessions.slice(i, i + batchSize)
-                        const results = await Promise.all(
-                            batch.map(async (s) => {
-                                const { data: firstMsg } = await supabase
-                                    .from('messages')
-                                    .select('content')
-                                    .eq('session_id', s.id)
-                                    .eq('role', 'user')
-                                    .order('created_at', { ascending: true })
-                                    .limit(1)
-                                    .single()
-                                return { id: s.id, topic: firstMsg?.content || '' }
-                            })
-                        )
-
-                        // 점진적 업데이트
-                        setSessions(prev => prev.map(s => {
-                            const found = results.find(r => r.id === s.id)
-                            return found ? { ...s, topic: found.topic } : s
-                        }))
-                    }
-                }
-                return
-            }
-            setIsLoading(false)
+        // 제목이 없는 대화는 첫 질문을 가져와 채운다 (뒤에서 조용히)
+        const 빈것 = 첫판.filter((s) => !s.topic)
+        for (let i = 0; i < 빈것.length; i += 10) {
+            const 묶음 = 빈것.slice(i, i + 10)
+            const 결과 = await Promise.all(묶음.map(async (s) => {
+                const { data: 첫줄 } = await supabase
+                    .from('messages').select('content')
+                    .eq('session_id', s.id).eq('role', 'user')
+                    .order('created_at', { ascending: true }).limit(1).maybeSingle()
+                return { id: s.id, topic: 첫줄?.content || '' }
+            }))
+            set대화들((앞) => 앞.map((s) => {
+                const 찾음 = 결과.find((r) => r.id === s.id)
+                return 찾음 && 찾음.topic ? { ...s, topic: 찾음.topic } : s
+            }))
         }
-        loadSessions()
     }, [])
 
-    // 멘토별 그룹핑
-    const mentorGroups: MentorGroup[] = (() => {
-        const map = new Map<string, MentorGroup>()
-        for (const s of sessions) {
-            if (!map.has(s.mentor_id)) {
-                map.set(s.mentor_id, {
-                    mentor_id: s.mentor_id,
-                    mentor_name: s.mentor_name,
-                    mentor_avatar_url: s.mentor_avatar_url,
-                    sessions: [],
-                    total_messages: 0,
-                    latest_at: s.last_message_at,
-                })
-            }
-            const group = map.get(s.mentor_id)!
-            group.sessions.push(s)
-            group.total_messages += s.message_count
-            if (s.last_message_at > group.latest_at) {
-                group.latest_at = s.last_message_at
-            }
-        }
-        return Array.from(map.values()).sort((a, b) =>
-            new Date(b.latest_at).getTime() - new Date(a.latest_at).getTime()
-        )
-    })()
+    useEffect(() => { void 불러오기() }, [불러오기])
 
-    const toggleMentor = (mentorId: string) => {
-        setExpandedMentors(prev => {
-            const next = new Set(prev)
-            if (next.has(mentorId)) next.delete(mentorId)
-            else next.add(mentorId)
-            return next
-        })
-    }
-
-    const formatRelativeTime = (dateString: string) => {
-        const date = new Date(dateString)
-        const now = new Date()
-        const diffMs = now.getTime() - date.getTime()
-        const diffMin = Math.floor(diffMs / 60000)
-        const diffHours = Math.floor(diffMs / 3600000)
-        const diffDays = Math.floor(diffMs / 86400000)
-
-        if (diffMin < 1) return '방금 전'
-        if (diffMin < 60) return `${diffMin}분 전`
-        if (diffHours < 24) return `${diffHours}시간 전`
-        if (diffDays < 30) return `${diffDays}일 전`
-        if (diffDays < 365) return `${Math.floor(diffDays / 30)}개월 전`
-        return `${Math.floor(diffDays / 365)}년 전`
-    }
-
-    const truncate = (msg: string, maxLen = 40) => {
-        if (!msg) return ''
-        const clean = msg.replace(/\n/g, ' ').replace(/\*\*/g, '').trim()
-        if (clean.length <= maxLen) return clean
-        return clean.slice(0, maxLen) + '…'
-    }
-
-    const getMentorImage = (session: FlatSession) => {
-        return session.mentor_avatar_url || MENTOR_IMAGES[session.mentor_name] || null
-    }
-
-    // 개별 대화 삭제
-    const deleteSession = async (sessionId: string) => {
-        if (!confirm('이 대화를 삭제하시겠습니까?')) return
-        try {
-            const res = await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' })
-            const data = await res.json()
-            if (data.ok) {
-                setSessions(prev => prev.filter(s => s.id !== sessionId))
-            } else {
-                alert(data.error || '삭제 실패')
-            }
-        } catch {
-            alert('삭제 중 오류가 발생했습니다.')
-        }
-    }
-
-    // 멘토별 전체 대화 삭제
-    const deleteAllByMentor = async (mentorId: string, mentorName: string) => {
-        if (!confirm(`${mentorName}와의 모든 대화를 삭제하시겠습니까?`)) return
-        try {
-            const res = await fetch('/api/sessions/delete-by-mentor', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mentorId }),
-            })
-            const data = await res.json()
-            if (data.ok) {
-                setSessions(prev => prev.filter(s => s.mentor_id !== mentorId))
-            } else {
-                alert(data.error || '삭제 실패')
-            }
-        } catch {
-            alert('삭제 중 오류가 발생했습니다.')
-        }
+    const 지우기 = async (id: string) => {
+        if (!confirm('이 대화를 지울까요? 되돌릴 수 없습니다.')) return
+        const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' })
+        if (res.ok) set대화들((앞) => 앞.filter((s) => s.id !== id))
+        else alert('지우지 못했어요. 잠시 뒤 다시 해주세요.')
     }
 
     return (
-        <div style={{ minHeight: '100dvh', background: 'var(--종이)' }}>
+        <main style={{ minHeight: '100dvh', background: 'var(--종이)' }}>
+            <MembershipBanner />
             <AppSidebar />
 
-            <div className="sidebar-content" style={{  minHeight: '100dvh' }}>
-                <MembershipBanner />
+            <div style={{ maxWidth: 640, margin: '0 auto', padding: '24px 18px 40px' }}>
+                <h1 style={{ fontSize: 'var(--글자-대)', fontWeight: 900, letterSpacing: '-0.04em', margin: '0 0 6px' }}>
+                    채팅
+                </h1>
+                <p style={{ fontSize: 'var(--글자-작)', color: 'var(--먹연)', margin: '0 0 20px', lineHeight: 1.6 }}>
+                    코치와 나눈 이야기가 여기 쌓입니다. 누르면 그 자리에서 이어서 물어볼 수 있어요.
+                </p>
 
-                <SpeechHero
-                    eyebrow="다시 이어서 이야기하기"
-                    title={'지난 이야기를\n여기서 이어요'}
-                    tail={false}
-                />
+                {부르는중 && (
+                    <p style={{ fontSize: 15, color: 'var(--먹연)' }}>불러오는 중입니다</p>
+                )}
 
-                <section className="chats-section" style={{ maxWidth: 800, margin: '0 auto', padding: 'var(--틈-대) var(--틈) var(--틈-절)' }}>
+                {!부르는중 && 로그인함 === false && (
+                    <빈칸
+                        제목="로그인하면 지난 이야기가 보여요"
+                        설명="주고받은 이야기는 로그인한 분의 것만 남습니다."
+                        단추="로그인하기"
+                        주소="/login"
+                    />
+                )}
 
-                    {isLoading ? (
-                        <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
-                            <div style={{
-                                width: 32, height: 32,
-                                border: '3px solid #e4e4e7',
-                                borderTop: '3px solid #22c55e',
-                                borderRadius: '50%',
-                                animation: 'spin 1s linear infinite',
-                            }} />
-                        </div>
-                    ) : !user ? (
-                        <div style={{
-                            textAlign: 'center', padding: '60px 20px',
-                            background: '#fff', borderRadius: 20,
-                            border: '1px solid #f0f0f0',
-                        }}>
-                            <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-                            <h3 style={{ fontSize: 20, fontWeight: 700, color: '#18181b', marginBottom: 8 }}>
-                                로그인이 필요합니다
-                            </h3>
-                            <p style={{ fontSize: 16, color: '#9ca3af', marginBottom: 24 }}>
-                                대화 내역을 보려면 먼저 로그인해주세요
-                            </p>
+                {!부르는중 && 로그인함 && 대화들.length === 0 && (
+                    <빈칸
+                        제목="아직 나눈 이야기가 없어요"
+                        설명="코치에게 한 가지만 물어보세요. 여기에 그대로 남아 이어집니다."
+                        단추="코치 고르러 가기"
+                        주소="/mentors"
+                    />
+                )}
+
+                {대화들.map((s) => {
+                    const 사진 = s.mentor_avatar_url || MENTOR_IMAGES[s.mentor_name] || null
+                    return (
+                        <div key={s.id} style={{ position: 'relative', marginBottom: 10 }}>
                             <Link
-                                href="/login"
+                                href={`/chat/${s.mentor_id}?session=${s.id}`}
                                 style={{
-                                    display: 'inline-block',
-                                    padding: '14px 32px',
-                                    borderRadius: 14,
-                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                                    color: '#fff', textDecoration: 'none',
-                                    fontWeight: 600, fontSize: 16,
-                                    boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
+                                    display: 'flex', alignItems: 'center', gap: 13,
+                                    background: '#fff', border: '1px solid var(--선)', borderRadius: 16,
+                                    padding: '14px 44px 14px 14px', textDecoration: 'none', color: 'inherit',
                                 }}
                             >
-                                로그인하기
-                            </Link>
-                        </div>
-                    ) : sessions.length === 0 ? (
-                        <div style={{
-                            textAlign: 'center', padding: '60px 20px',
-                            background: '#fff', borderRadius: 20,
-                            border: '1px solid #f0f0f0',
-                        }}>
-                            <div style={{ fontSize: 48, marginBottom: 16 }}>💬</div>
-                            <h3 style={{ fontSize: 20, fontWeight: 700, color: '#18181b', marginBottom: 8 }}>
-                                아직 대화가 없어요
-                            </h3>
-                            <p style={{ fontSize: 16, color: '#9ca3af', marginBottom: 24 }}>
-                                AI를 선택하고 첫 대화를 시작해보세요!
-                            </p>
-                            <Link
-                                href="/mentors"
-                                style={{
-                                    display: 'inline-block',
-                                    padding: '14px 32px',
-                                    borderRadius: 14,
-                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                                    color: '#fff', textDecoration: 'none',
-                                    fontWeight: 600, fontSize: 16,
-                                    boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
-                                }}
-                            >
-                                AI 둘러보기
-                            </Link>
-                        </div>
-                    ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            {mentorGroups.map((group) => {
-                                const isExpanded = expandedMentors.has(group.mentor_id)
-                                const mentorImg = group.mentor_avatar_url || MENTOR_IMAGES[group.mentor_name] || null
+                                <span style={{
+                                    width: 48, height: 48, borderRadius: '50%', overflow: 'hidden',
+                                    background: 'var(--종이)', flexShrink: 0, position: 'relative',
+                                }}>
+                                    {사진 && <Image src={사진} alt="" fill sizes="48px" style={{ objectFit: 'cover' }} />}
+                                </span>
 
-                                return (
-                                    <div key={group.mentor_id} style={{
-                                        background: '#fff', borderRadius: 16,
-                                        border: '1px solid #f0f0f0',
-                                        overflow: 'hidden',
-                                        transition: 'box-shadow 150ms',
+                                <span style={{ flex: 1, minWidth: 0 }}>
+                                    <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                                        <span style={{ fontSize: 15.5, fontWeight: 800, letterSpacing: '-0.03em' }}>
+                                            {s.mentor_name}
+                                        </span>
+                                        <span style={{ fontSize: 12.5, color: '#9AA3A0', fontWeight: 600, flexShrink: 0 }}>
+                                            {지난시간(s.last_message_at)}
+                                        </span>
+                                    </span>
+                                    <span style={{
+                                        display: 'block', marginTop: 3,
+                                        fontSize: 14, color: 'var(--먹연)', lineHeight: 1.45,
+                                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                     }}>
-                                        {/* 멘토 헤더 — 클릭하면 펼침/접힘 */}
-                                        <div
-                                            onClick={() => toggleMentor(group.mentor_id)}
-                                            style={{
-                                                display: 'flex', alignItems: 'center', gap: 14,
-                                                padding: '14px 18px',
-                                                cursor: 'pointer',
-                                                transition: 'background 150ms',
-                                            }}
-                                        >
-                                            {mentorImg ? (
-                                                <img
-                                                    src={mentorImg}
-                                                    alt={group.mentor_name}
-                                                    style={{
-                                                        width: 44, height: 44,
-                                                        borderRadius: '50%', objectFit: 'cover',
-                                                        flexShrink: 0,
-                                                        border: '2px solid #f0fdf4',
-                                                    }}
-                                                />
-                                            ) : (
-                                                <img
-                                                    src="/logo.png"
-                                                    alt="큐리 AI"
-                                                    style={{
-                                                        width: 44, height: 44,
-                                                        borderRadius: '50%', objectFit: 'cover',
-                                                        flexShrink: 0,
-                                                        border: '2px solid #f0fdf4',
-                                                    }}
-                                                />
-                                            )}
+                                        {줄임(s.topic) || `이야기 ${s.message_count}개`}
+                                    </span>
+                                </span>
+                            </Link>
 
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                    <span style={{ fontSize: 15, fontWeight: 700, color: '#18181b' }}>
-                                                        {group.mentor_name}
-                                                    </span>
-                                                    <span style={{
-                                                        fontSize: 11, color: '#9ca3af',
-                                                        background: '#f5f5f5', borderRadius: 6,
-                                                        padding: '2px 6px', fontWeight: 500,
-                                                    }}>
-                                                        {group.sessions.length}개 대화
-                                                    </span>
-                                                </div>
-                                                <div style={{ fontSize: 12, color: '#b0b8c1', marginTop: 2 }}>
-                                                    마지막 대화 {formatRelativeTime(group.latest_at)}
-                                                </div>
-                                            </div>
-
-                                            {/* 펼침 화살표 */}
-                                            <span style={{
-                                                fontSize: 14, color: '#b0b8c1',
-                                                transition: 'transform 200ms',
-                                                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                                                flexShrink: 0,
-                                            }}>
-                                                ▼
-                                            </span>
-
-                                            {/* 멘토 전체 대화 삭제 버튼 */}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    deleteAllByMentor(group.mentor_id, group.mentor_name)
-                                                }}
-                                                title="모든 대화 삭제"
-                                                style={{
-                                                    width: 32, height: 32, borderRadius: 8,
-                                                    background: 'none', border: 'none',
-                                                    color: '#d1d5db', fontSize: 14,
-                                                    cursor: 'pointer', display: 'flex',
-                                                    alignItems: 'center', justifyContent: 'center',
-                                                    flexShrink: 0, transition: 'all 150ms',
-                                                }}
-                                                onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fef2f2' }}
-                                                onMouseLeave={e => { e.currentTarget.style.color = '#d1d5db'; e.currentTarget.style.background = 'none' }}
-                                            >
-                                                🗑
-                                            </button>
-                                        </div>
-
-                                        {/* 하위 세션 리스트 */}
-                                        {isExpanded && (
-                                            <div style={{
-                                                borderTop: '1px solid #f0f0f0',
-                                                padding: '4px 0',
-                                            }}>
-                                                {group.sessions.map((session) => (
-                                                    <Link
-                                                        key={session.id}
-                                                        href={`/chat/${session.mentor_id}?session=${session.id}`}
-                                                        className="session-row"
-                                                        style={{
-                                                            display: 'flex', alignItems: 'center',
-                                                            gap: 10,
-                                                            padding: '10px 18px 10px 76px',
-                                                            textDecoration: 'none', color: 'inherit',
-                                                            transition: 'background 100ms',
-                                                        }}
-                                                    >
-                                                        <div style={{
-                                                            width: 6, height: 6, borderRadius: '50%',
-                                                            background: '#d1d5db', flexShrink: 0,
-                                                        }} />
-                                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                                            <div style={{
-                                                                fontSize: 14, color: '#374151',
-                                                                overflow: 'hidden', textOverflow: 'ellipsis',
-                                                                whiteSpace: 'nowrap', lineHeight: 1.4,
-                                                            }}>
-                                                                {truncate(session.topic || '새 대화')}
-                                                            </div>
-                                                        </div>
-                                                        <span style={{
-                                                            fontSize: 12, color: '#b0b8c1',
-                                                            flexShrink: 0, whiteSpace: 'nowrap',
-                                                        }}>
-                                                            {formatRelativeTime(session.last_message_at)}
-                                                        </span>
-                                                        <span style={{
-                                                            fontSize: 11, color: '#9ca3af',
-                                                            background: '#f5f5f5', borderRadius: 6,
-                                                            padding: '2px 7px', fontWeight: 500,
-                                                            flexShrink: 0,
-                                                        }}>
-                                                            💬 {session.message_count}
-                                                        </span>
-                                                        {/* 개별 대화 삭제 버튼 */}
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.preventDefault()
-                                                                e.stopPropagation()
-                                                                deleteSession(session.id)
-                                                            }}
-                                                            title="이 대화 삭제"
-                                                            className="delete-session-btn"
-                                                            style={{
-                                                                width: 28, height: 28, borderRadius: 6,
-                                                                background: 'none', border: 'none',
-                                                                color: '#d1d5db', fontSize: 12,
-                                                                cursor: 'pointer', display: 'flex',
-                                                                alignItems: 'center', justifyContent: 'center',
-                                                                flexShrink: 0, opacity: 0,
-                                                                transition: 'all 150ms',
-                                                            }}
-                                                            onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fef2f2' }}
-                                                            onMouseLeave={e => { e.currentTarget.style.color = '#d1d5db'; e.currentTarget.style.background = 'none' }}
-                                                        >
-                                                            ✕
-                                                        </button>
-                                                    </Link>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )
-                            })}
+                            <button
+                                type="button"
+                                onClick={() => 지우기(s.id)}
+                                aria-label={`${s.mentor_name}와 나눈 이 이야기 지우기`}
+                                style={{
+                                    position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                                    width: 32, height: 32, borderRadius: '50%',
+                                    border: 0, background: 'transparent', cursor: 'pointer',
+                                    color: '#C4CBC8', fontSize: 17, lineHeight: 1,
+                                }}
+                            >
+                                ×
+                            </button>
                         </div>
-                    )}
-                </section>
+                    )
+                })}
             </div>
+        </main>
+    )
+}
 
-            <style>{`
-                @keyframes spin { to { transform: rotate(360deg) } }
-                .session-row:hover {
-                    background: #f9fafb !important;
-                }
-                .session-row:hover .delete-session-btn {
-                    opacity: 1 !important;
-                }
-                @media (max-width: 768px) {
-                    .sidebar-content {
-                        margin-left: 0 !important;
-                        padding-bottom: 72px;
-                        padding-top: 48px;
-                    }
-                    .chats-section {
-                        padding: 16px 16px 24px !important;
-                    }
-                    .session-row {
-                        padding: 10px 14px 10px 18px !important;
-                    }
-                    .delete-session-btn {
-                        opacity: 1 !important;
-                    }
-                }
-            `}</style>
+/** 아무것도 없을 때 — 렌트리는 빈 화면에도 다음 할 일을 하나 놓는다 */
+function 빈칸({ 제목, 설명, 단추, 주소 }: { 제목: string; 설명: string; 단추: string; 주소: string }) {
+    return (
+        <div style={{
+            background: '#fff', border: '1px solid var(--선)', borderRadius: 18,
+            padding: '44px 24px 40px', textAlign: 'center',
+        }}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#C4CBC8" strokeWidth="1.6"
+                strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 14 }} aria-hidden>
+                <path d="M21 12a8 8 0 0 1-8 8H7l-4 3V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z" />
+            </svg>
+            <p style={{ fontSize: 17, fontWeight: 800, margin: '0 0 7px' }}>{제목}</p>
+            <p style={{ fontSize: 14.5, color: 'var(--먹연)', margin: '0 0 20px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                {설명}
+            </p>
+            <Link href={주소} style={{
+                display: 'inline-block', background: 'var(--먹)', color: '#fff',
+                padding: '13px 26px', borderRadius: 999, fontWeight: 800, fontSize: 15.5, textDecoration: 'none',
+            }}>
+                {단추}
+            </Link>
         </div>
     )
 }

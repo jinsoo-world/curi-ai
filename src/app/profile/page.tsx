@@ -755,28 +755,6 @@ export default function ProfilePage() {
                                                         {subscription?.plan_type === 'annual' ? '₩99,000/년' : '₩9,900/월'}
                                                     </span>
                                                 </div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                                                    <span style={{ color: '#9ca3af' }}>다음 결제일</span>
-                                                    <span style={{ color: '#18181b', fontWeight: 500 }}>
-                                                        {subscription?.current_period_end
-                                                            ? new Date(subscription.current_period_end).toLocaleDateString('ko-KR', {
-                                                                year: 'numeric', month: 'long', day: 'numeric'
-                                                            })
-                                                            : '-'
-                                                        }
-                                                    </span>
-                                                </div>
-                                                {subscription?.status === 'canceled' && (
-                                                    <div style={{
-                                                        padding: '10px 14px', borderRadius: 10,
-                                                        background: '#fef3c7', border: '1px solid #fde68a',
-                                                        fontSize: 13, color: '#92400e', marginTop: 4,
-                                                    }}>
-                                                        ⚠️ 구독 취소 예정 — {subscription?.current_period_end
-                                                            ? new Date(subscription.current_period_end).toLocaleDateString('ko-KR')
-                                                            : ''} 까지 이용 가능
-                                                    </div>
-                                                )}
                                                 {subscription?.status === 'active' && (
                                                     <button
                                                         onClick={() => setShowCancelModal(true)}
@@ -953,8 +931,7 @@ export default function ProfilePage() {
                                                     fontSize: 13, color: '#16a34a',
                                                 }}>
                                                     <div style={{ fontWeight: 600, marginBottom: 4 }}>현재 구독 정보</div>
-                                                    <div>상태: {subscription.status === 'active' ? '쓰는 중' : subscription.status === 'canceled' ? '취소 예정' : subscription.status}</div>
-                                                    <div>다음 결제일: {new Date(subscription.current_period_end).toLocaleDateString('ko-KR')}</div>
+                                                    <div>상태: {subscription.status === 'active' ? '쓰는 중' : subscription.status === 'canceled' ? '해지됨' : subscription.status}</div>
                                                 </div>
                                             )}
                                         </div>
