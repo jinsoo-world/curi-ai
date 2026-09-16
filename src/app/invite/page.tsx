@@ -69,7 +69,7 @@ export default function InvitePage() {
             <AppSidebar />
             <div style={{ maxWidth: 640, margin: '0 auto', padding: '24px 18px 120px' }}>
                 <h1 style={{ fontSize: 'var(--글자-대)', fontWeight: 900, letterSpacing: '-0.04em', margin: '0 0 8px' }}>
-                    친구 부르기
+                    친구초대
                 </h1>
                 <p style={{ fontSize: 'var(--글자-본문)', color: 'var(--먹연)', margin: '0 0 20px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
                     내 주소로 들어온 친구가 휴대폰 인증을 마치면 {REFERRER_REWARD}클로버를 드려요. 몇 명이든 괜찮습니다.

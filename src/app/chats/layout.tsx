@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-    title: '대화 목록',
+    title: '채팅',
     description: 'AI와 나눈 대화를 다시 확인하세요. AI별 대화 히스토리를 한눈에.',
     robots: { index: false, follow: false },
     openGraph: {
