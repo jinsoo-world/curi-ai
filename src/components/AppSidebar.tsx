@@ -55,7 +55,9 @@ export default function AppSidebar() {
 
     const 불러오기 = useCallback(async () => {
         const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        // 화면을 여는 신원 확인은 getSession 으로 — getUser 는 부를 때마다 서버에 다녀온다(2026-09-16 실측 수 초)
+        const { data: { session } } = await supabase.auth.getSession()
+        const user = session?.user ?? null
 
         // 손님도 클로버를 갖는다 — 대표 확정 2026-09-15 「클로버 60개를 주면 되잖아」
         // 계정이 없으니 서버가 「하루 동안 쓴 값」을 빼서 알려준다.

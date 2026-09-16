@@ -18,7 +18,9 @@ export function useGuest(): { 손님: boolean; 확인중: boolean } {
         let 살아있음 = true
         void (async () => {
             try {
-                const { data: { user } } = await createClient().auth.getUser()
+                // 화면을 여는 신원 확인은 getSession 으로 — getUser 는 부를 때마다 서버에 다녀온다(2026-09-16 실측 수 초)
+                const { data: { session } } = await createClient().auth.getSession()
+                const user = session?.user ?? null
                 if (!살아있음) return
                 set손님(!user)
             } catch {

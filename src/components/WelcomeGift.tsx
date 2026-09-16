@@ -38,7 +38,9 @@ export default function WelcomeGift() {
             }
 
             const supabase = createClient()
-            const { data: { user } } = await supabase.auth.getUser()
+            // 화면을 여는 신원 확인은 getSession 으로 — getUser 는 부를 때마다 서버에 다녀온다(2026-09-16 실측 수 초)
+            const { data: { session } } = await supabase.auth.getSession()
+            const user = session?.user ?? null
             if (!살아있음) return
             if (user) return          // 로그인한 사람에게는 안 띄운다
 

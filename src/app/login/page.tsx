@@ -44,8 +44,8 @@ export default function LoginPage() {
 
         // 이미 로그인 상태면 리다이렉트
         const supabase = createClient()
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            if (user) {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user) {
                 router.replace('/mentors')
             }
         })

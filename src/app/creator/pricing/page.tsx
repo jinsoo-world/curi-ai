@@ -26,7 +26,7 @@ export default function CreatorPricingPage() {
 
     useEffect(() => {
         const supabase = createClient()
-        supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null))
+        supabase.auth.getSession().then(({ data }) => setUserId(data.session?.user?.id ?? null))
     }, [])
 
     const handleSubscribe = async () => {

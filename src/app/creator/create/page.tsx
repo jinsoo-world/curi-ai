@@ -157,8 +157,8 @@ export default function CreatorCreatePage() {
 
     useEffect(() => {
         const supabase = createClient()
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            setIsLoggedIn(!!user)
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setIsLoggedIn(!!session?.user)
         })
     }, [])
 

@@ -125,9 +125,9 @@ export default function CloverHunt() {
     // 로그인 여부 확인 (비회원이면 클로버 노출 안 함)
     useEffect(() => {
         const supabase = createClient()
-        supabase.auth.getUser().then(({ data }) => {
-            setIsLoggedIn(!!data.user)
-            if (data.user) loadStatus()
+        supabase.auth.getSession().then(({ data }) => {
+            setIsLoggedIn(!!data.session?.user)
+            if (data.session?.user) loadStatus()
         })
     }, [loadStatus])
 

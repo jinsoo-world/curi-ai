@@ -40,8 +40,8 @@ export default function ChargePage() {
 
     useEffect(() => {
         const supabase = createClient()
-        supabase.auth.getUser().then(async ({ data }) => {
-            const uid = data.user?.id ?? null
+        supabase.auth.getSession().then(async ({ data }) => {
+            const uid = data.session?.user?.id ?? null
             setUserId(uid)
             if (uid) {
                 const { data: row } = await supabase.from('users').select('clovers').eq('id', uid).single()
