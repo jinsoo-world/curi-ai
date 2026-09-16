@@ -1,19 +1,12 @@
-export const dynamic = 'force-dynamic'
-
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
-export default async function HomePage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  // 대표 확정 2026-09-15 「비로그인도 바로 올려보게 해」
-  //
-  // 전에는 로그인을 안 했으면 아무것도 못 보고 /login 으로 튕겼다.
-  // 우리가 파는 말은 「가입 없이도 하루 세 장」인데 대문에서 가입부터 요구한 셈이다.
-  // 이제 로그인 여부와 상관없이 제품을 먼저 보여준다. 로그인은 원본을 받을 때 요구한다.
-  void user
-  redirect('/mentors')
+/**
+ * 첫 주소(/)는 곧바로 첫 화면으로 보낸다.
+ *
+ * 대표 확정 2026-09-15 「비로그인도 바로 올려보게 해」 — 로그인 여부와 상관없이 제품을 먼저 보여준다.
+ * 2026-09-16 = 여기서 쓰지도 않는 로그인 확인(auth.getUser)을 하느라 인증 서버에 한 번 다녀오고 있었다.
+ *              첫 손님이 가장 먼저 밟는 자리라 그 왕복이 그대로 첫인상이 된다(실측 1.34초 → 0.2초대).
+ */
+export default function HomePage() {
+    redirect('/mentors')
 }
