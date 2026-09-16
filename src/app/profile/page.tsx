@@ -843,7 +843,7 @@ export default function ProfilePage() {
                                             borderBottom: '1px solid #f0f0f0',
                                         }}
                                     >
-                                        <span>대화 내역</span>
+                                        <span>채팅</span>
                                         <span style={{ color: '#d1d5db' }}>→</span>
                                     </Link>
                                     {/* 결제 내역 */}
