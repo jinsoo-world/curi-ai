@@ -34,6 +34,13 @@ export default function AppSidebar() {
     const pathname = usePathname()
     const router = useRouter()
     const [열림, set열림] = useState(false)
+
+    // 아래 고정 메뉴의 「더보기」가 이 서랍을 연다 (렌트리 참고 2026-09-16)
+    useEffect(() => {
+        const 열기 = () => set열림(true)
+        window.addEventListener('curi:open-menu', 열기)
+        return () => window.removeEventListener('curi:open-menu', 열기)
+    }, [])
     const [잔액, set잔액] = useState<number | null>(null)
     const [사진, set사진] = useState<string | null>(null)
     const [이름, set이름] = useState<string | null>(null)

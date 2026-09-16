@@ -16,6 +16,13 @@ import { usePathname } from 'next/navigation'
 
 type 칸 = { label: string; href: string; icon: React.ReactNode; match: (p: string) => boolean }
 
+/** 맨 끝 「더보기」 — 렌트리처럼 오른쪽 서랍을 연다. AppSidebar 가 이 신호를 듣는다. */
+const 더보기아이콘 = (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+        <path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" />
+    </svg>
+)
+
 const 선 = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
 
 const 칸들: 칸[] = [
@@ -30,19 +37,14 @@ const 칸들: 칸[] = [
         icon: (<svg width="22" height="22" viewBox="0 0 24 24" {...선}><rect x="3" y="5" width="18" height="15" rx="3" /><circle cx="12" cy="12.5" r="3.5" /><path d="M8 5l1.2-2h5.6L16 5" /></svg>),
     },
     {
-        label: '내 사진', href: '/photos',
+        label: '보관함', href: '/photos',
         match: (p) => p.startsWith('/photos'),
         icon: (<svg width="22" height="22" viewBox="0 0 24 24" {...선}><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M3 16l4.5-4.5 3.5 3.5 3-3L21 17" /><circle cx="8.5" cy="9" r="1.4" /></svg>),
     },
     {
-        label: '대화', href: '/chats',
+        label: '채팅', href: '/chats',
         match: (p) => p.startsWith('/chats') || p.startsWith('/chat/'),
         icon: (<svg width="22" height="22" viewBox="0 0 24 24" {...선}><path d="M21 12a8 8 0 0 1-8 8H7l-4 3V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z" /></svg>),
-    },
-    {
-        label: '내 정보', href: '/profile',
-        match: (p) => p.startsWith('/profile') || p.startsWith('/invite') || p.startsWith('/missions'),
-        icon: (<svg width="22" height="22" viewBox="0 0 24 24" {...선}><circle cx="12" cy="8.5" r="3.6" /><path d="M4.5 20c.8-3.9 3.9-6 7.5-6s6.7 2.1 7.5 6" /></svg>),
     },
 ]
 
@@ -70,6 +72,16 @@ export default function BottomTabs() {
                     </Link>
                 )
             })}
+
+            <button
+                type="button"
+                className="btm-tab"
+                onClick={() => window.dispatchEvent(new Event('curi:open-menu'))}
+                aria-label="더보기 메뉴 열기"
+            >
+                {더보기아이콘}
+                <span>더보기</span>
+            </button>
         </nav>
                         <style>{`
                 .btm-tabs {
@@ -82,6 +94,7 @@ export default function BottomTabs() {
                     padding-bottom: env(safe-area-inset-bottom, 0px);
                 }
                 .btm-tab {
+                    appearance: none; border: 0; background: transparent; cursor: pointer; font-family: inherit;
                     flex: 1 1 0;
                     display: flex; flex-direction: column;
                     align-items: center; justify-content: center; gap: 3px;
