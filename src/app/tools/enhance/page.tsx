@@ -68,7 +68,7 @@ export default function EnhancePage() {
             const res = await fetch('/api/tools/enhance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64: base64, mimeType, modeId, 표식: 브라우저표식() }),
+                body: JSON.stringify({ imageBase64: base64, mimeType, modeId, 표식: 브라우저표식(), 옵션요약: 요약만들기(ENHANCE_MODES.find(x => x.id === modeId)?.label) }),
             })
             const data = await res.json()
             if (!res.ok) {

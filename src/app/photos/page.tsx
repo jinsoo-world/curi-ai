@@ -12,7 +12,7 @@ import Link from 'next/link'
 import AppSidebar from '@/components/AppSidebar'
 import { 옵션읽기 } from '@/lib/photo-opts'
 
-interface 사진 { id: string; kind: string; url: string; createdAt: string; expiresAt: string }
+interface 사진 { id: string; kind: string; url: string; createdAt: string; expiresAt: string; options?: string | null }
 
 // 대표 지적 2026-09-16 = 「만든 사진이라고만 되어있네」
 // 강사 도구는 kind 를 'teacher' 로 보내는데 여기 표에는 'teacher-photo' 만 있었다.
@@ -52,7 +52,8 @@ export default function Page() {
                 const 목록 = d.photos ?? []
                 set사진들(목록)
                 const 표: Record<string, string> = {}
-                for (const p of 목록) { const t = 옵션읽기(p.url); if (t) 표[p.url] = t }
+                // 서버(tool_photos.options)가 먼저다. 없으면 이 브라우저에 적어둔 것으로 채운다
+                for (const p of 목록) { const t = p.options || 옵션읽기(p.url); if (t) 표[p.url] = t }
                 set옵션(표)
             } catch {
                 set사진들([])

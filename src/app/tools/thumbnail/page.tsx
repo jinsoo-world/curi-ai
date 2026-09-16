@@ -50,7 +50,7 @@ export default function ThumbnailPage() {
             const res = await fetch('/api/tools/thumbnail', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ placeId, lookId, title: 제목, subtitle: 부제, 표식: 브라우저표식() }),
+                body: JSON.stringify({ placeId, lookId, title: 제목, subtitle: 부제, 표식: 브라우저표식(), 옵션요약: 요약만들기(THUMB_PLACES.find(x => x.id === placeId)?.label, THUMB_LOOKS.find(x => x.id === lookId)?.label) }),
             })
             const data = await res.json()
             if (!res.ok) {

@@ -13,7 +13,7 @@ export async function GET() {
     const admin = createAdminClient()
     const { data: rows } = await admin
         .from('tool_photos')
-        .select('id, kind, path, created_at, expires_at')
+        .select('id, kind, path, created_at, expires_at, options')
         .eq('user_id', user.id)
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
@@ -22,6 +22,7 @@ export async function GET() {
     const photos = (rows ?? []).map((r) => ({
         id: r.id,
         kind: r.kind,
+        options: r.options ?? null,
         createdAt: r.created_at,
         expiresAt: r.expires_at,
         url: admin.storage.from('tool-photos').getPublicUrl(r.path).data.publicUrl,

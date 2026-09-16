@@ -36,6 +36,8 @@ export async function 사진보관(
     kind: string,
     userId: string | null,
     ext: 'png' | 'jpeg' = 'png',
+    /** 어떤 옵션으로 만들었나 — 보관함에 한 줄로 보여준다 (대표 지시 2026-09-16) */
+    options?: string | null,
 ): Promise<보관결과 | null> {
     try {
         const admin = createAdminClient()
@@ -61,6 +63,7 @@ export async function 사진보관(
                 user_id: userId,
                 kind,
                 path,
+                options: options || null,
                 claim_token: claimToken,
                 expires_at: new Date(언제 + 보관시간 * 3600_000).toISOString(),
             })

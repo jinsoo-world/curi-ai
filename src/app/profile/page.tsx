@@ -284,7 +284,10 @@ export default function ProfilePage() {
 
                 {/* Content */}
                 <section style={{ maxWidth: 600, margin: '0 auto', padding: '40px 24px' }}>
-                    {isLoading ? (
+                    {/* 대표 지시 2026-09-16 「속도 1/10으로 다시 줄여」
+                        서버 답을 다 받고 나서야 그리던 것을, 내 브라우저가 이미 아는 것(로그인·이름·메일·가입일)으로
+                        **먼저 그리고** 나머지를 채운다. 회색 뼈대는 아직 아무것도 모를 때만 잠깐 보인다. */}
+                    {isLoading && !user ? (
                         <div>
                             {/* 프로필 카드 스켈레톤 */}
                             <div style={{

@@ -30,7 +30,9 @@ export async function POST(req: NextRequest) {
         const { data: { user } } = await supabase.auth.getUser()
         const 손님 = !user
 
-        const { imageBase64, mimeType, modeId, 표식: 받은표식 } = await req.json()
+        const { imageBase64, mimeType, modeId, 표식: 받은표식, 옵션요약: 받은옵션 } = await req.json()
+        // 보관함에 보여줄 「어떤 옵션으로 만들었나」 — 화면이 만들어 보낸다 (대표 지시 2026-09-16)
+        const 옵션요약: string | null = typeof 받은옵션 === 'string' ? 받은옵션.slice(0, 120) : null
         if (typeof imageBase64 !== 'string' || imageBase64.length < 100) {
             return NextResponse.json({ error: '사진을 올려주세요.' }, { status: 400 })
         }
@@ -99,7 +101,7 @@ export async function POST(req: NextRequest) {
 
             const 원본64 = (imgPart as { inlineData: { data: string } }).inlineData.data
 
-            const 보관 = await 사진보관(원본64, 'enhance', 손님 ? null : user!.id)
+            const 보관 = await 사진보관(원본64, 'enhance', 손님 ? null : user!.id, 'png', 옵션요약)
 
             if (손님) {
                 return NextResponse.json({
