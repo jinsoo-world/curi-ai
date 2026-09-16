@@ -136,6 +136,29 @@ export default function UsersPage() {
         )
     }
 
+
+    // 클로버 주기 (관리자) — 몇 개 줄지 묻고, 서버가 넣고 기록까지 남긴다
+    async function 클로버주기(userId: string, 이름: string) {
+        const 답 = window.prompt(`${이름} 님께 클로버를 몇 개 드릴까요? (숫자만)`, '500')
+        if (!답) return
+        const 수 = Number(답.replace(/[^0-9]/g, ''))
+        if (!수) { alert('숫자만 넣어주세요.'); return }
+        const 이유 = window.prompt('무슨 일로 드리는지 한 줄 적어주세요(기록에 남습니다).', '') ?? ''
+        try {
+            const r = await fetch(`/api/admin/users/${userId}/clovers`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: 수, reason: 이유 }),
+            })
+            const d = await r.json()
+            if (!r.ok) { alert(d.error || '넣지 못했어요.'); return }
+            alert(`${이름} 님 ${d.before.toLocaleString()} → ${d.after.toLocaleString()} 클로버`)
+            location.reload()
+        } catch {
+            alert('넣지 못했어요. 잠시 뒤 다시 해주세요.')
+        }
+    }
+
     return (
         <div>
             {/* 헤더 */}
@@ -324,6 +347,20 @@ export default function UsersPage() {
                                 </td>
                                 <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', textAlign: 'center', color: '#16a34a' }}>
                                     {(user.clovers || 0).toLocaleString()}
+                                    {/* 클로버 주기 — 대표 지시 2026-09-16 「미니린님만 조금 더 늘려줘」
+                                        전에는 데이터베이스를 손으로 고쳐야 했다. 이제 여기서 준다(기록도 같이 남는다). */}
+                                    <button
+                                        type="button"
+                                        onClick={() => void 클로버주기(user.id, user.display_name || user.email)}
+                                        title="클로버 주기"
+                                        style={{
+                                            marginLeft: 6, border: '1px solid #d1fae5', background: '#f0fdf4',
+                                            color: '#16a34a', borderRadius: 7, fontSize: 11, fontWeight: 800,
+                                            padding: '2px 7px', cursor: 'pointer',
+                                        }}
+                                    >
+                                        + 주기
+                                    </button>
                                 </td>
                                 <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', textAlign: 'center', color: '#1e293b' }}>
                                     {(user as UserData).created_ai_count || 0}
