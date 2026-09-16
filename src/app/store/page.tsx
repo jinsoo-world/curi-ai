@@ -138,7 +138,7 @@ export default function CloverStorePage() {
                         }}>
                             <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>내 쿠폰함</div>
                             <div style={{ fontSize: 24, fontWeight: 800, color: '#374151' }}>
-                                🎟️ {user ? coupons : '—'}
+                                {user ? coupons : '—'}
                             </div>
                         </div>
                     </div>
@@ -165,7 +165,7 @@ export default function CloverStorePage() {
                                 color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: 15,
                                 boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
                             }}>
-                                🚀 로그인하기
+                                로그인하기
                             </Link>
                         </div>
                     )}
@@ -317,7 +317,7 @@ export default function CloverStorePage() {
                             border: '1px solid #fde68a',
                             display: 'inline-block',
                         }}>
-                            🚧 클로버 스토어는 현재 준비 중입니다. 곧 실제 교환 기능이 오픈됩니다!
+                            클로버 상점은 지금 준비 중입니다. 곧 실제로 바꿀 수 있게 됩니다.
                         </div>
                     </div>
 
@@ -456,7 +456,7 @@ export default function CloverStorePage() {
                         {clovers >= showPurchaseModal.cloverPrice ? (
                             <button
                                 onClick={() => {
-                                    alert('🚧 클로버 스토어는 아직 준비 중입니다!\n곧 실제 교환 기능이 오픈되니 기대해주세요!')
+                                    alert('클로버 상점은 아직 준비 중입니다.\n곧 실제로 바꿀 수 있게 됩니다.')
                                     setShowPurchaseModal(null)
                                 }}
                                 style={{

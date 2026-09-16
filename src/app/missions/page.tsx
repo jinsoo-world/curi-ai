@@ -343,7 +343,7 @@ export default function MissionsPage() {
                                 color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: 16,
                                 boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
                             }}>
-                                🚀 로그인하기
+                                로그인하기
                             </Link>
                         </div>
                     )}
@@ -612,7 +612,7 @@ export default function MissionsPage() {
                                         color: '#fff', textDecoration: 'none',
                                         boxShadow: '0 2px 8px rgba(34,197,94,0.3)',
                                     }}>
-                                        클로버 스토어 바로가기
+                                        클로버 상점 바로가기
                                     </Link>
                                 </div>
                             </div>

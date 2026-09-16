@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import AppSidebar from '@/components/AppSidebar'
 import { 옵션읽기 } from '@/lib/photo-opts'
+import { createClient } from '@/lib/supabase/client'
 
 interface 사진 { id: string; kind: string; url: string; createdAt: string; expiresAt: string; options?: string | null }
 
@@ -43,9 +44,16 @@ function 남은시간(expiresAt: string) {
 export default function Page() {
     const [사진들, set사진들] = useState<사진[] | null>(null)
     const [옵션, set옵션] = useState<Record<string, string>>({})
+    const [로그인함, set로그인함] = useState<boolean | null>(null)
 
     useEffect(() => {
         void (async () => {
+            // 로그인 안 한 분에게는 「없어요」가 아니라 「로그인하면 보여요」라고 해야 맞다
+            // (대표 모바일 점검 2026-09-16)
+            try {
+                const { data: { session } } = await createClient().auth.getSession()
+                set로그인함(!!session?.user)
+            } catch { set로그인함(null) }
             try {
                 const r = await fetch('/api/photos/list')
                 const d = await r.json()
@@ -76,12 +84,18 @@ export default function Page() {
 
                 {사진들?.length === 0 && (
                     <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '36px 22px', textAlign: 'center' }}>
-                        <p style={{ fontSize: 17, fontWeight: 800, margin: '0 0 8px' }}>아직 만든 사진이 없어요</p>
-                        <p style={{ fontSize: 15.5, color: '#71717a', margin: '0 0 18px' }}>사진 한 장만 있으면 바로 만들 수 있습니다.</p>
-                        <Link href="/studio" style={{
+                        <p style={{ fontSize: 17, fontWeight: 800, margin: '0 0 8px' }}>
+                            {로그인함 === false ? '로그인하면 만든 사진이 보여요' : '아직 만든 사진이 없어요'}
+                        </p>
+                        <p style={{ fontSize: 15.5, color: '#71717a', margin: '0 0 18px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                            {로그인함 === false
+                                ? '만든 사진은 로그인한 분의 것만 48시간 동안 남습니다.'
+                                : '사진 한 장만 있으면 바로 만들 수 있습니다.'}
+                        </p>
+                        <Link href={로그인함 === false ? '/login' : '/studio'} style={{
                             display: 'inline-block', background: '#1C2321', color: '#fff',
                             padding: '14px 28px', borderRadius: 999, fontWeight: 800, fontSize: 16, textDecoration: 'none',
-                        }}>만들러 가기</Link>
+                        }}>{로그인함 === false ? '로그인하기' : '만들러 가기'}</Link>
                     </div>
                 )}
 

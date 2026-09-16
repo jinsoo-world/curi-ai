@@ -23,6 +23,7 @@ export default function InvitePage() {
     const [부른수, set부른수] = useState<number | null>(null)
     const [이력, set이력] = useState<string[]>([])
     const [오류, set오류] = useState<string | null>(null)
+    const [로그인함, set로그인함] = useState<boolean | null>(null)
 
     useEffect(() => {
         let 살아있음 = true
@@ -30,6 +31,7 @@ export default function InvitePage() {
             const supabase = createClient()
             const { data: { session } } = await supabase.auth.getSession()
             const user = session?.user ?? null
+            if (살아있음) set로그인함(!!user)
             if (!user) {
                 if (살아있음) set오류('로그인하면 내 추천코드를 받을 수 있어요.')
                 return
@@ -76,8 +78,9 @@ export default function InvitePage() {
                     내 주소로 들어온 친구가 휴대폰 인증을 마치면 {REFERRER_REWARD}클로버를 드려요. 몇 명이든 괜찮습니다.
                 </p>
 
-                {/* ─── 성적 색면 (렌트리 참고) ─── */}
-                <div style={{
+                {/* ─── 성적 색면 (렌트리 참고) — 로그인한 분에게만.
+                     대표 지적 2026-09-16 모바일 점검 = 로그인 안 한 화면에서 「세는 중…」이 계속 남아 있었다 ─── */}
+                {로그인함 !== false && <div style={{
                     background: 'var(--진초록)', color: '#fff', borderRadius: 20,
                     padding: '26px 22px', marginBottom: 16, textAlign: 'center',
                 }}>
@@ -92,10 +95,10 @@ export default function InvitePage() {
                     <div style={{ fontSize: 14, fontWeight: 700, opacity: 0.85 }}>
                         {부른수 === null ? '세는 중…' : `친구 ${부른수}명`}
                     </div>
-                </div>
+                </div>}
 
                 {/* ─── 부른 사람 이력 (렌트리 참고) ─── */}
-                <div style={{
+                {로그인함 !== false && <div style={{
                     background: '#fff', border: '1px solid var(--선)', borderRadius: 18,
                     padding: '18px 20px', marginBottom: 20,
                 }}>
@@ -128,7 +131,7 @@ export default function InvitePage() {
                             ))}
                         </ul>
                     )}
-                </div>
+                </div>}
 
                 {코드 ? (
                     <ShareInvite code={코드} />
