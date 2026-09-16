@@ -6,6 +6,10 @@
  *    안내 문구를 넣는 방안을 협의 중이다. 신분증에 못 쓰는 증명사진은 팔 이유가 없다.
  *    코드와 화면은 지우지 않고 목록에서만 뺐다. 되살리려면 규정부터 다시 본다.
  *
+ * ⛔ 콘텐츠 썸네일도 뺐다(2026-09-16). 대표 지시 「만들기는 4개로 정리하자.
+ *    순서는 강사 프로필 / 배우 프로필 / 나를 닮은 AI / 화질 개선」
+ *    화면(/tools/thumbnail)과 서버는 지우지 않고 목록에서만 뺐다. 되살리려면 여기 한 칸만 더하면 된다.
+ *
  * (옛 기록) 여섯 가지 — 대표 확정 2026-09-15
  *
  * 「증명사진 만들기 / 강사 프로필 만들기 / 배우 프로필 만들기 /
@@ -44,14 +48,6 @@ export const TOOLS: ToolItem[] = [
         cost: 20,
     },
     {
-        id: 'enhance',
-        title: '사진 화질 개선하기',
-        desc: '흐릿하거나 오래된 사진을 살려요',
-        href: '/tools/enhance',
-        img: '/samples/act-m3.webp',
-        cost: 12,
-    },
-    {
         id: 'my-ai',
         title: '나를 닮은 AI 만들기',
         desc: '내 경험으로 말하는 AI 를 만들고 팔아요',
@@ -60,11 +56,11 @@ export const TOOLS: ToolItem[] = [
         cost: 'free',
     },
     {
-        id: 'thumbnail',
-        title: '콘텐츠 썸네일 만들기',
-        desc: '유튜브·강의·전자책 표지',
-        href: '/tools/thumbnail',
-        img: '/samples/act-w7.webp',
-        cost: 15,
+        id: 'enhance',
+        title: '사진 화질 개선하기',
+        desc: '흐릿하거나 오래된 사진을 살려요',
+        href: '/tools/enhance',
+        img: '/samples/act-m3.webp',
+        cost: 12,
     },
 ]

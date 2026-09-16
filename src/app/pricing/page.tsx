@@ -19,15 +19,15 @@ import { CLOVER_PACKS, discountPercent } from '@/domains/credit/packs'
 import { TEACHER_COST } from '@/domains/studio/teacher'
 import { PHOTO_COST } from '@/domains/studio/photo'
 import { ENHANCE_COST } from '@/domains/studio/enhance'
-import { THUMBNAIL_COST } from '@/domains/studio/thumbnail'
+import { TOOLS } from '@/domains/studio/tools'
 import { TRIAL_CLOVERS, TRIAL_DAYS, SIGNUP_CLOVERS } from '@/domains/trial'
 
-const 값표: { 이름: string; 클로버: number; 어디: string }[] = [
-    { 이름: '강사 프로필 만들기', 클로버: TEACHER_COST, 어디: '/tools/teacher-photo' },
-    { 이름: '배우 프로필 만들기', 클로버: PHOTO_COST, 어디: '/tools/actor-photo' },
-    { 이름: '콘텐츠 썸네일 만들기', 클로버: THUMBNAIL_COST, 어디: '/tools/thumbnail' },
-    { 이름: '사진 화질 개선하기', 클로버: ENHANCE_COST, 어디: '/tools/enhance' },
-]
+// 요금표는 만들기 목록(TOOLS) 한 표만 본다 — 대표 지시 2026-09-16
+// 「만들기는 4개로 정리하자」 「각 페이지에는 해당하는 내용만 있게 해」
+// 손으로 또 적어두면 목록에서 뺀 도구가 요금표에만 남는다(썸네일이 그랬다).
+const 값표 = TOOLS
+    .filter((t) => t.cost !== 'free')
+    .map((t) => ({ 이름: t.title, 클로버: t.cost as number, 어디: t.href }))
 
 export default function PricingPage() {
     const router = useRouter()

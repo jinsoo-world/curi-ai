@@ -109,9 +109,11 @@ export default function LookShowcase() {
                     ))}
                 </div>
 
+                {/* 대표 지시 2026-09-16 「url도 어긋나면 바꾸고」
+                    목록에서 뺀 도구(/tools/profile-photo)로 가고 있었다. 이제 만들기 목록으로 보낸다. */}
                 <div style={{ textAlign: 'center', marginTop: 32 }}>
                     <Link
-                        href="/tools/profile-photo"
+                        href="/studio"
                         style={{
                             display: 'inline-block',
                             background: '#fff',
