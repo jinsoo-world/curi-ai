@@ -12,6 +12,7 @@
  * 렌트리는 월 5회 상한이 있어 진행 막대를 쓴다. 우리는 상한이 없어 막대 대신 누적 숫자를 키웠다.
  */
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import AppSidebar from '@/components/AppSidebar'
 import ShareInvite from '@/components/ui/ShareInvite'
@@ -135,6 +136,21 @@ export default function InvitePage() {
 
                 {코드 ? (
                     <ShareInvite code={코드} />
+                ) : 로그인함 === false ? (
+                    // 로그인 안 한 분 — 채팅·보관함과 같은 모양으로 (대표 모바일 점검 2026-09-16)
+                    <div style={{
+                        background: '#fff', border: '1px solid var(--선)', borderRadius: 18,
+                        padding: '40px 24px 36px', textAlign: 'center',
+                    }}>
+                        <p style={{ fontSize: 17, fontWeight: 800, margin: '0 0 7px' }}>로그인하면 내 주소가 생겨요</p>
+                        <p style={{ fontSize: 14.5, color: 'var(--먹연)', margin: '0 0 20px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                            그 주소로 들어온 친구가 휴대폰 인증을 마치면 {REFERRER_REWARD}클로버를 드려요.
+                        </p>
+                        <Link href="/login" style={{
+                            display: 'inline-block', background: 'var(--먹)', color: '#fff',
+                            padding: '13px 26px', borderRadius: 999, fontWeight: 800, fontSize: 15.5, textDecoration: 'none',
+                        }}>로그인하기</Link>
+                    </div>
                 ) : (
                     <p style={{ fontSize: 'var(--글자-본문)', color: 'var(--먹연)', lineHeight: 1.6 }}>
                         {오류 ?? '잠시만요…'}
