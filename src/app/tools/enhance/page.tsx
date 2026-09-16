@@ -19,13 +19,17 @@ import { 센다 } from '@/lib/track'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { useSticky } from '@/components/studio/useSticky'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
+import { useStickyPhoto } from '@/components/studio/useStickyPhoto'
 import { 클로버알림, 클로버썼다, 클로버되돌림, 지금클로버 } from '@/lib/clover-bus'
 
 export default function EnhancePage() {
     const router = useRouter()
-    const [preview, setPreview] = useState<string | null>(null)
-    const [base64, setBase64] = useState<string | null>(null)
-    const [mimeType, setMimeType] = useState('image/jpeg')
+    // 올린 사진도 기억한다 — 파파님 피드백 2026-09-16
+    // 충전하러 갔다 오면 사진이 날아가 처음부터 다시 올려야 했다
+    const [보관사진, set보관사진] = useStickyPhoto('enhance')
+    const preview = 보관사진?.dataUrl ?? null
+    const base64 = 보관사진 ? (보관사진.dataUrl.split(',')[1] ?? null) : null
+    const mimeType = 보관사진?.mimeType ?? 'image/jpeg'
     const [modeId, setModeId] = useSticky<string | null>('enhance-mode', null)
     const [result, setResult] = useState<string | null>(null)
     const [미리보기, set미리보기] = useState(false)
@@ -41,9 +45,7 @@ export default function EnhancePage() {
             sessionStorage.removeItem(HERO_PHOTO_KEY)
             const { dataUrl, mimeType: mt } = JSON.parse(raw) as { dataUrl: string; mimeType: string }
             if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return
-            setPreview(dataUrl)
-            setBase64(dataUrl.split(',')[1] ?? null)
-            setMimeType(mt || 'image/jpeg')
+            set보관사진({ dataUrl, mimeType: mt || 'image/jpeg' })
         } catch {
             // 저장소를 못 읽는 브라우저면 그냥 새로 올리게 둔다
         }
@@ -99,9 +101,7 @@ export default function EnhancePage() {
                         <PhotoDrop
                             preview={preview}
                             onPicked={(dataUrl, mt) => {
-                                setPreview(dataUrl)
-                                setBase64(dataUrl.split(',')[1] ?? null)
-                                setMimeType(mt)
+                                set보관사진({ dataUrl, mimeType: mt })
                                 setResult(null)
                                 setErrorMsg(null)
                             }}

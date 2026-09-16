@@ -7,6 +7,7 @@
 
 import type { Choice } from './photo'
 import { 나이문장 } from './photo'
+import { 피부문장 } from './skin'
 import { HAIRS, 모자규칙, type HairChoice } from '@/domains/studio/hair'
 import type { 성별 } from './teacher'
 
@@ -89,7 +90,7 @@ export function isValidActorBackdrop(v: unknown): v is string { return typeof v 
  * 재취업용과 갈리는 곳 = 「반듯함」 대신 「사람으로 보이는가」에 무게를 둔다.
  * 캐스팅 담당은 매끈한 사진을 반기지 않는다. 실물과 다르면 현장에서 문제가 되기 때문이다.
  */
-export function buildActorPrompt(mood: Choice, backdrop: Choice, ratioLabel = '4:5', ageMinus = 0, hair?: HairChoice, gender?: 성별): string {
+export function buildActorPrompt(mood: Choice, backdrop: Choice, ratioLabel = '4:5', ageMinus = 0, hair?: HairChoice, gender?: 성별, skinId?: string): string {
     const 나이줄 = 나이문장(ageMinus)
 
     return [
@@ -105,7 +106,9 @@ export function buildActorPrompt(mood: Choice, backdrop: Choice, ratioLabel = '4
         `Expression and clothing: ${mood.prompt}.`,
         `Background: ${backdrop.prompt}.`,
         'Shot on a full-frame camera with an 85mm f/1.4 lens, single large softbox key light, real shadow falloff, faint film grain.',
-        'Keep visible skin pores, fine lines, uneven natural skin tone, a few stray hair strands and slight facial asymmetry.',
+        // 피부는 고른 대로 — 파파님 피드백 2026-09-16
+        피부문장(skinId),
+        'Keep a few stray hair strands and slight facial asymmetry.',
         'Minimal retouching — a casting profile that looks different from the real person is useless.',
         `Chest-up framing, ${ratioLabel} composition, sharp focus on the eyes.`,
         'No text, no logos, no watermark, no extra hands.',

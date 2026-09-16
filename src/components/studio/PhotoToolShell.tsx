@@ -49,6 +49,7 @@ export default function PhotoToolShell({
     downloadName,
     share,
     compareWithOriginal = false,
+    빠진것 = [],
 }: {
     title: string
     desc: string
@@ -74,6 +75,12 @@ export default function PhotoToolShell({
     share: { path: string; title: string; description: string; image: string }
     /** 화질 개선처럼 전후를 견줘야 하는 도구 */
     compareWithOriginal?: boolean
+    /**
+     * 아직 안 고른 칸 이름들 — 파파님 피드백 2026-09-16
+     * 「1~6번 중 체크가 안 된 항목이 있다면 몇 번이 미체크인지 안내되면 좋겠습니다」
+     * 예 = ['2. 어떤 이미지로 보이고 싶나요', '3. 어디서 찍은 것처럼']
+     */
+    빠진것?: string[]
 }) {
     const { 손님 } = useGuest()
     const 있는클로버 = useClover()
@@ -168,6 +175,27 @@ export default function PhotoToolShell({
                     </div>
                 )}
 
+                {/* 무엇이 빠졌는지 이름으로 알려준다 — 파파님 피드백 2026-09-16
+                    전에는 단추만 회색이 되고 이유를 말해 주지 않아, 1~6번을 다시 훑어야 했다.
+                    클로버가 모자란 경우는 위에서 이미 말했으니 여기서는 겹쳐 말하지 않는다. */}
+                {!loading && !모자람 && 빠진것.length > 0 && (
+                    <div style={{
+                        background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 14,
+                        padding: '14px 16px', marginBottom: 12,
+                    }}>
+                        <div style={{ fontSize: 15.5, fontWeight: 800, color: '#92400e', marginBottom: 6 }}>
+                            {빠진것.length}가지만 더 고르시면 됩니다
+                        </div>
+                        <ul style={{ margin: 0, padding: '0 0 0 18px', display: 'grid', gap: 4 }}>
+                            {빠진것.map(이름 => (
+                                <li key={이름} style={{ fontSize: 15, color: '#78350f', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                                    {이름}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
                 {loading ? (
                     <MakingBar 예상초={makingSeconds} />
                 ) : (
@@ -180,7 +208,11 @@ export default function PhotoToolShell({
                         cursor: (!canMake || 모자람) ? 'default' : 'pointer',
                     }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-                            {모자람 ? '클로버가 모자라요' : <>만들기 <CloverIcon size={18} color="#fff" /> {cost}개</>}
+                            {모자람
+                                ? '클로버가 모자라요'
+                                : 빠진것.length > 0
+                                    ? `${빠진것.length}가지를 더 고르시면 만들 수 있어요`
+                                    : <>만들기 <CloverIcon size={18} color="#fff" /> {cost}개</>}
                         </span>
                     </button>
                 )}

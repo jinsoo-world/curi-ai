@@ -13,22 +13,29 @@ import AdSlot from '@/components/AdSlot'
 import { 센다 } from '@/lib/track'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { useSticky } from '@/components/studio/useSticky'
+import { useStickyPhoto } from '@/components/studio/useStickyPhoto'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
 import { HAIRS, DEFAULT_HAIR } from '@/domains/studio/hair'
+import { SKINS, DEFAULT_SKIN } from '@/domains/studio/skin'
 import { 클로버알림, 클로버썼다, 클로버되돌림, 지금클로버 } from '@/lib/clover-bus'
 
 function TeacherPhotoPage안쪽() {
     const router = useRouter()
     const searchParams = useSearchParams()
-    const [preview, setPreview] = useState<string | null>(null)
-    const [base64, setBase64] = useState<string | null>(null)
-    const [mimeType, setMimeType] = useState('image/jpeg')
+    // 올린 사진도 기억한다 — 파파님 피드백 2026-09-16
+    // 충전하러 갔다 오면 사진이 날아가 처음부터 다시 올려야 했다
+    const [보관사진, set보관사진] = useStickyPhoto('teacher')
+    const preview = 보관사진?.dataUrl ?? null
+    const base64 = 보관사진 ? (보관사진.dataUrl.split(',')[1] ?? null) : null
+    const mimeType = 보관사진?.mimeType ?? 'image/jpeg'
     const [moodId, setMoodId] = useSticky<string | null>('teach-mood', null)
     const [placeId, setPlaceId] = useSticky<string | null>('teach-place', null)
     const [ageId, setAgeId] = useSticky<string>('age', DEFAULT_AGE_ID)
     const [ratioId, setRatioId] = useSticky<string>('teach-ratio', DEFAULT_RATIO_ID)
     const [성별, set성별] = useSticky<string>('gender', 'male')
     const [hairId, setHairId] = useSticky<string>('hair', DEFAULT_HAIR)
+    // 피부 손보기 — 파파님 피드백 2026-09-16 「피부 보정 기능도 있으면 좋겠습니다」
+    const [skinId, setSkinId] = useSticky<string>('skin', DEFAULT_SKIN)
     const [result, setResult] = useState<string | null>(null)
     const [미리보기, set미리보기] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -43,9 +50,7 @@ function TeacherPhotoPage안쪽() {
             sessionStorage.removeItem(HERO_PHOTO_KEY)
             const { dataUrl, mimeType: mt } = JSON.parse(raw) as { dataUrl: string; mimeType: string }
             if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return
-            setPreview(dataUrl)
-            setBase64(dataUrl.split(',')[1] ?? null)
-            setMimeType(mt || 'image/jpeg')
+            set보관사진({ dataUrl, mimeType: mt || 'image/jpeg' })
         } catch {
             // 저장소를 못 읽는 브라우저면 그냥 새로 올리게 둔다
         }
@@ -75,7 +80,7 @@ function TeacherPhotoPage안쪽() {
             const res = await fetch('/api/tools/profile-photo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64: base64, mimeType, styleId: moodId, backdropId: placeId, ratioId, ageId, kind: 'teacher', hairId, gender: 성별, 표식: 브라우저표식() }),
+                body: JSON.stringify({ imageBase64: base64, mimeType, styleId: moodId, backdropId: placeId, ratioId, ageId, kind: 'teacher', hairId, skinId, gender: 성별, 표식: 브라우저표식() }),
             })
             const data = await res.json()
             if (!res.ok) {
@@ -115,12 +120,17 @@ function TeacherPhotoPage안쪽() {
                 share={{ path: "/tools/teacher-photo", title: "강사 프로필 만들기", description: "사진 한 장만 올리면 얼굴은 그대로 두고 옷과 배경만 바꿔 드려요.", image: "/og/teacher-photo.png" }}
                 preview={preview}
                 onPicked={(dataUrl, mt) => {
-                    setPreview(dataUrl); setBase64(dataUrl.split(',')[1] ?? null)
-                    setMimeType(mt); setResult(null); setErrorMsg(null)
+                    set보관사진({ dataUrl, mimeType: mt })
+                    setResult(null); setErrorMsg(null)
                 }}
                 onError={setErrorMsg}
                 cost={TEACHER_COST}
                 canMake={!!base64 && !!moodId && !!placeId}
+                빠진것={[
+                    !base64 && '사진을 먼저 올려 주세요',
+                    !moodId && '2. 어떤 이미지로 보이고 싶나요',
+                    !placeId && '3. 어디서 찍은 것처럼',
+                ].filter(Boolean) as string[]}
                 loading={loading}
                 onMake={make}
                 errorMsg={errorMsg}
@@ -159,15 +169,33 @@ function TeacherPhotoPage안쪽() {
                 </칸>
 
                 <칸 제목="5. 나이">
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                         {AGES.map(a => (
                             <button key={a.id} onClick={() => setAgeId(a.id)} style={고름(ageId === a.id)}>
-                                <span style={{ fontSize: 14.5, fontWeight: 800, color: '#18181b' }}>{a.label}</span>
+                                <span style={{ display: 'block', fontSize: 14.5, fontWeight: 800, color: '#18181b' }}>{a.label}</span>
+                                {/* 많이 젊게 할수록 얼굴이 달라진다 — 파파님 피드백 2026-09-16
+                                    「나이를 젊게 만드는 기능은 기존 인물과 너무 다르게 생성되는 경우가 있습니다」 */}
+                                {a.note && (
+                                    <span style={{ display: 'block', fontSize: 12.5, color: a.id === 'm10' ? '#b45309' : '#71717a', marginTop: 3, wordBreak: 'keep-all' }}>
+                                        {a.note}
+                                    </span>
+                                )}
                             </button>
                         ))}
                     </div>
                 </칸>
-                <칸 제목="6. 사진 모양">
+
+                <칸 제목="6. 피부">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                        {SKINS.map(k => (
+                            <button key={k.id} onClick={() => setSkinId(k.id)} style={고름(skinId === k.id)}>
+                                <span style={{ display: 'block', fontSize: 14.5, fontWeight: 800, color: '#18181b' }}>{k.label}</span>
+                                <span style={{ display: 'block', fontSize: 12.5, color: '#71717a', marginTop: 3, wordBreak: 'keep-all', lineHeight: 1.4 }}>{k.desc}</span>
+                            </button>
+                        ))}
+                    </div>
+                </칸>
+                <칸 제목="7. 사진 모양">
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(96px, 1fr))', gap: 8 }}>
                         {RATIOS.map(r => (
                             <button key={r.id} onClick={() => setRatioId(r.id)} style={고름(ratioId === r.id)}>

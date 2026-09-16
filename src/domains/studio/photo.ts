@@ -1,4 +1,5 @@
 import { HAIRS, 모자규칙, type HairChoice } from '@/domains/studio/hair'
+import { 피부문장 } from '@/domains/studio/skin'
 // 전문가 프로필 사진 만들기 — 고르는 값과 프롬프트 조립
 //
 // 대표 지시 2026-09-14 = 「전문가 수준의 프로필 사진 제작하는 기능도 넣어줘」
@@ -143,15 +144,21 @@ export interface AgeOption {
     label: string
     /** 몇 살 젊게 */
     minus: number
+    /**
+     * 고르기 전에 알려줄 말 — 파파님 피드백 2026-09-16
+     * 「나이를 젊게 만드는 기능은 기존 인물과 너무 다르게 생성되는 경우가 있습니다」
+     * 많이 젊게 할수록 얼굴이 달라진다. 누르고 나서 놀라지 않게 미리 적는다.
+     */
+    note?: string
 }
 
 export const AGES: AgeOption[] = [
-    { id: 'as-is', label: '그대로', minus: 0 },
+    { id: 'as-is', label: '그대로', minus: 0, note: '얼굴이 가장 그대로예요' },
     // 대표 지시 0915 = 「조금 바랜 느낌인데. 아주 살짝만 젊게 해줘도 돼」
     // 기본값을 이걸로 둔다. 「그대로」가 기본이면 피곤한 날 찍은 사진이 그대로 나온다.
-    { id: 'fresh', label: '살짝 생기있게', minus: 2 },
+    { id: 'fresh', label: '살짝 생기있게', minus: 2, note: '권합니다' },
     { id: 'm5', label: '5살 젊게', minus: 5 },
-    { id: 'm10', label: '10살 젊게', minus: 10 },
+    { id: 'm10', label: '10살 젊게', minus: 10, note: '얼굴이 달라 보일 수 있어요' },
 ]
 
 export const DEFAULT_AGE_ID = 'fresh'
@@ -177,10 +184,21 @@ export function 나이문장(ageMinus: number): string {
     if (ageMinus <= 2) {
         return 'Keep the exact same age and the same lines on the face, but render the person on a good day: rested eyes with no dark circles, healthy blood colour in the skin, hydrated lips, tidy hair. Do not remove wrinkles, do not change the bone structure.'
     }
-    return `Make the subject look about ${ageMinus} years younger than in the uploaded photo, while keeping the same face and identity: softer fine lines, firmer skin, slightly fuller darker hair. Never change the bone structure or facial features.`
+    // 파파님 피드백 2026-09-16 = 「나이를 젊게 만드는 기능은 기존 인물과 너무 다르게 생성되는 경우가 있습니다」
+    // 원인 = 「firmer skin, fuller darker hair」가 모델을 딴사람 쪽으로 밀었다. 살을 채우고 머리를 바꾸면
+    // 얼굴의 비율 자체가 달라진다. 그래서 바꿔도 되는 것(피부결·잔주름·머리 윤기)만 이름으로 부르고,
+    // 건드리면 안 되는 것(뼈대·눈코입 간격·얼굴 너비·주름의 위치)을 하나하나 못 박는다.
+    return [
+        `Make the subject look about ${ageMinus} years younger, but the result must be unmistakably the SAME PERSON as the uploaded photo.`,
+        'Identity comes first: if looking younger would change who this is, stay closer to the original age.',
+        'You may soften fine lines, even out skin tone, and add a little healthy shine to the hair.',
+        'You must NOT change: the bone structure, the width or length of the face, the shape of the nose, eyes, lips, jaw or ears, the distance between the features, the hairline, or the natural hair colour.',
+        'Do not slim the face, do not enlarge the eyes, do not erase the deeper expression lines that make this face recognisable.',
+        'Compare against the uploaded photo: a family member must recognise this person instantly.',
+    ].join(' ')
 }
 
-export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '4:5', ageMinus = 0, purpose?: Purpose, hair?: HairChoice): string {
+export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '4:5', ageMinus = 0, purpose?: Purpose, hair?: HairChoice, skinId?: string): string {
     const 나이줄 = 나이문장(ageMinus)
     return [
         'Retouch this person into a professional headshot portrait.',
@@ -196,7 +214,8 @@ export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '
         // 전에는 「더 젊게 만들지 마라」라고 적었는데, 그 한 줄이 모델을 늙는 쪽으로 밀었다.
         // 주름을 지우라는 게 아니라 없던 나이를 더하지 말라고 적는다.
         나이줄,
-        'Keep natural skin texture and pores, but render the subject on their best day: rested, healthy, even skin tone.',
+        // 피부는 고른 대로 — 파파님 피드백 2026-09-16
+        피부문장(skinId),
         'Soft diffused key light with gentle fill from below to avoid harsh shadows in the nasolabial folds and under the eyes.',
         'Eye level, looking at the lens, sharp focus on the eyes.',
         `Upper body, ${ratioLabel} composition suitable for a profile picture.`,
@@ -204,7 +223,7 @@ export function buildPhotoPrompt(style: Choice, backdrop: Choice, ratioLabel = '
         // 「AI 같지 않게」라고만 적으면 모델이 잘 못 알아듣는다. 카메라와 빛을 구체로 적고,
         // 사람 얼굴에 원래 있는 것(모공·잔주름·비대칭·흐트러진 머리카락)을 이름으로 불러줘야 한다.
         'Shot on a full-frame camera with an 85mm f/1.4 lens, single large softbox key light, real shadow falloff, faint film grain.',
-        'Keep visible skin pores, fine lines, uneven natural skin tone, a few stray hair strands and slight facial asymmetry.',
+        'Keep a few stray hair strands and slight facial asymmetry.',
         'It must read as a real photograph of a real person, not a rendering.',
         'No text, no logos, no watermark, no extra hands. Avoid the AI look: no waxy plastic skin, no airbrushed glow, no perfect symmetry, no oversaturated colour, no sharpening halo.',
     ].filter(Boolean).join(' ')

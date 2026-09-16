@@ -18,6 +18,7 @@ import CloverIcon from '@/components/ui/CloverIcon'
 import Image from 'next/image'
 import Link from 'next/link'
 import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
+import { useStickyPhoto } from '@/components/studio/useStickyPhoto'
 import KeepNotice from '@/components/studio/KeepNotice'
 import ShareTool from '@/components/studio/ShareTool'
 import AdSlot from '@/components/AdSlot'
@@ -28,14 +29,18 @@ import { GUEST_CLOVERS, SIGNUP_CLOVERS } from '@/domains/trial'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { useSticky } from '@/components/studio/useSticky'
 import { HAIRS, DEFAULT_HAIR } from '@/domains/studio/hair'
+import { SKINS, DEFAULT_SKIN } from '@/domains/studio/skin'
 import { 클로버알림, 클로버썼다, 클로버되돌림, 지금클로버 } from '@/lib/clover-bus'
 
 function ActorPhotoPage안쪽() {
     const router = useRouter()
     const searchParams = useSearchParams()
-    const [preview, setPreview] = useState<string | null>(null)
-    const [base64, setBase64] = useState<string | null>(null)
-    const [mimeType, setMimeType] = useState('image/jpeg')
+    // 올린 사진도 기억한다 — 파파님 피드백 2026-09-16
+    // 충전하러 갔다 오면 사진이 날아가 처음부터 다시 올려야 했다
+    const [보관사진, set보관사진] = useStickyPhoto('actor')
+    const preview = 보관사진?.dataUrl ?? null
+    const base64 = 보관사진 ? (보관사진.dataUrl.split(',')[1] ?? null) : null
+    const mimeType = 보관사진?.mimeType ?? 'image/jpeg'
     const [modelId, setModelId] = useState(DEFAULT_MODEL_ID)
     const [ratioId, setRatioId] = useSticky<string>('actor-ratio', DEFAULT_RATIO_ID)
     const [ageId, setAgeId] = useSticky<string>('age', DEFAULT_AGE_ID)
@@ -44,6 +49,8 @@ function ActorPhotoPage안쪽() {
     // 대표 지적 2026-09-15 「성별 고르기도 넣고 머리 지시문도 넣어」
     const [성별, set성별] = useSticky<string>('gender', 'male')
     const [hairId, setHairId] = useSticky<string>('hair', DEFAULT_HAIR)
+    // 피부 손보기 — 파파님 피드백 2026-09-16
+    const [skinId, setSkinId] = useSticky<string>('skin', DEFAULT_SKIN)
     const [result, setResult] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -59,9 +66,7 @@ function ActorPhotoPage안쪽() {
             sessionStorage.removeItem(HERO_PHOTO_KEY)
             const { dataUrl, mimeType: mt } = JSON.parse(raw) as { dataUrl: string; mimeType: string }
             if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return
-            setPreview(dataUrl)
-            setBase64(dataUrl.split(',')[1] ?? null)
-            setMimeType(mt || 'image/jpeg')
+            set보관사진({ dataUrl, mimeType: mt || 'image/jpeg' })
         } catch {
             // 저장소를 못 읽는 브라우저면 그냥 새로 올리게 둔다
         }
@@ -91,7 +96,7 @@ function ActorPhotoPage안쪽() {
             const res = await fetch('/api/tools/profile-photo', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ imageBase64: base64, mimeType, styleId, backdropId, modelId, ratioId, ageId, kind: 'actor', hairId, gender: 성별, 표식: 브라우저표식() }),
+                body: JSON.stringify({ imageBase64: base64, mimeType, styleId, backdropId, modelId, ratioId, ageId, kind: 'actor', hairId, skinId, gender: 성별, 표식: 브라우저표식() }),
             })
             const data = await res.json()
             if (!res.ok) {
@@ -113,6 +118,13 @@ function ActorPhotoPage안쪽() {
     }
 
     const 준비됨 = !!base64 && !!styleId && !!backdropId
+    // 무엇이 빠졌는지 이름으로 알려준다 — 파파님 피드백 2026-09-16
+    // 「1~6번 중 체크가 안 된 항목이 있다면 몇 번이 미체크인지 안내되면 좋겠습니다」
+    const 빠진것 = [
+        !base64 && '1. 내 사진 올리기',
+        !styleId && '4. 어떤 느낌으로',
+        !backdropId && '5. 스튜디오 바탕',
+    ].filter(Boolean) as string[]
 
 
     const { 손님 } = useGuest()
@@ -146,9 +158,7 @@ function ActorPhotoPage안쪽() {
                     <PhotoDrop
                         preview={preview}
                         onPicked={(dataUrl, mt) => {
-                            setPreview(dataUrl)
-                            setBase64(dataUrl.split(',')[1] ?? null)
-                            setMimeType(mt)
+                            set보관사진({ dataUrl, mimeType: mt })
                             setErrorMsg(null)
                         }}
                         onError={setErrorMsg}
@@ -261,7 +271,13 @@ function ActorPhotoPage안쪽() {
                                     background: ageId === a.id ? '#f0fdf4' : '#fff', cursor: 'pointer',
                                     fontSize: 15, fontWeight: 700, color: '#18181b',
                                 }}>
-                                    {a.label}
+                                    <span style={{ display: 'block' }}>{a.label}</span>
+                                    {/* 많이 젊게 할수록 얼굴이 달라진다 — 파파님 피드백 2026-09-16 */}
+                                    {a.note && (
+                                        <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: a.id === 'm10' ? '#b45309' : '#71717a', marginTop: 3, wordBreak: 'keep-all' }}>
+                                            {a.note}
+                                        </span>
+                                    )}
                                 </button>
                             ))}
                         </div>
@@ -270,9 +286,26 @@ function ActorPhotoPage안쪽() {
                         </p>
                     </div>
 
+                    {/* 피부 — 파파님 피드백 2026-09-16 「피부 보정 기능도 있으면 좋겠습니다」 */}
+                    <div style={{ marginBottom: 24 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>8. 피부</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                            {SKINS.map(k => (
+                                <button key={k.id} onClick={() => setSkinId(k.id)} style={{
+                                    padding: '14px 8px', borderRadius: 14,
+                                    border: skinId === k.id ? '2.5px solid #22c55e' : '1.5px solid #e4e4e7',
+                                    background: skinId === k.id ? '#f0fdf4' : '#fff', cursor: 'pointer',
+                                }}>
+                                    <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: '#18181b' }}>{k.label}</span>
+                                    <span style={{ display: 'block', fontSize: 12.5, color: '#71717a', marginTop: 3, wordBreak: 'keep-all', lineHeight: 1.4 }}>{k.desc}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* 비율 — 어디에 쓸 사진인지에 따라 다르다 */}
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>8. 사진 모양</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>9. 사진 모양</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(96px, 1fr))', gap: 8 }}>
                             {RATIOS.map(r => (
                                 <button key={r.id} onClick={() => setRatioId(r.id)} style={{
@@ -321,6 +354,22 @@ function ActorPhotoPage안쪽() {
                     </div>
                 )}
 
+                {!loading && !모자람 && 빠진것.length > 0 && (
+                    <div style={{
+                        background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 14,
+                        padding: '14px 16px', marginBottom: 12,
+                    }}>
+                        <div style={{ fontSize: 15.5, fontWeight: 800, color: '#92400e', marginBottom: 6 }}>
+                            {빠진것.length}가지만 더 고르시면 됩니다
+                        </div>
+                        <ul style={{ margin: 0, padding: '0 0 0 18px', display: 'grid', gap: 4 }}>
+                            {빠진것.map(이름 => (
+                                <li key={이름} style={{ fontSize: 15, color: '#78350f', lineHeight: 1.6, wordBreak: 'keep-all' }}>{이름}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
                 {loading ? (
                     <MakingBar />
                 ) : (
@@ -331,7 +380,11 @@ function ActorPhotoPage안쪽() {
                         cursor: (!준비됨 || 모자람) ? 'default' : 'pointer',
                     }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            {모자람 ? '클로버가 모자라요' : <>사진 만들기 <CloverIcon size={17} color="#fff" /> {getModel(modelId)!.cost}개</>}
+                            {모자람
+                                ? '클로버가 모자라요'
+                                : 빠진것.length > 0
+                                    ? `${빠진것.length}가지를 더 고르시면 만들 수 있어요`
+                                    : <>사진 만들기 <CloverIcon size={17} color="#fff" /> {getModel(modelId)!.cost}개</>}
                         </span>
                     </button>
                 )}

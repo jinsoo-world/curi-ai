@@ -19,12 +19,22 @@ export default function ChargePage() {
     const [balance, setBalance] = useState<number | null>(null)
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
+    // 하던 곳으로 돌아갈 주소 — 파파님 피드백 2026-09-16
+    // 「충전 화면으로 갔다가 돌아오는 이전 버튼이 없어서 다시 초기 설정을 해야 합니다」
+    const [돌아갈곳, set돌아갈곳] = useState<string | null>(null)
 
     // 어디서 충전하러 왔는지 기억했다가 끝나면 그 자리로 돌려보낸다 (전수조사 4번)
     useEffect(() => {
         try {
             const b = new URLSearchParams(window.location.search).get('back')
-            if (b && b.startsWith('/')) sessionStorage.setItem('curi_back', b)
+            if (b && b.startsWith('/')) {
+                sessionStorage.setItem('curi_back', b)
+                set돌아갈곳(b)
+            } else {
+                // 주소에 없으면 앞서 저장해 둔 것이라도 쓴다(새로고침하고 돌아온 경우)
+                const 이전 = sessionStorage.getItem('curi_back')
+                if (이전 && 이전.startsWith('/')) set돌아갈곳(이전)
+            }
         } catch {}
     }, [])
 
@@ -79,6 +89,21 @@ export default function ChargePage() {
         <main style={{ minHeight: '100dvh', background: 'linear-gradient(180deg, #f0fdf4 0%, #ffffff 40%)' }}>
             <AppSidebar />
             <div style={{ maxWidth: 520, margin: '0 auto', padding: '40px 20px 80px' }}>
+                {/* 하던 곳으로 돌아가기 — 파파님 피드백 2026-09-16
+                    충전하러 왔다가 마음이 바뀌어도 나갈 문이 없었다. 브라우저 뒤로가기밖에 길이 없어
+                    중장년은 여기서 처음 화면으로 되돌아가 사진부터 다시 올렸다. */}
+                <button
+                    onClick={() => { if (돌아갈곳) router.push(돌아갈곳); else router.back() }}
+                    style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        background: 'none', border: 'none', padding: '4px 0', marginBottom: 10,
+                        fontSize: 15.5, fontWeight: 700, color: '#52525b', cursor: 'pointer',
+                    }}
+                >
+                    <span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>←</span>
+                    하던 곳으로 돌아가기
+                </button>
+
                 <h1 style={{ fontSize: 26, fontWeight: 800, color: '#18181b', margin: '0 0 6px' }}>
                     클로버 충전
                 </h1>

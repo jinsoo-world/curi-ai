@@ -9,6 +9,7 @@ import { GoogleGenAI } from '@google/genai'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getStyle, getBackdrop, isValidStyle, isValidBackdrop, buildPhotoPrompt, getAge, isValidAgeId, DEFAULT_AGE_ID, getPurpose, isValidPurpose } from '@/domains/studio/photo'
+import { isValidSkinId, DEFAULT_SKIN } from '@/domains/studio/skin'
 import { getMood, getTone, isValidMood, isValidTone, buildInstaPrompt } from '@/domains/studio/insta'
 import { getActorMood, getActorBackdrop, isValidActorMood, isValidActorBackdrop, buildActorPrompt } from '@/domains/studio/actor'
 import { getTeacherMood, getTeacherPlace, isValidTeacherMood, isValidTeacherPlace, buildTeacherPrompt } from '@/domains/studio/teacher'
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
         const { data: { user } } = await supabase.auth.getUser()
         const 손님 = !user
 
-        const { imageBase64, mimeType, styleId, backdropId, modelId, kind, ratioId, ageId, freeText, purposeId, hairId, gender, 표식: 받은표식 } = await req.json()
+        const { imageBase64, mimeType, styleId, backdropId, modelId, kind, ratioId, ageId, freeText, purposeId, hairId, gender, skinId, 표식: 받은표식 } = await req.json()
 
         if (typeof imageBase64 !== 'string' || imageBase64.length < 100) {
             return NextResponse.json({ error: '사진을 올려주세요.' }, { status: 400 })
@@ -125,17 +126,22 @@ export async function POST(req: NextRequest) {
             const 나이 = getAge(isValidAgeId(ageId) ? ageId : DEFAULT_AGE_ID)!.minus
             const 머리 = getHair(isValidHair(hairId) ? hairId : DEFAULT_HAIR)
             const 성별값 = gender === 'male' || gender === 'female' ? gender : undefined
+            // 피부 손보기 — 파파님 피드백 2026-09-16. 모르는 값이 오면 기본(살짝 정돈)으로 간다
+            const 피부 = isValidSkinId(skinId) ? skinId : DEFAULT_SKIN
             const prompt = isInsta
                 ? buildInstaPrompt(getMood(styleId)!, getTone(backdropId)!, typeof freeText === 'string' ? freeText : '')
                 : isTeacher
-                ? buildTeacherPrompt(getTeacherMood(styleId)!, getTeacherPlace(backdropId)!, ratio.label, 나이, 성별값, 머리)
+                ? buildTeacherPrompt(getTeacherMood(styleId)!, getTeacherPlace(backdropId)!, ratio.label, 나이, 성별값, 머리, 피부)
                 : isActor
-                ? buildActorPrompt(getActorMood(styleId)!, getActorBackdrop(backdropId)!, ratio.label, 나이, 머리, 성별값)
+                ? buildActorPrompt(getActorMood(styleId)!, getActorBackdrop(backdropId)!, ratio.label, 나이, 머리, 성별값, 피부)
                 : buildPhotoPrompt(
                     getStyle(styleId)!,
                     getBackdrop(backdropId)!,
                     ratio.label,
                     getAge(isValidAgeId(ageId) ? ageId : DEFAULT_AGE_ID)!.minus,
+                    undefined,
+                    머리,
+                    피부,
                   )
 
             const r = await ai.models.generateContent({

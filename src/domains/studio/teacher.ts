@@ -5,6 +5,7 @@
 
 import type { Choice } from './photo'
 import { 나이문장 } from './photo'
+import { 피부문장 } from './skin'
 import { HAIRS, 모자규칙, type HairChoice } from '@/domains/studio/hair'
 
 /** 성별 — 대표 지시 0915 「남성 / 여성 클릭하게 해」
@@ -92,7 +93,7 @@ export function getTeacherPlace(id: string) { return TEACHER_PLACES.find(p => p.
 export function isValidTeacherMood(v: unknown): v is string { return typeof v === 'string' && TEACHER_MOODS.some(m => m.id === v) }
 export function isValidTeacherPlace(v: unknown): v is string { return typeof v === 'string' && TEACHER_PLACES.some(p => p.id === v) }
 
-export function buildTeacherPrompt(mood: Choice, place: Choice, ratioLabel = '4:5', ageMinus = 0, gender?: 성별, hair?: HairChoice): string {
+export function buildTeacherPrompt(mood: Choice, place: Choice, ratioLabel = '4:5', ageMinus = 0, gender?: 성별, hair?: HairChoice, skinId?: string): string {
     const 나이줄 = 나이문장(ageMinus)
 
     return [
@@ -112,7 +113,8 @@ export function buildTeacherPrompt(mood: Choice, place: Choice, ratioLabel = '4:
         // 밝고 선명한 것이 규범이다(대표가 준 한국 강사 프로필 견본 전부가 그랬다).
         'Bright even beauty-dish lighting from the front with soft fill — the face is fully lit with no dark areas.',
         'Rich saturated colour, high clarity, sharp focus across the face, crisp edges.',
-        'Keep natural skin texture (pores and fine lines visible), but the skin must look healthy, rested and well lit.',
+        // 피부는 고른 대로 — 파파님 피드백 2026-09-16 「피부 보정 기능도 있으면 좋겠습니다」
+        피부문장(skinId),
         'NO film grain, NO muted or faded tone, NO grey cast, NO dark shadow on the face.',
         `Chest-up framing, ${ratioLabel} composition, sharp focus on the eyes, looking at the lens.`,
         'No text, no logos, no watermark, no extra hands.',
