@@ -20,9 +20,10 @@ type Props = { params: Promise<{ mentorId: string }> }
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { mentorId } = await params
     const m = await getPublicMentorById(mentorId)
-    if (!m) return { title: '코치 — 큐리 AI' }
+    if (!m) return { title: '코치' }
     return {
-        title: `${m.name} — 큐리 AI`,
+        // 맨 위 layout 이 '— 큐리 AI' 를 붙인다. 여기서 또 붙이면 두 번 나온다(2026-09-16 실측)
+        title: m.name,
         description: m.title || m.description || '',
         openGraph: {
             title: `${m.name} — 큐리 AI`,

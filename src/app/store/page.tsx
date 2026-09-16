@@ -6,6 +6,7 @@ import Image from 'next/image'
 import AppSidebar from '@/components/AppSidebar'
 import { createClient } from '@/lib/supabase/client'
 import AdSlot from '@/components/AdSlot'
+import CloverIcon from '@/components/ui/CloverIcon'
 
 interface StoreItem {
     id: string
@@ -93,7 +94,7 @@ export default function CloverStorePage() {
                             fontSize: 'var(--글자-대)', fontWeight: 900, color: 'var(--먹)',
                             letterSpacing: '-0.03em', margin: 0,
                         }}>
-                            🍀 클로버 상점
+                            클로버 상점
                         </h1>
                         <button
                             onClick={() => setShowInfoModal(true)}
@@ -125,7 +126,7 @@ export default function CloverStorePage() {
                         }}>
                             <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>보유 클로버</div>
                             <div style={{ fontSize: 24, fontWeight: 800, color: '#15803d' }}>
-                                🍀 {user ? clovers.toLocaleString() : '—'}
+                                {user ? clovers.toLocaleString() : '—'}
                             </div>
                         </div>
                         <div style={{
@@ -156,7 +157,7 @@ export default function CloverStorePage() {
                                 로그인이 필요합니다
                             </h2>
                             <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, marginBottom: 20 }}>
-                                클로버 스토어를 이용하려면 로그인해주세요!
+                                클로버 상점을 이용하려면 로그인해주세요!
                             </p>
                             <Link href="/login" style={{
                                 display: 'inline-block', padding: '12px 28px', borderRadius: 12,
@@ -294,7 +295,7 @@ export default function CloverStorePage() {
                                         fontSize: 16, fontWeight: 800, color: '#15803d',
                                         marginTop: 2,
                                     }}>
-                                        🍀 {item.cloverPrice.toLocaleString()}
+                                        <CloverIcon size={13} /> {item.cloverPrice.toLocaleString()}
                                     </div>
                                 </div>
                             </div>
@@ -352,7 +353,7 @@ export default function CloverStorePage() {
                         >
                             ✕
                         </button>
-                        <div style={{ fontSize: 48, marginBottom: 12 }}>🍀</div>
+                        <div style={{ marginBottom: 12 }}><CloverIcon size={44} /></div>
                         <h3 style={{ fontSize: 20, fontWeight: 700, color: '#18181b', marginBottom: 8 }}>
                             클로버란 무엇일까요?
                         </h3>
@@ -430,7 +431,7 @@ export default function CloverStorePage() {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span style={{ fontSize: 14, color: '#6b7280' }}>교환 가격</span>
                                 <span style={{ fontSize: 18, fontWeight: 800, color: '#15803d' }}>
-                                    🍀 {showPurchaseModal.cloverPrice.toLocaleString()}
+                                    <CloverIcon size={15} /> {showPurchaseModal.cloverPrice.toLocaleString()}
                                 </span>
                             </div>
                         </div>
@@ -448,7 +449,7 @@ export default function CloverStorePage() {
                                 fontSize: 14, fontWeight: 700,
                                 color: clovers >= showPurchaseModal.cloverPrice ? '#15803d' : '#dc2626',
                             }}>
-                                🍀 {clovers.toLocaleString()}
+                                <CloverIcon size={15} /> {clovers.toLocaleString()}
                             </span>
                         </div>
 
@@ -487,7 +488,7 @@ export default function CloverStorePage() {
                                     fontSize: 13, color: '#22c55e', textDecoration: 'none',
                                     fontWeight: 600,
                                 }}>
-                                    🍀 미션에서 클로버 모으기 →
+                                    미션에서 클로버 모으기 →
                                 </Link>
                             </div>
                         )}

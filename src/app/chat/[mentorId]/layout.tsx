@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         const mentor = await getMentorById(supabase, mentorId)
 
         if (!mentor) {
-            return { title: '큐리 AI — 대화' }
+            return { title: '채팅' }
         }
 
         const mentorImage = mentor.avatar_url || MENTOR_IMAGES[mentor.name]
@@ -55,7 +55,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             },
         }
     } catch {
-        return { title: '큐리 AI — 대화' }
+        return { title: '채팅' }
     }
 }
 

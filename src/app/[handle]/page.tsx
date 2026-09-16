@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     const name = user.display_name || cleanHandle
     return {
-        title: `${name} — 큐리 AI`,
+        title: name,
         description: `${name}의 AI 멘토와 대화를 시작하세요.`,
         openGraph: {
             title: `${name} — 큐리 AI`,
