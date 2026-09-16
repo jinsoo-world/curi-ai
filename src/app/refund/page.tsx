@@ -41,11 +41,16 @@ export default function RefundPage() {
                 }}>
                     <Link href="/login" style={{
                         fontSize: 20, fontWeight: 800, letterSpacing: '-0.04em',
-                        background: 'linear-gradient(135deg, #16a34a, #22c55e)',
-                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                        color: 'var(--먹, #111813)',
                         textDecoration: 'none',
+                        display: 'inline-flex', alignItems: 'center', gap: 8,
                     }}>
-                        🤖 큐리 AI
+                        {/* 대표 지적 2026-09-16 「이거는 로고 깨진다」
+                            글자에 그라데이션을 입히며 색을 투명으로 두어, 그림(이모지)이 초록 네모로 보였다.
+                            개인정보처리방침 화면과 같은 방식으로 진짜 로고 그림을 쓴다. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/logo.png" alt="" style={{ width: 28, height: 28, borderRadius: 6 }} />
+                        큐리 AI
                     </Link>
                 </div>
             </header>
