@@ -23,7 +23,6 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import Image from 'next/image'
 import { MembershipBanner } from '@/components/MembershipBanner'
 import AppSidebar from '@/components/AppSidebar'
 
@@ -175,9 +174,15 @@ export default function ChatsPage() {
                             >
                                 <span style={{
                                     width: 48, height: 48, borderRadius: '50%', overflow: 'hidden',
-                                    background: 'var(--종이)', flexShrink: 0, position: 'relative',
+                                    background: 'var(--종이)', flexShrink: 0, display: 'block',
                                 }}>
-                                    {사진 && <Image src={사진} alt="" fill sizes="48px" style={{ objectFit: 'cover' }} />}
+                                    {/* 코치 사진은 여러 곳에서 오고 주소가 우리 저장소 밖일 수도 있다.
+                                        next/image 로 바꿨더니 허용 목록 밖 주소가 통째로 안 떴다(2026-09-16). 원래대로 되돌린다. */}
+                                    {사진 && (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={사진} alt="" width={48} height={48}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                    )}
                                 </span>
 
                                 <span style={{ flex: 1, minWidth: 0 }}>
