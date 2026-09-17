@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireMentorOwner } from '@/lib/mentor-owner'
 import { generateEmbedding, splitIntoChunks } from '@/domains/knowledge/embedding'
 import { GoogleGenAI } from '@google/genai'
+import { 개인정보가리기 } from '@/domains/knowledge/개인정보가리기'
 
 /**
  * VTT 파일 전처리: 타임스탬프 제거, 추임새 제거, 화자별 대화 정리
@@ -501,6 +502,14 @@ export async function POST(req: NextRequest) {
                 .update({ processing_status: 'failed' })
                 .eq('id', sourceId)
             return NextResponse.json({ error: '텍스트를 추출할 수 없습니다.' }, { status: 400 })
+        }
+
+        // 남의 개인정보는 저장 전에 가린다 — 대표 지시 2026-09-17 「개인정보나 이런 건 규칙으로」
+        // 올리는 분이 깜빡해도 연락처·메일·주민번호·카드번호는 여기서 걸린다.
+        const 가림 = 개인정보가리기(textContent)
+        if (가림.합계 > 0) {
+            console.log('[Process] 개인정보 가림:', source.title, JSON.stringify(가림.가린수))
+            textContent = 가림.글
         }
 
         // 텍스트 → 청크 → 임베딩

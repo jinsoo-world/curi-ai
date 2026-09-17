@@ -874,6 +874,8 @@ export default function CreatorCreatePage() {
                                         { ext: 'PDF', color: '#dc2626', bg: '#fee2e2' },
                                         { ext: 'PPT', color: '#ea580c', bg: '#ffedd5' },
                                         { ext: 'DOCX', color: '#2563eb', bg: '#dbeafe' },
+                                        { ext: 'XLSX', color: '#15803d', bg: '#dcfce7' },
+                                        { ext: 'CSV', color: '#15803d', bg: '#dcfce7' },
                                         { ext: 'TXT', color: '#6b7280', bg: '#f3f4f6' },
                                         { ext: 'VTT', color: '#7c3aed', bg: '#ede9fe' },
                                     ].map(f => (
@@ -890,6 +892,19 @@ export default function CreatorCreatePage() {
                                 <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>
                                     최대 10개 · 합산 50MB
                                 </div>
+                            </div>
+
+                            {/* 개인정보 안내 — 대표 지시 2026-09-17 「개인정보나 이런 건 규칙으로」
+                                연락처·메일·주민번호·카드번호는 우리가 저장 전에 자동으로 가린다.
+                                다만 사람 이름은 못 가린다(가리면 후기가 누구 이야기인지 사라진다). 그건 알려야 한다. */}
+                            <div style={{
+                                marginTop: 10, padding: '12px 14px', borderRadius: 12,
+                                background: '#F4F6F3', border: '1px solid var(--선, #E5E7EB)',
+                                fontSize: 12.5, color: 'var(--먹연, #5C6660)', lineHeight: 1.7, wordBreak: 'keep-all',
+                            }}>
+                                올린 자료에서 <b>전화번호 · 이메일 · 주민번호 · 카드번호는 저장하기 전에 자동으로 가립니다.</b>
+                                <br />
+                                다만 <b>사람 이름은 가리지 않습니다.</b> 이름이 드러나면 안 되는 자료라면 올리기 전에 그 칸을 지워주세요.
                             </div>
 
                             {uploadedFiles.length > 0 && (
