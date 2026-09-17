@@ -16,7 +16,7 @@ const 칸 = { padding: '11px 14px', fontSize: 14, borderBottom: '1px solid #f1f5
 export default function TrafficView({ 첫자료 }: { 첫자료: 유입자료 }) {
     // 서버가 이미 숫자를 담아 보냈다. 첫 화면은 기다리지 않는다 — 대표 지적 2026-09-17 「10초 걸리는거 고쳐줘」
     const [일수, set일수] = useState(첫자료.일수)
-    const [자료, set자료] = useState<{ 들어온길: 길[]; 최근: 줄[]; 같은기간: { 가입: number; 사진: number } } | null>(첫자료)
+    const [자료, set자료] = useState<유입자료 | null>(첫자료)
     const [부르는중, set부르는중] = useState(false)
     const 첫판 = useRef(true)
 
@@ -101,6 +101,31 @@ export default function TrafficView({ 첫자료 }: { 첫자료: 유입자료 }) 
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+
+                    {/* 들어와서 무엇을 했나 — 대표 지적 2026-09-18 「고객이 들어와서 어떤 행동을 하는지 확인이 안돼」 */}
+                    <h2 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 10px' }}>들어와서 무엇을 했나</h2>
+                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden', marginBottom: 24 }}>
+                        {(!자료.행동 || 자료.행동.length === 0) && (
+                            <div style={{ ...칸, color: '#94a3b8' }}>
+                                아직 기록이 없습니다. 지금부터 사진을 올리거나 만들면 여기에 쌓입니다.
+                            </div>
+                        )}
+                        {(자료.행동 ?? []).map((a) => (
+                            <div key={a.이름} style={{ ...칸, display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <span style={{ fontWeight: 700, width: 150, flexShrink: 0 }}>{a.이름}</span>
+                                <span style={{
+                                    flex: 1, height: 10, borderRadius: 999, background: '#f1f5f9', overflow: 'hidden',
+                                }}>
+                                    <span style={{
+                                        display: 'block', height: '100%', borderRadius: 999, background: '#22c55e',
+                                        width: `${Math.min(100, (a.사람 / Math.max(1, 자료.행동[0]?.사람 || 1)) * 100)}%`,
+                                    }} />
+                                </span>
+                                <span style={{ fontWeight: 800, width: 64, textAlign: 'right' }}>{a.사람.toLocaleString()}명</span>
+                                <span style={{ color: '#94a3b8', width: 64, textAlign: 'right', fontSize: 13 }}>{a.횟수.toLocaleString()}번</span>
+                            </div>
+                        ))}
                     </div>
 
                     <h2 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 10px' }}>최근에 들어온 것</h2>
