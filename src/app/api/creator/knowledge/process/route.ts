@@ -251,6 +251,27 @@ export async function POST(req: NextRequest) {
             // 텍스트/마크다운: 직접 읽기
             textContent = await fileData.text()
 
+        } else if (['xlsx', 'xls', 'csv'].includes(ext)) {
+            // 엑셀·CSV — 대표 지적 2026-09-17 「AI 만들기에서 파일학습이 안되네. 엑셀파일 등등」
+            // 표는 시트마다 제목을 달고 줄로 편다. AI 가 읽을 때 어느 표의 어느 칸인지 알아야 한다.
+            try {
+                const XLSX = await import('xlsx')
+                const buffer = Buffer.from(await fileData.arrayBuffer())
+                const wb = XLSX.read(buffer, { type: 'buffer' })
+                const 조각: string[] = []
+                for (const 시트이름 of wb.SheetNames) {
+                    const 시트 = wb.Sheets[시트이름]
+                    if (!시트) continue
+                    const 표 = XLSX.utils.sheet_to_csv(시트, { blankrows: false })
+                    if (표.trim()) 조각.push(`[${시트이름}]\n${표.trim()}`)
+                }
+                textContent = 조각.join('\n\n')
+                console.log('[Process] 엑셀 읽음:', source.title, '시트', wb.SheetNames.length, '글자', textContent.length)
+            } catch (xlErr) {
+                console.error('[Process] 엑셀 읽기 실패:', xlErr instanceof Error ? xlErr.message : xlErr)
+                textContent = ''
+            }
+
         } else if (ext === 'vtt') {
             // VTT (줌 녹화 자막): 전처리 + Gemini 보정
             console.log('[Process] Parsing VTT file:', source.title)

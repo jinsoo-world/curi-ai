@@ -8,6 +8,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import AppSidebar from '@/components/AppSidebar'
 import { createClient } from '@/lib/supabase/client'
+import { 올릴수있는파일, 고르기필터 } from '@/domains/knowledge/files'
 // PERSONA_TEMPLATES import removed — agent prompt now directly entered
 
 interface UploadedFile {
@@ -394,7 +395,7 @@ export default function CreatorCreatePage() {
                 setMentorIdForUpload(mid)
             }
 
-            const allowedExtensions = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx', 'ppt', 'pptx']
+            const allowedExtensions: readonly string[] = 올릴수있는파일
 
             for (const file of newFilesArr) {
                 const ext = file.name.split('.').pop()?.toLowerCase() || ''
@@ -855,7 +856,7 @@ export default function CreatorCreatePage() {
                                 <input
                                     ref={fileInputRef}
                                     type="file"
-                                    accept=".pdf,.txt,.md,.doc,.docx,.hwp,.hwpx,.ppt,.pptx,.vtt"
+                                    accept={고르기필터}
                                     multiple
                                     style={{ display: 'none' }}
                                     onChange={e => handleFileUpload(e.target.files)}

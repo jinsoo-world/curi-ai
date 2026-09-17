@@ -3,10 +3,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import { 올릴수있는파일 } from '@/domains/knowledge/files'
 
 export const dynamic = 'force-dynamic'
 
-const ALLOWED_EXTENSIONS = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx', 'ppt', 'pptx']
+const ALLOWED_EXTENSIONS: readonly string[] = 올릴수있는파일
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const MAX_FILES_PER_MENTOR = 10
 const MAX_TOTAL_SIZE = 50 * 1024 * 1024 // 합산 50MB

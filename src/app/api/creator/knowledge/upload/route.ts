@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import { 올릴수있는파일 } from '@/domains/knowledge/files'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30 // 파일 업로드 + Storage 전송에 충분한 시간
@@ -19,7 +20,7 @@ const ALLOWED_TYPES = [
 ]
 
 // HWP/HWPX는 MIME 타입이 없으므로 확장자로 체크
-const ALLOWED_EXTENSIONS = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx', 'ppt', 'pptx', 'vtt']
+const ALLOWED_EXTENSIONS: readonly string[] = 올릴수있는파일
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const MAX_FILES_PER_MENTOR = 10
