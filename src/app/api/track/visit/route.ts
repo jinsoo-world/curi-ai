@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
             userId = user?.id ?? null
         } catch { /* 손님이면 그냥 비운다 */ }
 
-        await createAdminClient().from('visit_logs').insert({
+        const { error } = await createAdminClient().from('visit_logs').insert({
             path: 자르기(body.path, 200),
             utm_source: source,
             utm_medium: 자르기(body.utm_medium, 60),
@@ -45,9 +45,11 @@ export async function POST(req: NextRequest) {
             anon_id: 자르기(body.anon_id, 60),
         })
 
+        // 왜 안 들어갔는지 삼키지 않는다 — 2026-09-17 에 이걸 삼켜서 원인을 한참 찾았다
+        if (error) return NextResponse.json({ ok: false, why: error.message })
         return NextResponse.json({ ok: true })
-    } catch {
+    } catch (e) {
         // 계측이 서비스를 막지 않는다
-        return NextResponse.json({ ok: false })
+        return NextResponse.json({ ok: false, why: e instanceof Error ? e.message : 'unknown' })
     }
 }
