@@ -9,6 +9,13 @@ import { MentorHeader, ChatMessages, ChatInput, SuggestionCards } from './compon
 import { MAX_DAILY_FREE_GUEST } from '@/domains/chat/constants'
 import type { ChatMessage } from './components'
 
+/**
+ * 전화(음성 통화) 기능 스위치 — 대표 지시 2026-09-18 「전화하기 기능은 일단 잠시 준비중으로 바꿔줘. 일레븐랩스 연결 끊어졌어」
+ * 다시 열 때 이 한 줄만 true 로 바꾸면 된다. 화면·서버 코드는 그대로 두었다.
+ */
+const 전화기능켜짐 = false
+
+
 // 무거운 컴포넌트 — 필요할 때만 로드 (초기 번들에서 제외)
 // ⚠️ 반드시 파일을 직접 가리켜야 한다. 배럴('./components')을 가리키면
 // 위에서 이미 정적으로 불러온 같은 묶음이라 지연 로딩이 무효가 된다.
@@ -895,6 +902,10 @@ export default function ChatPage() {
                                     {mentor.voice_sample_url && (
                                     <button
                                         onClick={() => {
+                                            if (!전화기능켜짐) {
+                                                alert('전화 상담은 지금 준비 중입니다.\n채팅으로 먼저 이야기 나눠 주세요.')
+                                                return
+                                            }
                                             if (!isLoggedIn) {
                                                 setShowVoiceSample(true)
                                                 return
@@ -908,11 +919,11 @@ export default function ChatPage() {
                                             padding: '10px 24px',
                                             borderRadius: 100,
                                             border: 'none',
-                                            background: '#0E1412',
-                                            color: '#fff',
+                                            background: 전화기능켜짐 ? '#0E1412' : '#EEF1EF',
+                                            color: 전화기능켜짐 ? '#fff' : '#8A948E',
                                             fontSize: 15,
                                             fontWeight: 600,
-                                            cursor: 'pointer',
+                                            cursor: 전화기능켜짐 ? 'pointer' : 'default',
                                             transition: 'all 0.2s',
                                             boxShadow: '0 2px 8px rgba(22,163,74,0.25)',
                                         }}
@@ -925,7 +936,7 @@ export default function ChatPage() {
                                             e.currentTarget.style.boxShadow = '0 2px 8px rgba(22,163,74,0.25)'
                                         }}
                                     >
-                                        📞 전화하기
+                                        {전화기능켜짐 ? '전화하기' : '전화 상담 준비 중'}
                                     </button>
                                     )}
                                 </div>
