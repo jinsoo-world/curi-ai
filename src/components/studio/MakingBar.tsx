@@ -10,6 +10,7 @@
  * 다 되면 100% 로 튄다. 빈 화면에 글자만 바뀌는 것보다 기다리는 체감이 짧다.
  */
 import { useEffect, useState } from 'react'
+import 기다리는동안 from '@/components/studio/기다리는동안'
 
 const 단계 = [
     '사진을 살펴보고 있어요',
@@ -72,6 +73,10 @@ export default function MakingBar({ 예상초 = 30 }: { 예상초?: number }) {
                     : '거의 다 됐어요. 조금만 더 기다려 주세요.'}
                 <br />이 화면을 닫지 말아 주세요.
             </p>
+
+            {/* 기다리는 30초에 딱 하나만 여쭙는다 — 대표 지시 2026-09-18
+                「사진 받을 때, 로딩중일 때 그때 받는건 어때?」 */}
+            <기다리는동안 />
         </div>
     )
 }
