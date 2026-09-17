@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 
 const navItems = [
     { href: '/admin/overview', label: '📊 대시보드', id: 'overview' },
+    { href: '/admin/traffic', label: '🚪 들어온 길', id: 'traffic' },
     { href: '/admin/users', label: '👥 회원', id: 'users' },
     { href: '/admin/guest-logs', label: '👤 비회원', id: 'guest-logs' },
     { href: '/admin/mentors', label: '🤖 생성된 AI', id: 'mentors' },

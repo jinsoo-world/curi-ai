@@ -8,6 +8,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import dynamic from 'next/dynamic'
 const CloverHunt = dynamic(() => import('@/components/CloverHunt'), { loading: () => null })
 import BottomTabs from '@/components/BottomTabs'
+import VisitTracker from '@/components/VisitTracker'
 import './globals.css'
 import { GUEST_CLOVERS, SIGNUP_CLOVERS, TRIAL_CLOVERS } from '@/domains/trial'
 import { TEACHER_COST } from '@/domains/studio/teacher'
@@ -241,6 +242,10 @@ export default function RootLayout({
         <GoogleAnalytics />
         <Suspense fallback={null}>
           <PostHogTracker />
+        </Suspense>
+        {/* 어디서 들어왔는지 한 줄 남긴다 — 대표 지시 2026-09-17 */}
+        <Suspense fallback={null}>
+          <VisitTracker />
         </Suspense>
         <Analytics />
         <SpeedInsights sampleRate={0.3} />
