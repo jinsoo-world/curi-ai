@@ -105,6 +105,45 @@ export async function POST(req: Request) {
             })
         }
 
+        // ── ✨ JEV GATE SLOT (2026-09-19) ──
+        // Slot A: 권한 통과 후, 비싼 LLM 호출 전 저비용 intent/eligibility 게이트
+        // 향후 구현 예정 기능 (현재는 스텁):
+        //  1. 빈 메시지/공백만 있는 경우 차단 (이미 schema로 검증됨)
+        //  2. 인사/감사 등 간단한 응답은 캐시된 답변 반환
+        //  3. 최근 질문 중복 체크 (해시 비교)
+        //  4. 주제 벗어난 질문 필터링 (초소형 분류기/임베딩)
+        // 
+        // function jevGate(question: string, recentMessages: any[]): 
+        //   { allow: boolean; reason?: string; cannedReply?: string } {
+        //   // 예시: 인사 패턴
+        //   if (/^(안녕|ㅎㅇ|하이|헬로|감사|ㄱㅅ|고마워)[\s!?]*$/i.test(question)) {
+        //     return { allow: false, reason: 'greeting', cannedReply: '반갑습니다! 구체적인 질문을 해주시면 도와드릴게요 😊' }
+        //   }
+        //   // 예시: 중복 질문
+        //   const lastUserQ = recentMessages.filter(m => m.role === 'user').slice(-1)[0]?.content
+        //   if (lastUserQ && lastUserQ.trim() === question.trim()) {
+        //     return { allow: false, reason: 'duplicate' }
+        //   }
+        //   return { allow: true }
+        // }
+        // 
+        // const gateResult = jevGate(lastUserMessage, messages)
+        // if (!gateResult.allow) {
+        //   const encoder = new TextEncoder()
+        //   const gateStream = new ReadableStream({
+        //     start(controller) {
+        //       const reply = gateResult.cannedReply || '조금 더 구체적으로 질문해주세요.'
+        //       controller.enqueue(
+        //         encoder.encode(`data: ${JSON.stringify({ text: reply, done: true, fullResponse: reply })}\n\n`)
+        //       )
+        //       controller.close()
+        //     },
+        //   })
+        //   return new Response(gateStream, {
+        //     headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
+        //   })
+        // }
+
         // 멘토 정보 조회 (domains/mentor)
         const mentor = (await getMentorById(supabase, mentorId)) ?? (await getPublicMentorById(mentorId))
         if (!mentor) {
