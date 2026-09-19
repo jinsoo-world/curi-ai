@@ -684,7 +684,7 @@ export default function ChatPage() {
             '나이 들면 무릎이 아픈 게 당연한가요?',
             '건강검진 결과를 어떻게 봐야 하나요?',
         ]
-        setSuggestions(mentor?.sample_questions?.length > 0 ? mentor.sample_questions : fallbackStarters)
+        setSuggestions(mentor?.sample_questions?.length ? mentor.sample_questions : fallbackStarters)
         // 새 세션 생성
         try {
             const res = await fetch('/api/sessions', {
@@ -698,7 +698,7 @@ export default function ChatPage() {
                 window.history.replaceState(null, '', `/chat/${mentorId}?session=${session.id}`)
                 loadSidebarSessions()
                 // 강제 re-render
-                setSuggestions([...(mentor?.sample_questions?.length > 0 ? mentor.sample_questions : fallbackStarters)])
+                setSuggestions([...(mentor?.sample_questions?.length ? mentor.sample_questions : fallbackStarters)])
             }
         } catch (e) {
             console.error('새 세션 생성 실패:', e)
