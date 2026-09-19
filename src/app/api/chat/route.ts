@@ -16,8 +16,8 @@ export const maxDuration = 60
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
 /** 사진 1장 최대 크기 */
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
-/** 새 사진이 없을 때 거슬러 올라가 사진을 찾아볼 메시지 수 */
-const RECENT_IMAGE_LOOKBACK = 6
+/** 새 사진이 없을 때 거슬러 올라가 사진을 찾아볼 메시지 수 (P1 cost: 6→3으로 축소) */
+const RECENT_IMAGE_LOOKBACK = 3
 
 /**
  * 우리 저장소의 대화 사진 주소가 맞는지 확인한다.
@@ -69,24 +69,38 @@ export async function POST(req: Request) {
         // 개인 체험권은 프로필을 읽은 뒤에 더한다(아래 「내 체험권」 자리).
         let isFreeTrial = FREE_TRIAL_OPEN
 
-        // ── 🔒 비로그인 사용자 대화 제한 (isFreeTrial 무관, 항상 적용) ──
-        // 횟수는 아직 브라우저가 보고한다(서버 집계는 별건). 다만 숫자가 아닌 값을
-        // 보내면 검사 자체를 건너뛰던 구멍은 막는다 — 그게 사실상 무제한이었다.
-        const guestUsed = Number.isFinite(Number(guestMessageCount)) ? Number(guestMessageCount) : MAX_DAILY_FREE_GUEST
-        if (!user && guestUsed >= MAX_DAILY_FREE_GUEST) {
-            const encoder = new TextEncoder()
-            const guestLimitMsg = '무료 체험 대화를 모두 사용했어요! 😊\n\n회원가입하면 매일 무제한 대화 + 음성 전화가 가능해요 🎁'
-            const limitStream = new ReadableStream({
-                start(controller) {
-                    controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ text: guestLimitMsg, done: true, fullResponse: guestLimitMsg, guestLimit: true })}\n\n`)
-                    )
-                    controller.close()
-                },
-            })
-            return new Response(limitStream, {
-                headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
-            })
+        // ── 🔒 비로그인 사용자 대화 제한 (P0 서버 사이드 검증) ──
+        // 2026-09-19: 클라이언트 guestMessageCount를 신뢰하지 않음.
+        // visitor_id 기반 서버 DB 카운트로 실제 사용량 검증.
+        if (!user) {
+            const today = new Date().toISOString().slice(0, 10)
+            const adminDb = createAdminClient()
+            
+            // 오늘 날짜 + visitor_id로 실제 사용량 조회
+            const { count: serverGuestUsed } = await adminDb
+                .from('guest_chat_logs')
+                .select('id', { count: 'exact', head: true })
+                .eq('visitor_id', visitorId || 'unknown')
+                .gte('created_at', `${today}T00:00:00Z`)
+                .lt('created_at', `${today}T23:59:59Z`)
+            
+            const actualUsed = serverGuestUsed ?? 0
+            
+            if (actualUsed >= MAX_DAILY_FREE_GUEST) {
+                const encoder = new TextEncoder()
+                const guestLimitMsg = '무료 체험 대화를 모두 사용했어요! 😊\n\n회원가입하면 매일 무제한 대화 + 음성 전화가 가능해요 🎁'
+                const limitStream = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue(
+                            encoder.encode(`data: ${JSON.stringify({ text: guestLimitMsg, done: true, fullResponse: guestLimitMsg, guestLimit: true })}\n\n`)
+                        )
+                        controller.close()
+                    },
+                })
+                return new Response(limitStream, {
+                    headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
+                })
+            }
         }
 
         // ── 🛡️ 위기상담 가드레일 (AI 호출 전에 차단) ──
@@ -104,6 +118,45 @@ export async function POST(req: Request) {
                 headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
             })
         }
+
+        // ── ✨ JEV GATE SLOT (2026-09-19) ──
+        // Slot A: 권한 통과 후, 비싼 LLM 호출 전 저비용 intent/eligibility 게이트
+        // 향후 구현 예정 기능 (현재는 스텁):
+        //  1. 빈 메시지/공백만 있는 경우 차단 (이미 schema로 검증됨)
+        //  2. 인사/감사 등 간단한 응답은 캐시된 답변 반환
+        //  3. 최근 질문 중복 체크 (해시 비교)
+        //  4. 주제 벗어난 질문 필터링 (초소형 분류기/임베딩)
+        // 
+        // function jevGate(question: string, recentMessages: any[]): 
+        //   { allow: boolean; reason?: string; cannedReply?: string } {
+        //   // 예시: 인사 패턴
+        //   if (/^(안녕|ㅎㅇ|하이|헬로|감사|ㄱㅅ|고마워)[\s!?]*$/i.test(question)) {
+        //     return { allow: false, reason: 'greeting', cannedReply: '반갑습니다! 구체적인 질문을 해주시면 도와드릴게요 😊' }
+        //   }
+        //   // 예시: 중복 질문
+        //   const lastUserQ = recentMessages.filter(m => m.role === 'user').slice(-1)[0]?.content
+        //   if (lastUserQ && lastUserQ.trim() === question.trim()) {
+        //     return { allow: false, reason: 'duplicate' }
+        //   }
+        //   return { allow: true }
+        // }
+        // 
+        // const gateResult = jevGate(lastUserMessage, messages)
+        // if (!gateResult.allow) {
+        //   const encoder = new TextEncoder()
+        //   const gateStream = new ReadableStream({
+        //     start(controller) {
+        //       const reply = gateResult.cannedReply || '조금 더 구체적으로 질문해주세요.'
+        //       controller.enqueue(
+        //         encoder.encode(`data: ${JSON.stringify({ text: reply, done: true, fullResponse: reply })}\n\n`)
+        //       )
+        //       controller.close()
+        //     },
+        //   })
+        //   return new Response(gateStream, {
+        //     headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
+        //   })
+        // }
 
         // 멘토 정보 조회 (domains/mentor)
         const mentor = (await getMentorById(supabase, mentorId)) ?? (await getPublicMentorById(mentorId))
@@ -428,11 +481,15 @@ export async function POST(req: Request) {
                                 }).catch(err => console.error('[Chat] Credit deduction failed:', err))
                             }
 
-                            // 🧠 메모리 추출 (fire-and-forget, 응답 속도에 영향 없음)
-                            extractAndSaveMemories(supabase, user.id, mentorId, lastUserMessage, fullResponse)
-                                .catch(err => console.error('[Chat] Memory extraction failed:', err))
+                            // 🧠 메모리 추출 (P1 cost: 조건부 — 3턴마다만 실행)
+                            // 2026-09-19: 매번 LLM 호출은 비용 과다. 대화 초반(3,6,9턴)에만 추출.
+                            const userMsgCount = messages.length + 1
+                            if (userMsgCount % 3 === 0 && userMsgCount <= 9) {
+                                extractAndSaveMemories(supabase, user.id, mentorId, lastUserMessage, fullResponse)
+                                    .catch(err => console.error('[Chat] Memory extraction failed:', err))
+                            }
 
-                            // 📝 주제 자동 추출 (fire-and-forget, 2/4/8턴마다)
+                            // 📝 주제 자동 추출 (이미 조건부: 2/4/8턴마다)
                             extractAndUpdateTopic(supabase, sessionId, messages.length + 1)
                                 .catch(err => console.error('[Chat] Topic extraction failed:', err))
                         }

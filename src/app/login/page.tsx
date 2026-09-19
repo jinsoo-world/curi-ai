@@ -323,9 +323,52 @@ export default function LoginPage() {
                 </div>
                 )}
 
-                {/* Social Login */}
+                {/* Social Login — 2026-09-19: 카카오 우선 배치 (4060 중년 사용자 주 인증 수단) */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {/* Google */}
+                    {/* Kakao — 1순위 (인앱 브라우저 제약 없음, 중년 친화) */}
+                    <button
+                        type="button"
+                        onClick={() => handleSocialLogin('kakao')}
+                        disabled={isLoading !== null || !allChecked}
+                        style={{
+                            width: '100%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+                            padding: '16px 24px', fontSize: 17, fontWeight: 700,
+                            borderRadius: 16,
+                            background: allChecked ? '#FEE500' : '#f3f4f6',
+                            color: allChecked ? '#191919' : '#9ca3af',
+                            border: 'none',
+                            boxShadow: allChecked ? '0 2px 8px rgba(254,229,0,0.25)' : 'none',
+                            cursor: allChecked ? 'pointer' : 'not-allowed',
+                            transition: 'all 200ms',
+                            opacity: isLoading !== null ? 0.5 : 1,
+                        }}
+                    >
+                        {isLoading === 'kakao' ? (
+                            <div style={{
+                                width: 20, height: 20, borderRadius: '50%',
+                                border: '2px solid #d1d5db', borderTopColor: '#191919',
+                                animation: 'spin 0.8s linear infinite',
+                            }} />
+                        ) : (
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                <path d="M10 1C4.93 1 0.833 4.213 0.833 8.167c0 2.544 1.697 4.78 4.25 6.04-.149.533-.96 3.427-.992 3.64 0 0-.02.165.088.228.107.063.234.014.234.014.309-.043 3.578-2.34 4.145-2.739.464.066.94.1 1.442.1 5.07 0 9.167-3.213 9.167-7.283C19.167 4.213 15.07 1 10 1z" fill="#191919"/>
+                            </svg>
+                        )}
+                        카카오로 시작하기
+                        {lastProvider === 'kakao' && (
+                            <span style={{
+                                background: '#1f2937', color: '#fff',
+                                fontSize: 11, fontWeight: 700,
+                                padding: '4px 10px', borderRadius: 20,
+                                marginLeft: 4, whiteSpace: 'nowrap',
+                            }}>
+                                최근 사용
+                            </span>
+                        )}
+                    </button>
+
+                    {/* Google — 2순위 (인앱 브라우저 제약 있음) */}
                     <div style={{ position: 'relative' }}>
                         <button
                             type="button"
@@ -333,7 +376,7 @@ export default function LoginPage() {
                                 if (isInAppBrowser) {
                                     // 인앱 브라우저에서는 외부 브라우저로 안내
                                     const url = window.location.href
-                                    if (confirm('카카오톡 브라우저에서는 Google 로그인이 제한됩니다.\n\n외부 브라우저(Safari/Chrome)에서 여시거나,\n아래 카카오 로그인을 이용해주세요!')) {
+                                    if (confirm('카카오톡 브라우저에서는 Google 로그인이 제한됩니다.\n\n외부 브라우저(Safari/Chrome)에서 여시거나,\n위 카카오 로그인을 이용해주세요!')) {
                                         // 안드로이드: intent로 외부 브라우저 열기
                                         window.location.href = `intent://${url.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`
                                     }
@@ -391,49 +434,6 @@ export default function LoginPage() {
                             </div>
                         )}
                     </div>
-
-                    {/* Kakao */}
-                    <button
-                        type="button"
-                        onClick={() => handleSocialLogin('kakao')}
-                        disabled={isLoading !== null || !allChecked}
-                        style={{
-                            width: '100%',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-                            padding: '16px 24px', fontSize: 17, fontWeight: 600,
-                            borderRadius: 16,
-                            background: allChecked ? '#FEE500' : '#f3f4f6',
-                            color: allChecked ? '#191919' : '#9ca3af',
-                            border: 'none',
-                            boxShadow: allChecked ? '0 1px 3px rgba(0,0,0,0.04)' : 'none',
-                            cursor: allChecked ? 'pointer' : 'not-allowed',
-                            transition: 'all 200ms',
-                            opacity: isLoading !== null ? 0.5 : 1,
-                        }}
-                    >
-                        {isLoading === 'kakao' ? (
-                            <div style={{
-                                width: 20, height: 20, borderRadius: '50%',
-                                border: '2px solid #d1d5db', borderTopColor: '#191919',
-                                animation: 'spin 0.8s linear infinite',
-                            }} />
-                        ) : (
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                                <path d="M10 1C4.93 1 0.833 4.213 0.833 8.167c0 2.544 1.697 4.78 4.25 6.04-.149.533-.96 3.427-.992 3.64 0 0-.02.165.088.228.107.063.234.014.234.014.309-.043 3.578-2.34 4.145-2.739.464.066.94.1 1.442.1 5.07 0 9.167-3.213 9.167-7.283C19.167 4.213 15.07 1 10 1z" fill="#191919"/>
-                            </svg>
-                        )}
-                        카카오로 시작하기
-                        {lastProvider === 'kakao' && (
-                            <span style={{
-                                background: '#1f2937', color: '#fff',
-                                fontSize: 11, fontWeight: 700,
-                                padding: '4px 10px', borderRadius: 20,
-                                marginLeft: 4, whiteSpace: 'nowrap',
-                            }}>
-                                최근 사용
-                            </span>
-                        )}
-                    </button>
                 </div>
 
 

@@ -61,8 +61,8 @@ const ELEVENLABS_AGENT_IDS: Record<string, string> = {
     'Cathy': 'agent_6801kjg12gxhfxbaskx3y8s1szf1',  // TODO: Cathy 전용 에이전트 생성 후 교체
 }
 
-/** 전송할 컨텍스트 메시지 수 (최근 N턴) */
-const MAX_CONTEXT_MESSAGES = 20
+/** 전송할 컨텍스트 메시지 수 (최근 N턴) — 2026-09-19: 20 → 6으로 축소 (토큰 비용 절감) */
+const MAX_CONTEXT_MESSAGES = 6
 
 /** 연속 전송 방지 딜레이 (ms) */
 const SEND_DELAY_MS = 500
@@ -217,7 +217,13 @@ export default function ChatPage() {
                 const { mentor: data } = await res.json()
                 if (data) {
                     setMentor(data)
-                    setSuggestions(data.sample_questions || [])
+                    // 2026-09-19: 4060 중년 학습자 대화 스타터 (멘토 샘플이 없으면 기본 제공)
+                    const fallbackStarters = [
+                        '요즘 자꾸 깜빡깜빡하는데 괜찮은 건가요?',
+                        '나이 들면 무릎이 아픈 게 당연한가요?',
+                        '건강검진 결과를 어떻게 봐야 하나요?',
+                    ]
+                    setSuggestions(data.sample_questions?.length > 0 ? data.sample_questions : fallbackStarters)
                 } else {
                     router.push('/mentors')
                 }
@@ -672,7 +678,13 @@ export default function ChatPage() {
     const handleNewChat = useCallback(async () => {
         setMessages([])
         setShowSuggestions(true)
-        setSuggestions(mentor?.sample_questions || [])
+        // 2026-09-19: 새 대화 시작 시 fallback starters 제공
+        const fallbackStarters = [
+            '요즘 자꾸 깜빡깜빡하는데 괜찮은 건가요?',
+            '나이 들면 무릎이 아픈 게 당연한가요?',
+            '건강검진 결과를 어떻게 봐야 하나요?',
+        ]
+        setSuggestions(mentor?.sample_questions?.length > 0 ? mentor.sample_questions : fallbackStarters)
         // 새 세션 생성
         try {
             const res = await fetch('/api/sessions', {
@@ -686,7 +698,7 @@ export default function ChatPage() {
                 window.history.replaceState(null, '', `/chat/${mentorId}?session=${session.id}`)
                 loadSidebarSessions()
                 // 강제 re-render
-                setSuggestions([...mentor?.sample_questions || []])
+                setSuggestions([...(mentor?.sample_questions?.length > 0 ? mentor.sample_questions : fallbackStarters)])
             }
         } catch (e) {
             console.error('새 세션 생성 실패:', e)
