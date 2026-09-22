@@ -344,15 +344,21 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                         {filteredMentors.map((m) => {
                             const avatarUrl = m.avatar_url || MENTOR_IMAGES[m.name] || null
                             
-                            // 샘플 질문 생성 (폴백 개선 - expertise 활용)
+                            // 샘플 질문 생성 (긴 title/description 붙여넣기 방지)
                             let questions: string[] = []
                             if (Array.isArray(m.sample_questions) && m.sample_questions.length > 0) {
                                 questions = m.sample_questions.slice(0, 1)
                             } else if (Array.isArray(m.expertise) && m.expertise.length > 0) {
-                                // expertise 첫 번째 항목으로 질문 생성
-                                questions = [`${m.expertise[0]}에 대해 알려주세요`]
-                            } else if (m.title) {
-                                questions = [`${m.title}에 대해 알려주세요`]
+                                // expertise 첫 번째 항목이 짧은 주제인 경우에만 사용
+                                const topic = m.expertise[0]
+                                if (topic.length <= 20) {
+                                    questions = [`${topic}에 대해 어떻게 시작하면 좋을까요?`]
+                                } else {
+                                    questions = [`${m.name}에게 뭐부터 물어보면 좋아요?`]
+                                }
+                            } else {
+                                // 일반 짧은 질문 (긴 title/description 붙여넣지 않음)
+                                questions = [`${m.name}에게 뭐부터 물어보면 좋아요?`]
                             }
                             
                             if (questions.length === 0) return null
