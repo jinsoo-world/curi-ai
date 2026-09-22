@@ -2,3 +2,13 @@ node_modules/
 .next/
 .env.local
 .vercel/
+
+# 열쇠 파일 전부 (공개 저장소. 크리밋 기준 0923)
+.env
+.env.*
+!.env.local.example
+.claude/settings.local.json
+.mcp.json
+.cursor/
+*.pem
+*.key

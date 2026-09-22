@@ -14,6 +14,10 @@ export async function matchKnowledge(
     threshold = 0.7,
     count = 5,
 ): Promise<MatchedKnowledge[]> {
+    // 🛡 봇(mentor) 지정 없이 검색하면 다른 사람 자료가 섞인다. 빠지면 조용히 빈 배열이 아니라 예외.
+    if (!mentorId || typeof mentorId !== 'string') {
+        throw new Error('matchKnowledge: mentorId 는 필수다 (자료 격리)')
+    }
     try {
         const { data, error } = await db.rpc('match_knowledge', {
             query_embedding: queryEmbedding,
