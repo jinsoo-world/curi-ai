@@ -1,0 +1,71 @@
+# 라이브(www.curi-ai.com) 스모크 시험. 사람이 안 보고도 배포가 깨진 걸 알기 위한 것.
+# 읽기만 한다(돈·발송·저장 없음). 대화 API 는 SMOKE_CHAT=1 을 켜서 손으로 돌릴 때만 1회.
+# 언제 도나 = ①Vercel 이 main 을 배포 완료했을 때 ②매일 09:00 KST ③손으로(Actions 탭 → Run workflow)
+# 실패하면 = 스크린샷·흔적(trace) 을 아티팩트로 올린다. 슬랙 웹훅 시크릿(SLACK_WEBHOOK_URL)이 있으면 슬랙에도 알린다.
+name: smoke
+
+on:
+  deployment_status:            # Vercel 깃허브 연동이 배포 결과를 보내준다
+  schedule:
+    - cron: '0 0 * * *'         # 00:00 UTC = 09:00 KST
+  workflow_dispatch:
+    inputs:
+      base:
+        description: '시험할 주소 (비우면 https://www.curi-ai.com)'
+        required: false
+        default: 'https://www.curi-ai.com'
+      chat:
+        description: '대화 API 도 1회 부르기 (손님 하루 8회 한도 소모)'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    # 배포 이벤트는 「성공한 프로덕션 배포」일 때만. 스케줄·수동은 항상
+    if: >-
+      github.event_name != 'deployment_status' ||
+      (github.event.deployment_status.state == 'success' &&
+       contains(github.event.deployment.environment, 'production'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SMOKE_BASE: ${{ github.event.inputs.base || 'https://www.curi-ai.com' }}
+      SMOKE_CHAT: ${{ github.event.inputs.chat == 'true' && '1' || '' }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 설치
+        run: npm ci
+
+      - name: 크로미움 준비
+        run: npx playwright install --with-deps chromium
+
+      - name: 스모크 시험
+        run: npx playwright test
+
+      - name: 실패 증거 올리기 (스크린샷·흔적·보고서)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-실패증거-${{ github.run_id }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 14
+
+      - name: 슬랙 알림 (웹훅 시크릿이 있을 때만)
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          curl -sS -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"🔴 큐리AI 라이브 스모크 실패 (${SMOKE_BASE})\n원인·스크린샷: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL"

@@ -12,3 +12,7 @@ node_modules/
 .cursor/
 *.pem
 *.key
+
+# 스모크 시험 산출물
+test-results/
+playwright-report/
