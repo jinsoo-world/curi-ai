@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     //    그래서 짝을 이루는 두 화면(/login·/en)에만 각자 적는다.
   },
   openGraph: {
-    title: '큐리AI — 나만의 AI를 만들고 수익화해보세요!',
+    title: '큐리AI | 나만의 AI를 만들고 수익화해보세요!',
     description: '나만의 AI를 만들고 수익화해보세요! 콘텐츠 수익화, 브랜딩, 커리어 전환까지.',
     type: 'website',
     url: SITE_URL,
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: '큐리AI — 나만의 AI를 만들고 수익화해보세요!',
+    title: '큐리AI | 나만의 AI를 만들고 수익화해보세요!',
     description: '나만의 AI를 만들고 수익화해보세요! 콘텐츠 수익화, 브랜딩, 커리어 전환까지.',
     images: ['/og/main.png'],
   },

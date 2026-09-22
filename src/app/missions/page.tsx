@@ -210,7 +210,7 @@ export default function MissionsPage() {
             id: 'make-photo',
             icon: '',
             title: '사진 한 장 만들어보기',
-            description: '강사 프로필·배우 프로필·화질 개선 중 하나',
+            description: '강사 프로필, 배우 프로필, 화질 개선 중 하나',
             reward: 30,
             rewardLabel: '+30',
             progress: Math.min(1, 만든사진수),
