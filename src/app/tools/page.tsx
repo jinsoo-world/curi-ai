@@ -23,13 +23,14 @@ export const metadata: Metadata = {
 }
 
 // CEO 요구 2026-09-22: 강사/배우/화질개선 3개만 유지
+// 2026-09-22 이미지 품질 개선: 제목 베이킹 없는 깨끗한 초상화 샘플 사용
 const PHOTO_TOOLS = [
     {
         id: 'teacher',
         title: '강사 프로필',
         desc: '온라인 강의와 재취업에 쓸 수 있는 전문가 프로필 사진',
         href: '/tools/teacher-photo',
-        img: '/og/teacher-photo.png',
+        img: '/samples/teach-w1.webp',
         cost: 30,
     },
     {
@@ -37,7 +38,7 @@ const PHOTO_TOOLS = [
         title: '배우 프로필',
         desc: '오디션과 캐스팅에 쓸 수 있는 배우 프로필',
         href: '/tools/actor-photo',
-        img: '/og/actor-photo.png',
+        img: '/samples/act-m1.webp',
         cost: 30,
     },
     {
@@ -45,7 +46,7 @@ const PHOTO_TOOLS = [
         title: '화질 개선',
         desc: '낡고 흐릿한 사진을 선명하게 복원해드립니다',
         href: '/tools/enhance',
-        img: '/og/enhance.png',
+        img: '/samples/after-woman.webp',
         cost: 20,
     },
 ]
@@ -113,7 +114,7 @@ export default function ToolsHubPage() {
                                         alt={tool.title}
                                         fill
                                         sizes="(max-width: 768px) 50vw, 33vw"
-                                        style={{ objectFit: 'cover', objectPosition: 'center 28%' }}
+                                        style={{ objectFit: 'cover', objectPosition: 'center 15%' }}
                                     />
                                 )}
                             </div>
