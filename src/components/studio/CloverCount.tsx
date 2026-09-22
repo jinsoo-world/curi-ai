@@ -59,7 +59,7 @@ export default function CloverCount({ 값 }: { 값: number | null }) {
     return (
         <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
             <span className="app-top-credit-num">
-                {보이는값 === null ? '–' : 보이는값.toLocaleString()}
+                {보이는값 === null ? '-' : 보이는값.toLocaleString()}
             </span>
             {뱃지 !== null && 뱃지 !== 0 && (
                 <span

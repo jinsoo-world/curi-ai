@@ -19,8 +19,8 @@ const SITE_URL = 'https://www.curi-ai.com'
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: '큐리 AI — 사진 한 장으로 만드는 내 프로필 사진',
-    template: '%s — 큐리 AI',
+    default: '큐리 AI | 사진 한 장으로 만드는 내 프로필 사진',
+    template: '%s | 큐리 AI',
   },
   description:
     '사진 한 장만 올리면 강사 프로필·배우 프로필을 만들어 드립니다. 사진 화질 개선도 가능합니다.',
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
         url: '/og/main.png',
         width: 1200,
         height: 630,
-        alt: '큐리 AI — 사진 한 장으로 만드는 내 프로필 사진',
+        alt: '큐리 AI | 사진 한 장으로 만드는 내 프로필 사진',
       },
     ],
   },

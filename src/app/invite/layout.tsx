@@ -7,15 +7,15 @@ export const metadata: Metadata = {
     description: '내 주소로 친구가 들어와 휴대폰 인증을 하면 클로버 50개를 드려요.',
     keywords: ['큐리 AI 추천', '친구 초대', '추천코드'],
     openGraph: {
-        title: '친구 부르기 — 큐리 AI',
+        title: '친구 부르기 | 큐리 AI',
         description: '내 주소로 친구가 들어와 휴대폰 인증을 하면 클로버 50개를 드려요.',
         type: 'website',
         url: 'https://www.curi-ai.com/invite',
         siteName: '큐리 AI',
         locale: 'ko_KR',
-        images: [{ url: '/og-image.png', width: 1200, height: 630, alt: '친구 부르기 — 큐리 AI' }],
+        images: [{ url: '/og-image.png', width: 1200, height: 630, alt: '친구 부르기 | 큐리 AI' }],
     },
-    twitter: { card: 'summary_large_image', title: '친구 부르기 — 큐리 AI', description: '내 주소로 친구가 들어와 휴대폰 인증을 하면 클로버 50개를 드려요.', images: ['/og-image.png'] },
+    twitter: { card: 'summary_large_image', title: '친구 부르기 | 큐리 AI', description: '내 주소로 친구가 들어와 휴대폰 인증을 하면 클로버 50개를 드려요.', images: ['/og-image.png'] },
     alternates: { canonical: 'https://www.curi-ai.com/invite' },
     robots: { index: false, follow: true },
 }

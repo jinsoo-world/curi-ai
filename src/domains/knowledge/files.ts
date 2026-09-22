@@ -21,4 +21,4 @@ export const 올릴수있는파일 = [
 export const 고르기필터 = 올릴수있는파일.map((e) => '.' + e).join(',')
 
 /** 사람에게 보여줄 안내 */
-export const 안내문구 = 'PDF · 워드 · 한글 · 엑셀 · 파워포인트 · 텍스트'
+export const 안내문구 = 'PDF, 워드, 한글, 엑셀, 파워포인트, 텍스트'

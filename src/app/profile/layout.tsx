@@ -5,7 +5,7 @@ export const metadata: Metadata = {
     description: '프로필을 관리하고, 관심사를 업데이트하세요.',
     robots: { index: false, follow: false },
     openGraph: {
-        title: '마이페이지 — 큐리 AI',
+        title: '마이페이지 | 큐리 AI',
         description: '프로필을 관리하고, 관심사를 업데이트하세요.',
     },
 }

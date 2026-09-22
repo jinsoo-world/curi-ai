@@ -51,7 +51,7 @@ export default function Error({
                     >
                         🔄 다시 시도
                     </button>
-                    <Link href="/mentors" style={{
+                    <Link href="/" style={{
                         padding: '12px 24px', borderRadius: 12,
                         border: '1px solid #e5e7eb', background: '#fff',
                         color: '#374151', fontSize: 14, fontWeight: 600,
