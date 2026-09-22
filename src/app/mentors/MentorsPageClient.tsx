@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MENTOR_IMAGES } from '@/domains/mentor'
+import type { MentorCardData } from '@/domains/mentor'
 
 // 카테고리 목록
 const categories = [
@@ -14,7 +15,7 @@ const categories = [
     { key: 'mind', label: '마음', keywords: ['상담', '공감', '고민', '마음', '조언'] },
 ]
 
-export default function MentorsPageClient({ mentors }: { mentors: any[] }) {
+export default function MentorsPageClient({ mentors }: { mentors: MentorCardData[] }) {
     const [searchQuery, setSearchQuery] = useState('')
     const [activeCategory, setActiveCategory] = useState('all')
 

@@ -13,4 +13,6 @@ export interface MentorCardData {
     greeting_message: string
     sample_questions: string[]
     voice_sample_url?: string | null
+    sort_order?: number | null
+    creator_id?: string | null
 }

@@ -21,7 +21,7 @@ export async function getActiveMentors(): Promise<MentorCardData[]> {
 
     const { data, error } = await db
         .from('mentors')
-        .select('id, name, title, description, avatar_url, expertise, greeting_message, sample_questions, voice_sample_url, voice_id')
+        .select('id, name, title, description, avatar_url, expertise, greeting_message, sample_questions, voice_sample_url, voice_id, sort_order, creator_id')
         .eq('is_active', true)
         .order('sort_order', { ascending: true })
 
