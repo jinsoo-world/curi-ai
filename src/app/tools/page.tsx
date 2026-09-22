@@ -18,6 +18,7 @@ export const metadata: Metadata = {
     description: '사진 한 장으로 다양한 프로필 사진을 만들어보세요. 강사 프로필, 증명사진, 인스타 프로필, 배우 프로필까지.',
 }
 
+// CEO 요구 2026-09-22: 강사/배우/화질개선 3개만 유지
 const PHOTO_TOOLS = [
     {
         id: 'teacher',
@@ -25,22 +26,6 @@ const PHOTO_TOOLS = [
         desc: '온라인 강의와 재취업에 쓸 수 있는 전문가 프로필 사진',
         href: '/tools/teacher-photo',
         img: '/og/teacher-photo.png',
-        cost: 30,
-    },
-    {
-        id: 'id',
-        title: '증명사진',
-        desc: '이력서와 자격증에 붙일 수 있는 깔끔한 증명사진',
-        href: '/tools/id-photo',
-        img: '/og/profile-photo.png',
-        cost: 30,
-    },
-    {
-        id: 'insta',
-        title: '인스타 프로필',
-        desc: '인스타그램과 SNS에 쓸 수 있는 세련된 프로필',
-        href: '/tools/insta-profile',
-        img: '/og/insta-profile.png',
         cost: 30,
     },
     {
@@ -53,19 +38,11 @@ const PHOTO_TOOLS = [
     },
     {
         id: 'enhance',
-        title: '사진 화질 개선',
+        title: '화질 개선',
         desc: '낡고 흐릿한 사진을 선명하게 복원해드립니다',
         href: '/tools/enhance',
         img: '/og/enhance.png',
         cost: 20,
-    },
-    {
-        id: 'thumbnail',
-        title: '콘텐츠 썸네일',
-        desc: '유튜브와 블로그에 쓸 수 있는 눈길 가는 썸네일',
-        href: '/tools/thumbnail',
-        img: '/og/thumbnail.png',
-        cost: 30,
     },
 ]
 

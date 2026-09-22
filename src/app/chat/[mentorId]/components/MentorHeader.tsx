@@ -1,13 +1,9 @@
 'use client'
 
 /**
- * 대화 화면 맨 위 띠 — 지금 누구와 말하고 있는지만 보여준다
+ * 대화 화면 맨 위 띠 — Delphi 스타일 깔끔한 헤더 (2026-09-22)
  *
- * 대표 지시 2026-09-14 = 「대화창 UI는 더 직관적이고 깔끔하게 해. 지금 채팅 UI 다 걷어내고」
- * 「대화 창에도 더 이미지 크게 해. 이 사람이랑 대화하는 느낌을 주란말이야. web/MO 둘 다」
- *
- * 전에는 이 한 줄에 통화·전자책·보고서·공유·사이드바 여닫기까지 일곱 가지가 붙어 있었다.
- * 남긴 것은 셋이다. 뒤로 가기 · 상대 얼굴과 이름 · 새 대화.
+ * CEO 지시: "채팅 UI도 델파이처럼" - 큰 아바타, 넉넉한 간격, 부드러운 라운딩
  */
 import Image from 'next/image'
 import Link from 'next/link'
@@ -33,8 +29,7 @@ interface Props {
 }
 
 export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStreaming, onNewChat }: Props) {
-    // 대표 지시 2026-09-16 = 「코치 사진 더 키우고, 클릭하면 사진 크게 볼 수 있게 해.
-    //                        말할 때는 살짝 떨리게 해서 말하는 것처럼 효과 주고」
+    // Delphi 스타일: 큰 아바타, 부드러운 인터랙션
     const [사진크게, set사진크게] = useState(false)
     const [붙었나, set붙었나] = useState(false)
     useEffect(() => { set붙었나(true) }, [])
@@ -45,37 +40,38 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                 position: 'sticky',
                 top: 0,
                 zIndex: 30,
-                background: 'rgba(255,255,255,0.92)',
-                backdropFilter: 'saturate(180%) blur(12px)',
-                borderBottom: '1px solid var(--선)',
+                background: 'rgba(255,255,255,0.96)',
+                backdropFilter: 'saturate(180%) blur(16px)',
+                borderBottom: '1px solid rgba(0,0,0,0.06)',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
             }}
         >
             <div
                 style={{
-                    maxWidth: 960,   // 대화 칸과 맞춘다 — 대표 지적 2026-09-15
+                    maxWidth: 960,
                     margin: '0 auto',
-                    height: 68,
-                    padding: '0 12px',
+                    height: 76,
+                    padding: '0 16px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 12,
+                    gap: 16,
                 }}
             >
-                {/* 대표 지적 2026-09-16 = 「뒤로가기가 너무 아이콘이 작아. 확실하게 뒤로가기임을 알 수 있게 해」
-                    홑화살괄호 하나(‹)로는 무엇인지 알기 어려웠다. 화살표를 그리고 「뒤로」라고 적는다. */}
+                {/* Delphi 스타일: 부드러운 뒤로가기 버튼 */}
                 <Link
                     href="/chats"
                     aria-label="채팅 목록으로 돌아가기"
                     style={{
-                        height: 40, flexShrink: 0,
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
-                        padding: '0 15px 0 11px',
-                        borderRadius: 999,
-                        border: '1px solid var(--선)',
+                        height: 42, flexShrink: 0,
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '0 16px 0 12px',
+                        borderRadius: 12,
+                        border: '1px solid rgba(0,0,0,0.08)',
                         background: '#fff',
                         color: 'var(--먹)',
-                        fontSize: 15, fontWeight: 800, letterSpacing: '-0.03em',
+                        fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em',
                         textDecoration: 'none',
+                        transition: 'all 0.15s',
                     }}
                 >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -85,6 +81,7 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                     뒤로
                 </Link>
 
+                {/* Delphi 스타일: 큰 둥근 아바타 */}
                 <button
                     type="button"
                     onClick={() => mentorImage && set사진크게(true)}
@@ -92,12 +89,18 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                     className={isStreaming ? 'coach-face talking' : 'coach-face'}
                     style={{
                         position: 'relative',
-                        width: 'clamp(58px, 4.6vw, 76px)', height: 'clamp(58px, 4.6vw, 76px)', flexShrink: 0,
-                        borderRadius: 999, overflow: 'hidden',
-                        background: '#E8F2EC',
+                        width: 'clamp(64px, 5vw, 80px)', 
+                        height: 'clamp(64px, 5vw, 80px)', 
+                        flexShrink: 0,
+                        borderRadius: '50%', 
+                        overflow: 'hidden',
+                        background: 'linear-gradient(135deg, #E8F2EC 0%, #D4E8DC 100%)',
                         display: 'grid', placeItems: 'center',
-                        fontSize: 26, border: 0, padding: 0,
+                        fontSize: 28, border: '2px solid rgba(255,255,255,0.9)', 
+                        padding: 0,
                         cursor: mentorImage ? 'zoom-in' : 'default',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                        transition: 'transform 0.15s',
                     }}
                 >
                     {mentorImage ? (
@@ -109,33 +112,61 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
 
                 <Link
                     href={`/coach/${mentor.id}`}
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1, textDecoration: 'none', color: 'inherit' }}
+                    style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 14, 
+                        minWidth: 0, 
+                        flex: 1, 
+                        textDecoration: 'none', 
+                        color: 'inherit' 
+                    }}
                 >
                     <span style={{ minWidth: 0 }}>
-                        <span style={{ display: 'block', fontSize: 'clamp(17px, 1.45vw, 20px)', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--먹)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ 
+                            display: 'block', 
+                            fontSize: 'clamp(18px, 1.5vw, 21px)', 
+                            fontWeight: 800, 
+                            letterSpacing: '-0.03em', 
+                            color: 'var(--먹)', 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis', 
+                            whiteSpace: 'nowrap',
+                            marginBottom: 2,
+                        }}>
                             {mentor.name}
                         </span>
-                        <span style={{ display: 'block', fontSize: 'clamp(13px, 1.15vw, 15.5px)', color: isStreaming ? 'var(--연두)' : 'var(--먹연)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {isStreaming ? '쓰는 중…' : (mentor.title || '')}
+                        <span style={{ 
+                            display: 'block', 
+                            fontSize: 'clamp(14px, 1.2vw, 16px)', 
+                            color: isStreaming ? '#10b981' : 'var(--먹연)', 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis', 
+                            whiteSpace: 'nowrap',
+                            fontWeight: 500,
+                        }}>
+                            {isStreaming ? '답변 중…' : (mentor.title || '')}
                         </span>
                     </span>
                 </Link>
 
+                {/* Delphi 스타일: 부드러운 새 대화 버튼 */}
                 {onNewChat && (
                     <button
                         type="button"
                         onClick={onNewChat}
                         style={{
                             flexShrink: 0,
-                            height: 38,
-                            padding: '0 14px',
-                            borderRadius: 999,
-                            border: '1px solid var(--선)',
+                            height: 42,
+                            padding: '0 18px',
+                            borderRadius: 12,
+                            border: '1px solid rgba(0,0,0,0.08)',
                             background: '#fff',
                             fontSize: 'clamp(14px, 1.2vw, 16px)',
                             fontWeight: 700,
                             color: 'var(--먹)',
                             cursor: 'pointer',
+                            transition: 'all 0.15s',
                         }}
                     >
                         새 대화
