@@ -129,50 +129,23 @@
 .os-shape-pick { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 16px; background: var(--os-말풍선); border: 2px solid transparent; cursor: pointer; }
 .os-shape-pick[aria-pressed="true"] { border-color: var(--os-클로버); }
 
-/* ===== 캐릭터 = 도형 1 + 눈 2 ===== */
-.bot-avatar { position: relative; display: inline-block; line-height: 0; }
-.bot-avatar svg { display: block; overflow: visible; }
-.bot-avatar .body { transform-origin: 50% 50%; }
-.bot-avatar .eye { transform-origin: center; transform-box: fill-box; }
-.bot-avatar .badge { position: absolute; right: -2px; top: -2px; width: 18px; height: 18px; border-radius: 50%; background: var(--os-승인); color: #000; font-size: 12px; font-weight: 800; display: grid; place-items: center; }
-.bot-avatar .face-badge { position: absolute; right: -4px; bottom: -4px; width: 40%; height: 40%; border-radius: 50%; border: 2px solid var(--os-패널); object-fit: cover; }
-
-/* idle: 눈 깜빡 + 살짝 떠다님 */
-.bot-avatar[data-state="idle"] .eye { animation: bot-blink var(--눈-깜빡-주기) infinite; }
-.bot-avatar[data-state="idle"] .body { animation: bot-float var(--떠다님-주기) ease-in-out infinite; }
-/* listening: 눈 커짐 */
-.bot-avatar[data-state="listening"] .eye { transform: scale(1.25); }
-/* thinking: 눈 위로, 좌우로 천천히 */
-.bot-avatar[data-state="thinking"] .eye { animation: bot-think 1.6s ease-in-out infinite; }
-/* talking: 몸이 글자 리듬으로 늘었다 줄었다 */
-.bot-avatar[data-state="talking"] .body { animation: bot-talk var(--말함-주기) ease-in-out infinite; }
-.bot-avatar[data-state="talking"] .eye { animation: bot-blink 2600ms infinite; }
-/* waiting_approval: 정지 + 정면 응시 (배지는 컴포넌트가 그린다) */
-.bot-avatar[data-state="waiting_approval"] .body { animation: none; }
-/* working: 눈 아래로 */
-.bot-avatar[data-state="working"] .eye { transform: translateY(12%); animation: bot-blink 3000ms infinite; }
-/* sleeping: 눈 감김 + 아주 느린 호흡 */
-.bot-avatar[data-state="sleeping"] .eye { transform: scaleY(.12); }
-.bot-avatar[data-state="sleeping"] .body { animation: bot-breathe var(--호흡-주기) ease-in-out infinite; }
-/* error: x x 는 컴포넌트가 그린다, 몸은 살짝 흔들림 뒤 정지 */
-.bot-avatar[data-state="error"] .body { animation: bot-shake .5s ease-in-out 1; }
-
-@keyframes bot-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.08); } }
-@keyframes bot-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-@keyframes bot-think { 0%, 100% { transform: translate(-6%, -14%); } 50% { transform: translate(6%, -14%); } }
-@keyframes bot-talk { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.03, .97); } }
-@keyframes bot-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
-@keyframes bot-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
-
-@media (prefers-reduced-motion: reduce) {
-    .bot-avatar .body, .bot-avatar .eye { animation: none !important; }
-}
+/* 캐릭터(도형 1 + 눈 2)의 모양·움직임은 avatar.css 로 옮겼다 (BotAvatar.tsx 가 불러온다) */
 
 /* 좁은 화면(폰) = 명단은 위 가로 띠, 오른쪽 세부는 감춤 */
 @media (max-width: 900px) {
     .os-shell { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
-    .os-left { border-right: 0; border-bottom: 1px solid var(--os-선); max-height: 150px; }
-    .os-roster { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 84px; overflow-x: auto; overflow-y: hidden; padding: 6px 10px; }
+    .os-left { border-right: 0; border-bottom: 1px solid var(--os-선); max-height: 136px; }
+    /* 명단 = 손가락으로 옆으로 넘기는 띠. 한 칸씩 걸리게(snap), 끝에서 화면이 같이 튕기지 않게(overscroll) */
+    .os-roster {
+        grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 84px;
+        overflow-x: auto; overflow-y: hidden; padding: 6px 10px 8px;
+        scroll-snap-type: x proximity; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .os-roster::-webkit-scrollbar { display: none; }
+    /* 칸 = 캐릭터 + 이름만. 한 줄 소개 칩은 폰에선 숨긴다(높이 150 안에 안 들어가 잘렸다). title 로는 남아 있다 */
+    .os-bot-tile { scroll-snap-align: start; padding: 10px 6px 8px; gap: 6px; }
+    .os-bot-tile .os-chip { display: none; }
+    .os-bot-name { max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .os-search, .os-left-bottom { display: none; }
     .os-chat-wrap { grid-template-columns: 1fr; }
     .os-right { display: none; }
