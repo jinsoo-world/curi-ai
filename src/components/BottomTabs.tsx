@@ -49,7 +49,7 @@ const 칸들: 칸[] = [
 ]
 
 /** 이 띠를 걷는 곳 — 손이 바쁜 화면 */
-const 숨김 = ['/tools/teacher-photo', '/tools/id-photo', '/tools/insta-profile', '/tools/actor-photo', '/tools/enhance', '/tools/thumbnail', '/chat/', '/coach/', '/admin', '/login', '/billing', '/charge', '/creator/create', '/creator/edit', '/studio/']
+const 숨김 = ['/os', '/tools/teacher-photo', '/tools/id-photo', '/tools/insta-profile', '/tools/actor-photo', '/tools/enhance', '/tools/thumbnail', '/chat/', '/coach/', '/admin', '/login', '/billing', '/charge', '/creator/create', '/creator/edit', '/studio/']
 
 export default function BottomTabs() {
     const pathname = usePathname() || '/'

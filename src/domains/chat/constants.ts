@@ -46,3 +46,6 @@ export const MAX_MEMORY_ITEMS = 10
  */
 export const VOICE_FREE_TOTAL_SECONDS = 900   // 총 15분
 export const VOICE_MAX_CALL_SECONDS = 300     // 한 통화 5분
+
+/** 모델이 둘 다 안 될 때 사용자에게 보이는 한 줄 (서버 stream.ts 와 화면이 같이 쓴다) */
+export const UNAVAILABLE_TEXT = '지금은 잠깐 쉬는 중이에요. 잠시 뒤에 다시 말 걸어 주세요.'

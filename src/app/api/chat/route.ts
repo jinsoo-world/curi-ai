@@ -8,6 +8,7 @@ import { isTrialActive } from '@/domains/trial'
 import { generateEmbedding, matchKnowledge } from '@/domains/knowledge'
 import { deductCredit, getCreditBalance } from '@/domains/credit'
 import { pickDriverFromEnv } from '@/domains/llm'
+import { getOwnedTeamBotMentor } from '@/domains/os'
 import { CREDIT_CONSTANTS } from '@/domains/credit/types'
 
 export const dynamic = 'force-dynamic'
@@ -175,7 +176,10 @@ export async function POST(req: Request) {
         // }
 
         // 멘토 정보 조회 (domains/mentor)
-        const mentor = (await getMentorById(supabase, mentorId)) ?? (await getPublicMentorById(mentorId))
+        // 봇 찾기 = ①내가 볼 수 있는 봇 ②공개 봇 ③내 팀의 개인 봇(공개 안 됨, 주인만)
+        const mentor = (await getMentorById(supabase, mentorId))
+            ?? (await getPublicMentorById(mentorId))
+            ?? (user ? await getOwnedTeamBotMentor(createAdminClient(), user.id, mentorId) : null)
         if (!mentor) {
             return new Response('Mentor not found', { status: 404 })
         }

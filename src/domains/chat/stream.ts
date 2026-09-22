@@ -12,8 +12,8 @@ import { geminiToOpenAi, pickDriverFromEnv, solarChatStream, SOLAR_CHAT_MODEL } 
 import type { LlmChunk } from '@/domains/llm'
 import type { GeminiMessage } from './types'
 
-/** 모델이 둘 다 안 될 때 사용자에게 보이는 한 줄 */
-export const UNAVAILABLE_TEXT = '지금은 잠깐 쉬는 중이에요. 잠시 뒤에 다시 말 걸어 주세요.'
+import { UNAVAILABLE_TEXT } from './constants'
+export { UNAVAILABLE_TEXT }
 
 type TextChunk = { text?: string }
 
