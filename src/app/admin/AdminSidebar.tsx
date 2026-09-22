@@ -13,6 +13,7 @@ const navItems = [
     { href: '/admin/conversations', label: '💬 대화 내역', id: 'conversations' },
     { href: '/admin/match-logs', label: '🎯 멘토매칭', id: 'match-logs' },
     { href: '/admin/ebook-logs', label: '📕 전자책', id: 'ebook-logs' },
+    { href: '/admin/os', label: '🤝 봇 OS', id: 'os' },
 ]
 
 export default function AdminSidebar() {
