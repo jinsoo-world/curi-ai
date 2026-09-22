@@ -1,10 +1,14 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, Suspense } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MENTOR_IMAGES } from '@/domains/mentor'
 import type { MentorCardData } from '@/domains/mentor'
+import { MembershipBanner } from '@/components/MembershipBanner'
+import AppSidebar from '@/components/AppSidebar'
+import BizFooter from '@/components/BizFooter'
+import CreditClaimWrapper from './CreditClaimWrapper'
 
 // 카테고리 목록
 const categories = [
@@ -49,130 +53,186 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
     // 실제 DB 멘토가 없으면 빈 상태 표시
     if (mentors.length === 0) {
         return (
-            <div style={{ minHeight: '100dvh', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+            <div style={{ minHeight: '100dvh', background: 'var(--종이)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+                <MembershipBanner />
+                <AppSidebar />
                 <div style={{ textAlign: 'center', maxWidth: 400 }}>
                     <div style={{ fontSize: 64, marginBottom: 16 }}>🔍</div>
-                    <h2 style={{ fontSize: 24, fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>아직 멘토가 없어요</h2>
-                    <p style={{ fontSize: 16, color: '#64748b', lineHeight: 1.6 }}>곧 멋진 멘토들을 만나실 수 있을 거예요!</p>
+                    <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--먹)', marginBottom: 8 }}>아직 멘토가 없어요</h2>
+                    <p style={{ fontSize: 16, color: 'var(--먹연)', lineHeight: 1.6 }}>곧 멋진 멘토들을 만나실 수 있을 거예요!</p>
                 </div>
             </div>
         )
     }
 
     return (
-        <div style={{ minHeight: '100dvh', background: '#fff' }}>
-            {/* 상단 헤더 */}
-            <header style={{
-                background: '#1C2321',
-                color: '#fff',
-                padding: '20px 24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-            }}>
-                <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: '#fff' }}>
-                    <Image src="/logo.png" alt="큐리 AI" width={32} height={32} style={{ borderRadius: 6 }} />
-                    <span style={{ fontSize: 20, fontWeight: 800 }}>큐리 AI</span>
-                </Link>
-                <Link href="/" style={{ fontSize: 14, fontWeight: 600, color: '#fff', textDecoration: 'none' }}>
-                    홈으로
-                </Link>
-            </header>
+        <div style={{ minHeight: '100dvh', background: 'var(--종이)' }} role="document">
+            {/* ─── Sidebar ─── */}
+            <MembershipBanner />
+            <AppSidebar />
 
-            {/* 메인 컨테이너 */}
-            <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 20px' }}>
-                {/* 검색바 */}
-                <div style={{ marginBottom: 24 }}>
-                    <input
-                        type="text"
-                        placeholder="멘토 검색..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        style={{
-                            width: '100%',
-                            maxWidth: 600,
-                            padding: '14px 20px',
-                            fontSize: 16,
-                            border: '1px solid #e5e7eb',
-                            borderRadius: 12,
-                            outline: 'none',
-                            transition: 'border-color 0.2s',
-                        }}
-                        onFocus={(e) => e.currentTarget.style.borderColor = '#1C2321'}
-                        onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
-                    />
-                </div>
+            {/* ─── Credit Claim Modal ─── */}
+            <Suspense fallback={null}>
+                <CreditClaimWrapper />
+            </Suspense>
 
-                {/* 카테고리 칩 */}
-                <div style={{
+            {/* ─── Main Content (Delphi Discover 스타일) ─── */}
+            <div className="sidebar-content">
+
+                {/* ─── Header with CTA (Delphi style) ─── */}
+                <section style={{
+                    maxWidth: 1200,
+                    margin: '0 auto',
+                    padding: '24px 20px 12px',
                     display: 'flex',
-                    gap: 10,
-                    marginBottom: 32,
-                    overflowX: 'auto',
-                    paddingBottom: 8,
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
                 }}>
-                    {categories.map((category) => (
-                        <button
-                            key={category.key}
-                            onClick={() => setActiveCategory(category.key)}
-                            style={{
-                                padding: '10px 20px',
-                                fontSize: 15,
-                                fontWeight: 600,
-                                border: 'none',
-                                borderRadius: 20,
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap',
-                                transition: 'all 0.2s',
-                                background: activeCategory === category.key ? '#1C2321' : '#f3f4f6',
-                                color: activeCategory === category.key ? '#fff' : '#374151',
-                            }}
-                        >
-                            {category.label}
-                        </button>
-                    ))}
-                </div>
-
-                {/* 큰 포트레이트 카드 캐러셀 */}
-                <div style={{ marginBottom: 48 }}>
-                    <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 20, color: '#1e293b' }}>
-                        멘토 찾기
-                    </h2>
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                        gap: 20,
+                    <h1 style={{
+                        fontSize: 28,
+                        fontWeight: 700,
+                        color: 'var(--먹)',
+                        margin: 0,
                     }}>
-                        {filteredMentors.slice(0, 5).map((mentor) => {
-                            const avatarUrl = mentor.avatar_url || MENTOR_IMAGES[mentor.name] || null
+                        발견하기
+                    </h1>
+                    <Link
+                        href="/creator/create"
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '12px 24px',
+                            background: '#FF6B35',
+                            color: '#FFFFFF',
+                            fontSize: 15,
+                            fontWeight: 700,
+                            borderRadius: 999,
+                            textDecoration: 'none',
+                            boxShadow: '0 2px 12px rgba(255, 107, 53, 0.25)',
+                            transition: 'all 200ms',
+                        }}
+                        className="discover-primary-cta"
+                    >
+                        내 AI 만들기
+                    </Link>
+                </section>
+
+                {/* ─── Hero: Search + Category Chips ─── */}
+                <section style={{
+                    maxWidth: 1200,
+                    margin: '0 auto',
+                    padding: '16px 20px 28px',
+                    textAlign: 'center',
+                }}>
+                    {/* Search Bar */}
+                    <div style={{
+                        maxWidth: 640,
+                        margin: '0 auto 20px',
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            padding: '14px 22px',
+                            background: '#FFFFFF',
+                            border: '1px solid var(--선)',
+                            borderRadius: 999,
+                            boxShadow: '0 1px 8px rgba(42, 38, 37, 0.04)',
+                        }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--먹연)" strokeWidth="2.5" strokeLinecap="round">
+                                <circle cx="11" cy="11" r="7" />
+                                <path d="m21 21-4.35-4.35" />
+                            </svg>
+                            <input
+                                type="text"
+                                placeholder="무엇이 궁금하신가요?"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                style={{
+                                    flex: 1,
+                                    border: 'none',
+                                    background: 'transparent',
+                                    fontSize: 16,
+                                    color: 'var(--먹)',
+                                    outline: 'none',
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Category Chips */}
+                    <div style={{
+                        display: 'flex',
+                        gap: 8,
+                        justifyContent: 'center',
+                        flexWrap: 'wrap',
+                        maxWidth: 900,
+                        margin: '0 auto',
+                    }}>
+                        {categories.map((cat) => (
+                            <button
+                                key={cat.key}
+                                onClick={() => setActiveCategory(cat.key)}
+                                className="delphi-category-chip"
+                                data-active={activeCategory === cat.key}
+                                style={{
+                                    padding: '9px 18px',
+                                    borderRadius: 999,
+                                    border: '1px solid var(--선)',
+                                    background: activeCategory === cat.key ? 'var(--먹)' : '#FFFFFF',
+                                    color: activeCategory === cat.key ? '#FFFFFF' : 'var(--먹연)',
+                                    fontSize: 14,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                    transition: 'all 200ms',
+                                }}
+                            >
+                                {cat.label}
+                            </button>
+                        ))}
+                    </div>
+                </section>
+
+                {/* ─── Large Portrait Cards (Delphi style) ─── */}
+                <section style={{
+                    maxWidth: 1200,
+                    margin: '0 auto',
+                    padding: '20px 20px',
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        overflowX: 'auto',
+                        gap: 16,
+                        scrollbarWidth: 'none',
+                        msOverflowStyle: 'none',
+                        paddingBottom: 8,
+                    }}>
+                        {filteredMentors.slice(0, 6).map((m: MentorCardData) => {
+                            const avatarUrl = m.avatar_url || MENTOR_IMAGES[m.name] || null
                             return (
                                 <Link
-                                    key={mentor.id}
-                                    href={`/chat/${mentor.id}`}
+                                    key={m.id}
+                                    href={`/chat/${m.id}`}
+                                    className="delphi-portrait-card"
                                     style={{
                                         position: 'relative',
-                                        aspectRatio: '3/4',
+                                        flexShrink: 0,
+                                        width: 260,
+                                        height: 380,
                                         borderRadius: 20,
                                         overflow: 'hidden',
                                         textDecoration: 'none',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                                        transition: 'transform 0.2s, box-shadow 0.2s',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(-4px)'
-                                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)'
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(0)'
-                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
+                                        transition: 'transform 200ms',
                                     }}
                                 >
                                     {avatarUrl && (
                                         <Image
                                             src={avatarUrl}
-                                            alt={mentor.name}
+                                            alt={m.name}
                                             fill
-                                            sizes="(max-width: 768px) 50vw, 200px"
+                                            sizes="260px"
                                             style={{ objectFit: 'cover' }}
                                         />
                                     )}
@@ -186,88 +246,103 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                                             justifyContent: 'center',
                                             fontSize: 64,
                                             fontWeight: 900,
-                                            color: '#1C2321',
+                                            color: 'var(--먹)',
                                         }}>
-                                            {mentor.name.slice(0, 1)}
+                                            {m.name.slice(0, 1)}
                                         </div>
                                     )}
-                                    {/* 하단 그라데이션 + 이름/직함 */}
+                                    {/* Gradient overlay at bottom */}
                                     <div style={{
                                         position: 'absolute',
                                         bottom: 0,
                                         left: 0,
                                         right: 0,
-                                        padding: '40px 16px 16px',
-                                        background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)',
-                                        color: '#fff',
+                                        padding: '48px 20px 20px',
+                                        background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
                                     }}>
-                                        <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
-                                            {mentor.name}
-                                        </div>
-                                        {mentor.title && (
-                                            <div style={{ fontSize: 13, opacity: 0.9 }}>
-                                                {mentor.title}
-                                            </div>
-                                        )}
+                                        <h3 style={{
+                                            fontSize: 22,
+                                            fontWeight: 700,
+                                            color: '#FFFFFF',
+                                            marginBottom: 4,
+                                            lineHeight: 1.2,
+                                        }}>
+                                            {m.name}
+                                        </h3>
+                                        <p style={{
+                                            fontSize: 14,
+                                            color: 'rgba(255,255,255,0.85)',
+                                            lineHeight: 1.4,
+                                            margin: 0,
+                                        }}>
+                                            {m.title || m.description}
+                                        </p>
                                     </div>
                                 </Link>
                             )
                         })}
                     </div>
-                </div>
+                </section>
 
-                {/* 질문 리스트 */}
-                <div>
-                    <h3 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20, color: '#1e293b' }}>
-                        이런 걸 물어보세요
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                        {filteredMentors.map((mentor) => {
-                            const avatarUrl = mentor.avatar_url || MENTOR_IMAGES[mentor.name] || null
-                            const questions = Array.isArray(mentor.sample_questions) ? mentor.sample_questions.slice(0, 1) : []
+                {/* ─── Question List (Delphi "Ask about" style) ─── */}
+                <section style={{
+                    maxWidth: 1200,
+                    margin: '0 auto',
+                    padding: '28px 20px 48px',
+                }}>
+                    <h2 style={{
+                        fontSize: 17,
+                        fontWeight: 700,
+                        color: 'var(--먹)',
+                        marginBottom: 16,
+                        letterSpacing: '-0.02em',
+                    }}>
+                        이런 질문을 해보세요
+                    </h2>
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 10,
+                    }}>
+                        {filteredMentors.map((m) => {
+                            const avatarUrl = m.avatar_url || MENTOR_IMAGES[m.name] || null
+                            const questions = Array.isArray(m.sample_questions) ? m.sample_questions.slice(0, 1) : []
                             
                             if (questions.length === 0) return null
 
                             return questions.map((question: string, idx: number) => (
                                 <Link
-                                    key={`${mentor.id}-${idx}`}
-                                    href={`/chat/${mentor.id}`}
+                                    key={`${m.id}-${idx}`}
+                                    href={`/chat/${m.id}`}
+                                    className="delphi-question-row"
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: 16,
                                         padding: '16px 20px',
-                                        background: '#fff',
-                                        border: '1px solid #e5e7eb',
-                                        borderRadius: 12,
+                                        background: '#FFFFFF',
+                                        border: '1px solid var(--선)',
+                                        borderRadius: 16,
                                         textDecoration: 'none',
-                                        color: '#1e293b',
-                                        transition: 'all 0.2s',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.borderColor = '#1C2321'
-                                        e.currentTarget.style.background = '#f9fafb'
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.borderColor = '#e5e7eb'
-                                        e.currentTarget.style.background = '#fff'
+                                        transition: 'all 200ms',
                                     }}
                                 >
-                                    {/* 아바타 */}
+                                    {/* Avatar */}
                                     <div style={{
+                                        position: 'relative',
+                                        flexShrink: 0,
                                         width: 48,
                                         height: 48,
-                                        borderRadius: '50%',
+                                        borderRadius: 999,
                                         overflow: 'hidden',
-                                        flexShrink: 0,
-                                        background: '#f3f4f6',
+                                        background: 'var(--샌드)',
                                     }}>
                                         {avatarUrl && (
                                             <Image
                                                 src={avatarUrl}
-                                                alt={mentor.name}
-                                                width={48}
-                                                height={48}
+                                                alt={m.name}
+                                                fill
+                                                sizes="48px"
                                                 style={{ objectFit: 'cover' }}
                                             />
                                         )}
@@ -280,57 +355,105 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                                                 justifyContent: 'center',
                                                 fontSize: 20,
                                                 fontWeight: 700,
-                                                color: '#1C2321',
+                                                color: 'var(--먹)',
                                             }}>
-                                                {mentor.name.slice(0, 1)}
+                                                {m.name.slice(0, 1)}
                                             </div>
                                         )}
                                     </div>
-
-                                    {/* 이름 + 직함 + 질문 */}
+                                    {/* Text */}
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                                            <span style={{ fontSize: 15, fontWeight: 700, color: '#1e293b' }}>
-                                                {mentor.name}
-                                            </span>
-                                            {mentor.title && (
-                                                <span style={{ fontSize: 13, color: '#64748b' }}>
-                                                    {mentor.title}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div style={{ fontSize: 15, color: '#374151', lineHeight: 1.5 }}>
+                                        <div style={{
+                                            fontSize: 16,
+                                            fontWeight: 600,
+                                            color: 'var(--먹)',
+                                            marginBottom: 2,
+                                            lineHeight: 1.4,
+                                        }}>
                                             {question}
+                                        </div>
+                                        <div style={{
+                                            fontSize: 14,
+                                            color: 'var(--먹연)',
+                                            lineHeight: 1.3,
+                                        }}>
+                                            {m.name}
                                         </div>
                                     </div>
                                 </Link>
                             ))
                         })}
                     </div>
-                </div>
+                </section>
 
                 {/* 필터링 결과가 없을 때 */}
                 {filteredMentors.length === 0 && (
-                    <div style={{
-                        textAlign: 'center',
+                    <section style={{
+                        maxWidth: 1200,
+                        margin: '0 auto',
                         padding: '60px 20px',
+                        textAlign: 'center',
                     }}>
                         <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
-                        <h3 style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', marginBottom: 8 }}>
+                        <h3 style={{ fontSize: 20, fontWeight: 700, color: 'var(--먹)', marginBottom: 8 }}>
                             검색 결과가 없어요
                         </h3>
-                        <p style={{ fontSize: 16, color: '#64748b' }}>
+                        <p style={{ fontSize: 16, color: 'var(--먹연)' }}>
                             다른 키워드로 검색해보세요
                         </p>
-                    </div>
+                    </section>
                 )}
+
+                {/* ─── BizFooter (CEO requirement 2026-09-22) ─── */}
+                <div style={{
+                    maxWidth: 1200,
+                    margin: '0 auto',
+                    padding: '0 20px',
+                }}>
+                    <BizFooter maxWidth={1200} marginTop={48} />
+                </div>
             </div>
 
-            {/* 반응형 스타일 */}
             <style jsx>{`
+                /* Hide horizontal scrollbar on portrait cards */
+                .delphi-portrait-card::-webkit-scrollbar {
+                    display: none;
+                }
+                
+                /* Primary CTA hover */
+                :global(.discover-primary-cta:hover) {
+                    background: #E8552C !important;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 16px rgba(255, 107, 53, 0.4) !important;
+                }
+                
+                /* Category chip hover */
+                :global(.delphi-category-chip:hover) {
+                    background: var(--샌드) !important;
+                    border-color: var(--먹) !important;
+                    color: var(--먹) !important;
+                }
+                
+                /* Portrait card hover */
+                :global(.delphi-portrait-card:hover) {
+                    transform: translateY(-4px);
+                }
+                
+                /* Question row hover */
+                :global(.delphi-question-row:hover) {
+                    border-color: var(--먹);
+                    box-shadow: 0 4px 16px rgba(42, 38, 37, 0.08);
+                }
+                
                 @media (max-width: 768px) {
-                    input {
-                        font-size: 14px !important;
+                    :global(.sidebar-content) {
+                        margin-left: 0 !important;
+                        padding-bottom: 72px;
+                    }
+                    
+                    :global(.delphi-portrait-card) {
+                        width: 240px !important;
+                        height: 340px !important;
                     }
                 }
             `}</style>
