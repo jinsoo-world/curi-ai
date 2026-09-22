@@ -4,15 +4,10 @@ import Image from 'next/image'
 import { getActiveMentors, MENTOR_IMAGES } from '@/domains/mentor'
 import { MembershipBanner } from '@/components/MembershipBanner'
 import type { MentorCardData } from '@/domains/mentor'
-import NotificationBanner from './NotificationBanner'
-import WelcomeGift from '@/components/WelcomeGift'
-import MentorBoard from '@/components/ui/MentorBoard'
 import AppSidebar from '@/components/AppSidebar'
 import CreditClaimWrapper from './CreditClaimWrapper'
 import { Suspense } from 'react'
 import AdSlot from '@/components/AdSlot'
-import ClaimPhoto from '@/components/studio/ClaimPhoto'
-import FirstGuide from '@/components/studio/FirstGuide'
 
 export const metadata: Metadata = {
     title: 'AI 발견하기',
@@ -29,27 +24,45 @@ const fallbackMentors = [
         id: 'passion-jin',
         name: '열정진',
         title: '콘텐츠 수익화 / 브랜딩 전문가',
-        desc: '콘텐츠로 수익을 만들고, 퍼스널 브랜드를 구축하는 방법을 알려드립니다. 큐리어스 대표이자 콘텐츠 크리에이터로서의 실전 경험을 나눕니다.',
+        desc: '콘텐츠로 수익을 만들고, 퍼스널 브랜드를 구축하는 방법을 알려드립니다.',
         questions: ['콘텐츠 수익화 어디서 시작하면 좋을까요?', '퍼스널 브랜드 차별화 전략이 궁금해요'],
     },
     {
         id: 'mentor-2',
         name: '글담쌤',
         title: '글쓰기 & 콘텐츠 기획 전문가',
-        desc: '매력적인 글쓰기와 콘텐츠 기획의 핵심을 짚어드립니다. 큐리어스에서 글쓰기 클래스를 운영하고 있습니다.',
+        desc: '매력적인 글쓰기와 콘텐츠 기획의 핵심을 짚어드립니다.',
         questions: ['블로그 글 잘 쓰는 방법이 궁금해요', '매일 글쓰기 습관 만들기'],
     },
     {
         id: 'mentor-3',
         name: 'Cathy',
         title: '실전 마케팅 & 커뮤니티 전문가',
-        desc: '실전 마케팅과 커뮤니티 운영 노하우를 공유합니다. 큐리어스에서 마케팅 클래스를 담당하고 있습니다.',
+        desc: '실전 마케팅과 커뮤니티 운영 노하우를 공유합니다.',
         questions: ['인스타그램 팔로워 늘리는 현실적인 방법', '커뮤니티 처음 만들 때 뭐부터 해야 하나요?'],
     },
 ]
 
+const sampleQuestions = [
+    { mentor: '열정진', question: '콘텐츠 수익화 어디서 시작하면 좋을까요?', mentorId: 'passion-jin' },
+    { mentor: '글담쌤', question: '블로그 글 잘 쓰는 방법이 궁금해요', mentorId: 'mentor-2' },
+    { mentor: 'Cathy', question: '인스타그램 팔로워 늘리는 현실적인 방법', mentorId: 'mentor-3' },
+    { mentor: '열정진', question: '퍼스널 브랜드 차별화 전략이 궁금해요', mentorId: 'passion-jin' },
+    { mentor: '글담쌤', question: '매일 글쓰기 습관 만들기', mentorId: 'mentor-2' },
+]
+
 export default async function MentorsPage() {
     const mentors = await getActiveMentors()
+    const displayMentors = mentors.length > 0 ? mentors : fallbackMentors.map(m => ({
+        id: m.id,
+        name: m.name,
+        title: m.title,
+        description: m.desc,
+        avatar_url: MENTOR_IMAGES[m.name] || '',
+        expertise: [],
+        greeting_message: '',
+        sample_questions: m.questions,
+    } as MentorCardData))
 
     return (
         <div style={{ minHeight: '100dvh', background: 'var(--종이)' }} role="document">
@@ -57,63 +70,44 @@ export default async function MentorsPage() {
             {/* ─── Sidebar ─── */}
             <MembershipBanner />
             <AppSidebar />
-            <FirstGuide />
-            <div style={{ maxWidth: 1000, margin: "0 auto", padding: "0 18px" }}><ClaimPhoto /></div>
 
             {/* ─── Credit Claim Modal ─── */}
             <Suspense fallback={null}>
                 <CreditClaimWrapper />
             </Suspense>
 
-            {/* ─── Main Content (Delphi 스타일 발견 화면) ─── */}
+            {/* ─── Main Content (Delphi Discover 스타일) ─── */}
             <div className="sidebar-content">
 
-                {/* ─── 환영 선물 + 알림 ─── */}
-                <WelcomeGift />
-                <NotificationBanner />
-
-                {/* ─── Delphi 스타일 히어로 섹션 ─── */}
+                {/* ─── Hero: Search + Category Chips ─── */}
                 <section style={{
                     maxWidth: 1200,
                     margin: '0 auto',
-                    padding: '64px 20px 48px',
+                    padding: '48px 20px 32px',
                     textAlign: 'center',
-                    position: 'relative',
                 }}>
-                    {/* 큰 히어로 텍스트 (Delphi "What's on your mind?" 스타일) */}
-                    <h1 style={{
-                        fontSize: 'clamp(36px, 8vw, 56px)',
-                        fontWeight: 800,
-                        color: 'var(--먹)',
-                        marginBottom: 32,
-                        lineHeight: 1.2,
-                        letterSpacing: '-0.03em',
-                    }}>
-                        마음에 있는 것을<br />물어보세요
-                    </h1>
-
-                    {/* 검색 바 */}
+                    {/* Search Bar */}
                     <div style={{
-                        maxWidth: 640,
-                        margin: '0 auto 24px',
+                        maxWidth: 680,
+                        margin: '0 auto 28px',
                     }}>
                         <div style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 12,
-                            padding: '16px 24px',
-                            background: 'var(--카드)',
+                            gap: 14,
+                            padding: '18px 26px',
+                            background: '#FFFFFF',
                             border: '1px solid var(--선)',
                             borderRadius: 999,
-                            boxShadow: 'var(--그림자)',
+                            boxShadow: '0 2px 12px rgba(42, 38, 37, 0.06)',
                         }}>
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--먹연)" strokeWidth="2" strokeLinecap="round">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--먹연)" strokeWidth="2.5" strokeLinecap="round">
                                 <circle cx="11" cy="11" r="7" />
                                 <path d="m21 21-4.35-4.35" />
                             </svg>
                             <input
                                 type="text"
-                                placeholder="콘텐츠 수익화가 궁금해요"
+                                placeholder="무엇이 궁금하신가요?"
                                 style={{
                                     flex: 1,
                                     border: 'none',
@@ -123,35 +117,30 @@ export default async function MentorsPage() {
                                     outline: 'none',
                                 }}
                             />
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--먹연)" strokeWidth="2" strokeLinecap="round">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                                <line x1="12" y1="19" x2="12" y2="23" />
-                                <line x1="8" y1="23" x2="16" y2="23" />
-                            </svg>
                         </div>
                     </div>
 
-                    {/* 카테고리 칩 (가운데 정렬) */}
+                    {/* Category Chips */}
                     <div style={{
                         display: 'flex',
                         gap: 10,
                         justifyContent: 'center',
                         flexWrap: 'wrap',
-                        maxWidth: 800,
+                        maxWidth: 900,
                         margin: '0 auto',
                     }}>
-                        {['콘텐츠 & 수익화', '글쓰기', '마케팅', '브랜딩', '창업', '커리어'].map(cat => (
+                        {['전체', '콘텐츠', '글쓰기', '마케팅', '브랜딩', '창업', '커리어'].map((cat, idx) => (
                             <button
                                 key={cat}
-                                className="category-chip"
+                                className="delphi-category-chip"
+                                data-active={idx === 0}
                                 style={{
-                                    padding: '10px 18px',
+                                    padding: '11px 20px',
                                     borderRadius: 999,
                                     border: '1px solid var(--선)',
-                                    background: 'var(--카드)',
-                                    color: 'var(--먹연)',
-                                    fontSize: 14,
+                                    background: idx === 0 ? 'var(--먹)' : '#FFFFFF',
+                                    color: idx === 0 ? '#FFFFFF' : 'var(--먹연)',
+                                    fontSize: 15,
                                     fontWeight: 600,
                                     cursor: 'pointer',
                                     whiteSpace: 'nowrap',
@@ -164,204 +153,164 @@ export default async function MentorsPage() {
                     </div>
                 </section>
 
-                {/* ─── 실제 고민들 (Delphi "Real situations" 스타일) ─── */}
+                {/* ─── Large Portrait Cards (Delphi style) ─── */}
                 <section style={{
                     maxWidth: 1200,
                     margin: '0 auto',
-                    padding: '0 20px 56px',
+                    padding: '24px 20px',
                 }}>
-                    <h2 style={{
-                        fontSize: 20,
-                        fontWeight: 700,
-                        color: 'var(--먹)',
-                        marginBottom: 20,
-                    }}>
-                        이런 고민이 있으신가요?
-                    </h2>
                     <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-                        gap: 16,
+                        display: 'flex',
+                        overflowX: 'auto',
+                        gap: 20,
+                        scrollbarWidth: 'none',
+                        msOverflowStyle: 'none',
+                        paddingBottom: 8,
                     }}>
-                        {[
-                            { q: '콘텐츠로 수익을 만들고 싶은데 어디서 시작해야 할지 모르겠어요', cat: '콘텐츠', count: 8 },
-                            { q: '블로그 글은 쓰는데 사람들이 안 봐요. 뭐가 문제일까요?', cat: '글쓰기', count: 12 },
-                            { q: '퍼스널 브랜드를 만들고 싶은데 어떻게 차별화해야 하나요?', cat: '브랜딩', count: 6 },
-                        ].map((item, i) => (
+                        {displayMentors.slice(0, 6).map((m: MentorCardData) => (
                             <Link
-                                key={i}
-                                href={`/mentors?q=${encodeURIComponent(item.q)}`}
-                                className="situation-card"
+                                key={m.id}
+                                href={`/${m.id}`}
+                                className="delphi-portrait-card"
                                 style={{
-                                    display: 'block',
-                                    padding: 20,
-                                    background: 'var(--카드)',
-                                    border: '1px solid var(--선)',
-                                    borderRadius: 'var(--둥근)',
+                                    position: 'relative',
+                                    flexShrink: 0,
+                                    width: 280,
+                                    height: 400,
+                                    borderRadius: 24,
+                                    overflow: 'hidden',
                                     textDecoration: 'none',
-                                    transition: 'all 200ms',
+                                    transition: 'transform 200ms',
                                 }}
                             >
+                                {/* Image fills entire card */}
+                                {(m.avatar_url || MENTOR_IMAGES[m.name]) && (
+                                    <Image
+                                        src={m.avatar_url || MENTOR_IMAGES[m.name] || ''}
+                                        alt={m.name}
+                                        fill
+                                        sizes="280px"
+                                        style={{ objectFit: 'cover' }}
+                                    />
+                                )}
+                                {/* Gradient overlay at bottom */}
                                 <div style={{
-                                    display: 'flex',
-                                    alignItems: 'flex-start',
-                                    gap: 12,
-                                    marginBottom: 12,
+                                    position: 'absolute',
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    padding: '48px 20px 20px',
+                                    background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
                                 }}>
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--먹연)" strokeWidth="2" style={{ flexShrink: 0, marginTop: 2 }}>
-                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                                    </svg>
+                                    <h3 style={{
+                                        fontSize: 22,
+                                        fontWeight: 700,
+                                        color: '#FFFFFF',
+                                        marginBottom: 4,
+                                        lineHeight: 1.2,
+                                    }}>
+                                        {m.name}
+                                    </h3>
                                     <p style={{
-                                        fontSize: 16,
-                                        color: 'var(--먹)',
-                                        lineHeight: 1.5,
+                                        fontSize: 14,
+                                        color: 'rgba(255,255,255,0.85)',
+                                        lineHeight: 1.4,
                                         margin: 0,
                                     }}>
-                                        {item.q}
+                                        {m.title || m.description}
                                     </p>
-                                </div>
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 12,
-                                    marginTop: 16,
-                                }}>
-                                    <span style={{
-                                        fontSize: 13,
-                                        fontWeight: 600,
-                                        color: 'var(--먹연)',
-                                        padding: '4px 12px',
-                                        background: 'var(--샌드)',
-                                        borderRadius: 999,
-                                    }}>
-                                        {item.cat}
-                                    </span>
-                                    <span style={{
-                                        fontSize: 13,
-                                        color: 'var(--먹연)',
-                                    }}>
-                                        {item.count}명이 물었어요
-                                    </span>
                                 </div>
                             </Link>
                         ))}
                     </div>
                 </section>
 
-                {/* ─── 알아두면 좋은 AI (Delphi "Worth knowing" 스타일) ─── */}
-                {mentors.length > 0 && (
-                    <section style={{
-                        maxWidth: 1200,
-                        margin: '0 auto',
-                        padding: '0 20px 56px',
+                {/* ─── Question List (Delphi "Ask about" style) ─── */}
+                <section style={{
+                    maxWidth: 1200,
+                    margin: '0 auto',
+                    padding: '32px 20px 56px',
+                }}>
+                    <h2 style={{
+                        fontSize: 18,
+                        fontWeight: 700,
+                        color: 'var(--먹)',
+                        marginBottom: 20,
+                        letterSpacing: '-0.02em',
                     }}>
-                        <h2 style={{
-                            fontSize: 20,
-                            fontWeight: 700,
-                            color: 'var(--먹)',
-                            marginBottom: 20,
-                        }}>
-                            알아두면 좋은 AI 멘토
-                        </h2>
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-                            gap: 20,
-                        }}>
-                            {mentors.slice(0, 4).map((m: MentorCardData) => (
-                                <Link
-                                    key={m.id}
-                                    href={`/${m.id}`}
-                                    className="mentor-card"
-                                    style={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        background: 'var(--카드)',
-                                        borderRadius: 'var(--둥근)',
-                                        overflow: 'hidden',
-                                        textDecoration: 'none',
-                                        border: '1px solid var(--선)',
-                                        transition: 'all 200ms',
-                                    }}
-                                >
+                        이런 질문을 해보세요
+                    </h2>
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 12,
+                    }}>
+                        {sampleQuestions.map((item, i) => (
+                            <Link
+                                key={i}
+                                href={`/chat/${item.mentorId}`}
+                                className="delphi-question-row"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 16,
+                                    padding: '16px 20px',
+                                    background: '#FFFFFF',
+                                    border: '1px solid var(--선)',
+                                    borderRadius: 16,
+                                    textDecoration: 'none',
+                                    transition: 'all 200ms',
+                                }}
+                            >
+                                {/* Avatar */}
+                                <div style={{
+                                    position: 'relative',
+                                    flexShrink: 0,
+                                    width: 48,
+                                    height: 48,
+                                    borderRadius: 999,
+                                    overflow: 'hidden',
+                                    background: 'var(--샌드)',
+                                }}>
+                                    {MENTOR_IMAGES[item.mentor] && (
+                                        <Image
+                                            src={MENTOR_IMAGES[item.mentor]}
+                                            alt={item.mentor}
+                                            fill
+                                            sizes="48px"
+                                            style={{ objectFit: 'cover' }}
+                                        />
+                                    )}
+                                </div>
+                                {/* Text */}
+                                <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{
-                                        position: 'relative',
-                                        aspectRatio: '3/4',
-                                        background: 'var(--샌드)',
+                                        fontSize: 16,
+                                        fontWeight: 600,
+                                        color: 'var(--먹)',
+                                        marginBottom: 2,
+                                        lineHeight: 1.4,
                                     }}>
-                                        {(m.avatar_url || MENTOR_IMAGES[m.name]) && (
-                                            <Image
-                                                src={m.avatar_url || MENTOR_IMAGES[m.name] || ''}
-                                                alt={m.name}
-                                                fill
-                                                sizes="(max-width: 768px) 50vw, 33vw"
-                                                style={{ objectFit: 'cover' }}
-                                            />
-                                        )}
+                                        {item.question}
                                     </div>
-                                    <div style={{ padding: 18 }}>
-                                        <h3 style={{
-                                            fontSize: 18,
-                                            fontWeight: 700,
-                                            color: 'var(--먹)',
-                                            marginBottom: 6,
-                                        }}>
-                                            {m.name}
-                                        </h3>
-                                        <p style={{
-                                            fontSize: 14,
-                                            color: 'var(--먹연)',
-                                            lineHeight: 1.5,
-                                            marginBottom: 12,
-                                        }}>
-                                            {m.title || m.description}
-                                        </p>
-                                        <div style={{
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: 4,
-                                            padding: '6px 12px',
-                                            background: 'var(--샌드)',
-                                            borderRadius: 999,
-                                            fontSize: 13,
-                                            fontWeight: 600,
-                                            color: 'var(--먹)',
-                                        }}>
-                                            물어보기
-                                        </div>
+                                    <div style={{
+                                        fontSize: 14,
+                                        color: 'var(--먹연)',
+                                        lineHeight: 1.3,
+                                    }}>
+                                        {item.mentor}
                                     </div>
-                                </Link>
-                            ))}
-                        </div>
-                    </section>
-                )}
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </section>
 
-                {/* ─── 모든 AI 멘토 그리드 ─── */}
-                <MentorBoard
-                    mentors={(mentors.length > 0
-                        ? mentors.map((m: MentorCardData) => ({
-                            id: m.id,
-                            name: m.name,
-                            title: m.title || m.description || '',
-                            image: m.avatar_url || MENTOR_IMAGES[m.name] || null,
-                            expertise: m.expertise || [],
-                        }))
-                        : fallbackMentors.map((m) => ({
-                            id: m.id,
-                            name: m.name,
-                            title: m.title || m.desc || '',
-                            image: MENTOR_IMAGES[m.name] || '/mentors/passion-jin.png',
-                            expertise: [],
-                        }))
-                    )}
-                />
-
-                {/* ─── 광고 + Footer ─── */}
-                <AdSlot />
-                <footer className="mentors-footer" style={{
+                {/* ─── Footer ─── */}
+                <footer style={{
                     borderTop: '1px solid var(--선)',
-                    background: 'var(--카드)',
-                    padding: '36px 20px 60px',
+                    background: '#FFFFFF',
+                    padding: '36px 20px 80px',
                 }}>
                     <div style={{ maxWidth: 1200, margin: '0 auto' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
@@ -404,22 +353,38 @@ export default async function MentorsPage() {
             </div>
 
             <style>{`
-                .category-chip:hover {
+                /* Hide horizontal scrollbar on portrait cards */
+                .delphi-portrait-card::-webkit-scrollbar {
+                    display: none;
+                }
+                
+                /* Category chip hover */
+                .delphi-category-chip:hover {
                     background: var(--샌드) !important;
-                    border-color: var(--먹연) !important;
+                    border-color: var(--먹) !important;
+                    color: var(--먹) !important;
                 }
-                .situation-card:hover {
-                    transform: translateY(-2px);
-                    box-shadow: var(--그림자-대);
-                }
-                .mentor-card:hover {
+                
+                /* Portrait card hover */
+                .delphi-portrait-card:hover {
                     transform: translateY(-4px);
-                    box-shadow: var(--그림자-대);
                 }
+                
+                /* Question row hover */
+                .delphi-question-row:hover {
+                    border-color: var(--먹);
+                    box-shadow: 0 4px 16px rgba(42, 38, 37, 0.08);
+                }
+                
                 @media (max-width: 768px) {
                     .sidebar-content {
                         margin-left: 0 !important;
                         padding-bottom: 72px;
+                    }
+                    
+                    .delphi-portrait-card {
+                        width: 240px !important;
+                        height: 340px !important;
                     }
                 }
             `}</style>
