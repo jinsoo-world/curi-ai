@@ -6,7 +6,6 @@ import Image from 'next/image'
 import { MENTOR_IMAGES } from '@/domains/mentor'
 import type { MentorCardData } from '@/domains/mentor'
 import { MembershipBanner } from '@/components/MembershipBanner'
-import AppSidebar from '@/components/AppSidebar'
 import BizFooter from '@/components/BizFooter'
 import CreditClaimWrapper from './CreditClaimWrapper'
 import DiscoverSidebar from '@/components/DiscoverSidebar'
@@ -60,7 +59,6 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
         return (
             <div style={{ minHeight: '100dvh', background: 'var(--종이)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
                 <MembershipBanner />
-                <AppSidebar />
                 <DiscoverSidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
                 <div style={{ textAlign: 'center', maxWidth: 400 }}>
                     <div style={{ fontSize: 64, marginBottom: 16 }}>🔍</div>
@@ -73,11 +71,10 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
 
     return (
         <div style={{ minHeight: '100dvh', background: 'var(--종이)' }} role="document">
-            {/* ─── Top Navigation ─── */}
+            {/* ─── Top Membership Banner (no AppSidebar on Discover) ─── */}
             <MembershipBanner />
-            <AppSidebar />
             
-            {/* ─── Delphi-style Left Sidebar ─── */}
+            {/* ─── Delphi-style Left Sidebar (primary nav for Discover) ─── */}
             <DiscoverSidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
 
             {/* ─── Credit Claim Modal ─── */}
@@ -346,11 +343,17 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                     }}>
                         {filteredMentors.map((m) => {
                             const avatarUrl = m.avatar_url || MENTOR_IMAGES[m.name] || null
-                            const questions = Array.isArray(m.sample_questions) && m.sample_questions.length > 0
-                                ? m.sample_questions.slice(0, 1)
-                                : m.title
-                                    ? [`${m.title}에 대해 알려주세요`]
-                                    : []
+                            
+                            // 샘플 질문 생성 (폴백 개선 - expertise 활용)
+                            let questions: string[] = []
+                            if (Array.isArray(m.sample_questions) && m.sample_questions.length > 0) {
+                                questions = m.sample_questions.slice(0, 1)
+                            } else if (Array.isArray(m.expertise) && m.expertise.length > 0) {
+                                // expertise 첫 번째 항목으로 질문 생성
+                                questions = [`${m.expertise[0]}에 대해 알려주세요`]
+                            } else if (m.title) {
+                                questions = [`${m.title}에 대해 알려주세요`]
+                            }
                             
                             if (questions.length === 0) return null
 
@@ -479,18 +482,19 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
             </div>
 
             <style jsx>{`
-                /* Delphi-style main content with left sidebar */
+                /* Delphi-style main content with left sidebar (no top app bar) */
                 :global(.discover-main-content) {
                     margin-left: 240px;
                     min-height: 100dvh;
-                    padding-top: 60px;
+                    padding-top: 0;
                     background: var(--종이);
+                    overflow-x: hidden;
                 }
 
-                /* Mobile menu button */
+                /* Mobile menu button (no top bar, so adjust position) */
                 :global(.discover-mobile-menu-btn) {
                     position: fixed;
-                    top: 80px;
+                    top: 16px;
                     left: 16px;
                     z-index: 100;
                     display: none;
@@ -511,14 +515,22 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                     display: none;
                 }
                 
-                /* Primary CTA hover */
+                /* Primary CTA hover (ensure touch target) */
+                :global(.discover-primary-cta) {
+                    min-height: 44px;
+                }
+                
                 :global(.discover-primary-cta:hover) {
                     background: #E8552C !important;
                     transform: translateY(-2px);
                     box-shadow: 0 4px 16px rgba(255, 107, 53, 0.4) !important;
                 }
                 
-                /* Category chip hover */
+                /* Category chip hover (ensure touch target) */
+                :global(.delphi-category-chip) {
+                    min-height: 44px;
+                }
+                
                 :global(.delphi-category-chip:hover) {
                     background: var(--샌드) !important;
                     border-color: var(--먹) !important;
@@ -526,6 +538,10 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                 }
                 
                 /* Portrait card hover */
+                :global(.delphi-portrait-card) {
+                    max-width: 100%;
+                }
+                
                 :global(.delphi-portrait-card:hover) {
                     transform: translateY(-4px);
                 }
@@ -541,6 +557,7 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                     :global(.discover-main-content) {
                         margin-left: 0 !important;
                         padding-bottom: 72px;
+                        overflow-x: hidden;
                     }
 
                     :global(.discover-mobile-menu-btn) {

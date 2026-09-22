@@ -50,7 +50,7 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                 style={{
                     maxWidth: 960,
                     margin: '0 auto',
-                    height: 60,
+                    height: 56,
                     padding: '0 16px',
                     display: 'flex',
                     alignItems: 'center',
@@ -62,14 +62,14 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                     href="/chats"
                     aria-label="채팅 목록으로 돌아가기"
                     style={{
-                        height: 42, flexShrink: 0,
+                        height: 38, flexShrink: 0,
                         display: 'inline-flex', alignItems: 'center', gap: 6,
-                        padding: '0 16px 0 12px',
-                        borderRadius: 12,
-                        border: '1px solid rgba(0,0,0,0.08)',
+                        padding: '0 14px 0 10px',
+                        borderRadius: 10,
+                        border: '1px solid rgba(0,0,0,0.06)',
                         background: '#fff',
                         color: 'var(--먹)',
-                        fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em',
+                        fontSize: 14, fontWeight: 700, letterSpacing: '-0.02em',
                         textDecoration: 'none',
                         transition: 'all 0.15s',
                     }}

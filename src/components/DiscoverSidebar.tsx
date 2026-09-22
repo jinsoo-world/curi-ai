@@ -100,7 +100,7 @@ export default function DiscoverSidebar({ isOpen = false, onClose }: DiscoverSid
                     position: fixed;
                     inset: 0;
                     background: rgba(0, 0, 0, 0.5);
-                    z-index: 998;
+                    z-index: 999;
                     animation: fadeIn 0.2s ease;
                 }
 
@@ -112,7 +112,7 @@ export default function DiscoverSidebar({ isOpen = false, onClose }: DiscoverSid
                     width: 240px;
                     background: #FFFFFF;
                     border-right: 1px solid var(--선);
-                    z-index: 999;
+                    z-index: 1000;
                     transition: transform 0.3s ease;
                 }
 
@@ -120,7 +120,7 @@ export default function DiscoverSidebar({ isOpen = false, onClose }: DiscoverSid
                     display: flex;
                     flex-direction: column;
                     height: 100%;
-                    padding: 80px 16px 24px;
+                    padding: 20px 16px 24px;
                 }
 
                 .discover-sidebar-nav {
@@ -133,6 +133,7 @@ export default function DiscoverSidebar({ isOpen = false, onClose }: DiscoverSid
                     display: flex;
                     align-items: center;
                     gap: 12px;
+                    min-height: 44px;
                     padding: 14px 16px;
                     border-radius: 12px;
                     text-decoration: none;
