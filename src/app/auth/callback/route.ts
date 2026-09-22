@@ -1,11 +1,19 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { SIGNUP_CLOVERS, REFERRER_REWARD } from '@/domains/trial'
+import { safeNextPath } from '@/lib/safe-next'
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
-    const next = searchParams.get('next') ?? '/mentors'
+    // 로그인 뒤 돌아갈 주소. 우리 사이트 경로만 허용(//·http 로 시작하면 무시), 없으면 /mentors
+    const next = safeNextPath(searchParams.get('next')) ?? '/mentors'
+    // 새 회원 표시(new_user=true)를 next 주소에 붙인다. next 에 ? 가 이미 있어도 안전하게
+    const withNewUser = (path: string) => {
+        const u = new URL(path, origin)
+        u.searchParams.set('new_user', 'true')
+        return u.toString()
+    }
 
     if (code) {
         const supabase = await createClient()
@@ -144,13 +152,13 @@ export async function GET(request: Request) {
                         }
 
                         // 쿠키 소비 (삭제)
-                        const response = NextResponse.redirect(`${origin}/mentors?new_user=true`)
+                        const response = NextResponse.redirect(withNewUser(next))
                         response.cookies.delete('curi_ref')
                         return response
                     }
 
-                    // 신규 유저 → 멘토 페이지 (new_user 플래그로 모달 자동 팝업)
-                    return NextResponse.redirect(`${origin}/mentors?new_user=true`)
+                    // 신규 유저 → next(기본 멘토 페이지). new_user 플래그로 모달 자동 팝업
+                    return NextResponse.redirect(withNewUser(next))
                 }
 
                 // 기존 유저: 카카오 정보 업데이트 (전화번호, 성별, 출생연도, 아바타)
@@ -186,8 +194,8 @@ export async function GET(request: Request) {
                     console.log(`[Auth Callback] Updated existing user ${user.id}:`, Object.keys(updates))
                 }
 
-                // 기존 유저 재로그인 → 멘토 페이지
-                return NextResponse.redirect(`${origin}/mentors`)
+                // 기존 유저 재로그인 → next(기본 멘토 페이지)
+                return NextResponse.redirect(`${origin}${next}`)
             }
 
             return NextResponse.redirect(`${origin}${next}`)

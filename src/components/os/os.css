@@ -134,3 +134,15 @@
     .os-right.open { display: block; position: fixed; inset: auto 0 0 0; max-height: 70dvh; border-radius: 22px 22px 0 0; z-index: 40; }
     .os-bubble { max-width: 88%; }
 }
+
+/* 첫 일 시키기 칩 (FirstTaskChips) = 인사말 아래, 첫 메시지 전에만 */
+.os-first-tasks { align-self: flex-start; max-width: 88%; margin-top: 4px; }
+.os-first-tasks-title { font-size: 14px; color: var(--os-글-흐림); margin: 0 0 8px 6px; }
+.os-first-tasks .os-chipbtn { font-size: 16px; line-height: 1.4; }
+
+/* 손님 명단 (GuestRoster) = 로그인 전 왼쪽에 공개 봇 3개 */
+.os-guest-roster { grid-column: 1 / -1; padding: 4px 4px 8px; }
+.os-guest-roster-title { font-size: 13px; color: var(--os-글-흐림); text-align: center; margin-bottom: 6px; }
+@media (max-width: 900px) {
+    .os-guest-roster { display: none; }
+}

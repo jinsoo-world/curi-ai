@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { safeNextPath } from '@/lib/safe-next'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -11,6 +12,8 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState<string | null>(null)
     const [error, setError] = useState('')
     const router = useRouter()
+    // 로그인 뒤 돌아갈 주소 (/login?next=/os). 우리 사이트 경로만 받고, 없으면 /mentors
+    const [nextPath, setNextPath] = useState<string | null>(null)
 
     // 이미 약관 동의한 적 있는지 체크 (localStorage)
     const [hasAgreedBefore, setHasAgreedBefore] = useState(false)
@@ -42,11 +45,15 @@ export default function LoginPage() {
         const saved = localStorage.getItem('curi_last_provider')
         if (saved) setLastProvider(saved)
 
+        // 돌아갈 주소 읽기 (next 파라미터)
+        const next = safeNextPath(new URLSearchParams(window.location.search).get('next'))
+        setNextPath(next)
+
         // 이미 로그인 상태면 리다이렉트
         const supabase = createClient()
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session?.user) {
-                router.replace('/mentors')
+                router.replace(next ?? '/mentors')
             }
         })
 
@@ -102,7 +109,8 @@ export default function LoginPage() {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider,
                 options: {
-                    redirectTo: `${window.location.origin}/auth/callback`,
+                    // next 가 있으면 콜백까지 들고 간다 → 콜백이 로그인 뒤 그 주소로 보낸다
+                    redirectTo: `${window.location.origin}/auth/callback${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''}`,
                     scopes:
                         provider === 'kakao'
                             ? 'account_email profile_nickname profile_image name gender birthday birthyear phone_number'
