@@ -50,11 +50,11 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                 style={{
                     maxWidth: 960,
                     margin: '0 auto',
-                    height: 76,
+                    height: 60,
                     padding: '0 16px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 16,
+                    gap: 12,
                 }}
             >
                 {/* Delphi 스타일: 부드러운 뒤로가기 버튼 */}
@@ -81,7 +81,7 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                     뒤로
                 </Link>
 
-                {/* Delphi 스타일: 큰 둥근 아바타 */}
+                {/* Delphi 스타일: 얇은 헤더, 작은 아바타 (CEO 요구 2026-09-22) */}
                 <button
                     type="button"
                     onClick={() => mentorImage && set사진크게(true)}
@@ -89,22 +89,22 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                     className={isStreaming ? 'coach-face talking' : 'coach-face'}
                     style={{
                         position: 'relative',
-                        width: 'clamp(64px, 5vw, 80px)', 
-                        height: 'clamp(64px, 5vw, 80px)', 
+                        width: 'clamp(48px, 4vw, 56px)', 
+                        height: 'clamp(48px, 4vw, 56px)', 
                         flexShrink: 0,
                         borderRadius: '50%', 
                         overflow: 'hidden',
                         background: 'linear-gradient(135deg, #E8F2EC 0%, #D4E8DC 100%)',
                         display: 'grid', placeItems: 'center',
-                        fontSize: 28, border: '2px solid rgba(255,255,255,0.9)', 
+                        fontSize: 22, border: '2px solid rgba(255,255,255,0.9)', 
                         padding: 0,
                         cursor: mentorImage ? 'zoom-in' : 'default',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
                         transition: 'transform 0.15s',
                     }}
                 >
                     {mentorImage ? (
-                        <Image src={mentorImage} alt="" fill sizes="76px" quality={90} style={{ objectFit: 'cover', objectPosition: 'center 20%' }} />
+                        <Image src={mentorImage} alt="" fill sizes="56px" quality={90} style={{ objectFit: 'cover', objectPosition: 'center 20%' }} />
                     ) : (
                         <span aria-hidden>{mentorEmoji || mentor.name.slice(0, 1)}</span>
                     )}
@@ -115,7 +115,7 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                     style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
-                        gap: 14, 
+                        gap: 10, 
                         minWidth: 0, 
                         flex: 1, 
                         textDecoration: 'none', 
@@ -125,20 +125,20 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                     <span style={{ minWidth: 0 }}>
                         <span style={{ 
                             display: 'block', 
-                            fontSize: 'clamp(18px, 1.5vw, 21px)', 
+                            fontSize: 'clamp(16px, 1.4vw, 18px)', 
                             fontWeight: 800, 
-                            letterSpacing: '-0.03em', 
+                            letterSpacing: '-0.02em', 
                             color: 'var(--먹)', 
                             overflow: 'hidden', 
                             textOverflow: 'ellipsis', 
                             whiteSpace: 'nowrap',
-                            marginBottom: 2,
+                            marginBottom: 1,
                         }}>
                             {mentor.name}
                         </span>
                         <span style={{ 
                             display: 'block', 
-                            fontSize: 'clamp(14px, 1.2vw, 16px)', 
+                            fontSize: 'clamp(13px, 1.1vw, 14px)', 
                             color: isStreaming ? '#10b981' : 'var(--먹연)', 
                             overflow: 'hidden', 
                             textOverflow: 'ellipsis', 
@@ -157,12 +157,12 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                         onClick={onNewChat}
                         style={{
                             flexShrink: 0,
-                            height: 42,
-                            padding: '0 18px',
-                            borderRadius: 12,
+                            height: 38,
+                            padding: '0 16px',
+                            borderRadius: 10,
                             border: '1px solid rgba(0,0,0,0.08)',
                             background: '#fff',
-                            fontSize: 'clamp(14px, 1.2vw, 16px)',
+                            fontSize: 'clamp(13px, 1.1vw, 14px)',
                             fontWeight: 700,
                             color: 'var(--먹)',
                             cursor: 'pointer',

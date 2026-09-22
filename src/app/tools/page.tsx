@@ -15,7 +15,11 @@ import CloverIcon from '@/components/ui/CloverIcon'
 
 export const metadata: Metadata = {
     title: '프로필 사진 만들기',
-    description: '사진 한 장으로 다양한 프로필 사진을 만들어보세요. 강사 프로필, 증명사진, 인스타 프로필, 배우 프로필까지.',
+    description: '사진 한 장으로 프로페셔널한 프로필 사진을 만들어보세요. 강사 프로필, 배우 프로필, 화질 개선까지.',
+    openGraph: {
+        title: '프로필 사진 만들기 — 큐리 AI',
+        description: '강사 프로필, 배우 프로필, 화질 개선 도구를 제공합니다.',
+    },
 }
 
 // CEO 요구 2026-09-22: 강사/배우/화질개선 3개만 유지
