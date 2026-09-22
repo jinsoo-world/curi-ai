@@ -18,6 +18,8 @@ export function PhotoDrop({
     emptyTitle = '사진을 올려주세요',
     emptyHint,
     successLabel = '사진을 올렸어요',
+    /** avatar: 프로필용 작은 1:1 정방형. default: 도구용 큰 드롭존 */
+    variant = 'default',
 }: {
     preview: string | null
     /** 고른 사진을 dataURL 과 종류로 돌려준다 */
@@ -32,7 +34,11 @@ export function PhotoDrop({
     emptyTitle?: string
     emptyHint?: ReactNode
     successLabel?: string
+    variant?: 'default' | 'avatar'
 }) {
+    const isAvatar = variant === 'avatar'
+    // 프로필은 작은 1:1 크롬(~160px). 파일학습/도구 드롭은 기존 큰 칸 유지
+    const avatarSize = 160
     const fileRef = useRef<HTMLInputElement>(null)
     const cameraRef = useRef<HTMLInputElement>(null)
     const [dragging, setDragging] = useState(false)
@@ -68,6 +74,7 @@ export function PhotoDrop({
                 e.preventDefault(); setDragging(false)
                 handleFile(e.dataTransfer.files?.[0])
             }}
+            style={isAvatar ? { display: 'flex', flexDirection: 'column', alignItems: 'flex-start' } : undefined}
         >
             <input
                 ref={fileRef}
@@ -88,48 +95,67 @@ export function PhotoDrop({
 
             {preview ? (
                 <div style={{
-                    padding: 14, borderRadius: 18,
+                    padding: isAvatar ? 10 : 14,
+                    borderRadius: isAvatar ? 16 : 18,
                     border: dragging ? '2px dashed #22c55e' : '1.5px solid #e4e4e7',
                     background: dragging ? '#f0fdf4' : '#fff',
+                    width: isAvatar ? avatarSize + 20 : '100%',
+                    maxWidth: '100%',
+                    boxSizing: 'border-box',
                 }}>
-                    {/* 올린 사진은 크게 보여준다. 작은 네모로 두면 올라갔는지 모르고 다시 누른다
-                        (대표 지시 0915 「업로드 된걸 알아야지. 중장년 인지 규칙 적용해」) */}
-                    {/* 사진을 눌러도 바꿀 수 있다. 아래 단추는 그대로 둔다 */}
+                    {/* avatar: 작은 1:1 크롬. default: 크게 보여 올린 걸 바로 알게 함 */}
                     <button
                         type="button"
                         onClick={() => fileRef.current?.click()}
                         aria-label="다른 사진으로 바꾸기"
                         style={{
-                            position: 'relative', display: 'block', width: '100%',
+                            position: 'relative', display: 'block',
+                            width: isAvatar ? avatarSize : '100%',
+                            maxWidth: '100%',
                             padding: 0, border: 'none', background: 'none',
-                            cursor: 'pointer', marginBottom: 12,
+                            cursor: 'pointer', marginBottom: isAvatar ? 8 : 12,
                         }}
                     >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={preview} alt="올린 사진" style={{
-                            width: '100%', aspectRatio: '1 / 1', objectFit: 'cover',
-                            borderRadius: 14, display: 'block',
+                            width: '100%',
+                            aspectRatio: '1 / 1',
+                            height: isAvatar ? avatarSize : undefined,
+                            objectFit: 'cover',
+                            borderRadius: isAvatar ? 12 : 14,
+                            display: 'block',
                         }} />
                         <span style={{
-                            position: 'absolute', right: 10, bottom: 10,
+                            position: 'absolute', right: isAvatar ? 6 : 10, bottom: isAvatar ? 6 : 10,
                             background: 'rgba(0,0,0,0.62)', color: '#fff',
-                            fontSize: 15, fontWeight: 700,
-                            padding: '8px 14px', borderRadius: 999,
+                            fontSize: isAvatar ? 12 : 15, fontWeight: 700,
+                            padding: isAvatar ? '5px 10px' : '8px 14px', borderRadius: 999,
                         }}>
                             눌러서 바꾸기
                         </span>
                     </button>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 16, fontWeight: 800, color: '#16a34a' }}>
+                    <div style={{
+                        display: 'flex', alignItems: 'center',
+                        justifyContent: 'space-between', gap: 8,
+                        flexWrap: 'wrap',
+                    }}>
+                        <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            fontSize: isAvatar ? 13 : 16, fontWeight: 800, color: '#16a34a',
+                        }}>
                             <span style={{
-                                width: 24, height: 24, borderRadius: 999, background: '#1C2321', color: '#fff',
-                                display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 900,
+                                width: isAvatar ? 20 : 24, height: isAvatar ? 20 : 24, borderRadius: 999,
+                                background: '#1C2321', color: '#fff',
+                                display: 'grid', placeItems: 'center',
+                                fontSize: isAvatar ? 12 : 15, fontWeight: 900,
                             }} aria-hidden>✓</span>
                             {successLabel}
                         </span>
                         <button onClick={() => fileRef.current?.click()} style={{
                             background: '#f4f4f5', border: 'none', borderRadius: 12,
-                            padding: '12px 18px', fontSize: 15, color: '#3f3f46', cursor: 'pointer', fontWeight: 700,
+                            padding: isAvatar ? '8px 12px' : '12px 18px',
+                            fontSize: isAvatar ? 13 : 15, color: '#3f3f46',
+                            cursor: 'pointer', fontWeight: 700,
                         }}>다른 사진으로</button>
                     </div>
                 </div>
@@ -137,29 +163,68 @@ export function PhotoDrop({
                 <button
                     onClick={() => fileRef.current?.click()}
                     style={{
-                        width: '100%', minHeight: 320, padding: '48px 24px', borderRadius: 20,
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        border: dragging ? '3px dashed #22c55e' : '2.5px dashed #d4d4d8',
+                        width: isAvatar ? avatarSize : '100%',
+                        height: isAvatar ? avatarSize : undefined,
+                        maxWidth: '100%',
+                        minHeight: isAvatar ? avatarSize : 320,
+                        aspectRatio: isAvatar ? '1 / 1' : undefined,
+                        padding: isAvatar ? '12px 10px' : '48px 24px',
+                        borderRadius: isAvatar ? 16 : 20,
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', justifyContent: 'center',
+                        border: dragging
+                            ? (isAvatar ? '2.5px dashed #22c55e' : '3px dashed #22c55e')
+                            : (isAvatar ? '2px dashed #d4d4d8' : '2.5px dashed #d4d4d8'),
                         background: dragging ? '#f0fdf4' : '#fff',
                         cursor: 'pointer', transition: 'all 0.15s',
+                        boxSizing: 'border-box',
                     }}
                 >
-                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke={dragging ? '#166534' : '#3f3f46'}
-                        strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 16 }} aria-hidden>
+                    <svg
+                        width={isAvatar ? 36 : 56}
+                        height={isAvatar ? 36 : 56}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke={dragging ? '#166534' : '#3f3f46'}
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{ marginBottom: isAvatar ? 8 : 16 }}
+                        aria-hidden
+                    >
                         <path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.7a1 1 0 0 0 .83-.45l.94-1.4A1 1 0 0 1 9.8 3.7h4.4a1 1 0 0 1 .83.45l.94 1.4a1 1 0 0 0 .83.45h1.7A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5z" />
                         <circle cx="12" cy="13" r="3.6" />
                     </svg>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: dragging ? '#166534' : '#18181b', marginBottom: 10 }}>
+                    <div style={{
+                        fontSize: isAvatar ? 13 : 22,
+                        fontWeight: 800,
+                        color: dragging ? '#166534' : '#18181b',
+                        marginBottom: isAvatar ? 4 : 10,
+                        textAlign: 'center',
+                        lineHeight: 1.35,
+                        wordBreak: 'keep-all',
+                        padding: isAvatar ? '0 4px' : 0,
+                    }}>
                         {dragging ? '여기에 놓으세요' : emptyTitle}
                     </div>
-                    <div style={{ fontSize: 16, color: '#71717a', lineHeight: 1.7, wordBreak: 'keep-all' }}>
-                        {emptyHint ?? (
-                            <>
-                                눌러서 고르셔도 되고, 끌어다 놓거나 붙여넣어도 돼요<br />
-                                <span style={{ fontSize: 15, color: '#a1a1aa' }}>얼굴이 잘 보이는 밝은 사진, 4MB 이하</span>
-                            </>
-                        )}
-                    </div>
+                    {!isAvatar && (
+                        <div style={{ fontSize: 16, color: '#71717a', lineHeight: 1.7, wordBreak: 'keep-all' }}>
+                            {emptyHint ?? (
+                                <>
+                                    눌러서 고르셔도 되고, 끌어다 놓거나 붙여넣어도 돼요<br />
+                                    <span style={{ fontSize: 15, color: '#a1a1aa' }}>얼굴이 잘 보이는 밝은 사진, 4MB 이하</span>
+                                </>
+                            )}
+                        </div>
+                    )}
+                    {isAvatar && emptyHint && (
+                        <div style={{
+                            fontSize: 11, color: '#a1a1aa', lineHeight: 1.4,
+                            wordBreak: 'keep-all', textAlign: 'center', marginTop: 2,
+                        }}>
+                            {emptyHint}
+                        </div>
+                    )}
                 </button>
             )}
 
