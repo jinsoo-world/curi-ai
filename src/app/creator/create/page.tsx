@@ -418,7 +418,7 @@ export default function CreatorCreatePage() {
         
         setQueuedFiles(prev => [...prev, ...newQueued])
         setError(null)
-        setToast(`📁 ${newFilesArr.length}개 파일 선택됨 (AI 생성 후 업로드)`)
+        setToast(`${newFilesArr.length}개 파일을 목록에 담았어요`)
         setTimeout(() => setToast(null), 3000)
     }
 
@@ -868,12 +868,19 @@ export default function CreatorCreatePage() {
 
                         <div style={styles.card}>
                             <label style={{ ...styles.label, marginBottom: 4, fontSize: 15 }}>📚 지식 파일 추가</label>
-                            <p style={styles.hint}>AI가 참고할 문서를 업로드하세요</p>
+                            <p style={styles.hint}>AI가 참고할 문서를 올려주세요</p>
+                            <p style={{
+                                margin: '0 0 12px', fontSize: 14, color: '#71717a',
+                                lineHeight: 1.6, wordBreak: 'keep-all',
+                            }}>
+                                학습은 「AI 공개하기」 이후에 진행되고, 그다음 대화에서 문서를 활용해요.
+                            </p>
 
                             <div
                                 style={{
                                     ...styles.dropZone,
                                     ...(dragOver ? styles.dropZoneActive : {}),
+                                    ...(queuedFiles.length > 0 ? { minHeight: 140, padding: '24px 16px' } : {}),
                                 }}
                                 onClick={() => fileInputRef.current?.click()}
                                 onDragOver={e => { e.preventDefault(); setDragOver(true) }}
@@ -894,7 +901,7 @@ export default function CreatorCreatePage() {
                                 />
                                 <div style={{ fontSize: 32, marginBottom: 8 }}>{uploading ? '⏳' : '📄'}</div>
                                 <div style={{ fontSize: 18, fontWeight: 800, color: '#18181b' }}>
-                                    {uploading ? '업로드 중...' : '파일을 올려주세요'}
+                                    {uploading ? '업로드 중...' : queuedFiles.length > 0 ? '파일 더 올리기' : '파일을 올려주세요'}
                                 </div>
                                 <div style={{ fontSize: 15, color: '#71717a', marginTop: 6, wordBreak: 'keep-all' }}>
                                     눌러서 고르셔도 되고, 끌어다 놓아도 돼요
@@ -940,6 +947,80 @@ export default function CreatorCreatePage() {
                                 <br />
                                 다만 <b>사람 이름은 가리지 않습니다.</b> 이름이 드러나면 안 되는 자료라면 올리기 전에 그 칸을 지워주세요.
                             </div>
+
+                            {/* 선택만 된 대기 파일 (공개 후 업로드) */}
+                            {queuedFiles.length > 0 && (
+                                <div style={{ marginTop: 14 }}>
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        marginBottom: 8, gap: 8, flexWrap: 'wrap',
+                                    }}>
+                                        <div style={{ fontSize: 14, fontWeight: 800, color: '#18181b' }}>
+                                            선택한 파일 {queuedFiles.length}개
+                                        </div>
+                                        <div style={{
+                                            fontSize: 12, fontWeight: 700, color: '#b45309',
+                                            background: '#fffbeb', border: '1px solid #fde68a',
+                                            padding: '4px 10px', borderRadius: 999,
+                                        }}>
+                                            공개 후 업로드
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                        {queuedFiles.map(qf => {
+                                            const ext = qf.file.name.split('.').pop()?.toLowerCase()
+                                            const iconMap: Record<string, string> = {
+                                                pdf: '/file-icons/pdf.png', hwp: '/file-icons/hwp.png',
+                                                docx: '/file-icons/docx.png', doc: '/file-icons/doc.png',
+                                                ppt: '/file-icons/ppt.png', pptx: '/file-icons/ppt.png',
+                                                txt: '/file-icons/txt.png',
+                                            }
+                                            const iconSrc = ext ? iconMap[ext] : null
+                                            return (
+                                                <div key={qf.id} style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                    gap: 10, padding: '12px 14px', borderRadius: 14,
+                                                    background: '#f0fdf4', border: '1.5px solid #bbf7d0',
+                                                }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                                                        {iconSrc ? (
+                                                            // eslint-disable-next-line @next/next/no-img-element
+                                                            <img src={iconSrc} alt={ext || ''} style={{ width: 28, height: 28, objectFit: 'contain', flexShrink: 0 }} />
+                                                        ) : (
+                                                            <span style={{ fontSize: 22, flexShrink: 0 }}>📄</span>
+                                                        )}
+                                                        <div style={{ minWidth: 0 }}>
+                                                            <div style={{
+                                                                fontSize: 14, fontWeight: 700, color: '#18181b',
+                                                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                            }}>
+                                                                {qf.file.name}
+                                                            </div>
+                                                            <div style={{ fontSize: 12, color: '#71717a', marginTop: 2 }}>
+                                                                {formatFileSize(qf.file.size)}, 대기 중
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); removeQueuedFile(qf.id) }}
+                                                        aria-label={`${qf.file.name} 제거`}
+                                                        style={{
+                                                            flexShrink: 0,
+                                                            padding: '8px 12px', borderRadius: 10,
+                                                            border: '1px solid #e4e4e7', background: '#fff',
+                                                            color: '#71717a', fontSize: 13, fontWeight: 700,
+                                                            cursor: 'pointer',
+                                                        }}
+                                                    >
+                                                        제거
+                                                    </button>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )}
 
                             {uploadedFiles.length > 0 && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
