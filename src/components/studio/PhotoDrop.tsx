@@ -4,7 +4,7 @@
 // 대표 지적 2026-09-14 「파일 끌어다놓는 방식은 왜 안돼」
 // 컴퓨터에서는 끌어다 놓는 게 파일 창을 여는 것보다 빠르고, 화면을 캡처해
 // 바로 붙여넣는 사람도 많다.
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, type ReactNode } from 'react'
 
 const MAX_BYTES = 4 * 1024 * 1024
 
@@ -12,11 +12,26 @@ export function PhotoDrop({
     preview,
     onPicked,
     onError,
+    maxBytes = MAX_BYTES,
+    showCamera = true,
+    privacyNote,
+    emptyTitle = '사진을 올려주세요',
+    emptyHint,
+    successLabel = '사진을 올렸어요',
 }: {
     preview: string | null
     /** 고른 사진을 dataURL 과 종류로 돌려준다 */
     onPicked: (dataUrl: string, mimeType: string) => void
     onError: (msg: string) => void
+    /** 기본 4MB. 프로필 등에서만 늘릴 때 쓴다 */
+    maxBytes?: number
+    /** false 면 카메라 단추를 숨긴다 */
+    showCamera?: boolean
+    /** null 이면 안내 문구를 숨긴다. undefined 면 기본 안내 */
+    privacyNote?: string | null
+    emptyTitle?: string
+    emptyHint?: ReactNode
+    successLabel?: string
 }) {
     const fileRef = useRef<HTMLInputElement>(null)
     const cameraRef = useRef<HTMLInputElement>(null)
@@ -25,11 +40,15 @@ export function PhotoDrop({
     const handleFile = useCallback((f: File | null | undefined) => {
         if (!f) return
         if (!/^image\//.test(f.type)) { onError('사진 파일만 올릴 수 있어요.'); return }
-        if (f.size > MAX_BYTES) { onError('사진은 4MB 이하만 올려주세요.'); return }
+        if (f.size > maxBytes) {
+            const mb = Math.round(maxBytes / (1024 * 1024))
+            onError(`사진은 ${mb}MB 이하만 올려주세요.`)
+            return
+        }
         const reader = new FileReader()
         reader.onload = () => onPicked(String(reader.result), f.type || 'image/jpeg')
         reader.readAsDataURL(f)
-    }, [onPicked, onError])
+    }, [onPicked, onError, maxBytes])
 
     // 화면을 캡처해 바로 붙여넣는 경우
     useEffect(() => {
@@ -106,7 +125,7 @@ export function PhotoDrop({
                                 width: 24, height: 24, borderRadius: 999, background: '#1C2321', color: '#fff',
                                 display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 900,
                             }} aria-hidden>✓</span>
-                            사진을 올렸어요
+                            {successLabel}
                         </span>
                         <button onClick={() => fileRef.current?.click()} style={{
                             background: '#f4f4f5', border: 'none', borderRadius: 12,
@@ -131,33 +150,41 @@ export function PhotoDrop({
                         <circle cx="12" cy="13" r="3.6" />
                     </svg>
                     <div style={{ fontSize: 22, fontWeight: 800, color: dragging ? '#166534' : '#18181b', marginBottom: 10 }}>
-                        {dragging ? '여기에 놓으세요' : '사진을 올려주세요'}
+                        {dragging ? '여기에 놓으세요' : emptyTitle}
                     </div>
                     <div style={{ fontSize: 16, color: '#71717a', lineHeight: 1.7, wordBreak: 'keep-all' }}>
-                        눌러서 고르셔도 되고, 끌어다 놓거나 붙여넣어도 돼요<br />
-                        <span style={{ fontSize: 15, color: '#a1a1aa' }}>얼굴이 잘 보이는 밝은 사진 · 4MB 이하</span>
+                        {emptyHint ?? (
+                            <>
+                                눌러서 고르셔도 되고, 끌어다 놓거나 붙여넣어도 돼요<br />
+                                <span style={{ fontSize: 15, color: '#a1a1aa' }}>얼굴이 잘 보이는 밝은 사진, 4MB 이하</span>
+                            </>
+                        )}
                     </div>
                 </button>
             )}
 
             {!preview && (
                 <>
-                    <button
-                        type="button"
-                        onClick={() => cameraRef.current?.click()}
-                        className="photo-drop-camera"
-                        style={{
-                            width: '100%', marginTop: 10, padding: '15px 12px', borderRadius: 14,
-                            border: '1px solid #e4e4e7', background: '#fff',
-                            fontSize: 16, fontWeight: 800, color: '#18181b', cursor: 'pointer',
-                        }}
-                    >
-                        휴대폰 카메라로 찍기
-                    </button>
+                    {showCamera && (
+                        <button
+                            type="button"
+                            onClick={() => cameraRef.current?.click()}
+                            className="photo-drop-camera"
+                            style={{
+                                width: '100%', marginTop: 10, padding: '15px 12px', borderRadius: 14,
+                                border: '1px solid #e4e4e7', background: '#fff',
+                                fontSize: 16, fontWeight: 800, color: '#18181b', cursor: 'pointer',
+                            }}
+                        >
+                            휴대폰 카메라로 찍기
+                        </button>
+                    )}
                     {/* 얼굴 사진을 올리는 서비스라 가장 무서운 지점이다. 올리는 칸 바로 밑에 적는다 */}
-                    <p style={{ fontSize: 15, color: '#71717a', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                        올린 사진은 이 사진을 만드는 데에만 씁니다. AI 학습에 쓰지 않고, 만든 뒤 48시간 안에 지웁니다.
-                    </p>
+                    {privacyNote !== null && (
+                        <p style={{ fontSize: 15, color: '#71717a', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                            {privacyNote ?? '올린 사진은 이 사진을 만드는 데에만 씁니다. AI 학습에 쓰지 않고, 만든 뒤 48시간 안에 지웁니다.'}
+                        </p>
+                    )}
                 </>
             )}
         </div>
