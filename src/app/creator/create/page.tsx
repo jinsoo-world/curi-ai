@@ -548,139 +548,141 @@ export default function CreatorCreatePage() {
         <div style={{ minHeight: '100dvh', background: 'var(--종이)' }}>
             <AppSidebar />
 
-            <div className="sidebar-content" style={{ minHeight: '100dvh', paddingTop: 24, paddingBottom: 80 }}>
-                {/* Header */}
-                <div style={{
-                    maxWidth: 960,
-                    margin: '0 auto',
-                    padding: '0 20px 32px',
-                    borderBottom: '1px solid var(--선)',
-                }}>
-                    <h1 style={{
-                        fontSize: 32,
-                        fontWeight: 800,
-                        color: 'var(--먹)',
-                        marginBottom: 8,
-                    }}>
-                        AI 만들기
-                    </h1>
-                    <p style={{
-                        fontSize: 16,
-                        color: 'var(--먹연)',
-                        lineHeight: 1.6,
-                    }}>
-                        나만의 AI를 만들어보세요. 단계별로 설정하면 완성됩니다.
-                    </p>
-                </div>
-
-                {/* Step Progress */}
-                <div style={{
-                    maxWidth: 960,
-                    margin: '32px auto 0',
-                    padding: '0 20px',
-                }}>
-                    <div style={{
-                        display: 'flex',
-                        gap: 12,
-                        overflowX: 'auto',
-                        scrollbarWidth: 'none',
-                        paddingBottom: 12,
-                    }}>
-                        {steps.map((step, idx) => {
-                            const isActive = step.key === currentStep
-                            const isPast = steps.findIndex(s => s.key === currentStep) > idx
-                            return (
-                                <button
-                                    key={step.key}
-                                    onClick={() => setCurrentStep(step.key)}
-                                    style={{
-                                        flex: '0 0 auto',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 8,
-                                        padding: '12px 20px',
-                                        borderRadius: 12,
-                                        border: isActive ? '2px solid #FF6B35' : '1px solid var(--선)',
-                                        background: isActive ? '#FFF4F0' : isPast ? '#F0FDF4' : '#FFFFFF',
-                                        color: isActive ? '#FF6B35' : isPast ? '#16A34A' : 'var(--먹연)',
-                                        fontSize: 15,
-                                        fontWeight: isActive ? 700 : 600,
-                                        cursor: 'pointer',
-                                        transition: 'all 200ms',
-                                        whiteSpace: 'nowrap',
-                                    }}
-                                >
-                                    <span style={{ fontSize: 20 }}>{step.icon}</span>
-                                    <span>{step.label}</span>
-                                </button>
-                            )
-                        })}
-                    </div>
-                </div>
-
-                {/* Error Toast */}
-                {error && (
+            <div className="sidebar-content creator-two-col-layout" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'row' }}>
+                {/* ══════ 좌측: 폼 영역 ══════ */}
+                <div className="creator-form-col" style={{ flex: '1 1 0', paddingTop: 24, paddingBottom: 80, overflowY: 'auto', height: '100dvh' }}>
+                    {/* Header */}
                     <div style={{
                         maxWidth: 960,
-                        margin: '16px auto 0',
+                        margin: '0 auto',
+                        padding: '0 20px 32px',
+                        borderBottom: '1px solid var(--선)',
+                    }}>
+                        <h1 style={{
+                            fontSize: 32,
+                            fontWeight: 800,
+                            color: 'var(--먹)',
+                            marginBottom: 8,
+                        }}>
+                            AI 만들기
+                        </h1>
+                        <p style={{
+                            fontSize: 16,
+                            color: 'var(--먹연)',
+                            lineHeight: 1.6,
+                        }}>
+                            나만의 AI를 만들어보세요. 단계별로 설정하면 완성됩니다.
+                        </p>
+                    </div>
+
+                    {/* Step Progress */}
+                    <div style={{
+                        maxWidth: 960,
+                        margin: '32px auto 0',
                         padding: '0 20px',
                     }}>
                         <div style={{
-                            padding: '16px 20px',
-                            background: '#FEE2E2',
-                            border: '1px solid #DC2626',
-                            borderRadius: 12,
-                            color: '#DC2626',
-                            fontSize: 15,
-                            fontWeight: 600,
                             display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
+                            gap: 12,
+                            overflowX: 'auto',
+                            scrollbarWidth: 'none',
+                            paddingBottom: 12,
                         }}>
-                            <span>{error}</span>
-                            <button
-                                onClick={() => setError(null)}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: '#DC2626',
-                                    fontSize: 18,
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                ✕
-                            </button>
+                            {steps.map((step, idx) => {
+                                const isActive = step.key === currentStep
+                                const isPast = steps.findIndex(s => s.key === currentStep) > idx
+                                return (
+                                    <button
+                                        key={step.key}
+                                        onClick={() => setCurrentStep(step.key)}
+                                        style={{
+                                            flex: '0 0 auto',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 8,
+                                            padding: '12px 20px',
+                                            borderRadius: 12,
+                                            border: isActive ? '2px solid #FF6B35' : '1px solid var(--선)',
+                                            background: isActive ? '#FFF4F0' : isPast ? '#F0FDF4' : '#FFFFFF',
+                                            color: isActive ? '#FF6B35' : isPast ? '#16A34A' : 'var(--먹연)',
+                                            fontSize: 15,
+                                            fontWeight: isActive ? 700 : 600,
+                                            cursor: 'pointer',
+                                            transition: 'all 200ms',
+                                            whiteSpace: 'nowrap',
+                                        }}
+                                    >
+                                        <span style={{ fontSize: 20 }}>{step.icon}</span>
+                                        <span>{step.label}</span>
+                                    </button>
+                                )
+                            })}
                         </div>
                     </div>
-                )}
 
-                {/* Success Toast */}
-                {toast && (
+                    {/* Error Toast */}
+                    {error && (
+                        <div style={{
+                            maxWidth: 960,
+                            margin: '16px auto 0',
+                            padding: '0 20px',
+                        }}>
+                            <div style={{
+                                padding: '16px 20px',
+                                background: '#FEE2E2',
+                                border: '1px solid #DC2626',
+                                borderRadius: 12,
+                                color: '#DC2626',
+                                fontSize: 15,
+                                fontWeight: 600,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                            }}>
+                                <span>{error}</span>
+                                <button
+                                    onClick={() => setError(null)}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#DC2626',
+                                        fontSize: 18,
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Success Toast */}
+                    {toast && (
+                        <div style={{
+                            position: 'fixed',
+                            bottom: 100,
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            padding: '16px 24px',
+                            background: '#16A34A',
+                            color: '#FFFFFF',
+                            borderRadius: 12,
+                            fontSize: 15,
+                            fontWeight: 700,
+                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+                            zIndex: 1000,
+                        }}>
+                            {toast}
+                        </div>
+                    )}
+
+                    {/* Step Content */}
                     <div style={{
-                        position: 'fixed',
-                        bottom: 100,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        padding: '16px 24px',
-                        background: '#16A34A',
-                        color: '#FFFFFF',
-                        borderRadius: 12,
-                        fontSize: 15,
-                        fontWeight: 700,
-                        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-                        zIndex: 1000,
+                        maxWidth: 960,
+                        margin: '32px auto 0',
+                        padding: '0 20px',
                     }}>
-                        {toast}
-                    </div>
-                )}
-
-                {/* Step Content */}
-                <div style={{
-                    maxWidth: 960,
-                    margin: '32px auto 0',
-                    padding: '0 20px',
-                }}>
                     {/* Step 1: Basic Info */}
                     {currentStep === 'basic' && (
                         <div style={{
@@ -1527,66 +1529,399 @@ export default function CreatorCreatePage() {
                             </div>
                         </div>
                     )}
+                    </div>
+
+                    {/* Sticky Bottom CTA */}
+                    <div style={{
+                        position: 'fixed',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        background: '#FFFFFF',
+                        borderTop: '1px solid var(--선)',
+                        padding: '16px 20px',
+                        zIndex: 100,
+                    }}>
+                        <div style={{
+                            maxWidth: 960,
+                            margin: '0 auto',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 16,
+                        }}>
+                            <div>
+                                <p style={{ fontSize: 14, color: 'var(--먹연)', marginBottom: 4 }}>
+                                    {currentStep === 'basic' && '기본 정보를 입력하고 다음 단계로 이동하세요'}
+                                    {currentStep === 'personality' && 'AI의 성격을 정의해주세요 (선택사항)'}
+                                    {currentStep === 'greeting' && '인사말과 예시 질문을 설정해주세요 (선택사항)'}
+                                    {currentStep === 'knowledge' && '지식 파일을 추가해주세요 (선택사항)'}
+                                    {currentStep === 'advanced' && '고급 설정을 완료하고 AI를 생성하세요'}
+                                </p>
+                            </div>
+                            <button
+                                onClick={handleSubmit}
+                                disabled={!canProceed('basic') || loading}
+                                style={{
+                                    padding: '14px 40px',
+                                    background: (canProceed('basic') && !loading) ? '#FF6B35' : '#D1D5DB',
+                                    color: '#FFFFFF',
+                                    fontSize: 16,
+                                    fontWeight: 700,
+                                    border: 'none',
+                                    borderRadius: 12,
+                                    cursor: (canProceed('basic') && !loading) ? 'pointer' : 'not-allowed',
+                                    transition: 'all 200ms',
+                                    whiteSpace: 'nowrap',
+                                    boxShadow: (canProceed('basic') && !loading) ? '0 2px 12px rgba(255, 107, 53, 0.25)' : 'none',
+                                }}
+                                onMouseEnter={e => {
+                                    if (canProceed('basic') && !loading) (e.target as HTMLElement).style.background = '#E8552C'
+                                }}
+                                onMouseLeave={e => {
+                                    if (canProceed('basic') && !loading) (e.target as HTMLElement).style.background = '#FF6B35'
+                                }}
+                            >
+                                {loading ? '생성 중...' : '🚀 AI 생성하기'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Sticky Bottom CTA */}
-                <div style={{
-                    position: 'fixed',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
+                {/* ══════ 우측: 미리보기 채팅 ══════ */}
+                <div className="creator-preview-col" style={{
+                    flex: '0 0 480px',
+                    borderLeft: '1px solid var(--선)',
                     background: '#FFFFFF',
-                    borderTop: '1px solid var(--선)',
-                    padding: '16px 20px',
-                    zIndex: 100,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100dvh',
+                    position: 'sticky',
+                    top: 0,
                 }}>
+                    {/* 미리보기 헤더 */}
                     <div style={{
-                        maxWidth: 960,
-                        margin: '0 auto',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 16,
+                        padding: '16px 20px',
+                        borderBottom: '1px solid var(--선)',
+                        background: '#FFFFFF',
                     }}>
-                        <div>
-                            <p style={{ fontSize: 14, color: 'var(--먹연)', marginBottom: 4 }}>
-                                {currentStep === 'basic' && '기본 정보를 입력하고 다음 단계로 이동하세요'}
-                                {currentStep === 'personality' && 'AI의 성격을 정의해주세요 (선택사항)'}
-                                {currentStep === 'greeting' && '인사말과 예시 질문을 설정해주세요 (선택사항)'}
-                                {currentStep === 'knowledge' && '지식 파일을 추가해주세요 (선택사항)'}
-                                {currentStep === 'advanced' && '고급 설정을 완료하고 AI를 생성하세요'}
-                            </p>
-                        </div>
-                        <button
-                            onClick={handleSubmit}
-                            disabled={!canProceed('basic') || loading}
-                            style={{
-                                padding: '14px 40px',
-                                background: (canProceed('basic') && !loading) ? '#FF6B35' : '#D1D5DB',
-                                color: '#FFFFFF',
-                                fontSize: 16,
-                                fontWeight: 700,
-                                border: 'none',
-                                borderRadius: 12,
-                                cursor: (canProceed('basic') && !loading) ? 'pointer' : 'not-allowed',
-                                transition: 'all 200ms',
-                                whiteSpace: 'nowrap',
-                                boxShadow: (canProceed('basic') && !loading) ? '0 2px 12px rgba(255, 107, 53, 0.25)' : 'none',
-                            }}
-                            onMouseEnter={e => {
-                                if (canProceed('basic') && !loading) (e.target as HTMLElement).style.background = '#E8552C'
-                            }}
-                            onMouseLeave={e => {
-                                if (canProceed('basic') && !loading) (e.target as HTMLElement).style.background = '#FF6B35'
-                            }}
-                        >
-                            {loading ? '생성 중...' : '🚀 AI 생성하기'}
-                        </button>
+                        <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--먹)', margin: 0 }}>
+                            💬 미리보기
+                        </h3>
                     </div>
+
+                    {/* 채팅 스크롤 영역 */}
+                    <div style={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        padding: '20px 16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 12,
+                    }}>
+                        {/* AI 프로필 카드 */}
+                        {name.trim() ? (
+                            <>
+                                <div style={{
+                                    textAlign: 'center',
+                                    padding: '16px 12px',
+                                    borderRadius: 16,
+                                    background: '#F9FAFB',
+                                    marginBottom: 8,
+                                }}>
+                                    <div style={{
+                                        width: 64,
+                                        height: 64,
+                                        borderRadius: '50%',
+                                        background: avatarPreview ? '#F3F4F6' : 'linear-gradient(135deg, #FF6B35, #E8552C)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: 28,
+                                        fontWeight: 700,
+                                        color: '#FFFFFF',
+                                        margin: '0 auto 12px',
+                                        overflow: 'hidden',
+                                        border: avatarPreview ? '2px solid var(--선)' : 'none',
+                                    }}>
+                                        {avatarPreview ? (
+                                            <img src={avatarPreview} alt="프로필" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            name[0].toUpperCase()
+                                        )}
+                                    </div>
+                                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--먹)', marginBottom: 4 }}>
+                                        {name}
+                                    </div>
+                                    <div style={{ fontSize: 14, color: 'var(--먹연)' }}>
+                                        {title || '한줄 소개를 입력해주세요'}
+                                    </div>
+                                </div>
+
+                                {/* 인사말 */}
+                                {previewMessages.length === 0 && (
+                                    <>
+                                        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                                            <div style={{
+                                                width: 36,
+                                                height: 36,
+                                                borderRadius: '50%',
+                                                flexShrink: 0,
+                                                background: avatarPreview ? '#F3F4F6' : 'linear-gradient(135deg, #FF6B35, #E8552C)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                overflow: 'hidden',
+                                                border: avatarPreview ? '1px solid var(--선)' : 'none',
+                                                marginTop: 2,
+                                                color: '#FFFFFF',
+                                                fontSize: 16,
+                                                fontWeight: 700,
+                                            }}>
+                                                {avatarPreview ? (
+                                                    <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                ) : (
+                                                    name[0].toUpperCase()
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '80%' }}>
+                                                <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>{name}</div>
+                                                <div style={{
+                                                    padding: '12px 16px',
+                                                    fontSize: 14,
+                                                    color: 'var(--먹)',
+                                                    lineHeight: 1.6,
+                                                    background: '#F9FAFB',
+                                                    borderRadius: 12,
+                                                    border: '1px solid var(--선)',
+                                                }}>
+                                                    {effectiveGreeting}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* 예시 질문 버튼 */}
+                                        {sampleQArr.length > 0 && (
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 46 }}>
+                                                {sampleQArr.map((q, i) => (
+                                                    <button
+                                                        key={i}
+                                                        onClick={() => handlePreviewSend(q)}
+                                                        disabled={previewLoading}
+                                                        style={{
+                                                            padding: '8px 14px',
+                                                            borderRadius: 20,
+                                                            border: '1px solid #FFE4D6',
+                                                            background: '#FFF4F0',
+                                                            color: '#FF6B35',
+                                                            fontSize: 13,
+                                                            fontWeight: 600,
+                                                            cursor: previewLoading ? 'not-allowed' : 'pointer',
+                                                            transition: 'all 150ms',
+                                                        }}
+                                                        onMouseEnter={e => {
+                                                            if (!previewLoading) (e.currentTarget as HTMLElement).style.background = '#FFE4D6'
+                                                        }}
+                                                        onMouseLeave={e => {
+                                                            if (!previewLoading) (e.currentTarget as HTMLElement).style.background = '#FFF4F0'
+                                                        }}
+                                                    >
+                                                        {q}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* 대화 메시지 */}
+                                {previewMessages.map((m, i) => (
+                                    <div key={i} style={{
+                                        display: 'flex',
+                                        flexDirection: m.role === 'user' ? 'row-reverse' : 'row',
+                                        alignItems: 'flex-start',
+                                        gap: 10,
+                                    }}>
+                                        {m.role === 'assistant' && (
+                                            <div style={{
+                                                width: 36,
+                                                height: 36,
+                                                borderRadius: '50%',
+                                                flexShrink: 0,
+                                                background: avatarPreview ? '#F3F4F6' : 'linear-gradient(135deg, #FF6B35, #E8552C)',
+                                                color: '#FFFFFF',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: 16,
+                                                fontWeight: 700,
+                                                overflow: 'hidden',
+                                                marginTop: 2,
+                                                border: avatarPreview ? '1px solid var(--선)' : 'none',
+                                            }}>
+                                                {avatarPreview ? (
+                                                    <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                ) : (
+                                                    name[0].toUpperCase()
+                                                )}
+                                            </div>
+                                        )}
+                                        <div style={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            maxWidth: m.role === 'user' ? '75%' : '80%',
+                                        }}>
+                                            {m.role === 'assistant' && (
+                                                <div style={{ fontSize: 13, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>{name}</div>
+                                            )}
+                                            <div style={{
+                                                padding: m.role === 'user' ? '10px 16px' : '12px 16px',
+                                                borderRadius: m.role === 'user' ? 20 : 12,
+                                                background: m.role === 'user' ? '#FF6B35' : '#F9FAFB',
+                                                color: m.role === 'user' ? '#FFFFFF' : 'var(--먹)',
+                                                fontSize: 14,
+                                                lineHeight: 1.6,
+                                                border: m.role === 'user' ? 'none' : '1px solid var(--선)',
+                                                wordBreak: 'break-word',
+                                            }}>
+                                                {m.role === 'assistant' ? (
+                                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                                                ) : (
+                                                    m.content
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {previewLoading && (
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: 10,
+                                    }}>
+                                        <div style={{
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: '50%',
+                                            flexShrink: 0,
+                                            background: avatarPreview ? '#F3F4F6' : 'linear-gradient(135deg, #FF6B35, #E8552C)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            overflow: 'hidden',
+                                            border: avatarPreview ? '1px solid var(--선)' : 'none',
+                                            color: '#FFFFFF',
+                                            fontSize: 16,
+                                            fontWeight: 700,
+                                        }}>
+                                            {avatarPreview ? (
+                                                <img src={avatarPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : (
+                                                name[0].toUpperCase()
+                                            )}
+                                        </div>
+                                        <div style={{
+                                            padding: '12px 16px',
+                                            borderRadius: 12,
+                                            background: '#F9FAFB',
+                                            border: '1px solid var(--선)',
+                                            fontSize: 14,
+                                            color: '#9CA3AF',
+                                        }}>
+                                            입력 중...
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div ref={previewEndRef} />
+                            </>
+                        ) : (
+                            <div style={{
+                                textAlign: 'center',
+                                padding: '48px 20px',
+                                color: 'var(--먹연)',
+                            }}>
+                                <div style={{ fontSize: 48, marginBottom: 16 }}>💬</div>
+                                <p style={{ fontSize: 15, lineHeight: 1.6 }}>
+                                    AI 이름을 입력하면<br />미리보기가 시작됩니다
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 입력창 */}
+                    {name.trim() && (
+                        <div style={{
+                            padding: '16px',
+                            borderTop: '1px solid var(--선)',
+                            background: '#FFFFFF',
+                        }}>
+                            <form
+                                onSubmit={e => {
+                                    e.preventDefault()
+                                    handlePreviewSend()
+                                }}
+                                style={{ display: 'flex', gap: 8 }}
+                            >
+                                <input
+                                    type="text"
+                                    placeholder="메시지를 입력하세요..."
+                                    value={previewInput}
+                                    onChange={e => setPreviewInput(e.target.value)}
+                                    disabled={previewLoading}
+                                    style={{
+                                        flex: 1,
+                                        padding: '12px 16px',
+                                        fontSize: 14,
+                                        border: '1px solid var(--선)',
+                                        borderRadius: 12,
+                                        outline: 'none',
+                                        transition: 'border-color 200ms',
+                                    }}
+                                    onFocus={e => e.target.style.borderColor = '#FF6B35'}
+                                    onBlur={e => e.target.style.borderColor = 'var(--선)'}
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={!previewInput.trim() || previewLoading}
+                                    style={{
+                                        padding: '12px 20px',
+                                        background: (previewInput.trim() && !previewLoading) ? '#FF6B35' : '#D1D5DB',
+                                        color: '#FFFFFF',
+                                        fontSize: 14,
+                                        fontWeight: 700,
+                                        border: 'none',
+                                        borderRadius: 12,
+                                        cursor: (previewInput.trim() && !previewLoading) ? 'pointer' : 'not-allowed',
+                                        transition: 'all 200ms',
+                                    }}
+                                >
+                                    {previewLoading ? '⏳' : '전송'}
+                                </button>
+                            </form>
+                        </div>
+                    )}
                 </div>
             </div>
 
             <style jsx>{`
+                @media (max-width: 1024px) {
+                    .creator-two-col-layout {
+                        flex-direction: column !important;
+                    }
+                    .creator-form-col {
+                        height: auto !important;
+                        overflow-y: visible !important;
+                    }
+                    .creator-preview-col {
+                        flex: 0 0 auto !important;
+                        height: 500px !important;
+                        position: relative !important;
+                        border-left: none !important;
+                        border-top: 1px solid var(--선) !important;
+                    }
+                }
                 @media (max-width: 768px) {
                     .sidebar-content {
                         padding-bottom: 160px !important;
