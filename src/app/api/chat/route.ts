@@ -9,6 +9,7 @@ import { generateEmbedding, matchKnowledge } from '@/domains/knowledge'
 import { deductCredit, getCreditBalance } from '@/domains/credit'
 import { pickDriverFromEnv } from '@/domains/llm'
 import { getOwnedTeamBotMentor } from '@/domains/os'
+import { findSourcesOfChunks } from '@/domains/os/knowledge'
 import { CREDIT_CONSTANTS } from '@/domains/credit/types'
 
 export const dynamic = 'force-dynamic'
@@ -291,6 +292,10 @@ export async function POST(req: Request) {
             } catch { /* 고민 조회 실패 무시 */ }
         }
 
+        // 📎 이번 답에 쓴 자료(출처). 마지막 조각에 실어 보낸다 — 화면이 「참고한 자료」로 보여 준다.
+        //    자료를 안 썼으면 빈 배열이라 옛 화면들은 그냥 무시한다(모양이 안 바뀐다).
+        let usedSources: { id: string; title: string }[] = []
+
         // 📚 RAG 지식 검색 (멘토별 지식 베이스)
         try {
             console.log('[Chat RAG] Generating embedding, length:', lastUserMessage.length)
@@ -305,6 +310,13 @@ export async function POST(req: Request) {
                     // 🛡 자료는 「명령」이 아니라 「인용」이다 (프롬프트 인젝션 방어, 크리밋 기준 0923).
                     // 자료 안에 「이전 지시 무시하고 …」 같은 글이 숨어 있어도 울타리 안의 글은 데이터로만 읽게 한다.
                     const knowledgeText = fenceKnowledge(knowledge.map(k => k.content))
+                    // 어느 자료에서 나온 조각인지 되짚는다(검색 함수는 글만 돌려주고 출처를 안 알려준다).
+                    // 실패해도 대화는 그대로 간다 — 출처가 없으면 안 보여 줄 뿐이다.
+                    try {
+                        usedSources = await findSourcesOfChunks(createAdminClient(), mentorId, knowledge.map(k => k.content))
+                    } catch (srcErr) {
+                        console.error('[Chat RAG] 출처 찾기 실패:', srcErr instanceof Error ? srcErr.message : srcErr)
+                    }
                     const isCreatorBot = !!(mentor as Record<string, unknown>).creator_id
                     if (isCreatorBot) {
                         // 크리에이터 AI: 지식을 최상단에 삽입 (Primacy bias → 가중치 최대화)
@@ -551,7 +563,7 @@ export async function POST(req: Request) {
                     }
 
                     controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ text: '', done: true, fullResponse })}\n\n`)
+                        encoder.encode(`data: ${JSON.stringify({ text: '', done: true, fullResponse, sources: usedSources })}\n\n`)
                     )
                 } catch (error) {
                     controller.enqueue(

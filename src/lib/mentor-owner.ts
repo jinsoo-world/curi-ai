@@ -63,8 +63,23 @@ export async function requireMentorOwner(
     const isAdmin = user.email === ADMIN_EMAIL
     const creatorId = creator?.id ?? null
 
+    // 봇 팀(team_bots)으로도 주인을 가른다 (에이전트 OS, 2026-09-25).
+    // OS 에서 만든 봇은 크리에이터 프로필로도 주인이 맞지만, 이 길이 하나 더 있어야
+    // 프로필이 바뀌거나 없어져도 자기 봇의 자료를 계속 다룰 수 있다.
+    // 표가 아직 없으면(42P01) 조용히 「내 봇 아님」으로 본다 = 기본 거절.
+    let isTeamBotOwner = false
+    if (!isAdmin) {
+        const { data: teamBot } = await admin
+            .from('team_bots')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('mentor_id', mentor.id)
+            .maybeSingle()
+        isTeamBotOwner = !!teamBot
+    }
+
     // 주인이 아니면 여기서 끝. 어드민만 예외.
-    if (!isAdmin && (!creatorId || mentor.creator_id !== creatorId)) {
+    if (!isAdmin && !isTeamBotOwner && (!creatorId || mentor.creator_id !== creatorId)) {
         return { ok: false, error: '권한이 없습니다.', status: 403 }
     }
 

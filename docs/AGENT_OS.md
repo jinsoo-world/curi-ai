@@ -95,6 +95,17 @@ npm run lint           # 린트
 npm run build          # 빌드
 ```
 
+## 7-1. 3일차에 생긴 것 (2026-09-25)
+
+| 무엇 | 어디 | 알아 둘 것 |
+|---|---|---|
+| 봇 자료 창구 | `src/app/api/os/knowledge/*` · `src/domains/os/knowledge.ts` | 첫 줄이 늘 `assertBotOwned`(team_bots.user_id = 나). 링크는 SSRF 차단(사설·메타데이터 주소 금지). 유튜브는 제목·주소만 기억(자막 못 읽음) |
+| 파일 올리기 | `/api/os/knowledge/upload-url` → 브라우저가 직접 올림 → `/api/creator/knowledge/process` | 글 뽑기는 기존 창구를 그대로 쓴다. `lib/mentor-owner.ts` 에 team_bots 주인 길을 하나 더했다 |
+| 인용 | `/api/chat` 마지막 조각에 `sources:[{id,title}]` | 검색 함수가 출처를 안 주므로 조각 글로 되짚는다(`findSourcesOfChunks`). 실패해도 대화는 그대로 |
+| 승인 카드 | `src/domains/agent/intent.ts`(규칙) · `permissions.ts`(DB) · `/api/os/chat/draft` · `/api/os/permissions*` | 규칙으로 먼저 보고 애매할 때만 솔라 미니. 허용해도 **여기서 보내지 않는다**. draft_only 봇은 카드도 안 만든다 |
+| 그룹 채팅 | `supabase/migrations/20260925_channels.sql` · `src/domains/os/channels.ts` · `/api/os/channels/*` | 사람 말 한 번에 봇은 **최대 2번**. 봇이 부를 수 있는 건 한 명, 지목당한 봇은 다시 지목 못 한다(안티패턴 ㉟) |
+
 ## 8. 변경 이력
 
 - 2026-09-23 · 솔라 드라이버(`domains/llm`) + `chat/stream.ts` 되돌아가기 · 표 4개 마이그레이션 · 다크 토큰 `[data-theme="os"]` · 이 문서.
+- 2026-09-25 · 자료 커널을 봇 안으로(넣기·목록·빼기·인용) · 승인 카드(초안 + 허용/거절/고쳐서 허용) · 그룹 채팅(표 3개, 봇 2턴 상한). 테스트 213개.
