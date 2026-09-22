@@ -24,7 +24,7 @@ const PHOTO_TOOLS = [
         title: '강사 프로필',
         desc: '온라인 강의와 재취업에 쓸 수 있는 전문가 프로필 사진',
         href: '/tools/teacher-photo',
-        img: '/samples/teacher.jpg',
+        img: '/og/teacher-photo.png',
         cost: 30,
     },
     {
@@ -32,7 +32,7 @@ const PHOTO_TOOLS = [
         title: '증명사진',
         desc: '이력서와 자격증에 붙일 수 있는 깔끔한 증명사진',
         href: '/tools/id-photo',
-        img: '/samples/id.jpg',
+        img: '/og/profile-photo.png',
         cost: 30,
     },
     {
@@ -40,7 +40,7 @@ const PHOTO_TOOLS = [
         title: '인스타 프로필',
         desc: '인스타그램과 SNS에 쓸 수 있는 세련된 프로필',
         href: '/tools/insta-profile',
-        img: '/samples/insta.jpg',
+        img: '/og/insta-profile.png',
         cost: 30,
     },
     {
@@ -48,7 +48,7 @@ const PHOTO_TOOLS = [
         title: '배우 프로필',
         desc: '오디션과 캐스팅에 쓸 수 있는 배우 프로필',
         href: '/tools/actor-photo',
-        img: '/samples/actor.jpg',
+        img: '/og/actor-photo.png',
         cost: 30,
     },
     {
@@ -56,7 +56,7 @@ const PHOTO_TOOLS = [
         title: '사진 화질 개선',
         desc: '낡고 흐릿한 사진을 선명하게 복원해드립니다',
         href: '/tools/enhance',
-        img: '/samples/enhance.jpg',
+        img: '/og/enhance.png',
         cost: 20,
     },
     {
@@ -64,7 +64,7 @@ const PHOTO_TOOLS = [
         title: '콘텐츠 썸네일',
         desc: '유튜브와 블로그에 쓸 수 있는 눈길 가는 썸네일',
         href: '/tools/thumbnail',
-        img: '/samples/thumbnail.jpg',
+        img: '/og/thumbnail.png',
         cost: 30,
     },
 ]
@@ -107,6 +107,7 @@ export default function ToolsHubPage() {
                         <Link
                             key={tool.id}
                             href={tool.href}
+                            className="tool-card"
                             style={{
                                 display: 'flex',
                                 flexDirection: 'column',
@@ -116,14 +117,6 @@ export default function ToolsHubPage() {
                                 textDecoration: 'none',
                                 border: '1px solid var(--선)',
                                 transition: 'all 200ms ease',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-4px)'
-                                e.currentTarget.style.boxShadow = 'var(--그림자-대)'
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'none'
-                                e.currentTarget.style.boxShadow = 'var(--그림자)'
                             }}
                         >
                             {/* 도구 이미지 */}
@@ -218,6 +211,10 @@ export default function ToolsHubPage() {
             </main>
 
             <style>{`
+                .tool-card:hover {
+                    transform: translateY(-4px);
+                    box-shadow: var(--그림자-대);
+                }
                 @media (max-width: 768px) {
                     main {
                         padding: 32px 16px 90px !important;

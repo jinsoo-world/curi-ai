@@ -144,6 +144,7 @@ export default async function MentorsPage() {
                         {['콘텐츠 & 수익화', '글쓰기', '마케팅', '브랜딩', '창업', '커리어'].map(cat => (
                             <button
                                 key={cat}
+                                className="category-chip"
                                 style={{
                                     padding: '10px 18px',
                                     borderRadius: 999,
@@ -155,14 +156,6 @@ export default async function MentorsPage() {
                                     cursor: 'pointer',
                                     whiteSpace: 'nowrap',
                                     transition: 'all 200ms',
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = 'var(--샌드)'
-                                    e.currentTarget.style.borderColor = 'var(--먹연)'
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'var(--카드)'
-                                    e.currentTarget.style.borderColor = 'var(--선)'
                                 }}
                             >
                                 {cat}
@@ -198,6 +191,7 @@ export default async function MentorsPage() {
                             <Link
                                 key={i}
                                 href={`/mentors?q=${encodeURIComponent(item.q)}`}
+                                className="situation-card"
                                 style={{
                                     display: 'block',
                                     padding: 20,
@@ -206,14 +200,6 @@ export default async function MentorsPage() {
                                     borderRadius: 'var(--둥근)',
                                     textDecoration: 'none',
                                     transition: 'all 200ms',
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(-2px)'
-                                    e.currentTarget.style.boxShadow = 'var(--그림자-대)'
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = 'none'
-                                    e.currentTarget.style.boxShadow = 'none'
                                 }}
                             >
                                 <div style={{
@@ -286,6 +272,7 @@ export default async function MentorsPage() {
                                 <Link
                                     key={m.id}
                                     href={`/${m.id}`}
+                                    className="mentor-card"
                                     style={{
                                         display: 'flex',
                                         flexDirection: 'column',
@@ -295,14 +282,6 @@ export default async function MentorsPage() {
                                         textDecoration: 'none',
                                         border: '1px solid var(--선)',
                                         transition: 'all 200ms',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(-4px)'
-                                        e.currentTarget.style.boxShadow = 'var(--그림자-대)'
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.transform = 'none'
-                                        e.currentTarget.style.boxShadow = 'none'
                                     }}
                                 >
                                     <div style={{
@@ -425,6 +404,18 @@ export default async function MentorsPage() {
             </div>
 
             <style>{`
+                .category-chip:hover {
+                    background: var(--샌드) !important;
+                    border-color: var(--먹연) !important;
+                }
+                .situation-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: var(--그림자-대);
+                }
+                .mentor-card:hover {
+                    transform: translateY(-4px);
+                    box-shadow: var(--그림자-대);
+                }
                 @media (max-width: 768px) {
                     .sidebar-content {
                         margin-left: 0 !important;
