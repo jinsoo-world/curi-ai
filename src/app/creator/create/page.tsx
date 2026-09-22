@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import AppSidebar from '@/components/AppSidebar'
+import { PhotoDrop } from '@/components/studio/PhotoDrop'
 import { createClient } from '@/lib/supabase/client'
 import { 올릴수있는파일, 고르기필터 } from '@/domains/knowledge/files'
 
@@ -57,7 +58,6 @@ export default function CreatorCreatePage() {
     const [summaryLoading, setSummaryLoading] = useState(false)
     const [uploading, setUploading] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const avatarInputRef = useRef<HTMLInputElement>(null)
     const [dragOver, setDragOver] = useState(false)
     const [mentorIdForUpload, setMentorIdForUpload] = useState<string | null>(null)
 
@@ -204,9 +204,7 @@ export default function CreatorCreatePage() {
             .finally(() => setSummaryLoading(false))
     }, [previewSource?.sourceId])
 
-    function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
-        const file = e.target.files?.[0]
-        if (!file) return
+    function applyAvatarFile(file: File, previewUrl: string) {
         if (!file.type.startsWith('image/')) {
             setError('이미지 파일만 업로드 가능합니다.')
             return
@@ -219,12 +217,23 @@ export default function CreatorCreatePage() {
         const img = document.createElement('img')
         img.onload = () => {
             if (Math.abs(img.width - img.height) > img.width * 0.1) {
-                alert('💡 프로필 사진은 1:1 정방형 이미지를 권장합니다.\n현재 이미지가 정방형이 아닐 수 있습니다.')
+                alert('프로필 사진은 1:1 정방형 이미지를 권장합니다.\n현재 이미지가 정방형이 아닐 수 있습니다.')
             }
         }
-        img.src = URL.createObjectURL(file)
+        img.src = previewUrl
         setAvatarFile(file)
-        setAvatarPreview(URL.createObjectURL(file))
+        setAvatarPreview(previewUrl)
+        setError(null)
+    }
+
+    function handleAvatarFromDrop(dataUrl: string, mimeType: string) {
+        fetch(dataUrl)
+            .then(r => r.blob())
+            .then(blob => {
+                const ext = (mimeType.split('/')[1] || 'jpeg').replace('jpeg', 'jpg')
+                applyAvatarFile(new File([blob], `avatar.${ext}`, { type: mimeType || 'image/jpeg' }), dataUrl)
+            })
+            .catch(() => setError('사진을 읽지 못했어요. 다시 올려주세요.'))
     }
 
     async function handleCreate(isPublic: boolean = true) {
@@ -630,10 +639,10 @@ export default function CreatorCreatePage() {
                     }}>
                         {/* 헤더 */}
                         <div style={{ marginBottom: 0 }}>
-                            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#18181b' }}>
-                                🤖 나만의 AI 만들기
+                            <h1 style={{ margin: 0, fontSize: 'var(--글자-대)', fontWeight: 900, color: '#18181b', letterSpacing: '-0.04em', wordBreak: 'keep-all' }}>
+                                나만의 AI 만들기
                             </h1>
-                            <p style={{ margin: '2px 0 0', fontSize: 13, color: '#9ca3af' }}>
+                            <p style={{ margin: '8px 0 0', fontSize: 'var(--글자-본문)', color: 'var(--먹연)', lineHeight: 1.6, wordBreak: 'keep-all' }}>
                                 AI에 반영되는 설정만 표시됩니다
                             </p>
                         </div>
@@ -716,10 +725,10 @@ export default function CreatorCreatePage() {
                                     onClick={() => setCreatorTab(tab.key)}
                                     style={{
                                         flex: 1,
-                                        padding: '10px 0',
-                                        fontSize: 14,
-                                        fontWeight: creatorTab === tab.key ? 700 : 500,
-                                        color: creatorTab === tab.key ? '#18181b' : '#9ca3af',
+                                        padding: '12px 0',
+                                        fontSize: 15,
+                                        fontWeight: creatorTab === tab.key ? 800 : 600,
+                                        color: creatorTab === tab.key ? '#18181b' : '#71717a',
                                         background: 'none',
                                         border: 'none',
                                         borderBottom: creatorTab === tab.key ? '2px solid #22c55e' : '2px solid transparent',
@@ -747,38 +756,24 @@ export default function CreatorCreatePage() {
                         {/* Step 1: 기본정보 */}
                         {creatorTab === 'basic' && (<>
                         <div style={styles.card}>
-                            <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', marginBottom: 12 }}>
-                                <div
-                                    onClick={() => avatarInputRef.current?.click()}
-                                    style={{
-                                        width: 64, height: 64, borderRadius: '50%',
-                                        border: '3px dashed #d1d5db', cursor: 'pointer',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        overflow: 'hidden', background: '#f9fafb',
-                                        transition: 'border-color 200ms',
-                                    }}
-                                    onMouseEnter={e => ((e.currentTarget as HTMLElement).style.borderColor = '#22c55e')}
-                                    onMouseLeave={e => ((e.currentTarget as HTMLElement).style.borderColor = '#d1d5db')}
-                                >
-                                    {avatarPreview ? (
-                                        <img src={avatarPreview} alt="프로필" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    ) : (
-                                        <div style={{ textAlign: 'center' as const, color: '#9ca3af' }}>
-                                            <div style={{ fontSize: 24 }}>📷</div>
-                                            <div style={{ fontSize: 10 }}>프로필</div>
-                                        </div>
+                            <div style={{ marginBottom: 8 }}>
+                                <div style={styles.sectionLabel}>1. 프로필 사진</div>
+                                <PhotoDrop
+                                    preview={avatarPreview}
+                                    onPicked={handleAvatarFromDrop}
+                                    onError={msg => setError(msg)}
+                                    maxBytes={7 * 1024 * 1024}
+                                    showCamera={false}
+                                    privacyNote={null}
+                                    emptyTitle="프로필 사진을 올려주세요"
+                                    emptyHint={(
+                                        <>
+                                            눌러서 고르셔도 되고, 끌어다 놓거나 붙여넣어도 돼요<br />
+                                            <span style={{ fontSize: 15, color: '#a1a1aa' }}>1:1 정방형 권장, 7MB 이하</span>
+                                        </>
                                     )}
-                                </div>
-                                <input
-                                    ref={avatarInputRef}
-                                    type="file"
-                                    accept="image/*"
-                                    style={{ display: 'none' }}
-                                    onChange={handleAvatarChange}
+                                    successLabel="프로필 사진을 올렸어요"
                                 />
-                                <span style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
-                                    클릭하여 프로필 사진 업로드 (1:1 정방형 권장, 7MB 이내)
-                                </span>
                             </div>
 
                             <div style={styles.field}>
@@ -869,7 +864,7 @@ export default function CreatorCreatePage() {
                                 <span style={{ fontSize: 20 }}>💎</span>
                                 <span style={{ fontSize: 15, fontWeight: 800, color: '#92400e' }}>유료 기능</span>
                             </div>
-                            <p style={{ fontSize: 14, color: '#78350f', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                            <p style={{ fontSize: 15, color: '#78350f', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
                                 지식 파일 학습은 클로버 100개가 필요합니다. 무료로 1-2단계만으로도 AI를 만들 수 있어요. {cloverBalance !== null && cloverBalance < 100 && (
                                     <>현재 클로버: {cloverBalance}개. <Link href="/charge" style={{ color: '#b45309', fontWeight: 700, textDecoration: 'underline' }}>충전하기</Link></>
                                 )}
@@ -902,9 +897,12 @@ export default function CreatorCreatePage() {
                                     style={{ display: 'none' }}
                                     onChange={e => handleFileSelect(e.target.files)}
                                 />
-                                <div style={{ fontSize: 28, marginBottom: 4 }}>{uploading ? '⏳' : '📄'}</div>
-                                <div style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>
-                                    {uploading ? '업로드 중...' : '클릭하거나 드래그'}
+                                <div style={{ fontSize: 32, marginBottom: 8 }}>{uploading ? '⏳' : '📄'}</div>
+                                <div style={{ fontSize: 18, fontWeight: 800, color: '#18181b' }}>
+                                    {uploading ? '업로드 중...' : '파일을 올려주세요'}
+                                </div>
+                                <div style={{ fontSize: 15, color: '#71717a', marginTop: 6, wordBreak: 'keep-all' }}>
+                                    눌러서 고르셔도 되고, 끌어다 놓아도 돼요
                                 </div>
                                 <div style={{
                                     display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
@@ -930,7 +928,7 @@ export default function CreatorCreatePage() {
                                         </span>
                                     ))}
                                 </div>
-                                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>
+                                <div style={{ fontSize: 15, color: '#a1a1aa', marginTop: 10 }}>
                                     최대 10개, 합산 50MB
                                 </div>
                             </div>
@@ -941,7 +939,7 @@ export default function CreatorCreatePage() {
                             <div style={{
                                 marginTop: 10, padding: '12px 14px', borderRadius: 12,
                                 background: '#F4F6F3', border: '1px solid var(--선, #E5E7EB)',
-                                fontSize: 12.5, color: 'var(--먹연, #5C6660)', lineHeight: 1.7, wordBreak: 'keep-all',
+                                fontSize: 15, color: 'var(--먹연, #5C6660)', lineHeight: 1.7, wordBreak: 'keep-all',
                             }}>
                                 올린 자료에서 <b>전화번호, 이메일, 주민번호, 카드번호는 저장하기 전에 자동으로 가립니다.</b>
                                 <br />
@@ -1299,7 +1297,7 @@ export default function CreatorCreatePage() {
                                 <span style={{ fontSize: 20 }}>💎</span>
                                 <span style={{ fontSize: 15, fontWeight: 800, color: '#92400e' }}>유료 기능</span>
                             </div>
-                            <p style={{ fontSize: 14, color: '#78350f', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                            <p style={{ fontSize: 15, color: '#78350f', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
                                 고급 설정은 클로버 50개가 필요합니다. 무료로 1-2단계만으로도 AI를 만들 수 있어요. {cloverBalance !== null && cloverBalance < 50 && (
                                     <>현재 클로버: {cloverBalance}개. <Link href="/charge" style={{ color: '#b45309', fontWeight: 700, textDecoration: 'underline' }}>충전하기</Link></>
                                 )}
@@ -2169,64 +2167,76 @@ export default function CreatorCreatePage() {
 const styles: Record<string, React.CSSProperties> = {
     card: {
         background: '#fff',
-        borderRadius: 16,
+        borderRadius: 14,
         padding: '18px 16px',
-        border: '1px solid #f0f0f0',
-        marginBottom: 14,
+        border: '1.5px solid #e4e4e7',
+        marginBottom: 22,
         display: 'flex',
         flexDirection: 'column',
-        gap: 12,
+        gap: 14,
     },
     field: {
         display: 'flex',
         flexDirection: 'column',
-        gap: 4,
+        gap: 8,
+    },
+    sectionLabel: {
+        fontSize: 15,
+        fontWeight: 700,
+        color: '#3f3f46',
+        marginBottom: 8,
     },
     label: {
-        fontSize: 14,
-        fontWeight: 600,
-        color: '#374151',
+        fontSize: 15,
+        fontWeight: 700,
+        color: '#3f3f46',
     },
     hint: {
-        fontSize: 12,
-        color: '#9ca3af',
+        fontSize: 15,
+        color: '#71717a',
         margin: '0 0 4px',
+        lineHeight: 1.6,
+        wordBreak: 'keep-all',
     },
     input: {
         width: '100%',
-        padding: '12px 14px',
-        borderRadius: 10,
-        border: '1px solid #e5e7eb',
-        background: '#fafafa',
+        padding: '14px 16px',
+        borderRadius: 14,
+        border: '1.5px solid #e4e4e7',
+        background: '#fff',
         color: '#18181b',
-        fontSize: 15,
+        fontSize: 16,
+        fontWeight: 600,
         outline: 'none',
         boxSizing: 'border-box',
     },
     textarea: {
         width: '100%',
-        padding: '12px 14px',
-        borderRadius: 10,
-        border: '1px solid #e5e7eb',
-        background: '#fafafa',
+        padding: '14px 16px',
+        borderRadius: 14,
+        border: '1.5px solid #e4e4e7',
+        background: '#fff',
         color: '#18181b',
-        fontSize: 15,
+        fontSize: 16,
+        fontWeight: 600,
         outline: 'none',
         resize: 'vertical',
         boxSizing: 'border-box',
         fontFamily: 'inherit',
+        lineHeight: 1.6,
     },
     errorBox: {
         background: '#fef2f2',
-        border: '1px solid #fca5a5',
+        border: '1.5px solid #fca5a5',
         color: '#dc2626',
-        padding: '10px 14px',
-        borderRadius: 10,
-        fontSize: 14,
+        padding: '12px 16px',
+        borderRadius: 12,
+        fontSize: 15,
         marginBottom: 14,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        lineHeight: 1.6,
     },
     templateGrid: {
         display: 'grid',
@@ -2239,53 +2249,56 @@ const styles: Record<string, React.CSSProperties> = {
         alignItems: 'center',
         gap: 4,
         padding: '14px 8px',
-        borderRadius: 12,
-        border: '1px solid #e5e7eb',
-        background: '#fafafa',
+        borderRadius: 14,
+        border: '1.5px solid #e4e4e7',
+        background: '#fff',
         cursor: 'pointer',
         transition: 'all 0.2s',
-        color: '#4b5563',
+        color: '#18181b',
         textAlign: 'center',
     },
     templateCardSelected: {
-        border: '2px solid #22c55e',
+        border: '2.5px solid #22c55e',
         background: '#f0fdf4',
-        color: '#14532d',
+        color: '#166534',
+        boxShadow: '0 0 0 3px rgba(34,197,94,0.12)',
     },
     dropZone: {
-        border: '2px dashed #d1d5db',
-        borderRadius: 12,
-        padding: '20px 12px',
+        border: '2.5px dashed #d4d4d8',
+        borderRadius: 20,
+        padding: '36px 20px',
+        minHeight: 180,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 4,
         cursor: 'pointer',
-        transition: 'all 0.2s',
-        background: '#fafafa',
+        transition: 'all 0.15s',
+        background: '#fff',
     },
     dropZoneActive: {
-        border: '2px dashed #22c55e',
+        border: '3px dashed #22c55e',
         background: '#f0fdf4',
     },
     fileItem: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '8px 12px',
-        borderRadius: 8,
+        padding: '12px 14px',
+        borderRadius: 14,
         background: '#f0fdf4',
-        fontSize: 13,
+        fontSize: 15,
     },
     createBtn: {
         width: '100%',
-        padding: '16px 24px',
-        borderRadius: 14,
+        padding: 17,
+        borderRadius: 16,
         border: 'none',
         background: '#FF6B35',
         color: '#fff',
-        fontSize: 16,
-        fontWeight: 700,
+        fontSize: 17,
+        fontWeight: 800,
         cursor: 'pointer',
         transition: 'opacity 0.2s',
         boxShadow: '0 2px 12px rgba(255,107,53,0.3)',
