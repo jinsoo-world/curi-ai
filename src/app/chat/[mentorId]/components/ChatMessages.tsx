@@ -578,7 +578,7 @@ export default function ChatMessages({
                                 flexDirection: isUser ? 'row-reverse' : 'row',
                                 alignItems: 'flex-start',
                                 gap: 12,
-                                marginBottom: 4,
+                                marginBottom: 16,
                                 animation: 'msgFadeIn 0.3s ease-out',
                             }}
                         >

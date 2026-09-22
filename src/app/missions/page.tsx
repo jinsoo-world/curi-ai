@@ -210,7 +210,7 @@ export default function MissionsPage() {
             id: 'make-photo',
             icon: '',
             title: '사진 한 장 만들어보기',
-            description: '증명사진·강사 프로필·배우 프로필 중 아무거나',
+            description: '강사 프로필·배우 프로필·화질 개선 중 하나',
             reward: 30,
             rewardLabel: '+30',
             progress: Math.min(1, 만든사진수),
@@ -791,7 +791,7 @@ export default function MissionsPage() {
                                             objectType: 'feed' as const,
                                             content: {
                                                 title: '큐리 AI - 나만의 AI를 만들어보세요!',
-                                                description: '사진 한 장으로 증명사진·프로필 사진을 만들 수 있어요',
+                                                description: '사진 한 장으로 전문가 프로필 사진을 만들 수 있어요',
                                                 imageUrl: 'https://www.curi-ai.com/og-image.png',
                                                 link: { mobileWebUrl: inviteLink, webUrl: inviteLink },
                                             },

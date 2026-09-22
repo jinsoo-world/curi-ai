@@ -258,11 +258,17 @@ export default function ChatInput({
 
     return (
         <div style={{
-            background: '#FAFAFA',
+            position: 'sticky',
+            bottom: 0,
+            zIndex: 20,
+            background: 'rgba(250, 250, 250, 0.98)',
+            backdropFilter: 'saturate(180%) blur(16px)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             paddingBottom: 'max(env(safe-area-inset-bottom, 12px), 16px)',
+            paddingTop: 8,
+            borderTop: '1px solid rgba(0,0,0,0.04)',
         }}>
             {/* STT 에러 토스트 */}
             {sttError && (
