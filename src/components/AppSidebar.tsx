@@ -21,16 +21,13 @@ import { 클로버듣기, 클로버알림, 클로버씀듣기 } from '@/lib/clov
 import { SIGNUP_CLOVERS } from '@/domains/trial'
 import CloverCount from '@/components/studio/CloverCount'
 
-// 대표 지시 2026-09-16 = 「중복인 거 정리하고, 깔끔하게 직관적으로 하라」
-//                      「대화하기에 만들기가 들어가있어」
-//
-// 같은 곳으로 가는 길이 위·아래·서랍 세 군데에 흩어져 있었고, 친구초대는 서랍에만 두 번 있었다.
-// 이제 위 띠와 아래 고정 메뉴가 **같은 다섯 칸**을 말한다. 서랍에는 그 다섯에 없는 것만 둔다.
-// 「대화하기」가 첫 화면(/mentors)으로 가 사진 만들기가 열리던 것도 여기서 끊는다 — 채팅은 /chats 다.
+// Delphi 스타일 UX 개편 2026-09-22 — 프로필 사진 도구를 별도 탭으로 분리
+// 
+// 메인 제품은 AI 멘토 발견/생성, 프로필 사진 생성 도구는 독립적인 섹션으로 명확히 분리
 const 메뉴 = [
-    { label: '홈', href: '/mentors' },
-    { label: '만들기', href: '/studio' },
-    { label: '보관함', href: '/photos' },
+    { label: '발견', href: '/mentors' },
+    { label: 'AI 만들기', href: '/creator/create' },
+    { label: '프로필 사진', href: '/tools' },
     { label: '채팅', href: '/chats' },
 ]
 

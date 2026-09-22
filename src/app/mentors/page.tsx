@@ -1,5 +1,3 @@
-export const revalidate = 30 // 30초마다 재생성 (ISR) — 멘토 변경사항 빠르게 반영
-
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -7,10 +5,7 @@ import { getActiveMentors, MENTOR_IMAGES } from '@/domains/mentor'
 import { MembershipBanner } from '@/components/MembershipBanner'
 import type { MentorCardData } from '@/domains/mentor'
 import NotificationBanner from './NotificationBanner'
-import PhotoHero from '@/components/studio/PhotoHero'
 import WelcomeGift from '@/components/WelcomeGift'
-import LookShowcase from '@/components/studio/LookShowcase'
-import ToolTiles from '@/components/studio/ToolTiles'
 import MentorBoard from '@/components/ui/MentorBoard'
 import AppSidebar from '@/components/AppSidebar'
 import CreditClaimWrapper from './CreditClaimWrapper'
@@ -19,17 +14,12 @@ import AdSlot from '@/components/AdSlot'
 import ClaimPhoto from '@/components/studio/ClaimPhoto'
 import FirstGuide from '@/components/studio/FirstGuide'
 
-/**
- * 대표 지적 2026-09-15 = 카톡·검색에 나가는 제목이 「멘토 선택 — 큐리 AI — 큐리 AI」였다.
- * 겹친 이유 = 바깥 틀(layout)이 이미 「— 큐리 AI」를 붙이는데 여기서 또 적었다.
- * 그리고 내용이 옛 제품(멘토와 대화)이라 지금 제품(사진 도구)과 어긋났다.
- */
 export const metadata: Metadata = {
-    title: 'AI 프로필 사진 만들기',
-    description: '사진 한 장만 올리면 됩니다. 얼굴은 그대로 두고 옷과 배경만 바꿔 강사 프로필·배우 프로필을 만들어 드려요.',
+    title: 'AI 발견하기',
+    description: '당신에게 필요한 AI 멘토를 만나보세요. 콘텐츠 수익화, 브랜딩, 글쓰기 전문가들과 대화할 수 있습니다.',
     openGraph: {
-        title: 'AI 프로필 사진 만들기 — 큐리 AI',
-        description: '사진 한 장만 올리면 됩니다. 얼굴은 그대로 두고 옷과 배경만 바꿔드려요.',
+        title: 'AI 발견하기 — 큐리 AI',
+        description: '당신에게 필요한 AI 멘토를 만나보세요.',
     },
 }
 
@@ -65,33 +55,288 @@ export default async function MentorsPage() {
         <div style={{ minHeight: '100dvh', background: 'var(--종이)' }} role="document">
 
             {/* ─── Sidebar ─── */}
-            {/* 체험권 띠가 맨 위 — 위 띠보다 먼저 온다 */}
             <MembershipBanner />
-
             <AppSidebar />
             <FirstGuide />
             <div style={{ maxWidth: 1000, margin: "0 auto", padding: "0 18px" }}><ClaimPhoto /></div>
 
-            {/* ─── Credit Claim Modal (client, wrapped in Suspense for searchParams) ─── */}
+            {/* ─── Credit Claim Modal ─── */}
             <Suspense fallback={null}>
                 <CreditClaimWrapper />
             </Suspense>
 
-            {/* ─── Main Content (offset by sidebar on desktop) ─── */}
+            {/* ─── Main Content (Delphi 스타일 발견 화면) ─── */}
             <div className="sidebar-content">
 
-                {/* ─── 사진 히로 — 대표 지시 0914 「이게 메인으로」 ─── */}
+                {/* ─── 환영 선물 + 알림 ─── */}
                 <WelcomeGift />
-
-                <PhotoHero />
-
-                {/* ─── 알림 ─── */}
                 <NotificationBanner />
 
-                {/* ─── 지금 쓸 수 있는 도구 ─── */}
-                <ToolTiles />
+                {/* ─── Delphi 스타일 히어로 섹션 ─── */}
+                <section style={{
+                    maxWidth: 1200,
+                    margin: '0 auto',
+                    padding: '64px 20px 48px',
+                    textAlign: 'center',
+                    position: 'relative',
+                }}>
+                    {/* 큰 히어로 텍스트 (Delphi "What's on your mind?" 스타일) */}
+                    <h1 style={{
+                        fontSize: 'clamp(36px, 8vw, 56px)',
+                        fontWeight: 800,
+                        color: 'var(--먹)',
+                        marginBottom: 32,
+                        lineHeight: 1.2,
+                        letterSpacing: '-0.03em',
+                    }}>
+                        마음에 있는 것을<br />물어보세요
+                    </h1>
 
-                {/* ─── 관심사 탭 + 멘토 목록 ─── */}
+                    {/* 검색 바 */}
+                    <div style={{
+                        maxWidth: 640,
+                        margin: '0 auto 24px',
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            padding: '16px 24px',
+                            background: 'var(--카드)',
+                            border: '1px solid var(--선)',
+                            borderRadius: 999,
+                            boxShadow: 'var(--그림자)',
+                        }}>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--먹연)" strokeWidth="2" strokeLinecap="round">
+                                <circle cx="11" cy="11" r="7" />
+                                <path d="m21 21-4.35-4.35" />
+                            </svg>
+                            <input
+                                type="text"
+                                placeholder="콘텐츠 수익화가 궁금해요"
+                                style={{
+                                    flex: 1,
+                                    border: 'none',
+                                    background: 'transparent',
+                                    fontSize: 17,
+                                    color: 'var(--먹)',
+                                    outline: 'none',
+                                }}
+                            />
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--먹연)" strokeWidth="2" strokeLinecap="round">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                                <line x1="12" y1="19" x2="12" y2="23" />
+                                <line x1="8" y1="23" x2="16" y2="23" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    {/* 카테고리 칩 (가운데 정렬) */}
+                    <div style={{
+                        display: 'flex',
+                        gap: 10,
+                        justifyContent: 'center',
+                        flexWrap: 'wrap',
+                        maxWidth: 800,
+                        margin: '0 auto',
+                    }}>
+                        {['콘텐츠 & 수익화', '글쓰기', '마케팅', '브랜딩', '창업', '커리어'].map(cat => (
+                            <button
+                                key={cat}
+                                className="category-chip"
+                                style={{
+                                    padding: '10px 18px',
+                                    borderRadius: 999,
+                                    border: '1px solid var(--선)',
+                                    background: 'var(--카드)',
+                                    color: 'var(--먹연)',
+                                    fontSize: 14,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                    transition: 'all 200ms',
+                                }}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+                </section>
+
+                {/* ─── 실제 고민들 (Delphi "Real situations" 스타일) ─── */}
+                <section style={{
+                    maxWidth: 1200,
+                    margin: '0 auto',
+                    padding: '0 20px 56px',
+                }}>
+                    <h2 style={{
+                        fontSize: 20,
+                        fontWeight: 700,
+                        color: 'var(--먹)',
+                        marginBottom: 20,
+                    }}>
+                        이런 고민이 있으신가요?
+                    </h2>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                        gap: 16,
+                    }}>
+                        {[
+                            { q: '콘텐츠로 수익을 만들고 싶은데 어디서 시작해야 할지 모르겠어요', cat: '콘텐츠', count: 8 },
+                            { q: '블로그 글은 쓰는데 사람들이 안 봐요. 뭐가 문제일까요?', cat: '글쓰기', count: 12 },
+                            { q: '퍼스널 브랜드를 만들고 싶은데 어떻게 차별화해야 하나요?', cat: '브랜딩', count: 6 },
+                        ].map((item, i) => (
+                            <Link
+                                key={i}
+                                href={`/mentors?q=${encodeURIComponent(item.q)}`}
+                                className="situation-card"
+                                style={{
+                                    display: 'block',
+                                    padding: 20,
+                                    background: 'var(--카드)',
+                                    border: '1px solid var(--선)',
+                                    borderRadius: 'var(--둥근)',
+                                    textDecoration: 'none',
+                                    transition: 'all 200ms',
+                                }}
+                            >
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    gap: 12,
+                                    marginBottom: 12,
+                                }}>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--먹연)" strokeWidth="2" style={{ flexShrink: 0, marginTop: 2 }}>
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                    </svg>
+                                    <p style={{
+                                        fontSize: 16,
+                                        color: 'var(--먹)',
+                                        lineHeight: 1.5,
+                                        margin: 0,
+                                    }}>
+                                        {item.q}
+                                    </p>
+                                </div>
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 12,
+                                    marginTop: 16,
+                                }}>
+                                    <span style={{
+                                        fontSize: 13,
+                                        fontWeight: 600,
+                                        color: 'var(--먹연)',
+                                        padding: '4px 12px',
+                                        background: 'var(--샌드)',
+                                        borderRadius: 999,
+                                    }}>
+                                        {item.cat}
+                                    </span>
+                                    <span style={{
+                                        fontSize: 13,
+                                        color: 'var(--먹연)',
+                                    }}>
+                                        {item.count}명이 물었어요
+                                    </span>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </section>
+
+                {/* ─── 알아두면 좋은 AI (Delphi "Worth knowing" 스타일) ─── */}
+                {mentors.length > 0 && (
+                    <section style={{
+                        maxWidth: 1200,
+                        margin: '0 auto',
+                        padding: '0 20px 56px',
+                    }}>
+                        <h2 style={{
+                            fontSize: 20,
+                            fontWeight: 700,
+                            color: 'var(--먹)',
+                            marginBottom: 20,
+                        }}>
+                            알아두면 좋은 AI 멘토
+                        </h2>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                            gap: 20,
+                        }}>
+                            {mentors.slice(0, 4).map((m: MentorCardData) => (
+                                <Link
+                                    key={m.id}
+                                    href={`/${m.id}`}
+                                    className="mentor-card"
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        background: 'var(--카드)',
+                                        borderRadius: 'var(--둥근)',
+                                        overflow: 'hidden',
+                                        textDecoration: 'none',
+                                        border: '1px solid var(--선)',
+                                        transition: 'all 200ms',
+                                    }}
+                                >
+                                    <div style={{
+                                        position: 'relative',
+                                        aspectRatio: '3/4',
+                                        background: 'var(--샌드)',
+                                    }}>
+                                        {(m.avatar_url || MENTOR_IMAGES[m.name]) && (
+                                            <Image
+                                                src={m.avatar_url || MENTOR_IMAGES[m.name] || ''}
+                                                alt={m.name}
+                                                fill
+                                                sizes="(max-width: 768px) 50vw, 33vw"
+                                                style={{ objectFit: 'cover' }}
+                                            />
+                                        )}
+                                    </div>
+                                    <div style={{ padding: 18 }}>
+                                        <h3 style={{
+                                            fontSize: 18,
+                                            fontWeight: 700,
+                                            color: 'var(--먹)',
+                                            marginBottom: 6,
+                                        }}>
+                                            {m.name}
+                                        </h3>
+                                        <p style={{
+                                            fontSize: 14,
+                                            color: 'var(--먹연)',
+                                            lineHeight: 1.5,
+                                            marginBottom: 12,
+                                        }}>
+                                            {m.title || m.description}
+                                        </p>
+                                        <div style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: 4,
+                                            padding: '6px 12px',
+                                            background: 'var(--샌드)',
+                                            borderRadius: 999,
+                                            fontSize: 13,
+                                            fontWeight: 600,
+                                            color: 'var(--먹)',
+                                        }}>
+                                            물어보기
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {/* ─── 모든 AI 멘토 그리드 ─── */}
                 <MentorBoard
                     mentors={(mentors.length > 0
                         ? mentors.map((m: MentorCardData) => ({
@@ -111,28 +356,20 @@ export default async function MentorsPage() {
                     )}
                 />
 
-                {/* ─── 만들 수 있는 사진 — 대표 지시 0914 「이런 느낌도 좋다」 ─── */}
-                <LookShowcase />
-
-                {/* ─── 광고(애드센스) — 무료 화면에만. 본문 끝난 뒤, 바닥글 앞 ─── */}
+                {/* ─── 광고 + Footer ─── */}
                 <AdSlot />
-
-                {/* ─── Footer ─── */}
                 <footer className="mentors-footer" style={{
                     borderTop: '1px solid var(--선)',
-                    background: 'var(--흰)',
+                    background: 'var(--카드)',
                     padding: '36px 20px 60px',
                 }}>
                     <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-                        {/* 로고 + 회사명 */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
                             <Image src="/logo.png" alt="큐리 AI" width={28} height={28} style={{ borderRadius: 6 }} />
-                            <span style={{ fontSize: 15, fontWeight: 700, color: '#374151' }}>큐리 AI</span>
+                            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--먹)' }}>큐리 AI</span>
                         </div>
-
-                        {/* 사업자 정보 */}
                         <div style={{
-                            fontSize: 12, color: '#9ca3af', lineHeight: 1.9,
+                            fontSize: 12, color: 'var(--먹연)', lineHeight: 1.9,
                             letterSpacing: '-0.01em',
                         }}>
                             <div>미션드리븐 (대표 : 김진수) ㅣ curious@mission-driven.kr</div>
@@ -140,27 +377,23 @@ export default async function MentorsPage() {
                             <div>전화번호 : 010-9716-6015</div>
                             <div>사무실 : 서울특별시 마포구 성지길 25-11 3층 비123호</div>
                         </div>
-
-                        {/* 정책 링크 */}
                         <div style={{
                             display: 'flex', gap: 4, marginTop: 20,
-                            fontSize: 12, color: '#9ca3af',
+                            fontSize: 12, color: 'var(--먹연)',
                             flexWrap: 'wrap',
                         }}>
-                            <Link href="/privacy" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
+                            <Link href="/privacy" style={{ color: 'var(--먹)', textDecoration: 'none', fontWeight: 600 }}>
                                 개인정보처리방침
                             </Link>
-                            <span style={{ color: '#d1d5db' }}>ㅣ</span>
-                            <Link href="/terms" style={{ color: '#6b7280', textDecoration: 'none' }}>
+                            <span style={{ color: 'var(--선)' }}>ㅣ</span>
+                            <Link href="/terms" style={{ color: 'var(--먹연)', textDecoration: 'none' }}>
                                 서비스이용약관
                             </Link>
-                            <span style={{ color: '#d1d5db' }}>ㅣ</span>
-                            <Link href="/refund" style={{ color: '#6b7280', textDecoration: 'none' }}>
+                            <span style={{ color: 'var(--선)' }}>ㅣ</span>
+                            <Link href="/refund" style={{ color: 'var(--먹연)', textDecoration: 'none' }}>
                                 취소·환불정책
                             </Link>
                         </div>
-
-                        {/* 카피라이트 */}
                         <div style={{
                             fontSize: 11, color: '#d1d5db', marginTop: 16,
                         }}>
@@ -170,50 +403,23 @@ export default async function MentorsPage() {
                 </footer>
             </div>
 
-            {/* ─── Responsive CSS ─── */}
             <style>{`
+                .category-chip:hover {
+                    background: var(--샌드) !important;
+                    border-color: var(--먹연) !important;
+                }
+                .situation-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: var(--그림자-대);
+                }
+                .mentor-card:hover {
+                    transform: translateY(-4px);
+                    box-shadow: var(--그림자-대);
+                }
                 @media (max-width: 768px) {
                     .sidebar-content {
                         margin-left: 0 !important;
                         padding-bottom: 72px;
-                    }
-                    .mentors-hero {
-                        padding: 32px 20px 16px !important;
-                    }
-                    .mentors-hero h1 {
-                        font-size: 28px !important;
-                    }
-                    .mentors-grid-section {
-                        padding: 0 16px 40px !important;
-                    }
-                    .mentors-grid {
-                        grid-template-columns: repeat(2, 1fr) !important;
-                        gap: 12px !important;
-                    }
-                    .mentor-questions {
-                        display: none !important;
-                    }
-                    .mentor-card-info {
-                        padding: 12px 12px 16px !important;
-                    }
-                    .mentor-card-info h2 {
-                        font-size: 17px !important;
-                    }
-                    .mentor-card-info p:first-of-type {
-                        font-size: 12px !important;
-                        margin-bottom: 4px !important;
-                    }
-                    .mentor-card-info p:last-of-type {
-                        font-size: 12px !important;
-                        margin-bottom: 0 !important;
-                        -webkit-line-clamp: 1 !important;
-                    }
-                    .mentor-card-info span {
-                        font-size: 10px !important;
-                        padding: 2px 8px !important;
-                    }
-                    .mentors-footer {
-                        padding: 24px 20px 80px !important;
                     }
                 }
             `}</style>
