@@ -6,9 +6,9 @@ import Image from 'next/image'
 import { MENTOR_IMAGES } from '@/domains/mentor'
 import type { MentorCardData } from '@/domains/mentor'
 import { MembershipBanner } from '@/components/MembershipBanner'
+import AppSidebar from '@/components/AppSidebar'
 import BizFooter from '@/components/BizFooter'
 import CreditClaimWrapper from './CreditClaimWrapper'
-import DiscoverSidebar from '@/components/DiscoverSidebar'
 
 // 카테고리 목록 - Delphi 스타일 개선 (2026-09-22)
 // CEO 요구: 실제 mentor.expertise 필드 활용, 빈 결과 피드백
@@ -23,7 +23,6 @@ const categories = [
 export default function MentorsPageClient({ mentors }: { mentors: MentorCardData[] }) {
     const [searchQuery, setSearchQuery] = useState('')
     const [activeCategory, setActiveCategory] = useState('all')
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
     // 필터링된 멘토 목록 (expertise 필드 우선 활용)
     const filteredMentors = useMemo(() => {
@@ -59,7 +58,7 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
         return (
             <div style={{ minHeight: '100dvh', background: 'var(--종이)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
                 <MembershipBanner />
-                <DiscoverSidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+                <AppSidebar />
                 <div style={{ textAlign: 'center', maxWidth: 400 }}>
                     <div style={{ fontSize: 64, marginBottom: 16 }}>🔍</div>
                     <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--먹)', marginBottom: 8 }}>아직 멘토가 없어요</h2>
@@ -71,29 +70,17 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
 
     return (
         <div style={{ minHeight: '100dvh', background: 'var(--종이)' }} role="document">
-            {/* ─── Top Membership Banner (no AppSidebar on Discover) ─── */}
+            {/* ─── Sidebar & Banner (same chrome as home) ─── */}
             <MembershipBanner />
-            
-            {/* ─── Delphi-style Left Sidebar (primary nav for Discover) ─── */}
-            <DiscoverSidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+            <AppSidebar />
 
             {/* ─── Credit Claim Modal ─── */}
             <Suspense fallback={null}>
                 <CreditClaimWrapper />
             </Suspense>
 
-            {/* ─── Main Content (Delphi Discover 스타일, left sidebar margin) ─── */}
-            <div className="discover-main-content">
-                {/* 모바일 햄버거 버튼 */}
-                <button
-                    className="discover-mobile-menu-btn"
-                    onClick={() => setMobileMenuOpen(true)}
-                    aria-label="메뉴 열기"
-                >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                        <path d="M3 12h18M3 6h18M3 18h18" />
-                    </svg>
-                </button>
+            {/* ─── Main Content (same layout as home) ─── */}
+            <div className="sidebar-content">
 
                 {/* ─── Header with CTA (Delphi style) ─── */}
                 <section style={{
@@ -482,34 +469,6 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
             </div>
 
             <style jsx>{`
-                /* Delphi-style main content with left sidebar (no top app bar) */
-                :global(.discover-main-content) {
-                    margin-left: 240px;
-                    min-height: 100dvh;
-                    padding-top: 0;
-                    background: var(--종이);
-                    overflow-x: hidden;
-                }
-
-                /* Mobile menu button (no top bar, so adjust position) */
-                :global(.discover-mobile-menu-btn) {
-                    position: fixed;
-                    top: 16px;
-                    left: 16px;
-                    z-index: 100;
-                    display: none;
-                    align-items: center;
-                    justify-content: center;
-                    width: 44px;
-                    height: 44px;
-                    background: #FFFFFF;
-                    border: 1px solid var(--선);
-                    border-radius: 12px;
-                    cursor: pointer;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-                    color: var(--먹);
-                }
-
                 /* Hide horizontal scrollbar on portrait cards */
                 .delphi-portrait-card::-webkit-scrollbar {
                     display: none;
@@ -552,18 +511,8 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                     box-shadow: 0 4px 16px rgba(42, 38, 37, 0.08);
                 }
                 
-                /* 모바일: 사이드바 없음, 햄버거 표시 */
+                /* 모바일 반응형 */
                 @media (max-width: 768px) {
-                    :global(.discover-main-content) {
-                        margin-left: 0 !important;
-                        padding-bottom: 72px;
-                        overflow-x: hidden;
-                    }
-
-                    :global(.discover-mobile-menu-btn) {
-                        display: flex;
-                    }
-                    
                     :global(.delphi-portrait-card) {
                         width: 220px !important;
                         height: 320px !important;
