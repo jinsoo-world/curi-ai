@@ -68,3 +68,34 @@ self.addEventListener('fetch', (event) => {
             })
     )
 })
+
+// === push (메시징) ===
+// 서버(web-push)가 보낸 알림을 화면에 띄우고, 누르면 /os 로 간다.
+// 이 블록만 메시징 담당. 캐시·오프라인 블록은 위에 따로 있다.
+self.addEventListener('push', (event) => {
+    let data = { title: '큐리AI', body: '', url: '/os' }
+    try { data = { ...data, ...event.data.json() } } catch { if (event.data) data.body = event.data.text() }
+    event.waitUntil(
+        self.registration.showNotification(data.title, {
+            body: data.body,
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/icon-192x192.png',
+            data: { url: data.url },
+            tag: data.tag || undefined,
+        })
+    )
+})
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close()
+    const url = (event.notification.data && event.notification.data.url) || '/os'
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+            for (const c of list) {
+                if ('focus' in c) { c.navigate(url); return c.focus() }
+            }
+            return self.clients.openWindow(url)
+        })
+    )
+})
+// === /push (메시징) ===

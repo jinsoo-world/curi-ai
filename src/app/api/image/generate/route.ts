@@ -8,6 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenAI } from '@google/genai'
 import { requireAdminAPI } from '@/lib/admin-guard'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -21,6 +23,9 @@ export async function POST(req: NextRequest) {
     if (auth.error) {
         return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
+    // 요청 횟수 제한(보안 C-1 9번): 시간당 10
+    const rl = await checkRateLimit(createAdminClient(), rateLimitKey('image', auth.user?.id), 10, 3600)
+    if (!rl.allowed) return NextResponse.json({ error: rateLimitMessage('사진 만들기') }, { status: 429 })
 
     try {
         const { prompt, model } = await req.json()

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
 
 export const maxDuration = 60
 
@@ -11,6 +13,9 @@ export async function POST(request: NextRequest) {
         if (!user) {
             return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
         }
+        // 요청 횟수 제한(보안 C-1 9번): 분당 10
+        const rl = await checkRateLimit(createAdminClient(), rateLimitKey('tts', user.id), 10, 60)
+        if (!rl.allowed) return NextResponse.json({ error: rateLimitMessage('음성 읽기') }, { status: 429 })
 
         const { text, voiceId: requestVoiceId } = await request.json()
 
