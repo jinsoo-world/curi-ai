@@ -8,6 +8,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import type { TeamBot } from '@/domains/os/types'
 import BotAvatar from './BotAvatar'
 import NewBotSheet from './NewBotSheet'
+import GuestRoster from './GuestRoster'
 import './os.css'
 
 interface TeamState {
@@ -87,6 +88,9 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
         team, loading, guest, tableMissing, refresh, openNewBot: () => setSheet(true),
     }), [team, loading, guest, tableMissing, refresh])
 
+    // 손님 소개 화면(/os/welcome)은 한 장짜리라 뼈대(왼쪽 명단) 없이 그린다
+    if (pathname.startsWith('/os/welcome')) return <>{children}</>
+
     return (
         <Ctx.Provider value={value}>
             <div className="os-shell" data-theme="os">
@@ -136,6 +140,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                                 로그인하면 내 봇 팀이 여기 모여요.
                             </div>
                         )}
+                        {!loading && guest && <GuestRoster />}
                     </div>
 
                     <div className="os-left-bottom">

@@ -13,11 +13,15 @@ export default function OsHome() {
     const first = team.find(b => !b.hidden)
 
     useEffect(() => {
-        if (!loading && first) {
-            const demo = new URLSearchParams(window.location.search).get('demo') === '1'
+        if (loading) return
+        const demo = new URLSearchParams(window.location.search).get('demo') === '1'
+        if (first) {
             router.replace(`/os/chat/${first.mentorId}${demo ? '?demo=1' : ''}`)
+        } else if (guest && !demo) {
+            // 손님(로그인 전)은 소개 화면부터. 둘러보기(?demo=1)는 그대로 시연 팀으로 간다
+            router.replace('/os/welcome')
         }
-    }, [loading, first, router])
+    }, [loading, first, guest, router])
 
     if (loading) return <div className="os-empty">불러오는 중…</div>
     if (first) return null
