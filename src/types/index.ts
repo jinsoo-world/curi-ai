@@ -35,6 +35,8 @@ export interface Mentor {
     greeting_message: string
     sample_questions: string[]
     voice_id: string | null // ElevenLabs voice ID
+    /** 채팅방 테마 색상 hex. null이면 기본 스타일 */
+    chat_theme_color?: string | null
     is_active: boolean
     sort_order: number
     created_at: string

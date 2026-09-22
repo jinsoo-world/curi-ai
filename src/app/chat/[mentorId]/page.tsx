@@ -36,6 +36,7 @@ interface MentorData {
     sample_questions: string[]
     system_prompt: string
     pdf_export_enabled?: boolean
+    chat_theme_color?: string | null
 }
 
 // 멘토별 프로필 이미지
@@ -59,6 +60,15 @@ const MENTOR_EMOJI: Record<string, string> = {
 // ElevenLabs 에이전트 ID (멘토별)
 const ELEVENLABS_AGENT_IDS: Record<string, string> = {
     'Cathy': 'agent_6801kjg12gxhfxbaskx3y8s1szf1',  // TODO: Cathy 전용 에이전트 생성 후 교체
+}
+
+
+/** 채팅 테마 색상: #RGB / #RRGGBB만 허용. 아니면 null */
+function safeThemeColor(raw: string | null | undefined): string | null {
+    if (!raw || typeof raw !== 'string') return null
+    const v = raw.trim()
+    if (/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(v)) return v
+    return null
 }
 
 /** 전송할 컨텍스트 메시지 수 (최근 N턴) — 2026-09-19: 20 → 6으로 축소 (토큰 비용 절감) */
@@ -742,6 +752,7 @@ export default function ChatPage() {
 
     const mentorImage = mentor.avatar_url || MENTOR_IMAGES[mentor.name]
     const mentorEmoji = MENTOR_EMOJI[mentor.slug] || ''
+    const themeColor = safeThemeColor(mentor.chat_theme_color)
 
     return (
         <div style={{
@@ -766,6 +777,7 @@ export default function ChatPage() {
                     mentorEmoji={mentorEmoji}
                     isStreaming={isStreaming}
                     onNewChat={handleNewChat}
+                    themeColor={themeColor}
                     onCall={mentor.voice_sample_url ? () => {
                         if (!isLoggedIn) {
                             setShowVoiceSample(true)
@@ -1012,6 +1024,7 @@ export default function ChatPage() {
                             systemPrompt={mentor?.system_prompt}
                             voiceId={mentor.voice_id}
                             exportLabel="전자책 원고 보기"
+                            themeColor={themeColor}
                         />
 
 

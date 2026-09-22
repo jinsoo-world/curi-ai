@@ -38,6 +38,8 @@ export interface SetPersonaInput {
     systemPrompt: string
     greetingMessage: string
     sampleQuestions: string[]
+    /** 채팅방 테마 색상 hex (고급설정). null이면 기본 */
+    chatThemeColor?: string | null
 }
 
 /** AI 멘토 지식 입력 (Step 3) */

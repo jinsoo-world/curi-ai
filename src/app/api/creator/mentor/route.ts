@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
             // ── Step 2: 페르소나 ──
             case 2: {
-                const { mentorId, template, systemPrompt, greetingMessage, sampleQuestions } = body
+                const { mentorId, template, systemPrompt, greetingMessage, sampleQuestions, chatThemeColor } = body
 
                 if (!mentorId) {
                     return NextResponse.json(
@@ -83,6 +83,7 @@ export async function POST(req: NextRequest) {
                     systemPrompt: systemPrompt || '',
                     greetingMessage: greetingMessage || `안녕하세요! ${body.mentorName || 'AI'}입니다 😊`,
                     sampleQuestions: sampleQuestions || [],
+                    chatThemeColor: typeof chatThemeColor === 'string' ? chatThemeColor : chatThemeColor ?? null,
                 })
 
                 return NextResponse.json({ success: true })

@@ -85,15 +85,20 @@ export async function setMentorPersona(
 ) {
     const template = input.template ? PERSONA_TEMPLATES.find(t => t.id === input.template) : null
 
+    const updates: Record<string, unknown> = {
+        persona_template: input.template || null,
+        system_prompt: input.systemPrompt || template?.defaultPromptStyle || '',
+        greeting_message: input.greetingMessage,
+        sample_questions: input.sampleQuestions,
+        updated_at: new Date().toISOString(),
+    }
+    if (input.chatThemeColor !== undefined) {
+        updates.chat_theme_color = input.chatThemeColor || null
+    }
+
     const { error } = await db
         .from('mentors')
-        .update({
-            persona_template: input.template || null,
-            system_prompt: input.systemPrompt || template?.defaultPromptStyle || '',
-            greeting_message: input.greetingMessage,
-            sample_questions: input.sampleQuestions,
-            updated_at: new Date().toISOString(),
-        })
+        .update(updates)
         .eq('id', input.mentorId)
 
     if (error) {

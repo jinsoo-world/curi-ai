@@ -29,6 +29,8 @@ interface ChatMessagesProps {
     systemPrompt?: string
     voiceId?: string | null
     exportLabel?: string
+    /** 채팅방 테마 색상 hex. null이면 기본 사용자 말풍선 */
+    themeColor?: string | null
 }
 
 /* ── 스피커 아이콘 ── */
@@ -491,6 +493,7 @@ export default function ChatMessages({
     systemPrompt,
     voiceId,
     exportLabel,
+    themeColor,
 }: ChatMessagesProps) {
     // 스트리밍 종료 감지 — autoTTS가 켜져 있을 때만
     const prevStreamingRef = useRef(isStreaming)
@@ -663,8 +666,8 @@ export default function ChatMessages({
                                     ...(isUser ? {
                                         padding: 'clamp(14px, 1.2vw, 18px) clamp(18px, 1.6vw, 24px)',
                                         borderRadius: '20px 20px 4px 20px',
-                                        background: '#F5F5F4',
-                                        color: '#18181B',
+                                        background: themeColor || '#F5F5F4',
+                                        color: themeColor ? '#FFFFFF' : '#18181B',
                                         fontSize: 'clamp(16px, 1.4vw, 18px)',
                                         lineHeight: 1.7,
                                         wordBreak: 'break-word' as const,
