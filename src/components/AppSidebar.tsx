@@ -244,6 +244,29 @@ export default function AppSidebar() {
                             </>
                         )}
 
+                        {/* Delphi-style bottom CTA — CEO requirement 2026-09-22 */}
+                        <div style={{ marginTop: 'auto', paddingTop: 20 }}>
+                            <Link
+                                href="/creator/create"
+                                className="app-top-sheet-item"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    fontWeight: 700,
+                                    color: 'var(--진초록)',
+                                    padding: '14px 16px',
+                                    background: '#f0fdf4',
+                                    borderRadius: 12,
+                                }}
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                                    <path d="M12 5v14M5 12h14" />
+                                </svg>
+                                <span>AI 만들기</span>
+                            </Link>
+                        </div>
+
                         {로그인함 === false && (
                             <>
                                 <div className="app-top-sheet-line" />
