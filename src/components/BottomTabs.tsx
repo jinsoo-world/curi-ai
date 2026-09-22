@@ -27,19 +27,19 @@ const 선 = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLine
 
 const 칸들: 칸[] = [
     {
-        label: '홈', href: '/mentors',
+        label: '발견', href: '/mentors',
         match: (p) => p === '/mentors' || p === '/',
         icon: (<svg width="22" height="22" viewBox="0 0 24 24" {...선}><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V20h14V9.5" /></svg>),
     },
     {
-        label: '만들기', href: '/studio',
-        match: (p) => p.startsWith('/studio') || p.startsWith('/tools'),
-        icon: (<svg width="22" height="22" viewBox="0 0 24 24" {...선}><rect x="3" y="5" width="18" height="15" rx="3" /><circle cx="12" cy="12.5" r="3.5" /><path d="M8 5l1.2-2h5.6L16 5" /></svg>),
+        label: 'AI', href: '/creator/create',
+        match: (p) => p.startsWith('/creator') || p.startsWith('/studio'),
+        icon: (<svg width="22" height="22" viewBox="0 0 24 24" {...선}><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="6" r="1.5" /><circle cx="12" cy="18" r="1.5" /><circle cx="6" cy="9" r="1.5" /><circle cx="18" cy="9" r="1.5" /><circle cx="6" cy="15" r="1.5" /><circle cx="18" cy="15" r="1.5" /></svg>),
     },
     {
-        label: '보관함', href: '/photos',
-        match: (p) => p.startsWith('/photos'),
-        icon: (<svg width="22" height="22" viewBox="0 0 24 24" {...선}><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M3 16l4.5-4.5 3.5 3.5 3-3L21 17" /><circle cx="8.5" cy="9" r="1.4" /></svg>),
+        label: '사진', href: '/tools',
+        match: (p) => p.startsWith('/tools'),
+        icon: (<svg width="22" height="22" viewBox="0 0 24 24" {...선}><rect x="3" y="5" width="18" height="15" rx="3" /><circle cx="12" cy="12.5" r="3.5" /><path d="M8 5l1.2-2h5.6L16 5" /></svg>),
     },
     {
         label: '채팅', href: '/chats',
@@ -49,7 +49,7 @@ const 칸들: 칸[] = [
 ]
 
 /** 이 띠를 걷는 곳 — 손이 바쁜 화면 */
-const 숨김 = ['/tools/', '/chat/', '/coach/', '/admin', '/login', '/billing', '/charge', '/creator/create', '/creator/edit', '/studio/']
+const 숨김 = ['/tools/teacher-photo', '/tools/id-photo', '/tools/insta-profile', '/tools/actor-photo', '/tools/enhance', '/tools/thumbnail', '/chat/', '/coach/', '/admin', '/login', '/billing', '/charge', '/creator/create', '/creator/edit', '/studio/']
 
 export default function BottomTabs() {
     const pathname = usePathname() || '/'
