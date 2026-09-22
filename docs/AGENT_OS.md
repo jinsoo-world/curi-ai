@@ -98,3 +98,14 @@ npm run build          # 빌드
 ## 8. 변경 이력
 
 - 2026-09-23 · 솔라 드라이버(`domains/llm`) + `chat/stream.ts` 되돌아가기 · 표 4개 마이그레이션 · 다크 토큰 `[data-theme="os"]` · 이 문서.
+
+## 9. 메시징(푸시·문자·이메일) + 요청 횟수 제한 — 2026-09-27 (브랜치 agent/c)
+
+- 관문 하나 = `src/domains/messaging/dispatch.ts`. 밖으로 나가는 모든 메시지는 여기를 지난다. 순서: 도구 관문(gateTool) → 문자 스위치(`SMS_ENABLED=true`) → 내 설정 → 조용한 시간(기본 22:00~08:00 서울, 푸시·문자 보류·이메일은 감) → 열쇠 준비 → 보내기 → `message_log`(받는 곳 끝 4자만).
+- 내게 오는 알림(audience=self) = 안전 도구 `notify_owner`. **봇이 남에게 보내는 것(audience=other)은 `permission_requests.status IN ('allowed','edited_allowed')` 카드 id 가 있어야만 나간다.** 없으면 blocked 로 기록만.
+- 드라이버 3개(같은 모양 `send(msg)`) = `drivers/push.ts`(web-push, VAPID) · `drivers/sms.ts`(기존 `lib/sms.ts` 솔라피) · `drivers/email.ts`(AWS SES v2). 열쇠 없으면 blocked, 죽지 않는다.
+- 표 4개 = `supabase/migrations/20260927_messaging.sql` (push_subscriptions · message_log · notification_prefs · rate_limits). rate_limits 는 RLS 켬 + 정책 없음 = 서버 전용.
+- API = `POST/DELETE /api/os/push/subscribe` · `GET/PATCH /api/os/notification-prefs` · `POST /api/os/messages/send`(승인 카드 id 필수) · `POST /api/os/messages/notify-me`.
+- 화면 조각 = `src/components/os/NotificationSettings.tsx` (`/os/settings` 에 `<NotificationSettings />` 로 끼운다). 브라우저 쪽 = `src/lib/push-client.ts`, 서비스 워커 push 블록 = `public/sw.js` `// === push (메시징) ===` 안.
+- 요청 횟수 제한(보안 C-1 9번) = `src/lib/rate-limit.ts` `checkRateLimit(db, key, limit, windowSec)`. 붙인 곳: `/api/chat` 분당 20 · `/api/image/generate` 시간당 10 · `/api/tts` 분당 10 · `/api/os/messages/*` 분당 5. 넘으면 429 + 한국어 안내. 표 없으면 통과 + 경고 로그.
+- 환경변수 = `WEBPUSH_VAPID_PUBLIC` `WEBPUSH_VAPID_PRIVATE` `WEBPUSH_SUBJECT`(mailto:) · `SMS_ENABLED` + 솔라피 셋 · `SES_REGION` `SES_FROM` `AWS_ACCESS_KEY_ID` `AWS_SECRET_ACCESS_KEY`. VAPID 열쇠 만들기 = `node scripts/webpush-keys.mjs`(출력만).

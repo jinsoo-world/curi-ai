@@ -19,6 +19,7 @@ export const SAFE_TOOLS = [
     'draft_post',         // 게시글 초안 (게시하지 않음)
     'organize_notes',     // 정리
     'propose_next_step',  // 다음 한 걸음 제안
+    'notify_owner',       // 주인(나)에게 알림 — 루틴 결과·승인 요청 도착·클로버 부족 (밖으로 안 나감)
 ] as const
 
 /** 사람 승인이 반드시 필요한 행동 → permission_requests.action_type 과 같은 이름 */

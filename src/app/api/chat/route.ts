@@ -10,6 +10,7 @@ import { deductCredit, getCreditBalance } from '@/domains/credit'
 import { pickDriverFromEnv } from '@/domains/llm'
 import { getOwnedTeamBotMentor } from '@/domains/os'
 import { CREDIT_CONSTANTS } from '@/domains/credit/types'
+import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -63,6 +64,9 @@ export async function POST(req: Request) {
         const { data: { user } } = await supabase.auth.getUser()
 
         const { messages, mentorId, sessionId, guestMessageCount, inputMethod, visitorId, imageUrl } = await req.json()
+        // 요청 횟수 제한(보안 C-1 9번): 사용자/방문자 분당 20
+        const rl = await checkRateLimit(createAdminClient(), rateLimitKey('chat', user?.id, visitorId, req), 20, 60)
+        if (!rl.allowed) return Response.json({ error: rateLimitMessage('대화') }, { status: 429 })
         const lastUserMessage = messages[messages.length - 1]?.content || ''
 
         // 📊 분석 데이터 수집 (헤더에서 추출)
