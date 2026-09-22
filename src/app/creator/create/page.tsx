@@ -64,8 +64,8 @@ export default function CreatorCreatePage() {
     // 미리보기 디바이스 모드
     const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
 
-    // 4단계 마법사 탭: 기본정보 / 프롬프트 / 파일학습 / 고급설정
-    const [creatorTab, setCreatorTab] = useState<'basic' | 'prompt' | 'files' | 'advanced'>('basic')
+    // 3단계 마법사 탭: 기본정보(프롬프트 포함) / 파일학습 / 고급설정
+    const [creatorTab, setCreatorTab] = useState<'basic' | 'files' | 'advanced'>('basic')
 
     // 클로버 잔액 (파일학습 유료 게이팅용)
     const [cloverBalance, setCloverBalance] = useState<number | null>(null)
@@ -632,11 +632,14 @@ export default function CreatorCreatePage() {
                     <div className="creator-form-col" style={{
                         flex: '1 1 0',
                         maxWidth: 640,
-                        padding: '16px 20px 80px',
-                        overflowY: 'auto',
+                        padding: '16px 20px 0',
                         height: '100dvh',
                         boxSizing: 'border-box',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        position: 'relative',
                     }}>
+                    <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 12 }}>
                         {/* 헤더 */}
                         <div style={{ marginBottom: 0 }}>
                             <h1 style={{ margin: 0, fontSize: 'var(--글자-대)', fontWeight: 900, color: '#18181b', letterSpacing: '-0.04em', wordBreak: 'keep-all' }}>
@@ -708,7 +711,7 @@ export default function CreatorCreatePage() {
                             </div>
                         )}
 
-                        {/* ═══ 4단계 마법사 탭 ═══ */}
+                        {/* ═══ 3단계 마법사 탭 ═══ */}
                         <div style={{
                             display: 'flex', gap: 0,
                             borderBottom: '2px solid #f0f0f0',
@@ -716,7 +719,6 @@ export default function CreatorCreatePage() {
                         }}>
                             {[
                                 { key: 'basic' as const, label: '📝 기본정보' },
-                                { key: 'prompt' as const, label: '🎭 프롬프트' },
                                 { key: 'files' as const, label: '📚 파일학습 💎' },
                                 { key: 'advanced' as const, label: '⚙️ 고급설정' },
                             ].map(tab => (
@@ -753,24 +755,22 @@ export default function CreatorCreatePage() {
                             </div>
                         )}
 
-                        {/* Step 1: 기본정보 */}
+                        {/* Step 1: 기본정보 (이름, 소개, 사진 + 에이전트 프롬프트) */}
                         {creatorTab === 'basic' && (<>
                         <div style={styles.card}>
                             <div style={{ marginBottom: 8 }}>
                                 <div style={styles.sectionLabel}>1. 프로필 사진</div>
                                 <PhotoDrop
+                                    variant="avatar"
                                     preview={avatarPreview}
                                     onPicked={handleAvatarFromDrop}
                                     onError={msg => setError(msg)}
                                     maxBytes={7 * 1024 * 1024}
                                     showCamera={false}
                                     privacyNote={null}
-                                    emptyTitle="프로필 사진을 올려주세요"
+                                    emptyTitle="사진 올리기"
                                     emptyHint={(
-                                        <>
-                                            눌러서 고르셔도 되고, 끌어다 놓거나 붙여넣어도 돼요<br />
-                                            <span style={{ fontSize: 15, color: '#a1a1aa' }}>1:1 정방형 권장, 7MB 이하</span>
-                                        </>
+                                        <span>1:1 정방형, 7MB 이하</span>
                                     )}
                                     successLabel="프로필 사진을 올렸어요"
                                 />
@@ -798,13 +798,10 @@ export default function CreatorCreatePage() {
                                 />
                             </div>
                         </div>
-                        </>)}
 
-                        {/* Step 2: 프롬프트 (인사말/예시질문 포함) */}
-                        {creatorTab === 'prompt' && (<>
                         <div style={styles.card}>
                             <div style={styles.field}>
-                                <label style={{ ...styles.label, fontSize: 15 }}>🎭 에이전트 프롬프트</label>
+                                <label style={{ ...styles.label, fontSize: 15 }}>에이전트 프롬프트</label>
                                 <p style={styles.hint}>AI의 성격, 말투, 전문성을 정의합니다</p>
                                 <textarea
                                     style={{ ...styles.textarea, fontFamily: 'monospace', fontSize: 13 }}
@@ -818,11 +815,9 @@ export default function CreatorCreatePage() {
                                     {systemPrompt.length.toLocaleString()}/10,000
                                 </div>
                             </div>
-                        </div>
 
-                        <div style={styles.card}>
                             <div style={styles.field}>
-                                <label style={styles.label}>👋 인사말 (선택)</label>
+                                <label style={styles.label}>인사말 (선택)</label>
                                 <input
                                     style={styles.input}
                                     placeholder={`안녕하세요! ${name || 'AI'}입니다 😊`}
@@ -836,7 +831,7 @@ export default function CreatorCreatePage() {
                             </div>
 
                             <div style={styles.field}>
-                                <label style={styles.label}>💬 예시 질문 (선택)</label>
+                                <label style={styles.label}>예시 질문 (선택)</label>
                                 <p style={styles.hint}>줄바꿈으로 구분, 대화 시작 시 추천 질문으로 표시</p>
                                 <textarea
                                     style={styles.textarea}
@@ -853,7 +848,7 @@ export default function CreatorCreatePage() {
                         </div>
                         </>)}
 
-                        {/* Step 3: 파일학습 (유료 기능) */}
+                        {/* Step 2: 파일학습 (유료 기능) */}
                         {creatorTab === 'files' && (<>
                         {/* 유료 기능 안내 */}
                         <div style={{
@@ -865,7 +860,7 @@ export default function CreatorCreatePage() {
                                 <span style={{ fontSize: 15, fontWeight: 800, color: '#92400e' }}>유료 기능</span>
                             </div>
                             <p style={{ fontSize: 15, color: '#78350f', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                                지식 파일 학습은 클로버 100개가 필요합니다. 무료로 1-2단계만으로도 AI를 만들 수 있어요. {cloverBalance !== null && cloverBalance < 100 && (
+                                지식 파일 학습은 클로버 100개가 필요합니다. 무료로 기본정보만으로도 AI를 만들 수 있어요. {cloverBalance !== null && cloverBalance < 100 && (
                                     <>현재 클로버: {cloverBalance}개. <Link href="/charge" style={{ color: '#b45309', fontWeight: 700, textDecoration: 'underline' }}>충전하기</Link></>
                                 )}
                             </p>
@@ -1286,7 +1281,7 @@ export default function CreatorCreatePage() {
                         </div>
                         </>)}
 
-                        {/* Step 4: 고급설정 (유료 기능) */}
+                        {/* Step 3: 고급설정 (유료 기능) */}
                         {creatorTab === 'advanced' && (<>
                         {/* 유료 기능 안내 */}
                         <div style={{
@@ -1298,7 +1293,7 @@ export default function CreatorCreatePage() {
                                 <span style={{ fontSize: 15, fontWeight: 800, color: '#92400e' }}>유료 기능</span>
                             </div>
                             <p style={{ fontSize: 15, color: '#78350f', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                                고급 설정은 클로버 50개가 필요합니다. 무료로 1-2단계만으로도 AI를 만들 수 있어요. {cloverBalance !== null && cloverBalance < 50 && (
+                                고급 설정은 클로버 50개가 필요합니다. 무료로 기본정보만으로도 AI를 만들 수 있어요. {cloverBalance !== null && cloverBalance < 50 && (
                                     <>현재 클로버: {cloverBalance}개. <Link href="/charge" style={{ color: '#b45309', fontWeight: 700, textDecoration: 'underline' }}>충전하기</Link></>
                                 )}
                             </p>
@@ -1505,19 +1500,30 @@ export default function CreatorCreatePage() {
                         </div>
                         </>)}
 
-                        {/* ── 하단 버튼 ── */}
-                        <div style={{ paddingBottom: 20 }}>
+                    </div>{/* end scrollable form body */}
+
+                        {/* ── 고정 하단 CTA: AI 공개하기 ── */}
+                        <div style={{
+                            flexShrink: 0,
+                            padding: '12px 0 16px',
+                            borderTop: '1px solid #e5e7eb',
+                            background: '#f8f9fa',
+                            position: 'sticky',
+                            bottom: 0,
+                            zIndex: 20,
+                        }}>
                             {uploadedFiles.some(f => f.status === 'processing' || f.status === 'uploading') && (
                                 <div style={{
                                     fontSize: 12, color: '#d97706', textAlign: 'center' as const,
                                     marginBottom: 6, fontWeight: 500,
                                 }}>
-                                    ⏳ 파일 처리 중... 완료되면 공개할 수 있어요
+                                    파일 처리 중... 완료되면 공개할 수 있어요
                                 </div>
                             )}
                             <button
                                 style={{
                                     ...styles.createBtn,
+                                    background: '#FF6B35',
                                     opacity: (loading || uploadedFiles.some(f => f.status === 'processing' || f.status === 'uploading')) ? 0.5 : 1,
                                 }}
                                 onClick={() => {
@@ -1531,8 +1537,8 @@ export default function CreatorCreatePage() {
                                 disabled={loading || uploadedFiles.some(f => f.status === 'processing' || f.status === 'uploading')}
                             >
                                 {loading ? '생성 중...' :
-                                 uploadedFiles.some(f => f.status === 'processing') ? '⏳ 파일 처리 중...' :
-                                 '🚀 AI 공개하기'}
+                                 uploadedFiles.some(f => f.status === 'processing') ? '파일 처리 중...' :
+                                 'AI 공개하기'}
                             </button>
                         </div>
                     </div>
