@@ -891,7 +891,7 @@ export default function CreatorCreatePage() {
                                 onDrop={e => {
                                     e.preventDefault()
                                     setDragOver(false)
-                                    handleFileUpload(e.dataTransfer.files)
+                                    handleFileSelect(e.dataTransfer.files)
                                 }}
                             >
                                 <input
@@ -900,7 +900,7 @@ export default function CreatorCreatePage() {
                                     accept={고르기필터}
                                     multiple
                                     style={{ display: 'none' }}
-                                    onChange={e => handleFileUpload(e.target.files)}
+                                    onChange={e => handleFileSelect(e.target.files)}
                                 />
                                 <div style={{ fontSize: 28, marginBottom: 4 }}>{uploading ? '⏳' : '📄'}</div>
                                 <div style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>
@@ -931,7 +931,7 @@ export default function CreatorCreatePage() {
                                     ))}
                                 </div>
                                 <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>
-                                    최대 10개 · 합산 50MB
+                                    최대 10개, 합산 50MB
                                 </div>
                             </div>
 
@@ -943,7 +943,7 @@ export default function CreatorCreatePage() {
                                 background: '#F4F6F3', border: '1px solid var(--선, #E5E7EB)',
                                 fontSize: 12.5, color: 'var(--먹연, #5C6660)', lineHeight: 1.7, wordBreak: 'keep-all',
                             }}>
-                                올린 자료에서 <b>전화번호 · 이메일 · 주민번호 · 카드번호는 저장하기 전에 자동으로 가립니다.</b>
+                                올린 자료에서 <b>전화번호, 이메일, 주민번호, 카드번호는 저장하기 전에 자동으로 가립니다.</b>
                                 <br />
                                 다만 <b>사람 이름은 가리지 않습니다.</b> 이름이 드러나면 안 되는 자료라면 올리기 전에 그 칸을 지워주세요.
                             </div>
@@ -964,9 +964,9 @@ export default function CreatorCreatePage() {
                                                         <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{f.fileName}</div>
                                                         <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
                                                             {formatFileSize(f.fileSize)}
-                                                            {f.status === 'completed' && ' · ✅ AI가 학습 완료'}
-                                                            {f.status === 'processing' && ' · 📄 파일 읽는 중...'}
-                                                            {f.status === 'failed' && ' · ❌ 처리 실패'}
+                                                            {f.status === 'completed' && ' - ✅ AI가 학습 완료'}
+                                                            {f.status === 'processing' && ' - 📄 파일 읽는 중...'}
+                                                            {f.status === 'failed' && ' - ❌ 처리 실패'}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1077,7 +1077,7 @@ export default function CreatorCreatePage() {
                                         >
                                             <div style={{ fontSize: 32, marginBottom: 6 }}>🎤</div>
                                             <div style={{ fontSize: 14, fontWeight: 700, color: '#7c3aed' }}>마이크로 바로 녹음</div>
-                                            <div style={{ fontSize: 11, color: '#a78bfa', marginTop: 4 }}>클릭하면 녹음 시작 · 3~30초</div>
+                                            <div style={{ fontSize: 11, color: '#a78bfa', marginTop: 4 }}>클릭하면 녹음 시작, 3~30초</div>
                                         </div>
                                     ) : (
                                         <div
@@ -2140,7 +2140,7 @@ export default function CreatorCreatePage() {
                                             {loading ? '생성 중...' : '비공개 (나만 보기)'}
                                         </div>
                                         <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
-                                            나만 대화할 수 있어요 · 나중에 변경 가능
+                                            나만 대화할 수 있어요. 나중에 변경 가능
                                         </div>
                                     </div>
                                 </div>

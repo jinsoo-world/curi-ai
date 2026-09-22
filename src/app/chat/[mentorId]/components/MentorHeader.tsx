@@ -16,6 +16,8 @@ interface Props {
     mentorEmoji?: string
     isStreaming?: boolean
     onNewChat?: () => void
+    /** 채팅방 테마 색상 hex. null이면 기본 */
+    themeColor?: string | null
     // 아래는 예전 화면이 넘기던 것들. 지금 띠에서는 쓰지 않는다.
     onCall?: () => void
     onToggleSidebar?: () => void
@@ -28,7 +30,7 @@ interface Props {
     onEditRequest?: (prefill: string) => void
 }
 
-export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStreaming, onNewChat }: Props) {
+export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStreaming, onNewChat, themeColor }: Props) {
     // Delphi 스타일: 큰 아바타, 부드러운 인터랙션
     const [사진크게, set사진크게] = useState(false)
     const [붙었나, set붙었나] = useState(false)
@@ -42,8 +44,12 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                 zIndex: 30,
                 background: 'rgba(255,255,255,0.96)',
                 backdropFilter: 'saturate(180%) blur(16px)',
-                borderBottom: '1px solid rgba(0,0,0,0.06)',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                borderBottom: themeColor
+                    ? `2px solid ${themeColor}`
+                    : '1px solid rgba(0,0,0,0.06)',
+                boxShadow: themeColor
+                    ? `0 1px 0 ${themeColor}22, 0 1px 3px rgba(0,0,0,0.02)`
+                    : '0 1px 3px rgba(0,0,0,0.02)',
             }}
         >
             <div
