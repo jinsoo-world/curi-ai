@@ -577,23 +577,24 @@ export default function ChatMessages({
                                 display: 'flex',
                                 flexDirection: isUser ? 'row-reverse' : 'row',
                                 alignItems: 'flex-start',
-                                gap: 14,
+                                gap: 12,
+                                marginBottom: 4,
                                 animation: 'msgFadeIn 0.3s ease-out',
                             }}
                         >
-                            {/* 멘토 아바타 — 작고 깔끔하게 */}
+                            {/* 멘토 아바타 — Delphi 스타일: 작고 깔끔하게 */}
                             {!isUser && (
                                 mentorImage ? (
                                     <img
                                         src={mentorImage}
                                         alt={mentor.name}
                                         style={{
-                                            width: 44,
-                                            height: 44,
+                                            width: 36,
+                                            height: 36,
                                             borderRadius: '50%',
                                             objectFit: 'cover',
                                             flexShrink: 0,
-                                            marginTop: 2,
+                                            marginTop: 4,
                                         }}
                                     />
                                 ) : (
@@ -601,12 +602,12 @@ export default function ChatMessages({
                                         src="/logo.png"
                                         alt="큐리 AI"
                                         style={{
-                                            width: 44,
-                                            height: 44,
+                                            width: 36,
+                                            height: 36,
                                             borderRadius: '50%',
                                             objectFit: 'cover',
                                             flexShrink: 0,
-                                            marginTop: 2,
+                                            marginTop: 4,
                                         }}
                                     />
                                 )
@@ -616,16 +617,16 @@ export default function ChatMessages({
                             <div style={{
                                 display: 'flex',
                                 flexDirection: 'column',
-                                maxWidth: isUser ? '78%' : '88%',
+                                maxWidth: isUser ? '75%' : '85%',
                                 minWidth: 0,
                             }}>
-                                {/* 멘토 이름 — 간결하게 */}
+                                {/* 멘토 이름 — Delphi 스타일: 작고 간결하게 */}
                                 {!isUser && (
                                     <div style={{
-                                        fontSize: 'clamp(14px, 1.2vw, 16px)',
+                                        fontSize: 'clamp(13px, 1.1vw, 14px)',
                                         fontWeight: 600,
-                                        color: '#64748b',
-                                        marginBottom: 6,
+                                        color: '#71717A',
+                                        marginBottom: 4,
                                         letterSpacing: '-0.01em',
                                     }}>
                                         {mentor.name}
@@ -660,19 +661,19 @@ export default function ChatMessages({
                                 {/* 메시지 본문 — 사진만 보낸 경우엔 빈 말풍선을 띄우지 않는다 */}
                                 {!(isUser && !msg.content) && <div style={{
                                     ...(isUser ? {
-                                        padding: 'clamp(13px, 1.1vw, 17px) clamp(18px, 1.5vw, 24px)',
-                                        borderRadius: '20px 20px 6px 20px',
-                                        background: '#1C2321',
-                                        color: '#fff',
-                                        // PC 에서 글씨가 작았다 — 대표 지적 2026-09-15
-                                        fontSize: 'clamp(16px, 1.35vw, 18px)',
+                                        padding: 'clamp(14px, 1.2vw, 18px) clamp(18px, 1.6vw, 24px)',
+                                        borderRadius: '20px 20px 4px 20px',
+                                        background: '#F5F5F4',
+                                        color: '#18181B',
+                                        fontSize: 'clamp(16px, 1.4vw, 18px)',
                                         lineHeight: 1.7,
                                         wordBreak: 'break-word' as const,
+                                        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                                     } : {
                                         padding: '4px 0',
                                         color: '#1e293b',
-                                        fontSize: 'clamp(17.5px, 1.5vw, 20px)',
-                                        lineHeight: 1.85,
+                                        fontSize: 'clamp(17px, 1.5vw, 19px)',
+                                        lineHeight: 1.8,
                                         wordBreak: 'break-word' as const,
                                     }),
                                 }}>

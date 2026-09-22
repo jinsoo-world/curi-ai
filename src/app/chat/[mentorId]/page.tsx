@@ -748,7 +748,7 @@ export default function ChatPage() {
             display: 'flex',
             flexDirection: 'row',
             height: '100dvh',
-            background: 'var(--종이)',
+            background: '#FAFAFA',
         }}>
             {/* 메인 채팅 영역 */}
             <div
@@ -783,7 +783,7 @@ export default function ChatPage() {
                     onEditRequest={isEbookBot ? (prefill: string) => setInput(prefill) : undefined}
                 />
 
-                {/* Messages Area */}
+                {/* Messages Area — Delphi 스타일 */}
                 <div
                     ref={chatContainerRef}
                     role="log"
@@ -795,18 +795,16 @@ export default function ChatPage() {
                         display: 'flex',
                         justifyContent: 'center',
                         WebkitOverflowScrolling: 'touch',
+                        background: '#FAFAFA',
                     }}
                 >
                     <div className="chat-messages-inner" style={{
                         width: '100%',
-                        // PC 에서 너무 좁고 작았다 — 대표 지적 2026-09-15 「대화 UI가 너무 작아. 조금 더 키워줘. PC」
-                        maxWidth: 900,
-                        // 아래쪽을 넉넉히 둔다 — 대표 지적 2026-09-15 「입력창 위 여백 살짝 조정해」
-                        // 마지막 추천 질문이 입력창에 가려 세 개뿐인 줄 알았다
-                        padding: '24px clamp(16px, 4vw, 40px) 40px',
+                        maxWidth: 840,
+                        padding: '32px clamp(20px, 4vw, 40px) 48px',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 28,
+                        gap: 24,
                     }}>
                         {/* 🎯 Lenny 스타일 Welcome */}
                         {messages.length === 0 && (
@@ -875,10 +873,13 @@ export default function ChatPage() {
                                     {mentor.title}
                                 </p>
 
-                                {/* 💬 Chat / 📞 Call 버튼 */}
+                                {/* 💬 Chat / 📞 Call 버튼 — Delphi 스타일 세그먼트 컨트롤 */}
                                 <div style={{
-                                    display: 'flex',
-                                    gap: 12,
+                                    display: 'inline-flex',
+                                    background: '#F5F5F4',
+                                    borderRadius: 100,
+                                    padding: 4,
+                                    gap: 4,
                                     marginBottom: 26,
                                 }}>
                                     <button
@@ -889,27 +890,25 @@ export default function ChatPage() {
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: 8,
-                                            padding: 'clamp(11px, 1vw, 15px) clamp(24px, 2.2vw, 34px)',
+                                            padding: 'clamp(10px, 1vw, 14px) clamp(20px, 2vw, 32px)',
                                             borderRadius: 100,
                                             border: 'none',
                                             background: '#1C2321',
                                             color: '#fff',
-                                            fontSize: 'clamp(15px, 1.4vw, 18px)',
+                                            fontSize: 'clamp(15px, 1.35vw, 17px)',
                                             fontWeight: 600,
                                             cursor: 'pointer',
                                             transition: 'all 0.2s',
-                                            boxShadow: '0 2px 8px rgba(34,197,94,0.25)',
+                                            boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
                                         }}
                                         onMouseEnter={e => {
-                                            e.currentTarget.style.transform = 'scale(1.04)'
-                                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(34,197,94,0.35)'
+                                            e.currentTarget.style.boxShadow = '0 3px 10px rgba(0,0,0,0.15)'
                                         }}
                                         onMouseLeave={e => {
-                                            e.currentTarget.style.transform = 'scale(1)'
-                                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(34,197,94,0.25)'
+                                            e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)'
                                         }}
                                     >
-                                        💬 대화하기
+                                        💬 대화
                                     </button>
                                     {mentor.voice_sample_url && (
                                     <button
@@ -928,27 +927,25 @@ export default function ChatPage() {
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: 8,
-                                            padding: '10px 24px',
+                                            padding: 'clamp(10px, 1vw, 14px) clamp(20px, 2vw, 32px)',
                                             borderRadius: 100,
                                             border: 'none',
-                                            background: 전화기능켜짐 ? '#0E1412' : '#EEF1EF',
-                                            color: 전화기능켜짐 ? '#fff' : '#8A948E',
-                                            fontSize: 15,
+                                            background: 전화기능켜짐 ? '#fff' : 'transparent',
+                                            color: 전화기능켜짐 ? '#1C2321' : '#A1A1AA',
+                                            fontSize: 'clamp(15px, 1.35vw, 17px)',
                                             fontWeight: 600,
                                             cursor: 전화기능켜짐 ? 'pointer' : 'default',
                                             transition: 'all 0.2s',
-                                            boxShadow: '0 2px 8px rgba(22,163,74,0.25)',
+                                            boxShadow: 전화기능켜짐 ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
                                         }}
                                         onMouseEnter={e => {
-                                            e.currentTarget.style.transform = 'scale(1.04)'
-                                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(22,163,74,0.35)'
+                                            if (전화기능켜짐) e.currentTarget.style.boxShadow = '0 3px 10px rgba(0,0,0,0.12)'
                                         }}
                                         onMouseLeave={e => {
-                                            e.currentTarget.style.transform = 'scale(1)'
-                                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(22,163,74,0.25)'
+                                            if (전화기능켜짐) e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.08)'
                                         }}
                                     >
-                                        {전화기능켜짐 ? '전화하기' : '전화 상담 준비 중'}
+                                        📞 {전화기능켜짐 ? '전화' : '전화 준비중'}
                                     </button>
                                     )}
                                 </div>

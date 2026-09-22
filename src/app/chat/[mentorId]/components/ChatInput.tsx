@@ -258,11 +258,11 @@ export default function ChatInput({
 
     return (
         <div style={{
-            background: '#faf8f5',
+            background: '#FAFAFA',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            paddingBottom: 'max(env(safe-area-inset-bottom, 8px), 12px)',
+            paddingBottom: 'max(env(safe-area-inset-bottom, 12px), 16px)',
         }}>
             {/* STT 에러 토스트 */}
             {sttError && (
@@ -311,18 +311,18 @@ export default function ChatInput({
                     padding: '8px clamp(12px, 4vw, 40px)',
                 }}
             >
-                {/* 제미나이 스타일: 큰 pill 안에 textarea + 버튼들 */}
+                {/* Delphi 스타일: 깔끔한 pill 안에 textarea + 버튼들 */}
                 <div style={{
                     background: '#ffffff',
                     borderRadius: 28,
                     border: isFocused || isListening
-                        ? '1.5px solid #22c55e'
-                        : '1.5px solid #e2e8f0',
+                        ? '2px solid #E5E5E5'
+                        : '2px solid #E5E5E5',
                     boxShadow: isFocused
-                        ? '0 0 0 3px rgba(34,197,94,0.08), 0 4px 16px rgba(0,0,0,0.06)'
-                        : '0 2px 12px rgba(0,0,0,0.04)',
+                        ? '0 2px 12px rgba(0,0,0,0.08)'
+                        : '0 1px 6px rgba(0,0,0,0.04)',
                     transition: 'border-color 0.2s, box-shadow 0.2s',
-                    padding: 'clamp(12px, 1.1vw, 18px) clamp(16px, 1.4vw, 22px)',
+                    padding: 'clamp(14px, 1.2vw, 18px) clamp(18px, 1.5vw, 24px)',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 8,
@@ -433,7 +433,7 @@ export default function ChatInput({
                             </span>
                         )}
 
-                        {/* 사진 첨부 버튼 */}
+                        {/* 사진 첨부 버튼 — Delphi 스타일 */}
                         <input
                             ref={fileRef}
                             type="file"
@@ -450,25 +450,25 @@ export default function ChatInput({
                             aria-label="사진 첨부"
                             title="사진 보내기"
                             style={{
-                                width: 'clamp(48px, 3.6vw, 56px)',
-                                height: 'clamp(48px, 3.6vw, 56px)',
+                                width: 'clamp(44px, 3.4vw, 48px)',
+                                height: 'clamp(44px, 3.4vw, 48px)',
                                 borderRadius: '50%',
-                                background: '#EDF7F1',
+                                background: 'transparent',
                                 border: 'none',
-                                color: 'var(--진초록)',
+                                color: '#71717A',
                                 cursor: (isStreaming || imageUploading) ? 'default' : 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 transition: 'all 0.2s',
                                 flexShrink: 0,
-                                opacity: (isStreaming || imageUploading) ? 0.4 : 1,
+                                opacity: (isStreaming || imageUploading) ? 0.3 : 1,
                             }}
                         >
                             <PhotoIcon />
                         </button>
 
-                        {/* 마이크 버튼 */}
+                        {/* 마이크 버튼 — Delphi 스타일 */}
                         {sttSupported && (
                             <button
                                 type="button"
@@ -476,35 +476,35 @@ export default function ChatInput({
                                 disabled={isStreaming}
                                 aria-label={isListening ? '음성 입력 중지' : '음성으로 입력'}
                                 style={{
-                                    width: 'clamp(48px, 3.6vw, 56px)',
-                                    height: 'clamp(48px, 3.6vw, 56px)',
+                                    width: 'clamp(44px, 3.4vw, 48px)',
+                                    height: 'clamp(44px, 3.4vw, 48px)',
                                     borderRadius: '50%',
-                                    background: isListening ? '#ef4444' : '#EDF7F1',
+                                    background: isListening ? '#EF4444' : 'transparent',
                                     border: 'none',
-                                    color: isListening ? '#fff' : 'var(--진초록)',
+                                    color: isListening ? '#fff' : '#71717A',
                                     cursor: isStreaming ? 'default' : 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     transition: 'all 0.2s',
                                     flexShrink: 0,
-                                    opacity: isStreaming ? 0.4 : 1,
+                                    opacity: isStreaming ? 0.3 : 1,
                                 }}
                             >
                                 {isListening ? <StopIcon /> : <MicIcon />}
                             </button>
                         )}
 
-                        {/* 전송 버튼 */}
+                        {/* 전송 버튼 — Delphi 스타일 */}
                         <button
                             type="submit"
                             disabled={!canSend}
                             aria-label="메시지 전송"
                             style={{
-                                width: 52,
-                                height: 52,
+                                width: 'clamp(48px, 3.6vw, 52px)',
+                                height: 'clamp(48px, 3.6vw, 52px)',
                                 borderRadius: '50%',
-                                background: canSend ? 'var(--연두)' : '#CFD8D2',
+                                background: canSend ? '#1C2321' : '#E5E5E5',
                                 border: 'none',
                                 color: '#fff',
                                 cursor: canSend ? 'pointer' : 'default',
@@ -513,7 +513,7 @@ export default function ChatInput({
                                 justifyContent: 'center',
                                 transition: 'all 0.2s',
                                 flexShrink: 0,
-                                boxShadow: canSend ? '0 4px 14px rgba(34,197,94,0.35)' : 'none',
+                                boxShadow: canSend ? '0 2px 8px rgba(0,0,0,0.12)' : 'none',
                             }}
                         >
                             <SendIcon />
