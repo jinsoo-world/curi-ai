@@ -9,7 +9,15 @@ import type { TeamBot } from '@/domains/os/types'
 import BotAvatar from './BotAvatar'
 import NewBotSheet from './NewBotSheet'
 import GuestRoster from './GuestRoster'
+import NewGroupSheet from './NewGroupSheet'
 import './os.css'
+
+/** 그룹 채팅방 한 줄 (왼쪽 명단 아래에 겹친 아바타로 보인다) */
+export interface ChannelView {
+    id: string
+    name: string
+    members: { mentorId: string; name: string; shape: string; color: string; avatarUrl: string | null }[]
+}
 
 interface TeamState {
     team: TeamBot[]
@@ -18,6 +26,10 @@ interface TeamState {
     tableMissing: boolean
     refresh: () => Promise<void>
     openNewBot: () => void
+    /** 그룹 채팅 (표가 아직 없으면 빈 목록) */
+    channels: ChannelView[]
+    refreshChannels: () => Promise<void>
+    openNewGroup: () => void
 }
 
 
@@ -46,6 +58,8 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     const [guest, setGuest] = useState(false)
     const [tableMissing, setTableMissing] = useState(false)
     const [sheet, setSheet] = useState(false)
+    const [groupSheet, setGroupSheet] = useState(false)
+    const [channels, setChannels] = useState<ChannelView[]>([])
     const [query, setQuery] = useState('')
 
     const refresh = useCallback(async () => {
@@ -66,7 +80,19 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
         }
     }, [])
 
+    // 그룹방 목록. 표가 아직 없으면 조용히 빈 목록으로 둔다(화면이 죽지 않게)
+    const refreshChannels = useCallback(async () => {
+        try {
+            const res = await fetch('/api/os/channels', { cache: 'no-store' })
+            const data = await res.json()
+            setChannels(Array.isArray(data.channels) ? data.channels : [])
+        } catch {
+            setChannels([])
+        }
+    }, [])
+
     useEffect(() => { void refresh() }, [refresh])
+    useEffect(() => { void refreshChannels() }, [refreshChannels])
 
     // ⌘/Ctrl + N = 새 봇 (그록봇의 ⌘1 문법을 한 키로)
     useEffect(() => {
@@ -86,7 +112,8 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
 
     const value = useMemo<TeamState>(() => ({
         team, loading, guest, tableMissing, refresh, openNewBot: () => setSheet(true),
-    }), [team, loading, guest, tableMissing, refresh])
+        channels, refreshChannels, openNewGroup: () => setGroupSheet(true),
+    }), [team, loading, guest, tableMissing, refresh, channels, refreshChannels])
 
     // 손님 소개 화면(/os/welcome)은 한 장짜리라 뼈대(왼쪽 명단) 없이 그린다
     if (pathname.startsWith('/os/welcome')) return <>{children}</>
@@ -143,6 +170,28 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                         {!loading && guest && <GuestRoster />}
                     </div>
 
+                    {/* 그룹 채팅 — 겹친 아바타 + 이름. 표가 없으면 이 칸 자체가 안 보인다 */}
+                    {channels.length > 0 && (
+                        <div className="os-groups">
+                            {channels.map(c => {
+                                const href = `/os/group/${c.id}`
+                                return (
+                                    <button key={c.id} className="os-row-btn" aria-current={pathname === href} onClick={() => router.push(href)}>
+                                        <span className="os-stack" aria-hidden>
+                                            {c.members.slice(0, 3).map(m => (
+                                                <span key={m.mentorId} className="os-stack-item">
+                                                    <BotAvatar shape={m.shape as TeamBot['shape']} color={m.color as TeamBot['color']} state="idle" size={24} />
+                                                </span>
+                                            ))}
+                                            {c.members.length > 3 && <span className="os-stack-more">+{c.members.length - 3}</span>}
+                                        </span>
+                                        <span>{c.name}</span>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    )}
+
                     <div className="os-left-bottom">
                         <Link href="/mentors" className="os-row-btn" style={{ textDecoration: 'none' }}>🏪 <span>둘러보기 (리더들의 봇)</span></Link>
                         {guest
@@ -158,6 +207,15 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                         guest={guest}
                         onClose={() => setSheet(false)}
                         onCreated={async (bot) => { setSheet(false); await refresh(); router.push(`/os/chat/${bot.mentorId}`) }}
+                        onWantGroup={() => { setSheet(false); setGroupSheet(true) }}
+                    />
+                )}
+
+                {groupSheet && (
+                    <NewGroupSheet
+                        team={team}
+                        onClose={() => setGroupSheet(false)}
+                        onCreated={async (ch) => { setGroupSheet(false); await refreshChannels(); router.push(`/os/group/${ch.id}`) }}
                     />
                 )}
             </div>

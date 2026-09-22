@@ -2,6 +2,7 @@
 // 오른쪽 세부칸 (그록봇 = 「봇의 화면」+ 루틴 + 멤버). 우리 P0 = 이 봇이 읽은 자료 + 승인 모드 + 루틴 자리.
 
 import type { TeamBot } from '@/domains/os/types'
+import KnowledgeList from './KnowledgeList'
 
 const ROLE_LABEL: Record<TeamBot['role'], string> = { twin: '디지털 나', chief: '비서실장', helper: '도우미' }
 const APPROVAL_LABEL: Record<TeamBot['approvalMode'], string> = {
@@ -30,11 +31,8 @@ export default function DetailPane({ bot, publicName }: { bot: TeamBot | null; p
             <h4>승인</h4>
             <div className="os-card">{APPROVAL_LABEL[bot.approvalMode]}<br /><span style={{ fontSize: 13 }}>보내기·게시·결제·삭제는 카드로 물어보고, 허용해야만 나가요.</span></div>
 
-            <h4>이 봇이 읽은 자료</h4>
-            <div className="os-card">
-                {bot.knowledgeCount > 0 ? <><b>{bot.knowledgeCount}개</b> 읽었어요.</> : '아직 읽은 자료가 없어요.'}<br />
-                <span style={{ fontSize: 13 }}>자료 넣기는 3일차에 여기 열려요 (PDF·링크·유튜브).</span>
-            </div>
+            {/* 자료는 진짜 목록이다 (3일차). 넣고 빼는 것도 여기서 한다 */}
+            <KnowledgeList mentorId={bot.mentorId} />
 
             <h4>루틴</h4>
             <div className="os-card">루틴은 이 봇이 정해진 때에 반복하는 일이에요. 만들려면 대화로 요청해 주세요. (4일차)</div>

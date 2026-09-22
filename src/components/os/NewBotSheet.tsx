@@ -13,9 +13,11 @@ interface Props {
     guest: boolean
     onClose: () => void
     onCreated: (bot: TeamBot) => void | Promise<void>
+    /** 「그룹 채팅 만들기」로 넘어가기 (3일차) */
+    onWantGroup?: () => void
 }
 
-export default function NewBotSheet({ guest, onClose, onCreated }: Props) {
+export default function NewBotSheet({ guest, onClose, onCreated, onWantGroup }: Props) {
     const [step, setStep] = useState<1 | 2 | 3>(1)
     const [job, setJob] = useState<string>('')
     const [customJob, setCustomJob] = useState('')
@@ -84,6 +86,11 @@ export default function NewBotSheet({ guest, onClose, onCreated }: Props) {
                                 <input type="text" value={customJob} onChange={e => setCustomJob(e.target.value)} maxLength={120}
                                     placeholder="예) 매주 뉴스레터 초안 쓰기" autoFocus />
                             </div>
+                        )}
+                        {onWantGroup && (
+                            <button className="os-linkbtn" onClick={onWantGroup} style={{ marginTop: 14 }}>
+                                👥 봇 말고 「그룹 채팅」 만들기 — 봇 여러 명과 한 방에서 이야기해요
+                            </button>
                         )}
                         <div className="os-sheet-foot">
                             <button className="os-btn" onClick={onClose}>닫기</button>

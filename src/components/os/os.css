@@ -59,6 +59,51 @@
 .os-right .os-card { background: var(--os-말풍선); border-radius: 14px; padding: 12px 14px; font-size: 14.5px; color: var(--os-글-연); line-height: 1.5; }
 .os-right .os-card b { color: var(--os-글); }
 
+/* 이 봇이 읽은 자료 — 한 줄 = 종류 + 제목 + 상태 + 빼기 */
+.os-source { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 12px; background: var(--os-말풍선); margin-bottom: 6px; font-size: 14px; color: var(--os-글); }
+.os-source-kind { flex: 0 0 auto; line-height: 0; }
+.os-source-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.os-source-state { flex: 0 0 auto; font-size: 12px; color: var(--os-글-흐림); }
+.os-source-state.ok { color: var(--os-클로버); }
+.os-source-state.bad { color: var(--os-오류); }
+.os-source-x { flex: 0 0 auto; width: 26px; height: 26px; border: 0; border-radius: 8px; background: transparent; color: var(--os-글-흐림); cursor: pointer; font-size: 13px; }
+.os-source-x:hover { background: var(--os-말풍선-내); color: var(--os-글); }
+
+/* 자료 넣기 시트 */
+.os-tabs { display: flex; gap: 6px; margin-top: 14px; }
+.os-tab { flex: 1; padding: 10px 8px; border-radius: 12px; border: 1px solid var(--os-선); background: var(--os-말풍선); color: var(--os-글-연); font-size: 14px; cursor: pointer; min-height: 44px; }
+.os-tab[aria-selected="true"] { color: var(--os-글); border-color: var(--os-클로버); box-shadow: inset 0 0 0 1px var(--os-클로버); }
+.os-textarea { width: 100%; margin-top: 10px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--os-선); background: var(--os-말풍선); color: var(--os-글); font-size: 15px; line-height: 1.55; resize: vertical; font-family: inherit; }
+.os-linkbtn { border: 0; background: transparent; color: var(--os-포인트); font-size: 14px; cursor: pointer; padding: 8px 0; text-align: left; width: 100%; }
+
+/* 답에 쓴 자료 (인용) */
+.os-cite { align-self: flex-start; max-width: 72%; font-size: 12.5px; color: var(--os-글-흐림); margin: -6px 0 2px 6px; line-height: 1.5; }
+
+/* 승인 카드 — 말풍선 자리에 뜬다 */
+.os-permit { align-self: flex-start; max-width: 88%; background: var(--os-말풍선); border: 1px solid color-mix(in srgb, var(--os-승인) 45%, var(--os-선)); border-radius: 18px; padding: 14px 16px; color: var(--os-글); }
+.os-permit[data-status="denied"] { border-color: var(--os-선); opacity: .75; }
+.os-permit[data-status="allowed"], .os-permit[data-status="edited_allowed"] { border-color: color-mix(in srgb, var(--os-클로버) 55%, var(--os-선)); }
+.os-permit-head { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+.os-permit-badge { width: 20px; height: 20px; border-radius: 50%; background: var(--os-승인); color: #000; font-weight: 800; font-size: 13px; display: grid; place-items: center; flex: 0 0 auto; }
+.os-permit-kind { margin-left: auto; font-size: 12.5px; color: var(--os-글-흐림); }
+.os-permit-to { font-size: 13.5px; color: var(--os-글-연); margin-top: 8px; }
+.os-permit-label { font-size: 12.5px; color: var(--os-글-흐림); margin: 12px 0 6px; }
+.os-permit-body { background: var(--os-바탕); border-radius: 12px; padding: 12px 14px; font-size: 15px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; max-height: 300px; overflow-y: auto; }
+.os-permit-warn { margin-top: 10px; font-size: 13px; color: var(--os-경고); line-height: 1.5; }
+.os-permit-foot { display: flex; gap: 8px; margin-top: 14px; }
+.os-permit-foot .os-btn { flex: 1; min-height: 44px; font-size: 14.5px; padding: 10px 8px; }
+.os-permit-done { margin-top: 12px; font-size: 14px; color: var(--os-클로버); }
+.os-permit[data-status="denied"] .os-permit-done { color: var(--os-글-흐림); }
+.os-permit-note { margin-top: 10px; font-size: 12.5px; color: var(--os-글-흐림); line-height: 1.5; }
+
+/* 그룹 채팅 — 겹친 아바타 */
+.os-groups { border-top: 1px solid var(--os-선); padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; }
+.os-groups .os-row-btn[aria-current="true"] { background: var(--os-말풍선); }
+.os-stack { display: inline-flex; align-items: center; flex: 0 0 auto; }
+.os-stack-item { line-height: 0; margin-right: -10px; border-radius: 50%; }
+.os-stack-item:last-child { margin-right: 0; }
+.os-stack-more { margin-left: 12px; font-size: 12px; color: var(--os-글-흐림); }
+
 /* 빈 상태 */
 .os-empty { flex: 1; display: grid; place-items: center; text-align: center; padding: 40px 24px; color: var(--os-글-연); font-size: 16px; line-height: 1.6; }
 .os-cta { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; padding: 14px 22px; border-radius: 16px; background: var(--os-글); color: var(--os-바탕); border: 0; font-size: 16px; font-weight: 700; cursor: pointer; min-height: var(--손가락); }
