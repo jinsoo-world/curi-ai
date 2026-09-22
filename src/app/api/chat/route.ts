@@ -7,6 +7,7 @@ import { MAX_DAILY_FREE, MAX_DAILY_FREE_GUEST, FREE_TRIAL_OPEN } from '@/domains
 import { isTrialActive } from '@/domains/trial'
 import { generateEmbedding, matchKnowledge } from '@/domains/knowledge'
 import { deductCredit, getCreditBalance } from '@/domains/credit'
+import { pickDriverFromEnv } from '@/domains/llm'
 import { CREDIT_CONSTANTS } from '@/domains/credit/types'
 
 export const dynamic = 'force-dynamic'
@@ -368,7 +369,9 @@ export async function POST(req: Request) {
         // Gemini 대화 히스토리 구성 (domains/mentor)
         const geminiMessages = buildGeminiHistory(mentor.greeting_message, messages, attachedImage)
 
-        // 스트리밍 응답 (domains/chat)
+        // 스트리밍 응답 (domains/chat) — 어느 모델이 답하는지는 stream.ts 가 고른다.
+        // 밖에서 확인할 수 있게 고른 드라이버 이름만 응답 머리글(X-Llm-Driver)에 붙인다.
+        const llmDriver = pickDriverFromEnv(!!attachedImage)
         const response = await generateChatStream(systemPrompt, geminiMessages)
 
         // SSE 스트림 생성
@@ -544,6 +547,7 @@ export async function POST(req: Request) {
                 'Content-Type': 'text/event-stream',
                 'Cache-Control': 'no-cache',
                 'Connection': 'keep-alive',
+                'X-Llm-Driver': llmDriver,
             },
         })
     } catch (error) {

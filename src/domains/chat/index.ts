@@ -2,7 +2,8 @@
 
 export * from './types'
 export * from './constants'
-export { generateChatStream } from './gemini'
+// 대화 답은 stream.ts 가 드라이버(솔라/Gemini)를 골라 흘려준다. gemini.ts 를 직접 쓰지 않는다.
+export { generateChatStream, UNAVAILABLE_TEXT } from './stream'
 export {
     getUserMemories,
     getChatSessions,
