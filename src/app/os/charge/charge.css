@@ -1,0 +1,68 @@
+/* 봇 팀 클로버 충전 (/os/charge). 색은 globals.css [data-theme="os"] 토큰만. 글자 17px 이상, 단추 52px 이상 */
+
+.osc { flex: 1; overflow-y: auto; padding: 28px 24px 64px; font-size: 17px; line-height: 1.6; word-break: keep-all; }
+.osc-inner { max-width: 560px; margin: 0 auto; }
+
+.osc-back {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-height: 52px; padding: 0 6px; border: 0; background: transparent;
+    color: var(--os-글-연); font-size: 17px; font-weight: 600; cursor: pointer; border-radius: 12px;
+}
+.osc-back:hover { color: var(--os-글); background: var(--os-말풍선); }
+
+.osc-h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin: 8px 0 6px; }
+.osc-p { color: var(--os-글-연); margin: 0 0 20px; }
+
+/* 지금 잔량 */
+.osc-balance {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 16px 18px; border-radius: 16px; background: var(--os-패널); border: 1px solid var(--os-선);
+    margin-bottom: 18px;
+}
+.osc-balance-label { color: var(--os-글-연); font-size: 17px; }
+.osc-balance-num { display: inline-flex; align-items: center; gap: 8px; font-size: 22px; font-weight: 800; }
+.osc-low { margin: -8px 0 18px; padding: 12px 14px; border-radius: 12px; color: var(--os-경고); background: color-mix(in srgb, var(--os-경고) 16%, transparent); font-size: 17px; }
+
+/* 상품 3개 */
+.osc-packs { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+.osc-pack {
+    position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    min-height: 84px; padding: 18px 20px; border-radius: 18px; text-align: left; cursor: pointer;
+    background: var(--os-패널); color: var(--os-글); border: 2px solid var(--os-선);
+}
+.osc-pack:hover { border-color: var(--os-글-흐림); }
+.osc-pack[aria-pressed="true"] { border-color: var(--os-클로버); background: color-mix(in srgb, var(--os-클로버) 10%, var(--os-패널)); }
+.osc-pack-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.osc-pack-clovers { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+.osc-pack-sub { font-size: 17px; color: var(--os-글-연); margin-top: 2px; }
+.osc-pack-right { text-align: right; flex-shrink: 0; }
+.osc-pack-won { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+.osc-badge { display: inline-block; font-size: 14px; font-weight: 800; padding: 3px 9px; border-radius: 8px; background: var(--os-클로버); color: #000; margin-bottom: 4px; }
+.osc-badge.rec { background: var(--os-승인); }
+
+/* 결제 단추 */
+.osc-pay {
+    width: 100%; min-height: 56px; border-radius: 16px; border: 0; cursor: pointer;
+    background: var(--os-클로버); color: #000; font-size: 18px; font-weight: 800;
+}
+.osc-pay:disabled { opacity: .45; cursor: default; }
+.osc-error { margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; color: var(--os-오류); background: color-mix(in srgb, var(--os-오류) 16%, transparent); font-size: 17px; }
+.osc-note { font-size: 15px; color: var(--os-글-흐림); text-align: center; margin: 14px 0 0; line-height: 1.6; }
+.osc-note a { color: var(--os-클로버); font-weight: 600; text-decoration: none; }
+
+/* 손님 */
+.osc-guest { text-align: center; padding: 40px 0 0; }
+.osc-guest .os-cta { text-decoration: none; }
+
+/* 결제 끝난 자리 (/os/charge/done) */
+.osc-done { flex: 1; display: grid; place-items: center; padding: 24px; }
+.osc-done-card { width: min(440px, 100%); background: var(--os-패널); border: 1px solid var(--os-선); border-radius: 22px; padding: 36px 28px; text-align: center; }
+.osc-done-card h2 { font-size: 24px; font-weight: 800; margin: 12px 0 8px; }
+.osc-done-card p { color: var(--os-글-연); margin: 0 0 8px; font-size: 17px; line-height: 1.7; }
+.osc-done-card .osc-pay { margin-top: 20px; }
+.osc-done-card .osc-sub { margin-top: 10px; min-height: 52px; width: 100%; border-radius: 16px; border: 1px solid var(--os-선); background: transparent; color: var(--os-글); font-size: 17px; font-weight: 600; cursor: pointer; }
+
+@media (max-width: 900px) {
+    .osc { padding: 20px 16px 48px; }
+    .osc-pack { padding: 16px; }
+}

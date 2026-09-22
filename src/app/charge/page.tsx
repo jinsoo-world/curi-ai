@@ -8,6 +8,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { CLOVER_PACKS, discountPercent } from '@/domains/credit/packs'
+import { startCloverCharge } from '@/domains/credit/charge-client'
+import { chargeReturnUrls } from '@/domains/credit/charge-flow'
 import AppSidebar from '@/components/AppSidebar'
 import CloverIcon from '@/components/ui/CloverIcon'
 import BizFooter from '@/components/BizFooter'
@@ -23,24 +25,23 @@ export default function ChargePage() {
     // 「충전 화면으로 갔다가 돌아오는 이전 버튼이 없어서 다시 초기 설정을 해야 합니다」
     const [돌아갈곳, set돌아갈곳] = useState<string | null>(null)
 
-    // 어디서 충전하러 왔는지 기억했다가 끝나면 그 자리로 돌려보낸다 (전수조사 4번)
-    useEffect(() => {
-        try {
-            const b = new URLSearchParams(window.location.search).get('back')
-            if (b && b.startsWith('/')) {
-                sessionStorage.setItem('curi_back', b)
-                set돌아갈곳(b)
-            } else {
-                // 주소에 없으면 앞서 저장해 둔 것이라도 쓴다(새로고침하고 돌아온 경우)
-                const 이전 = sessionStorage.getItem('curi_back')
-                if (이전 && 이전.startsWith('/')) set돌아갈곳(이전)
-            }
-        } catch {}
-    }, [])
-
     useEffect(() => {
         const supabase = createClient()
         supabase.auth.getSession().then(async ({ data }) => {
+            // 어디서 충전하러 왔는지 기억했다가 끝나면 그 자리로 돌려보낸다 (전수조사 4번)
+            // (세션 콜백 안에서 한다 = effect 본문에서 바로 setState 하지 않는 린트 규칙)
+            try {
+                const b = new URLSearchParams(window.location.search).get('back')
+                if (b && b.startsWith('/')) {
+                    sessionStorage.setItem('curi_back', b)
+                    set돌아갈곳(b)
+                } else {
+                    // 주소에 없으면 앞서 저장해 둔 것이라도 쓴다(새로고침하고 돌아온 경우)
+                    const 이전 = sessionStorage.getItem('curi_back')
+                    if (이전 && 이전.startsWith('/')) set돌아갈곳(이전)
+                }
+            } catch {}
+
             const uid = data.session?.user?.id ?? null
             setUserId(uid)
             if (uid) {
@@ -60,24 +61,9 @@ export default function ChargePage() {
         setLoading(true)
         setErrorMsg(null)
         try {
-            const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY
-            if (!clientKey) throw new Error('결제 설정이 아직 안 됐어요. 잠시 뒤 다시 시도해 주세요.')
-
-            const { loadTossPayments } = await import('@tosspayments/tosspayments-sdk')
-            const tossPayments = await loadTossPayments(clientKey)
-            const payment = tossPayments.payment({ customerKey: userId })
-
-            const orderId = `clover_${pack.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-
-            await payment.requestPayment({
-                method: 'CARD',
-                amount: { currency: 'KRW', value: pack.won },
-                orderId,
-                orderName: `클로버 ${pack.clovers.toLocaleString()}개`,
-                successUrl: `${window.location.origin}/charge/done?packId=${pack.id}`,
-                failUrl: `${window.location.origin}/charge?failed=1`,
-                card: { useEscrow: false, flowMode: 'DEFAULT', useCardPoint: false, useAppCardOnly: false },
-            })
+            // 결제창 열기는 봇 팀 화면(/os/charge)과 같은 함수를 쓴다. 겉만 다르고 속은 하나.
+            const urls = chargeReturnUrls(window.location.origin, '/charge/done', '/charge', pack.id)
+            await startCloverCharge({ userId, pack, ...urls })
         } catch (error) {
             const msg = error instanceof Error ? error.message : '결제를 시작하지 못했어요.'
             setErrorMsg(msg)
