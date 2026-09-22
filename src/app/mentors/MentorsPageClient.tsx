@@ -9,31 +9,35 @@ import { MembershipBanner } from '@/components/MembershipBanner'
 import AppSidebar from '@/components/AppSidebar'
 import BizFooter from '@/components/BizFooter'
 import CreditClaimWrapper from './CreditClaimWrapper'
+import DiscoverSidebar from '@/components/DiscoverSidebar'
 
-// 카테고리 목록
+// 카테고리 목록 - Delphi 스타일 개선 (2026-09-22)
+// CEO 요구: 실제 mentor.expertise 필드 활용, 빈 결과 피드백
 const categories = [
     { key: 'all', label: '전체' },
-    { key: 'money', label: '돈 벌기', keywords: ['수익', '돈', '블로그', '세일즈', '협상', '마케팅', '창업'] },
-    { key: 'write', label: '글·책', keywords: ['책', '출판', '글', '원고', '전자책', '콘텐츠'] },
-    { key: 'tool', label: 'AI·도구', keywords: ['AI', '구글', '문서', '도구', '자동화'] },
-    { key: 'mind', label: '마음', keywords: ['상담', '공감', '고민', '마음', '조언'] },
+    { key: 'money', label: '돈 벌기', keywords: ['수익', '돈', '블로그', '세일즈', '협상', '마케팅', '창업', '수익화'] },
+    { key: 'write', label: '글·책', keywords: ['책', '출판', '글', '원고', '전자책', '콘텐츠', '글쓰기'] },
+    { key: 'tool', label: 'AI·도구', keywords: ['AI', '구글', '문서', '도구', '자동화', '챗GPT'] },
+    { key: 'mind', label: '마음', keywords: ['상담', '공감', '고민', '마음', '조언', '심리'] },
 ]
 
 export default function MentorsPageClient({ mentors }: { mentors: MentorCardData[] }) {
     const [searchQuery, setSearchQuery] = useState('')
     const [activeCategory, setActiveCategory] = useState('all')
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-    // 필터링된 멘토 목록
+    // 필터링된 멘토 목록 (expertise 필드 우선 활용)
     const filteredMentors = useMemo(() => {
         let result = mentors
 
-        // 카테고리 필터
+        // 카테고리 필터 (expertise 배열도 함께 검색)
         if (activeCategory !== 'all') {
             const category = categories.find(c => c.key === activeCategory)
             if (category && 'keywords' in category) {
                 result = result.filter(m => {
-                    const text = `${m.name} ${m.title || ''} ${m.description || ''} ${(m.expertise || []).join(' ')}`
-                    return category.keywords!.some(keyword => text.includes(keyword))
+                    const expertiseText = Array.isArray(m.expertise) ? m.expertise.join(' ').toLowerCase() : ''
+                    const text = `${m.name} ${m.title || ''} ${m.description || ''} ${expertiseText}`.toLowerCase()
+                    return category.keywords!.some(keyword => text.toLowerCase().includes(keyword.toLowerCase()))
                 })
             }
         }
@@ -42,7 +46,8 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase().trim()
             result = result.filter(m => {
-                const text = `${m.name} ${m.title || ''} ${m.description || ''}`.toLowerCase()
+                const expertiseText = Array.isArray(m.expertise) ? m.expertise.join(' ').toLowerCase() : ''
+                const text = `${m.name} ${m.title || ''} ${m.description || ''} ${expertiseText}`.toLowerCase()
                 return text.includes(query)
             })
         }
@@ -56,6 +61,7 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
             <div style={{ minHeight: '100dvh', background: 'var(--종이)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
                 <MembershipBanner />
                 <AppSidebar />
+                <DiscoverSidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
                 <div style={{ textAlign: 'center', maxWidth: 400 }}>
                     <div style={{ fontSize: 64, marginBottom: 16 }}>🔍</div>
                     <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--먹)', marginBottom: 8 }}>아직 멘토가 없어요</h2>
@@ -67,17 +73,30 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
 
     return (
         <div style={{ minHeight: '100dvh', background: 'var(--종이)' }} role="document">
-            {/* ─── Sidebar ─── */}
+            {/* ─── Top Navigation ─── */}
             <MembershipBanner />
             <AppSidebar />
+            
+            {/* ─── Delphi-style Left Sidebar ─── */}
+            <DiscoverSidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
 
             {/* ─── Credit Claim Modal ─── */}
             <Suspense fallback={null}>
                 <CreditClaimWrapper />
             </Suspense>
 
-            {/* ─── Main Content (Delphi Discover 스타일) ─── */}
-            <div className="sidebar-content">
+            {/* ─── Main Content (Delphi Discover 스타일, left sidebar margin) ─── */}
+            <div className="discover-main-content">
+                {/* 모바일 햄버거 버튼 */}
+                <button
+                    className="discover-mobile-menu-btn"
+                    onClick={() => setMobileMenuOpen(true)}
+                    aria-label="메뉴 열기"
+                >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M3 12h18M3 6h18M3 18h18" />
+                    </svg>
+                </button>
 
                 {/* ─── Header with CTA (Delphi style) ─── */}
                 <section style={{
@@ -195,7 +214,7 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                     </div>
                 </section>
 
-                {/* ─── Large Portrait Cards (Delphi style) ─── */}
+                {/* ─── Large Portrait Cards (Delphi style, 밀도 개선) ─── */}
                 <section style={{
                     maxWidth: 1200,
                     margin: '0 auto',
@@ -227,16 +246,37 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                                         transition: 'transform 200ms',
                                     }}
                                 >
-                                    {avatarUrl && (
+                                    {avatarUrl ? (
                                         <Image
                                             src={avatarUrl}
                                             alt={m.name}
                                             fill
                                             sizes="260px"
                                             style={{ objectFit: 'cover' }}
+                                            onError={(e) => {
+                                                // 깨진 이미지 처리 - gradient fallback
+                                                const target = e.target as HTMLImageElement
+                                                target.style.display = 'none'
+                                                const parent = target.parentElement
+                                                if (parent) {
+                                                    const fallback = document.createElement('div')
+                                                    fallback.style.cssText = `
+                                                        width: 100%;
+                                                        height: 100%;
+                                                        background: linear-gradient(135deg, #E8F2EC 0%, #C7E4D3 100%);
+                                                        display: flex;
+                                                        align-items: center;
+                                                        justify-content: center;
+                                                        font-size: 64px;
+                                                        font-weight: 900;
+                                                        color: var(--먹);
+                                                    `
+                                                    fallback.textContent = m.name.slice(0, 1)
+                                                    parent.insertBefore(fallback, parent.firstChild)
+                                                }
+                                            }}
                                         />
-                                    )}
-                                    {!avatarUrl && (
+                                    ) : (
                                         <div style={{
                                             width: '100%',
                                             height: '100%',
@@ -284,7 +324,7 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                     </div>
                 </section>
 
-                {/* ─── Question List (Delphi "Ask about" style) ─── */}
+                {/* ─── Question List (Delphi "Ask about" style, 빈 질문 폴백) ─── */}
                 <section style={{
                     maxWidth: 1200,
                     margin: '0 auto',
@@ -306,7 +346,11 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                     }}>
                         {filteredMentors.map((m) => {
                             const avatarUrl = m.avatar_url || MENTOR_IMAGES[m.name] || null
-                            const questions = Array.isArray(m.sample_questions) ? m.sample_questions.slice(0, 1) : []
+                            const questions = Array.isArray(m.sample_questions) && m.sample_questions.length > 0
+                                ? m.sample_questions.slice(0, 1)
+                                : m.title
+                                    ? [`${m.title}에 대해 알려주세요`]
+                                    : []
                             
                             if (questions.length === 0) return null
 
@@ -337,16 +381,19 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                                         overflow: 'hidden',
                                         background: 'var(--샌드)',
                                     }}>
-                                        {avatarUrl && (
+                                        {avatarUrl ? (
                                             <Image
                                                 src={avatarUrl}
                                                 alt={m.name}
                                                 fill
                                                 sizes="48px"
                                                 style={{ objectFit: 'cover' }}
+                                                onError={(e) => {
+                                                    const target = e.target as HTMLImageElement
+                                                    target.style.display = 'none'
+                                                }}
                                             />
-                                        )}
-                                        {!avatarUrl && (
+                                        ) : (
                                             <div style={{
                                                 width: '100%',
                                                 height: '100%',
@@ -386,7 +433,7 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                     </div>
                 </section>
 
-                {/* 필터링 결과가 없을 때 */}
+                {/* 필터링 결과가 없을 때 (카테고리 피드백 포함) */}
                 {filteredMentors.length === 0 && (
                     <section style={{
                         maxWidth: 1200,
@@ -396,11 +443,28 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                     }}>
                         <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
                         <h3 style={{ fontSize: 20, fontWeight: 700, color: 'var(--먹)', marginBottom: 8 }}>
-                            검색 결과가 없어요
+                            {activeCategory !== 'all' ? '이 카테고리에는 멘토가 없어요' : '검색 결과가 없어요'}
                         </h3>
-                        <p style={{ fontSize: 16, color: 'var(--먹연)' }}>
-                            다른 키워드로 검색해보세요
+                        <p style={{ fontSize: 16, color: 'var(--먹연)', marginBottom: 16 }}>
+                            {activeCategory !== 'all' ? '전체 카테고리를 선택하거나 다른 카테고리를 둘러보세요' : '다른 키워드로 검색해보세요'}
                         </p>
+                        {activeCategory !== 'all' && (
+                            <button
+                                onClick={() => setActiveCategory('all')}
+                                style={{
+                                    padding: '12px 24px',
+                                    background: 'var(--먹)',
+                                    color: '#FFFFFF',
+                                    border: 'none',
+                                    borderRadius: 999,
+                                    fontSize: 15,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                전체 보기
+                            </button>
+                        )}
                     </section>
                 )}
 
@@ -415,6 +479,33 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
             </div>
 
             <style jsx>{`
+                /* Delphi-style main content with left sidebar */
+                :global(.discover-main-content) {
+                    margin-left: 240px;
+                    min-height: 100dvh;
+                    padding-top: 60px;
+                    background: var(--종이);
+                }
+
+                /* Mobile menu button */
+                :global(.discover-mobile-menu-btn) {
+                    position: fixed;
+                    top: 80px;
+                    left: 16px;
+                    z-index: 100;
+                    display: none;
+                    align-items: center;
+                    justify-content: center;
+                    width: 44px;
+                    height: 44px;
+                    background: #FFFFFF;
+                    border: 1px solid var(--선);
+                    border-radius: 12px;
+                    cursor: pointer;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+                    color: var(--먹);
+                }
+
                 /* Hide horizontal scrollbar on portrait cards */
                 .delphi-portrait-card::-webkit-scrollbar {
                     display: none;
@@ -445,15 +536,32 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                     box-shadow: 0 4px 16px rgba(42, 38, 37, 0.08);
                 }
                 
+                /* 모바일: 사이드바 없음, 햄버거 표시 */
                 @media (max-width: 768px) {
-                    :global(.sidebar-content) {
+                    :global(.discover-main-content) {
                         margin-left: 0 !important;
                         padding-bottom: 72px;
                     }
+
+                    :global(.discover-mobile-menu-btn) {
+                        display: flex;
+                    }
                     
                     :global(.delphi-portrait-card) {
-                        width: 240px !important;
-                        height: 340px !important;
+                        width: 220px !important;
+                        height: 320px !important;
+                    }
+
+                    /* 모바일 카테고리 칩 밀도 */
+                    :global(.delphi-category-chip) {
+                        padding: 8px 14px !important;
+                        font-size: 13px !important;
+                    }
+
+                    /* 모바일 질문 행 밀도 */
+                    :global(.delphi-question-row) {
+                        padding: 12px 16px !important;
+                        gap: 12px !important;
                     }
                 }
             `}</style>
