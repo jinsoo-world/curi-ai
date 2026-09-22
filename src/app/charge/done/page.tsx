@@ -4,6 +4,7 @@
 // 여기서 서버에 확인을 받아야 클로버가 들어간다(화면이 아니라 서버가 토스에 직접 묻는다).
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { confirmCloverCharge } from '@/domains/credit/charge-client'
 
 function ChargeDoneInner() {
     const router = useRouter()
@@ -13,35 +14,30 @@ function ChargeDoneInner() {
     const [balance, setBalance] = useState<number | null>(null)
     const [errorMsg, setErrorMsg] = useState('')
 
+    const paymentKey = searchParams.get('paymentKey')
+    const orderId = searchParams.get('orderId')
+    const amount = searchParams.get('amount')
+    const packId = searchParams.get('packId')
+    // 값이 빠졌으면 그릴 때 바로 실패로 본다 (effect 본문에서 setState 하지 않는 린트 규칙)
+    const 빠짐 = !paymentKey || !orderId || !amount || !packId
+
     useEffect(() => {
-        const paymentKey = searchParams.get('paymentKey')
-        const orderId = searchParams.get('orderId')
-        const amount = searchParams.get('amount')
-        const packId = searchParams.get('packId')
+        if (!paymentKey || !orderId || !amount || !packId) return
 
-        if (!paymentKey || !orderId || !amount || !packId) {
-            setState('fail')
-            setErrorMsg('결제 정보가 모자랍니다.')
-            return
-        }
-
-        fetch('/api/credits/charge', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentKey, orderId, amount: Number(amount), packId }),
-        })
-            .then(async res => {
-                const data = await res.json()
-                if (!res.ok) throw new Error(data.error || '충전에 실패했어요.')
-                setClovers(data.clovers ?? 0)
-                setBalance(data.balance ?? null)
+        confirmCloverCharge({ paymentKey, orderId, amount: Number(amount), packId })
+            .then(data => {
+                setClovers(data.clovers)
+                setBalance(data.balance)
                 setState('ok')
             })
             .catch(e => {
                 setState('fail')
                 setErrorMsg(e instanceof Error ? e.message : '충전에 실패했어요.')
             })
-    }, [searchParams])
+    }, [paymentKey, orderId, amount, packId])
+
+    const 상태 = 빠짐 ? 'fail' : state
+    const 오류글 = 빠짐 ? '결제 정보가 모자랍니다.' : errorMsg
 
     return (
         <main style={{
@@ -52,14 +48,14 @@ function ChargeDoneInner() {
                 width: '100%', maxWidth: 400, background: '#fff', borderRadius: 20,
                 padding: '36px 28px', textAlign: 'center', border: '1px solid #e4e4e7',
             }}>
-                {state === 'ing' && (
+                {상태 === 'ing' && (
                     <>
                         <div style={{ fontSize: 40, marginBottom: 14 }}>🍀</div>
                         <p style={{ fontSize: 16, color: '#52525b', margin: 0 }}>충전하고 있어요...</p>
                     </>
                 )}
 
-                {state === 'ok' && (
+                {상태 === 'ok' && (
                     <>
                         <div style={{ fontSize: 44, marginBottom: 14 }}>🎉</div>
                         <h2 style={{ fontSize: 22, fontWeight: 800, color: '#18181b', margin: '0 0 8px' }}>
@@ -92,14 +88,14 @@ function ChargeDoneInner() {
                     </>
                 )}
 
-                {state === 'fail' && (
+                {상태 === 'fail' && (
                     <>
 
                         <h2 style={{ fontSize: 20, fontWeight: 800, color: '#18181b', margin: '0 0 8px' }}>
                             충전하지 못했어요
                         </h2>
                         <p style={{ fontSize: 14, color: '#71717a', margin: '0 0 24px', lineHeight: 1.7, wordBreak: 'keep-all' }}>
-                            {errorMsg}<br />
+                            {오류글}<br />
                             돈이 빠져나갔는데 클로버가 안 들어왔다면 알려주세요. 바로 확인해 드립니다.
                         </p>
                         <button
