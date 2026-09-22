@@ -523,7 +523,7 @@ export default function ProfilePage() {
                                         <div>
                                             <div style={labelStyle}>광고성 정보 수신 동의</div>
                                             <div style={{ fontSize: 15, color: profile?.marketing_consent ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
-                                                {profile?.marketing_consent ? '동의함 (문자 · 이메일 · 앱 알림)' : '동의하지 않음'}
+                                                {profile?.marketing_consent ? '동의함 (문자, 이메일, 앱 알림)' : '동의하지 않음'}
                                             </div>
                                             {!profile?.marketing_consent && (
                                                 <div style={{

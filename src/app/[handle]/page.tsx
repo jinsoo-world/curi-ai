@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const user = await getUserByHandle(db, cleanHandle)
 
     if (!user) {
-        return { title: '크리에이터를 찾을 수 없습니다 — 큐리 AI' }
+        return { title: '크리에이터를 찾을 수 없습니다 | 큐리 AI' }
     }
 
     const name = user.display_name || cleanHandle
@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         title: name,
         description: `${name}의 AI 멘토와 대화를 시작하세요.`,
         openGraph: {
-            title: `${name} — 큐리 AI`,
+            title: `${name} | 큐리 AI`,
             description: `${name}의 AI 멘토와 대화를 시작하세요.`,
         },
     }

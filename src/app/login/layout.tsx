@@ -4,7 +4,7 @@ export const metadata: Metadata = {
     title: '로그인',
     description: 'Google 계정으로 간편하게 시작하세요. AI가 24시간 함께합니다.',
     openGraph: {
-        title: '로그인 — 큐리 AI',
+        title: '로그인 | 큐리 AI',
         description: 'Google 계정으로 간편하게 시작하세요. AI가 24시간 함께합니다.',
     },
     // 영어 화면과 짝을 이룬다. 루트(/)는 307 리다이렉트라 hreflang 대상이 될 수 없어

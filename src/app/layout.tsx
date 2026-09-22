@@ -19,8 +19,8 @@ const SITE_URL = 'https://www.curi-ai.com'
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: '큐리 AI — 사진 한 장으로 만드는 내 프로필 사진',
-    template: '%s — 큐리 AI',
+    default: '큐리 AI | 사진 한 장으로 만드는 내 프로필 사진',
+    template: '%s | 큐리 AI',
   },
   description:
     '사진 한 장만 올리면 강사 프로필·배우 프로필을 만들어 드립니다. 사진 화질 개선도 가능합니다.',
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     //    그래서 짝을 이루는 두 화면(/login·/en)에만 각자 적는다.
   },
   openGraph: {
-    title: '큐리AI — 나만의 AI를 만들고 수익화해보세요!',
+    title: '큐리AI | 나만의 AI를 만들고 수익화해보세요!',
     description: '나만의 AI를 만들고 수익화해보세요! 콘텐츠 수익화, 브랜딩, 커리어 전환까지.',
     type: 'website',
     url: SITE_URL,
@@ -47,13 +47,13 @@ export const metadata: Metadata = {
         url: '/og/main.png',
         width: 1200,
         height: 630,
-        alt: '큐리 AI — 사진 한 장으로 만드는 내 프로필 사진',
+        alt: '큐리 AI | 사진 한 장으로 만드는 내 프로필 사진',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: '큐리AI — 나만의 AI를 만들고 수익화해보세요!',
+    title: '큐리AI | 나만의 AI를 만들고 수익화해보세요!',
     description: '나만의 AI를 만들고 수익화해보세요! 콘텐츠 수익화, 브랜딩, 커리어 전환까지.',
     images: ['/og/main.png'],
   },

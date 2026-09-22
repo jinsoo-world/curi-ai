@@ -15,8 +15,8 @@ import CreditClaimWrapper from './CreditClaimWrapper'
 const categories = [
     { key: 'all', label: '전체' },
     { key: 'money', label: '돈 벌기', keywords: ['수익', '돈', '블로그', '세일즈', '협상', '마케팅', '창업', '수익화'] },
-    { key: 'write', label: '글·책', keywords: ['책', '출판', '글', '원고', '전자책', '콘텐츠', '글쓰기'] },
-    { key: 'tool', label: 'AI·도구', keywords: ['AI', '구글', '문서', '도구', '자동화', '챗GPT'] },
+    { key: 'write', label: '글, 책', keywords: ['책', '출판', '글', '원고', '전자책', '콘텐츠', '글쓰기'] },
+    { key: 'tool', label: 'AI, 도구', keywords: ['AI', '구글', '문서', '도구', '자동화', '챗GPT'] },
     { key: 'mind', label: '마음', keywords: ['상담', '공감', '고민', '마음', '조언', '심리'] },
 ]
 

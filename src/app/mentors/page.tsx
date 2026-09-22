@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     title: 'AI 발견하기',
     description: '당신에게 필요한 AI 멘토를 만나보세요. 콘텐츠 수익화, 브랜딩, 글쓰기 전문가들과 대화할 수 있습니다.',
     openGraph: {
-        title: 'AI 발견하기 — 큐리 AI',
+        title: 'AI 발견하기 | 큐리 AI',
         description: '당신에게 필요한 AI 멘토를 만나보세요.',
     },
 }

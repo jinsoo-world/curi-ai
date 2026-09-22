@@ -488,7 +488,7 @@ export default function LoginPage() {
                     </Link>
                     <span style={{ color: '#d1d5db' }}>ㅣ</span>
                     <Link href="/refund" style={{ color: '#6b7280', textDecoration: 'none' }}>
-                        취소·환불정책
+                        취소/환불정책
                     </Link>
                     <span aria-hidden="true" style={{ color: '#d1d5db' }}>ㅣ</span>
                     <Link

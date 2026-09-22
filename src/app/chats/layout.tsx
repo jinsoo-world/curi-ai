@@ -5,7 +5,7 @@ export const metadata: Metadata = {
     description: 'AI와 나눈 대화를 다시 확인하세요. AI별 대화 히스토리를 한눈에.',
     robots: { index: false, follow: false },
     openGraph: {
-        title: '대화 목록 — 큐리 AI',
+        title: '대화 목록 | 큐리 AI',
         description: 'AI와 나눈 대화를 다시 확인하세요.',
     },
 }

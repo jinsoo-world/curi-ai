@@ -7,15 +7,15 @@ export const metadata: Metadata = {
     description: '큐리 AI 이용 요금과 클로버 값을 안내합니다.',
     keywords: ['큐리 AI 요금', 'AI 프로필 사진 가격'],
     openGraph: {
-        title: '이용 요금 — 큐리 AI',
+        title: '이용 요금 | 큐리 AI',
         description: '큐리 AI 이용 요금과 클로버 값을 안내합니다.',
         type: 'website',
         url: 'https://www.curi-ai.com/pricing',
         siteName: '큐리 AI',
         locale: 'ko_KR',
-        images: [{ url: '/og-image.png', width: 1200, height: 630, alt: '이용 요금 — 큐리 AI' }],
+        images: [{ url: '/og-image.png', width: 1200, height: 630, alt: '이용 요금 | 큐리 AI' }],
     },
-    twitter: { card: 'summary_large_image', title: '이용 요금 — 큐리 AI', description: '큐리 AI 이용 요금과 클로버 값을 안내합니다.', images: ['/og-image.png'] },
+    twitter: { card: 'summary_large_image', title: '이용 요금 | 큐리 AI', description: '큐리 AI 이용 요금과 클로버 값을 안내합니다.', images: ['/og-image.png'] },
     alternates: { canonical: 'https://www.curi-ai.com/pricing' },
     robots: { index: true, follow: true },
 }

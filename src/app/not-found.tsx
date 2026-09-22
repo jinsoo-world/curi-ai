@@ -35,7 +35,7 @@ export default function NotFound() {
             </p>
             <div style={{ display: 'flex', gap: 12 }}>
                 <Link
-                    href="/mentors"
+                    href="/"
                     style={{
                         padding: '12px 28px',
                         borderRadius: 12,

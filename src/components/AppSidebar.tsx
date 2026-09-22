@@ -130,7 +130,7 @@ export default function AppSidebar() {
         <header className="app-top">
             <div className="app-top-inner">
                 {/* 왼쪽 — 이름표 */}
-                <Link href="/mentors" className="app-top-logo" aria-label="큐리 AI 첫 화면">
+                <Link href="/" className="app-top-logo" aria-label="큐리 AI 홈">
                     <Image src="/logo.png" alt="" width={30} height={30} style={{ borderRadius: 9 }} />
                     <span>큐리 AI</span>
                 </Link>
@@ -196,7 +196,7 @@ export default function AppSidebar() {
                             </Link>
                             <Link href="/charge" className="app-top-sheet-credit">
                                 <CloverIcon size={15} />
-                                {잔액 === null ? '–' : 잔액.toLocaleString()}개
+                                {잔액 === null ? '-' : 잔액.toLocaleString()}개
                             </Link>
                         </div>
 

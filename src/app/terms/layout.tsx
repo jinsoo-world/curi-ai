@@ -7,15 +7,15 @@ export const metadata: Metadata = {
     description: '큐리 AI 서비스 이용약관입니다.',
     keywords: ['이용약관'],
     openGraph: {
-        title: '서비스 이용약관 — 큐리 AI',
+        title: '서비스 이용약관 | 큐리 AI',
         description: '큐리 AI 서비스 이용약관입니다.',
         type: 'website',
         url: 'https://www.curi-ai.com/terms',
         siteName: '큐리 AI',
         locale: 'ko_KR',
-        images: [{ url: '/og-image.png', width: 1200, height: 630, alt: '서비스 이용약관 — 큐리 AI' }],
+        images: [{ url: '/og-image.png', width: 1200, height: 630, alt: '서비스 이용약관 | 큐리 AI' }],
     },
-    twitter: { card: 'summary_large_image', title: '서비스 이용약관 — 큐리 AI', description: '큐리 AI 서비스 이용약관입니다.', images: ['/og-image.png'] },
+    twitter: { card: 'summary_large_image', title: '서비스 이용약관 | 큐리 AI', description: '큐리 AI 서비스 이용약관입니다.', images: ['/og-image.png'] },
     alternates: { canonical: 'https://www.curi-ai.com/terms' },
     robots: { index: true, follow: true },
 }
