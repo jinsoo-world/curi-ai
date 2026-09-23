@@ -8,14 +8,17 @@ import { useOsTeam } from './OsShell'
 import BotAvatar from './BotAvatar'
 import BotMarkdown from './BotMarkdown'
 import MenuIcon, { CloseIcon, swipeToClose } from './MenuIcon'
-import { findMentionedBot, pickResponders, botWorkingLabel } from '@/domains/os/channels'
+import { findMentionedBot, pickResponders } from '@/domains/os/channels'
 import { osTrack } from '@/domains/os/events'
 import type { BotColor, BotShape } from '@/domains/os/types'
 import MentionPicker from './MentionPicker'
 import { useMentionComposer } from './useMentionComposer'
+import { MsgRow, useRevealTimestamps } from './MsgRow'
+import WorkingStatusLine from './WorkingStatusLine'
+import OgLinkPreview, { isUrlOnlyText } from './OgLinkPreview'
 
 interface Member { mentorId: string; name: string; shape: string; color: string; avatarUrl: string | null }
-interface Msg { id: string; authorKind: 'user' | 'bot'; mentorId: string | null; content: string }
+interface Msg { id: string; authorKind: 'user' | 'bot'; mentorId: string | null; content: string; createdAt?: string }
 
 export default function OsGroupChat({ channelId }: { channelId: string }) {
     const { team, refreshChannels } = useOsTeam()
@@ -30,6 +33,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
     const [err, setErr] = useState<string | null>(null)
     const [notReady, setNotReady] = useState(false)
     const endRef = useRef<HTMLDivElement>(null)
+    const reveal = useRevealTimestamps()
     const inputRef = useRef<HTMLTextAreaElement>(null)
 
     const mentionBots = useMemo(
@@ -60,7 +64,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
         if (!text || busy) return
         setInput(''); setBusy(true); setErr(null)
         osTrack('os_group_message', { channel_id: channelId, members: members.length })
-        setMessages(prev => [...prev, { id: `tmp-${Date.now()}`, authorKind: 'user', mentorId: null, content: text }])
+        setMessages(prev => [...prev, { id: `tmp-${Date.now()}`, authorKind: 'user', mentorId: null, content: text, createdAt: new Date().toISOString() }])
         // 서버와 같은 규칙으로 누가 답할지 미리 보여 준다
         const upcoming = pickResponders(text, members.map(m => ({ mentorId: m.mentorId, name: m.name })))
         setWorkingIds(upcoming.map(r => r.mentorId))
@@ -139,26 +143,33 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                     </span>
                 </header>
 
-                <div className="os-messages">
+                <div className={`os-messages${reveal.className ? ` ${reveal.className}` : ''}`} ref={reveal.ref} style={reveal.style}>
                     {messages.length === 0 && (
-                        <div className="os-bubble bot">여기서는 봇 여러 명이 같이 들어요. 방 전체에 말하면 진행 봇이 짧게 받은 뒤 멤버들이 차례로 답해요. 한 명만 부르려면 「@이름」으로 시작하세요.</div>
+                        <MsgRow side="bot">
+                            <div className="os-bubble bot">여기서는 봇 여러 명이 같이 들어요. 방 전체에 말하면 진행 봇이 짧게 받은 뒤 멤버들이 차례로 답해요. 한 명만 부르려면 「@이름」으로 시작하세요.</div>
+                        </MsgRow>
                     )}
                     {messages.map(m => m.authorKind === 'user'
-                        ? <div key={m.id} className="os-bubble me">{m.content}</div>
+                        ? (
+                            <MsgRow key={m.id} side="me" createdAt={m.createdAt}>
+                                {!isUrlOnlyText(m.content) && <div className="os-bubble me">{m.content}</div>}
+                                <OgLinkPreview text={m.content} className="os-og-cards--me" />
+                            </MsgRow>
+                        )
                         : (
-                            <div key={m.id} style={{ display: 'contents' }}>
+                            <MsgRow key={m.id} side="bot" createdAt={m.createdAt}>
                                 <div className="os-sender">{아바타(m.mentorId)}<span>{보낸사람(m)}</span></div>
-                                <div className="os-bubble bot md"><BotMarkdown text={m.content} /></div>
-                            </div>
+                                {!isUrlOnlyText(m.content) && <div className="os-bubble bot md"><BotMarkdown text={m.content} /></div>}
+                                <OgLinkPreview text={m.content} />
+                            </MsgRow>
                         ))}
                     {workingIds.map(id => {
                         const m = members.find(x => x.mentorId === id)
                         if (!m) return null
                         return (
-                            <div key={`work-${id}`} style={{ display: 'contents' }}>
-                                <div className="os-sender">{아바타(id)}<span>{m.name}</span></div>
-                                <div className="os-bubble bot os-working" aria-live="polite">{botWorkingLabel(m.name)}</div>
-                            </div>
+                            <MsgRow key={`work-${id}`} side="bot">
+                                <WorkingStatusLine botName={m.name} avatar={아바타(id, 22)} />
+                            </MsgRow>
                         )
                     })}
                     <div ref={endRef} />

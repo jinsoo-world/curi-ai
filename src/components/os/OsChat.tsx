@@ -32,6 +32,8 @@ import PhotoGrid from './PhotoGrid'
 import { photoPayload } from '@/domains/os/photos'
 // === /사진 첨부 ===
 import { MsgRow, useRevealTimestamps } from './MsgRow'
+import WorkingStatusLine from './WorkingStatusLine'
+import OgLinkPreview, { isUrlOnlyText } from './OgLinkPreview'
 // === @ 멘션 ===
 import MentionPicker from './MentionPicker'
 import { useMentionComposer } from './useMentionComposer'
@@ -280,7 +282,8 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
 
         osTrack('os_message_sent', { mentor_id: mentorId, guest, photos: photoUrls.length })
         if (guest) window.dispatchEvent(new Event('curi:guest-sent'))
-        const userMsg: Msg = { id: `u-${Date.now()}`, role: 'user', content: text, ...(photoUrls.length ? { imageUrls: photoUrls } : {}) }
+        const nowIso = new Date().toISOString()
+        const userMsg: Msg = { id: `u-${Date.now()}`, role: 'user', content: text, createdAt: nowIso, ...(photoUrls.length ? { imageUrls: photoUrls } : {}) }
         // === /사진 첨부 ===
         const botId = `a-${Date.now()}`
         const base = [...messages, userMsg]
@@ -291,7 +294,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
             : null
         if (전달) {
             if (!overrideText) setInput('')
-            setMessages([...base, { id: botId, role: 'assistant', content: `${전달.name}에게 옮기는 중이에요…` }])
+            setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: `${전달.name}에게 옮기는 중이에요…` }])
             setState('working')
             try {
                 const sid = await ensureSession()
@@ -303,7 +306,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                 if (d?.relayed) {
                     osTrack('os_relay_sent', { from_mentor_id: mentorId, to_mentor_id: String(d.to?.mentorId ?? '') })
                     setMessages([...base, {
-                        id: botId, role: 'assistant', content: String(d.answer ?? ''),
+                        id: botId, role: 'assistant', createdAt: nowIso, content: String(d.answer ?? ''),
                         relay: {
                             fromName: String(d.from?.name ?? name), toName: String(d.to?.name ?? 전달.name),
                             shape: (d.to?.shape ?? 'circle') as RelayView['shape'],
@@ -316,9 +319,9 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                 }
                 // 못 옮겼으면(로그인 전, 표 없음, 밖으로 나가는 말) 조용히 평소 대화로 내려간다.
                 // needsApproval 이면 아래 승인 카드 길이 그 말을 받는다.
-                setMessages([...base, { id: botId, role: 'assistant', content: '' }])
+                setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: '' }])
             } catch {
-                setMessages([...base, { id: botId, role: 'assistant', content: '' }])
+                setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: '' }])
             }
         }
         // === /전달(relay) ===
@@ -329,7 +332,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         if (눈치?.kind === 'group') {
             // === 전달(relay) === 안내만 하지 않고 「그룹 채팅 만들기」 창을 바로 연다
             if (!overrideText) setInput('')
-            setMessages([...base, { id: botId, role: 'assistant', content: '여러 봇과 한 방에서 이야기하는 창을 열었어요. 넣을 봇을 골라 주세요.' }])
+            setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: '여러 봇과 한 방에서 이야기하는 창을 열었어요. 넣을 봇을 골라 주세요.' }])
             setState('idle')
             openNewGroup()
             return
@@ -337,7 +340,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         }
         if (눈치?.kind === 'knowledge' && bot) {
             if (!overrideText) setInput('')
-            setMessages([...base, { id: botId, role: 'assistant', content: '자료에 넣었어요. 읽는 데 잠시 걸려요 📎' }])
+            setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: '자료에 넣었어요. 읽는 데 잠시 걸려요 📎' }])
             setState('idle')
             try {
                 const res = await fetch('/api/os/knowledge', {
@@ -347,14 +350,14 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                 if (res.ok) osTrack('os_knowledge_added', { mentor_id: mentorId, kind: 'url' })
                 else {
                     const d = await res.json().catch(() => ({}))
-                    setMessages([...base, { id: botId, role: 'assistant', content: `이 링크는 못 넣었어요. ${String(d.error ?? '').slice(0, 80)}` }])
+                    setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: `이 링크는 못 넣었어요. ${String(d.error ?? '').slice(0, 80)}` }])
                 }
             } catch {
-                setMessages([...base, { id: botId, role: 'assistant', content: '이 링크는 못 넣었어요. 잠시 뒤 다시 해 주세요.' }])
+                setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: '이 링크는 못 넣었어요. 잠시 뒤 다시 해 주세요.' }])
             }
             return
         }
-        setMessages([...base, { id: botId, role: 'assistant', content: '' }])
+        setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: '' }])
         if (!overrideText) setInput('')
         photos.clear()   // === 사진 첨부 === 보냈으니 띠를 비운다
         setStreaming(true)
@@ -374,13 +377,13 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                     const draftData = await draftRes.json()
                     if (draftData?.card) {
                         osTrack('os_approval_shown', { card_id: String(draftData.card.id ?? ''), action_type: String(draftData.card.actionType ?? '') })
-                        setMessages([...base, { id: botId, role: 'assistant', content: '', card: draftData.card as CardView }])
+                        setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: '', card: draftData.card as CardView }])
                         setState('waiting_approval')
                         setStreaming(false)
                         return
                     }
                     if (draftData?.blocked?.message) {
-                        setMessages([...base, { id: botId, role: 'assistant', content: draftData.blocked.message }])
+                        setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: draftData.blocked.message }])
                         setState('idle')
                         setStreaming(false)
                         return
@@ -424,7 +427,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                                 if (first) { setState('talking'); first = false }
                                 full += d.text
                                 const snapshot = full
-                                setMessages([...base, { id: botId, role: 'assistant', content: snapshot }])
+                                setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: snapshot }])
                             }
                             // 마지막 조각에 「이 답에 쓴 자료」가 실려 온다
                             if (d.done && Array.isArray(d.sources)) sources = d.sources
@@ -436,11 +439,11 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                 }
             }
             setState(full.includes(UNAVAILABLE_TEXT) ? 'error' : 'idle')
-            if (!full) setMessages([...base, { id: botId, role: 'assistant', content: UNAVAILABLE_TEXT }])
-            else if (sources.length > 0 || readUrls.length > 0) setMessages([...base, { id: botId, role: 'assistant', content: full, sources, readUrls }])
+            if (!full) setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: UNAVAILABLE_TEXT }])
+            else if (sources.length > 0 || readUrls.length > 0) setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: full, sources, readUrls }])
         } catch {
             setState('error')
-            setMessages([...base, { id: botId, role: 'assistant', content: UNAVAILABLE_TEXT }])
+            setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: UNAVAILABLE_TEXT }])
         } finally {
             setStreaming(false)
         }
@@ -509,7 +512,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
 
                 {/* 오늘 체크인 띠 — 오늘 아직 안 했을 때만. 손님, 시연에선 안 뜬다 */}
 
-                <div className="os-messages">
+                <div className={`os-messages${reveal.className ? ` ${reveal.className}` : ''}`} ref={reveal.ref} style={reveal.style}>
                     {messages.length === 0 && !bot && publicBot && (
                         <div className="os-chat-info">
                             <BotAvatar shape="circle" color="white" state="idle" size={96} faceUrl={publicBot.avatar_url ?? null} name={name} />
@@ -535,48 +538,63 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                         </div>
                     )}
                     {greeting && messages.length === 0 && !(!bot && publicBot) && (
-                        <>
+                        <MsgRow side="bot">
                             <div className="os-sender">{avatar}<span>{name}</span></div>
                             <div className="os-bubble bot">{greeting}</div>
-                        </>
+                        </MsgRow>
                     )}
                     {messages.map((m, i) => m.role === 'user'
                         ? (m.imageUrls && m.imageUrls.length > 0
                             // === 사진 첨부 === 사진 격자 + 글
-                            ? <div key={m.id} className="os-bubble me has-photos"><PhotoGrid urls={m.imageUrls} />{m.content && <div className="os-photo-text">{m.content}</div>}</div>
-                            : <div key={m.id} className="os-bubble me">{m.content}</div>)
+                            ? <MsgRow key={m.id} side="me" createdAt={m.createdAt}>
+                                <div className="os-bubble me has-photos"><PhotoGrid urls={m.imageUrls} />{m.content && !isUrlOnlyText(m.content) && <div className="os-photo-text">{m.content}</div>}</div>
+                                {m.content ? <OgLinkPreview text={m.content} className="os-og-cards--me" /> : null}
+                              </MsgRow>
+                            : <MsgRow key={m.id} side="me" createdAt={m.createdAt}>
+                                {!isUrlOnlyText(m.content) && <div className="os-bubble me">{m.content}</div>}
+                                <OgLinkPreview text={m.content} className="os-og-cards--me" />
+                              </MsgRow>)
                         // === 전달(relay) === 옆 봇이 대신 답한 말은 그 봇 얼굴, 이름으로 그린다
                         : m.relay
-                            ? <div key={m.id} style={{ display: 'contents' }}><RelayBubble view={m.relay} answer={m.content} /></div>
+                            ? <MsgRow key={m.id} side="bot" createdAt={m.createdAt}><RelayBubble view={m.relay} answer={m.content} /></MsgRow>
                         // === /전달(relay) ===
                         : (
-                            <div key={m.id} style={{ display: 'contents' }}>
-                                <div className="os-sender">{avatar}<span>{name}</span></div>
-                                {m.card
-                                    ? <PermissionCard
-                                        card={m.card}
-                                        onDecided={(c) => {
-                                            osTrack('os_approval_decided', { card_id: c.id, action_type: c.actionType, status: c.status })
-                                            setMessages(prev => prev.map(x => x.id === m.id ? { ...x, card: c } : x))
-                                            setState('idle')
-                                        }}
-                                    />
-                                    : <div className="os-bubble bot md">{m.content ? <BotMarkdown text={m.content} /> : (state === 'thinking' ? '…' : '')}</div>}
-                                {m.sources && m.sources.length > 0 && (
-                                    <div className="os-cite">📎 참고한 자료: {m.sources.map(s => s.title).join(', ')}</div>
+                            <MsgRow key={m.id} side="bot" createdAt={m.createdAt}>
+                                {(!m.content && !m.card && (streaming || state === 'thinking')) ? (
+                                    <WorkingStatusLine botName={name} avatar={avatar} />
+                                ) : (
+                                    <>
+                                        <div className="os-sender">{avatar}<span>{name}</span></div>
+                                        {m.card
+                                            ? <PermissionCard
+                                                card={m.card}
+                                                onDecided={(c) => {
+                                                    osTrack('os_approval_decided', { card_id: c.id, action_type: c.actionType, status: c.status })
+                                                    setMessages(prev => prev.map(x => x.id === m.id ? { ...x, card: c } : x))
+                                                    setState('idle')
+                                                }}
+                                            />
+                                            : (m.content && !isUrlOnlyText(m.content)
+                                                ? <div className="os-bubble bot md"><BotMarkdown text={m.content} /></div>
+                                                : null)}
+                                        {m.content && !m.card && <OgLinkPreview text={m.content} />}
+                                        {m.sources && m.sources.length > 0 && (
+                                            <div className="os-cite">📎 참고한 자료: {m.sources.map(s => s.title).join(', ')}</div>
+                                        )}
+                                        {!m.card && (
+                                            <LinkCards {...linkCardsFor(m, messages[i - 1]?.role === 'user' ? messages[i - 1].content : undefined)} />
+                                        )}
+                                        {/* 답 고치기 - 내 팀 봇일 때만(공개 봇·손님은 자료를 못 넣는다), 바로 앞이 내 말일 때만 */}
+                                        {!m.card && bot && !guest && m.content && messages[i - 1]?.role === 'user' && (
+                                            <button type="button" className="os-fix-trigger"
+                                                onClick={() => setFixTarget({ question: messages[i - 1].content, answer: m.content })}>
+                                                답 고치기
+                                            </button>
+                                        )}
+                                    </>
                                 )}
-                                {!m.card && (
-                                    <LinkCards {...linkCardsFor(m, messages[i - 1]?.role === 'user' ? messages[i - 1].content : undefined)} />
-                                )}
-                                {/* 답 고치기 — 내 팀 봇일 때만(공개 봇·손님은 자료를 못 넣는다), 바로 앞이 내 말일 때만 */}
-                                {!m.card && bot && !guest && m.content && messages[i - 1]?.role === 'user' && (
-                                    <button type="button" className="os-fix-trigger"
-                                        onClick={() => setFixTarget({ question: messages[i - 1].content, answer: m.content })}>
-                                        답 고치기
-                                    </button>
-                                )}
-                            </div>
-                        ))}
+                            </MsgRow>
+                        )                        ))}
                     <div ref={endRef} />
                 </div>
 
