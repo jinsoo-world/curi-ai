@@ -23,6 +23,8 @@ interface Msg { id: string; authorKind: 'user' | 'bot'; mentorId: string | null;
 export default function OsGroupChat({ channelId }: { channelId: string }) {
     const { team, refreshChannels } = useOsTeam()
     const [name, setName] = useState('그룹')
+    const [renaming, setRenaming] = useState(false)
+    const [nameDraft, setNameDraft] = useState('')
     const [members, setMembers] = useState<Member[]>([])
     const [messages, setMessages] = useState<Msg[]>([])
     const [input, setInput] = useState('')
@@ -59,6 +61,27 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
 
     useEffect(() => { void load() }, [load])
     useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, workingIds])
+
+    const saveName = useCallback(async () => {
+        const next = nameDraft.trim().slice(0, 40) || '내 팀'
+        setRenaming(false)
+        if (next === name) return
+        const prev = name
+        setName(next)
+        try {
+            const res = await fetch(`/api/os/channels/${channelId}`, {
+                method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: next }),
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || '이름을 못 바꿨어요')
+            if (data.channel?.name) setName(data.channel.name)
+            await refreshChannels()
+        } catch (e) {
+            setName(prev)
+            setErr(e instanceof Error ? e.message : '이름을 못 바꿨어요')
+        }
+    }, [nameDraft, name, channelId, refreshChannels])
 
     const send = useCallback(async () => {
         const text = input.trim()
@@ -138,7 +161,33 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                         ))}
                         {members.length > 3 && <span className="os-stack-more">+{members.length - 3}</span>}
                     </span>
-                    <span>{name}</span>
+                    <span className="os-chat-head-name">
+                        {renaming ? (
+                            <input
+                                className="os-group-name-input"
+                                value={nameDraft}
+                                maxLength={40}
+                                aria-label="방 이름"
+                                autoFocus
+                                onChange={e => setNameDraft(e.target.value)}
+                                onBlur={() => { void saveName() }}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') { e.preventDefault(); void saveName() }
+                                    if (e.key === 'Escape') { setRenaming(false); setNameDraft(name) }
+                                }}
+                            />
+                        ) : (
+                            <>
+                                <span>{name}</span>
+                                <button
+                                    type="button"
+                                    aria-label="방 이름 바꾸기"
+                                    title="이름 바꾸기"
+                                    onClick={() => { setNameDraft(name); setRenaming(true) }}
+                                >이름</button>
+                            </>
+                        )}
+                    </span>
                     <span style={{ marginLeft: 'auto' }}>
                         <button className="os-icon-btn os-menu" aria-label="멤버 보기" aria-expanded={detailOpen} title="멤버" onClick={() => setDetailOpen(v => !v)}><MenuIcon /></button>
                     </span>

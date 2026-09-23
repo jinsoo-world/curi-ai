@@ -1,5 +1,5 @@
 'use client'
-// 답 기다리는 동안: 작은 아바타(360°/3D) + 회전 상태 문구 + 오로라 (그록식).
+// 답 기다리는 동안: 작은 아바타(고정) + 오로라 상태 문구 (그록식). 얼굴은 돌리지 않는다.
 
 import { useEffect, useState, type ReactNode } from 'react'
 import { pickWorkingStatus, type WorkingStatusOpts } from '@/domains/os/working-status'

@@ -243,6 +243,7 @@ export function applyResponseSettingsToPrompt(systemPrompt: string, resolved: Pi
     if (settings.style) lines.push(`말투: ${settings.style}`)
     lines.push(lengthInstruction(settings))
     lines.push(creativityInstruction(settings))
+    lines.push('서식: 마크다운 굵게(**글자**)나 제목(#)을 쓰지 마라. 평범한 문장과 필요할 때만 짧은 목록(-)으로 답하라. 코드가 필요할 때만 코드 울타리를 쓴다.')
     if (settings.disclaimer) lines.push(`답을 마칠 때 다음 안내문을 자연스럽게 덧붙여라: "${settings.disclaimer}"`)
     if (lines.length === 0) return systemPrompt
     return `${systemPrompt}\n\n[⚙️ 답변 설정]\n${lines.join('\n')}`

@@ -89,6 +89,8 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     const [botPresence, setBotPresenceMap] = useState<Record<string, BotState>>({})
     const [groupSheet, setGroupSheet] = useState(false)
     const [channels, setChannels] = useState<ChannelView[]>([])
+    const [renamingChannelId, setRenamingChannelId] = useState<string | null>(null)
+    const [channelNameDraft, setChannelNameDraft] = useState('')
     const [query, setQuery] = useState('')
     const [demo, setDemo] = useState(false)   // 시연(?demo=1). 서버와 첫 그림이 같아야 해서 효과에서 한 박자 뒤에 읽는다
     const [phone, setPhone] = useState(false) // 좁은 화면(≤900px). 사용 한도 원형과 ＋ 단추가 명단 띠 끝으로 옮겨 간다
@@ -131,6 +133,27 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
 
     useEffect(() => { void refresh() }, [refresh])
     useEffect(() => { void refreshChannels() }, [refreshChannels])
+
+    const saveChannelName = useCallback(async (channelId: string) => {
+        const next = channelNameDraft.trim().slice(0, 40) || '내 팀'
+        setRenamingChannelId(null)
+        const prev = channels.find(c => c.id === channelId)?.name
+        if (prev === next) return
+        setChannels(list => list.map(c => c.id === channelId ? { ...c, name: next } : c))
+        try {
+            const res = await fetch(`/api/os/channels/${channelId}`, {
+                method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: next }),
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || '이름을 못 바꿨어요')
+            if (data.channel?.name) {
+                setChannels(list => list.map(c => c.id === channelId ? { ...c, name: data.channel.name } : c))
+            }
+        } catch {
+            if (prev != null) setChannels(list => list.map(c => c.id === channelId ? { ...c, name: prev } : c))
+        }
+    }, [channelNameDraft, channels])
 
     // @멘션 넘김: 상대 봇이 「나를 부른다」 — 읽지 않음 + 잠깐 펄스
     useEffect(() => {
@@ -375,18 +398,46 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                         <div className="os-groups">
                             {channels.map(c => {
                                 const href = `/os/group/${c.id}`
+                                if (renamingChannelId === c.id) {
+                                    return (
+                                        <div key={c.id} className="os-group-row">
+                                            <input
+                                                className="os-group-name-input"
+                                                value={channelNameDraft}
+                                                maxLength={40}
+                                                aria-label="방 이름"
+                                                autoFocus
+                                                onChange={e => setChannelNameDraft(e.target.value)}
+                                                onBlur={() => { void saveChannelName(c.id) }}
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Enter') { e.preventDefault(); void saveChannelName(c.id) }
+                                                    if (e.key === 'Escape') setRenamingChannelId(null)
+                                                }}
+                                            />
+                                        </div>
+                                    )
+                                }
                                 return (
-                                    <Link key={c.id} href={href} prefetch={true} className="os-row-btn" aria-current={pathname === href} style={{ textDecoration: 'none' }}>
-                                        <span className="os-stack" aria-hidden>
-                                            {c.members.slice(0, 3).map(m => (
-                                                <span key={m.mentorId} className="os-stack-item">
-                                                    <BotAvatar shape={m.shape as TeamBot['shape']} color={m.color as TeamBot['color']} state="idle" size={24} />
-                                                </span>
-                                            ))}
-                                            {c.members.length > 3 && <span className="os-stack-more">+{c.members.length - 3}</span>}
-                                        </span>
-                                        <span>{c.name}</span>
-                                    </Link>
+                                    <div key={c.id} className="os-group-row">
+                                        <Link href={href} prefetch={true} className="os-row-btn" aria-current={pathname === href} style={{ textDecoration: 'none' }}>
+                                            <span className="os-stack" aria-hidden>
+                                                {c.members.slice(0, 3).map(m => (
+                                                    <span key={m.mentorId} className="os-stack-item">
+                                                        <BotAvatar shape={m.shape as TeamBot['shape']} color={m.color as TeamBot['color']} state="idle" size={24} />
+                                                    </span>
+                                                ))}
+                                                {c.members.length > 3 && <span className="os-stack-more">+{c.members.length - 3}</span>}
+                                            </span>
+                                            <span>{c.name}</span>
+                                        </Link>
+                                        <button
+                                            type="button"
+                                            className="os-group-rename"
+                                            aria-label={`${c.name} 이름 바꾸기`}
+                                            title="이름 바꾸기"
+                                            onClick={() => { setChannelNameDraft(c.name); setRenamingChannelId(c.id) }}
+                                        >이름</button>
+                                    </div>
                                 )
                             })}
                         </div>

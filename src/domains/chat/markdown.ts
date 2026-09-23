@@ -21,3 +21,29 @@ export function 한글강조_바로잡기(text: string): string {
         // **X.** → **X**.     (닫는 별표 앞의 문장부호를 밖으로)
         .replace(/\*\*([^*\n]+?)([.,!?:;])\*\*/g, '**$1**$2')
 }
+
+
+/**
+ * 봇 답에서 **굵게** 마커를 걷어 낸다. 코드 울타리(```)와 인라인 코드(`)는 건드리지 않는다.
+ * 렌더(BotMarkdown)가 strong 을 평문으로 그리기 전, 남은 별표가 글자로 보이지 않게 한다.
+ */
+export function stripMdBoldMarkers(text: string): string {
+    if (!text || !text.includes('**')) return text
+    const parts: string[] = []
+    // 코드 울타리 / 인라인 코드 / 그 외
+    const re = /```[\s\S]*?```|`[^`\n]+`/g
+    let last = 0
+    let m: RegExpExecArray | null
+    while ((m = re.exec(text)) !== null) {
+        if (m.index > last) parts.push(_stripBoldChunk(text.slice(last, m.index)))
+        parts.push(m[0])
+        last = m.index + m[0].length
+    }
+    if (last < text.length) parts.push(_stripBoldChunk(text.slice(last)))
+    return parts.join('')
+}
+
+function _stripBoldChunk(chunk: string): string {
+    // **...** 쌍을 내용만 남긴다. 짝이 안 맞는 잔여 ** 도 제거.
+    return chunk.replace(/\*\*([^*\n]+?)\*\*/g, '$1').replace(/\*\*/g, '')
+}

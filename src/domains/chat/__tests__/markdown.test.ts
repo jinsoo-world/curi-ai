@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { 한글강조_바로잡기 } from '../markdown'
+import { 한글강조_바로잡기, stripMdBoldMarkers } from '../markdown'
 
 describe('한글 강조 표시 바로잡기', () => {
     it('닫는 별표 뒤에 조사가 붙어 깨지던 실제 문장을 고친다', () => {
@@ -29,5 +29,24 @@ describe('한글 강조 표시 바로잡기', () => {
     it('한 문장에 두 군데가 깨져도 둘 다 고친다', () => {
         const 원문 = '**"앞"**과 **"뒤"**를'
         expect(한글강조_바로잡기(원문)).toBe('"**앞**"과 "**뒤**"를')
+    })
+})
+
+describe('stripMdBoldMarkers — 봇 답 **굵게** 제거', () => {
+    it('일반 **굵게** 를 평문으로 푼다', () => {
+        expect(stripMdBoldMarkers('안녕 **그록봇** 반가워')).toBe('안녕 그록봇 반가워')
+    })
+    it('따옴표 안 굵게도 푼다', () => {
+        expect(stripMdBoldMarkers('**"도움이 필요한…"**')).toBe('"도움이 필요한…"')
+    })
+    it('코드 울타리 안 ** 는 남긴다', () => {
+        const src = '설명\n```\nconst x = "**keep**"\n```\n끝'
+        expect(stripMdBoldMarkers(src)).toBe(src)
+    })
+    it('인라인 코드 안 ** 는 남긴다', () => {
+        expect(stripMdBoldMarkers('값은 `**x**` 입니다')).toBe('값은 `**x**` 입니다')
+    })
+    it('별표 없으면 그대로', () => {
+        expect(stripMdBoldMarkers('평문')).toBe('평문')
     })
 })

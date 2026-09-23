@@ -153,6 +153,25 @@ export async function createChannel(
 }
 
 /** 멤버 추가 (내 팀의 봇만) */
+/** 방 이름 바꾸기 (내 방에서만). 비우면 「내 팀」 */
+export async function renameChannel(
+    db: SupabaseClient, userId: string, channelId: string, name: string,
+): Promise<Channel> {
+    const ch = await getChannel(db, userId, channelId)
+    if (!ch) throw new Error('그 방을 못 찾았어요')
+    const next = (name || '내 팀').trim().slice(0, 40) || '내 팀'
+    const { data, error } = await db
+        .from('channels')
+        .update({ name: next })
+        .eq('id', channelId)
+        .eq('user_id', userId)
+        .select('id, name, kind, created_at')
+        .single()
+    if (error || !data) throw wrap(error ?? { message: '방 이름을 못 바꿨어요' })
+    const row = data as { id: string; name: string; kind: 'group'; created_at: string }
+    return { id: row.id, name: row.name, kind: row.kind, createdAt: row.created_at, memberMentorIds: ch.memberMentorIds }
+}
+
 export async function addChannelMembers(
     db: SupabaseClient, userId: string, channelId: string, mentorIds: string[],
 ): Promise<string[]> {

@@ -94,7 +94,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
     const [addSheet, setAddSheet] = useState(false)
     const [demo, setDemo] = useState(false)
     const endRef = useRef<HTMLDivElement>(null)
-    const cacheLoaded = useRef(false)   // 되살리기 전에 빈 목록을 저장해 지워 버리는 일을 막는다
+    const cacheLoadedFor = useRef<string | null>(null)   // 이 mentorId 캐시를 읽은 뒤에만 다시 쓴다
     // === 사진 첨부 ===
     const photos = usePhotoAttach()
     const [dragging, setDragging] = useState(false)
@@ -117,29 +117,32 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         setBotPresence(mentorId, state)
     }, [mentorId, state, setBotPresence])
 
-    // 시연(?demo=1) 표식 + 이 봇과 아까 나눈 대화(탭 저장소)를 되살린다. 서버는 부르지 않는다 = 두 번째 방문은 바로 그 자리.
+    // 시연(?demo=1) + 탭 캐시를 이 봇 키로 동기 복원. mentorId 가 바뀌면 바로 비우고 다시 읽는다
+    // (이전엔 비동기 then 이라 쓰기 효과가 다른 봇 말에 캐시를 덮어쓸 수 있었다).
     useEffect(() => {
-        void Promise.resolve().then(() => {
-            setDemo(new URLSearchParams(window.location.search).get('demo') === '1')
-            const cached = readChatCache<Msg>(window.sessionStorage, mentorId)
-            if (cached) { setMessages(cached.messages); setSessionId(cached.sessionId) }
-            cacheLoaded.current = true
-        })
+        setDemo(new URLSearchParams(window.location.search).get('demo') === '1')
+        cacheLoadedFor.current = null
+        const cached = readChatCache<Msg>(window.sessionStorage, mentorId)
+        if (cached) {
+            setMessages(cached.messages)
+            setSessionId(cached.sessionId)
+        } else {
+            setMessages([])
+            setSessionId(null)
+        }
+        cacheLoadedFor.current = mentorId
     }, [mentorId])
 
-
-    // 로그인 직후, 새 탭: 손님 때 탭에만 있던 말은 계정으로 넘기고, 아니면 서버 최근 대화방을 불러온다.
-    // 대표 0923 「로그인을 하면 해당 계정에 대화들이 팀장들 대화방에 쌓여야지 왜 자꾸 초기화되냐」
-    // 옛 /chat 경로만 /api/sessions/merge 를 썼고 /os 는 안 써서, 손님→로그인 순간 방이 비는 것처럼 보였다.
+    // 로그인 사용자: 서버 최근 대화방을 항상 불러 클라우드 기록을 살린다.
+    // 탭 캐시에 sessionId 가 있어도 건너뛰지 않는다(봇 전환 후 빈 방처럼 보이던 원인).
+    // 손님 때 탭에만 있던 말은 /api/sessions/merge 로 계정에 넘긴다.
     useEffect(() => {
         if (guest) return
         let alive = true
         void (async () => {
-            await Promise.resolve()
             const cached = readChatCache<Msg>(window.sessionStorage, mentorId)
             const realSid = cached?.sessionId && !cached.sessionId.startsWith('guest-') ? cached.sessionId : null
 
-            // 손님으로 나눈 말(세션 id 없음)이 탭에 남아 있으면 계정 대화방으로 이관
             if (cached && cached.messages.length > 0 && !realSid) {
                 try {
                     const mergeRes = await fetch('/api/sessions/merge', {
@@ -156,13 +159,10 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                         setSessionId(sid)
                         setMessages(prev => prev.length > 0 ? prev : cached.messages)
                         writeChatCache(window.sessionStorage, mentorId, { sessionId: sid, messages: cached.messages })
-                        return
+                        // 이관 후에도 서버에서 한 번 더 읽어 맞춘다(아래)
                     }
                 } catch { /* 이관 실패해도 아래 서버 복원으로 이어간다 */ }
             }
-
-            // 이미 계정 세션이 탭에 있으면 첫 효과에서 그린 내용을 그대로 둔다
-            if (realSid) return
 
             try {
                 const sr = await fetch(`/api/sessions?mentorId=${encodeURIComponent(mentorId)}`, { cache: 'no-store' })
@@ -174,15 +174,24 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                 const rows = (md?.messages ?? []).filter(m => m.role === 'user' || m.role === 'assistant').slice(-50)
                 if (!alive) return
                 setSessionId(sid)
-                if (rows.length) setMessages(prev => prev.length > 0 ? prev : rows.map(m => ({ id: m.id, role: m.role as Msg['role'], content: m.content, createdAt: (m as { createdAt?: string }).createdAt })))
-            } catch { /* 못 불러와도 새 대화로 시작한다 */ }
+                // 서버에 말이 있으면 그걸 쓴다. 저장 직전(스트림 중 전환)엔 캐시가 더 길 수 있어 더 긴 쪽을 남긴다.
+                if (rows.length > 0) {
+                    const mapped = rows.map(m => ({
+                        id: m.id,
+                        role: m.role as Msg['role'],
+                        content: m.content,
+                        createdAt: (m as { createdAt?: string }).createdAt,
+                    }))
+                    setMessages(prev => (prev.length > mapped.length ? prev : mapped))
+                }
+            } catch { /* 못 불러와도 캐시/새 대화로 이어간다 */ }
         })()
         return () => { alive = false }
     }, [mentorId, guest])
 
-    // 말이 오갈 때마다(답이 다 온 뒤) 탭 저장소에 최근 50개를 남긴다. 되살리기 전(첫 그림)에는 쓰지 않는다
+    // 말이 오갈 때마다(답이 다 온 뒤) 탭 저장소에 최근 50개를 남긴다. 이 봇 캐시를 읽기 전에는 쓰지 않는다
     useEffect(() => {
-        if (streaming || !cacheLoaded.current) return
+        if (streaming || cacheLoadedFor.current !== mentorId) return
         writeChatCache(window.sessionStorage, mentorId, { sessionId, messages })
     }, [messages, sessionId, streaming, mentorId])
 
@@ -236,6 +245,14 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         if (guest) return null
         if (sessionId) return sessionId
         try {
+            // 이미 이 봇 대화방이 있으면 재사용한다. 새로 만들면 예전 말이 안 보이는 「빈 방」이 된다.
+            const sr = await fetch(`/api/sessions?mentorId=${encodeURIComponent(mentorId)}`, { cache: 'no-store' })
+            const sd = sr.ok ? await sr.json() as { sessions?: { id: string }[] } : null
+            const existing = sd?.sessions?.[0]?.id
+            if (existing) {
+                setSessionId(existing)
+                return existing
+            }
             const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mentorId }) })
             const d = await res.json()
             const id = d?.session?.id ?? null

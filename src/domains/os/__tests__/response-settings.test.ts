@@ -109,6 +109,7 @@ describe('applyResponseSettingsToPrompt — 프롬프트에 얹기', () => {
         const out = applyResponseSettingsToPrompt('원본', { settings: defaultResponseSettings('personal') })
         expect(out).toContain('원본')
         expect(out).toContain('[⚙️ 답변 설정]')
+        expect(out).toContain('마크다운 굵게')
     })
     it('목적·추가 지침·말투·안내문을 다 채우면 전부 들어간다', () => {
         const settings = {
