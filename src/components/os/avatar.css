@@ -6,8 +6,7 @@
     position: relative; display: inline-block; line-height: 0; flex: none;
     --배지: 18px; --얼굴: 28px; --말함-주기: 500ms;
 }
-/* 그림만 살짝 크게(10%). 자리(width/height)는 그대로라 옆 것과 안 부딪힌다. 부르는 쪽이 --확대 로 바꿀 수 있다 */
-.bot-avatar svg { display: block; overflow: visible; transform: scale(var(--확대, 1.1)); }
+.bot-avatar svg { display: block; overflow: visible; }
 
 /* 몸: 가운데(50,50) 기준으로 늘고 줄고 흔들린다 */
 .bot-avatar .body { transform-origin: 50px 50px; transition: transform 300ms ease; }
@@ -18,10 +17,16 @@
 .bot-avatar.is-blinking .eye { transform: scaleY(.08); }
 .bot-avatar.wink-left .eye-left, .bot-avatar.wink-right .eye-right { transform: scaleY(.12) scaleX(1.25); }
 
-/* 눈꺼풀: 몸 색 판이 눈알 모양으로 잘려 위에서 내려온다. 평소엔 완전히 올라가 안 보인다 */
-.bot-avatar .lid { transform-box: fill-box; transform-origin: center; transform: translateY(-100%); transition: transform 420ms ease; }
+/* 눈꺼풀: 몸 색 판이 눈알 모양으로 잘려 위에서 내려온다. 평소엔 완전히 올라가 안 보인다. 뜨는 건 0.2초로 빠르게 */
+.bot-avatar .lid { transform-box: fill-box; transform-origin: center; transform: translateY(-100%); transition: transform 200ms ease; }
 /* 눈동자: 일하는 중엔 좌우로 훑고, 졸릴 땐 아래로 내려온다 */
-.bot-avatar .pupil { transform-box: fill-box; transform-origin: center; transition: transform 420ms ease; }
+.bot-avatar .pupil { transform-box: fill-box; transform-origin: center; transition: transform 200ms ease; }
+
+/* 졸음(is-drowsy, 컴포넌트가 5분 뒤 붙임): 60초에 걸쳐 스르륵 눈꺼풀 반쯤, 눈동자 아래, 입 작게 (대표 0923 「5분 동안 말 안 걸면 조금씩 감기게」) */
+.bot-avatar.is-drowsy { --눈-깜빡-길이: 300ms; }
+.bot-avatar.is-drowsy .lid { transform: translateY(-44%); transition-duration: 60s; }
+.bot-avatar.is-drowsy .pupil { transform: translateY(32%); transition-duration: 60s; }
+.bot-avatar.is-drowsy .mouth { transform: scale(.7); transition: transform 60s ease; }
 
 /* 몸 위·아래 점, 자는 z */
 .bot-avatar .dots circle { fill: var(--os-글-연); opacity: .25; }
@@ -46,12 +51,8 @@
 
 /* ---- 상태 8개 ---- */
 
-/* idle 쉬는 중 = 졸음 (대표 0923 「일 안 할 때는 눈 반쯤 감겨서 졸게」): 눈꺼풀 반쯤, 눈동자 아래, 입 작게, 아주 느린 숨. 깜빡임은 JS(3~6초, 천천히) */
-.bot-avatar[data-state="idle"] { --눈-깜빡-길이: 300ms; }
+/* idle 쉬는 중: 눈 뜨고 아주 느린 숨. 깜빡임은 JS(3~6초). 5분 지나면 위 is-drowsy 가 붙어 졸기 시작한다 */
 .bot-avatar[data-state="idle"] .body { animation: bot-breathe var(--호흡-주기, 5000ms) ease-in-out infinite; }
-.bot-avatar[data-state="idle"] .lid { transform: translateY(-44%); }
-.bot-avatar[data-state="idle"] .pupil { transform: translateY(32%); }
-.bot-avatar[data-state="idle"] .mouth { transform: scale(.7); }
 
 /* listening 듣는 중: 눈이 커지고 입력창(아래) 쪽으로 시선, 몸이 살짝 기울어 귀 기울임 */
 .bot-avatar[data-state="listening"] .eye-pos { transform: translate(0, 6%) scale(1.22); }
