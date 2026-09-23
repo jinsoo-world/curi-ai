@@ -9,6 +9,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 const TABLE_MISSING = '42P01'
+const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 
 export class ChannelTableMissing extends Error {
     constructor() { super('channels 표가 아직 없다. supabase/migrations/20260925_channels.sql 을 실행해야 한다') }
@@ -36,7 +37,7 @@ export interface ChannelMessage {
 }
 
 function wrap(error: { code?: string; message: string }): Error {
-    return error.code === TABLE_MISSING ? new ChannelTableMissing() : new Error(error.message)
+    return (error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST) ? new ChannelTableMissing() : new Error(error.message)
 }
 
 /**

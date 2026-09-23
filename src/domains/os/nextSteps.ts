@@ -6,6 +6,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 const TABLE_MISSING = '42P01'
+const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 
 export class NextStepTableMissing extends Error {
     constructor() { super('next_steps 표가 아직 없다. supabase/migrations/20260923_agent_os_p0.sql 을 실행해야 한다') }
@@ -28,7 +29,7 @@ function toStep(r: Row): NextStep {
 }
 
 function rethrow(error: { code?: string; message?: string }): never {
-    if (error.code === TABLE_MISSING) throw new NextStepTableMissing()
+    if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) throw new NextStepTableMissing()
     throw new Error(error.message ?? '미룬 일을 읽지 못했다')
 }
 

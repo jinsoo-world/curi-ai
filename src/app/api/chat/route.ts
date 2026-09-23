@@ -331,6 +331,12 @@ export async function POST(req: Request) {
 
         // 🎛 답변 설정 반영 — 목적·추가 지침·말투·길이·창의성·안내문을 프롬프트에 얹는다(domains/os/response-settings)
         const responseSettings = await loadResponseSettingsForChat(createAdminClient(), mentorId, mentor as { creator_id?: string | null }, user?.id ?? null)
+            .catch(async (e) => {
+                console.error('[chat] response settings', e instanceof Error ? e.message : e)
+                const { mergeResponseSettings, resolveMaxOutputTokens } = await import('@/domains/os/response-settings')
+                const settings = { ...mergeResponseSettings(null, 'personal'), creativity: 'adaptive' as const }
+                return { settings, kind: 'personal' as const, maxOutputTokens: resolveMaxOutputTokens(settings), recencyOn: settings.recencyOn, citationsOn: settings.citationsOn, noAnswerText: settings.noAnswerText, initialMessage: settings.initialMessage }
+            })
         systemPrompt = applyResponseSettingsToPrompt(systemPrompt, responseSettings)
 
         // 🧩 사용자가 깃허브에서 내려받아 이 봇에 붙인 스킬(지침 글). 울타리 안에만 들어가고 도구 게이트는 못 넘는다(domains/os/skills)

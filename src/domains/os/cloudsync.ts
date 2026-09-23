@@ -26,6 +26,7 @@ import {
 
 /** 표가 아직 DB 에 없을 때 나는 Postgres 오류 번호 */
 const TABLE_MISSING = '42P01'
+const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 /** 한 번 실행에서 새로 넣는 파일・문서 수 상한(시간 초과 방지, cron/routines 와 같은 생각) */
 const MAX_PER_SYNC_RUN = 20
 
@@ -153,7 +154,7 @@ export async function registerCloudSyncs(
             folder_or_page_id: it.id, name, status: 'pending',
         }, { onConflict: 'user_id,mentor_id,provider,folder_or_page_id' }).select('id').single()
         if (error) {
-            if (error.code === TABLE_MISSING) throw new SyncTableMissing()
+            if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) throw new SyncTableMissing()
             throw new Error(error.message)
         }
         out.push({ id: (data as { id: string }).id, folderOrPageId: it.id, name })
@@ -167,7 +168,7 @@ export async function listCloudSyncs(db: SupabaseClient, userId: string, mentorI
     const { data, error } = await db.from('knowledge_syncs').select(SELECT)
         .eq('user_id', userId).eq('mentor_id', mentorId).order('created_at', { ascending: false })
     if (error) {
-        if (error.code === TABLE_MISSING) return []
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) return []
         throw new Error(error.message)
     }
     return ((data ?? []) as SyncRaw[]).map(toView)
@@ -177,7 +178,7 @@ export async function listCloudSyncs(db: SupabaseClient, userId: string, mentorI
 export async function deleteCloudSync(db: SupabaseClient, userId: string, syncId: string): Promise<void> {
     const { error, count } = await db.from('knowledge_syncs').delete({ count: 'exact' }).eq('id', syncId).eq('user_id', userId)
     if (error) {
-        if (error.code === TABLE_MISSING) throw new SyncTableMissing()
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) throw new SyncTableMissing()
         throw new Error(error.message)
     }
     if (!count) throw new Error('그 동기화를 못 찾았어요')
@@ -211,7 +212,7 @@ export async function getCloudSyncRow(db: SupabaseClient, userId: string, syncId
         .select('id, user_id, mentor_id, provider, folder_or_page_id, name, last_synced_at')
         .eq('id', syncId).eq('user_id', userId).maybeSingle()
     if (error) {
-        if (error.code === TABLE_MISSING) return null
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) return null
         throw new Error(error.message)
     }
     if (!data) return null
@@ -343,7 +344,7 @@ export async function listDueCloudSyncs(db: SupabaseClient, limit = 30): Promise
         .order('last_synced_at', { ascending: true, nullsFirst: true })
         .limit(limit)
     if (error) {
-        if (error.code === TABLE_MISSING) return []
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) return []
         throw new Error(error.message)
     }
     return ((data ?? []) as { id: string; user_id: string; mentor_id: string; provider: CloudProvider; folder_or_page_id: string; name: string; last_synced_at: string | null }[])

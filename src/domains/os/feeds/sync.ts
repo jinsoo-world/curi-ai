@@ -20,6 +20,7 @@ import { fetchPodcastItems } from './podcast'
 import { fetchSocialStubItems, SOCIAL_STUB_NOTE } from './social-stub'
 
 const TABLE_MISSING = '42P01'
+const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 const COLUMN_MISSING = '42703'
 
 export const FEED_CAP_FULL_NOTE = `자료 칸이 다 찼어요(${MAX_SOURCES_PER_BOT}개). 자료를 빼야 더 가져와요`

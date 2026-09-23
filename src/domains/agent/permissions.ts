@@ -10,6 +10,7 @@ import type { IrreversibleAction } from './tool-gate'
 
 /** 표가 아직 없을 때 나는 Postgres 오류 번호 */
 const TABLE_MISSING = '42P01'
+const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 
 export class PermissionTableMissing extends Error {
     constructor() { super('permission_requests 표가 아직 없다. supabase/migrations/20260923_agent_os_p0.sql 을 실행해야 한다') }
@@ -77,7 +78,7 @@ export async function createPermissionRequest(
         .select(SELECT)
         .single()
     if (error || !data) {
-        if (error?.code === TABLE_MISSING) throw new PermissionTableMissing()
+        if ((error?.code === TABLE_MISSING || error?.code === TABLE_MISSING_REST)) throw new PermissionTableMissing()
         throw new Error(error?.message ?? '승인 카드를 만들지 못했다')
     }
     return toCard(data as Raw)
@@ -91,7 +92,7 @@ export async function listPermissionRequests(
     if (status !== 'all') q = q.eq('status', status)
     const { data, error } = await q.order('created_at', { ascending: false }).limit(limit)
     if (error) {
-        if (error.code === TABLE_MISSING) throw new PermissionTableMissing()
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) throw new PermissionTableMissing()
         throw new Error(error.message)
     }
     return ((data ?? []) as Raw[]).map(toCard)
@@ -122,7 +123,7 @@ export async function decidePermissionRequest(
         .select(SELECT)
         .maybeSingle()
     if (error) {
-        if (error.code === TABLE_MISSING) throw new PermissionTableMissing()
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) throw new PermissionTableMissing()
         throw new Error(error.message)
     }
     return data ? toCard(data as Raw) : null

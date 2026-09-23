@@ -7,6 +7,7 @@ import type { NewBotInput, TeamBot } from './types'
 
 /** 표가 아직 DB 에 없을 때(마이그레이션 미적용) 나는 Postgres 오류 번호 */
 const TABLE_MISSING = '42P01'
+const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 
 type Row = {
     id: string; mentor_id: string; role: TeamBot['role']; shape: TeamBot['shape']; color: TeamBot['color']
@@ -28,7 +29,7 @@ export async function listTeam(db: SupabaseClient, userId: string): Promise<Team
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true })
     if (error) {
-        if (error.code === TABLE_MISSING) throw new TeamTableMissing()
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) throw new TeamTableMissing()
         throw new Error(error.message)
     }
     const rows = (data ?? []) as unknown as Row[]
@@ -114,7 +115,7 @@ export async function createTeamBot(
     if (tErr || !tb) {
         // 팀 줄을 못 만들었으면 몸도 지운다 (반쪽 봇을 남기지 않는다)
         await db.from('mentors').delete().eq('id', mentor.id)
-        if (tErr?.code === TABLE_MISSING) throw new TeamTableMissing()
+        if ((tErr?.code === TABLE_MISSING || tErr?.code === TABLE_MISSING_REST)) throw new TeamTableMissing()
         throw new Error(tErr?.message ?? '팀에 넣지 못했다')
     }
 

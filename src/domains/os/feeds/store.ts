@@ -15,6 +15,7 @@ import { withScheme } from './rss'
 import { SOCIAL_STUB_NOTE } from './social-stub'
 
 const TABLE_MISSING = '42P01'
+const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 /** 봇 하나에 붙일 수 있는 계정 수 */
 export const MAX_FEEDS_PER_BOT = 5
 
@@ -23,7 +24,7 @@ export class FeedTableMissing extends Error {
 }
 
 function fail(error: { code?: string; message?: string } | null): never {
-    if (error?.code === TABLE_MISSING) throw new FeedTableMissing()
+    if ((error?.code === TABLE_MISSING || error?.code === TABLE_MISSING_REST)) throw new FeedTableMissing()
     throw new Error(error?.message ?? '연결 표를 읽지 못했어요')
 }
 

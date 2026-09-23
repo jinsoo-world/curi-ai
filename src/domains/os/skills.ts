@@ -156,6 +156,7 @@ export function applySkills(prompt: string, skills: readonly SkillForPrompt[]): 
 // ---------- DB ----------
 
 const TABLE_MISSING = '42P01'
+const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 
 export class SkillTableMissing extends Error {
     constructor() { super('bot_skills 표가 아직 없다. supabase/migrations/20260930_connect_skills.sql 을 실행해야 한다') }
@@ -187,13 +188,13 @@ function toView(r: Raw): SkillView {
 }
 
 function dbError(error: { code?: string; message: string }): never {
-    if (error.code === TABLE_MISSING) throw new SkillTableMissing()
+    if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) throw new SkillTableMissing()
     throw new Error(error.message)
 }
 
 export async function listSkills(db: SupabaseClient, userId: string): Promise<SkillView[]> {
     const { data, error } = await db.from('bot_skills').select(SELECT).eq('user_id', userId).order('created_at', { ascending: true })
-    if (error) { if (error.code === TABLE_MISSING) return []; throw new Error(error.message) }
+    if (error) { if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) return []; throw new Error(error.message) }
     return ((data ?? []) as Raw[]).map(toView)
 }
 
@@ -262,7 +263,7 @@ export const BUILTIN_SKILLS: readonly BuiltinSkillView[] = [
 export async function skillsForMentor(db: SupabaseClient, userId: string, mentorId: string): Promise<SkillForPrompt[]> {
     const { data, error } = await db.from('bot_skills').select('name, content, mentor_ids')
         .eq('user_id', userId).eq('enabled', true).order('created_at', { ascending: true })
-    if (error) { if (error.code === TABLE_MISSING) return []; throw new Error(error.message) }
+    if (error) { if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) return []; throw new Error(error.message) }
     return ((data ?? []) as Pick<Raw, 'name' | 'content' | 'mentor_ids'>[])
         .filter(r => !Array.isArray(r.mentor_ids) || r.mentor_ids.length === 0 || r.mentor_ids.includes(mentorId))
         .map(r => ({ name: r.name, content: r.content }))

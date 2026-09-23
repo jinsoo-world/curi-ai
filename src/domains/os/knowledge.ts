@@ -11,6 +11,7 @@ import { markInjectionPatterns } from '@/domains/chat/injection'
 
 /** 표가 아직 DB 에 없을 때 나는 Postgres 오류 번호 */
 const TABLE_MISSING = '42P01'
+const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 /** 표에 아직 없는 칸을 적어 넣었을 때 나는 Postgres 오류 번호 (컬럼 없음) */
 const COLUMN_MISSING = '42703'
 
@@ -36,7 +37,7 @@ export async function assertBotOwned(db: SupabaseClient, userId: string, mentorI
         .eq('mentor_id', mentorId)
         .maybeSingle()
     if (error) {
-        if (error.code === TABLE_MISSING) throw new BotNotMine()
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) throw new BotNotMine()
         throw new Error(error.message)
     }
     if (!data) throw new BotNotMine()

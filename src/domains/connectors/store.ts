@@ -12,6 +12,7 @@ import { cleanKind, type ConnectorKind, type ConnectorStatus, type ConnectorView
 
 /** 표가 아직 DB 에 없을 때 나는 Postgres 오류 번호 */
 const TABLE_MISSING = '42P01'
+const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 
 /** 한 사람이 같은 종류를 여러 개 붙일 수 있는 최대 개수 */
 export const MAX_PER_KIND = 3
@@ -48,7 +49,7 @@ export async function listConnectors(db: SupabaseClient, userId: string): Promis
     const { data, error } = await db.from('connectors').select(SELECT)
         .eq('user_id', userId).order('created_at', { ascending: true })
     if (error) {
-        if (error.code === TABLE_MISSING) return []
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) return []
         throw new Error(error.message)
     }
     return ((data ?? []) as Raw[]).map(toView)
@@ -60,7 +61,7 @@ export async function findConnector(db: SupabaseClient, userId: string, kind: Co
         .eq('user_id', userId).eq('kind', kind).eq('status', 'connected')
         .order('created_at', { ascending: true }).limit(1).maybeSingle()
     if (error) {
-        if (error.code === TABLE_MISSING) return null
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) return null
         throw new Error(error.message)
     }
     return data ? toView(data as Raw) : null
@@ -91,7 +92,7 @@ export async function createConnector(
         status: 'connected',
     }).select(SELECT).single()
     if (error || !data) {
-        if (error?.code === TABLE_MISSING) throw new ConnectorTableMissing()
+        if ((error?.code === TABLE_MISSING || error?.code === TABLE_MISSING_REST)) throw new ConnectorTableMissing()
         throw new Error(error?.message ?? '연결을 붙이지 못했어요')
     }
     return toView(data as Raw)
@@ -114,7 +115,7 @@ export async function readConnectorSecret(
     const { data, error } = await db.from('connectors').select(SELECT)
         .eq('id', id).eq('user_id', userId).maybeSingle()     // 🔒 남의 연결 번호를 적어 보내도 안 나온다
     if (error) {
-        if (error.code === TABLE_MISSING) throw new ConnectorTableMissing()
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) throw new ConnectorTableMissing()
         throw new Error(error.message)
     }
     if (!data) throw new ConnectorNotMine()
@@ -133,7 +134,7 @@ export async function readConnectorTokenJson(
     const { data, error } = await db.from('connectors').select(SELECT)
         .eq('id', id).eq('user_id', userId).maybeSingle()
     if (error) {
-        if (error.code === TABLE_MISSING) throw new ConnectorTableMissing()
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) throw new ConnectorTableMissing()
         throw new Error(error.message)
     }
     if (!data) throw new ConnectorNotMine()
@@ -158,7 +159,7 @@ export async function updateConnectorToken(
         .update({ secret_encrypted: encryptSecret(JSON.stringify(token), key), status: 'connected' })
         .eq('id', id).eq('user_id', userId)
     if (error) {
-        if (error.code === TABLE_MISSING) throw new ConnectorTableMissing()
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) throw new ConnectorTableMissing()
         throw new Error(error.message)
     }
 }
@@ -168,7 +169,7 @@ export async function deleteConnector(db: SupabaseClient, userId: string, id: st
     const { error, count } = await db.from('connectors').delete({ count: 'exact' })
         .eq('id', id).eq('user_id', userId)
     if (error) {
-        if (error.code === TABLE_MISSING) throw new ConnectorTableMissing()
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) throw new ConnectorTableMissing()
         throw new Error(error.message)
     }
     if (!count) throw new ConnectorNotMine()

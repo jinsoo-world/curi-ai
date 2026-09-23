@@ -10,6 +10,7 @@ import type { OnMissingData, ScheduleKind } from './schedule'
 
 /** 표가 아직 DB 에 없을 때(마이그레이션 미적용) 나는 Postgres 오류 번호 */
 const TABLE_MISSING = '42P01'
+const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 
 export class RoutineTableMissing extends Error {
     constructor() { super('bot_routines 표가 아직 없다. supabase/migrations/20260926_bot_routines.sql 을 실행해야 한다') }
@@ -69,7 +70,7 @@ function toRoutine(r: Row): BotRoutine {
 }
 
 function rethrow(error: { code?: string; message?: string }): never {
-    if (error.code === TABLE_MISSING) throw new RoutineTableMissing()
+    if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) throw new RoutineTableMissing()
     throw new Error(error.message ?? '루틴 표를 읽지 못했다')
 }
 

@@ -12,6 +12,7 @@ import { dispatchWith } from '@/domains/messaging'
 
 /** 표가 아직 DB 에 없을 때(마이그레이션 미적용) 나는 Postgres 오류 번호 */
 const TABLE_MISSING = '42P01'
+const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 /** 칸이 아직 없을 때 */
 const COLUMN_MISSING = '42703'
 
@@ -159,7 +160,7 @@ export async function linkMarketBot(
         .eq('mentor_id', mentorId)
         .eq('user_id', user.id)
         .maybeSingle()
-    if (pErr?.code === TABLE_MISSING) throw new LinkTableMissing()
+    if ((pErr?.code === TABLE_MISSING || pErr?.code === TABLE_MISSING_REST)) throw new LinkTableMissing()
     const prevRow = prev as { id: string; last_notified_at: string | null } | null
     const notify = shouldNotifyOwner(prevRow?.last_notified_at, now)
     if (prevRow) {

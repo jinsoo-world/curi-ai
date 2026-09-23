@@ -6,6 +6,7 @@ import type { MessageLogEntry, MessagingStore, NotificationPrefs } from './types
 
 /** 표가 아직 없을 때 나는 Postgres 오류 번호 */
 export const TABLE_MISSING = '42P01'
+const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 
 type PrefsRow = { push: boolean; sms: boolean; email: boolean; quiet_from: string | null; quiet_to: string | null }
 
@@ -74,6 +75,6 @@ export async function savePrefs(db: SupabaseClient, userId: string, patch: Parti
         quiet_from: next.quietFrom,
         quiet_to: next.quietTo,
     }, { onConflict: 'user_id' })
-    if (error) throw new Error(error.code === TABLE_MISSING ? 'notification_prefs 표가 아직 없다. supabase/migrations/20260927_messaging.sql 을 실행해야 한다' : error.message)
+    if (error) throw new Error((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST) ? 'notification_prefs 표가 아직 없다. supabase/migrations/20260927_messaging.sql 을 실행해야 한다' : error.message)
     return next
 }

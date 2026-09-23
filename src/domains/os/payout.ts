@@ -10,6 +10,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { encryptSecret } from '@/domains/connectors/crypto'
 
 const TABLE_MISSING = '42P01'
+const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 
 export class PayoutTableMissing extends Error {
     constructor() { super('creator_payout_profiles 표가 아직 없다. supabase/migrations/20260931_bot_links_payout.sql 을 실행해야 한다') }
@@ -140,7 +141,7 @@ const SELECT = 'legal_name, email, phone, birth_date, bank_name, account_last4, 
 export async function getPayoutProfile(db: SupabaseClient, userId: string): Promise<PayoutView | null> {
     const { data, error } = await db.from('creator_payout_profiles').select(SELECT).eq('user_id', userId).maybeSingle()
     if (error) {
-        if (error.code === TABLE_MISSING) return null
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) return null
         throw new Error(error.message)
     }
     return data ? toPayoutView(data as Row) : null
@@ -175,7 +176,7 @@ export async function savePayoutProfile(db: SupabaseClient, userId: string, valu
         .select(SELECT)
         .single()
     if (error || !data) {
-        if (error?.code === TABLE_MISSING) throw new PayoutTableMissing()
+        if ((error?.code === TABLE_MISSING || error?.code === TABLE_MISSING_REST)) throw new PayoutTableMissing()
         throw new Error(error?.message ?? '정산 정보를 저장하지 못했다')
     }
     return toPayoutView(data as Row)

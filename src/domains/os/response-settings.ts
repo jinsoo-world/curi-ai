@@ -16,6 +16,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 /** 표가 아직 DB 에 없을 때 나는 Postgres 오류 번호 */
 const TABLE_MISSING = '42P01'
+const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 
 export class ResponseSettingsTableMissing extends Error {
     constructor() { super('bot_response_settings 표가 아직 없다. supabase/migrations/20261001_bot_response_settings.sql 을 실행해야 한다') }
@@ -299,7 +300,7 @@ export async function botHasKnowledge(db: SupabaseClient, mentorId: string): Pro
 export async function fetchResponseSettingsRow(db: SupabaseClient, mentorId: string): Promise<ResponseSettingsRow | null> {
     const { data, error } = await db.from('bot_response_settings').select('*').eq('mentor_id', mentorId).maybeSingle()
     if (error) {
-        if (error.code === TABLE_MISSING) return null
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) return null
         throw new Error(error.message)
     }
     return data as ResponseSettingsRow | null
@@ -370,7 +371,7 @@ export async function saveResponseSettings(
         updated_at: new Date().toISOString(),
     }, { onConflict: 'mentor_id' })
     if (error) {
-        if (error.code === TABLE_MISSING) throw new ResponseSettingsTableMissing()
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) throw new ResponseSettingsTableMissing()
         throw new Error(error.message)
     }
 }
