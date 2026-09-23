@@ -6,8 +6,8 @@
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react'
 import type { BotColor, BotShape, BotState } from '@/domains/os/types'
 import {
-    ERROR_X_MS, ariaLabel, avatarClass, badgePx, blinkHoldMs, eyeKind, eyeLayout, eyeR, facePx,
-    isDoubleBlink, nextBlinkDelay, nextWinkDelay, shouldBlink, showsBadge, showsThinkDots, showsWorkDots, showsZ, talkBeatMs,
+    ERROR_X_MS, IDLE_DROWSY_MS, ariaLabel, avatarClass, badgePx, blinkHoldMs, eyeKind, eyeLayout, eyeR, facePx,
+    isDoubleBlink, nextBlinkDelay, nextWinkDelay, shouldBlink, showsBadge, showsThinkDots, showsWorkDots, showsZ, startDrowsyTimer, talkBeatMs,
 } from './avatar'
 import './avatar.css'
 
@@ -34,8 +34,10 @@ export interface BotAvatarProps {
     shape: BotShape
     color: BotColor
     state?: BotState
-    /** 화면 픽셀. 36(대화 머리), 44(도형 고르기), 72(명단), 96(새 봇 미리보기) 를 쓴다. 기본 83 (72 에서 15% 키움, 중장년 눈 배려) */
+    /** 화면 픽셀. 36(대화 머리), 44(도형 고르기), 72(명단), 96(새 봇 미리보기) 를 쓴다 */
     size?: number
+    /** 쉬는 중 이만큼(ms) 말이 없으면 눈이 스르륵 감긴다. 기본 5분 */
+    idleAfterMs?: number
     /** 리더 얼굴 사진(만든 사람 배지). 있으면 오른쪽 아래에 붙는다 */
     faceUrl?: string | null
     /** 봇 이름. aria-label 이 「이름, 상태」로 읽힌다 */
@@ -69,7 +71,7 @@ function useTimers() {
     return { set, clearAll }
 }
 
-export default function BotAvatar({ shape, color, state = 'idle', size = 83, faceUrl, name, title }: BotAvatarProps) {
+export default function BotAvatar({ shape, color, state = 'idle', size = 72, idleAfterMs = IDLE_DROWSY_MS, faceUrl, name, title }: BotAvatarProps) {
     const fill = `var(--봇-${color})`
     const geo = eyeLayout(shape)
     const reduced = useReducedMotion()
@@ -79,6 +81,14 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 83, fac
     const [wink, setWink] = useState<'L' | 'R' | null>(null)
     const [talkBeat, setTalkBeat] = useState(500)
     const [errorX, setErrorX] = useState(true)
+    const [drowsy, setDrowsy] = useState(false)
+
+    // 0) 졸음 = 쉬는 중이 5분(+봇마다 0~20초) 이어지면 눈꺼풀이 천천히 내려온다. 상태가 바뀌면(말을 걸면) 바로 뜬다
+    useEffect(() => {
+        setDrowsy(false)
+        if (state !== 'idle' || reduced) return
+        return startDrowsyTimer(idleAfterMs, Math.random(), () => setDrowsy(true))
+    }, [state, reduced, idleAfterMs])
 
     // 1) 깜빡임 = 3~6초 불규칙, 다섯 번에 한 번은 두 번 연속
     const blinkTimers = useTimers()
@@ -87,7 +97,7 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 83, fac
         const { set, clearAll } = blinkTimers
         const once = (after?: () => void) => {
             setBlinking(true)
-            set(() => { setBlinking(false); after?.() }, blinkHoldMs(state))
+            set(() => { setBlinking(false); after?.() }, blinkHoldMs(drowsy))
         }
         const schedule = () => set(() => {
             if (isDoubleBlink(Math.random())) once(() => set(() => once(schedule), DOUBLE_GAP_MS))
@@ -97,7 +107,7 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 83, fac
         return clearAll
         // blinkTimers 는 ref 묶음이라 바뀌지 않는다
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [state, reduced])
+    }, [state, reduced, drowsy])
 
     // 2) 말하는 중 = 가끔 한쪽 눈 찡긋 + 첫 박자 랜덤
     const winkTimers = useTimers()
@@ -131,7 +141,7 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 83, fac
     } as CSSProperties
 
     // 👀 동그란 눈 = 검은 테 + 흰 눈알 + 검은 눈동자(살짝 위, 바깥) + 흰 반짝 점 (대표 0923 「눈은 동그랗게, 검정 안에 흰 점」)
-    //    + 눈꺼풀(몸 색, 눈알 모양으로 잘라 얹음) = 쉬는 중엔 반쯤 내려와 졸린 눈. 위치는 avatar.css 가 상태별로 옮긴다
+    //    + 눈꺼풀(몸 색, 눈알 모양으로 잘라 얹음) = 졸릴 때(is-drowsy) 반쯤 내려온다. 위치는 avatar.css 가 옮긴다
     const R = eyeR(geo.w)
     const stroke = R * 0.26
     const rim = R + stroke / 2
@@ -172,7 +182,7 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 83, fac
 
     return (
         <span
-            className={avatarClass({ blinking, wink, faceUrl })}
+            className={avatarClass({ blinking, wink, drowsy, faceUrl })}
             data-state={state}
             data-shape={shape}
             role="img"
@@ -191,10 +201,10 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 83, fac
                 {/* 🍑 귀여움: 볼터치 2개 + 작은 미소 (대표 0923 「조금 더 귀엽게, 그록봇 느낌 살짝 빼고」). 자는 중, 장애일 땐 미소를 감춘다 */}
                 {state !== 'error' && (
                     <g className="cute" aria-hidden="true">
-                        <circle cx={geo.lx - R * 0.9} cy={geo.cy + R * 1.3} r={R * 0.52} fill="rgba(255, 128, 150, 0.38)" />
-                        <circle cx={geo.rx + R * 0.9} cy={geo.cy + R * 1.3} r={R * 0.52} fill="rgba(255, 128, 150, 0.38)" />
+                        <circle cx={geo.lx - R * 0.9} cy={geo.cy + R * 1.3} r={R * 0.48} fill="rgba(255, 128, 150, 0.38)" />
+                        <circle cx={geo.rx + R * 0.9} cy={geo.cy + R * 1.3} r={R * 0.48} fill="rgba(255, 128, 150, 0.38)" />
                         {state !== 'sleeping' && (
-                            <rect className="mouth" x={50 - R * 0.4} y={geo.cy + R * 1.45} width={R * 0.8} height={R} rx={R * 0.4}
+                            <rect className="mouth" x={50 - R * 0.36} y={geo.cy + R * 1.45} width={R * 0.72} height={R * 0.9} rx={R * 0.36}
                                 fill="#fff" stroke={eyeColor} strokeWidth={R * 0.2} />
                         )}
                     </g>

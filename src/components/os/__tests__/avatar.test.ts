@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
     ariaLabel, avatarClass, badgePx, blinkHoldMs, eyeGap, eyeKind, eyeLayout, eyeR, eyeThicknessPx, facePx,
-    isDoubleBlink, nextBlinkDelay, nextWinkDelay, shouldBlink, talkBeatMs, STATE_KO, SHAPE_KO, COLOR_KO,
+    isDoubleBlink, nextBlinkDelay, nextWinkDelay, shouldBlink, startDrowsyTimer, talkBeatMs,
+    DROWSY_JITTER_MS, IDLE_DROWSY_MS, STATE_KO, SHAPE_KO, COLOR_KO,
 } from '../avatar'
 import { SHAPES, COLORS } from '@/domains/os/presets'
 import type { BotState } from '@/domains/os/types'
@@ -29,6 +30,7 @@ describe('os/avatar — 눈 자리', () => {
             expect(g.rx + r * 1.13).toBeLessThan(90)
         }
         expect(eyeLayout('circle').rx - eyeLayout('circle').lx).toBe(30)   // 예전 20 → 1.5배
+        expect(eyeLayout('circle').w).toBe(8)                                // 눈 크기는 기본값 (대표 0923 「다 눈 기본값으로」)
     })
 
     it('물방울은 꼭지 아래(눈이 더 아래), 클로버는 가운데 잎 사이(50)에 조금 작게', () => {
@@ -84,14 +86,35 @@ describe('os/avatar — 상태·글자', () => {
         expect(avatarClass({ blinking: false, wink: null })).toBe('bot-avatar')
         expect(avatarClass({ blinking: true, wink: 'L', faceUrl: 'x.png' })).toBe('bot-avatar is-blinking wink-left has-face')
         expect(avatarClass({ blinking: false, wink: 'R' })).toBe('bot-avatar wink-right')
+        expect(avatarClass({ blinking: false, wink: null, drowsy: true })).toBe('bot-avatar is-drowsy')
     })
 })
 
 describe('os/avatar — 시간표(불규칙)', () => {
-    it('눈 감고 있는 시간: 쉬는 중(졸음)은 천천히 320ms, 나머지는 120ms', () => {
-        expect(blinkHoldMs('idle')).toBe(320)
-        expect(blinkHoldMs('thinking')).toBe(120)
-        expect(blinkHoldMs('working')).toBe(120)
+    it('눈 감고 있는 시간: 졸린 중은 천천히 320ms, 깨어 있으면 120ms', () => {
+        expect(blinkHoldMs(true)).toBe(320)
+        expect(blinkHoldMs(false)).toBe(120)
+    })
+
+    it('졸음 시계: 5분 + 봇마다 0~20초 뒤에 한 번 울리고, 취소하면 안 울린다', () => {
+        vi.useFakeTimers()
+        try {
+            expect(IDLE_DROWSY_MS).toBe(5 * 60 * 1000)
+            const onDrowsy = vi.fn()
+            startDrowsyTimer(IDLE_DROWSY_MS, 0.5, onDrowsy)
+            vi.advanceTimersByTime(IDLE_DROWSY_MS + DROWSY_JITTER_MS / 2 - 1)
+            expect(onDrowsy).not.toHaveBeenCalled()
+            vi.advanceTimersByTime(1)
+            expect(onDrowsy).toHaveBeenCalledTimes(1)
+
+            const cancelled = vi.fn()
+            const cancel = startDrowsyTimer(IDLE_DROWSY_MS, 0, cancelled)
+            cancel()   // 사용자가 말을 걸어 상태가 바뀜
+            vi.advanceTimersByTime(IDLE_DROWSY_MS + DROWSY_JITTER_MS)
+            expect(cancelled).not.toHaveBeenCalled()
+        } finally {
+            vi.useRealTimers()
+        }
     })
 
     it('깜빡임 간격은 3~6초, 두 번 연속은 다섯에 하나', () => {
