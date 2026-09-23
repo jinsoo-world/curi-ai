@@ -4,6 +4,7 @@
 
 import { useRef, useState } from 'react'
 import { 올릴수있는파일, 고르기필터, 안내문구 } from '@/domains/knowledge/files'
+import { osTrack } from '@/domains/os/events'
 
 type Tab = 'file' | 'link' | 'text'
 
@@ -55,6 +56,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
             const d2 = await r2.json().catch(() => ({}))
             await onAdded()
             if (!r2.ok) throw new Error(d2.error || '봇이 파일을 못 읽었어요')
+            osTrack('os_knowledge_added', { mentor_id: mentorId, kind: 'file' })
             setMsg('다 읽었어요')
             setTimeout(onClose, 700)
         } catch (e) {
@@ -77,6 +79,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
             })
             const data = await res.json()
             if (!res.ok) throw new Error(data.error || '넣지 못했어요')
+            osTrack('os_knowledge_added', { mentor_id: mentorId, kind: tab === 'link' ? 'url' : 'text' })
             await onAdded()
             setMsg('다 읽었어요')
             setTimeout(onClose, 700)

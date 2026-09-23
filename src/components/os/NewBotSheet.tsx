@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { JOBS, AUTONOMY, SHAPES, COLORS, suggestName, findJob } from '@/domains/os/presets'
 import type { ApprovalMode, BotColor, BotShape, TeamBot } from '@/domains/os/types'
+import { osTrack } from '@/domains/os/events'
 import BotAvatar from './BotAvatar'
 
 interface Props {
@@ -49,6 +50,7 @@ export default function NewBotSheet({ guest, onClose, onCreated, onWantGroup }: 
             })
             const data = await res.json()
             if (!res.ok) throw new Error(data.error || '만들지 못했어요')
+            osTrack('os_bot_created', { job, autonomy, shape, color })
             await onCreated(data.bot as TeamBot)
         } catch (e) {
             setErr(e instanceof Error ? e.message : '만들지 못했어요')

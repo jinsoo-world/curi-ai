@@ -2,10 +2,12 @@
 // 에이전트 OS 뼈대 = 왼쪽 봇 명단(격자) + 가운데(자식 화면). 그록봇 화면 실측(기획 §13).
 // 팀 명단은 여기서 한 번 불러 아래 화면(대화·세부칸)이 useOsTeam() 으로 같이 쓴다.
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { TeamBot } from '@/domains/os/types'
+import { osTrack } from '@/domains/os/events'
+import { applyFontSize, readFontSize } from '@/domains/os/settings'
 import BotAvatar from './BotAvatar'
 import NewBotSheet from './NewBotSheet'
 import GuestRoster from './GuestRoster'
@@ -62,6 +64,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     const [groupSheet, setGroupSheet] = useState(false)
     const [channels, setChannels] = useState<ChannelView[]>([])
     const [query, setQuery] = useState('')
+    const bootstrapped = useRef(false)   // 기본 봇 만들기는 한 세션에 한 번만
 
     const refresh = useCallback(async () => {
         if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === '1') {
@@ -94,6 +97,29 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
 
     useEffect(() => { void refresh() }, [refresh])
     useEffect(() => { void refreshChannels() }, [refreshChannels])
+
+    // 이 화면에 왔다(획득) + 설정에서 고른 글자 크기를 되살린다. 둘 다 한 번만
+    useEffect(() => {
+        osTrack('os_view')
+        applyFontSize(document.documentElement, readFontSize(window.localStorage))
+    }, [])
+
+    /**
+     * 첫 로그인인데 팀이 비어 있으면 기본 봇 3명을 한 번만 만들어 준다.
+     * 빈 화면에서 「＋ 를 눌러 첫 봇을 만드세요」는 대부분 그냥 나간다(대표 지시 0923).
+     * 실패는 조용히 넘긴다 — 만들기 단추는 그대로 있으니 사람이 직접 만들 수 있다.
+     */
+    useEffect(() => {
+        if (loading || guest || tableMissing || team.length > 0 || bootstrapped.current) return
+        bootstrapped.current = true
+        void (async () => {
+            try {
+                const res = await fetch('/api/os/team/bootstrap', { method: 'POST' })
+                const d = await res.json().catch(() => ({}))
+                if (res.ok && Array.isArray(d.team) && d.team.length > 0) await refresh()
+            } catch { /* 조용히 */ }
+        })()
+    }, [loading, guest, tableMissing, team.length, refresh])
 
     // ⌘/Ctrl + N = 새 봇 (그록봇의 ⌘1 문법을 한 키로). /os?new=1 (앱 아이콘 길게 눌러 「새 봇」)도 같은 창
     useEffect(() => {
@@ -153,7 +179,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                                     onClick={() => router.push(href)}
                                     title={b.oneLiner ?? b.name}
                                 >
-                                    <BotAvatar shape={b.shape} color={b.color} state={current ? 'listening' : 'idle'} size={72} faceUrl={b.avatarUrl} />
+                                    <BotAvatar shape={b.shape} color={b.color} state={current ? 'listening' : 'idle'} size={72} faceUrl={b.avatarUrl} name={b.name} />
                                     <span className="os-bot-name">{b.name}</span>
                                     {b.oneLiner && <span className="os-chip">{b.oneLiner}</span>}
                                 </button>
@@ -197,6 +223,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                     <InstallPrompt />
                     <div className="os-left-bottom">
                         <Link href="/mentors" className="os-row-btn" style={{ textDecoration: 'none' }}>🏪 <span>둘러보기 (리더들의 봇)</span></Link>
+                        <Link href="/os/settings" className="os-row-btn" style={{ textDecoration: 'none' }}>⚙ <span>설정</span></Link>
                         {guest
                             ? <Link href="/login?next=/os" className="os-row-btn" style={{ textDecoration: 'none' }}>👤 <span>로그인</span></Link>
                             : <Link href="/profile" className="os-row-btn" style={{ textDecoration: 'none' }}>👤 <span>내 계정</span></Link>}

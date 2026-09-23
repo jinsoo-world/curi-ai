@@ -3,6 +3,8 @@
 
 import type { TeamBot } from '@/domains/os/types'
 import KnowledgeList from './KnowledgeList'
+import RoutinePanel from './RoutinePanel'
+import WeeklyCard from './WeeklyCard'
 
 const ROLE_LABEL: Record<TeamBot['role'], string> = { twin: '디지털 나', chief: '비서실장', helper: '도우미' }
 const APPROVAL_LABEL: Record<TeamBot['approvalMode'], string> = {
@@ -34,8 +36,11 @@ export default function DetailPane({ bot, publicName }: { bot: TeamBot | null; p
             {/* 자료는 진짜 목록이다 (3일차). 넣고 빼는 것도 여기서 한다 */}
             <KnowledgeList mentorId={bot.mentorId} />
 
-            <h4>루틴</h4>
-            <div className="os-card">루틴은 이 봇이 정해진 때에 반복하는 일이에요. 만들려면 대화로 요청해 주세요. (4일차)</div>
+            {/* 루틴 = 목록·만들기·시험 실행 (5일차) */}
+            <RoutinePanel mentorId={bot.mentorId} botName={bot.name} />
+
+            {/* 이번 주 = 미룬 일·승인·체크인·자료 (세부칸 맨 아래) */}
+            <WeeklyCard />
         </div>
     )
 }
