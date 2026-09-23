@@ -143,3 +143,22 @@
     .os-market-intro-meta h1 { font-size: 22px; }
     .os-back { margin: 8px 10px 0; }
 }
+
+/* @멘션 넘김: 상대 봇이 나를 부를 때 */
+.os-bot-face-wrap { position: relative; display: inline-grid; place-items: center; }
+.os-bot-tile.is-calling .os-bot-face-wrap {
+    animation: os-bot-call-pulse 0.9s ease-in-out 4;
+}
+.os-bot-tile.has-unread .os-bot-name { font-weight: 700; color: var(--os-클로버); }
+.os-bot-unread {
+    position: absolute; right: 2px; top: 2px; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--os-클로버, #22c55e); box-shadow: 0 0 0 2px var(--os-패널, #fff);
+    pointer-events: none;
+}
+@keyframes os-bot-call-pulse {
+    0%, 100% { transform: scale(1); filter: none; }
+    50% { transform: scale(1.08); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--os-클로버) 55%, transparent)); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .os-bot-tile.is-calling .os-bot-face-wrap { animation: none; }
+}

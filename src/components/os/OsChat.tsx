@@ -39,15 +39,14 @@ import MentionPicker from './MentionPicker'
 import { useMentionComposer } from './useMentionComposer'
 import {
     decidePersonalMentionRoute,
-    stashPendingMentionSend,
-    takePendingMentionSend,
+    emitBotCall,
+    handoffAckLine,
 } from '@/domains/os/mentions'
 // === /@ 멘션 ===
 
 // 세부칸, 자료 넣기 시트는 열 때만 내려받는다 (봇을 갈아탈 때 실을 것이 줄어든다)
 const DetailPane = dynamic(() => import('./DetailPane'), { ssr: false })
 const AddKnowledgeSheet = dynamic(() => import('./AddKnowledgeSheet'), { ssr: false })
-const FixAnswerSheet = dynamic(() => import('./FixAnswerSheet'), { ssr: false })
 
 interface Msg {
     id: string
@@ -82,7 +81,7 @@ function linkCardsFor(m: Msg, prevUserText?: string): { readUrls?: ReadUrlItem[]
 }
 
 export default function OsChat({ mentorId }: { mentorId: string }) {
-    const { team, loading, guest, openNewGroup } = useOsTeam()
+    const { team, loading, guest, openNewGroup, openEditBot, setBotPresence } = useOsTeam()
     const router = useRouter()
     const bot = useMemo(() => team.find(b => b.mentorId === mentorId) ?? null, [team, mentorId])
     const [publicBot, setPublicBot] = useState<PublicBot | null>(null)
@@ -93,8 +92,6 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
     const [sessionId, setSessionId] = useState<string | null>(null)
     const [detailOpen, setDetailOpen] = useState(false)   // 항상 닫힌 채 시작. 열 때만 세부칸을 그린다(대표 0923 「닫힌 채로, 열 때 로딩」)
     const [addSheet, setAddSheet] = useState(false)
-    /** 「답 고치기」로 연 시트  -  고칠 질문, 봇이 한 답 */
-    const [fixTarget, setFixTarget] = useState<{ question: string; answer: string } | null>(null)
     const [demo, setDemo] = useState(false)
     const endRef = useRef<HTMLDivElement>(null)
     const cacheLoaded = useRef(false)   // 되살리기 전에 빈 목록을 저장해 지워 버리는 일을 막는다
@@ -115,6 +112,11 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
     const mention = useMentionComposer(mentionBots)
     // === /@ 멘션 ===
 
+    // 명단 상태 동그라미에 이 방 상태를 알린다
+    useEffect(() => {
+        setBotPresence(mentorId, state)
+    }, [mentorId, state, setBotPresence])
+
     // 시연(?demo=1) 표식 + 이 봇과 아까 나눈 대화(탭 저장소)를 되살린다. 서버는 부르지 않는다 = 두 번째 방문은 바로 그 자리.
     useEffect(() => {
         void Promise.resolve().then(() => {
@@ -125,12 +127,6 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         })
     }, [mentorId])
 
-    // === @ 멘션 === 다른 방에서 @봇 + 내용으로 넘어온 말을 이 방에서 보낸다 (LLM은 여기서만)
-    const pendingSent = useRef(false)
-    useEffect(() => {
-        pendingSent.current = false
-    }, [mentorId])
-    // === /@ 멘션 ===
 
     // 로그인 직후, 새 탭: 손님 때 탭에만 있던 말은 계정으로 넘기고, 아니면 서버 최근 대화방을 불러온다.
     // 대표 0923 「로그인을 하면 해당 계정에 대화들이 팀장들 대화방에 쌓여야지 왜 자꾸 초기화되냐」
@@ -248,34 +244,48 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         } catch { return null }
     }, [guest, sessionId, mentorId])
 
-    // overrideText 가 있으면(「답 고치기」의 「다시 물어보기」) 입력창 내용 대신 그 질문을 그대로 다시 보낸다.
-    // 이때는 입력창(내가 지금 쓰던 글)을 지우지 않는다.
+    // overrideText 가 있으면 입력창 내용 대신 그 질문을 그대로 다시 보낸다(입력창은 지우지 않는다).
     const send = useCallback(async (overrideText?: string) => {
         const text = (overrideText ?? input).trim()
         // === 사진 첨부 === 사진만 보내도 된다. 올리는 중이거나 실패한 장이 남아 있으면 기다린다.
         const photoUrls = photos.urls
         if ((!text && photoUrls.length === 0) || streaming || photos.uploading || photos.failed) return
 
-        // === @ 멘션 === 다른 팀 봇을 부르면 그 방으로 옮기거나(멘션만) / 그 봇에게 말을 넘긴다(멘션+내용). LLM은 안 부른다.
+        // === @ 멘션 === 다른 팀 봇을 부르면 **지금 방에 남긴 채** 넘긴다. 왼쪽 명단이 상대 봇을 부른다.
         if (!overrideText && text && photoUrls.length === 0) {
             const decision = decidePersonalMentionRoute(
                 text,
                 team.filter(b => !b.hidden).map(b => ({ mentorId: b.mentorId, name: b.name })),
                 mentorId,
             )
-            if (decision.action === 'switch') {
+            if (decision.action === 'handoff') {
                 setInput('')
                 mention.close()
-                osTrack('os_mention_switch', { from_mentor_id: mentorId, to_mentor_id: decision.mentorId })
-                router.push(`/os/chat/${decision.mentorId}${demo ? '?demo=1' : ''}`)
-                return
-            }
-            if (decision.action === 'route') {
-                setInput('')
-                mention.close()
-                stashPendingMentionSend(typeof window !== 'undefined' ? window.sessionStorage : null, decision.mentorId, decision.message)
-                osTrack('os_mention_route', { from_mentor_id: mentorId, to_mentor_id: decision.mentorId })
-                router.push(`/os/chat/${decision.mentorId}${demo ? '?demo=1' : ''}`)
+                const nowIso = new Date().toISOString()
+                const userMsg: Msg = { id: `u-${Date.now()}`, role: 'user', content: text, createdAt: nowIso }
+                const ack = handoffAckLine(decision.name)
+                const botId = `a-${Date.now()}`
+                setMessages(prev => [...prev, userMsg, { id: botId, role: 'assistant', createdAt: nowIso, content: ack }])
+                setState('idle')
+                emitBotCall(typeof window !== 'undefined' ? window : null, decision.mentorId)
+                osTrack('os_mention_handoff', { from_mentor_id: mentorId, to_mentor_id: decision.mentorId })
+                if (!guest) {
+                    void (async () => {
+                        try {
+                            const sid = await ensureSession()
+                            await fetch('/api/os/mention-handoff', {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    text,
+                                    fromMentorId: mentorId,
+                                    toMentorId: decision.mentorId,
+                                    fromSessionId: sid ?? undefined,
+                                    message: decision.message,
+                                }),
+                            })
+                        } catch { /* 화면 안내는 이미 남겼다 */ }
+                    })()
+                }
                 return
             }
         }
@@ -449,7 +459,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
             setStreaming(false)
         }
         // === 전달(relay), 사진 첨부 === team, openNewGroup, name, photos 가 더 들어간다
-    }, [input, streaming, messages, mentorId, guest, bot, ensureSession, team, openNewGroup, name, photos, mention, router, demo])
+    }, [input, streaming, messages, mentorId, guest, bot, ensureSession, team, openNewGroup, name, photos, mention])
 
     const applyMention = (item: { mentorId: string; name: string }) => {
         const el = inputRef.current
@@ -475,19 +485,6 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send() }
     }
 
-    // === @ 멘션 === 이 방으로 넘어온 대기 말이 있으면 한 번만 보낸다 (봇, 세션 준비 후)
-    useEffect(() => {
-        if (pendingSent.current || loading || streaming) return
-        if (!bot && !publicBot) return
-        const pending = takePendingMentionSend(
-            typeof window !== 'undefined' ? window.sessionStorage : null,
-            mentorId,
-        )
-        if (!pending) return
-        pendingSent.current = true
-        void send(pending)
-    }, [loading, streaming, bot, publicBot, mentorId, send])
-    // === /@ 멘션 ===
 
     const avatar = bot
         ? <BotAvatar shape={bot.shape} color={bot.color} state={state} size={36} faceUrl={bot.avatarUrl} name={bot.name} />
@@ -503,8 +500,13 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         >
             <div className="os-chat-col">
                 <header className="os-chat-head">
-                    {avatar}
-                    <span>{name}</span>
+                    <button type="button" className="os-chat-head-bot" onClick={() => bot && openEditBot(bot)}
+                        disabled={!bot || guest || bot.id.startsWith('demo-')}
+                        title={bot && !guest && !bot.id.startsWith('demo-') ? '봇 편집' : undefined}
+                        aria-label={bot && !guest && !bot.id.startsWith('demo-') ? `${name} 편집` : name}>
+                        {avatar}
+                        <span>{name}</span>
+                    </button>
                     <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
                         <button className="os-icon-btn os-menu" aria-label="세부 정보 열기" aria-expanded={detailOpen}
                             title="세부 정보 열기" onClick={() => setDetailOpen(v => !v)}><MenuIcon /></button>
@@ -584,13 +586,6 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                                         )}
                                         {!m.card && (
                                             <LinkCards {...linkCardsFor(m, messages[i - 1]?.role === 'user' ? messages[i - 1].content : undefined)} />
-                                        )}
-                                        {/* 답 고치기 - 내 팀 봇일 때만(공개 봇, 손님은 자료를 못 넣는다), 바로 앞이 내 말일 때만 */}
-                                        {!m.card && bot && !guest && m.content && messages[i - 1]?.role === 'user' && (
-                                            <button type="button" className="os-fix-trigger"
-                                                onClick={() => setFixTarget({ question: messages[i - 1].content, answer: m.content })}>
-                                                답 고치기
-                                            </button>
                                         )}
                                     </>
                                 )}
@@ -673,16 +668,6 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
 
             {addSheet && bot && (
                 <AddKnowledgeSheet mentorId={bot.mentorId} onClose={() => setAddSheet(false)} onAdded={() => { }} />
-            )}
-
-            {fixTarget && bot && (
-                <FixAnswerSheet
-                    mentorId={bot.mentorId}
-                    question={fixTarget.question}
-                    currentAnswer={fixTarget.answer}
-                    onClose={() => setFixTarget(null)}
-                    onRetry={(q) => void send(q)}
-                />
             )}
         </div>
     )

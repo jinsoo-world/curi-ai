@@ -24,12 +24,14 @@ export interface TeamBot {
     hidden: boolean
     sortOrder: number
     avatarUrl: string | null
+    /** mentors.system_prompt — 편집 시트 프롬프트 칸. 목록에 같이 실어 온다 */
+    systemPrompt: string
     greeting: string
     knowledgeCount: number
     createdAt: string
 }
 
-/** 새 봇 만들기 3걸음의 입력 */
+/** 새 봇 만들기 입력 (승인 모드는 항상 always_ask 로 둔다) */
 export interface NewBotInput {
     job: string            // presets.JOBS 의 id 또는 'custom'
     customJob?: string     // job === 'custom' 일 때 사용자가 쓴 한 줄

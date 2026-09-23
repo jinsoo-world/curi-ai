@@ -1,6 +1,6 @@
 // domains/os — 채팅 입력창 「@」 멘션 (순수 함수 = 시험 대상)
 //
-// 1:1 방: 다른 팀 봇을 @하면 그 봇 방으로 옮기거나(멘션만) / 그 봇에게 말을 보낸다(멘션+내용).
+// 1:1 방: 다른 팀 봇을 @하면 지금 방에 남긴 채 그 봇에게 넘긴다(사이드바가 상대 봇을 부른다).
 // 그룹방: 서버 pickResponders / findMentionedBot 이 이미 @한 명만 답하게 한다. 여기는 입력 UI·파싱만.
 // 제품 카피에 가운뎃점(·)·긴 줄표(—) 금지.
 
@@ -97,14 +97,15 @@ export function stripMentionToken(text: string, name: string): string {
 
 export type PersonalMentionDecision =
     | { action: 'stay' }
-    | { action: 'switch'; mentorId: string; name: string }
-    | { action: 'route'; mentorId: string; name: string; message: string }
+    | { action: 'handoff'; mentorId: string; name: string; message: string }
 
 /**
- * 1:1 방에서 보내기 직전: @다른봇 이 있으면 그 봇으로 옮길지/말을 넘길지 고른다.
+ * 1:1 방에서 보내기 직전: @다른봇 이 있으면 **지금 방에 남긴 채** 그 봇에게 넘긴다.
  * - 멘션 없음·지금 봇 멘션 → stay (평소 대화)
- * - @다른봇 만 (또는 공백만) → switch (LLM 안 부름)
- * - @다른봇 + 내용 → route (그 봇 방으로 가서 내용만 보낸다)
+ * - @다른봇 (내용 있든 없든) → handoff (채널 전환 없음. 사이드바에서 상대 봇이 부른다)
+ *
+ * 예전 switch(멘션만 방으로 이동) / route(내용 들고 방으로 이동) 는 없앴다.
+ * 그룹방은 이 함수를 쓰지 않는다 (pickResponders / findMentionedBot).
  */
 export function decidePersonalMentionRoute(
     text: string,
@@ -117,13 +118,76 @@ export function decidePersonalMentionRoute(
     if (!mentioned) return { action: 'stay' }
     if (mentioned.mentorId === currentMentorId) return { action: 'stay' }
     const remainder = stripMentionToken(t, mentioned.name)
-    if (!remainder) return { action: 'switch', mentorId: mentioned.mentorId, name: mentioned.name }
     return {
-        action: 'route',
+        action: 'handoff',
         mentorId: mentioned.mentorId,
         name: mentioned.name,
         message: remainder.slice(0, 8000),
     }
+}
+
+/** 지금 방 봇이 채팅에 남기는 넘김 안내. 가운뎃점·긴 줄표 없음. */
+export function handoffAckLine(name: string): string {
+    const n = (name ?? '').trim() || '그 봇'
+    return `${n}에게도 전달할게요.`
+}
+
+/** 왼쪽 명단 「나를 불러」 이벤트 이름 (CustomEvent detail.mentorId) */
+export const BOT_CALL_EVENT = 'curi:bot-call'
+
+/** 읽지 않은 호출을 탭 저장소에 남기는 키 (mentorId[] JSON) */
+export const BOT_CALL_UNREAD_KEY = 'curi:bot-call-unread'
+
+/** 사이드바에 「이 봇이 나를 부른다」를 알린다. */
+export function emitBotCall(
+    target: Pick<EventTarget, 'dispatchEvent'> | null | undefined,
+    mentorId: string,
+): void {
+    if (!target || !mentorId) return
+    try {
+        target.dispatchEvent(new CustomEvent(BOT_CALL_EVENT, { detail: { mentorId } }))
+    } catch { /* jsdom / 구형 */ }
+}
+
+/** 읽지 않은 호출 목록을 읽는다. */
+export function readBotCallUnread(
+    storage: Pick<Storage, 'getItem'> | null | undefined,
+): string[] {
+    if (!storage) return []
+    try {
+        const raw = storage.getItem(BOT_CALL_UNREAD_KEY)
+        if (!raw) return []
+        const arr = JSON.parse(raw) as unknown
+        if (!Array.isArray(arr)) return []
+        return arr.filter((x): x is string => typeof x === 'string' && !!x)
+    } catch {
+        return []
+    }
+}
+
+/** 읽지 않은 호출에 mentorId 를 더한다 (이미 있으면 앞으로 당긴다). */
+export function addBotCallUnread(
+    storage: Pick<Storage, 'getItem' | 'setItem'> | null | undefined,
+    mentorId: string,
+): string[] {
+    if (!storage || !mentorId) return readBotCallUnread(storage)
+    const next = [mentorId, ...readBotCallUnread(storage).filter(id => id !== mentorId)].slice(0, 40)
+    try { storage.setItem(BOT_CALL_UNREAD_KEY, JSON.stringify(next)) } catch { /* quota */ }
+    return next
+}
+
+/** 그 봇 방을 열면 읽지 않은 호출에서 뺀다. */
+export function clearBotCallUnread(
+    storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null | undefined,
+    mentorId: string,
+): string[] {
+    if (!storage || !mentorId) return readBotCallUnread(storage)
+    const next = readBotCallUnread(storage).filter(id => id !== mentorId)
+    try {
+        if (next.length === 0) storage.removeItem(BOT_CALL_UNREAD_KEY)
+        else storage.setItem(BOT_CALL_UNREAD_KEY, JSON.stringify(next))
+    } catch { /* */ }
+    return next
 }
 
 /** 방 옮긴 뒤 자동으로 보낼 말 (세션 저장소). 키는 mentorId. */

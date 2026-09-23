@@ -18,7 +18,9 @@ export { listNextSteps, createNextStep, patchNextStep, guessNextStep, NextStepTa
 export type { NextStep } from './nextSteps'
 export {
     detectMentionQuery, filterMentionBots, applyMentionInsertion,
-    stripMentionToken, decidePersonalMentionRoute,
+    stripMentionToken, decidePersonalMentionRoute, handoffAckLine,
     stashPendingMentionSend, takePendingMentionSend,
+    emitBotCall, readBotCallUnread, addBotCallUnread, clearBotCallUnread,
+    BOT_CALL_EVENT, BOT_CALL_UNREAD_KEY,
 } from './mentions'
 export type { MentionBot, MentionQuery, PersonalMentionDecision } from './mentions'

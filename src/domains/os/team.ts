@@ -13,7 +13,7 @@ type Row = {
     id: string; mentor_id: string; role: TeamBot['role']; shape: TeamBot['shape']; color: TeamBot['color']
     one_liner: string | null; approval_mode: TeamBot['approvalMode']; pinned: boolean; hidden: boolean
     sort_order: number; created_at: string
-    mentors: { name: string; avatar_url: string | null; greeting_message: string } | null
+    mentors: { name: string; avatar_url: string | null; greeting_message: string; system_prompt: string | null } | null
 }
 
 export class TeamTableMissing extends Error {
@@ -24,7 +24,7 @@ export class TeamTableMissing extends Error {
 export async function listTeam(db: SupabaseClient, userId: string): Promise<TeamBot[]> {
     const { data, error } = await db
         .from('team_bots')
-        .select('id, mentor_id, role, shape, color, one_liner, approval_mode, pinned, hidden, sort_order, created_at, mentors(name, avatar_url, greeting_message)')
+        .select('id, mentor_id, role, shape, color, one_liner, approval_mode, pinned, hidden, sort_order, created_at, mentors(name, avatar_url, greeting_message, system_prompt)')
         .eq('user_id', userId)
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true })
@@ -57,6 +57,7 @@ export async function listTeam(db: SupabaseClient, userId: string): Promise<Team
         hidden: r.hidden,
         sortOrder: r.sort_order,
         avatarUrl: r.mentors?.avatar_url ?? null,
+        systemPrompt: r.mentors?.system_prompt ?? '',
         greeting: r.mentors?.greeting_message ?? '',
         knowledgeCount: countMap.get(r.mentor_id) ?? 0,
         createdAt: r.created_at,
@@ -122,16 +123,16 @@ export async function createTeamBot(
     return {
         id: tb.id, mentorId: mentor.id, name: mentor.name, role: tb.role, shape: tb.shape, color: tb.color,
         oneLiner: tb.one_liner, approvalMode: tb.approval_mode, pinned: tb.pinned, hidden: tb.hidden,
-        sortOrder: tb.sort_order, avatarUrl: mentor.avatar_url, greeting: mentor.greeting_message,
+        sortOrder: tb.sort_order, avatarUrl: mentor.avatar_url, systemPrompt: '', greeting: mentor.greeting_message,
         knowledgeCount: 0, createdAt: tb.created_at,
     }
 }
 
 /**
  * 봇 편집. 팀 줄(team_bots)의 칸 = 고정, 숨김, 정렬, 승인 모드, 모양, 색, 한 줄 소개, 역할.
- * 봇의 몸(mentors)에 있는 칸 = 이름, 인사말. 몸은 내가 만든 것(creator_profiles 가 내 것)만 바꾼다 = 리더의 공개 봇 몸은 건드리지 않는다.
+ * 봇의 몸(mentors)에 있는 칸 = 이름, 인사말, 프롬프트, 프로필 사진. 몸은 내가 만든 것(creator_profiles 가 내 것)만 바꾼다 = 리더의 공개 봇 몸은 건드리지 않는다.
  */
-export type TeamBotPatch = Partial<Pick<TeamBot, 'pinned' | 'hidden' | 'sortOrder' | 'approvalMode' | 'shape' | 'color' | 'oneLiner' | 'role' | 'name' | 'greeting'>>
+export type TeamBotPatch = Partial<Pick<TeamBot, 'pinned' | 'hidden' | 'sortOrder' | 'approvalMode' | 'shape' | 'color' | 'oneLiner' | 'role' | 'name' | 'greeting' | 'systemPrompt' | 'avatarUrl'>>
 
 export async function updateTeamBot(
     db: SupabaseClient, userId: string, teamBotId: string,
@@ -154,6 +155,8 @@ export async function updateTeamBot(
     const body: Record<string, unknown> = {}
     if (patch.name !== undefined) body.name = patch.name.trim().slice(0, 20)
     if (patch.greeting !== undefined) body.greeting_message = patch.greeting.trim().slice(0, 200)
+    if (patch.systemPrompt !== undefined) body.system_prompt = patch.systemPrompt.slice(0, 12000)
+    if (patch.avatarUrl !== undefined) body.avatar_url = patch.avatarUrl
     if (Object.keys(body).length === 0) return
 
     const { data: tb } = await db.from('team_bots').select('mentor_id').eq('id', teamBotId).eq('user_id', userId).maybeSingle()

@@ -6,6 +6,7 @@ import {
     faceBorderPx, faceClipId, faceTiltPeriodMs, isDoubleBlink, nextBlinkDelay, nextWinkDelay, shouldBlink,
     showsFace, showsFaceThinkDots, startDrowsyTimer, talkBeatMs,
     DROWSY_JITTER_MS, IDLE_DROWSY_MS, STATE_KO, SHAPE_KO, COLOR_KO,
+    presenceTone, presenceLabel,
 } from '../avatar'
 import BotAvatar from '../BotAvatar'
 import { SHAPES, COLORS } from '@/domains/os/presets'
@@ -188,5 +189,20 @@ describe('os/avatar — 사진 얼굴 (대표 0923 「있는 사진은 그걸 �
         const idleHtml = renderToStaticMarkup(createElement(BotAvatar, { shape: 'circle', color: 'orange', state: 'idle', size: 72 }))
         expect(idleHtml).toContain('class="cute"')
         expect(idleHtml).toContain('class="mouth"')
+    })
+})
+
+
+describe('presenceTone — 상태 동그라미 색', () => {
+    it('가능=초록, 바쁨=노랑, 장애=빨강, 잠=회색', () => {
+        expect(presenceTone('idle')).toBe('green')
+        expect(presenceTone('listening')).toBe('green')
+        expect(presenceTone('talking')).toBe('green')
+        expect(presenceTone('thinking')).toBe('amber')
+        expect(presenceTone('working')).toBe('amber')
+        expect(presenceTone('waiting_approval')).toBe('amber')
+        expect(presenceTone('error')).toBe('red')
+        expect(presenceTone('sleeping')).toBe('gray')
+        expect(presenceLabel('green')).toBe('가능')
     })
 })

@@ -6,8 +6,12 @@ import {
     applyMentionInsertion,
     stripMentionToken,
     decidePersonalMentionRoute,
+    handoffAckLine,
     stashPendingMentionSend,
     takePendingMentionSend,
+    addBotCallUnread,
+    clearBotCallUnread,
+    readBotCallUnread,
 } from '../mentions'
 
 const 팀 = [
@@ -122,7 +126,7 @@ describe('stripMentionToken', () => {
     })
 })
 
-describe('decidePersonalMentionRoute — 1:1 소환/넘기기', () => {
+describe('decidePersonalMentionRoute — 1:1 넘기기(채널 유지)', () => {
     it('멘션 없으면 stay', () => {
         expect(decidePersonalMentionRoute('안녕하세요', 팀, 'm1')).toEqual({ action: 'stay' })
     })
@@ -131,24 +135,52 @@ describe('decidePersonalMentionRoute — 1:1 소환/넘기기', () => {
         expect(decidePersonalMentionRoute('@비서실장 일정 알려줘', 팀, 'm1')).toEqual({ action: 'stay' })
     })
 
-    it('다른 봇 @만 있으면 switch (LLM 안 부름)', () => {
+    it('다른 봇 @만 있으면 handoff (방 이동 없음)', () => {
         expect(decidePersonalMentionRoute('@글감봇', 팀, 'm1')).toEqual({
-            action: 'switch', mentorId: 'm2', name: '글감봇',
+            action: 'handoff', mentorId: 'm2', name: '글감봇', message: '',
         })
         expect(decidePersonalMentionRoute('@글감봇   ', 팀, 'm1')).toEqual({
-            action: 'switch', mentorId: 'm2', name: '글감봇',
+            action: 'handoff', mentorId: 'm2', name: '글감봇', message: '',
         })
     })
 
-    it('다른 봇 @ + 내용이면 route (그 봇이 답)', () => {
+    it('다른 봇 @ + 내용이면 handoff (메시지 포함, 방 이동 없음)', () => {
         expect(decidePersonalMentionRoute('@요약봇 이 문단 줄여 줘', 팀, 'm1')).toEqual({
-            action: 'route', mentorId: 'm3', name: '요약봇', message: '이 문단 줄여 줘',
+            action: 'handoff', mentorId: 'm3', name: '요약봇', message: '이 문단 줄여 줘',
         })
     })
 
     it('빈 말·빈 팀이면 stay', () => {
         expect(decidePersonalMentionRoute('', 팀, 'm1')).toEqual({ action: 'stay' })
         expect(decidePersonalMentionRoute('@글감봇', [], 'm1')).toEqual({ action: 'stay' })
+    })
+})
+
+describe('handoffAckLine', () => {
+    it('자연스러운 한국어 안내', () => {
+        expect(handoffAckLine('글감봇')).toBe('글감봇에게도 전달할게요.')
+    })
+})
+
+describe('bot call unread', () => {
+    let mem: Record<string, string>
+    let storage: Storage
+    beforeEach(() => {
+        mem = {}
+        storage = {
+            get length() { return Object.keys(mem).length },
+            clear: () => { mem = {} },
+            getItem: (k: string) => mem[k] ?? null,
+            setItem: (k: string, v: string) => { mem[k] = v },
+            removeItem: (k: string) => { delete mem[k] },
+            key: () => null,
+        } as Storage
+    })
+    it('더하고 빼면 비운다', () => {
+        expect(addBotCallUnread(storage, 'm2')).toEqual(['m2'])
+        expect(readBotCallUnread(storage)).toEqual(['m2'])
+        expect(clearBotCallUnread(storage, 'm2')).toEqual([])
+        expect(readBotCallUnread(storage)).toEqual([])
     })
 })
 

@@ -180,7 +180,7 @@ export async function addTextSource(db: SupabaseClient, mentorId: string, title:
 }
 
 /**
- * Q&A 한 쌍(질문+답)을 자료로 넣는다 — 직접 쓰기 / CSV 올리기 / 「답 고치기」가 전부 이 함수를 쓴다.
+ * Q&A 한 쌍(질문+답)을 자료로 넣는다. 직접 쓰기 / CSV 올리기가 이 함수를 쓴다.
  * 청크는 쪼개지 않고 질문+답 그대로 하나 — 그래야 비슷한 질문이 왔을 때 「질문 그대로 검색」(matchKnowledge 가산점)이 통한다.
  */
 export async function addQaSource(

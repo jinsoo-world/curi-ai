@@ -147,6 +147,38 @@ export function showsWorkDots(state: BotState): boolean { return state === 'work
 export function showsZ(state: BotState): boolean { return state === 'sleeping' }
 export function showsBadge(state: BotState): boolean { return state === 'waiting_approval' }
 
+/** 상태 → 오른쪽 위 동그라미 색 (대표: 초록=가능, 노랑=바쁨, 빨강=장애, 회색=잠) */
+export type PresenceTone = 'green' | 'amber' | 'red' | 'gray'
+
+export function presenceTone(state: BotState): PresenceTone {
+    switch (state) {
+        case 'idle':
+        case 'listening':
+        case 'talking':
+            return 'green'
+        case 'thinking':
+        case 'working':
+        case 'waiting_approval':
+            return 'amber'
+        case 'error':
+            return 'red'
+        case 'sleeping':
+            return 'gray'
+        default:
+            return 'green'
+    }
+}
+
+export function presenceLabel(tone: PresenceTone): string {
+    switch (tone) {
+        case 'green': return '가능'
+        case 'amber': return '바쁨'
+        case 'red': return '장애'
+        case 'gray': return '잠'
+    }
+}
+
+
 /** 사진 얼굴 —————————————————————————————————————————————
  * 봇에 프로필 사진이 있으면 그린 얼굴 대신 사진을 도형 안에 채운다(대표 0923 「있는 사진은 그걸 써. 생동감 있게」).
  * 불러오다 실패(onError)하면 faceError 가 true 로 바뀌어 여기서 false 가 되고, 그린 캐릭터 얼굴로 조용히 되돌아간다 */

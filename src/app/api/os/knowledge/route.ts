@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ source: { id: (source as { id: string }).id } })
         }
         if (kind === 'qa') {
-            // Q&A 직접 쓰기 / CSV 한 줄 / 「답 고치기」가 전부 여기로 온다 (sourceKind 로 갈래를 구분)
+            // Q&A 직접 쓰기 / CSV 한 줄이 여기로 온다 (sourceKind 로 갈래를 구분). 옛 sourceKind=fix 자료도 읽힌다.
             const source = await addQaSource(db, mentorId, String(body.question ?? ''), String(body.answer ?? ''), {
                 context: typeof body.context === 'string' ? body.context : undefined,
                 authorIsMe: typeof body.authorIsMe === 'boolean' ? body.authorIsMe : undefined,

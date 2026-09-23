@@ -11,11 +11,6 @@ import RoutinePanel from './RoutinePanel'
 import ResponseSettingsSheet from './ResponseSettingsSheet'
 
 const ROLE_LABEL: Record<TeamBot['role'], string> = { twin: '디지털 나', chief: '비서실장', helper: '도우미' }
-const APPROVAL_LABEL: Record<TeamBot['approvalMode'], string> = {
-    always_ask: '보내기 전 항상 물어봐요',
-    draft_only: '초안만 만들어요 (밖으로 안 나감)',
-    auto_safe: '되돌릴 수 있는 일은 알아서 (지금은 항상 물어봐요와 같음)',
-}
 
 /** demo = 시연(/os?demo=1). 시연 봇은 내 봇이 아니라 자료 창구가 403 을 내니 목록을 부르지 않고 한 줄만 보인다.
  *  OsChat 이 demo 를 안 넘겨도 시연 봇은 id 가 demo- 로 시작하니 스스로 알아본다 */
@@ -58,7 +53,7 @@ export default function DetailPane({ bot, publicName, demo = false }: { bot: Tea
             </div>
 
             <h4>승인</h4>
-            <div className="os-card">{APPROVAL_LABEL[bot.approvalMode]}<br /><span style={{ fontSize: 13 }}>보내기, 게시, 결제, 삭제는 카드로 물어보고, 허용해야만 나가요.</span></div>
+            <div className="os-card">보내기 전 항상 물어봐요<br /><span style={{ fontSize: 13 }}>보내기, 게시, 결제, 삭제는 카드로 물어보고, 허용해야만 나가요.</span></div>
 
             {/* 답변 설정(델파이급) — 목적·지침·말투·길이·창의성·출처·안내문·최신성. 접어 두고 필요할 때만 편다 */}
             {시연 ? null : (

@@ -13,7 +13,7 @@
 //   수익(R) os_knowledge_added 자기 자료를 넣었나     ← 갈아타기 어려워지는 지점
 //   활성(A) os_relay_sent      봇이 옆 봇에게 말을 옮겼나 (봇끼리 전달)
 //   활성(A) os_group_message   그룹방에서 말을 걸었나
-//   활성(A) os_mention_switch / os_mention_route  1:1에서 @다른봇 소환·넘기기
+//   활성(A) os_mention_handoff  1:1에서 @다른봇 넘기기(채널 유지)
 //
 // ⛔ 개인정보는 절대 넣지 않는다. 이름, 전화, 메시지 본문, 자료 제목 금지. ID 와 개수만.
 
@@ -30,8 +30,7 @@ export type OsEvent =
     | 'os_knowledge_added'
     | 'os_relay_sent'
     | 'os_group_message'
-    | 'os_mention_switch'
-    | 'os_mention_route'
+    | 'os_mention_handoff'
 
 /** 붙여도 되는 값 = 숫자, 참거짓, 짧은 갈래 이름, ID. 본문, 이름은 안 된다 */
 export type OsEventProps = Record<string, string | number | boolean | null | undefined>

@@ -1,16 +1,16 @@
 'use client'
-// 새 봇 만들기 = 3걸음, 전부 칩만 누른다 (기획 §13).
-//  ① 이 봇이 맡을 일 한 가지  ② 어디까지 알아서?  ③ 모양, 색 + 이름
+// 새 봇 만들기 = 2걸음, 전부 칩만 누른다.
+//  ① 이 봇이 맡을 일 한 가지  ② 모양, 색 + 이름
+// 승인 모드(어디까지 알아서) UI 는 없앴다. 서버는 항상 always_ask.
 // 그림 생성 없이 도형+색이라 즉시, 비용 0.
 //
-// edit 를 주면 「봇 편집」 시트가 된다(우클릭 메뉴 → 편집). 한 장에 이름, 한 줄 소개, 역할, 도형, 색, 인사말, 승인 모드.
-// 칸은 옛 「AI 만들기」(/creator/create) 기본정보 탭에 있는 것만 = 이름, 한줄 소개, 인사말 (+ 봇 팀 고유의 역할, 도형, 색, 승인 모드).
-// 저장은 PATCH /api/os/team/[id]. 페이지 이동 없이 대화 화면 위에 뜬다.
+// edit 를 주면 「봇 편집」 시트. 프로필 사진, 한 줄 소개, 프롬프트, 이름, 역할, 도형, 색, 인사말을 한 장에서 고친다.
+// 저장은 PATCH /api/os/team/[id]. 대화 헤더(얼굴/이름) 또는 우클릭 「편집」으로 연다.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { JOBS, AUTONOMY, SHAPES, COLORS, suggestName, findJob } from '@/domains/os/presets'
-import type { ApprovalMode, BotColor, BotRole, BotShape, TeamBot } from '@/domains/os/types'
+import { JOBS, SHAPES, COLORS, suggestName, findJob } from '@/domains/os/presets'
+import type { BotColor, BotRole, BotShape, TeamBot } from '@/domains/os/types'
 import { osTrack } from '@/domains/os/events'
 import BotAvatar from './BotAvatar'
 import type { MarketBot } from '@/app/api/os/market/route'
@@ -37,7 +37,7 @@ export default function NewBotSheet({ guest, onClose, onCreated, onWantGroup, ed
     return <CreateBotSheet guest={guest} onClose={onClose} onCreated={onCreated} onWantGroup={onWantGroup} />
 }
 
-/** 편집 = 한 장. 바뀐 칸만 보낸다 */
+/** 편집 = 한 장. 프로필 사진·한줄소개·프롬프트·나머지. 바뀐 칸만 보낸다 */
 function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => void; onSaved?: () => void | Promise<void> }) {
     const [name, setName] = useState(bot.name)
     const [oneLiner, setOneLiner] = useState(bot.oneLiner ?? '')
@@ -45,23 +45,51 @@ function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => 
     const [shape, setShape] = useState<BotShape>(bot.shape)
     const [color, setColor] = useState<BotColor>(bot.color)
     const [greeting, setGreeting] = useState(bot.greeting ?? '')
-    const [approval, setApproval] = useState<ApprovalMode>(bot.approvalMode)
+    const [prompt, setPrompt] = useState(bot.systemPrompt ?? '')
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(bot.avatarUrl)
+    const [avatarFile, setAvatarFile] = useState<File | null>(null)
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(bot.avatarUrl)
+    const fileRef = useRef<HTMLInputElement>(null)
     const [busy, setBusy] = useState(false)
     const [err, setErr] = useState<string | null>(null)
 
     const canSave = name.trim().length > 0 && name.trim().length <= 20
 
+    const onPickPhoto = (file: File | null) => {
+        if (!file) return
+        if (!file.type.startsWith('image/')) { setErr('사진 파일만 올릴 수 있어요'); return }
+        if (file.size > 4 * 1024 * 1024) { setErr('사진은 4MB 이하만 올릴 수 있어요'); return }
+        setErr(null)
+        setAvatarFile(file)
+        setAvatarPreview(URL.createObjectURL(file))
+    }
+
     const save = async () => {
         setBusy(true); setErr(null)
-        const patch: Record<string, unknown> = {}
-        if (name.trim() !== bot.name) patch.name = name.trim()
-        if (oneLiner.trim() !== (bot.oneLiner ?? '')) patch.oneLiner = oneLiner.trim()
-        if (role !== bot.role) patch.role = role
-        if (shape !== bot.shape) patch.shape = shape
-        if (color !== bot.color) patch.color = color
-        if (greeting.trim() !== (bot.greeting ?? '')) patch.greeting = greeting.trim()
-        if (approval !== bot.approvalMode) patch.approvalMode = approval
         try {
+            let nextAvatar = avatarUrl
+            if (avatarFile) {
+                const formData = new FormData()
+                formData.append('file', avatarFile)
+                formData.append('fileName', `mentor-avatar-${Date.now()}.${avatarFile.name.split('.').pop() || 'jpg'}`)
+                formData.append('bucket', 'mentor-avatars')
+                const up = await fetch('/api/creator/avatar/upload', { method: 'POST', body: formData })
+                const upData = await up.json().catch(() => ({}))
+                if (!up.ok) throw new Error(upData.error || '사진을 올리지 못했어요')
+                nextAvatar = String(upData.url ?? '')
+                if (!nextAvatar) throw new Error('사진 주소를 받지 못했어요')
+            }
+
+            const patch: Record<string, unknown> = {}
+            if (name.trim() !== bot.name) patch.name = name.trim()
+            if (oneLiner.trim() !== (bot.oneLiner ?? '')) patch.oneLiner = oneLiner.trim()
+            if (role !== bot.role) patch.role = role
+            if (shape !== bot.shape) patch.shape = shape
+            if (color !== bot.color) patch.color = color
+            if (greeting.trim() !== (bot.greeting ?? '')) patch.greeting = greeting.trim()
+            if (prompt !== (bot.systemPrompt ?? '')) patch.systemPrompt = prompt
+            if (nextAvatar !== bot.avatarUrl) patch.avatarUrl = nextAvatar
+
             if (Object.keys(patch).length > 0) {
                 const res = await fetch(`/api/os/team/${bot.id}`, {
                     method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
@@ -82,10 +110,16 @@ function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => 
         <div className="os-sheet-back" data-theme="os" onClick={busy ? undefined : onClose} role="dialog" aria-modal="true" aria-label="봇 편집">
             <div className="os-sheet" onClick={e => e.stopPropagation()}>
                 <h3>봇 편집</h3>
-                <div className="os-step">바꾼 것만 저장돼요. 맡은 일(설명)은 그대로예요.</div>
+                <div className="os-step">프로필 사진, 한 줄 소개, 프롬프트, 기본 정보를 한곳에서 고쳐요.</div>
 
                 <div style={{ display: 'flex', gap: 18, alignItems: 'center', marginBottom: 6 }}>
-                    <BotAvatar shape={shape} color={color} state="idle" size={96} />
+                    <button type="button" className="os-edit-face" onClick={() => fileRef.current?.click()} disabled={busy}
+                        aria-label="프로필 사진 바꾸기" title="프로필 사진 바꾸기">
+                        <BotAvatar shape={shape} color={color} state="idle" size={96} faceUrl={avatarPreview} name={name || bot.name} />
+                        <span className="os-edit-face-hint">사진</span>
+                    </button>
+                    <input ref={fileRef} type="file" accept="image/*" hidden
+                        onChange={e => onPickPhoto(e.target.files?.[0] ?? null)} />
                     <div style={{ flex: 1 }}>
                         <div className="os-field-label">이름</div>
                         <input type="text" value={name} onChange={e => setName(e.target.value)} maxLength={20} placeholder="봇 이름" aria-label="봇 이름" disabled={busy} />
@@ -95,6 +129,12 @@ function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => 
                 <div className="os-field">
                     <div className="os-field-label">한 줄 소개</div>
                     <input type="text" value={oneLiner} onChange={e => setOneLiner(e.target.value)} maxLength={40} placeholder="예) 팬 질문에 내 말투로 답해요" aria-label="한 줄 소개" disabled={busy} />
+                </div>
+
+                <div className="os-field">
+                    <div className="os-field-label">프롬프트 (이 봇이 따르는 설명, 12000자까지)</div>
+                    <textarea className="os-textarea" rows={6} value={prompt} onChange={e => setPrompt(e.target.value.slice(0, 12000))}
+                        maxLength={12000} placeholder="예) 너는 글감봇이야. 짧고 구체적인 글감만 제안해." aria-label="프롬프트" disabled={busy} />
                 </div>
 
                 {bot.role !== 'twin' && (
@@ -137,21 +177,10 @@ function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => 
                         placeholder={`안녕하세요, ${name || '봇'}이에요.`} aria-label="인사말" disabled={busy} />
                 </div>
 
-                <div className="os-field">
-                    <div className="os-field-label">어디까지 알아서 할까요</div>
-                    <div className="os-chips" style={{ flexDirection: 'column' }}>
-                        {AUTONOMY.map(a => (
-                            <button key={a.id} type="button" className="os-chipbtn" aria-pressed={approval === a.id} onClick={() => setApproval(a.id)} disabled={busy}>
-                                {a.label}<small>{a.desc}</small>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
                 {err && <div className="os-notice" style={{ margin: '14px 0 0' }}>{err}</div>}
                 <div className="os-sheet-foot">
                     <button type="button" className="os-btn" onClick={onClose} disabled={busy}>닫기</button>
-                    <button type="button" className="os-btn primary" onClick={save} disabled={!canSave || busy}>{busy ? '저장하는 중' : '저장'}</button>
+                    <button type="button" className="os-btn primary" onClick={() => void save()} disabled={!canSave || busy}>{busy ? '저장하는 중' : '저장'}</button>
                 </div>
             </div>
         </div>
@@ -161,10 +190,9 @@ function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => 
 function CreateBotSheet({ guest, onClose, onCreated, onWantGroup }: Omit<Props, 'edit' | 'onSaved'>) {
     // 새로 만들기(3걸음) / 봇 마켓에서 가져오기(다른 리더가 만든 공개 봇을 내 팀에 넣기) — 대표 지시 0923
     const [tab, setTab] = useState<'new' | 'market'>('new')
-    const [step, setStep] = useState<1 | 2 | 3>(1)
+    const [step, setStep] = useState<1 | 2>(1)
     const [job, setJob] = useState<string>('')
     const [customJob, setCustomJob] = useState('')
-    const [autonomy, setAutonomy] = useState<ApprovalMode>('always_ask')
     const [shape, setShape] = useState<BotShape>('circle')
     const [color, setColor] = useState<BotColor>('orange')
     const [name, setName] = useState('')
@@ -188,11 +216,11 @@ function CreateBotSheet({ guest, onClose, onCreated, onWantGroup }: Omit<Props, 
         try {
             const res = await fetch('/api/os/team', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ job, customJob, autonomy, shape, color, name: name.trim() }),
+                body: JSON.stringify({ job, customJob, autonomy: 'always_ask', shape, color, name: name.trim() }),
             })
             const data = await res.json()
             if (!res.ok) throw new Error(data.error || '만들지 못했어요')
-            osTrack('os_bot_created', { job, autonomy, shape, color })
+            osTrack('os_bot_created', { job, autonomy: 'always_ask', shape, color })
             await onCreated(data.bot as TeamBot)
         } catch (e) {
             setErr(e instanceof Error ? e.message : '만들지 못했어요')
@@ -222,7 +250,7 @@ function CreateBotSheet({ guest, onClose, onCreated, onWantGroup }: Omit<Props, 
                 ) : step === 1 ? (
                     <>
                         <h3>이 봇이 맡을 일 한 가지</h3>
-                        <div className="os-step">1 / 3 / 봇 하나는 일 하나만 맡아요. 그래야 잘해요.</div>
+                        <div className="os-step">1 / 2 / 봇 하나는 일 하나만 맡아요. 그래야 잘해요.</div>
                         <div className="os-chips">
                             {JOBS.map(j => (
                                 <button key={j.id} className="os-chipbtn" aria-pressed={job === j.id} onClick={() => pickJob(j.id)}>
@@ -247,26 +275,10 @@ function CreateBotSheet({ guest, onClose, onCreated, onWantGroup }: Omit<Props, 
                             <button className="os-btn primary" disabled={!canNext1} onClick={() => setStep(2)}>다음</button>
                         </div>
                     </>
-                ) : step === 2 ? (
-                    <>
-                        <h3>어디까지 알아서 할까요?</h3>
-                        <div className="os-step">2 / 3 / 밖으로 나가는 일(보내기, 게시, 결제, 삭제)은 늘 내가 허용한 뒤에만.</div>
-                        <div className="os-chips" style={{ flexDirection: 'column' }}>
-                            {AUTONOMY.map(a => (
-                                <button key={a.id} className="os-chipbtn" aria-pressed={autonomy === a.id} onClick={() => setAutonomy(a.id)}>
-                                    {a.label}<small>{a.desc}</small>
-                                </button>
-                            ))}
-                        </div>
-                        <div className="os-sheet-foot">
-                            <button className="os-btn" onClick={() => setStep(1)}>이전</button>
-                            <button className="os-btn primary" onClick={() => setStep(3)}>다음</button>
-                        </div>
-                    </>
                 ) : (
                     <>
                         <h3>모양과 색, 그리고 이름</h3>
-                        <div className="os-step">3 / 3 / 명단에 이렇게 보여요.</div>
+                        <div className="os-step">2 / 2 / 명단에 이렇게 보여요. 보내기·게시·결제·삭제는 늘 물어본 뒤에만 나가요.</div>
                         <div style={{ display: 'flex', gap: 18, alignItems: 'center', marginBottom: 16 }}>
                             <BotAvatar shape={shape} color={color} state="idle" size={96} />
                             <div style={{ flex: 1 }}>
@@ -291,7 +303,7 @@ function CreateBotSheet({ guest, onClose, onCreated, onWantGroup }: Omit<Props, 
                         </div>
                         {err && <div className="os-notice" style={{ margin: '14px 0 0' }}>{err}</div>}
                         <div className="os-sheet-foot">
-                            <button className="os-btn" onClick={() => setStep(2)} disabled={busy}>이전</button>
+                            <button className="os-btn" onClick={() => setStep(1)} disabled={busy}>이전</button>
                             <button className="os-btn primary" onClick={create} disabled={!canCreate || busy}>{busy ? '만드는 중' : '팀에 넣기'}</button>
                         </div>
                     </>
@@ -328,7 +340,7 @@ function MarketTab({ guest, onClose, onLinked }: { guest: boolean; onClose: () =
             await onLinked({
                 id: '', mentorId: bot.mentorId, name: bot.name, role: 'helper', shape: 'circle', color: 'white',
                 oneLiner: bot.oneLiner, approvalMode: 'always_ask', pinned: false, hidden: false, sortOrder: 0,
-                avatarUrl: bot.avatarUrl, greeting: '', knowledgeCount: 0, createdAt: '',
+                avatarUrl: bot.avatarUrl, systemPrompt: '', greeting: '', knowledgeCount: 0, createdAt: '',
             })
         } catch {
             setNote('연결이 잠깐 끊겼어요. 다시 눌러 주세요.')

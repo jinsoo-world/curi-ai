@@ -10,7 +10,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import type { TeamBot } from '@/domains/os/types'
+import type { BotState, TeamBot } from '@/domains/os/types'
+import {
+    BOT_CALL_EVENT, addBotCallUnread, clearBotCallUnread, readBotCallUnread,
+} from '@/domains/os/mentions'
 import { osTrack } from '@/domains/os/events'
 import { applyFontSize, readFontSize } from '@/domains/os/settings'
 import BotAvatar from './BotAvatar'
@@ -41,6 +44,10 @@ interface TeamState {
     channels: ChannelView[]
     refreshChannels: () => Promise<void>
     openNewGroup: () => void
+    /** 대화 헤더 얼굴/이름 클릭 → 이 봇 편집 시트 */
+    openEditBot: (bot: TeamBot) => void
+    /** 채팅이 알려 주는 봇 상태 (명단 동그라미) */
+    setBotPresence: (mentorId: string, state: BotState) => void
 }
 
 
@@ -50,10 +57,10 @@ interface TeamState {
  * 대화는 진짜 /api/chat(공개 봇)로 간다. 저장은 안 한다. mentorId 4개는 바뀌지 않는다 — 이름, 소개만 기본 팀과 맞췄다.
  */
 const DEMO_TEAM: TeamBot[] = [
-    { id: 'demo-1', mentorId: '9fc9b3fa-1721-40c6-bc4e-1b544c117483', name: '기획팀장', role: 'helper', shape: 'clover', color: 'green', oneLiner: '방향을 잡고 결정거리를 가져와요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 0, avatarUrl: null, greeting: '안녕하세요, 기획팀장이에요. 이번 주 뭐부터 할지 같이 정리해 볼까요?', knowledgeCount: 0, createdAt: '' },
-    { id: 'demo-2', mentorId: 'a5a7fc67-2238-4705-bcc7-505e52644e25', name: '홍보팀장', role: 'helper', shape: 'circle', color: 'orange', oneLiner: '알리는 글과 답장 초안을 써요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 1, avatarUrl: null, greeting: '안녕하세요, 홍보팀장이에요. 다음 강의 알리는 글부터 써 드릴까요?', knowledgeCount: 0, createdAt: '' },
-    { id: 'demo-3', mentorId: '91db92f7-5831-40a5-8941-4501fb543f56', name: '개발팀장', role: 'helper', shape: 'hex', color: 'blue', oneLiner: '도구와 반복 일을 정리해요', approvalMode: 'draft_only', pinned: true, hidden: false, sortOrder: 2, avatarUrl: null, greeting: '안녕하세요, 개발팀장이에요. 매주 반복하는 일 중에 자동화할 것부터 찾아 드릴게요.', knowledgeCount: 0, createdAt: '' },
-    { id: 'demo-4', mentorId: '94835097-6f27-4ee4-ab73-f423da271537', name: '조사팀장', role: 'helper', shape: 'drop', color: 'yellow', oneLiner: '자료를 찾고 근거를 모아요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 3, avatarUrl: null, greeting: '안녕하세요, 조사팀장이에요. 궁금한 것 있으면 자료랑 출처까지 찾아 드릴게요.', knowledgeCount: 0, createdAt: '' },
+    { id: 'demo-1', mentorId: '9fc9b3fa-1721-40c6-bc4e-1b544c117483', name: '기획팀장', role: 'helper', shape: 'clover', color: 'green', oneLiner: '방향을 잡고 결정거리를 가져와요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 0, avatarUrl: null, systemPrompt: '', greeting: '안녕하세요, 기획팀장이에요. 이번 주 뭐부터 할지 같이 정리해 볼까요?', knowledgeCount: 0, createdAt: '' },
+    { id: 'demo-2', mentorId: 'a5a7fc67-2238-4705-bcc7-505e52644e25', name: '홍보팀장', role: 'helper', shape: 'circle', color: 'orange', oneLiner: '알리는 글과 답장 초안을 써요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 1, avatarUrl: null, systemPrompt: '', greeting: '안녕하세요, 홍보팀장이에요. 다음 강의 알리는 글부터 써 드릴까요?', knowledgeCount: 0, createdAt: '' },
+    { id: 'demo-3', mentorId: '91db92f7-5831-40a5-8941-4501fb543f56', name: '개발팀장', role: 'helper', shape: 'hex', color: 'blue', oneLiner: '도구와 반복 일을 정리해요', approvalMode: 'draft_only', pinned: true, hidden: false, sortOrder: 2, avatarUrl: null, systemPrompt: '', greeting: '안녕하세요, 개발팀장이에요. 매주 반복하는 일 중에 자동화할 것부터 찾아 드릴게요.', knowledgeCount: 0, createdAt: '' },
+    { id: 'demo-4', mentorId: '94835097-6f27-4ee4-ab73-f423da271537', name: '조사팀장', role: 'helper', shape: 'drop', color: 'yellow', oneLiner: '자료를 찾고 근거를 모아요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 3, avatarUrl: null, systemPrompt: '', greeting: '안녕하세요, 조사팀장이에요. 궁금한 것 있으면 자료랑 출처까지 찾아 드릴게요.', knowledgeCount: 0, createdAt: '' },
 ]
 
 const Ctx = createContext<TeamState | null>(null)
@@ -77,6 +84,9 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     const [tableMissing, setTableMissing] = useState(false)
     const [sheet, setSheet] = useState(false)
     const [editBot, setEditBot] = useState<TeamBot | null>(null)
+    const [unreadIds, setUnreadIds] = useState<string[]>([])
+    const [callingIds, setCallingIds] = useState<string[]>([])
+    const [botPresence, setBotPresenceMap] = useState<Record<string, BotState>>({})
     const [groupSheet, setGroupSheet] = useState(false)
     const [channels, setChannels] = useState<ChannelView[]>([])
     const [query, setQuery] = useState('')
@@ -121,6 +131,33 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
 
     useEffect(() => { void refresh() }, [refresh])
     useEffect(() => { void refreshChannels() }, [refreshChannels])
+
+    // @멘션 넘김: 상대 봇이 「나를 부른다」 — 읽지 않음 + 잠깐 펄스
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+        setUnreadIds(readBotCallUnread(window.sessionStorage))
+        const onCall = (e: Event) => {
+            const id = (e as CustomEvent<{ mentorId?: string }>).detail?.mentorId
+            if (!id) return
+            setUnreadIds(addBotCallUnread(window.sessionStorage, id))
+            setCallingIds(prev => (prev.includes(id) ? prev : [...prev, id]))
+            window.setTimeout(() => {
+                setCallingIds(prev => prev.filter(x => x !== id))
+            }, 4200)
+        }
+        window.addEventListener(BOT_CALL_EVENT, onCall)
+        return () => window.removeEventListener(BOT_CALL_EVENT, onCall)
+    }, [])
+
+    // 그 봇 방을 열면 읽지 않음 해제
+    useEffect(() => {
+        const m = pathname.match(/^\/os\/chat\/([^/?#]+)/)
+        const id = m?.[1]
+        if (!id || typeof window === 'undefined') return
+        setUnreadIds(clearBotCallUnread(window.sessionStorage, id))
+        setCallingIds(prev => prev.filter(x => x !== id))
+    }, [pathname])
+
 
     // 이 화면에 왔다(획득) + 설정에서 고른 글자 크기를 되살린다 + 시연인지, 폰인지 읽는다
     useEffect(() => {
@@ -170,10 +207,20 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
             .filter(b => !q || b.name.includes(q) || (b.oneLiner ?? '').includes(q))
     }, [team, query])
 
+    const openEditBot = useCallback((bot: TeamBot) => {
+        if (!bot || bot.id.startsWith('demo-')) return
+        setEditBot(bot)
+    }, [])
+    const setBotPresence = useCallback((mentorId: string, state: BotState) => {
+        if (!mentorId) return
+        setBotPresenceMap(prev => (prev[mentorId] === state ? prev : { ...prev, [mentorId]: state }))
+    }, [])
+
     const value = useMemo<TeamState>(() => ({
         team, loading, guest, tableMissing, refresh, openNewBot: () => setSheet(true),
         channels, refreshChannels, openNewGroup: () => setGroupSheet(true),
-    }), [team, loading, guest, tableMissing, refresh, channels, refreshChannels])
+        openEditBot, setBotPresence,
+    }), [team, loading, guest, tableMissing, refresh, channels, refreshChannels, openEditBot, setBotPresence])
 
     // ── 우클릭 / 길게 누르기 메뉴 ──────────────────────────────
     const openMenu = useCallback((bot: TeamBot, x: number, y: number) => {
@@ -274,13 +321,16 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                             // Link + prefetch = 화면에 보이는 순간 그 봇 화면을 미리 받아 둔다 → 누르면 서버를 안 기다린다 (대표 지시 0923 「전환이 느려」)
                             // 주소를 쌓는(push) 보통 링크라 봇 A → 봇 B → 뒤로 = A 가 된다
                             const current = isCurrent(b)
+                            const presence = botPresence[b.mentorId] ?? (current ? 'listening' : 'idle')
+                            const calling = callingIds.includes(b.mentorId)
+                            const unread = unreadIds.includes(b.mentorId)
                             return (
                                 <Link
                                     key={b.id}
                                     href={`${chatPath(b)}${q}`}
                                     prefetch={true}
                                     role="listitem"
-                                    className="os-bot-tile"
+                                    className={`os-bot-tile${calling ? ' is-calling' : ''}${unread ? ' has-unread' : ''}`}
                                     aria-current={current}
                                     title={b.oneLiner ?? b.name}
                                     onContextMenu={e => { e.preventDefault(); openMenu(b, e.clientX, e.clientY) }}
@@ -292,7 +342,10 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                                     onClick={e => { if (suppressClick.current) { e.preventDefault(); suppressClick.current = false } }}
                                 >
                                     {/* 폰 띠는 96px 안에 캐릭터+이름이 들어가야 해서 52px (넓은 화면 격자는 72px 그대로) */}
-                                    <BotAvatar shape={b.shape} color={b.color} state={current ? 'listening' : 'idle'} size={phone ? 52 : (visible.length >= 6 ? 56 : 72)} faceUrl={b.avatarUrl} name={b.name} />
+                                    <span className="os-bot-face-wrap">
+                                        <BotAvatar shape={b.shape} color={b.color} state={presence} size={phone ? 52 : (visible.length >= 6 ? 56 : 72)} faceUrl={b.avatarUrl} name={b.name} />
+                                        {unread && <span className="os-bot-unread" aria-label="새 메시지" />}
+                                    </span>
                                     <span className="os-bot-name">{b.name}</span>
                                     {b.oneLiner && <span className="os-chip">{b.oneLiner}</span>}
                                 </Link>

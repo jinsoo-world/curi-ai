@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     if (!name || name.length > 20) return NextResponse.json({ error: '이름은 1~20자' }, { status: 400 })
     if (!JOBS.some(j => j.id === body.job)) return NextResponse.json({ error: '맡을 일을 골라 주세요' }, { status: 400 })
     if (body.job === 'custom' && !(body.customJob ?? '').toString().trim()) return NextResponse.json({ error: '맡을 일을 한 줄 써 주세요' }, { status: 400 })
-    if (!AUTONOMY_OK.has(body.autonomy as string)) return NextResponse.json({ error: '어디까지 알아서 할지 골라 주세요' }, { status: 400 })
+    if (!AUTONOMY_OK.has(body.autonomy as string)) return NextResponse.json({ error: '승인 모드 값이 올바르지 않아요' }, { status: 400 })
     if (!SHAPES.includes(body.shape as never) || !COLORS.includes(body.color as never)) return NextResponse.json({ error: '모양과 색을 골라 주세요' }, { status: 400 })
 
     const input: NewBotInput = {

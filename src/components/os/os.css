@@ -317,9 +317,6 @@
 /* 답에 쓴 자료 (인용) */
 .os-cite { align-self: flex-start; max-width: 72%; font-size: 12.5px; color: var(--os-글-흐림); margin: -6px 0 2px 6px; line-height: 1.5; }
 
-/* 답 고치기 — 봇 말풍선 아래 작은 글자 단추 */
-.os-fix-trigger { align-self: flex-start; background: transparent; border: 0; padding: 2px 6px; margin: -4px 0 6px 6px; font-size: 12px; color: var(--os-글-흐림); cursor: pointer; }
-.os-fix-trigger:hover { color: var(--os-글); text-decoration: underline; }
 .os-fix-question { margin: 10px 0; padding: 10px 12px; border-radius: 12px; background: var(--os-말풍선); color: var(--os-글-연); font-size: 14px; line-height: 1.5; }
 
 /* 봇이 이번 답을 쓰며 읽은 페이지 (LinkCards) — 말풍선 위 작은 카드 줄 */
@@ -619,3 +616,23 @@
     .os-photo-strip-wrap { margin: 0 12px; }
 }
 /* === /사진 첨부 === */
+
+/* 봇 편집 시트: 프로필 사진 누르기 */
+.os-edit-face {
+    position: relative; border: 0; background: transparent; padding: 0; cursor: pointer;
+    display: inline-grid; place-items: center;
+}
+.os-edit-face:disabled { opacity: .6; cursor: wait; }
+.os-edit-face-hint {
+    position: absolute; bottom: -2px; right: -2px; font-size: 11px; font-weight: 700;
+    padding: 2px 6px; border-radius: 999px; background: var(--os-말풍선-내); color: var(--os-글);
+    box-shadow: 0 0 0 1px var(--os-선);
+}
+
+/* 대화 헤더: 얼굴·이름 누르면 봇 편집 */
+.os-chat-head-bot {
+    display: inline-flex; align-items: center; gap: 10px; border: 0; background: transparent;
+    color: inherit; font: inherit; padding: 0; cursor: pointer; min-width: 0; text-align: left;
+}
+.os-chat-head-bot:disabled { cursor: default; }
+.os-chat-head-bot:not(:disabled):hover { opacity: .92; }

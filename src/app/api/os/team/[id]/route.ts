@@ -1,4 +1,4 @@
-// PATCH  /api/os/team/[id] → 고정, 숨김, 정렬, 승인 모드, 모양, 색, 한 줄 소개, 역할, 이름, 인사말 (봇 편집 시트)
+// PATCH  /api/os/team/[id] → 고정, 숨김, 정렬, 승인 모드, 모양, 색, 한 줄 소개, 역할, 이름, 인사말, 프롬프트, 프로필 사진 (봇 편집 시트)
 // DELETE /api/os/team/[id] → 팀에서 빼기 (봇의 몸과 대화 기록은 남는다)
 //
 // 모양/색이 실제로 바뀌면 단톡에 「눈치채기 → 받아치기」 비트를 남긴다 (look-change).
@@ -37,6 +37,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         patch.name = name
     }
     if (typeof body.greeting === 'string') patch.greeting = body.greeting.slice(0, 200)
+    if (typeof body.systemPrompt === 'string') patch.systemPrompt = body.systemPrompt.slice(0, 12000)
+    if (typeof body.avatarUrl === 'string' || body.avatarUrl === null) patch.avatarUrl = body.avatarUrl as string | null
     try {
         const db = createAdminClient()
 

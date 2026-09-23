@@ -42,6 +42,20 @@
 .bot-avatar .dots.work circle { fill: var(--os-포인트); }
 .bot-avatar .zz { fill: var(--os-글-연); opacity: 0; font-family: inherit; }
 
+
+/* 상태 동그라미 (오른쪽 위). BotState → 초록/노랑/빨강/회색. 승인 ! 배지와 같은 자리 — ! 가 있으면 동그라미는 잠시 숨긴다 */
+.bot-avatar .presence {
+    position: absolute; right: calc(var(--배지) * -0.12); top: calc(var(--배지) * -0.12);
+    width: calc(var(--배지) * 0.72); height: calc(var(--배지) * 0.72); border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--os-패널);
+    pointer-events: none;
+}
+.bot-avatar .presence[data-tone="green"] { background: #22c55e; }
+.bot-avatar .presence[data-tone="amber"] { background: #f59e0b; }
+.bot-avatar .presence[data-tone="red"] { background: #ef4444; }
+.bot-avatar .presence[data-tone="gray"] { background: #94a3b8; }
+.bot-avatar.has-badge .presence { display: none; }
+
 /* 배지: 「!」 승인 기다림 (오른쪽 위) · 리더 얼굴 (오른쪽 아래). 크기는 컴포넌트가 px 로 넣는다 */
 .bot-avatar .badge {
     position: absolute; right: calc(var(--배지) * -0.15); top: calc(var(--배지) * -0.15);
@@ -135,7 +149,7 @@
 /* 움직임 줄이기(4060 어지럼 배려): 전부 멈추고 눈은 뜬 채로. JS 시간표도 컴포넌트가 끈다 */
 @media (prefers-reduced-motion: reduce) {
     .bot-avatar .body, .bot-avatar .eye-pos, .bot-avatar .eye, .bot-avatar .lid, .bot-avatar .pupil, .bot-avatar .mouth,
-    .bot-avatar .dots circle, .bot-avatar .zz, .bot-avatar .badge {
+    .bot-avatar .dots circle, .bot-avatar .zz, .bot-avatar .badge, .bot-avatar .presence {
         animation: none !important; transition: none !important;
     }
     .bot-avatar .lid { transform: translateY(-100%) !important; }

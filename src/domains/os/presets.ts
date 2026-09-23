@@ -95,7 +95,7 @@ export const JOBS: JobPreset[] = [
     },
 ]
 
-/** 2걸음: 어디까지 알아서 할까 */
+/** 승인 모드 선택지 (만들기 UI에서는 안 보이고 서버 기본 always_ask) */
 export const AUTONOMY: { id: ApprovalMode; label: string; desc: string }[] = [
     { id: 'always_ask', label: '보내기 전 항상 물어봐 (추천)', desc: '초안, 정리는 알아서, 밖으로 나가는 건 내가 허용한 뒤에만' },
     { id: 'draft_only', label: '초안만 만들어', desc: '밖으로 보내는 일은 아예 하지 않아요' },

@@ -7,6 +7,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties } from 'react'
 import type { BotColor, BotShape, BotState } from '@/domains/os/types'
 import {
     ERROR_X_MS, IDLE_DROWSY_MS, ariaLabel, avatarClass, badgePx, blinkHoldMs, eyeKind, eyeLayout, eyeR, facePx,
+    presenceTone, presenceLabel,
     faceBorderPx, faceClipId, faceTiltPeriodMs, isDoubleBlink, nextBlinkDelay, nextWinkDelay, shouldBlink, showsBadge,
     showsFace, showsFaceThinkDots, showsThinkDots, showsWorkDots, showsZ, startDrowsyTimer, talkBeatMs,
 } from './avatar'
@@ -214,7 +215,7 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, idl
 
     return (
         <span
-            className={avatarClass({ blinking, wink, drowsy, faceUrl: hasFace ? faceUrl : undefined })}
+            className={`${avatarClass({ blinking, wink, drowsy, faceUrl: hasFace ? faceUrl : undefined })}${showsBadge(state) ? ' has-badge' : ''}`}
             data-state={state}
             data-shape={shape}
             role="img"
@@ -291,6 +292,8 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, idl
                     </g>
                 )}
             </svg>
+            {/* 상태 동그라미 (초록=가능, 노랑=바쁨, 빨강=장애, 회색=잠). 승인 ! 이 있으면 CSS 가 동그라미를 숨긴다 */}
+            <span className="presence" data-tone={presenceTone(state)} title={presenceLabel(presenceTone(state))} aria-hidden="true" />
             {showsBadge(state) && <span className="badge" aria-hidden="true">!</span>}
             {/* 사진 얼굴 + 장애: 얼굴은 몸 안에서 이미 회색으로 바뀐다(css). 여기선 x 표시만 작게 얹는다 */}
             {hasFace && state === 'error' && <span className="badge badge-x" aria-hidden="true">✕</span>}
