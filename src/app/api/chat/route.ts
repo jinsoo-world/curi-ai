@@ -342,6 +342,9 @@ export async function POST(req: Request) {
         // 📎 이번 답에 쓴 자료(출처). 마지막 조각에 실어 보낸다 — 화면이 「참고한 자료」로 보여 준다.
         //    자료를 안 썼으면 빈 배열이라 옛 화면들은 그냥 무시한다(모양이 안 바뀐다).
         let usedSources: { id: string; title: string }[] = []
+        // 🔗 이번 답에서 읽어 본 주소들 — 마지막 조각에 readUrls 로 실어 보낸다(성공/실패 다 포함).
+        //    「링크 읽기」 스킬 카드(SkillsPanel)가 이 결과를 화면에 보여 준다. 못 읽었으면 이유를 사람 말로.
+        let readUrls: { url: string; title?: string; ok: boolean; reason?: string }[] = []
 
         // 📚 RAG 지식 검색 (멘토별 지식 베이스)
         try {
@@ -417,6 +420,9 @@ export async function POST(req: Request) {
             if (읽은것.length > 0) {
                 const 성공 = 읽은것.filter((r): r is Extract<typeof r, { ok: true }> => r.ok)
                 const 실패 = 읽은것.filter(r => !r.ok)
+                readUrls = 읽은것.map(r => r.ok
+                    ? { url: r.url, title: r.title, ok: true as const }
+                    : { url: r.requestedUrl, ok: false as const, reason: r.reason })
 
                 if (성공.length > 0) {
                     const 울타리 = fenceKnowledge(성공.map(p => `${p.title} (${p.url})\n${p.text}`))
@@ -690,7 +696,7 @@ export async function POST(req: Request) {
                     }
 
                     controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ text: '', done: true, fullResponse, sources: usedSources })}\n\n`)
+                        encoder.encode(`data: ${JSON.stringify({ text: '', done: true, fullResponse, sources: usedSources, readUrls })}\n\n`)
                     )
                 } catch (error) {
                     controller.enqueue(

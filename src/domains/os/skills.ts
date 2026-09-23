@@ -234,6 +234,30 @@ export async function deleteSkill(db: SupabaseClient, userId: string, id: string
     if (!count) throw new SkillNotMine()
 }
 
+// ---------- 내장 스킬 ----------
+// 깃허브에서 가져오는 스킬(위)과 달리, 이미 코드에 있는 능력을 카드로 보여만 준다.
+// 지울 수 없다(코드 자체가 그 능력이라) — 켜고 끄는 값은 화면(localStorage)에만 있다.
+// 「링크 읽기」= /api/chat 이 이미 하는 일(domains/os/readers readUrl)을 그대로 가리킨다.
+
+export interface BuiltinSkillView {
+    id: string
+    name: string
+    description: string
+    /** 화면에서 켜고 끈 값을 localStorage 에 적을 때 쓰는 열쇠 */
+    storageKey: string
+    defaultEnabled: boolean
+}
+
+export const BUILTIN_SKILLS: readonly BuiltinSkillView[] = [
+    {
+        id: 'linkread',
+        name: '링크 읽기',
+        description: '대화에 붙인 주소의 글·유튜브 자막을 읽고 답해요. 최대 5개',
+        storageKey: 'os-skill-linkread',
+        defaultEnabled: true,
+    },
+]
+
 /** 이 봇(mentors.id)에 붙은 켜진 스킬 본문. 프롬프트 조립 직전에 부른다. 표가 없으면 빈 목록 */
 export async function skillsForMentor(db: SupabaseClient, userId: string, mentorId: string): Promise<SkillForPrompt[]> {
     const { data, error } = await db.from('bot_skills').select('name, content, mentor_ids')
