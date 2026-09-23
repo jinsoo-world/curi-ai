@@ -7,7 +7,8 @@ import { useEffect, useId, useRef, useState, type CSSProperties } from 'react'
 import type { BotColor, BotShape, BotState } from '@/domains/os/types'
 import {
     ERROR_X_MS, IDLE_DROWSY_MS, ariaLabel, avatarClass, badgePx, blinkHoldMs, eyeKind, eyeLayout, eyeR, facePx,
-    isDoubleBlink, nextBlinkDelay, nextWinkDelay, shouldBlink, showsBadge, showsThinkDots, showsWorkDots, showsZ, startDrowsyTimer, talkBeatMs,
+    faceBorderPx, faceClipId, faceTiltPeriodMs, isDoubleBlink, nextBlinkDelay, nextWinkDelay, shouldBlink, showsBadge,
+    showsFace, showsFaceThinkDots, showsThinkDots, showsWorkDots, showsZ, startDrowsyTimer, talkBeatMs,
 } from './avatar'
 import './avatar.css'
 
@@ -38,7 +39,7 @@ export interface BotAvatarProps {
     size?: number
     /** 쉬는 중 이만큼(ms) 말이 없으면 눈이 스르륵 감긴다. 기본 5분 */
     idleAfterMs?: number
-    /** 리더 얼굴 사진(만든 사람 배지). 있으면 오른쪽 아래에 붙는다 */
+    /** 봇 프로필 사진. 있으면 그린 얼굴 대신 도형 안에 이 사진을 채운다(불러오기 실패하면 그린 얼굴로 되돌아간다) */
     faceUrl?: string | null
     /** 봇 이름. aria-label 이 「이름, 상태」로 읽힌다 */
     name?: string
@@ -82,6 +83,15 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, idl
     const [talkBeat, setTalkBeat] = useState(500)
     const [errorX, setErrorX] = useState(true)
     const [drowsy, setDrowsy] = useState(false)
+
+    // 사진 얼굴: 봇에 이미 프로필 사진(faceUrl)이 있으면 그린 얼굴 대신 그 사진을 몸 도형 안에 채운다(대표 0923 「있는 사진은 그걸 써」).
+    // 불러오다 실패(onError)하면 원래 그린 캐릭터 얼굴로 조용히 되돌아간다
+    const [faceError, setFaceError] = useState(false)
+    useEffect(() => { setFaceError(false) }, [faceUrl])
+    const hasFace = showsFace(faceUrl, faceError)
+    const faceClip = faceClipId(uid)
+    const faceBorderW = faceBorderPx(size) * (100 / size)   // px → 100 좌표계 단위로 환산(테두리가 크기와 무관하게 3~4px로 보이게)
+    const [tiltMs] = useState(() => faceTiltPeriodMs(Math.random()))   // idle 갸웃 간격 6~9초, 봇마다 달라 보이게 한 번만 뽑는다
 
     // 0) 졸음 = 쉬는 중이 5분(+봇마다 0~20초) 이어지면 눈꺼풀이 천천히 내려온다. 상태가 바뀌면(말을 걸면) 바로 뜬다
     useEffect(() => {
@@ -138,6 +148,8 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, idl
         '--배지': `${badgePx(size)}px`,
         '--얼굴': `${facePx(size)}px`,
         '--말함-주기': `${talkBeat}ms`,
+        // 사진 얼굴이 아니면 대표가 확정한 기존 캐릭터 화면을 한 글자도 안 바꾼다 — 이 변수도 사진 모드에서만 넣는다
+        ...(hasFace ? { '--갸웃-주기': `${tiltMs}ms` } : {}),
     } as CSSProperties
 
     // 👀 동그란 눈 = 검은 테 + 흰 눈알 + 검은 눈동자(살짝 위, 바깥) + 흰 반짝 점 (대표 0923 「눈은 동그랗게, 검정 안에 흰 점」)
@@ -182,7 +194,7 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, idl
 
     return (
         <span
-            className={avatarClass({ blinking, wink, drowsy, faceUrl })}
+            className={avatarClass({ blinking, wink, drowsy, faceUrl: hasFace ? faceUrl : undefined })}
             data-state={state}
             data-shape={shape}
             role="img"
@@ -192,27 +204,59 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, idl
         >
             <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden="true" focusable="false">
                 <g className="body" onAnimationIteration={state === 'talking' ? () => setTalkBeat(talkBeatMs(Math.random())) : undefined}>
-                    {shape === 'clover'
-                        ? CLOVER.map(([cx, cy, r]) => <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r={r} fill={fill} />)
-                        : <path d={PATHS[shape]} fill={fill} />}
+                    {hasFace ? (
+                        <>
+                            {/* 사진을 봇 도형 모양으로 잘라 몸에 채운다. 클로버는 잎 4장 + 심을 그대로 자름틀로 쓴다 */}
+                            <clipPath id={faceClip}>
+                                {shape === 'clover'
+                                    ? CLOVER.map(([cx, cy, r]) => <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r={r} />)
+                                    : <path d={PATHS[shape]} />}
+                            </clipPath>
+                            <g clipPath={`url(#${faceClip})`}>
+                                <image href={faceUrl ?? ''} x="0" y="0" width="100" height="100"
+                                    preserveAspectRatio="xMidYMid slice" onError={() => setFaceError(true)} />
+                            </g>
+                            <g className="face-border">
+                                {shape === 'clover'
+                                    ? CLOVER.map(([cx, cy, r]) => (
+                                        <circle key={`b-${cx}-${cy}`} cx={cx} cy={cy} r={r} fill="none" stroke={fill} strokeWidth={faceBorderW} />
+                                    ))
+                                    : <path d={PATHS[shape]} fill="none" stroke={fill} strokeWidth={faceBorderW} />}
+                            </g>
+                        </>
+                    ) : (
+                        shape === 'clover'
+                            ? CLOVER.map(([cx, cy, r]) => <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r={r} fill={fill} />)
+                            : <path d={PATHS[shape]} fill={fill} />
+                    )}
                 </g>
-                <g className="eye-pos eye-pos-left">{eye(geo.lx, 'left')}</g>
-                <g className="eye-pos eye-pos-right">{eye(geo.rx, 'right')}</g>
-                {/* 🍑 귀여움: 볼터치 2개 + 작은 미소 (대표 0923 「조금 더 귀엽게, 그록봇 느낌 살짝 빼고」). 자는 중, 장애일 땐 미소를 감춘다 */}
-                {state !== 'error' && (
-                    <g className="cute" aria-hidden="true">
-                        <circle cx={geo.lx - R * 0.9} cy={geo.cy + R * 1.3} r={R * 0.48} fill="rgba(255, 128, 150, 0.38)" />
-                        <circle cx={geo.rx + R * 0.9} cy={geo.cy + R * 1.3} r={R * 0.48} fill="rgba(255, 128, 150, 0.38)" />
-                        {state !== 'sleeping' && (
-                            <rect className="mouth" x={50 - R * 0.36} y={geo.cy + R * 1.45} width={R * 0.72} height={R * 0.9} rx={R * 0.36}
-                                fill="#fff" stroke={eyeColor} strokeWidth={R * 0.2} />
+                {!hasFace && (
+                    <>
+                        <g className="eye-pos eye-pos-left">{eye(geo.lx, 'left')}</g>
+                        <g className="eye-pos eye-pos-right">{eye(geo.rx, 'right')}</g>
+                        {/* 🍑 귀여움: 볼터치 2개 + 작은 미소 (대표 0923 「조금 더 귀엽게, 그록봇 느낌 살짝 빼고」). 자는 중, 장애일 땐 미소를 감춘다 */}
+                        {state !== 'error' && (
+                            <g className="cute" aria-hidden="true">
+                                <circle cx={geo.lx - R * 0.9} cy={geo.cy + R * 1.3} r={R * 0.48} fill="rgba(255, 128, 150, 0.38)" />
+                                <circle cx={geo.rx + R * 0.9} cy={geo.cy + R * 1.3} r={R * 0.48} fill="rgba(255, 128, 150, 0.38)" />
+                                {state !== 'sleeping' && (
+                                    <rect className="mouth" x={50 - R * 0.36} y={geo.cy + R * 1.45} width={R * 0.72} height={R * 0.9} rx={R * 0.36}
+                                        fill="#fff" stroke={eyeColor} strokeWidth={R * 0.2} />
+                                )}
+                            </g>
                         )}
-                    </g>
+                    </>
                 )}
 
                 {showsThinkDots(state) && (
                     <g className="dots think">
                         <circle cx="38" cy={geo.dotsY} r="4" /><circle cx="50" cy={geo.dotsY} r="4" /><circle cx="62" cy={geo.dotsY} r="4" />
+                    </g>
+                )}
+                {/* 사진 얼굴 + 생각 중: 눈이 없어 위 점 대신 몸 아래에 점 3개(고리 회전과 같이 돈다) */}
+                {showsFaceThinkDots(hasFace, state) && (
+                    <g className="dots think">
+                        <circle cx="38" cy={geo.workY} r="4" /><circle cx="50" cy={geo.workY} r="4" /><circle cx="62" cy={geo.workY} r="4" />
                     </g>
                 )}
                 {showsWorkDots(state) && (
@@ -228,9 +272,8 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, idl
                 )}
             </svg>
             {showsBadge(state) && <span className="badge" aria-hidden="true">!</span>}
-            {/* 리더 얼굴은 외부 저장소 주소라 next/image 최적화 대상이 아니다(작은 배지) */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            {faceUrl && <img className="face-badge" src={faceUrl} alt="" />}
+            {/* 사진 얼굴 + 장애: 얼굴은 몸 안에서 이미 회색으로 바뀐다(css). 여기선 x 표시만 작게 얹는다 */}
+            {hasFace && state === 'error' && <span className="badge badge-x" aria-hidden="true">✕</span>}
         </span>
     )
 }

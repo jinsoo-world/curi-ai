@@ -1,9 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import {
     ariaLabel, avatarClass, badgePx, blinkHoldMs, eyeGap, eyeKind, eyeLayout, eyeR, eyeThicknessPx, facePx,
-    isDoubleBlink, nextBlinkDelay, nextWinkDelay, shouldBlink, startDrowsyTimer, talkBeatMs,
+    faceBorderPx, faceClipId, faceTiltPeriodMs, isDoubleBlink, nextBlinkDelay, nextWinkDelay, shouldBlink,
+    showsFace, showsFaceThinkDots, startDrowsyTimer, talkBeatMs,
     DROWSY_JITTER_MS, IDLE_DROWSY_MS, STATE_KO, SHAPE_KO, COLOR_KO,
 } from '../avatar'
+import BotAvatar from '../BotAvatar'
 import { SHAPES, COLORS } from '@/domains/os/presets'
 import type { BotState } from '@/domains/os/types'
 
@@ -132,5 +136,57 @@ describe('os/avatar — 시간표(불규칙)', () => {
         expect(talkBeatMs(0.5)).toBe(500)
         expect(nextWinkDelay(0)).toBe(1200)
         expect(nextWinkDelay(1)).toBeLessThanOrEqual(3000)
+    })
+})
+
+describe('os/avatar — 사진 얼굴 (대표 0923 「있는 사진은 그걸 써」)', () => {
+    it('사진이 있고 실패한 적 없으면 보여 준다. 실패(onError)하면 그린 얼굴로 되돌아간다', () => {
+        expect(showsFace('https://x/a.png', false)).toBe(true)
+        expect(showsFace('https://x/a.png', true)).toBe(false)   // onError 뒤 복귀
+        expect(showsFace(null, false)).toBe(false)
+        expect(showsFace(undefined, false)).toBe(false)
+        expect(showsFace('', false)).toBe(false)
+    })
+
+    it('clipPath id 는 uid 마다 고유하다(한 화면에 봇이 여럿이라 겹치면 안 된다)', () => {
+        expect(faceClipId('a')).toBe('a-face-clip')
+        expect(faceClipId('b')).toBe('b-face-clip')
+        expect(faceClipId('a')).not.toBe(faceClipId('b'))
+    })
+
+    it('테두리는 작은 아바타 3px, 큰 아바타 4px', () => {
+        expect(faceBorderPx(36)).toBe(3)
+        expect(faceBorderPx(44)).toBe(3)
+        expect(faceBorderPx(72)).toBe(4)
+        expect(faceBorderPx(96)).toBe(4)
+    })
+
+    it('갸웃 간격은 6~9초', () => {
+        expect(faceTiltPeriodMs(0)).toBe(6000)
+        expect(faceTiltPeriodMs(0.5)).toBe(7500)
+        expect(faceTiltPeriodMs(1)).toBeLessThanOrEqual(9000)
+        expect(faceTiltPeriodMs(1)).toBeGreaterThanOrEqual(8999)
+    })
+
+    it('사진 얼굴 + 생각 중일 때만 몸 아래 점 3개', () => {
+        expect(showsFaceThinkDots(true, 'thinking')).toBe(true)
+        expect(showsFaceThinkDots(true, 'idle')).toBe(false)
+        expect(showsFaceThinkDots(false, 'thinking')).toBe(false)
+    })
+
+    it('faceUrl 을 안 넘기면 대표가 확정한 기존 캐릭터 그대로다 — 눈·볼터치·입은 있고 사진 얼굴 요소는 하나도 안 생긴다', () => {
+        for (const state of ALL_STATES) {
+            const html = renderToStaticMarkup(createElement(BotAvatar, { shape: 'circle', color: 'orange', state, size: 72 }))
+            expect(html).toContain('eye-pos-left')
+            expect(html).toContain('eye-pos-right')
+            expect(html).not.toContain('has-face')
+            expect(html).not.toContain('face-border')
+            expect(html).not.toContain('face-clip')
+            expect(html).not.toContain('badge-x')
+        }
+        // idle·talking 은 캐릭터가 그대로면 볼터치+입이 있어야 한다(장애만 미소를 감춘다, 기존 규칙)
+        const idleHtml = renderToStaticMarkup(createElement(BotAvatar, { shape: 'circle', color: 'orange', state: 'idle', size: 72 }))
+        expect(idleHtml).toContain('class="cute"')
+        expect(idleHtml).toContain('class="mouth"')
     })
 })
