@@ -9,22 +9,24 @@
 import { useEffect, useState } from 'react'
 import './pwa.css'
 
-type Kind = 'button' | 'ios' | 'mac-safari' | 'other'
+export type Kind = 'button' | 'ios' | 'mac-safari' | 'other'
 
-interface BeforeInstallPromptEvent extends Event {
+export interface BeforeInstallPromptEvent extends Event {
     prompt: () => Promise<void>
     userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
 const HIDE_KEY = 'curi-install-hide-until'
 
-function isStandalone(): boolean {
+/** 이미 앱으로(홈 화면 아이콘으로) 열려 있는가. 이러면 설치 안내를 그리지 않는다 */
+export function isStandalone(): boolean {
     if (typeof window === 'undefined') return false
     const nav = window.navigator as Navigator & { standalone?: boolean }
     return window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true
 }
 
-function detectKind(): Kind {
+/** 기기·브라우저별 설치 길. InstallModal(밝은 화면용)도 같은 판별을 쓴다 */
+export function detectKind(): Kind {
     const ua = navigator.userAgent
     const iOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
     if (iOS) return 'ios'

@@ -13,6 +13,7 @@ import Image from 'next/image'
 import AdSlot from '@/components/AdSlot'
 import ClaimPhoto from '@/components/studio/ClaimPhoto'
 import UploadedPeek from '@/components/studio/UploadedPeek'
+import InstallModal from '@/components/pwa/InstallModal'
 
 function ItemCard({ item, onGo }: { item: ToolItem; onGo: (href: string) => void }) {
     return (
@@ -68,11 +69,14 @@ export default function StudioPage() {
     const 사진들고옴 = useSearchParams()?.get('사진') === '올림'
     const [name, setName] = useState<string | null>(null)
     const [balance, setBalance] = useState<number | null>(null)
+    // 로그인 여부. 「내 봇 팀 열기」가 로그인 전이면 /os/welcome 으로 보낸다
+    const [로그인함, set로그인함] = useState<boolean | null>(null)
 
     useEffect(() => {
         const supabase = createClient()
         supabase.auth.getSession().then(async ({ data }) => {
             const uid = data.session?.user?.id
+            set로그인함(!!uid)
             if (!uid) return
             // 한 번에 여러 칸을 물으면 그중 하나만 없어도 통째로 실패한다(0915 잔액 0 사고)
             const { data: row } = await supabase.from('users').select('display_name, clovers').eq('id', uid).maybeSingle()
@@ -87,7 +91,28 @@ export default function StudioPage() {
             <AppSidebar />
             <div style={{ maxWidth: 1000, margin: "0 auto", padding: "0 18px" }}><ClaimPhoto /></div>
             <WelcomeGift />
+            <InstallModal />
             <div style={{ maxWidth: 1000, margin: '0 auto', padding: '36px 18px 90px' }}>
+                {/* 홈 → 대화 진입. 대표 지시 0923 「홈페이지에서 채팅 쪽으로 들어갈 루트가 없어」 */}
+                <button
+                    type="button"
+                    onClick={() => router.push(로그인함 ? '/os' : '/os/welcome')}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: 14, width: '100%', marginBottom: 26,
+                        padding: '18px 20px', borderRadius: 20, border: 'none', cursor: 'pointer', textAlign: 'left',
+                        background: '#0B0B0C', color: '#fff',
+                    }}
+                >
+                    <Image src="/icons/curi-192.png" alt="" width={48} height={48} style={{ borderRadius: 14, flexShrink: 0 }} />
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: 'block', fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.3 }}>내 봇 팀 열기</span>
+                        <span style={{ display: 'block', fontSize: 14.5, color: 'rgba(255,255,255,0.72)', marginTop: 3, lineHeight: 1.5, wordBreak: 'keep-all' }}>
+                            이름 있는 AI 봇들이 내 자료로 답하고 초안을 만들어요. 무료로 시작해요.
+                        </span>
+                    </span>
+                    <span aria-hidden style={{ fontSize: 24, lineHeight: 1, flexShrink: 0 }}>→</span>
+                </button>
+
                 {/* 인사 + 잔액 */}
                 {사진들고옴 && <UploadedPeek />}
 
