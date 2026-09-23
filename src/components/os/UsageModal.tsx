@@ -53,22 +53,13 @@ export default function UsageModal({ data, onClose }: { data: UsageLike; onClose
 
                 {d.blockedText && <p className="os-usage-blocked" role="alert">{d.blockedText}</p>}
 
-                <section className="os-usage-sec os-usage-5h" aria-label={t('usage.5h')}>
-                    <RingSvg pct={data.pct5h} size={112} stroke={9} />
+                <section className="os-usage-sec os-usage-5h" aria-label={t('usage.week')}>
+                    <RingSvg pct={data.pctWeek} size={112} stroke={9} />
                     <div className="os-usage-5h-text">
-                        <div className="os-usage-label">{t('usage.5h')}</div>
-                        <b>{d.fiveHourText}</b>
-                        <div className="os-usage-sub">{d.fiveHourReset}</div>
+                        <div className="os-usage-label">{t('usage.week')}</div>
+                        <b>{d.weekText}</b>
+                        <div className="os-usage-sub">{d.weekReset}</div>
                     </div>
-                </section>
-
-                <section className="os-usage-sec" aria-label={t('usage.week')}>
-                    <div className="os-usage-label">{t('usage.week')}</div>
-                    <div className="os-usage-bar-track" data-tone={usageTone(data.pctWeek)} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={data.pctWeek} aria-label={t('usage.week')}>
-                        <span style={{ width: `${Math.min(100, data.pctWeek)}%` }} />
-                    </div>
-                    <b>{d.weekText}</b>
-                    <div className="os-usage-sub">{d.weekReset}</div>
                 </section>
 
                 <section className="os-usage-sec" aria-label={t('clover.label')}>

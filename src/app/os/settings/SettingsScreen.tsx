@@ -316,22 +316,13 @@ function UsageTab() {
                 {usage.kind === 'ok' && d && (
                     <>
                         {d.blockedText && <p className="os-usage-blocked" role="alert">{d.blockedText}</p>}
-                        <section className="os-usage-sec os-usage-5h" aria-label={t('usage.5h')}>
-                            <RingSvg pct={usage.data.pct5h} size={96} stroke={9} />
+                        <section className="os-usage-sec os-usage-5h" aria-label={t('usage.week')}>
+                            <RingSvg pct={usage.data.pctWeek} size={96} stroke={9} />
                             <div className="os-usage-5h-text">
-                                <div className="os-usage-label">{t('usage.5h')}</div>
-                                <b>{d.fiveHourText}</b>
-                                <div className="os-usage-sub">{d.fiveHourReset}</div>
+                                <div className="os-usage-label">{t('usage.week')}</div>
+                                <b>{t('usage.weekLine', { pct: usage.data.pctWeek, limit: withComma(usage.data.limitWeek), used: withComma(usage.data.usedWeek) })}</b>
+                                <div className="os-usage-sub">{t('usage.weekReset')}</div>
                             </div>
-                        </section>
-                        <section className="os-usage-sec" aria-label={t('usage.week')}>
-                            <div className="os-usage-label">{t('usage.week')}</div>
-                            <div className="os-usage-bar-track" data-tone={usageTone(usage.data.pctWeek)} role="progressbar" aria-valuemin={0} aria-valuemax={100}
-                                aria-valuenow={usage.data.pctWeek} aria-label={t('usage.week')}>
-                                <span style={{ width: `${Math.min(100, usage.data.pctWeek)}%` }} />
-                            </div>
-                            <b>{t('usage.weekLine', { pct: usage.data.pctWeek, limit: withComma(usage.data.limitWeek), used: withComma(usage.data.usedWeek) })}</b>
-                            <div className="os-usage-sub">{t('usage.weekReset')}</div>
                         </section>
                     </>
                 )}

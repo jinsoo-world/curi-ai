@@ -1,6 +1,6 @@
 // domains/os — 사용 한도 DB 읽기 (서버 전용. service_role 이라 user_id 를 여기서 건다)
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { WINDOW_5H_MS, usageView, weekStartKST, type UsageView } from './usage'
+import { usageView, weekStartKST, type UsageView } from './usage'
 import { planLimits, resolvePlan, type PlanId } from './plan'
 
 /** 대표 트윈 판정(9/27) 때문에 관리자는 프로 한도. 관리자 명단은 admin-guard 와 같은 규칙 */
@@ -36,11 +36,10 @@ async function countUserTurns(db: SupabaseClient, userId: string, since: Date): 
 
 /** 지금 이 사람의 사용 한도 상태 */
 export async function readUsage(db: SupabaseClient, userId: string, now = new Date(), email?: string | null): Promise<UsageView> {
-    const [w5, wk, plan] = await Promise.all([
-        countUserTurns(db, userId, new Date(now.getTime() - WINDOW_5H_MS)),
+    const [wk, plan] = await Promise.all([
         countUserTurns(db, userId, weekStartKST(now)),
         readPlanId(db, userId, email),
     ])
     const lim = planLimits(plan)
-    return usageView({ now, used5h: w5.count, oldest5h: w5.oldest, usedWeek: wk.count, limit5h: lim.limit5h, limitWeek: lim.limitWeek })
+    return usageView({ now, used5h: 0, oldest5h: null, usedWeek: wk.count, limit5h: lim.limit5h, limitWeek: lim.limitWeek })
 }

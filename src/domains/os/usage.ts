@@ -1,4 +1,4 @@
-// domains/os — 사용 한도 (내 봇은 클로버 0. 대신 「5시간 한도 + 주간 한도」 두 창으로 예산을 지킨다)
+// domains/os — 사용 한도 (내 봇은 클로버 0. 대신 주간 한도 하나로 예산을 지킨다. 대표 확정 0923: 5시간 창 없음, 사용량은 주 단위, 구독은 월)
 //
 // 대표 확정 0923: 「내 봇은 무료. 사용 한도는 한 줄로 = 퍼센트, 재설정 시기, 주간 한도 초기화」
 // 순수 계산만 여기. DB 읽기는 usage-db.ts.
@@ -48,11 +48,11 @@ export function usageView(i: UsageInput): UsageView {
     const pctWeek = Math.min(100, Math.round((i.usedWeek / limitWeek) * 100))
     const resetAt5h = i.oldest5h ? new Date(i.oldest5h.getTime() + WINDOW_5H_MS) : null
     const weekResetAt = weekResetKST(i.now)
-    const blocked = i.used5h >= limit5h || i.usedWeek >= limitWeek
+    const blocked = i.usedWeek >= limitWeek   // 대표 확정 0923: 5시간 창 없음. 주간 한도만 막는다
     return {
         used5h: i.used5h, limit5h, pct5h, resetAt5h,
         usedWeek: i.usedWeek, limitWeek, pctWeek, weekResetAt, blocked,
-        line: usageLine({ pct5h, resetAt5h, pctWeek, weekResetAt, now: i.now }),
+        line: usageLine({ pctWeek, limitWeek, usedWeek: i.usedWeek, weekResetAt }),
     }
 }
 
@@ -76,9 +76,8 @@ export function kstDayHourText(d: Date): string {
 }
 
 /** 한 줄: 「사용 한도 12% / 4시간 12분 후 재설정 / 주간 3% / (월) 0시 초기화」 */
-export function usageLine(v: { pct5h: number; resetAt5h: Date | null; pctWeek: number; weekResetAt: Date; now: Date }): string {
-    const reset = v.resetAt5h ? `${untilText(v.resetAt5h, v.now)} 재설정` : '아직 안 씀'
-    return `사용 한도 ${v.pct5h}% / ${reset} / 주간 ${v.pctWeek}% / ${kstDayHourText(v.weekResetAt)} 초기화`
+export function usageLine(v: { pctWeek: number; limitWeek: number; usedWeek: number; weekResetAt: Date }): string {
+    return `이번 주 사용 한도 ${v.pctWeek}% (${withComma(v.limitWeek)}번 중 ${withComma(v.usedWeek)}번) / ${kstDayHourText(v.weekResetAt)} 초기화`
 }
 
 // ── 원형 게이지 + 사용량 모달 (대표 지시 0923: 「클로드코드처럼 원형으로, 누르면 모달로 사용량(클로버)」) ──
@@ -130,8 +129,7 @@ export function usageDetail(v: UsageLike, now: Date): UsageDetail {
     const weekResetAt = toDate(v.weekResetAt) as Date
     let blockedText: string | null = null
     if (v.blocked) {
-        const at = v.used5h >= v.limit5h && resetAt5h ? resetAt5h : weekResetAt
-        blockedText = `지금은 한도에 닿았어요. ${untilText(at, now)} 다시 쓸 수 있어요`
+        blockedText = `이번 주 한도에 닿았어요. ${kstDayHourText(weekResetAt)}에 다시 쓸 수 있어요`
     }
     return {
         fiveHourText: `${v.pct5h}% 썼어요 (${withComma(v.limit5h)}번 중 ${withComma(v.used5h)}번)`,

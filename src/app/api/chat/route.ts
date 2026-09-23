@@ -239,14 +239,11 @@ export async function POST(req: Request) {
 
         const dailyUsed = (userProfile as any)?.daily_free_used || 0
         const isPremium = (userProfile as any)?.subscription_tier === 'premium'
-        // 🍀 내 팀 봇과의 대화는 클로버 0 (대표 확정 0923). 대신 사용 한도 두 창(5시간 100턴 · 주간 1,000턴)으로 예산을 지킨다.
+        // 🍀 내 팀 봇과의 대화는 클로버 0 (대표 확정 0923). 대신 주간 한도 하나로 예산을 지킨다(5시간 창 없음, 대표 확정 0923).
         if (ownTeamBot && user) {
             const usage = await readUsage(createAdminClient(), user.id, new Date(), user.email)
             if (usage.blocked) {
-                const when = usage.resetAt5h && usage.used5h >= usage.limit5h
-                    ? `${untilText(usage.resetAt5h, new Date())} 다시 이야기할 수 있어요.`
-                    : `${kstDayHourText(usage.weekResetAt)}에 주간 한도가 초기화돼요.`
-                const msg = `오늘 사용 한도에 닿았어요. ${when}`
+                const msg = `이번 주 사용 한도에 닿았어요. ${kstDayHourText(usage.weekResetAt)}에 다시 채워져요. 더 쓰려면 요금제를 올려 보세요.`
                 const enc = new TextEncoder()
                 const limitStream = new ReadableStream({
                     start(controller) {

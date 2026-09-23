@@ -30,7 +30,7 @@ export default function UsageBar({ guest, refreshKey }: { guest: boolean; refres
     if (guest || !isUsable(u)) return null
     return (
         <>
-            <UsageRing pct={u.pct5h} onClick={() => setOpen(true)} />
+            <UsageRing pct={u.pctWeek} onClick={() => setOpen(true)} />
             {open && <UsageModal data={u} onClose={close} />}
         </>
     )

@@ -81,7 +81,7 @@ const ko = {
 
     // ── 설정: 사용량과 요금제 ──
     'usage.title': '사용량',
-    'usage.5h': '5시간 창',
+    'usage.5h': '이번 주',
     'usage.week': '이번 주',
     'usage.weekLine': '주간 사용량 {pct}% ({limit}번 중 {used}번)',
     'usage.weekReset': '월요일 0시에 다시 채워져요',
@@ -175,6 +175,14 @@ const ko = {
     'wel.bot.content_ideas.line': '글감과 영상 소재를 찾아요',
     'wel.bot.chief': '비서실장',
     'wel.bot.chief.line': '결정이 필요한 것만 가져와요',
+    'wel.bot.planning_lead': '기획팀장',
+    'wel.bot.planning_lead.line': '방향을 잡고 결정거리를 가져와요',
+    'wel.bot.marketing_lead': '홍보팀장',
+    'wel.bot.marketing_lead.line': '알리는 글과 답장 초안을 써요',
+    'wel.bot.dev_lead': '개발팀장',
+    'wel.bot.dev_lead.line': '도구와 반복 일을 정리해요',
+    'wel.bot.research_lead': '조사팀장',
+    'wel.bot.research_lead.line': '자료를 찾고 근거를 모아요',
 } as const
 
 export type TKey = keyof typeof ko
@@ -329,6 +337,14 @@ const en: Record<TKey, string> = {
     'wel.bot.content_ideas.line': 'Finds topics for posts and videos',
     'wel.bot.chief': 'Chief of Staff',
     'wel.bot.chief.line': 'Brings you only what needs a decision',
+    'wel.bot.planning_lead': 'Planning lead',
+    'wel.bot.planning_lead.line': 'Sets direction and brings you decisions',
+    'wel.bot.marketing_lead': 'Marketing lead',
+    'wel.bot.marketing_lead.line': 'Drafts announcements and replies',
+    'wel.bot.dev_lead': 'Dev lead',
+    'wel.bot.dev_lead.line': 'Tidies up tools and repeat work',
+    'wel.bot.research_lead': 'Research lead',
+    'wel.bot.research_lead.line': 'Finds sources and gathers evidence',
 }
 
 const ja: Record<TKey, string> = {
@@ -481,6 +497,14 @@ const ja: Record<TKey, string> = {
     'wel.bot.content_ideas.line': '記事や動画のネタを探します',
     'wel.bot.chief': '秘書室長',
     'wel.bot.chief.line': '決断が必要なことだけ持ってきます',
+    'wel.bot.planning_lead': '企画チーム長',
+    'wel.bot.planning_lead.line': '方向を決めて、判断が必要なことを持ってきます',
+    'wel.bot.marketing_lead': '広報チーム長',
+    'wel.bot.marketing_lead.line': 'お知らせや返信の下書きを書きます',
+    'wel.bot.dev_lead': '開発チーム長',
+    'wel.bot.dev_lead.line': 'ツールと繰り返し作業を整理します',
+    'wel.bot.research_lead': '調査チーム長',
+    'wel.bot.research_lead.line': '資料を探して根拠を集めます',
 }
 
 export const DICT: Record<Locale, Record<TKey, string>> = { ko, en, ja }

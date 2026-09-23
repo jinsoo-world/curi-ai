@@ -11,10 +11,11 @@ import './welcome.css'
 
 // 첫 화면에 세울 봇 3명 = 프리셋 그대로 (답장봇, 글감봇, 비서실장). 이름과 한 줄은 언어별 사전에서
 const SHOWCASE = [
-    { job: 'fan_reply', state: 'talking' as const },
-    { job: 'content_ideas', state: 'thinking' as const },
-    { job: 'chief', state: 'idle' as const },
-].map(s => ({ ...s, preset: JOBS.find(j => j.id === s.job)! }))
+    { job: 'planning_lead', state: 'talking' as const },
+    { job: 'marketing_lead', state: 'thinking' as const },
+    { job: 'dev_lead', state: 'idle' as const },
+    { job: 'research_lead', state: 'idle' as const },
+].map(s => ({ ...s, preset: JOBS.find(j => j.id === s.job) })).filter((s): s is typeof s & { preset: NonNullable<typeof s.preset> } => !!s.preset)
 
 /** 사전 글의 줄바꿈(\n)을 <br /> 로 */
 function Lines({ text }: { text: string }) {
