@@ -10,7 +10,6 @@ import { osTrack } from '@/domains/os/events'
 import { readLocalIntent } from '@/domains/os/settings'
 import BotAvatar from './BotAvatar'
 import BotMarkdown from './BotMarkdown'
-import CheckinStrip from './CheckinStrip'
 import CloverBar from './CloverBar'
 import DetailPane from './DetailPane'
 import NextStepLink from './NextStepLink'
@@ -223,7 +222,6 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                 </header>
 
                 {/* 오늘 체크인 띠 — 오늘 아직 안 했을 때만. 손님·시연에선 안 뜬다 */}
-                <CheckinStrip hidden={개인화숨김} />
 
                 <div className="os-messages">
                     {greeting && messages.length === 0 && (
