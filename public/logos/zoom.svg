@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Zoom">
+  <rect width="64" height="64" rx="12" fill="#0B5CFF"/>
+  <rect x="12" y="21" width="28" height="22" rx="6" fill="#FFFFFF"/>
+  <path fill="#FFFFFF" d="M42 29l10-6.5v19L42 35z"/>
+</svg>

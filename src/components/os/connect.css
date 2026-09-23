@@ -1,0 +1,65 @@
+/* 연결 화면(/os/connect) 전용. 색은 globals.css [data-theme="os"] 토큰만 쓴다.
+   os.css·settings.css 는 다른 손이 고치므로 여기에 필요한 규칙을 모아 둔다. */
+
+.os-connect { max-width: 640px; width: 100%; margin: 0 auto; padding: 24px 20px 60px; overflow-y: auto; color: var(--os-글); font-size: calc(15px * var(--os-font-scale, 1)); }
+.os-connect h1 { font-size: calc(24px * var(--os-font-scale, 1)); margin: 0 0 4px; }
+.os-connect .os-connect-lead { color: var(--os-글-흐림); font-size: calc(14px * var(--os-font-scale, 1)); line-height: 1.55; margin: 0 0 16px; }
+
+/* 탭 2개: 서비스 / 스킬 */
+.os-connect-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.os-connect-tab { flex: 1; min-height: 44px; padding: 10px 8px; border-radius: 12px; border: 1px solid var(--os-선); background: var(--os-말풍선); color: var(--os-글-연); font-size: calc(15px * var(--os-font-scale, 1)); cursor: pointer; }
+.os-connect-tab[aria-selected="true"] { color: var(--os-글); border-color: var(--os-클로버); box-shadow: inset 0 0 0 1px var(--os-클로버); font-weight: 700; }
+
+.os-connect .os-card { background: var(--os-말풍선); border-radius: 16px; padding: 4px 16px; line-height: 1.55; color: var(--os-글-연); }
+.os-connect .os-card b { color: var(--os-글); }
+.os-connect-note { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--os-클로버) 14%, transparent); color: var(--os-글); font-size: calc(14px * var(--os-font-scale, 1)); line-height: 1.5; }
+.os-connect-note.warn { background: color-mix(in srgb, var(--os-경고) 18%, transparent); color: var(--os-경고); }
+
+/* 서비스 한 줄: 왼쪽 32px 로고, 이름과 배지, 오른쪽 단추 */
+.os-svc { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 0; }
+.os-svc + .os-svc, .os-svc + .os-svc-more, .os-svc-more + .os-svc { border-top: 1px solid var(--os-선); }
+.os-svc-logo { width: 32px; height: 32px; border-radius: 8px; flex: 0 0 auto; display: block; }
+.os-svc-body { flex: 1; min-width: 0; }
+.os-svc-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.os-svc-hint { font-size: calc(13px * var(--os-font-scale, 1)); color: var(--os-글-흐림); margin-top: 2px; line-height: 1.5; }
+.os-svc-badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--os-말풍선-내); color: var(--os-글-흐림); white-space: nowrap; }
+.os-svc-badge.on { color: var(--os-클로버); background: color-mix(in srgb, var(--os-클로버) 16%, transparent); }
+.os-svc-badge.soon { color: var(--os-경고); background: color-mix(in srgb, var(--os-경고) 16%, transparent); }
+.os-svc-badge.bad { color: var(--os-오류); background: color-mix(in srgb, var(--os-오류) 16%, transparent); }
+.os-svc-act { flex: 0 0 auto; display: flex; gap: 8px; }
+.os-svc-act .os-btn { min-height: 44px; padding: 10px 14px; font-size: calc(14px * var(--os-font-scale, 1)); }
+.os-svc-more { padding: 4px 0 14px 44px; }
+
+/* 붙여 넣기 칸(노션·슬랙 옛길) */
+.os-connect-input { width: 100%; background: var(--os-말풍선-내); color: var(--os-글); border: 1px solid var(--os-선); border-radius: 10px; padding: 10px 12px; font-size: calc(15px * var(--os-font-scale, 1)); min-height: 44px; font-family: inherit; }
+.os-connect-input::placeholder { color: var(--os-글-흐림); }
+.os-connect-form { display: flex; gap: 8px; align-items: center; }
+.os-connect-form .os-btn { min-height: 44px; white-space: nowrap; }
+
+/* 스킬 한 줄 */
+.os-skill { padding: 12px 0; }
+.os-skill + .os-skill { border-top: 1px solid var(--os-선); }
+.os-skill-head { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.os-skill-body { flex: 1; min-width: 0; }
+.os-skill-src { font-size: calc(12.5px * var(--os-font-scale, 1)); color: var(--os-글-흐림); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.os-skill-bots { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.os-skill-bot { min-height: 36px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--os-선); background: transparent; color: var(--os-글-연); font-size: calc(13px * var(--os-font-scale, 1)); cursor: pointer; }
+.os-skill-bot[aria-pressed="true"] { color: var(--os-글); border-color: var(--os-클로버); box-shadow: inset 0 0 0 1px var(--os-클로버); }
+.os-skill-bot:disabled { opacity: .4; cursor: default; }
+
+/* 켜기/끄기 스위치 */
+.os-connect-switch { width: 52px; height: 30px; border-radius: 15px; border: 0; padding: 0; flex: 0 0 auto; position: relative; cursor: pointer; background: var(--os-말풍선-내); transition: background .15s; }
+.os-connect-switch[aria-checked="true"] { background: var(--os-클로버, #03C124); }
+.os-connect-switch > span { position: absolute; top: 2px; left: 2px; width: 26px; height: 26px; border-radius: 13px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .35); transition: left .15s; }
+.os-connect-switch[aria-checked="true"] > span { left: 24px; }
+.os-connect-switch:disabled { cursor: not-allowed; opacity: .4; }
+
+/* 폰(390px): 단추가 이름 아래로 내려가 세로로 선다 */
+@media (max-width: 420px) {
+    .os-connect { padding-left: 16px; padding-right: 16px; }
+    .os-svc { flex-wrap: wrap; }
+    .os-svc-act { width: 100%; padding-left: 44px; }
+    .os-svc-act .os-btn { flex: 1; }
+    .os-svc-more { padding-left: 0; }
+    .os-connect-form { flex-direction: column; align-items: stretch; }
+}
