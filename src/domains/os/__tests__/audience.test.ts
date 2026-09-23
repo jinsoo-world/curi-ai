@@ -83,4 +83,18 @@ describe('os/audience — 누가 이 봇과 대화할 수 있나 (Just Me / Insi
         expect(cleanVisitorLimit('50')).toBe(50)
         expect(cleanVisitorLimit(50.7)).toBe(50)
     })
+
+    it('방문자 봇 한도 게이트 — 한도 미설정은 통과, 사용량이 한도 이상이면 막힘', () => {
+        // checkVisitorBotWeeklyLimit 의 순수 규칙 (DB 없이): limit==null → 통과, used >= limit → 막힘
+        const blocked = (used: number, limit: number | null) => limit != null && used >= limit
+        expect(blocked(0, null)).toBe(false)
+        expect(blocked(99, null)).toBe(false)
+        expect(blocked(0, 10)).toBe(false)
+        expect(blocked(9, 10)).toBe(false)
+        expect(blocked(10, 10)).toBe(true)
+        expect(blocked(11, 10)).toBe(true)
+        // 요금제 한도와 주인이 정한 한도의 min 은 visitorWeeklyLimit 이 담당
+        expect(visitorWeeklyLimit(100, 10)).toBe(10)
+    })
+
 })

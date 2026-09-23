@@ -3,6 +3,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import {
     checkAudience, cleanVisitorLimit, defaultAudienceLevel, isAudienceLevel, type AudienceLevel,
 } from './audience'
+import { countUserTurnsForMentor } from './usage-db'
+import { weekStartKST } from './usage'
 
 /** 표가 아직 DB 에 없을 때(마이그레이션 미적용) 나는 Postgres 오류 번호 */
 const TABLE_MISSING = '42P01'
@@ -151,6 +153,43 @@ export async function checkChatAudience(
     } catch (e) {
         console.error('[os/audience] checkChatAudience', e instanceof Error ? e.message : e)
         return { allowed: true, message: null, level: 'public' }
+    }
+}
+
+
+/**
+ * 방문자 1인당 주간 한도 — 봇 주인이 Audience 시트에서 정한 messageLimitPerWeek.
+ * 주인 본인·한도 미설정·비로그인은 통과. 표 오류 시에도 막지 않는다(대화가 끊기면 안 된다).
+ * (요금제 한도와의 min 은 내 팀 봇 경로의 readUsage 가 따로 지킨다. 여기는 「이 봇」캡만.)
+ */
+export async function checkVisitorBotWeeklyLimit(
+    db: SupabaseClient,
+    mentor: { id: string; is_active?: boolean | null; creator_id?: string | null },
+    viewer: { userId: string | null; email?: string | null },
+    now = new Date(),
+): Promise<{ allowed: boolean; message: string | null; used: number; limit: number | null }> {
+    try {
+        if (!viewer.userId) return { allowed: true, message: null, used: 0, limit: null }
+        const ownerId = await resolveMentorOwnerId(db, mentor)
+        if (ownerId && ownerId === viewer.userId) return { allowed: true, message: null, used: 0, limit: null }
+
+        const settings = await getAudienceSettings(db, mentor)
+        const limit = settings.messageLimitPerWeek
+        if (limit == null) return { allowed: true, message: null, used: 0, limit: null }
+
+        const used = await countUserTurnsForMentor(db, viewer.userId, mentor.id, weekStartKST(now))
+        if (used >= limit) {
+            return {
+                allowed: false,
+                message: `이 봇 주인이 정해 둔 방문자 주간 한도(${limit}번)에 닿았어요. 다음 주 월요일 0시(서울)에 다시 채워져요.`,
+                used,
+                limit,
+            }
+        }
+        return { allowed: true, message: null, used, limit }
+    } catch (e) {
+        console.error('[os/audience] checkVisitorBotWeeklyLimit', e instanceof Error ? e.message : e)
+        return { allowed: true, message: null, used: 0, limit: null }
     }
 }
 

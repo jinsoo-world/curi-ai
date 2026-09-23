@@ -1,9 +1,10 @@
 'use client'
 // 오른쪽 세부칸 (그록봇 = 「봇의 화면」+ 루틴 + 멤버). 우리 P0 = 이 봇이 읽은 자료 + 승인 모드 + 루틴 자리.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { TeamBot } from '@/domains/os/types'
 import AudienceSheet from './AudienceSheet'
+import { AUDIENCE_LABEL, type AudienceLevel, isAudienceLevel } from '@/domains/os/audience'
 import KnowledgeList from './KnowledgeList'
 import FeedList from './FeedList'
 import RoutinePanel from './RoutinePanel'
@@ -23,6 +24,23 @@ export default function DetailPane({ bot, publicName, demo = false }: { bot: Tea
     const [답변설정열림, set답변설정열림] = useState(false)
     const [답변설정펼침, set답변설정펼침] = useState(false)
     const [audienceOpen, setAudienceOpen] = useState(false)
+    const [audienceLevel, setAudienceLevel] = useState<AudienceLevel | null>(null)
+
+    useEffect(() => {
+        if (!bot || 시연) { setAudienceLevel(null); return }
+        let alive = true
+        ;(async () => {
+            try {
+                const res = await fetch(`/api/os/audience?mentorId=${encodeURIComponent(bot.mentorId)}`, { cache: 'no-store' })
+                const d = await res.json().catch(() => ({}))
+                if (!alive) return
+                if (res.ok && isAudienceLevel(d.level)) setAudienceLevel(d.level)
+            } catch { /* 요약 실패해도 버튼은 그대로 */ }
+        })()
+        return () => { alive = false }
+        // audienceOpen 이 닫힐 때(저장 직후) 다시 읽어 버튼 글자를 갱신한다
+    }, [bot, 시연, audienceOpen])
+
     if (!bot) {
         return (
             <div>
@@ -47,11 +65,11 @@ export default function DetailPane({ bot, publicName, demo = false }: { bot: Tea
                 <>
                     <button type="button" className="os-card" style={{ width: '100%', textAlign: 'left', cursor: 'pointer' }}
                         aria-expanded={답변설정펼침} onClick={() => set답변설정펼침(v => !v)}>
-                        <b>답변 설정</b>{' '}<span style={{ fontSize: 13, color: 'var(--os-글-흐림)' }}>{답변설정펼침 ? '접기 ▲' : '목적·말투·길이·창의성 등 ▼'}</span>
+                        <b>답변 설정</b>{' '}<span style={{ fontSize: 13, color: 'var(--os-글-흐림)' }}>{답변설정펼침 ? '접기 ▲' : '목적, 말투, 길이, 창의성 등 ▼'}</span>
                     </button>
                     {답변설정펼침 && (
                         <div className="os-card" style={{ marginTop: -8 }}>
-                            자료에 없는 질문에 어디까지 답할지, 답 길이·말투를 이 봇만 따로 정할 수 있어요.
+                            자료에 없는 질문에 어디까지 답할지, 답 길이와 말투를 이 봇만 따로 정할 수 있어요.
                             <button className="os-btn primary" style={{ width: '100%', marginTop: 10, minHeight: 44 }}
                                 onClick={() => set답변설정열림(true)}>답변 설정 열기</button>
                         </div>
@@ -66,7 +84,7 @@ export default function DetailPane({ bot, publicName, demo = false }: { bot: Tea
             {!시연 && (
                 <button type="button" className="os-btn" style={{ width: '100%', textAlign: 'left', marginBottom: 4 }}
                     onClick={() => setAudienceOpen(true)}>
-                    누가 대화할 수 있나요 →
+                    누가 대화할 수 있나요{audienceLevel ? ` (${AUDIENCE_LABEL[audienceLevel]})` : ''} →
                 </button>
             )}
             {audienceOpen && <AudienceSheet mentorId={bot.mentorId} botName={bot.name} onClose={() => setAudienceOpen(false)} />}

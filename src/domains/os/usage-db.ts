@@ -35,6 +35,30 @@ async function countUserTurns(db: SupabaseClient, userId: string, since: Date): 
 }
 
 /** 지금 이 사람의 사용 한도 상태 */
+
+/** 이 사람이 이 봇(mentor)과 나눈 대화만, since 이후 사용자 턴 수 (방문자 1인당 주간 한도용) */
+export async function countUserTurnsForMentor(
+    db: SupabaseClient,
+    userId: string,
+    mentorId: string,
+    since: Date,
+): Promise<number> {
+    const { data: sessions } = await db
+        .from('chat_sessions')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('mentor_id', mentorId)
+    const ids = (sessions ?? []).map((s: { id: string }) => s.id)
+    if (ids.length === 0) return 0
+    const { count } = await db
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .in('session_id', ids)
+        .eq('role', 'user')
+        .gte('created_at', since.toISOString())
+    return count ?? 0
+}
+
 export async function readUsage(db: SupabaseClient, userId: string, now = new Date(), email?: string | null): Promise<UsageView> {
     const [wk, plan] = await Promise.all([
         countUserTurns(db, userId, weekStartKST(now)),

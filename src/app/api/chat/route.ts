@@ -10,7 +10,7 @@ import { deductCredit, getCreditBalance } from '@/domains/credit'
 import { pickDriverFromEnv } from '@/domains/llm'
 import { getOwnedTeamBotMentor } from '@/domains/os'
 import { readUsage } from '@/domains/os/usage-db'
-import { checkChatAudience } from '@/domains/os/audience-db'
+import { checkChatAudience, checkVisitorBotWeeklyLimit } from '@/domains/os/audience-db'
 import { untilText, kstDayHourText } from '@/domains/os/usage'
 import { findSourcesOfChunks } from '@/domains/os/knowledge'
 import { readUrlsInText } from '@/domains/os/readers'
@@ -224,6 +224,29 @@ export async function POST(req: Request) {
         }
 
         // 🍀 내 팀 봇(team_bots 에 내 것으로 등록)인가 — 대표 확정 0923 「내 봇은 무료로 해」
+
+        // 🎯 방문자 1인당 주간 한도 — Audience 시트가 bot_audience.message_limit_per_week 에 저장한 값.
+        // 주인 본인은 통과. 한도를 안 정했으면 통과. (내 팀 봇 주간 한도·클로버 한도와 별개로 「이 봇」캡만 본다)
+        if (user) {
+            const visitorCap = await checkVisitorBotWeeklyLimit(
+                createAdminClient(),
+                mentor as { id: string; is_active?: boolean | null; creator_id?: string | null },
+                { userId: user.id, email: user.email },
+            )
+            if (!visitorCap.allowed) {
+                const msg = visitorCap.message ?? '이 봇 주인이 정해 둔 방문자 주간 한도에 닿았어요'
+                const enc = new TextEncoder()
+                const limitStream = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue(enc.encode(`data: ${JSON.stringify({ text: msg, done: true, fullResponse: msg, usageLimit: true, visitorBotLimit: true })}\n\n`))
+                        controller.close()
+                    },
+                })
+                return new Response(limitStream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' } })
+            }
+        }
+
+
         const ownTeamBot = !!(user && (await getOwnedTeamBotMentor(createAdminClient(), user.id, mentorId)))
 
         // 🔒 이 대화방이 정말 이 사람 것인지 확인한다.
