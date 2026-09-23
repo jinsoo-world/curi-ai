@@ -42,11 +42,35 @@
     display: grid; place-items: center;
     box-shadow: 0 0 0 2px var(--os-패널);
 }
-.bot-avatar .face-badge {
-    position: absolute; right: calc(var(--얼굴) * -0.12); bottom: calc(var(--얼굴) * -0.12);
-    width: var(--얼굴); height: var(--얼굴); border-radius: 50%;
-    border: 2px solid var(--os-패널); box-shadow: 0 0 0 1px var(--os-선);
-    object-fit: cover; background: var(--os-말풍선);
+/* ---- 사진 얼굴(has-face): 그린 눈·입 대신 도형 안에 진짜 사진 + 봇 색 테두리. 상태마다 숨·갸웃·말 박자로 생동감(대표 0923) ---- */
+.bot-avatar.has-face .face-border { transform-box: fill-box; transform-origin: center; }
+.bot-avatar.has-face .badge-x { background: var(--os-글-연); color: var(--os-바탕); }
+
+/* idle: 아주 느린 숨(4초) + 6~9초마다 한 번씩 살짝 갸웃(3도). transform 대신 scale/rotate 개별 속성이라 서로 안 덮어쓴다(.body 의 transform-origin 은 위 기본값을 그대로 쓴다) */
+.bot-avatar.has-face[data-state="idle"] .body {
+    animation: bot-face-breathe 4s ease-in-out infinite, bot-face-tilt var(--갸웃-주기, 7500ms) ease-in-out infinite;
+}
+/* listening: 눈이 없어 몸 전체가 살짝 커지고, 테두리가 밝아져 「듣고 있다」를 보인다 */
+.bot-avatar.has-face[data-state="listening"] .body { scale: 1.04; }
+.bot-avatar.has-face[data-state="listening"] .face-border { filter: brightness(1.4); }
+/* thinking: 테두리가 점선 고리가 되어 천천히 돈다 + 몸 아래 점 3개(다른 애니메이션 재사용) */
+.bot-avatar.has-face[data-state="thinking"] .face-border { stroke-dasharray: 6 5; animation: bot-face-ring-spin 3s linear infinite; }
+/* talking: 테두리 두께가 8→4→8 로 맥동 + 몸이 1↔1.03 으로만 커졌다 줄었다(흔들지 않는다) */
+.bot-avatar.has-face[data-state="talking"] .face-border { animation: bot-face-border-pulse .6s ease-in-out infinite; }
+.bot-avatar.has-face[data-state="talking"] .body { animation: bot-face-talk-breathe .6s ease-in-out infinite; }
+/* error: 사진이 회색으로 바뀌고, ✕ 배지(위 badge-x)가 오른쪽 위에 뜬다 */
+.bot-avatar.has-face[data-state="error"] .body { filter: grayscale(1) brightness(.92); }
+/* drowsy: 조금 어둡게(다른 졸음 효과와 같이 60초에 걸쳐 천천히) */
+.bot-avatar.has-face.is-drowsy .body { filter: brightness(.86); transition: filter 60s ease; }
+
+@keyframes bot-face-breathe        { 0%, 100% { scale: 1; } 50% { scale: 1.02; } }
+@keyframes bot-face-tilt           { 0%, 92%, 100% { rotate: 0deg; } 96% { rotate: 3deg; } }
+@keyframes bot-face-ring-spin      { to { rotate: 360deg; } }
+@keyframes bot-face-border-pulse   { 0%, 100% { stroke-width: 8; } 50% { stroke-width: 4; } }
+@keyframes bot-face-talk-breathe   { 0%, 100% { scale: 1; } 50% { scale: 1.03; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .bot-avatar.has-face .body, .bot-avatar.has-face .face-border { animation: none !important; }
 }
 
 /* ---- 상태 8개 ---- */
