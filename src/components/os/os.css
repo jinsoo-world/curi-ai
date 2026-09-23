@@ -234,3 +234,53 @@
 /* 넓은 화면 기본 = 열림. 닫으면 칸이 사라지고 대화가 그 자리를 쓴다 */
 .os-right.closed { display: none; }
 .os-chat-wrap.narrow { grid-template-columns: minmax(0, 1fr); }
+
+/* === 사진 첨부 === (PhotoAttach·PhotoGrid. 둥글기 14px·그림자 0 6px 18px rgba(0,0,0,.35) 는 대표 지시 0923 값) */
+.os-plus-wrap { position: relative; flex: 0 0 auto; }
+.os-plus-menu { position: absolute; left: 0; bottom: calc(100% + 8px); min-width: 220px; padding: 6px; border-radius: var(--둥근-소); background: var(--os-패널); border: 1px solid var(--os-선); box-shadow: 0 6px 18px rgba(0,0,0,.35); z-index: 20; display: flex; flex-direction: column; gap: 2px; }
+.os-plus-item { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 10px 12px; border: 0; border-radius: 12px; background: transparent; color: var(--os-글); font-size: 15px; cursor: pointer; min-height: 44px; }
+.os-plus-item small { margin-left: auto; color: var(--os-글-흐림); font-size: 12.5px; }
+.os-plus-item:hover:not(:disabled) { background: var(--os-말풍선); }
+.os-plus-item:disabled { opacity: .45; cursor: default; }
+
+.os-photo-strip-wrap { margin: 0 20px; display: flex; flex-direction: column; gap: 6px; }
+.os-photo-notice { font-size: 13px; color: var(--os-경고); padding: 0 6px; }
+.os-photo-strip { display: flex; align-items: center; gap: 10px; padding: 8px 6px 12px; overflow-x: auto; }
+.os-photo-thumb { position: relative; flex: 0 0 auto; width: 72px; height: 72px; border-radius: 14px; overflow: hidden; background: var(--os-말풍선); box-shadow: 0 6px 18px rgba(0,0,0,.35); transition: transform .15s ease, box-shadow .15s ease; }
+.os-photo-thumb:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(0,0,0,.45); }
+.os-photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.os-photo-thumb[data-state="uploading"] img { opacity: .55; }
+.os-photo-thumb[data-state="error"] { box-shadow: 0 0 0 2px var(--os-오류), 0 6px 18px rgba(0,0,0,.35); }
+.os-photo-thumb[data-state="error"] img { opacity: .4; }
+.os-photo-spin { position: absolute; inset: 0; margin: auto; width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.25); border-top-color: var(--os-글); animation: os-photo-spin .8s linear infinite; }
+@keyframes os-photo-spin { to { transform: rotate(360deg); } }
+.os-photo-retry { position: absolute; inset: 0; margin: auto; width: 44px; height: 26px; border: 0; border-radius: 8px; background: var(--os-오류); color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer; min-height: 0; }
+.os-photo-x { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; min-height: 0; border: 0; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; font-size: 15px; line-height: 1; cursor: pointer; display: grid; place-items: center; }
+.os-photo-x:hover { background: rgba(0,0,0,.85); }
+.os-photo-count { flex: 0 0 auto; font-size: 12.5px; color: var(--os-글-흐림); padding-left: 4px; }
+
+/* 내 말풍선 안 격자 — 사진이 있으면 말풍선 안쪽 여백을 줄여 사진이 가장자리에 붙는다 */
+.os-bubble.me.has-photos { padding: 6px; max-width: min(72%, 420px); }
+.os-bubble.me.has-photos .os-photo-text { padding: 8px 10px 6px; }
+.os-photo-grid { display: grid; gap: 6px; }
+.os-photo-grid[data-cols="1"] { grid-template-columns: 1fr; }
+.os-photo-grid[data-cols="2"] { grid-template-columns: 1fr 1fr; }
+.os-photo-grid[data-cols="3"] { grid-template-columns: 1fr 1fr 1fr; }
+.os-photo-cell { display: block; padding: 0; border: 0; min-height: 0; border-radius: 14px; overflow: hidden; background: var(--os-말풍선); cursor: zoom-in; box-shadow: 0 6px 18px rgba(0,0,0,.35); transition: transform .15s ease; aspect-ratio: 1 / 1; }
+.os-photo-grid[data-cols="1"] .os-photo-cell { aspect-ratio: auto; max-height: 360px; }
+.os-photo-cell:hover { transform: translateY(-2px); }
+.os-photo-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.os-photo-grid[data-cols="1"] .os-photo-cell img { max-height: 360px; object-fit: contain; background: #000; }
+
+/* 크게 보기 덮개 */
+.os-photo-view { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.88); display: grid; place-items: center; padding: 24px; cursor: zoom-out; }
+.os-photo-view img { max-width: 100%; max-height: 100%; border-radius: 14px; box-shadow: 0 6px 18px rgba(0,0,0,.35); cursor: default; }
+.os-photo-view-count { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); font-size: 13.5px; color: var(--os-글-연); }
+.os-photo-view-x { position: fixed; top: 14px; right: 14px; width: 40px; height: 40px; min-height: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.12); color: #fff; font-size: 22px; cursor: pointer; display: grid; place-items: center; }
+
+/* 끌어다 놓는 동안 대화 영역 테두리 */
+.os-chat-wrap.dragging .os-messages { outline: 2px dashed var(--os-포인트); outline-offset: -8px; border-radius: 18px; }
+@media (max-width: 900px) {
+    .os-photo-strip-wrap { margin: 0 12px; }
+}
+/* === /사진 첨부 === */

@@ -22,6 +22,8 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/hei
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 /** 새 사진이 없을 때 거슬러 올라가 사진을 찾아볼 메시지 수 (P1 cost: 6→3으로 축소) */
 const RECENT_IMAGE_LOOKBACK = 3
+/** 한 메시지에 붙일 수 있는 사진 수 (=== 사진 첨부 ===, domains/os/photos PHOTO_MAX_COUNT 와 같은 값) */
+const MAX_IMAGE_COUNT = 10
 
 /**
  * 우리 저장소의 대화 사진 주소가 맞는지 확인한다.
@@ -64,7 +66,7 @@ export async function POST(req: Request) {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
 
-        const { messages, mentorId, sessionId, guestMessageCount, inputMethod, visitorId, imageUrl } = await req.json()
+        const { messages, mentorId, sessionId, guestMessageCount, inputMethod, visitorId, imageUrl, imageUrls } = await req.json()
         // 요청 횟수 제한(보안 C-1 9번): 사용자/방문자 분당 20
         const rl = await checkRateLimit(createAdminClient(), rateLimitKey('chat', user?.id, visitorId, req), 20, 60)
         if (!rl.allowed) return Response.json({ error: rateLimitMessage('대화') }, { status: 429 })
@@ -385,10 +387,16 @@ export async function POST(req: Request) {
             }
         }
 
-        let attachedImage: { mimeType: string; data: string } | null = null
-        if (sourceImageUrl) {
+        // === 사진 첨부 === 여러 장(imageUrls, 최대 10)이 오면 전부 우리 저장소 주소인지 검사해 읽는다.
+        // 1장(imageUrl)만 온 옛 길은 위 sourceImageUrl 그대로. 여러 장일 때만 이 목록을 쓴다.
+        const safeImageUrls: string[] = Array.isArray(imageUrls)
+            ? (imageUrls as unknown[]).filter(isOurChatImage).slice(0, MAX_IMAGE_COUNT) as string[]
+            : []
+        const sourceImageUrls = safeImageUrls.length > 1 ? safeImageUrls : (sourceImageUrl ? [sourceImageUrl] : [])
+
+        const readImage = async (url: string): Promise<{ mimeType: string; data: string } | null> => {
             try {
-                const imgRes = await fetch(sourceImageUrl, {
+                const imgRes = await fetch(url, {
                     redirect: 'error',               // 우리 주소에서 딴 데로 튕기는 것 차단
                     signal: AbortSignal.timeout(10_000),
                 })
@@ -396,15 +404,18 @@ export async function POST(req: Request) {
                 const type = (imgRes.headers.get('content-type') || '').split(';')[0].trim()
                 if (imgRes.ok && ALLOWED_IMAGE_TYPES.includes(type) && declared <= MAX_IMAGE_BYTES) {
                     const buf = Buffer.from(await imgRes.arrayBuffer())
-                    if (buf.byteLength <= MAX_IMAGE_BYTES) {
-                        attachedImage = { mimeType: type, data: buf.toString('base64') }
-                    }
+                    if (buf.byteLength <= MAX_IMAGE_BYTES) return { mimeType: type, data: buf.toString('base64') }
                 }
             } catch (imgErr) {
                 // 사진을 못 읽어도 대화는 글만으로 이어간다
                 console.error('[Chat Image] fetch failed:', imgErr instanceof Error ? imgErr.message : imgErr)
             }
+            return null
         }
+        const attachedImages = (await Promise.all(sourceImageUrls.map(readImage)))
+            .filter((x): x is { mimeType: string; data: string } => x !== null)
+        // 1장이면 옛 모양(객체 하나) 그대로 넘긴다 — 기존 동작 불변
+        const attachedImage = attachedImages.length === 0 ? null : attachedImages.length === 1 ? attachedImages[0] : attachedImages
 
         // Gemini 대화 히스토리 구성 (domains/mentor)
         const geminiMessages = buildGeminiHistory(mentor.greeting_message, messages, attachedImage)
@@ -477,7 +488,7 @@ export async function POST(req: Request) {
                                 // 검사를 통과한 우리 사진만 저장한다. 검사 없이 저장하면
                                 // 화면에서 그대로 <img src> 로 나가 남의 서버로 접속이 샌다.
                                 // 사진이 없으면 칸 자체를 넣지 않는다(칸이 없는 DB 에서도 안 깨지게).
-                                ...(safeImageUrl ? { image_url: safeImageUrl } : {}),
+                                ...(safeImageUrl ? { image_url: safeImageUrl } : safeImageUrls[0] ? { image_url: safeImageUrls[0] } : {}),
                                 input_method: inputMethod || 'text',
                                 ip_address: analytics.ip_address,
                                 device_type: analytics.device_type,

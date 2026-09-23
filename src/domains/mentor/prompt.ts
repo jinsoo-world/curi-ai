@@ -290,10 +290,12 @@ export interface AttachedImage {
 export function buildGeminiHistory(
     greetingMessage: string,
     messages: { role: string; content: string }[],
-    attachedImage?: AttachedImage | null,
+    attachedImage?: AttachedImage | AttachedImage[] | null,
 ) {
     const lastIndex = messages.length - 1
-    const attachToLast = !!attachedImage && messages[lastIndex]?.role === 'user'
+    // === 사진 첨부 === 1장(옛 길)도 여러 장(배열)도 받는다. 모두 마지막 사용자 메시지에 붙는다.
+    const attached: AttachedImage[] = Array.isArray(attachedImage) ? attachedImage : attachedImage ? [attachedImage] : []
+    const attachToLast = attached.length > 0 && messages[lastIndex]?.role === 'user'
 
     return [
         { role: 'user' as const, parts: [{ text: '(시스템 설정 완료. 첫 인사를 기다리고 있습니다.)' }] },
@@ -301,9 +303,7 @@ export function buildGeminiHistory(
         ...messages.map((msg, i) => {
             const role = msg.role === 'user' ? 'user' as const : 'model' as const
             if (attachToLast && i === lastIndex) {
-                const parts: ({ inlineData: AttachedImage } | { text: string })[] = [
-                    { inlineData: attachedImage! },
-                ]
+                const parts: ({ inlineData: AttachedImage } | { text: string })[] = attached.map(img => ({ inlineData: img }))
                 // 사진만 보내는 경우도 있다. 빈 글자를 넣으면 Gemini 가 거절한다.
                 if (msg.content) parts.push({ text: msg.content })
                 return { role, parts }
