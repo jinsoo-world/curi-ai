@@ -594,7 +594,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                                     </>
                                 )}
                             </MsgRow>
-                        )                        ))}
+                        ))}
                     <div ref={endRef} />
                 </div>
 

@@ -1,14 +1,9 @@
 // POST /api/os/channels/[id]/chat - 그룹방에 사람이 말하면 봇이 답한다.
 //
-// 돌아가는 순서 (한 번에 끝. 스트림 아님)
-//   ① 사람 말 저장
-//   ② 사람이 「@홍보팀장 …」 처럼 한 명을 콕 집으면 **그 봇만** 답한다
-//      (그 답에 @다른봇이 있으면 기존 2턴 규칙으로 한 번만 이어 답한다)
-//   ③ @가 없으면 진행 봇(첫 멤버)이 짧게 받은 뒤, 나머지 멤버가 차례로 답한다
-//      (상한 MAX_FANOUT_BOTS, 봇끼리 @로 다시 부르지 않는다)
-//   ④ 그록봇 안티패턴 ㉟ = 끝없이 도는 것. 상한과 2턴 규칙으로 막는다.
-//
-// 🔒 남의 방은 getChannel 이 null 을 돌려줘서 여기서 끝난다.
+// ① 사람 말 저장
+// ② @콕집으면 그 봇(+@이어받기 1번)
+// ③ 없으면 진행 봇 → 멤버 병렬 (MAX_FANOUT_BOTS)
+// ④ 답은 askChat(솔라→Gemini 폴백). 둘 다 죽으면 UNAVAILABLE_TEXT.
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -17,14 +12,12 @@ import {
     findMentionedBot, canBotSpeakAgain, pickResponders, ChannelTableMissing,
 } from '@/domains/os/channels'
 import type { ChannelBot, ChannelMessage } from '@/domains/os/channels'
-import { askSolar } from '@/domains/agent/ask'
-import { SOLAR_CHAT_MODEL } from '@/domains/llm/constants'
+import { askChat } from '@/domains/agent/ask'
 import { UNAVAILABLE_TEXT } from '@/domains/chat/constants'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-/** 최근 말 몇 줄을 봇에게 보여 줄까 */
 const CONTEXT_LINES = 12
 
 function 대화기록(messages: ChannelMessage[], bots: ChannelBot[]): string {
@@ -58,6 +51,21 @@ function 방규칙(me: ChannelBot, others: ChannelBot[], mode: 'solo' | 'lead' |
 - 부를 사람이 없으면 아무도 부르지 않는다. 바뀐 게 없으면 길게 말하지 않는다.`
 }
 
+async function 봇한줄(
+    말할봇: ChannelBot,
+    bots: ChannelBot[],
+    기록: string,
+    mode: 'solo' | 'lead' | 'member',
+): Promise<string> {
+    const 나머지 = bots.filter(b => b.mentorId !== 말할봇.mentorId)
+    const 답 = await askChat(
+        방규칙(말할봇, 나머지, mode),
+        `[방에서 오간 말]\n${기록}\n\n위 흐름에 이어 「${말할봇.name}」으로서 답한다.`,
+        { maxTokens: mode === 'lead' ? 400 : 900 },
+    )
+    return (답 ?? UNAVAILABLE_TEXT).trim()
+}
+
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -86,45 +94,43 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
             .map(r => bots.find(b => b.mentorId === r.mentorId))
             .filter((b): b is ChannelBot => !!b)
 
-        // @로 한 명을 집으면 기존 2턴 중계(그 봇 + @이어받기 1번). 방 전체면 진행→멤버 차례(상한)만.
         if (콕집음) {
             let 봇이말한횟수 = 0
             let 말할봇: ChannelBot | null = 응답순[0] ?? bots[0]
             let 앞선봇: string | null = null
             while (말할봇 && canBotSpeakAgain(봇이말한횟수)) {
-                const 나머지 = bots.filter(b => b.mentorId !== 말할봇!.mentorId)
                 const 기록 = 대화기록([...지난말, ...새말], bots)
-                const 답 = await askSolar(
-                    방규칙(말할봇, 나머지, 'solo'),
-                    `[방에서 오간 말]\n${기록}\n\n위 흐름에 이어 「${말할봇.name}」으로서 답한다.`,
-                    { model: SOLAR_CHAT_MODEL, temperature: 0.7, maxTokens: 900 },
-                )
-                const 내용 = (답 ?? UNAVAILABLE_TEXT).trim()
+                const 내용 = await 봇한줄(말할봇, bots, 기록, 'solo')
                 const 저장 = await saveChannelMessage(db, id, { authorKind: 'bot', mentorId: 말할봇.mentorId, content: 내용 })
                 새말.push(저장)
                 봇이말한횟수 += 1
                 앞선봇 = 말할봇.mentorId
-                const 지목: { mentorId: string; name: string } | null = 답
-                    ? findMentionedBot(내용, 멤버목록, 앞선봇)
-                    : null
+                const 지목: { mentorId: string; name: string } | null =
+                    내용 !== UNAVAILABLE_TEXT
+                        ? findMentionedBot(내용, 멤버목록, 앞선봇)
+                        : null
                 말할봇 = (지목 && canBotSpeakAgain(봇이말한횟수))
                     ? bots.find(b => b.mentorId === 지목.mentorId) ?? null
                     : null
             }
         } else {
-            for (let i = 0; i < 응답순.length; i++) {
-                const 말할봇 = 응답순[i]
-                const 나머지 = bots.filter(b => b.mentorId !== 말할봇.mentorId)
-                const mode = i === 0 ? 'lead' as const : 'member' as const
+            const [lead, ...members] = 응답순
+            if (lead) {
                 const 기록 = 대화기록([...지난말, ...새말], bots)
-                const 답 = await askSolar(
-                    방규칙(말할봇, 나머지, mode),
-                    `[방에서 오간 말]\n${기록}\n\n위 흐름에 이어 「${말할봇.name}」으로서 답한다.`,
-                    { model: SOLAR_CHAT_MODEL, temperature: 0.7, maxTokens: mode === 'lead' ? 400 : 900 },
-                )
-                const 내용 = (답 ?? UNAVAILABLE_TEXT).trim()
-                const 저장 = await saveChannelMessage(db, id, { authorKind: 'bot', mentorId: 말할봇.mentorId, content: 내용 })
+                const 내용 = await 봇한줄(lead, bots, 기록, 'lead')
+                const 저장 = await saveChannelMessage(db, id, { authorKind: 'bot', mentorId: lead.mentorId, content: 내용 })
                 새말.push(저장)
+            }
+            if (members.length > 0) {
+                const 기록 = 대화기록([...지난말, ...새말], bots)
+                const 결과 = await Promise.all(members.map(async (말할봇) => {
+                    const 내용 = await 봇한줄(말할봇, bots, 기록, 'member')
+                    return { mentorId: 말할봇.mentorId, 내용 }
+                }))
+                for (const r of 결과) {
+                    const 저장 = await saveChannelMessage(db, id, { authorKind: 'bot', mentorId: r.mentorId, content: r.내용 })
+                    새말.push(저장)
+                }
             }
         }
 

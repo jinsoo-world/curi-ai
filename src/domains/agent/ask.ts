@@ -1,10 +1,12 @@
 // domains/agent — 모델에게 한 번 묻고 답 전체를 받아오는 작은 도구 (스트림 아님)
 //
-// 대화는 글이 흘러야 하지만, 분류, 초안은 「다 나온 답 한 덩어리」면 된다.
-// 실패하면 null 을 돌려준다. 절대 던지지 않는다 — 분류가 안 되면 그냥 평소대로 대화하면 되기 때문이다.
+// askSolar  = 솔라만 (분류·사이드 비트). 열쇠 없거나 죽으면 null.
+// askChat   = 1:1 대화와 같은 드라이버+폴백(솔라→Gemini). 그룹/중계 등 사람이 읽는 답에 쓴다.
 
 import { solarChatStream } from '@/domains/llm'
 import { SOLAR_MINI_MODEL } from '@/domains/llm/constants'
+import { generateChatStream, UNAVAILABLE_TEXT } from '@/domains/chat/stream'
+import type { GeminiMessage } from '@/domains/chat/types'
 
 export interface AskOptions {
     model?: string
@@ -36,6 +38,38 @@ export async function askSolar(
         return out.trim() || null
     } catch (e) {
         console.error('[agent/ask] 솔라 실패:', e instanceof Error ? e.message : e)
+        return null
+    }
+}
+
+export interface AskChatOptions {
+    maxTokens?: number
+    recencyOn?: boolean
+}
+
+/**
+ * 1:1 대화와 같은 경로로 한 번 묻고 답 전체를 받는다 (솔라→Gemini 폴백).
+ * 둘 다 죽거나 「쉬는 중」만 나오면 null — 호출쪽이 UNAVAILABLE_TEXT 를 붙인다.
+ */
+export async function askChat(
+    systemPrompt: string,
+    userText: string,
+    opts: AskChatOptions = {},
+): Promise<string | null> {
+    try {
+        const history: GeminiMessage[] = [{ role: 'user', parts: [{ text: userText }] }]
+        let out = ''
+        for await (const chunk of await generateChatStream(systemPrompt, history, {
+            maxOutputTokens: opts.maxTokens,
+            recencyOn: opts.recencyOn,
+        })) {
+            if (chunk.text) out += chunk.text
+        }
+        const trimmed = out.trim()
+        if (!trimmed || trimmed === UNAVAILABLE_TEXT) return null
+        return trimmed
+    } catch (e) {
+        console.error('[agent/ask] askChat 실패:', e instanceof Error ? e.message : e)
         return null
     }
 }

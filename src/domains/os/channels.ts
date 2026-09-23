@@ -90,11 +90,8 @@ export function pickResponders(
     return members.slice(0, MAX_FANOUT_BOTS)
 }
 
-/** 작업 중 표지 문구. 예) 「글감봇 작업 중…」 (제품 카피에 가운뎃점/긴 줄표 금지) */
-export function botWorkingLabel(name: string): string {
-    const n = (name ?? '').trim() || '봇'
-    return `${n} 작업 중…`
-}
+/** 작업 중 표지 (호환). 새 UI 는 working-status / WorkingStatusLine 을 쓴다. */
+export { botWorkingLabel } from './working-status'
 
 /** 내 그룹방 목록 */
 export async function listChannels(db: SupabaseClient, userId: string): Promise<Channel[]> {

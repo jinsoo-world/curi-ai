@@ -15,9 +15,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { readRelayIntent, withRelayPrefix, withRelayAnswerHeader, countRelayTurns, RELAY_MAX_TURNS, RELAY_TURN_LIMIT_TEXT } from '@/domains/agent/relay'
 import { classifyByRules } from '@/domains/agent/intent'
-import { askSolar } from '@/domains/agent/ask'
+import { askChat } from '@/domains/agent/ask'
 import { assertBotOwned } from '@/domains/os/knowledge'
-import { SOLAR_CHAT_MODEL } from '@/domains/llm/constants'
 import { UNAVAILABLE_TEXT } from '@/domains/chat/constants'
 
 export const dynamic = 'force-dynamic'
@@ -170,10 +169,10 @@ export async function POST(req: Request) {
 - 밖으로 나가는 일(보내기·게시·구매·이체·삭제)은 여기서 하지 않는다. 필요하면 초안만 쓰고 주인에게 물어본다.
 - 다른 봇을 다시 부르지 않는다. 여기서 이야기가 끝난다.`
 
-        const 답 = await askSolar(
+        const 답 = await askChat(
             규칙,
             `${기록 ? `[이 방에서 오간 말]\n${기록}\n\n` : ''}[${fromName}이 옮겨 온 말]\n${intent.message}\n\n위 말에 「${toName}」으로서 답한다.`,
-            { model: SOLAR_CHAT_MODEL, temperature: 0.7, maxTokens: 900 },
+            { maxTokens: 900 },
         )
         const 답본문 = (답 ?? UNAVAILABLE_TEXT).trim()
         await saveLine(db, toSession, 'assistant', 답본문)

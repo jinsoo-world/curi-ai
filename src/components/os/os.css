@@ -106,6 +106,112 @@
 /* 그룹방 작업 중 표지 */
 .os-working { color: var(--os-글-연); opacity: .85; }
 
+/* 그록식 작업 상태 줄 (아바타 + 짧은 문구) */
+.os-working-row {
+    display: flex; align-items: center; gap: 8px;
+    margin: 4px 0 6px 6px; min-height: 28px;
+    align-self: flex-start;
+}
+.os-working-row--aurora {
+    position: relative;
+}
+.os-working-row--aurora::before {
+    content: '';
+    position: absolute; left: -4px; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 18px; border-radius: 2px;
+    background: linear-gradient(180deg, #ff6bcb, #a78bfa, #22d3ee);
+    opacity: .85;
+}
+.os-working-text {
+    font-size: 14px; line-height: 1.4;
+    color: var(--os-글-연); opacity: .92;
+}
+.os-aurora-text {
+    font-size: 14px; line-height: 1.4; font-weight: 500;
+    background: linear-gradient(90deg, #ff6bcb, #c084fc, #22d3ee, #fb7185, #ff6bcb);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: os-aurora-shift 2.8s ease-in-out infinite;
+}
+@keyframes os-aurora-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .os-aurora-text { animation: none; background-position: 40% 50%; }
+}
+
+/* 그록식 OG 링크 미리보기 가로 카드 */
+.os-og-cards {
+    align-self: flex-start;
+    display: flex; flex-direction: column; gap: 8px;
+    max-width: min(420px, 92%);
+    margin: 2px 0 4px 6px;
+}
+.os-og-cards--me {
+    align-self: flex-end;
+    margin-left: 0; margin-right: 6px;
+}
+.os-og-card {
+    display: flex; align-items: stretch; gap: 0;
+    overflow: hidden;
+    border-radius: 14px;
+    background: var(--os-말풍선);
+    text-decoration: none; color: inherit;
+    border: 1px solid color-mix(in srgb, var(--os-선) 80%, transparent);
+    min-height: 72px;
+}
+.os-og-card:hover { background: var(--os-말풍선-내); }
+.os-og-card-main {
+    flex: 1 1 auto; min-width: 0;
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 12px 12px 14px;
+}
+.os-og-card-favicon {
+    flex: 0 0 auto; width: 20px; height: 20px; margin-top: 2px;
+    border-radius: 5px; overflow: hidden;
+    background: var(--os-말풍선-내);
+    display: grid; place-items: center;
+}
+.os-og-card-favicon img { width: 18px; height: 18px; object-fit: contain; display: block; }
+.os-og-card-favicon-fallback {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--os-클로버, #7c6af2);
+}
+.os-og-card-text {
+    flex: 1 1 auto; min-width: 0;
+    display: flex; flex-direction: column; gap: 3px;
+}
+.os-og-card-title {
+    font-size: 14.5px; font-weight: 650; line-height: 1.35;
+    color: var(--os-글);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.os-og-card-domain {
+    font-size: 12.5px; line-height: 1.3;
+    color: var(--os-글-흐림);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.os-og-card-thumb {
+    flex: 0 0 72px; width: 72px; align-self: stretch;
+    background: color-mix(in srgb, var(--os-글-흐림) 18%, var(--os-말풍선));
+    display: grid; place-items: center; overflow: hidden;
+}
+.os-og-card-thumb img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.os-og-card-thumb-fallback {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: color-mix(in srgb, var(--os-클로버, #7c6af2) 35%, transparent);
+}
+.os-og-cards--me .os-og-card {
+    /* 내 말 쪽도 같은 카드 톤 (말풍선 색과 구분) */
+}
+
 /* 입력 막대를 감싸는 칸(dock). 넓은 화면에선 그냥 지나가는 칸(배경 없음), 폰에선 아래 「오늘 체크인 안건」 참고 — 화면 맨 아래 붙는다 */
 .os-input-dock { display: flex; flex-direction: column; }
 .os-input-bar { display: flex; align-items: center; gap: 8px; margin: 12px 20px 16px; padding: 8px 8px 8px 12px; border-radius: 22px; background: var(--os-말풍선); }
