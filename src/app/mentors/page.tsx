@@ -2,6 +2,8 @@ export const revalidate = 30 // 30초마다 재생성 (ISR) — 멘토 변경사
 
 import type { Metadata } from 'next'
 import { getActiveMentors } from '@/domains/mentor'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getLinkCounts } from '@/domains/os/team-link'
 import MentorsPageClient from './MentorsPageClient'
 
 /**
@@ -35,5 +37,12 @@ export default async function MentorsPage() {
         return (a.sort_order ?? 0) - (b.sort_order ?? 0)
     })
 
-    return <MentorsPageClient mentors={sortedMentors} />
+    // 「N명이 팀에 넣었어요」 — 뷰에서 한 번에 센다. 뷰가 없으면 전부 0(화면은 그대로 뜬다)
+    const linkCounts: Record<string, number> = {}
+    try {
+        const counts = await getLinkCounts(createAdminClient(), sortedMentors.map(m => m.id))
+        for (const [id, c] of counts) linkCounts[id] = c.linkCount
+    } catch { /* 열쇠 없음 등 — 배지만 비운다 */ }
+
+    return <MentorsPageClient mentors={sortedMentors} linkCounts={linkCounts} />
 }

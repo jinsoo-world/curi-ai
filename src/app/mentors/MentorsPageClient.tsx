@@ -20,7 +20,8 @@ const categories = [
     { key: 'mind', label: '마음', keywords: ['상담', '공감', '고민', '마음', '조언', '심리'] },
 ]
 
-export default function MentorsPageClient({ mentors }: { mentors: MentorCardData[] }) {
+/** 봇마다 「N명이 팀에 넣었어요」 숫자. 서버가 뷰(mentor_link_counts)에서 세서 넘긴다. 없으면 0 */
+export default function MentorsPageClient({ mentors, linkCounts = {} }: { mentors: MentorCardData[]; linkCounts?: Record<string, number> }) {
     const [searchQuery, setSearchQuery] = useState('')
     const [activeCategory, setActiveCategory] = useState('all')
 
@@ -214,9 +215,10 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                     }}>
                         {filteredMentors.slice(0, 6).map((m: MentorCardData) => {
                             const avatarUrl = m.avatar_url || MENTOR_IMAGES[m.name] || null
+                            const linkCount = linkCounts[m.id] ?? 0
                             return (
+                                <div key={m.id} style={{ flexShrink: 0, width: 260, display: 'flex', flexDirection: 'column', gap: 8 }}>
                                 <Link
-                                    key={m.id}
                                     href={`/chat/${m.id}`}
                                     className="delphi-portrait-card"
                                     style={{
@@ -303,6 +305,16 @@ export default function MentorsPageClient({ mentors }: { mentors: MentorCardData
                                         </p>
                                     </div>
                                 </Link>
+                                {/* 카드 아래 = 연동 수 배지 + 상세(내 팀에 추가)로 가는 길 */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '0 4px' }}>
+                                    <span style={{ fontSize: 13, color: 'var(--먹연)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {linkCount > 0 ? `👥 ${linkCount}명이 팀에 넣었어요` : '팀에 넣어 보세요'}
+                                    </span>
+                                    <Link href={`/mentors/${m.id}`} style={{ fontSize: 13, fontWeight: 600, color: 'var(--먹)', textDecoration: 'none', whiteSpace: 'nowrap', padding: '6px 10px', borderRadius: 999, border: '1px solid var(--선)', background: '#FFFFFF' }}>
+                                        자세히
+                                    </Link>
+                                </div>
+                                </div>
                             )
                         })}
                     </div>

@@ -36,12 +36,18 @@ interface MentorStatItem {
     userList: MentorUserStat[]
 }
 
+/** 봇 마켓 연동 수 (누가 내 봇을 팀에 넣었나). /api/os/team/link/mine */
+interface LinkStatItem { linkCount: number; monthNew: number }
+interface LinkTotals { totalLinks: number; monthNew: number; payoutReady: boolean }
+
 export default function CreatorManagePage() {
     const router = useRouter()
     const [mentors, setMentors] = useState<MentorItem[]>([])
     const [loading, setLoading] = useState(true)
     const [stats, setStats] = useState<Stats>({ total: 0, active: 0, totalMessages: 0, totalUsers: 0 })
     const [mentorStats, setMentorStats] = useState<Record<string, MentorStatItem>>({})
+    const [linkStats, setLinkStats] = useState<Record<string, LinkStatItem>>({})
+    const [linkTotals, setLinkTotals] = useState<LinkTotals>({ totalLinks: 0, monthNew: 0, payoutReady: false })
     const [search, setSearch] = useState('')
     const [isAdmin, setIsAdmin] = useState(false)
     const [openMenu, setOpenMenu] = useState<string | null>(null)
@@ -56,6 +62,24 @@ export default function CreatorManagePage() {
 
     useEffect(() => {
         fetchMentors()
+    }, [])
+
+    // 연동 수 + 정산 정보 유무 (표가 없어도 0 으로 뜬다)
+    useEffect(() => {
+        let alive = true
+        ;(async () => {
+            try {
+                const r = await fetch('/api/os/team/link/mine', { cache: 'no-store' })
+                if (!r.ok) return
+                const d = await r.json() as { bots?: { mentorId: string; linkCount: number; monthNew: number }[]; totalLinks?: number; monthNew?: number; payoutReady?: boolean }
+                if (!alive) return
+                const map: Record<string, LinkStatItem> = {}
+                for (const b of d.bots ?? []) map[b.mentorId] = { linkCount: b.linkCount, monthNew: b.monthNew }
+                setLinkStats(map)
+                setLinkTotals({ totalLinks: d.totalLinks ?? 0, monthNew: d.monthNew ?? 0, payoutReady: !!d.payoutReady })
+            } catch { /* 배지만 비운다 */ }
+        })()
+        return () => { alive = false }
     }, [])
 
     // 외부 클릭으로 메뉴 닫기
@@ -151,6 +175,7 @@ export default function CreatorManagePage() {
         { icon: '🌐', label: '공개된 AI', value: stats.active },
         { icon: '💬', label: '전체 메시지', value: stats.totalMessages },
         { icon: '👤', label: '대화한 사용자', value: stats.totalUsers },
+        { icon: '👥', label: '팀에 넣은 사람', value: linkTotals.totalLinks },
     ]
 
     return (
@@ -190,6 +215,32 @@ export default function CreatorManagePage() {
                             }}
                         >
                             ＋ 새 AI 만들기
+                        </button>
+                    </div>
+
+                    {/* 연동 = 정산 예정. 산식은 아직 없다(대표 확정 전) */}
+                    <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+                        padding: '14px 16px', marginBottom: 12, borderRadius: 12, background: '#fff', border: '1px solid #e5e7eb',
+                    }}>
+                        <div>
+                            <div style={{ fontSize: 15, fontWeight: 600, color: '#18181b' }}>
+                                연동 {linkTotals.totalLinks}건 = 정산 예정{linkTotals.monthNew > 0 ? ` (이번 달 새로 ${linkTotals.monthNew}건)` : ''}
+                            </div>
+                            <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
+                                다른 사람이 내 AI를 팀에 넣은 수예요. 정산 기준은 준비 중이에요.
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => router.push('/os/payout')}
+                            style={{
+                                padding: '10px 16px', borderRadius: 10, cursor: 'pointer', fontSize: 14, fontWeight: 600,
+                                border: linkTotals.payoutReady ? '1px solid #e5e7eb' : 'none',
+                                background: linkTotals.payoutReady ? '#fff' : '#15803d',
+                                color: linkTotals.payoutReady ? '#18181b' : '#fff',
+                            }}
+                        >
+                            {linkTotals.payoutReady ? '정산 정보 고치기' : '정산 정보 넣기'}
                         </button>
                     </div>
 
@@ -485,6 +536,15 @@ export default function CreatorManagePage() {
                                                 }}>
                                                     {m.title}
                                                 </div>
+                                                {/* 연동 수 배지 */}
+                                                {(linkStats[m.id]?.linkCount ?? 0) > 0 && (
+                                                    <div style={{
+                                                        display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, marginRight: 6,
+                                                        fontSize: 11, color: '#15803d', background: '#f0fdf4', padding: '2px 8px', borderRadius: 8, fontWeight: 500,
+                                                    }}>
+                                                        👥 {linkStats[m.id].linkCount}명이 팀에 넣었어요{linkStats[m.id].monthNew > 0 ? ` (이번 달 +${linkStats[m.id].monthNew})` : ''}
+                                                    </div>
+                                                )}
                                                 {/* AI별 통계 뱃지 */}
                                                 {mentorStats[m.id] && mentorStats[m.id].messages > 0 && (
                                                     <div

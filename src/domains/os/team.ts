@@ -156,7 +156,7 @@ export async function getOwnedTeamBotMentor(db: SupabaseClient, userId: string, 
         .from('team_bots')
         .select('mentor_id, mentors(*)')
         .eq('user_id', userId)
-        .eq('mentor_id', mentorId)
+        .eq('mentor_id', mentorId).eq('linked_from_market', false)   // 마켓에서 연동한 봇은 내 봇이 아니다(클로버 규칙 그대로)
         .maybeSingle()
     if (error || !data) return null
     return (data as unknown as { mentors: Record<string, unknown> | null }).mentors
