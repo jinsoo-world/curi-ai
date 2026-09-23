@@ -43,6 +43,8 @@ export interface BotAvatarProps {
     idleAfterMs?: number
     /** 봇 프로필 사진. 있으면 그린 얼굴 대신 도형 안에 이 사진을 채운다(불러오기 실패하면 그린 얼굴로 되돌아간다) */
     faceUrl?: string | null
+    /** 사진 얼굴 테두리. color=악센트 링(기본, 명단/대화), shadow=은은한 그림자(마켓), none=테두리 없음 */
+    faceRim?: 'color' | 'shadow' | 'none'
     /** 봇 이름. aria-label 이 「이름, 상태」로 읽힌다 */
     name?: string
     title?: string
@@ -91,7 +93,7 @@ function useFaceBorderStroke(faceUrl: string | null | undefined, enabled: boolea
     return enabled ? stroke : fallback
 }
 
-export default function BotAvatar({ shape, color, state = 'idle', size = 72, idleAfterMs = IDLE_DROWSY_MS, faceUrl, name, title }: BotAvatarProps) {
+export default function BotAvatar({ shape, color, state = 'idle', size = 72, idleAfterMs = IDLE_DROWSY_MS, faceUrl, faceRim = 'color', name, title }: BotAvatarProps) {
     const fill = `var(--봇-${color})`
     const geo = eyeLayout(shape)
     const reduced = useReducedMotion()
@@ -110,8 +112,9 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, idl
     const hasFace = showsFace(faceUrl, faceError)
     const faceClip = faceClipId(uid)
     const faceBorderW = faceBorderPx(size) * (100 / size)   // px → 100 좌표계 단위로 환산(테두리가 크기와 무관하게 3~4px로 보이게)
-    // 사진 있을 때만 테두리 색을 사진에서 뽑는다(그린 눈 아바타는 fill 그대로). CEO: 전부 연두 링 → 사진별 악센트
-    const faceBorderStroke = useFaceBorderStroke(faceUrl, hasFace, fill)
+    // 사진 + faceRim=color 일 때만 테두리 색을 사진에서 뽑는다. shadow/none 은 링을 그리지 않는다(마켓은 shadow)
+    const showColorRim = hasFace && faceRim === 'color'
+    const faceBorderStroke = useFaceBorderStroke(faceUrl, showColorRim, fill)
     const [tiltMs] = useState(() => faceTiltPeriodMs(Math.random()))   // idle 갸웃 간격 6~9초, 봇마다 달라 보이게 한 번만 뽑는다
 
     // 0) 졸음 = 쉬는 중이 5분(+봇마다 0~20초) 이어지면 눈꺼풀이 천천히 내려온다. 상태가 바뀌면(말을 걸면) 바로 뜬다
@@ -215,7 +218,7 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, idl
 
     return (
         <span
-            className={`${avatarClass({ blinking, wink, drowsy, faceUrl: hasFace ? faceUrl : undefined })}${showsBadge(state) ? ' has-badge' : ''}`}
+            className={`${avatarClass({ blinking, wink, drowsy, faceUrl: hasFace ? faceUrl : undefined })}${showsBadge(state) ? ' has-badge' : ''}${hasFace && faceRim === 'shadow' ? ' face-rim-shadow' : ''}`}
             data-state={state}
             data-shape={shape}
             role="img"
@@ -237,6 +240,7 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, idl
                                 <image href={faceUrl ?? ''} x="0" y="0" width="100" height="100"
                                     preserveAspectRatio="xMidYMid slice" onError={() => setFaceError(true)} />
                             </g>
+                            {showColorRim && (
                             <g className="face-border">
                                 {shape === 'clover'
                                     ? CLOVER.map(([cx, cy, r]) => (
@@ -244,6 +248,7 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, idl
                                     ))
                                     : <path d={PATHS[shape]} fill="none" stroke={faceBorderStroke} strokeWidth={faceBorderW} />}
                             </g>
+                            )}
                         </>
                     ) : (
                         shape === 'clover'

@@ -25,7 +25,7 @@ export default async function OsMarketPage({ searchParams }: { searchParams: Pro
                 <div className="os-market-grid">
                     {mentors.map(m => (
                         <Link key={m.id} href={`/os/market/${m.id}${tail}`} className="os-market-card" prefetch={false}>
-                            <BotAvatar shape="circle" color="white" state="idle" size={112} faceUrl={m.avatar_url ?? null} name={m.name} />
+                            <BotAvatar shape="circle" color="white" state="idle" size={112} faceUrl={m.avatar_url ?? null} faceRim="shadow" name={m.name} />
                             <span className="os-market-name">{m.name}</span>
                             {m.title && <span className="os-market-title">{m.title}</span>}
                         </Link>

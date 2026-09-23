@@ -57,6 +57,7 @@
     display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 12px 18px;
     border-radius: 20px; background: var(--os-말풍선); color: var(--os-글); text-decoration: none; text-align: center; min-height: 200px;
 }
+/* 마켓 카드 얼굴: BotAvatar faceRim=shadow (색 링 없음). 왼쪽 명단 색 테두리는 그대로 */
 .os-market-card:hover { background: var(--os-말풍선-내); }
 .os-market-name { font-size: 17px; font-weight: 700; line-height: 1.25; }
 .os-market-title { font-size: 13px; color: var(--os-글-연); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
