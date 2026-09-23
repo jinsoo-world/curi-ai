@@ -188,6 +188,8 @@ export async function POST(req: Request) {
         if (!mentor) {
             return new Response('Mentor not found', { status: 404 })
         }
+        // 🍀 내 팀 봇(team_bots 에 내 것으로 등록)인가 — 대표 확정 0923 「내 봇은 무료로 해」
+        const ownTeamBot = !!(user && (await getOwnedTeamBotMentor(createAdminClient(), user.id, mentorId)))
 
         // 🔒 이 대화방이 정말 이 사람 것인지 확인한다.
         // 없으면 대화방 번호만 알면 남의 방에 아무 글이나 심을 수 있었다.
@@ -224,6 +226,9 @@ export async function POST(req: Request) {
 
         const dailyUsed = (userProfile as any)?.daily_free_used || 0
         const isPremium = (userProfile as any)?.subscription_tier === 'premium'
+        // 🍀 내 팀 봇과의 대화는 클로버를 쓰지 않는다(대표 확정 0923). 예산 보호 안전선 = 하루 300턴(솔라 1턴 약 2원).
+        const OWN_BOT_FREE_DAILY_CAP = 300
+        if (ownTeamBot && dailyUsed < OWN_BOT_FREE_DAILY_CAP) isFreeTrial = true
         if (user && !isPremium && !isFreeTrial && dailyUsed >= MAX_DAILY_FREE) {
             const encoder = new TextEncoder()
             const limitStream = new ReadableStream({
