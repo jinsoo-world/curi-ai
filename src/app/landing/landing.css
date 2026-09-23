@@ -1,0 +1,332 @@
+/* /landing — 델파이(delphi.ai) 흐름 + 21st.dev uilayout 컴포넌트 구조를 가져와 큐리AI 색으로 다시 칠한 랜딩.
+   21st.dev의 uilayout.contact 라이브러리는 소스 보기가 로그인(계정 생성)을 요구해 그대로 못 긁었다(레지스트리 403).
+   대신 로그인 없이 열리는 공개 미리보기(cdn.21st.dev bundle html)를 렌더링해 실제 구조(배지 pill, 그라데이션 강조
+   글자, bento 카드 그리드, 번호 스텝 카드)를 확인하고 그 모양을 우리 색·글자로 다시 짰다. 세부는 보고 참고.
+
+   대표 지시 색 3개 — 배경 검정 #0B0B0C · 초록 #03C124 · CTA 주황 #FF6B35.
+   기존 os 다크 토큰([data-theme="os"])과 같이 쓰되, 이 페이지 전용 색은 여기 한 곳에만 적는다. */
+
+.ld {
+    --ld-bg: #0B0B0C;
+    --ld-card: #17171A;
+    --ld-card-hover: #1E1E22;
+    --ld-border: #2A2A2D;
+    --ld-fg: #F2F2F7;
+    --ld-fg-dim: #A1A1A6;
+    --ld-green: #03C124;
+    --ld-orange: #FF6B35;
+
+    background: var(--ld-bg);
+    color: var(--ld-fg);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.ld-wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* 상단 내비 — uilayout hero-section의 backdrop-blur 헤더 구조 */
+.ld-nav {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    backdrop-filter: blur(16px);
+    background: rgba(11, 11, 12, 0.75);
+    border-bottom: 1px solid var(--ld-border);
+}
+.ld-nav-inner {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.ld-logo { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+.ld-nav-cta {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: var(--둥근-소);
+    background: var(--ld-orange);
+    color: #fff;
+    font-weight: 600;
+    font-size: var(--글자-작);
+    text-decoration: none;
+}
+
+/* 히어로 — 가운데 정렬 배지 + 그라데이션 강조 헤드라인(uilayout hero-section 패턴) */
+.ld-hero { padding: 64px 0 24px; text-align: center; }
+.ld-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(3, 193, 36, 0.12);
+    border: 1px solid rgba(3, 193, 36, 0.35);
+    color: var(--ld-green);
+    font-size: var(--글자-작);
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+.ld-h1 {
+    font-size: var(--글자-초대);
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    max-width: 720px;
+    margin: 0 auto;
+}
+.ld-h1 em {
+    font-style: normal;
+    background: linear-gradient(90deg, var(--ld-green), #4ee36a);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.ld-sub {
+    margin: 20px auto 0;
+    max-width: 560px;
+    font-size: var(--글자-중);
+    color: var(--ld-fg-dim);
+    line-height: 1.6;
+}
+.ld-cta-row {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 32px;
+}
+.ld-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--손가락);
+    padding: 0 26px;
+    border-radius: var(--둥근-소);
+    font-size: var(--글자-본문);
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.ld-btn:active { transform: scale(0.97); }
+.ld-btn-primary { background: var(--ld-orange); color: #fff; }
+.ld-btn-ghost { background: var(--ld-card); color: var(--ld-fg); border: 1px solid var(--ld-border); }
+
+/* 데모 자리 — 봇 4명. uilayout hero-section 하단의 카드 그리드(블록 미리보기) 구조를 그대로 가져와
+   블록 썸네일 대신 우리 봇 캐릭터를 앉혔다 */
+.ld-demo {
+    margin-top: 56px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+.ld-demo-card {
+    background: var(--ld-card);
+    border: 1px solid var(--ld-border);
+    border-radius: var(--둥근);
+    padding: 20px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+.ld-demo-name { font-size: var(--글자-작); font-weight: 700; }
+.ld-demo-line { font-size: 13px; color: var(--ld-fg-dim); text-align: center; line-height: 1.4; }
+
+/* 공통 섹션 헤더 */
+.ld-section { padding: 72px 0; }
+.ld-section-kicker {
+    text-align: center;
+    color: var(--ld-green);
+    font-weight: 700;
+    font-size: var(--글자-작);
+    margin-bottom: 10px;
+}
+.ld-h2 {
+    text-align: center;
+    font-size: var(--글자-대);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    max-width: 640px;
+    margin: 0 auto;
+}
+.ld-h2-sub {
+    text-align: center;
+    color: var(--ld-fg-dim);
+    max-width: 520px;
+    margin: 14px auto 0;
+    font-size: var(--글자-본문);
+    line-height: 1.6;
+}
+
+/* 작동 방식 3단계 — 번호가 큰 스텝 카드(uilayout about-bento/stats-bento의 큰 숫자 패턴) */
+.ld-steps {
+    margin-top: 44px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+.ld-step {
+    position: relative;
+    background: var(--ld-card);
+    border: 1px solid var(--ld-border);
+    border-radius: var(--둥근);
+    padding: 28px 22px;
+    overflow: hidden;
+}
+.ld-step-num {
+    position: absolute;
+    top: -6px;
+    right: 10px;
+    font-size: 72px;
+    font-weight: 800;
+    color: rgba(242, 242, 247, 0.06);
+    line-height: 1;
+}
+.ld-step-title { font-size: var(--글자-중); font-weight: 700; margin-bottom: 8px; }
+.ld-step-desc { font-size: var(--글자-본문); color: var(--ld-fg-dim); line-height: 1.6; }
+
+/* 사례 3개 — bento 카드(uilayout about-bento 패턴) */
+.ld-cases {
+    margin-top: 44px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+.ld-case {
+    background: var(--ld-card);
+    border: 1px solid var(--ld-border);
+    border-radius: var(--둥근);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.ld-case-top { display: flex; align-items: center; gap: 10px; }
+.ld-case-role { font-size: var(--글자-작); font-weight: 700; color: var(--ld-fg-dim); }
+.ld-case-bubble {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--ld-border);
+    border-radius: var(--둥근-소);
+    padding: 14px 16px;
+    font-size: var(--글자-본문);
+    line-height: 1.6;
+}
+
+/* 안전 — 체크 3개 bento */
+.ld-safety {
+    margin-top: 44px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+.ld-safe-item {
+    background: var(--ld-card);
+    border: 1px solid var(--ld-border);
+    border-radius: var(--둥근);
+    padding: 24px;
+    text-align: center;
+}
+.ld-safe-icon {
+    width: 40px; height: 40px;
+    border-radius: 999px;
+    background: rgba(3, 193, 36, 0.12);
+    color: var(--ld-green);
+    display: grid;
+    place-content: center;
+    margin: 0 auto 14px;
+    font-size: 18px;
+    font-weight: 800;
+}
+.ld-safe-title { font-weight: 700; font-size: var(--글자-본문); margin-bottom: 6px; }
+.ld-safe-desc { font-size: 15px; color: var(--ld-fg-dim); line-height: 1.6; }
+
+/* 가격 요약 — PLANS 표를 그대로 읽어 카드 3장(uilayout growth-plans 패턴 참고) */
+.ld-pricing {
+    margin-top: 44px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    align-items: stretch;
+}
+.ld-price-card {
+    position: relative;
+    background: var(--ld-card);
+    border: 1px solid var(--ld-border);
+    border-radius: var(--둥근);
+    padding: 28px 22px;
+    display: flex;
+    flex-direction: column;
+}
+.ld-price-card.recommended {
+    border-color: var(--ld-green);
+    box-shadow: 0 0 0 1px var(--ld-green);
+}
+.ld-price-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--ld-green);
+    color: #05170a;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.ld-price-name { font-size: var(--글자-중); font-weight: 700; }
+.ld-price-amount { font-size: 30px; font-weight: 800; margin: 10px 0 4px; }
+.ld-price-amount span { font-size: 14px; font-weight: 500; color: var(--ld-fg-dim); }
+.ld-price-perks { list-style: none; margin: 16px 0 20px; padding: 0; flex: 1; }
+.ld-price-perks li {
+    font-size: 15px;
+    color: var(--ld-fg-dim);
+    padding: 6px 0 6px 20px;
+    position: relative;
+    line-height: 1.5;
+}
+.ld-price-perks li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--ld-green);
+    font-weight: 800;
+}
+.ld-price-more {
+    text-align: center;
+    margin-top: 16px;
+}
+.ld-price-more a { color: var(--ld-fg-dim); font-size: 14px; text-decoration: underline; }
+
+/* 앱 설치 안내 한 줄 */
+.ld-install {
+    text-align: center;
+    font-size: var(--글자-본문);
+    color: var(--ld-fg-dim);
+    padding: 28px 0;
+    border-top: 1px solid var(--ld-border);
+    border-bottom: 1px solid var(--ld-border);
+}
+
+/* 마지막 CTA */
+.ld-final {
+    text-align: center;
+    padding: 80px 0;
+}
+.ld-final .ld-h2 { max-width: 480px; }
+.ld-final .ld-cta-row { margin-top: 28px; }
+
+@media (max-width: 760px) {
+    .ld-demo { grid-template-columns: repeat(2, 1fr); }
+    .ld-steps, .ld-cases, .ld-safety, .ld-pricing { grid-template-columns: 1fr; }
+    .ld-h1 { font-size: clamp(30px, 9vw, 40px); }
+    .ld-section { padding: 48px 0; }
+}
