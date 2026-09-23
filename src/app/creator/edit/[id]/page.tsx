@@ -10,6 +10,7 @@ import { convertWebmToWav, needsConversion } from '@/lib/audio-convert'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MENTOR_IMAGES } from '@/domains/mentor/constants'
+import { 올릴수있는파일, 고르기필터 } from '@/domains/knowledge/files'
 
 export default function CreatorEditPage() {
     const router = useRouter()
@@ -317,7 +318,7 @@ export default function CreatorEditPage() {
 
         setUploading(true)
         try {
-            const allowedExtensions = ['pdf', 'txt', 'md', 'doc', 'docx', 'hwp', 'hwpx', 'ppt', 'pptx']
+            const allowedExtensions: readonly string[] = 올릴수있는파일
             for (const file of newFilesArr) {
                 const ext = file.name.split('.').pop()?.toLowerCase() || ''
                 if (!allowedExtensions.includes(ext)) {
@@ -836,7 +837,7 @@ export default function CreatorEditPage() {
                             <input
                                 ref={fileInputRef}
                                 type="file"
-                                accept=".pdf,.txt,.md,.doc,.docx,.hwp,.hwpx,.ppt,.pptx,.vtt"
+                                accept={고르기필터}
                                 multiple
                                 style={{ display: 'none' }}
                                 onChange={e => handleFileUpload(e.target.files)}
@@ -846,7 +847,7 @@ export default function CreatorEditPage() {
                                 {uploading ? '업로드 중...' : '파일 추가 (클릭 또는 드래그)'}
                             </div>
                             <div style={{ fontSize: 11, color: '#9ca3af' }}>
-                                HWP, PDF, PPT, DOCX, TXT, VTT · 최대 10개 · 합산 50MB
+                                PDF, 워드, 한글, 엑셀, 파워포인트, 텍스트 / 최대 10개 / 합산 50MB
                             </div>
                         </div>
 
@@ -869,7 +870,7 @@ export default function CreatorEditPage() {
                                                 <div>
                                                     <div style={{ fontSize: 14, fontWeight: 500, color: '#18181b' }}>{src.title}</div>
                                                     <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
-                                                        {src.file_size ? `${src.file_size >= 1048576 ? (src.file_size / 1048576).toFixed(1) + 'MB' : (src.file_size / 1024).toFixed(0) + 'KB'} · ` : ''}{src.processing_status === 'processing' ? '📄 파일 읽는 중...' :
+                                                        {src.file_size ? `${src.file_size >= 1048576 ? (src.file_size / 1048576).toFixed(1) + 'MB' : (src.file_size / 1024).toFixed(0) + 'KB'} / ` : ''}{src.processing_status === 'processing' ? '📄 파일 읽는 중...' :
                                                          src.processing_status === 'completed' ? '✅ AI가 학습 완료' :
                                                          src.processing_status === 'failed' ? '텍스트 추출에 실패했습니다' : ''}
                                                     </div>

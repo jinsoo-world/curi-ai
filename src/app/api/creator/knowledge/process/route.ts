@@ -256,7 +256,9 @@ export async function POST(req: NextRequest) {
             // 엑셀·CSV — 대표 지적 2026-09-17 「AI 만들기에서 파일학습이 안되네. 엑셀파일 등등」
             // 표는 시트마다 제목을 달고 줄로 편다. AI 가 읽을 때 어느 표의 어느 칸인지 알아야 한다.
             try {
-                const XLSX = await import('xlsx')
+                const mod = await import('xlsx')
+                // CJS/ESM 섞이면 default 에만 실리는 경우가 있어 둘 다 본다
+                const XLSX = (mod as { default?: typeof mod }).default ?? mod
                 const buffer = Buffer.from(await fileData.arrayBuffer())
                 const wb = XLSX.read(buffer, { type: 'buffer' })
                 const 조각: string[] = []
@@ -450,17 +452,22 @@ export async function POST(req: NextRequest) {
             }
 
         } else if (ext === 'pdf') {
-            // PDF: pdf-parse로 텍스트 추출 (무료, 로컬, 페이지 무제한)
+            // PDF: pdf-parse v2 (PDFParse 클래스). v1 호출(require()(buffer))은 「is not a function」으로 항상 깨졌다.
+            const buffer = Buffer.from(await fileData.arrayBuffer())
             try {
-                // eslint-disable-next-line @typescript-eslint/no-require-imports
-                const pdfParse = require('pdf-parse')
-                const buffer = Buffer.from(await fileData.arrayBuffer())
-                const pdfData = await pdfParse(buffer)
-                textContent = (pdfData.text || '')
-                    .replace(/\n{3,}/g, '\n\n')
-                    .replace(/[ \t]{2,}/g, ' ')
-                    .trim()
-                console.log('[Process] PDF parsed with pdf-parse, text length:', textContent.length, 'pages:', pdfData.numpages)
+                const { PDFParse } = await import('pdf-parse')
+                const parser = new PDFParse({ data: new Uint8Array(buffer) })
+                try {
+                    const pdfData = await parser.getText()
+                    textContent = (pdfData.text || '')
+                        .replace(/\n-- \d+ of \d+ --\n/g, '\n') // v2 페이지 구분 꼬리표 제거
+                        .replace(/\n{3,}/g, '\n\n')
+                        .replace(/[ \t]{2,}/g, ' ')
+                        .trim()
+                    console.log('[Process] PDF parsed with pdf-parse, text length:', textContent.length, 'pages:', pdfData.pages?.length ?? 0)
+                } finally {
+                    await parser.destroy().catch(() => {})
+                }
             } catch (pdfErr) {
                 console.error('[Process] pdf-parse error:', pdfErr instanceof Error ? pdfErr.message : pdfErr)
             }
@@ -470,7 +477,8 @@ export async function POST(req: NextRequest) {
                 console.log('[Process] PDF text too short, falling back to Upstage OCR')
                 try {
                     const formData = new FormData()
-                    formData.append('document', fileData, source.title)
+                    // arrayBuffer 를 이미 썼으니 같은 바이트로 Blob 을 다시 만든다
+                    formData.append('document', new Blob([new Uint8Array(buffer)]), source.title)
                     formData.append('model', 'ocr')
                     formData.append('ocr', 'force')
                     const parseRes = await fetch('https://api.upstage.ai/v1/document-digitization', {
@@ -501,7 +509,13 @@ export async function POST(req: NextRequest) {
             await admin.from('knowledge_sources')
                 .update({ processing_status: 'failed' })
                 .eq('id', sourceId)
-            return NextResponse.json({ error: '텍스트를 추출할 수 없습니다.' }, { status: 400 })
+            let 이유 = '텍스트를 추출할 수 없습니다.'
+            if (ext === 'pdf') {
+                이유 = 'PDF에서 글자를 못 뽑았어요. 스캔본(사진만 있는 PDF)이거나 암호가 걸린 파일일 수 있어요. 글자를 드래그해 고를 수 있는 PDF로 다시 올려 주세요.'
+            } else if (['xlsx', 'xls', 'csv'].includes(ext)) {
+                이유 = '엑셀/CSV에서 글자를 못 뽑았어요. 암호가 걸려 있거나 칸이 비어 있는 표일 수 있어요.'
+            }
+            return NextResponse.json({ error: 이유 }, { status: 400 })
         }
 
         // 남의 개인정보는 저장 전에 가린다 — 대표 지시 2026-09-17 「개인정보나 이런 건 규칙으로」

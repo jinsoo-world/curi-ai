@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
-import { 올릴수있는파일 } from '@/domains/knowledge/files'
+import { 올릴수있는파일, 안내문구 } from '@/domains/knowledge/files'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
         const ext = fileName.split('.').pop()?.toLowerCase() || ''
         if (!ALLOWED_EXTENSIONS.includes(ext)) {
             return NextResponse.json(
-                { error: '지원하지 않는 파일 형식입니다. PDF, TXT, MD, DOC, DOCX, HWP, HWPX, PPT, PPTX만 가능합니다.' },
+                { error: `지원하지 않는 파일 형식입니다. ${안내문구} 만 가능합니다.` },
                 { status: 400 },
             )
         }

@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
-import { 올릴수있는파일 } from '@/domains/knowledge/files'
+import { 올릴수있는파일, 안내문구 } from '@/domains/knowledge/files'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30 // 파일 업로드 + Storage 전송에 충분한 시간
@@ -39,6 +39,9 @@ const EXT_MIME_MAP: Record<string, string> = {
     pdf: 'application/pdf',
     txt: 'text/plain',
     md: 'text/markdown',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    xls: 'application/vnd.ms-excel',
+    csv: 'text/csv',
 }
 
 /**
@@ -69,7 +72,7 @@ export async function POST(req: NextRequest) {
         const ext = file.name.split('.').pop()?.toLowerCase() || ''
         if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTENSIONS.includes(ext)) {
             return NextResponse.json(
-                { error: '지원하지 않는 파일 형식입니다. HWP, PDF, TXT, MD, DOC, DOCX, VTT만 가능합니다.' },
+                { error: `지원하지 않는 파일 형식입니다. ${안내문구} 만 가능합니다.` },
                 { status: 400 },
             )
         }

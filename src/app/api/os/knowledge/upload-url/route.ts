@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     const ext = fileName.split('.').pop()?.toLowerCase() || ''
     if (!(올릴수있는파일 as readonly string[]).includes(ext)) {
-        return NextResponse.json({ error: `이 파일은 못 읽어요. ${올릴수있는파일.join('·')} 만 넣을 수 있어요` }, { status: 400 })
+        return NextResponse.json({ error: `이 파일은 못 읽어요. ${올릴수있는파일.join(', ')} 만 넣을 수 있어요` }, { status: 400 })
     }
     if (fileSize > MAX_FILE_SIZE) return NextResponse.json({ error: '파일은 10MB 까지 넣을 수 있어요' }, { status: 400 })
 
