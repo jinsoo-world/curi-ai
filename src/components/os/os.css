@@ -276,7 +276,7 @@
 .os-input-bar { display: flex; align-items: center; gap: 8px; margin: 12px 20px 16px; padding: 6px 8px 6px 12px; border-radius: 22px; background: var(--os-말풍선); }
 /* 여러 줄로 커지면 ＋/보내기를 아래에 붙인다 (useComposerAutoHeight 가 is-multi 를 단다) */
 .os-input-bar.is-multi { align-items: flex-end; }
-.os-input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--os-글); font-size: 17px; line-height: 1.45; padding: 8px 6px; min-height: 44px; max-height: 180px; overflow-y: auto; box-sizing: border-box; }
+.os-input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--os-글); font-size: 17px; line-height: 1.4; padding: 10px 6px; min-height: 44px; max-height: 180px; overflow-y: auto; box-sizing: border-box; }
 .os-input::placeholder { color: var(--os-글-흐림); }
 /* 원형 단추 = 정확히 40×40. globals 의 button min-height(52px)와 flex 줄어들기가 원을 세로로 늘였었다 → 둘 다 막는다.
    손가락 크기(52px)는 보이지 않는 ::after 로 채운다 */
@@ -603,6 +603,8 @@
 }
 /* === 사진 첨부 === (PhotoAttach, PhotoGrid. 둥글기 14px, 그림자 0 6px 18px rgba(0,0,0,.35) 는 대표 지시 0923 값) */
 .os-plus-wrap { position: relative; flex: 0 0 auto; }
+/* ＋ 를 보내기(채워진 원)와 비슷한 시각 무게로 — 히트 영역은 .os-input-bar .os-icon-btn 44×44 유지 */
+.os-plus-wrap .os-icon-btn { font-size: 28px; }
 .os-plus-menu { position: absolute; left: 0; bottom: calc(100% + 8px); min-width: 220px; padding: 6px; border-radius: var(--둥근-소); background: var(--os-패널); border: 1px solid var(--os-선); box-shadow: 0 6px 18px var(--os-그림자, rgba(0,0,0,.35)); z-index: 20; display: flex; flex-direction: column; gap: 2px; }
 .os-plus-item { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 10px 12px; border: 0; border-radius: 12px; background: transparent; color: var(--os-글); font-size: 15px; cursor: pointer; min-height: 44px; }
 .os-plus-item small { margin-left: auto; color: var(--os-글-흐림); font-size: 12.5px; }
@@ -774,9 +776,9 @@
 .os-input-chip-mirror {
     position: absolute;
     inset: 0;
-    padding: 8px 6px;
+    padding: 10px 6px;
     font-size: 17px;
-    line-height: 1.45;
+    line-height: 1.4;
     white-space: pre-wrap;
     word-break: break-word;
     overflow-x: hidden;
