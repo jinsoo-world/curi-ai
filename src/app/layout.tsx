@@ -20,7 +20,7 @@ const SITE_URL = 'https://www.curi-ai.com'
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: '큐리 AI | 사진 한 장으로 만드는 내 프로필 사진',
+    default: '큐리AI | 내 일을 나눠 맡는 AI 봇 팀',
     template: '%s | 큐리 AI',
   },
   description:
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.ico',
-    apple: '/icons/apple-touch-icon-180.png',
+    apple: '/icons/apple-touch-icon-180.png?v=3',
   },
   // 아이폰 「홈 화면에 추가」 = 주소창 없이 앱처럼 열리고, 상태바가 화면 위에 겹친다(검정 바탕이라 자연스럽다)
   appleWebApp: {
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
         url: '/og/main.png',
         width: 1200,
         height: 630,
-        alt: '큐리 AI | 사진 한 장으로 만드는 내 프로필 사진',
+        alt: '큐리AI | 내 일을 나눠 맡는 AI 봇 팀',
       },
     ],
   },

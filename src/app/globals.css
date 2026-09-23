@@ -128,6 +128,12 @@ button, a[role="button"] {
   min-height: var(--손가락);
 }
 
+/* 켜고 끄는 토글은 손가락 최소 높이(52px)를 따르면 둥근 네모로 늘어난다. 토글은 제 크기 그대로(0923 대표 「토글이 이상해」) */
+button[role="switch"] {
+  min-height: 0;
+  min-width: 0;
+}
+
 ::selection {
   background-color: #dcfce7;
   color: var(--진초록);

@@ -252,7 +252,7 @@ export const BUILTIN_SKILLS: readonly BuiltinSkillView[] = [
     {
         id: 'linkread',
         name: '링크 읽기',
-        description: '대화에 붙인 주소의 글·유튜브 자막을 읽고 답해요. 최대 5개',
+        description: '대화에 붙인 주소의 글과 유튜브 자막을 읽고 답해요. 최대 5개',
         storageKey: 'os-skill-linkread',
         defaultEnabled: true,
     },

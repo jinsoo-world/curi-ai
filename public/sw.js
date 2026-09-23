@@ -6,7 +6,7 @@
 // === 캐시·오프라인 (설치형 앱) ===
 
 // 껍데기 저장소 이름. 껍데기 파일을 바꾸면 끝 숫자를 올린다 → 옛 저장소는 아래 activate 에서 지워진다.
-const SHELL_CACHE = 'curi-ai-shell-v2'
+const SHELL_CACHE = 'curi-ai-shell-v3'
 const OFFLINE_URL = '/offline.html'
 
 // 설치할 때 미리 저장하는 것 = 인터넷 없이도 보여야 하는 최소한

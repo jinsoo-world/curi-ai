@@ -169,10 +169,10 @@ export default function LoginPage() {
                     fontSize: 17, fontWeight: 800, color: '#15803d',
                     letterSpacing: '-0.02em',
                 }}>
-                    가입하면 클로버 40개를 드려요
+                    로그인하면 대화 한도 2배로 드려요
                 </div>
                 <div style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
-                    사진 한 장으로 내 프로필 사진을 만들어 보세요
+                    기획, 홍보, 개발, 조사를 맡는 봇 4명이 기다려요
                 </div>
             </div>
 
@@ -204,7 +204,7 @@ export default function LoginPage() {
                         큐리 AI
                     </h1>
                     <p style={{ fontSize: 15, color: '#9ca3af', lineHeight: 1.6 }}>
-                        사진 한 장으로 만드는 내 프로필 사진
+                        내 일을 나눠 맡는 AI 봇 팀
                     </p>
                 </div>
 
