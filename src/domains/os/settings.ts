@@ -93,6 +93,34 @@ export function cloverBarView(balance: number | null | undefined, guest: boolean
     }
 }
 
+/* ────────────────────── 서버에 묻기 전에 알아채는 가벼운 규칙 ────────────────────── */
+
+/**
+ * 사람 말이 「모델을 부를 것도 없는 일」인지 먼저 본다.
+ *  - 주소 + 읽어/넣어/추가/저장/기억  → 자료로 넣기 (모델 안 부름 = 클로버 안 씀)
+ *  - 그룹/단톡/여러 봇               → 그룹 채팅 만드는 곳 안내
+ * 애매하면 null = 평소대로 봇에게 물어본다. 넓게 잡으면 사람 말을 가로챈다.
+ */
+export type LocalIntent = { kind: 'knowledge'; url: string } | { kind: 'group' } | null
+
+const URL_RE = /https?:\/\/[^\s<>"')]+/i
+const 넣어달라 = /(읽어|읽어줘|읽어 줘|넣어|넣어줘|넣어 줘|추가|저장|기억)/
+const 그룹말 = /(그룹|단톡|여러\s*봇)/
+
+export function readLocalIntent(text: string): LocalIntent {
+    const 말 = (text ?? '').trim()
+    if (!말) return null
+
+    const m = 말.match(URL_RE)
+    if (m && 넣어달라.test(말)) {
+        // 문장 끝 따옴표·마침표가 주소에 딸려오는 것만 떼어 낸다
+        return { kind: 'knowledge', url: m[0].replace(/[.,!?)\]]+$/, '') }
+    }
+    // 주소를 넣어 달라는 말이 아니면서 그룹 이야기면 안내
+    if (!m && 그룹말.test(말)) return { kind: 'group' }
+    return null
+}
+
 /* ────────────────────────── 여러 개 고르는 칩 ────────────────────────── */
 
 /**

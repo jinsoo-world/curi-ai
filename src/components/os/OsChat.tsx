@@ -7,6 +7,7 @@ import { getVisitorId } from '@/lib/visitor'
 import { UNAVAILABLE_TEXT } from '@/domains/chat/constants'
 import type { BotState } from '@/domains/os/types'
 import { osTrack } from '@/domains/os/events'
+import { readLocalIntent } from '@/domains/os/settings'
 import BotAvatar from './BotAvatar'
 import BotMarkdown from './BotMarkdown'
 import CheckinStrip from './CheckinStrip'
@@ -41,13 +42,19 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
     const [state, setState] = useState<BotState>('idle')
     const [streaming, setStreaming] = useState(false)
     const [sessionId, setSessionId] = useState<string | null>(null)
-    const [detailOpen, setDetailOpen] = useState(false)
+    const [detailOpen, setDetailOpen] = useState(false)   // 넓은 화면이면 켜진 채로 시작한다(아래 효과)
     const [addSheet, setAddSheet] = useState(false)
     const [demo, setDemo] = useState(false)
     const endRef = useRef<HTMLDivElement>(null)
 
-    // 시연(?demo=1)·손님에게는 「내 것」을 저장하는 칸(체크인·다음 한 걸음)을 안 보인다
-    useEffect(() => { setDemo(new URLSearchParams(window.location.search).get('demo') === '1') }, [])
+    // 시연(?demo=1)·손님에게는 「내 것」을 저장하는 칸(체크인·다음 한 걸음)을 안 보인다.
+    // 오른쪽 세부칸은 넓은 화면이면 열린 채, 폰이면 닫힌 채 시작한다. 그 뒤로는 ⓘ 로 사람이 정한다.
+    useEffect(() => {
+        void Promise.resolve().then(() => {
+            setDemo(new URLSearchParams(window.location.search).get('demo') === '1')
+            setDetailOpen(window.matchMedia?.('(min-width: 901px)').matches ?? true)
+        })
+    }, [])
     const 개인화숨김 = guest || demo
 
     // 내 팀에 없으면 공개 봇(리더의 봇)인지 본다
@@ -82,6 +89,35 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         const userMsg: Msg = { id: `u-${Date.now()}`, role: 'user', content: text }
         const botId = `a-${Date.now()}`
         const base = [...messages, userMsg]
+
+        // 서버를 부르기 전 가벼운 규칙 2개. 내 팀 봇일 때만 본다(공개 봇에는 자료를 못 넣는다).
+        // 여기서 끝나는 말은 모델을 부르지 않는다 = 클로버를 안 쓴다.
+        const 눈치 = bot && !guest ? readLocalIntent(text) : null
+        if (눈치?.kind === 'group') {
+            setInput('')
+            setMessages([...base, { id: botId, role: 'assistant', content: '여러 봇과 한 방에서 이야기하려면 왼쪽 위 ＋ → 그룹 채팅 만들기 로 만들 수 있어요.' }])
+            setState('idle')
+            return
+        }
+        if (눈치?.kind === 'knowledge' && bot) {
+            setInput('')
+            setMessages([...base, { id: botId, role: 'assistant', content: '자료에 넣었어요. 읽는 데 잠시 걸려요 📎' }])
+            setState('idle')
+            try {
+                const res = await fetch('/api/os/knowledge', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mentorId, kind: 'url', url: 눈치.url }),
+                })
+                if (res.ok) osTrack('os_knowledge_added', { mentor_id: mentorId, kind: 'url' })
+                else {
+                    const d = await res.json().catch(() => ({}))
+                    setMessages([...base, { id: botId, role: 'assistant', content: `이 링크는 못 넣었어요. ${String(d.error ?? '').slice(0, 80)}` }])
+                }
+            } catch {
+                setMessages([...base, { id: botId, role: 'assistant', content: '이 링크는 못 넣었어요. 잠시 뒤 다시 해 주세요.' }])
+            }
+            return
+        }
         setMessages([...base, { id: botId, role: 'assistant', content: '' }])
         setInput('')
         setStreaming(true)
@@ -164,7 +200,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         } finally {
             setStreaming(false)
         }
-    }, [input, streaming, messages, mentorId, guest, ensureSession])
+    }, [input, streaming, messages, mentorId, guest, bot, ensureSession])
 
     const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send() }
@@ -175,13 +211,14 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         : <BotAvatar shape="circle" color="white" state={state} size={36} faceUrl={publicBot?.avatar_url ?? null} name={publicBot?.name ?? name} />
 
     return (
-        <div className="os-chat-wrap">
+        <div className={`os-chat-wrap${detailOpen ? '' : ' narrow'}`}>
             <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 <header className="os-chat-head">
                     {avatar}
                     <span>{name}</span>
                     <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-                        <button className="os-icon-btn" aria-label="세부 정보" title="세부 정보" onClick={() => setDetailOpen(v => !v)}>ⓘ</button>
+                        <button className="os-icon-btn" aria-label="세부 정보" aria-expanded={detailOpen}
+                            title={detailOpen ? '세부 정보 닫기' : '세부 정보 열기'} onClick={() => setDetailOpen(v => !v)}>ⓘ</button>
                     </span>
                 </header>
 
@@ -247,7 +284,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                 </div>
             </div>
 
-            <aside className={`os-right${detailOpen ? ' open' : ''}`}>
+            <aside className={`os-right ${detailOpen ? 'open' : 'closed'}`}>
                 <DetailPane bot={bot} publicName={publicBot?.name ?? null} />
             </aside>
 

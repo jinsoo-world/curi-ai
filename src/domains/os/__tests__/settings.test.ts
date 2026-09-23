@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
     FONT_KEY, SIGNUP_CLOVERS,
-    applyFontSize, cleanFontSize, cloverBarView, readFontSize, saveFontSize, toggleChip,
+    applyFontSize, cleanFontSize, cloverBarView, readFontSize, readLocalIntent, saveFontSize, toggleChip,
 } from '../settings'
 
 /** 저장이 되는 가짜 브라우저 창고 */
@@ -94,5 +94,29 @@ describe('여러 개 고르는 칩', () => {
         const 꽉 = ['1', '2', '3']
         expect(toggleChip(꽉, '4', 3)).toEqual(['1', '2', '3'])
         expect(toggleChip(꽉, '2', 3)).toEqual(['1', '3'])
+    })
+})
+
+describe('서버에 묻기 전에 알아채는 규칙', () => {
+    it('주소 + 넣어 달라는 말이면 자료로 넣는다', () => {
+        expect(readLocalIntent('https://curious-500.com/글 이거 읽어줘')).toEqual({ kind: 'knowledge', url: 'https://curious-500.com/글' })
+        expect(readLocalIntent('이 링크 저장해 http://example.com/a?b=1')).toEqual({ kind: 'knowledge', url: 'http://example.com/a?b=1' })
+    })
+
+    it('문장 끝 마침표·닫는 괄호는 주소에서 뗀다', () => {
+        expect(readLocalIntent('https://example.com/글. 기억해 줘')).toEqual({ kind: 'knowledge', url: 'https://example.com/글' })
+    })
+
+    it('주소만 있고 넣어 달라는 말이 없으면 평소대로 봇에게 물어본다', () => {
+        expect(readLocalIntent('https://example.com 이거 어떻게 생각해?')).toBeNull()
+        expect(readLocalIntent('오늘 뭐 하지')).toBeNull()
+        expect(readLocalIntent('')).toBeNull()
+    })
+
+    it('그룹 이야기면 만드는 곳을 안내한다', () => {
+        expect(readLocalIntent('봇 여러 봇이랑 같이 이야기하고 싶어')).toEqual({ kind: 'group' })
+        expect(readLocalIntent('단톡방 만들 수 있어?')).toEqual({ kind: 'group' })
+        // 주소를 넣어 달라는 말이 먼저다 (가로채지 않는다)
+        expect(readLocalIntent('https://example.com 그룹 자료로 추가해')).toEqual({ kind: 'knowledge', url: 'https://example.com' })
     })
 })

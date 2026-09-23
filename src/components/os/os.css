@@ -224,3 +224,8 @@
 .os-settings .os-card b { color: var(--os-글); }
 .os-set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
 .os-set-sub { font-size: 13px; color: var(--os-글-흐림); margin-top: 2px; line-height: 1.5; }
+
+/* ── 오른쪽 세부칸 여닫기 (대표 지시 0923: 데스크톱에서도 ⓘ 로 닫힌다) ── */
+/* 넓은 화면 기본 = 열림. 닫으면 칸이 사라지고 대화가 그 자리를 쓴다 */
+.os-right.closed { display: none; }
+.os-chat-wrap.narrow { grid-template-columns: minmax(0, 1fr); }
