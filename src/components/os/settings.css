@@ -1,0 +1,60 @@
+/* 설정 화면(/os/settings) 전용. 색은 globals.css [data-theme="os"] 토큰만 쓴다.
+   os.css 는 다른 손이 고치므로 설정 화면에 필요한 규칙은 여기에 모아 둔다. */
+
+/* 글자 크기 = 설정 화면 자체에도 바로 보인다 (--os-font-scale 은 domains/os/settings.ts 가 html 에 붙인다) */
+.os-settings { font-size: calc(15px * var(--os-font-scale, 1)); }
+.os-settings h1 { font-size: calc(24px * var(--os-font-scale, 1)); }
+.os-settings .os-card { font-size: calc(15px * var(--os-font-scale, 1)); }
+.os-settings .os-set-sub,
+.os-settings .os-set-hint { font-size: calc(13px * var(--os-font-scale, 1)); }
+.os-settings .os-chipbtn { font-size: calc(15px * var(--os-font-scale, 1)); }
+
+/* 설정 줄: 위아래 여백을 모든 줄이 똑같이 갖는다 (조용한 시간 줄도 이 규칙을 탄다) */
+.os-set-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 6px 0; }
+.os-set-line + .os-set-line { border-top: 1px solid var(--os-선); }
+.os-set-line > .os-set-text { min-width: 0; flex: 1; }
+.os-set-hint { color: var(--os-글-흐림); margin-top: 2px; line-height: 1.5; }
+.os-set-hint.warn { color: var(--os-경고); }
+
+/* iOS 식 토글: 트랙 52x30, 손잡이 26 원, 켜짐 = 클로버 초록 */
+.os-ios-switch {
+    width: 52px; height: 30px; border-radius: 15px; border: 0; padding: 0; flex: 0 0 auto;
+    position: relative; cursor: pointer; background: var(--os-말풍선-내); transition: background .15s;
+}
+.os-ios-switch[aria-checked="true"] { background: var(--os-클로버, #03C124); }
+.os-ios-switch > span {
+    position: absolute; top: 2px; left: 2px; width: 26px; height: 26px; border-radius: 13px;
+    background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .35); transition: left .15s;
+}
+.os-ios-switch[aria-checked="true"] > span { left: 24px; }
+.os-ios-switch:disabled { cursor: not-allowed; opacity: .4; }
+
+/* 승인 모드 고르기 (라디오 3개) */
+.os-approval { display: grid; gap: 6px; margin-top: 10px; }
+.os-approval label {
+    display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 12px;
+    border-radius: 12px; border: 1px solid var(--os-선); cursor: pointer; color: var(--os-글);
+}
+.os-approval label:has(input:checked) { border-color: var(--os-클로버); box-shadow: inset 0 0 0 1px var(--os-클로버); }
+.os-approval input { width: 20px; height: 20px; margin: 0; accent-color: var(--os-클로버, #03C124); flex: 0 0 auto; }
+.os-approval label:has(input:disabled) { cursor: default; opacity: .55; }
+
+/* 조용한 시간: 시작 ~ 끝 두 칸. 폰 폭(390px)에서도 한 줄에 들어가고, 안 들어가면 둘째 줄로 곱게 내려간다 */
+.os-quiet { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.os-quiet-pair { display: inline-flex; align-items: center; gap: 8px; }
+.os-quiet input[type="time"] {
+    background: var(--os-말풍선-내); color: var(--os-글); border: 1px solid var(--os-선);
+    border-radius: 10px; padding: 0 10px; height: 44px; font-size: 15px; font-family: inherit; min-width: 0; width: 118px;
+}
+.os-quiet span { color: var(--os-글-연); }
+
+/* 외부 연결 줄: 왼쪽 로고, 가운데 이름과 상태, 오른쪽 단추 */
+.os-conn-logo { width: 32px; height: 32px; border-radius: 8px; flex: 0 0 auto; display: block; }
+.os-conn-head { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.os-conn-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.os-conn-state { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--os-말풍선-내); color: var(--os-글-흐림); white-space: nowrap; }
+.os-conn-state.on { color: var(--os-클로버); background: color-mix(in srgb, var(--os-클로버) 16%, transparent); }
+
+@media (max-width: 420px) {
+    .os-settings { padding-left: 16px; padding-right: 16px; }
+}

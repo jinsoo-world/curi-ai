@@ -30,7 +30,12 @@ export default function KnowledgeList({ mentorId, onCountChange }: { mentorId: s
         try {
             const res = await fetch(`/api/os/knowledge?mentorId=${encodeURIComponent(mentorId)}`, { cache: 'no-store' })
             const data = await res.json()
-            if (!res.ok) { 읽는중.current = false; setErr(data.error || '자료를 못 불러왔어요'); setSources([]); return }
+            if (!res.ok) {
+                읽는중.current = false
+                // 403 = 시연 봇(내 봇이 아님). 「권한이 없어요」보다 왜 안 되는지 말해 준다
+                setErr(res.status === 403 ? '이 봇은 시연용이라 자료를 넣을 수 없어요' : (data.error || '자료를 못 불러왔어요'))
+                setSources([]); return
+            }
             const list = (data.sources ?? []) as BotSourceView[]
             읽는중.current = list.some(s => s.status === 'pending' || s.status === 'processing')
             setErr(null)
@@ -77,6 +82,9 @@ export default function KnowledgeList({ mentorId, onCountChange }: { mentorId: s
         <>
             <h4>이 봇이 읽은 자료 {sources ? `(${sources.length}개)` : ''}</h4>
 
+            {/* 넣기 단추는 목록 위에 항상 보인다 (목록이 길어도 안 숨는다) */}
+            <button className="os-btn primary" style={{ width: '100%', marginBottom: 10, minHeight: 44 }} onClick={() => setSheet(true)}>＋ 자료 넣기</button>
+
             {err && <div className="os-card" style={{ color: 'var(--os-경고)' }}>{err}</div>}
 
             {sources === null && <div className="os-card">불러오는 중…</div>}
@@ -95,8 +103,6 @@ export default function KnowledgeList({ mentorId, onCountChange }: { mentorId: s
                     <button className="os-source-x" aria-label={`${s.title} 빼기`} title="빼기" onClick={() => void 빼기(s.id, s.title)}>✕</button>
                 </div>
             ))}
-
-            <button className="os-btn" style={{ width: '100%', marginTop: 10 }} onClick={() => setSheet(true)}>＋ 자료 넣기</button>
 
             {sheet && (
                 <AddKnowledgeSheet

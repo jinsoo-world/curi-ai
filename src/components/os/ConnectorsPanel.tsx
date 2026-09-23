@@ -7,6 +7,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { CONNECTOR_INFO, CONNECTOR_KINDS, type ConnectorKind, type ConnectorView } from '@/domains/connectors/types'
 
+/** 서비스 로고(벡터라 어느 크기에서도 선명). public/logos/ 에 우리가 그린 단순 마크 */
+const LOGO: Record<ConnectorKind, string> = {
+    notion: '/logos/notion.svg', slack: '/logos/slack.svg', kakao: '/logos/kakao.svg', instagram: '/logos/instagram.svg', curious: '/logos/curious.svg',
+}
+
 const sub: React.CSSProperties = { fontSize: 13, color: 'var(--os-글-흐림)', marginTop: 2, lineHeight: 1.5 }
 const row: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 44 }
 const input: React.CSSProperties = {
@@ -106,9 +111,15 @@ export default function ConnectorsPanel() {
                 const 쓸수있나 = info.ready && enabled
                 return (
                     <div key={kind} style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--os-선)' }}>
-                        <div style={row}>
-                            <div>
-                                <b>{info.name}</b>
+                        <div className="os-conn-head">
+                            {/* 로고는 우리가 그린 정적 SVG 라 next/image 최적화 대상이 아니다 */}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img className="os-conn-logo" src={LOGO[kind]} alt={info.name} width={32} height={32} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div className="os-conn-name">
+                                    <b>{info.name}</b>
+                                    <span className={`os-conn-state${목록.length > 0 ? ' on' : ''}`}>{목록.length > 0 ? '연결됨' : '연결 안 됨'}</span>
+                                </div>
                                 <div style={sub}>{info.hint}</div>
                             </div>
                             {쓸수있나 ? (

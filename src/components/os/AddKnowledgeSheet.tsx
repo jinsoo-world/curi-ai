@@ -5,6 +5,7 @@
 import { useRef, useState } from 'react'
 import { 올릴수있는파일, 고르기필터, 안내문구 } from '@/domains/knowledge/files'
 import { osTrack } from '@/domains/os/events'
+import { splitUrls } from '@/domains/os/settings'
 
 type Tab = 'file' | 'link' | 'text'
 
@@ -17,7 +18,8 @@ interface Props {
 
 export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props) {
     const [tab, setTab] = useState<Tab>('file')
-    const [url, setUrl] = useState('')
+    /** 링크 칸 여러 개. 붙여 넣은 글에 주소가 여러 개면 자동으로 칸이 늘어난다 */
+    const [urls, setUrls] = useState<string[]>([''])
     const [title, setTitle] = useState('')
     const [text, setText] = useState('')
     const [busy, setBusy] = useState(false)
@@ -67,19 +69,62 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
         }
     }
 
+    /** 링크 칸 하나를 고친다. 주소가 여러 개 들어오면(줄바꿈, 쉼표) 칸을 나눠 준다 */
+    const 링크칸바꾸기 = (i: number, value: string) => {
+        const 나눔 = splitUrls(value)
+        setUrls(prev => {
+            const next = [...prev]
+            if (나눔.length > 1) next.splice(i, 1, ...나눔)
+            else next[i] = value
+            return next
+        })
+    }
+
+    /** 링크 여러 개를 차례로 넣는다. 실패한 주소만 칸에 남겨 다시 시도할 수 있게 한다 */
+    const 링크넣기 = async () => {
+        const 목록 = splitUrls(urls.join('\n'))
+        if (목록.length === 0) return
+        setBusy(true); setErr(null)
+        const 실패: { url: string; why: string }[] = []
+        let 성공 = 0
+        for (const [i, u] of 목록.entries()) {
+            setMsg(목록.length > 1 ? `${목록.length}개 중 ${i + 1}번째를 봇이 읽는 중이에요…` : '봇이 읽는 중이에요…')
+            try {
+                const res = await fetch('/api/os/knowledge', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mentorId, kind: 'url', url: u }),
+                })
+                const data = await res.json().catch(() => ({}))
+                if (!res.ok) throw new Error(data.error || '넣지 못했어요')
+                성공 += 1
+                osTrack('os_knowledge_added', { mentor_id: mentorId, kind: 'url' })
+            } catch (e) {
+                실패.push({ url: u, why: e instanceof Error ? e.message : '넣지 못했어요' })
+            }
+        }
+        if (성공 > 0) await onAdded()
+        setBusy(false)
+        if (실패.length === 0) {
+            setMsg(목록.length > 1 ? `${목록.length}개 다 읽었어요` : '다 읽었어요')
+            setTimeout(onClose, 700)
+            return
+        }
+        setUrls(실패.map(f => f.url))
+        setMsg(성공 > 0 ? `${목록.length}개 중 ${성공}개 넣었어요` : null)
+        setErr(`${실패.length}개는 못 넣었어요. 남긴 주소를 고쳐서 다시 「넣기」를 눌러 주세요. (${실패[0].why})`)
+    }
+
     const 넣기 = async () => {
+        if (tab === 'link') { await 링크넣기(); return }
         setBusy(true); setErr(null); setMsg('봇이 읽는 중이에요…')
         try {
-            const body = tab === 'link'
-                ? { mentorId, kind: 'url', url: url.trim() }
-                : { mentorId, kind: 'text', title: title.trim(), text }
             const res = await fetch('/api/os/knowledge', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
+                body: JSON.stringify({ mentorId, kind: 'text', title: title.trim(), text }),
             })
             const data = await res.json()
             if (!res.ok) throw new Error(data.error || '넣지 못했어요')
-            osTrack('os_knowledge_added', { mentor_id: mentorId, kind: tab === 'link' ? 'url' : 'text' })
+            osTrack('os_knowledge_added', { mentor_id: mentorId, kind: 'text' })
             await onAdded()
             setMsg('다 읽었어요')
             setTimeout(onClose, 700)
@@ -91,7 +136,8 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
         }
     }
 
-    const 넣을수있나 = tab === 'link' ? url.trim().length > 6 : text.trim().length >= 10
+    const 주소개수 = splitUrls(urls.join('\n')).length
+    const 넣을수있나 = tab === 'link' ? 주소개수 > 0 : text.trim().length >= 10
 
     return (
         <div className="os-sheet-back" data-theme="os" onClick={busy ? undefined : onClose} role="dialog" aria-modal="true" aria-label="자료 넣기">
@@ -124,11 +170,21 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                 )}
 
                 {tab === 'link' && (
-                    <div style={{ marginTop: 14 }}>
-                        <input type="text" value={url} onChange={e => setUrl(e.target.value)} disabled={busy}
-                            placeholder="https://… (웹페이지나 유튜브 주소)" aria-label="링크 주소" />
-                        <div style={{ color: 'var(--os-글-흐림)', fontSize: 13, marginTop: 8, lineHeight: 1.5 }}>
-                            유튜브는 아직 제목과 주소만 기억해요. 영상 속 말은 못 읽어요.
+                    <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
+                        {urls.map((u, i) => (
+                            <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                <input type="text" value={u} onChange={e => 링크칸바꾸기(i, e.target.value)} disabled={busy}
+                                    placeholder="https://… (웹페이지나 유튜브 주소)" aria-label={`링크 주소 ${i + 1}`} style={{ flex: 1, minWidth: 0 }} />
+                                {urls.length > 1 && (
+                                    <button type="button" className="os-source-x" aria-label={`주소 ${i + 1} 빼기`} disabled={busy}
+                                        onClick={() => setUrls(prev => prev.filter((_, j) => j !== i))}>✕</button>
+                                )}
+                            </div>
+                        ))}
+                        <button type="button" className="os-btn" style={{ minHeight: 44 }} disabled={busy}
+                            onClick={() => setUrls(prev => [...prev, ''])}>＋ 주소 더 넣기</button>
+                        <div style={{ color: 'var(--os-글-흐림)', fontSize: 13, lineHeight: 1.5 }}>
+                            주소를 여러 줄 붙여 넣으면 알아서 나눠요. 유튜브는 아직 제목과 주소만 기억해요. 영상 속 말은 못 읽어요.
                         </div>
                     </div>
                 )}
@@ -149,7 +205,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                     <button className="os-btn" onClick={onClose} disabled={busy}>닫기</button>
                     {tab !== 'file' && (
                         <button className="os-btn primary" onClick={넣기} disabled={busy || !넣을수있나}>
-                            {busy ? '넣는 중…' : '넣기'}
+                            {busy ? '넣는 중…' : tab === 'link' && 주소개수 > 1 ? `${주소개수}개 넣기` : '넣기'}
                         </button>
                     )}
                 </div>

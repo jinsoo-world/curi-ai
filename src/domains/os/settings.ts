@@ -42,16 +42,46 @@ export function saveFontSize(size: unknown, store?: Pick<Storage, 'setItem'> | n
     return 값
 }
 
+/** 글자 배율. CSS 변수 `--os-font-scale` 로 나가서 `calc(15px * var(--os-font-scale))` 처럼 쓴다 */
+export const FONT_SCALE: Record<FontSize, number> = { small: 0.92, normal: 1, large: 1.15 }
+
+/** 문서 뿌리(html) 중 우리가 만지는 부분만. 시험에서는 가짜 객체를 넘긴다 */
+export type FontRoot = {
+    dataset: Record<string, string | undefined>
+    style?: { setProperty(name: string, value: string): void; removeProperty(name: string): void }
+}
+
 /**
- * 문서 뿌리에 글자 크기를 붙인다 → os.css 의 `[data-font="large"] …` 가 받는다.
+ * 문서 뿌리에 글자 크기를 붙인다 → os.css 의 `[data-font="large"] …` 와 `--os-font-scale` 변수가 받는다.
  * 「보통」은 붙이지 않는다(기본값이라 규칙이 없다).
  */
-export function applyFontSize(root: { dataset: Record<string, string | undefined> } | null | undefined, size: unknown): FontSize {
+export function applyFontSize(root: FontRoot | null | undefined, size: unknown): FontSize {
     const 값 = cleanFontSize(size)
     if (!root) return 값
     if (값 === 'normal') delete root.dataset.font
     else root.dataset.font = 값
+    if (값 === 'normal') root.style?.removeProperty('--os-font-scale')
+    else root.style?.setProperty('--os-font-scale', String(FONT_SCALE[값]))
     return 값
+}
+
+/* ────────────────────────── 주소 여러 개 나누기 ────────────────────────── */
+
+/**
+ * 붙여 넣은 글에서 주소를 전부 뽑는다. 줄바꿈, 빈칸, 쉼표로 여러 개가 들어와도 하나씩 나눈다.
+ * 같은 주소가 두 번 있으면 한 번만. 문장 끝 마침표, 따옴표는 뗀다.
+ */
+export function splitUrls(text: string): string[] {
+    const 전부 = (text ?? '').match(/https?:\/\/[^\s<>"',]+/gi) ?? []
+    const 본것 = new Set<string>()
+    const 결과: string[] = []
+    for (const 원본 of 전부) {
+        const 주소 = 원본.replace(/[.!?)\]]+$/, '')
+        if (!주소 || 본것.has(주소)) continue
+        본것.add(주소)
+        결과.push(주소)
+    }
+    return 결과
 }
 
 /* ────────────────────────── 클로버 잔량 띠 ────────────────────────── */
