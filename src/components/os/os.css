@@ -151,6 +151,11 @@
     .os-right { display: none; }
     .os-right.open { display: block; position: fixed; inset: auto 0 0 0; max-height: 70dvh; border-radius: 22px 22px 0 0; z-index: 40; }
     .os-bubble { max-width: 88%; }
+    /* 앱으로 설치해 열면(주소창 없음) 노치·홈 표시줄이 화면을 가린다 → 그만큼 띄운다 */
+    .os-left { padding-top: env(safe-area-inset-top); }
+    .os-plus { top: calc(14px + env(safe-area-inset-top)); }
+    .os-input-bar { margin-bottom: calc(16px + env(safe-area-inset-bottom)); }
+    .os-right.open { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
 }
 
 /* 첫 일 시키기 칩 (FirstTaskChips) = 인사말 아래, 첫 메시지 전에만 */

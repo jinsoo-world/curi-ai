@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic'
 const CloverHunt = dynamic(() => import('@/components/CloverHunt'), { loading: () => null })
 import BottomTabs from '@/components/BottomTabs'
 import VisitTracker from '@/components/VisitTracker'
+import RegisterSW from '@/components/pwa/RegisterSW'
 import './globals.css'
 import { GUEST_CLOVERS, SIGNUP_CLOVERS, TRIAL_CLOVERS } from '@/domains/trial'
 import { TEACHER_COST } from '@/domains/studio/teacher'
@@ -27,7 +28,13 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.ico',
-    apple: '/icons/icon-192x192.png',
+    apple: '/icons/apple-touch-icon-180.png',
+  },
+  // 아이폰 「홈 화면에 추가」 = 주소창 없이 앱처럼 열리고, 상태바가 화면 위에 겹친다(검정 바탕이라 자연스럽다)
+  appleWebApp: {
+    capable: true,
+    title: '큐리AI',
+    statusBarStyle: 'black-translucent',
   },
   alternates: {
     canonical: SITE_URL,
@@ -250,17 +257,8 @@ export default function RootLayout({
         {children}
         <CloverHunt />
         <BottomTabs />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').catch(function() {});
-                });
-              }
-            `,
-          }}
-        />
+        {/* 서비스 워커 등록(배포에서만). 옛 인라인 스크립트를 컴포넌트 한 줄로 바꿨다 */}
+        <RegisterSW />
         {/* GTM (Google Tag Manager) — head script */}
         {GTM_ID && (
           <Script

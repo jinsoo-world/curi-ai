@@ -1,0 +1,45 @@
+/* 「앱으로 설치」 줄·안내. 색은 globals.css [data-theme="os"] 토큰만 쓴다 */
+
+.pwa-install {
+    display: flex; align-items: center; gap: 4px;
+    margin: 6px 12px 0; padding: 4px 4px 4px 8px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--os-클로버) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--os-클로버) 35%, transparent);
+}
+.pwa-install-btn {
+    flex: 1; display: flex; align-items: center; gap: 10px;
+    padding: 8px 6px; border: 0; background: transparent; color: var(--os-글);
+    font-size: 15px; text-align: left; cursor: pointer; min-height: 44px; border-radius: 10px;
+}
+.pwa-install-btn:hover { background: color-mix(in srgb, var(--os-클로버) 18%, transparent); }
+.pwa-install-text { display: flex; flex-direction: column; line-height: 1.25; }
+.pwa-install-text b { font-weight: 700; }
+.pwa-install-text small { font-size: 12.5px; color: var(--os-글-연); }
+.pwa-install-x {
+    width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent;
+    color: var(--os-글-흐림); font-size: 20px; cursor: pointer;
+}
+.pwa-install-x:hover { background: var(--os-말풍선); color: var(--os-글); }
+
+/* 안내 시트 안 걸음(1·2·3) */
+.pwa-steps { list-style: none; display: flex; flex-direction: column; gap: 14px; margin: 6px 0 4px; }
+.pwa-steps li { display: flex; gap: 14px; align-items: flex-start; font-size: 17px; line-height: 1.5; }
+.pwa-steps li > b {
+    flex: none; width: 34px; height: 34px; border-radius: 50%;
+    background: var(--os-클로버); color: #0B0B0C; font-weight: 800; font-size: 17px;
+    display: grid; place-items: center;
+}
+.pwa-steps small { display: block; font-size: 14px; color: var(--os-글-연); margin-top: 2px; }
+.pwa-note { margin-top: 16px; padding: 10px 12px; border-radius: 12px; background: var(--os-말풍선); color: var(--os-글-연); font-size: 14px; line-height: 1.5; }
+
+/* 좁은 화면(폰) = 왼쪽 명단이 접히므로 화면 아래 띠로 뜬다. 홈 표시줄(안전 영역)만큼 띄운다 */
+@media (max-width: 900px) {
+    .pwa-install {
+        position: fixed; left: 12px; right: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom));
+        z-index: 45; margin: 0;
+        background: color-mix(in srgb, var(--os-패널) 92%, var(--os-클로버));
+        box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+    }
+}
