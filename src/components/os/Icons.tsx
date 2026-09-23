@@ -48,3 +48,19 @@ export function IconPhone(p: SVGProps<SVGSVGElement>) {
         </svg>
     )
 }
+/** 세부칸 여닫기 = 줄 셋 (햄버거) */
+export function IconMenu(p: SVGProps<SVGSVGElement>) {
+    return (
+        <svg {...base(p)}>
+            <path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" />
+        </svg>
+    )
+}
+/** 돌아가기 = 왼쪽 화살표 */
+export function IconBack(p: SVGProps<SVGSVGElement>) {
+    return (
+        <svg {...base(p)}>
+            <path d="M15 5l-7 7 7 7" />
+        </svg>
+    )
+}

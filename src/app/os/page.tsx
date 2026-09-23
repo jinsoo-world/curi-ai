@@ -12,6 +12,8 @@ export default function OsHome() {
     const router = useRouter()
     const first = team.find(b => !b.hidden)
 
+    // /os 는 「첫 봇 대화로 가는 문」이라 자기 자리를 첫 봇 주소로 바꾼다(replace). 그래서 뒤로 가기 목록엔 /os 가 안 남고
+    // 봇 마켓, 설정에서 뒤로를 누르면 곧장 직전 대화로 돌아온다. 이 replace 는 /os 에서만, 다른 화면에선 자동 이동이 없다.
     useEffect(() => {
         if (loading) return
         const demo = new URLSearchParams(window.location.search).get('demo') === '1'

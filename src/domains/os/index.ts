@@ -2,6 +2,7 @@
 export * from './types'
 export { JOBS, AUTONOMY, SHAPES, COLORS, DEFAULT_TEAM, suggestName, findJob, buildBotPrompt } from './presets'
 export { listTeam, createTeamBot, updateTeamBot, removeTeamBot, getOwnedTeamBotMentor, bootstrapDefaultTeam, TeamTableMissing } from './team'
+export type { TeamBotPatch } from './team'
 export type { VoiceProfile } from './voice'
 export { analyzeVoice, buildVoiceGuide, splitSentences, stripParticle, isPolite } from './voice'
 export type { TwinProfile } from './twin'

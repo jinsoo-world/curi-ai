@@ -1,0 +1,90 @@
+/* 왼쪽 명단 손질 (OsShell 만 부른다). os.css 뒤에 읽혀 같은 이름표를 덧쓴다.
+   os.css 는 대화 화면 담당이 고치므로 여기엔 왼쪽 명단, 봇 마켓(/os/market), 우클릭 메뉴만 둔다.
+   색은 globals.css [data-theme="os"] 토큰만 쓴다. */
+
+/* 글자 크기 = 봇 이름 16px 이상, 줄 단추 17px (대표 지시 0923) */
+.os-bot-name { font-size: 16px; }
+.os-row-btn { font-size: 17px; }
+
+/* 타일은 Link 다. 밑줄 없이, 길게 눌러도 아이폰 링크 미리보기(callout)가 안 뜨게 */
+.os-bot-tile { text-decoration: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+
+/* 격자 아래 가로 단추 2개 = ＋ 개인봇 / ＋ 단체방 (옛 오른쪽 위 ＋ 타일과 ⌘N 을 대신한다) */
+.os-add-row { display: flex; gap: 6px; padding: 4px 12px 10px; }
+.os-add-btn {
+    flex: 1; min-height: 44px; padding: 8px 6px; border-radius: 12px;
+    border: 1px dashed var(--os-선); background: transparent; color: var(--os-글-연);
+    font-size: 15px; cursor: pointer; white-space: nowrap;
+}
+.os-add-btn:hover { background: var(--os-말풍선); color: var(--os-글); }
+
+/* 사용 한도 원형 자리 = 「봇 마켓」 줄 바로 위 */
+.os-usage-slot { display: flex; align-items: center; padding: 4px 10px 6px; min-height: 0; }
+.os-usage-slot:empty { display: none; }
+
+/* 사용 한도 원형 단추(UsageRing)는 입력창 위에 있을 때의 바깥 여백(20px)을 갖고 있다. 명단 안에선 뺀다 */
+.os-usage-slot .os-usage-ring-btn { margin: 0; }
+
+/* 우클릭(폰은 길게 누르기) 메뉴 = 편집 / 대화 새로 시작 / 숨기기 / 팀에서 빼기 */
+.os-ctx-back { position: fixed; inset: 0; z-index: 45; }
+.os-ctx {
+    position: fixed; z-index: 46; min-width: 190px; padding: 6px; border-radius: 14px;
+    background: var(--os-패널); border: 1px solid var(--os-선); box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+    display: flex; flex-direction: column; gap: 2px;
+}
+.os-ctx-title { padding: 6px 12px 4px; font-size: 12.5px; color: var(--os-글-흐림); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.os-ctx-item {
+    display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 10px 12px;
+    border: 0; border-radius: 10px; background: transparent; color: var(--os-글); font-size: 15px; cursor: pointer; min-height: 44px;
+}
+.os-ctx-item:hover { background: var(--os-말풍선); }
+.os-ctx-item.danger { color: var(--os-오류); }
+
+/* 한 장짜리 화면(설정, 봇 마켓) 위 「대화로 돌아가기」. 앱으로 설치해 열면 브라우저 뒤로 단추가 없어 이 단추가 유일한 길이다 */
+.os-back {
+    display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
+    margin: 12px 16px 0; padding: 8px 12px; min-height: 44px; border: 0; border-radius: 12px;
+    background: transparent; color: var(--os-글-연); font-size: 15px; cursor: pointer;
+}
+.os-back:hover { background: var(--os-말풍선); color: var(--os-글); }
+
+/* 봇 마켓 (/os/market) = 뼈대 안에서 그린다. 왼쪽 명단이 그대로 있어 봇을 누르면 바로 대화로 돌아간다 */
+.os-market { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 24px 40px; color: var(--os-글); }
+.os-market h1 { font-size: 22px; margin: 8px 0 4px; }
+.os-market-sub { color: var(--os-글-연); font-size: 15px; line-height: 1.5; margin: 0 0 18px; }
+.os-market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.os-market-card {
+    display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 10px 16px;
+    border-radius: 18px; background: var(--os-말풍선); color: var(--os-글); text-decoration: none; text-align: center; min-height: 160px;
+}
+.os-market-card:hover { background: var(--os-말풍선-내); }
+.os-market-name { font-size: 16px; font-weight: 600; line-height: 1.25; }
+.os-market-title { font-size: 13px; color: var(--os-글-연); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.os-market-empty { color: var(--os-글-연); font-size: 15px; padding: 24px 0; }
+
+/* 편집 시트 안 인사말 칸 */
+.os-sheet textarea.os-textarea { margin-top: 0; }
+.os-sheet .os-field { margin-top: 14px; }
+.os-sheet .os-field-label { font-size: 13px; color: var(--os-글-흐림); margin-bottom: 8px; }
+
+/* ── 폰(≤900px) = 위쪽 가로 띠 (대표 아이폰 390px 실측 0923 「봇들 이름이 안 보인다」) ──
+   원인 = os.css 가 띠를 136px 로 자르는데 안전 영역(노치) 여백이 그 안에 들어가고, 캐릭터가 72px 라 이름이 아래로 잘려 나갔다.
+   여기선 캐릭터 52px + 이름 13px 한 줄로 96px 안에 넣고, 띠 높이는 안전 영역만큼만 더 준다. */
+@media (max-width: 900px) {
+    .os-left { max-height: calc(96px + env(safe-area-inset-top)); }
+    .os-roster { padding: 4px 10px 4px; gap: 0 2px; grid-auto-columns: 78px; align-items: start; }
+    .os-bot-tile { padding: 4px 2px 4px; gap: 3px; border-radius: 12px; }
+    .os-bot-tile .os-bot-name { font-size: 13px; line-height: 1.2; max-width: 72px; padding-bottom: 3px; }
+    /* 선택된 봇 = 이름 아래 초록 밑줄 */
+    .os-bot-tile[aria-current="true"] { background: transparent; }
+    .os-bot-tile[aria-current="true"] .os-bot-name { box-shadow: inset 0 -2px 0 var(--os-클로버); }
+    /* ＋ 단추 2개 = 띠 끝에 세로로 쌓인 한 칸 */
+    .os-add-tile { display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 6px 3px; scroll-snap-align: start; height: 100%; }
+    .os-add-tile .os-add-btn { min-height: 34px; font-size: 12.5px; padding: 2px 4px; border-radius: 10px; }
+    /* 사용 한도 원형 = 그 다음 칸. 글자(사용 한도 12%)는 원 안 숫자로 대신하므로 뺀다 */
+    .os-usage-tile { display: grid; place-items: center; padding: 6px 2px; scroll-snap-align: start; height: 100%; }
+    .os-usage-tile .os-usage-ring-btn { margin: 0; padding: 4px; min-height: 0; }
+    .os-usage-tile .os-usage-ring-caption { display: none; }
+    .os-market { padding: 4px 14px 32px; }
+    .os-back { margin: 8px 10px 0; }
+}

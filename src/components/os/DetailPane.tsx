@@ -12,7 +12,10 @@ const APPROVAL_LABEL: Record<TeamBot['approvalMode'], string> = {
     auto_safe: '되돌릴 수 있는 일은 알아서 (지금은 항상 물어봐요와 같음)',
 }
 
-export default function DetailPane({ bot, publicName }: { bot: TeamBot | null; publicName: string | null }) {
+/** demo = 시연(/os?demo=1). 시연 봇은 내 봇이 아니라 자료 창구가 403 을 내니 목록을 부르지 않고 한 줄만 보인다.
+ *  OsChat 이 demo 를 안 넘겨도 시연 봇은 id 가 demo- 로 시작하니 스스로 알아본다 */
+export default function DetailPane({ bot, publicName, demo = false }: { bot: TeamBot | null; publicName: string | null; demo?: boolean }) {
+    const 시연 = demo || !!bot?.id.startsWith('demo-')
     if (!bot) {
         return (
             <div>
@@ -32,8 +35,10 @@ export default function DetailPane({ bot, publicName }: { bot: TeamBot | null; p
             <h4>승인</h4>
             <div className="os-card">{APPROVAL_LABEL[bot.approvalMode]}<br /><span style={{ fontSize: 13 }}>보내기, 게시, 결제, 삭제는 카드로 물어보고, 허용해야만 나가요.</span></div>
 
-            {/* 자료는 진짜 목록이다 (3일차). 넣고 빼는 것도 여기서 한다 */}
-            <KnowledgeList mentorId={bot.mentorId} />
+            {/* 자료는 진짜 목록이다 (3일차). 넣고 빼는 것도 여기서 한다. 시연 봇은 목록을 부르지 않는다 */}
+            {시연
+                ? <><h4>자료</h4><div className="os-card">시연 봇에는 자료를 넣을 수 없어요. 내 팀 봇에서 넣어 주세요.</div></>
+                : <KnowledgeList mentorId={bot.mentorId} />}
 
             {/* 루틴 = 목록, 만들기, 시험 실행 (5일차) */}
             <RoutinePanel mentorId={bot.mentorId} botName={bot.name} />

@@ -55,7 +55,7 @@ export default function NewGroupSheet({ team, onClose, onCreated }: Props) {
                 <div className="os-step">봇 2명 이상을 한 방에 넣어요. 내가 물으면 한 명이 답하고, 필요하면 다른 한 명을 부를 수 있어요.</div>
 
                 {고를수있는봇.length < 2 ? (
-                    <div className="os-card">봇이 2명 이상이어야 그룹을 만들 수 있어요. ＋ 로 봇을 하나 더 만들어 주세요.</div>
+                    <div className="os-card">봇이 2명 이상이어야 단체방을 만들 수 있어요. 「＋ 개인봇」으로 봇을 하나 더 만들어 주세요.</div>
                 ) : (
                     <>
                         <div className="os-step" style={{ marginBottom: 8 }}>누구를 넣을까요</div>
@@ -97,7 +97,7 @@ export default function NewGroupSheet({ team, onClose, onCreated }: Props) {
                 <div className="os-sheet-foot">
                     <button className="os-btn" onClick={onClose} disabled={busy}>닫기</button>
                     <button className="os-btn primary" onClick={만들기} disabled={busy || picked.length < 2}>
-                        {busy ? '만드는 중…' : '방 만들기'}
+                        {busy ? '만드는 중' : '방 만들기'}
                     </button>
                 </div>
             </div>

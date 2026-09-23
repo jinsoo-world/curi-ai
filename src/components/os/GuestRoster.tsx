@@ -4,7 +4,7 @@
 // 손님이 타일을 누르면 그 봇과 바로 대화할 수 있다(손님 대화는 저장하지 않는다).
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import type { BotColor, BotShape } from '@/domains/os/types'
 import BotAvatar from './BotAvatar'
 
@@ -19,7 +19,6 @@ const SEEDS: Seed[] = [
 ]
 
 export default function GuestRoster() {
-    const router = useRouter()
     const [loaded, setLoaded] = useState<Record<string, Loaded>>({})
 
     useEffect(() => {
@@ -45,17 +44,17 @@ export default function GuestRoster() {
                     const m = loaded[s.mentorId]
                     const name = m?.name ?? s.name
                     return (
-                        <button
+                        <Link
                             key={s.mentorId}
+                            href={`/os/chat/${s.mentorId}`}
                             role="listitem"
                             className="os-bot-tile"
                             title={m?.title ?? name}
-                            onClick={() => router.push(`/os/chat/${s.mentorId}`)}
                         >
                             <BotAvatar shape={s.shape} color={s.color} state="idle" size={64} faceUrl={m?.avatarUrl ?? null} />
                             <span className="os-bot-name">{name}</span>
                             {m?.title && <span className="os-chip">{m.title}</span>}
-                        </button>
+                        </Link>
                     )
                 })}
             </div>
