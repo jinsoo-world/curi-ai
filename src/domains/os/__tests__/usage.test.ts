@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { usageView, weekStartKST, weekResetKST, untilText, kstDayHourText, USAGE_LIMIT_5H, USAGE_LIMIT_WEEK } from '../usage'
+import { usageView, weekStartKST, weekResetKST, untilText, kstDayHourText, usageTone, ringLabel, usageDetail, USAGE_LIMIT_5H, USAGE_LIMIT_WEEK } from '../usage'
 
 // 2026-09-23(수) 10:30 KST = 01:30 UTC
 const now = new Date('2026-09-23T01:30:00Z')
@@ -39,5 +39,48 @@ describe('os/usage — 사용 한도 한 줄', () => {
         expect(untilText(new Date(now.getTime() + 25 * 60_000), now)).toBe('25분 후')
         expect(untilText(new Date(now.getTime() + 2 * 60 * 60_000), now)).toBe('2시간 후')
         expect(untilText(new Date(now.getTime() + 95 * 60_000), now)).toBe('1시간 35분 후')
+    })
+})
+
+describe('os/usage — 원형 게이지·사용량 모달 글자', () => {
+    const v = usageView({ now, used5h: 12, oldest5h: new Date(now.getTime() - 48 * 60_000), usedWeek: 30 })
+
+    it('색 단계: 80 미만 ok, 80 이상 warn, 100 full', () => {
+        expect(usageTone(0)).toBe('ok')
+        expect(usageTone(79)).toBe('ok')
+        expect(usageTone(80)).toBe('warn')
+        expect(usageTone(99)).toBe('warn')
+        expect(usageTone(100)).toBe('full')
+    })
+
+    it('원형 게이지 읽는 글자', () => {
+        expect(ringLabel(12)).toBe('사용 한도 12%, 누르면 자세히')
+    })
+
+    it('모달 글자에는 분모가 반드시 들어간다', () => {
+        const d = usageDetail(v, now)
+        expect(d.fiveHourText).toBe('12% 썼어요 (100번 중 12번)')
+        expect(d.fiveHourReset).toBe('4시간 12분 후 다시 채워져요')
+        expect(d.weekText).toBe('3% (1,000번 중 30번)')
+        expect(d.weekReset).toBe('(월) 0시에 초기화')
+        expect(d.blockedText).toBeNull()
+    })
+
+    it('JSON 으로 건너온 문자열 날짜도 그대로 읽는다', () => {
+        const json = JSON.parse(JSON.stringify(v))
+        expect(usageDetail(json, now).fiveHourReset).toBe('4시간 12분 후 다시 채워져요')
+    })
+
+    it('창이 비어 있으면 「아직 안 썼어요」', () => {
+        const empty = usageView({ now, used5h: 0, oldest5h: null, usedWeek: 0 })
+        expect(usageDetail(empty, now).fiveHourReset).toBe('아직 안 썼어요')
+    })
+
+    it('막혔을 때는 어느 창이 막았는지에 따라 다시 쓸 수 있는 시각을 고른다', () => {
+        const by5h = usageView({ now, used5h: USAGE_LIMIT_5H, oldest5h: new Date(now.getTime() - 60 * 60_000), usedWeek: 200 })
+        expect(usageDetail(by5h, now).blockedText).toBe('지금은 한도에 닿았어요. 4시간 후 다시 쓸 수 있어요')
+        const byWeek = usageView({ now, used5h: 3, oldest5h: now, usedWeek: USAGE_LIMIT_WEEK })
+        // 2026-09-23(수) 10:30 KST → (월) 0시까지 4일 13시간 30분
+        expect(usageDetail(byWeek, now).blockedText).toBe('지금은 한도에 닿았어요. 109시간 30분 후 다시 쓸 수 있어요')
     })
 })

@@ -1,0 +1,43 @@
+/* 사용 한도: 원형 게이지(입력창 위 단추) + 사용량 모달. 색과 간격은 os.css 의 토큰을 쓴다. */
+
+/* ── 원형 그림 (작은 것과 큰 것 공용) ── */
+.os-usage-ring { display: block; aspect-ratio: 1 / 1; flex: 0 0 auto; }
+.os-usage-ring-track { stroke: var(--os-말풍선-내); }
+.os-usage-ring-arc { stroke: #03C124; transition: stroke-dasharray .3s ease; }
+.os-usage-ring[data-tone="warn"] .os-usage-ring-arc { stroke: var(--os-승인); }
+.os-usage-ring[data-tone="full"] .os-usage-ring-arc { stroke: var(--os-오류); }
+.os-usage-ring-text { fill: var(--os-글); font-size: 30px; font-weight: 700; }
+
+/* ── 입력창 위 단추 ── */
+.os-usage-ring-btn { display: inline-flex; align-items: center; gap: 8px; margin: 0 20px 6px; padding: 4px 8px 4px 4px; border: 0; border-radius: 999px; background: transparent; color: var(--os-글-흐림); font-size: 13px; cursor: pointer; min-height: 36px; }
+.os-usage-ring-btn:hover { background: var(--os-말풍선); color: var(--os-글-연); }
+.os-usage-ring-btn:focus-visible { outline: 2px solid var(--os-포인트); outline-offset: 2px; }
+.os-usage-ring-btn[data-tone="warn"] { color: var(--os-경고); }
+.os-usage-ring-btn[data-tone="full"] { color: var(--os-오류); }
+.os-usage-ring-caption { white-space: nowrap; }
+@media (max-width: 600px) {
+    .os-usage-ring-caption { display: none; }
+    .os-usage-ring-btn { padding: 4px; }
+}
+
+/* ── 모달 ── */
+.os-usage-modal { width: min(440px, 100%); }
+.os-usage-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.os-usage-x { width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent; color: var(--os-글-흐림); font-size: 16px; cursor: pointer; }
+.os-usage-x:hover { background: var(--os-말풍선); color: var(--os-글); }
+.os-usage-blocked { margin: 8px 0 4px; padding: 10px 12px; border-radius: 12px; background: var(--os-말풍선); color: var(--os-오류); font-size: 14px; line-height: 1.5; }
+.os-usage-sec { padding: 14px 0; border-bottom: 1px solid var(--os-선); font-size: 14.5px; color: var(--os-글); line-height: 1.5; }
+.os-usage-sec:last-of-type { border-bottom: 0; }
+.os-usage-sec b { display: block; color: var(--os-글); font-weight: 600; }
+.os-usage-label { font-size: 13px; color: var(--os-글-흐림); font-weight: 600; letter-spacing: .02em; margin-bottom: 6px; }
+.os-usage-sub { font-size: 13px; color: var(--os-글-연); margin-top: 4px; }
+.os-usage-5h { display: flex; align-items: center; gap: 18px; }
+.os-usage-5h-text { flex: 1; min-width: 0; }
+.os-usage-bar-track { position: relative; height: 10px; border-radius: 5px; background: var(--os-말풍선-내); overflow: hidden; margin: 4px 0 8px; }
+.os-usage-bar-track > span { display: block; height: 100%; border-radius: 5px; background: #03C124; transition: width .3s ease; }
+.os-usage-bar-track[data-tone="warn"] > span { background: var(--os-승인); }
+.os-usage-bar-track[data-tone="full"] > span { background: var(--os-오류); }
+.os-usage-plan { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.os-usage-plan b { display: inline; }
+.os-usage-plan-link { color: var(--os-포인트); text-decoration: none; font-size: 14px; padding: 6px 10px; border-radius: 10px; }
+.os-usage-plan-link:hover { background: var(--os-말풍선); }
