@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import sharp from 'sharp'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,7 +50,22 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '사진 파일이 아니에요.' }, { status: 400 })
         }
 
-        const ext = file.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg'
+        // 아바타는 1024 정사각 JPEG 로 맞춰 용량을 줄인다 (미리보기에서 이미 잘랐어도 한 번 더 안전하게)
+        let outBuf: Buffer = buffer
+        let outType = file.type
+        let ext = file.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg'
+        try {
+            outBuf = await sharp(buffer, { failOn: 'none' })
+                .rotate()
+                .resize({ width: 1024, height: 1024, fit: 'cover', withoutEnlargement: true })
+                .jpeg({ quality: 88, mozjpeg: true })
+                .toBuffer()
+            outType = 'image/jpeg'
+            ext = 'jpg'
+        } catch (e) {
+            console.warn('[Avatar] resize skip:', e instanceof Error ? e.message : e)
+        }
+
         const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
 
         const admin = createAdmin(
@@ -62,8 +78,8 @@ export async function POST(req: NextRequest) {
 
         const { error: uploadError } = await admin.storage
             .from('mentor-avatars')
-            .upload(filePath, buffer, {
-                contentType: file.type,
+            .upload(filePath, outBuf, {
+                contentType: outType,
                 upsert: true,
             })
 

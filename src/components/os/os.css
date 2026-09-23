@@ -301,10 +301,12 @@
 .os-photo-grid[data-cols="1"] .os-photo-cell img { max-height: 360px; object-fit: contain; background: var(--os-바탕); }
 
 /* 크게 보기 덮개 */
-.os-photo-view { position: fixed; inset: 0; z-index: 60; background: var(--os-덮개-진, rgba(0,0,0,.88)); display: grid; place-items: center; padding: 24px; cursor: zoom-out; }
-.os-photo-view img { max-width: 100%; max-height: 100%; border-radius: 14px; box-shadow: 0 6px 18px var(--os-그림자, rgba(0,0,0,.35)); cursor: default; }
-.os-photo-view-count { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); font-size: 13.5px; color: var(--os-글-연); }
-.os-photo-view-x { position: fixed; top: 14px; right: 14px; width: 40px; height: 40px; min-height: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.12); color: #fff; font-size: 22px; cursor: pointer; display: grid; place-items: center; }
+.os-photo-view { position: fixed; inset: 0; z-index: 60; background: var(--os-덮개-진, rgba(0,0,0,.88)); display: grid; place-items: center; padding: 24px; cursor: zoom-out; touch-action: none; user-select: none; -webkit-user-select: none; overscroll-behavior: none; }
+.os-photo-view img { max-width: 100%; max-height: 100%; border-radius: 14px; box-shadow: 0 6px 18px var(--os-그림자, rgba(0,0,0,.35)); cursor: grab; touch-action: none; -webkit-user-drag: none; user-select: none; transition: transform .18s ease, opacity .18s ease; }
+.os-photo-view img:active { cursor: grabbing; }
+.os-photo-view-count { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); font-size: 13.5px; color: var(--os-글-연); pointer-events: none; }
+.os-photo-view-x { position: fixed; top: 14px; right: 14px; width: 40px; height: 40px; min-height: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.12); color: #fff; font-size: 22px; cursor: pointer; display: grid; place-items: center; z-index: 1; touch-action: manipulation; }
+.os-photo-view-hint { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); margin: 0; font-size: 12px; color: rgba(255,255,255,.55); pointer-events: none; }
 
 /* 끌어다 놓는 동안 대화 영역 테두리 */
 .os-chat-wrap.dragging .os-messages { outline: 2px dashed var(--os-포인트); outline-offset: -8px; border-radius: 18px; }

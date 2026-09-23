@@ -2,9 +2,11 @@
 //
 // 사진은 chat-images 버킷에 회원별 폴더로 쌓인다.
 // 공개 URL 을 돌려주고, 그 주소가 메시지에 함께 저장돼 나중에 대화를 다시 열어도 보인다.
+// 클라이언트가 이미 줄인 경우가 많지만, 큰 원본이 오면 sharp 로 긴 변 1600 JPEG 로 한 번 더 줄인다.
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import sharp from 'sharp'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +16,8 @@ export const dynamic = 'force-dynamic'
 const MAX_BYTES = 4 * 1024 * 1024
 /** Gemini 가 읽을 수 있는 형식만 받는다 */
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+/** 서버에서도 긴 변을 이 값으로 맞춘다 (클라이언트와 동일) */
+const MAX_EDGE = 1600
 
 /** 파일 맨 앞을 보고 진짜 사진인지 판별한다 */
 function looksLikeImage(buf: Buffer): boolean {
@@ -27,6 +31,32 @@ function looksLikeImage(buf: Buffer): boolean {
     // HEIC/HEIF = .... 'ftyp'
     if (buf.subarray(4, 8).toString('ascii') === 'ftyp') return true
     return false
+}
+
+/** JPEG/PNG/WEBP 만 줄인다. HEIC 는 sharp 환경에 따라 실패할 수 있어 원본 유지. */
+async function maybeDownscale(buffer: Buffer, contentType: string): Promise<{ buf: Buffer; type: string; ext: string }> {
+    const ext0 = contentType.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg'
+    if (contentType === 'image/heic' || contentType === 'image/heif') {
+        return { buf: buffer, type: contentType, ext: ext0 }
+    }
+    try {
+        const img = sharp(buffer, { failOn: 'none' })
+        const meta = await img.metadata()
+        const w = meta.width ?? 0
+        const h = meta.height ?? 0
+        const long = Math.max(w, h)
+        // 이미 작으면 JPEG 재인코딩만 (PNG 큰 경우 용량 절약)
+        const pipeline = long > MAX_EDGE
+            ? img.resize({ width: w >= h ? MAX_EDGE : undefined, height: h > w ? MAX_EDGE : undefined, fit: 'inside', withoutEnlargement: true })
+            : img
+        const out = await pipeline.rotate().jpeg({ quality: 82, mozjpeg: true }).toBuffer()
+        if (out.length > 0 && out.length < buffer.length) {
+            return { buf: out, type: 'image/jpeg', ext: 'jpg' }
+        }
+    } catch (e) {
+        console.warn('[Chat Image] downscale skip:', e instanceof Error ? e.message : e)
+    }
+    return { buf: buffer, type: contentType, ext: ext0 }
 }
 
 export async function POST(req: NextRequest) {
@@ -46,7 +76,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '사진을 찾지 못했어요.' }, { status: 400 })
         }
         if (!ALLOWED.includes(file.type)) {
-            return NextResponse.json({ error: '사진 파일만 보낼 수 있어요 (JPG·PNG·WEBP·HEIC).' }, { status: 400 })
+            return NextResponse.json({ error: '사진 파일만 보낼 수 있어요 (JPG, PNG, WEBP, HEIC).' }, { status: 400 })
         }
         if (file.size > MAX_BYTES) {
             return NextResponse.json({ error: '사진은 4MB 이하만 보낼 수 있어요.' }, { status: 400 })
@@ -60,17 +90,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '사진 파일이 아니에요.' }, { status: 400 })
         }
 
+        const ready = await maybeDownscale(buffer, file.type)
+
         const admin = createAdmin(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.SUPABASE_SERVICE_ROLE_KEY!,
         )
 
-        const ext = file.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg'
-        const filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+        const filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ready.ext}`
 
         const { error: uploadError } = await admin.storage
             .from('chat-images')
-            .upload(filePath, buffer, { contentType: file.type, upsert: false })
+            .upload(filePath, ready.buf, { contentType: ready.type, upsert: false })
 
         if (uploadError) {
             console.error('[Chat Image] Upload error:', uploadError.message)

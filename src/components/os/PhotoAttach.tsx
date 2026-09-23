@@ -1,11 +1,13 @@
 'use client'
 // 사진 붙이기 — ＋ 메뉴(사진 / 자료) + 입력창 위 미리보기 띠 + 올리기 상태.
-// 규칙(장 수, 크기, 종류, 격자)은 domains/os/photos.ts 에만 있다. 올리기는 기존 /api/chat/upload-image 를 장당 부른다(동시 3).
+// 규칙(장 수, 크기, 종류, 격자)은 domains/os/photos.ts 에만 있다. 올리기는 /api/chat/upload-image 를 장당 부른다(동시 3).
+// 올리기 직전에 compressPhotoForUpload 로 긴 변 1600 JPEG 로 줄여 체감 속도를 올린다.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
     checkPhotoFiles, runLimited, pickImageFiles, PHOTO_MAX_COUNT, PHOTO_TYPES,
 } from '@/domains/os/photos'
+import { compressPhotoForUpload } from '@/domains/os/compress-photo'
 
 export interface PhotoItem {
     id: string
@@ -20,8 +22,10 @@ export interface PhotoItem {
 }
 
 async function uploadOne(file: File): Promise<string> {
+    // 폰 원본(수 MB)을 그대로 올리면 느리다. 긴 변 1600 JPEG 로 줄인 뒤 보낸다.
+    const ready = await compressPhotoForUpload(file)
     const form = new FormData()
-    form.append('file', file)
+    form.append('file', ready)
     const res = await fetch('/api/chat/upload-image', { method: 'POST', body: form })
     const d = await res.json().catch(() => ({}))
     if (!res.ok || !d?.url) throw new Error(String(d?.error ?? '사진을 올리지 못했어요'))
