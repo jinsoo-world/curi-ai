@@ -16,18 +16,30 @@ export interface EyeLayout {
     zY: number
 }
 
-const BASE: Omit<EyeLayout, 'lx' | 'rx' | 'cy'> = { w: 8, h: 18, dotsY: -4, workY: 104, zX: 78, zY: 18 }
+const BASE: Omit<EyeLayout, 'lx' | 'rx' | 'cy'> = { w: 9, h: 18, dotsY: -4, workY: 104, zX: 78, zY: 18 }
 
-/** 도형별 눈 자리. 클로버는 가운데 잎 사이(작은 심 위)에 조금 작게 */
+/** 도형별 눈 자리. 두 눈 사이를 넓게(대표 0923 「눈이 좌우로 너무 몰렸다」, 예전 가운데 간격 20 → 30). 클로버는 가운데 심 위라 조금 작고 좁게 */
 export function eyeLayout(shape: BotShape): EyeLayout {
     switch (shape) {
-        case 'circle': return { ...BASE, lx: 40, rx: 60, cy: 46 }
-        case 'hex':    return { ...BASE, lx: 40, rx: 60, cy: 47 }
-        case 'square': return { ...BASE, lx: 39, rx: 61, cy: 46 }
-        case 'egg':    return { ...BASE, lx: 40, rx: 60, cy: 52 }            // 달걀은 아래가 넓어 얼굴이 조금 아래
-        case 'drop':   return { ...BASE, lx: 41, rx: 59, cy: 62, zX: 74, zY: 30 } // 물방울은 꼭지 아래 넓은 곳
-        case 'clover': return { ...BASE, lx: 43, rx: 57, cy: 50, w: 7, h: 15, zX: 76, zY: 22 }
+        case 'circle': return { ...BASE, lx: 35, rx: 65, cy: 46 }
+        case 'hex':    return { ...BASE, lx: 35, rx: 65, cy: 47 }
+        case 'square': return { ...BASE, lx: 34, rx: 66, cy: 46 }
+        case 'egg':    return { ...BASE, lx: 35, rx: 65, cy: 52 }                       // 달걀은 아래가 넓어 얼굴이 조금 아래
+        case 'drop':   return { ...BASE, lx: 36.5, rx: 63.5, cy: 63, w: 8.5, zX: 74, zY: 30 } // 물방울은 꼭지 아래 넓은 곳. 위가 좁아 눈도 조금 작게
+        case 'clover': return { ...BASE, lx: 38.5, rx: 61.5, cy: 50, w: 7.5, h: 15, zX: 76, zY: 22 }
     }
+}
+
+/** 동그란 눈의 반지름(100 좌표계). 눈 너비 w 에 비례한다 */
+export function eyeR(w: number): number {
+    return w * 1.2
+}
+
+/** 두 눈 사이 빈 틈(테 바깥끼리). 0 이하면 눈이 붙어 보인다 */
+export function eyeGap(g: EyeLayout): number {
+    const r = eyeR(g.w)
+    const rim = r + r * 0.13     // 테 두께 r*0.26 의 절반이 바깥으로 나온다
+    return (g.rx - g.lx) - rim * 2
 }
 
 /** 화면 픽셀 기준 눈 두께. viewBox 100 을 size 로 늘리니 크기에 정비례한다 */
@@ -74,6 +86,11 @@ export const BLINK_STATES: ReadonlySet<BotState> = new Set<BotState>(['idle', 'l
 
 export function shouldBlink(state: BotState): boolean {
     return BLINK_STATES.has(state)
+}
+
+/** 눈을 감고 있는 시간(ms). 쉬는 중(졸음)은 천천히, 나머지는 재빨리 */
+export function blinkHoldMs(state: BotState): number {
+    return state === 'idle' ? 320 : 120
 }
 
 /** 다음 깜빡임까지 기다릴 시간(ms) = 3~6초 불규칙. rand 는 0~1 (검사할 때 고정값을 넣는다) */

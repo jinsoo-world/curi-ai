@@ -3,10 +3,10 @@
 // 움직임은 data-state 하나로 avatar.css 가 바꾸고, 「불규칙」이 필요한 것(깜빡임, 찡긋, 말 리듬, 장애 눈)만 여기 JS 가 시간을 잡는다.
 // 눈 자리, 글자 계산은 avatar.ts(순수 함수)에 있다. 색, 모양 이름은 team_bots 표의 값과 같다.
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useId, useRef, useState, type CSSProperties } from 'react'
 import type { BotColor, BotShape, BotState } from '@/domains/os/types'
 import {
-    ERROR_X_MS, ariaLabel, avatarClass, badgePx, eyeKind, eyeLayout, facePx,
+    ERROR_X_MS, ariaLabel, avatarClass, badgePx, blinkHoldMs, eyeKind, eyeLayout, eyeR, facePx,
     isDoubleBlink, nextBlinkDelay, nextWinkDelay, shouldBlink, showsBadge, showsThinkDots, showsWorkDots, showsZ, talkBeatMs,
 } from './avatar'
 import './avatar.css'
@@ -27,7 +27,6 @@ const CLOVER: [number, number, number][] = [
     [50, 50, 17],                                            // 심
 ]
 
-const BLINK_MS = 120
 const WINK_MS = 170
 const DOUBLE_GAP_MS = 260
 
@@ -35,7 +34,7 @@ export interface BotAvatarProps {
     shape: BotShape
     color: BotColor
     state?: BotState
-    /** 화면 픽셀. 36(대화 머리), 44(도형 고르기), 72(명단), 96(새 봇 미리보기) 를 쓴다 */
+    /** 화면 픽셀. 36(대화 머리), 44(도형 고르기), 72(명단), 96(새 봇 미리보기) 를 쓴다. 기본 83 (72 에서 15% 키움, 중장년 눈 배려) */
     size?: number
     /** 리더 얼굴 사진(만든 사람 배지). 있으면 오른쪽 아래에 붙는다 */
     faceUrl?: string | null
@@ -70,10 +69,11 @@ function useTimers() {
     return { set, clearAll }
 }
 
-export default function BotAvatar({ shape, color, state = 'idle', size = 72, faceUrl, name, title }: BotAvatarProps) {
+export default function BotAvatar({ shape, color, state = 'idle', size = 83, faceUrl, name, title }: BotAvatarProps) {
     const fill = `var(--봇-${color})`
     const geo = eyeLayout(shape)
     const reduced = useReducedMotion()
+    const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '')   // 눈꺼풀 clipPath id. 한 화면에 봇이 여럿이라 겹치면 안 된다
 
     const [blinking, setBlinking] = useState(false)
     const [wink, setWink] = useState<'L' | 'R' | null>(null)
@@ -87,7 +87,7 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, fac
         const { set, clearAll } = blinkTimers
         const once = (after?: () => void) => {
             setBlinking(true)
-            set(() => { setBlinking(false); after?.() }, BLINK_MS)
+            set(() => { setBlinking(false); after?.() }, blinkHoldMs(state))
         }
         const schedule = () => set(() => {
             if (isDoubleBlink(Math.random())) once(() => set(() => once(schedule), DOUBLE_GAP_MS))
@@ -131,7 +131,10 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, fac
     } as CSSProperties
 
     // 👀 동그란 눈 = 검은 테 + 흰 눈알 + 검은 눈동자(살짝 위, 바깥) + 흰 반짝 점 (대표 0923 「눈은 동그랗게, 검정 안에 흰 점」)
-    const R = geo.w * 1.2
+    //    + 눈꺼풀(몸 색, 눈알 모양으로 잘라 얹음) = 쉬는 중엔 반쯤 내려와 졸린 눈. 위치는 avatar.css 가 상태별로 옮긴다
+    const R = eyeR(geo.w)
+    const stroke = R * 0.26
+    const rim = R + stroke / 2
     const eye = (x: number, side: 'left' | 'right') => {
         const cls = `eye eye-${side}`
         if (kind === 'x') {
@@ -145,12 +148,24 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, fac
             const w = R * 2
             return <rect className={cls} x={x - w / 2} y={geo.cy - 1.6} width={w} height={3.2} rx={1.6} fill={eyeColor} />
         }
-        const dir = side === 'left' ? 1 : 1   // 두 눈동자가 같은 쪽(오른쪽 위)을 본다 = 생각하는 표정
+        const clipId = `${uid}-lid-${side}`
+        const lidTop = geo.cy - rim - 1
+        const lidH = (rim + 1) * 2
         return (
             <g className={cls}>
-                <circle cx={x} cy={geo.cy} r={R} fill="#fff" stroke={eyeColor} strokeWidth={R * 0.26} />
-                <circle cx={x + dir * R * 0.18} cy={geo.cy - R * 0.12} r={R * 0.6} fill={eyeColor} />
-                <circle cx={x + dir * R * 0.42} cy={geo.cy - R * 0.4} r={R * 0.2} fill="#fff" />
+                <circle cx={x} cy={geo.cy} r={R} fill="#fff" stroke={eyeColor} strokeWidth={stroke} />
+                <g className="pupil">
+                    {/* 두 눈동자가 같은 쪽(오른쪽 위)을 본다. 일할 땐 CSS 가 좌우로 움직인다 */}
+                    <circle cx={x + R * 0.18} cy={geo.cy - R * 0.12} r={R * 0.6} fill={eyeColor} />
+                    <circle cx={x + R * 0.42} cy={geo.cy - R * 0.4} r={R * 0.2} fill="#fff" />
+                </g>
+                <clipPath id={clipId}><circle cx={x} cy={geo.cy} r={rim} /></clipPath>
+                <g clipPath={`url(#${clipId})`}>
+                    <g className="lid">
+                        <rect x={x - rim - 1} y={lidTop} width={lidH} height={lidH} fill={fill} />
+                        <rect x={x - rim - 1} y={lidTop + lidH - stroke * 0.8} width={lidH} height={stroke * 0.8} fill={eyeColor} />
+                    </g>
+                </g>
             </g>
         )
     }
@@ -176,10 +191,10 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, fac
                 {/* 🍑 귀여움: 볼터치 2개 + 작은 미소 (대표 0923 「조금 더 귀엽게, 그록봇 느낌 살짝 빼고」). 자는 중, 장애일 땐 미소를 감춘다 */}
                 {state !== 'error' && (
                     <g className="cute" aria-hidden="true">
-                        <circle cx={geo.lx - R * 0.9} cy={geo.cy + R * 1.3} r={R * 0.48} fill="rgba(255, 128, 150, 0.38)" />
-                        <circle cx={geo.rx + R * 0.9} cy={geo.cy + R * 1.3} r={R * 0.48} fill="rgba(255, 128, 150, 0.38)" />
+                        <circle cx={geo.lx - R * 0.9} cy={geo.cy + R * 1.3} r={R * 0.52} fill="rgba(255, 128, 150, 0.38)" />
+                        <circle cx={geo.rx + R * 0.9} cy={geo.cy + R * 1.3} r={R * 0.52} fill="rgba(255, 128, 150, 0.38)" />
                         {state !== 'sleeping' && (
-                            <rect className="mouth" x={50 - R * 0.36} y={geo.cy + R * 1.45} width={R * 0.72} height={R * 0.9} rx={R * 0.36}
+                            <rect className="mouth" x={50 - R * 0.4} y={geo.cy + R * 1.45} width={R * 0.8} height={R} rx={R * 0.4}
                                 fill="#fff" stroke={eyeColor} strokeWidth={R * 0.2} />
                         )}
                     </g>

@@ -6,7 +6,8 @@
     position: relative; display: inline-block; line-height: 0; flex: none;
     --배지: 18px; --얼굴: 28px; --말함-주기: 500ms;
 }
-.bot-avatar svg { display: block; overflow: visible; }
+/* 그림만 살짝 크게(10%). 자리(width/height)는 그대로라 옆 것과 안 부딪힌다. 부르는 쪽이 --확대 로 바꿀 수 있다 */
+.bot-avatar svg { display: block; overflow: visible; transform: scale(var(--확대, 1.1)); }
 
 /* 몸: 가운데(50,50) 기준으로 늘고 줄고 흔들린다 */
 .bot-avatar .body { transform-origin: 50px 50px; transition: transform 300ms ease; }
@@ -16,6 +17,11 @@
 .bot-avatar .eye { transform-box: fill-box; transform-origin: center; transition: transform var(--눈-깜빡-길이, 120ms) ease-in-out; }
 .bot-avatar.is-blinking .eye { transform: scaleY(.08); }
 .bot-avatar.wink-left .eye-left, .bot-avatar.wink-right .eye-right { transform: scaleY(.12) scaleX(1.25); }
+
+/* 눈꺼풀: 몸 색 판이 눈알 모양으로 잘려 위에서 내려온다. 평소엔 완전히 올라가 안 보인다 */
+.bot-avatar .lid { transform-box: fill-box; transform-origin: center; transform: translateY(-100%); transition: transform 420ms ease; }
+/* 눈동자: 일하는 중엔 좌우로 훑고, 졸릴 땐 아래로 내려온다 */
+.bot-avatar .pupil { transform-box: fill-box; transform-origin: center; transition: transform 420ms ease; }
 
 /* 몸 위·아래 점, 자는 z */
 .bot-avatar .dots circle { fill: var(--os-글-연); opacity: .25; }
@@ -40,30 +46,36 @@
 
 /* ---- 상태 8개 ---- */
 
-/* idle 쉬는 중: 몸이 4초 주기로 1~2px 떠다님. 깜빡임은 JS(3~6초 불규칙) */
-.bot-avatar[data-state="idle"] .body { animation: bot-float var(--떠다님-주기, 4000ms) ease-in-out infinite; }
+/* idle 쉬는 중 = 졸음 (대표 0923 「일 안 할 때는 눈 반쯤 감겨서 졸게」): 눈꺼풀 반쯤, 눈동자 아래, 입 작게, 아주 느린 숨. 깜빡임은 JS(3~6초, 천천히) */
+.bot-avatar[data-state="idle"] { --눈-깜빡-길이: 300ms; }
+.bot-avatar[data-state="idle"] .body { animation: bot-breathe var(--호흡-주기, 5000ms) ease-in-out infinite; }
+.bot-avatar[data-state="idle"] .lid { transform: translateY(-44%); }
+.bot-avatar[data-state="idle"] .pupil { transform: translateY(32%); }
+.bot-avatar[data-state="idle"] .mouth { transform: scale(.7); }
 
 /* listening 듣는 중: 눈이 커지고 입력창(아래) 쪽으로 시선, 몸이 살짝 기울어 귀 기울임 */
 .bot-avatar[data-state="listening"] .eye-pos { transform: translate(0, 6%) scale(1.22); }
 .bot-avatar[data-state="listening"] .body { transform: rotate(-3deg) translateY(1px); }
 
-/* thinking 생각 중: 눈이 위로 올라가 좌우로 천천히 훑음 + 몸 위 점 3개가 차례로 밝아짐 */
-.bot-avatar[data-state="thinking"] .eye-pos { animation: bot-think 1.8s ease-in-out infinite; }
+/* thinking 생각 중: 눈 크게 뜨고 눈동자만 좌우로 천천히 훑음. 몸은 가만히 */
+.bot-avatar[data-state="thinking"] .eye-pos { transform: scale(1.08); }
+.bot-avatar[data-state="thinking"] .pupil { animation: bot-scan 2.2s ease-in-out infinite; }
 .bot-avatar[data-state="thinking"] .dots.think circle { animation: bot-dot 1.2s ease-in-out infinite; }
 .bot-avatar[data-state="thinking"] .dots.think circle:nth-child(2) { animation-delay: .2s; }
 .bot-avatar[data-state="thinking"] .dots.think circle:nth-child(3) { animation-delay: .4s; }
 
-/* talking 말하는 중: 몸이 글자 리듬(0.4~0.6초 랜덤, JS 가 --말함-주기 로 넣음)으로 늘었다 줄었다. 눈은 가끔 찡긋(JS) */
-.bot-avatar[data-state="talking"] .body { animation: none; }   /* 말할 땐 입만 움직인다 (대표 0923) */
-.bot-avatar[data-state="talking"] .eye-pos { transform: scale(1.06); }
+/* talking 말하는 중: 눈 크게 뜨고 입만 리듬 있게(아래 .mouth). 몸은 안 움직인다 (대표 0923 「말할 때 몸 흔들면 어색」). 눈은 가끔 찡긋(JS) */
+.bot-avatar[data-state="talking"] .body { animation: none; }
+.bot-avatar[data-state="talking"] .eye-pos { transform: scale(1.1); }
 
 /* waiting_approval 승인 기다림: 정면 응시·정지. 노란 ! 배지만 숨 쉬듯 펄스 */
 .bot-avatar[data-state="waiting_approval"] .body,
 .bot-avatar[data-state="waiting_approval"] .eye-pos { animation: none; transform: none; }
 .bot-avatar[data-state="waiting_approval"] .badge { animation: bot-pulse 1.3s ease-in-out infinite; }
 
-/* working 일하는 중: 눈이 아래(자료)로 내려가 글 읽듯 좌→우 + 몸 아래 진행 점 */
-.bot-avatar[data-state="working"] .eye-pos { animation: bot-read 3s ease-in-out infinite; }
+/* working 일하는 중: 눈 크게 뜨고 눈동자가 글 읽듯 좌→우 + 몸 아래 진행 점. 몸은 가만히 */
+.bot-avatar[data-state="working"] .eye-pos { transform: scale(1.08); }
+.bot-avatar[data-state="working"] .pupil { animation: bot-read 3s ease-in-out infinite; }
 .bot-avatar[data-state="working"] .dots.work circle { animation: bot-dot 1s ease-in-out infinite; }
 .bot-avatar[data-state="working"] .dots.work circle:nth-child(2) { animation-delay: .18s; }
 .bot-avatar[data-state="working"] .dots.work circle:nth-child(3) { animation-delay: .36s; }
@@ -77,9 +89,8 @@
 .bot-avatar[data-state="error"] .body { animation: bot-shake .5s ease-in-out 1; }
 
 /* ---- 움직임 정의 ---- */
-@keyframes bot-float   { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-@keyframes bot-think   { 0%, 100% { transform: translate(-8%, -18%); } 50% { transform: translate(8%, -18%); } }
-@keyframes bot-read    { 0%, 100% { transform: translate(-10%, 14%); } 45% { transform: translate(10%, 14%); } 55% { transform: translate(10%, 16%); } 60% { transform: translate(-10%, 16%); } }
+@keyframes bot-scan    { 0%, 100% { transform: translateX(-26%); } 50% { transform: translateX(8%); } }
+@keyframes bot-read    { 0%, 100% { transform: translateX(-26%); } 45% { transform: translateX(8%); } 55% { transform: translateX(8%); } 60% { transform: translateX(-26%); } }
 @keyframes bot-talk    { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.03, .97); } }
 @keyframes bot-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.025, 1.015); } }
 @keyframes bot-shake   { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
@@ -87,11 +98,14 @@
 @keyframes bot-pulse   { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 2px var(--os-패널); } 50% { transform: scale(1.12); box-shadow: 0 0 0 2px var(--os-패널), 0 0 0 6px color-mix(in srgb, var(--os-승인) 35%, transparent); } }
 @keyframes bot-z       { 0% { opacity: 0; transform: translate(0, 4px); } 20% { opacity: .9; } 100% { opacity: 0; transform: translate(6px, -14px); } }
 
-/* 움직임 줄이기(4060 어지럼 배려): 전부 멈춘다. JS 시간표도 컴포넌트가 끈다 */
+/* 움직임 줄이기(4060 어지럼 배려): 전부 멈추고 눈은 뜬 채로. JS 시간표도 컴포넌트가 끈다 */
 @media (prefers-reduced-motion: reduce) {
-    .bot-avatar .body, .bot-avatar .eye-pos, .bot-avatar .eye, .bot-avatar .dots circle, .bot-avatar .zz, .bot-avatar .badge {
+    .bot-avatar .body, .bot-avatar .eye-pos, .bot-avatar .eye, .bot-avatar .lid, .bot-avatar .pupil, .bot-avatar .mouth,
+    .bot-avatar .dots circle, .bot-avatar .zz, .bot-avatar .badge {
         animation: none !important; transition: none !important;
     }
+    .bot-avatar .lid { transform: translateY(-100%) !important; }
+    .bot-avatar .pupil { transform: none !important; }
     .bot-avatar .dots circle { opacity: .7; }
     .bot-avatar .zz-1 { opacity: .8; }
 }
