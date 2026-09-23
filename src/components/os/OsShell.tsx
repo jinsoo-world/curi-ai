@@ -374,6 +374,17 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
         } catch { /* 명단이 안 바뀌면 그대로 */ }
     }
 
+    const 단체방지우기 = async (c: ChannelView) => {
+        if (!window.confirm(`「${c.name}」을(를) 정말 지울까요?\n방과 대화 기록은 사라지고, 봇 명단은 그대로예요.`)) return
+        try {
+            const res = await fetch(`/api/os/channels/${c.id}`, { method: 'DELETE' })
+            const data = await res.json().catch(() => ({} as { error?: string }))
+            if (!res.ok) throw new Error(data.error || '방을 못 지웠어요')
+            await refreshChannels()
+            if (pathname === `/os/group/${c.id}`) router.push('/os')
+        } catch { /* 목록이 안 바뀌면 그대로 */ }
+    }
+
     // 손님 소개 화면(/os/welcome)은 한 장짜리라 뼈대(왼쪽 명단) 없이 그린다
     if (pathname.startsWith('/os/welcome')) return <>{children}</>
 
@@ -518,6 +529,13 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                                             title="이름 바꾸기"
                                             onClick={() => { setChannelNameDraft(c.name); setRenamingChannelId(c.id) }}
                                         >이름</button>
+                                        <button
+                                            type="button"
+                                            className="os-group-rename os-group-delete"
+                                            aria-label={`${c.name} 삭제`}
+                                            title="방 삭제"
+                                            onClick={() => { void 단체방지우기(c) }}
+                                        >삭제</button>
                                     </div>
                                 )
                             })}

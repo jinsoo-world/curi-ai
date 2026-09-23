@@ -4,6 +4,7 @@
 // 봇이 한 말 위에는 「보낸 사람 ○○」(다른 봇을 부르면 「보낸 사람 ○○ → ○○」) 표식을 붙인다.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useOsTeam } from './OsShell'
 import BotAvatar from './BotAvatar'
 import BotMarkdown from './BotMarkdown'
@@ -25,6 +26,7 @@ interface Msg { id: string; authorKind: 'user' | 'bot'; mentorId: string | null;
 
 export default function OsGroupChat({ channelId }: { channelId: string }) {
     const { team, refreshChannels, toggleNav, navOpen } = useOsTeam()
+    const router = useRouter()
     const [name, setName] = useState('그룹')
     const [renaming, setRenaming] = useState(false)
     const [nameDraft, setNameDraft] = useState('')
@@ -91,6 +93,19 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
             setErr(e instanceof Error ? e.message : '이름을 못 바꿨어요')
         }
     }, [nameDraft, name, channelId, refreshChannels])
+
+    const 방지우기 = useCallback(async () => {
+        if (!window.confirm(`「${name}」을(를) 정말 지울까요?\n방과 대화 기록은 사라지고, 봇 명단은 그대로예요.`)) return
+        try {
+            const res = await fetch(`/api/os/channels/${channelId}`, { method: 'DELETE' })
+            const data = await res.json().catch(() => ({} as { error?: string }))
+            if (!res.ok) throw new Error(data.error || '방을 못 지웠어요')
+            await refreshChannels()
+            router.push('/os')
+        } catch (e) {
+            setErr(e instanceof Error ? e.message : '방을 못 지웠어요')
+        }
+    }, [name, channelId, refreshChannels, router])
 
     const send = useCallback(async () => {
         const text = input.trim()
@@ -221,6 +236,13 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                                     title="이름 바꾸기"
                                     onClick={() => { setNameDraft(name); setRenaming(true) }}
                                 >이름</button>
+                                <button
+                                    type="button"
+                                    aria-label="방 삭제"
+                                    title="방 삭제"
+                                    className="os-group-head-delete"
+                                    onClick={() => { void 방지우기() }}
+                                >삭제</button>
                             </>
                         )}
                     </span>

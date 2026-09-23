@@ -682,6 +682,9 @@
     cursor: pointer; font-size: 14px; line-height: 1;
 }
 .os-group-rename:hover { background: var(--os-말풍선); color: var(--os-글); }
+
+.os-group-rename.os-group-delete:hover { color: var(--os-오류); }
+.os-chat-head-name .os-group-head-delete:hover { color: var(--os-오류); }
 .os-group-name-input {
     flex: 1; min-width: 0; margin: 0; padding: 8px 10px; border-radius: 10px;
     border: 1px solid var(--os-선); background: var(--os-말풍선); color: var(--os-글);

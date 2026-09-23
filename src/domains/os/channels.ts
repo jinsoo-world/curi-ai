@@ -172,6 +172,20 @@ export async function renameChannel(
     return { id: row.id, name: row.name, kind: row.kind, createdAt: row.created_at, memberMentorIds: ch.memberMentorIds }
 }
 
+/** 방 지우기 (내 방에서만). 멤버·말은 DB CASCADE 로 같이 사라진다. 봇 자체(team_bots)는 그대로. */
+export async function deleteChannel(
+    db: SupabaseClient, userId: string, channelId: string,
+): Promise<void> {
+    const ch = await getChannel(db, userId, channelId)
+    if (!ch) throw new Error('그 방을 못 찾았어요')
+    const { error } = await db
+        .from('channels')
+        .delete()
+        .eq('id', channelId)
+        .eq('user_id', userId)          // 🔒 남의 방은 못 지운다
+    if (error) throw wrap(error)
+}
+
 export async function addChannelMembers(
     db: SupabaseClient, userId: string, channelId: string, mentorIds: string[],
 ): Promise<string[]> {

@@ -1,12 +1,13 @@
-// GET   /api/os/channels/[id] → 방 하나 (멤버 + 쌓인 말)
-// PATCH /api/os/channels/[id] → 이름 바꾸기, 멤버 추가/빼기
+// GET    /api/os/channels/[id] → 방 하나 (멤버 + 쌓인 말)
+// PATCH  /api/os/channels/[id] → 이름 바꾸기, 멤버 추가/빼기
 //   { name } 또는 { addMentorIds } / { removeMentorIds }
+// DELETE /api/os/channels/[id] → 방 지우기 (주인만, 말·멤버 CASCADE)
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
     getChannel, getChannelBots, listChannelMessages,
-    addChannelMembers, removeChannelMembers, renameChannel, ChannelTableMissing,
+    addChannelMembers, removeChannelMembers, renameChannel, deleteChannel, ChannelTableMissing,
 } from '@/domains/os/channels'
 
 export const dynamic = 'force-dynamic'
@@ -67,5 +68,22 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         const message = e instanceof Error ? e.message : '방을 못 바꿨어요'
         console.error('[os/channels PATCH]', message)
         return NextResponse.json({ error: message }, { status: 400 })
+    }
+}
+
+export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+    const user = await me()
+    if (!user) return NextResponse.json({ error: '로그인이 필요해요' }, { status: 401 })
+    const { id } = await ctx.params
+    try {
+        const db = createAdminClient()
+        await deleteChannel(db, user.id, id)
+        return NextResponse.json({ ok: true })
+    } catch (e) {
+        if (e instanceof ChannelTableMissing) return NextResponse.json({ tableMissing: true }, { status: 503 })
+        const message = e instanceof Error ? e.message : '방을 못 지웠어요'
+        console.error('[os/channels DELETE]', message)
+        const status = message.includes('못 찾았') ? 404 : 400
+        return NextResponse.json({ error: message }, { status })
     }
 }
