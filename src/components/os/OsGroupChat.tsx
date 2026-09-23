@@ -109,7 +109,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                     <span className="os-stack" aria-hidden>
                         {members.slice(0, 3).map(m => (
                             <span key={m.mentorId} className="os-stack-item">
-                                <BotAvatar shape={m.shape as BotShape} color={m.color as BotColor} state="idle" size={28} />
+                                <BotAvatar shape={m.shape as BotShape} color={m.color as BotColor} state="idle" size={28} faceUrl={m.avatarUrl} />
                             </span>
                         ))}
                         {members.length > 3 && <span className="os-stack-more">+{members.length - 3}</span>}

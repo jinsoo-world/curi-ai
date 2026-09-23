@@ -165,6 +165,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         const photoUrls = photos.urls
         if ((!text && photoUrls.length === 0) || streaming || photos.uploading || photos.failed) return
         osTrack('os_message_sent', { mentor_id: mentorId, guest, photos: photoUrls.length })
+        if (guest) window.dispatchEvent(new Event('curi:guest-sent'))
         const userMsg: Msg = { id: `u-${Date.now()}`, role: 'user', content: text, ...(photoUrls.length ? { imageUrls: photoUrls } : {}) }
         // === /사진 첨부 ===
         const botId = `a-${Date.now()}`
@@ -315,6 +316,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                             if (d.done && Array.isArray(d.sources)) sources = d.sources
                             // 곧 온다: 실제로 열어 읽은 링크(성공·실패). 없으면 위 sources 로 LinkCards 가 대신 그린다
                             if (d.done && Array.isArray(d.readUrls)) readUrls = d.readUrls
+                            if (d.done && d.guestLimit) window.dispatchEvent(new CustomEvent('curi:login-nudge', { detail: { reason: 'limit' } }))
                         } catch { /* 조각 하나 깨진 건 넘어간다 */ }
                     }
                 }

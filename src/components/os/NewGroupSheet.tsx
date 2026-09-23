@@ -64,7 +64,7 @@ export default function NewGroupSheet({ team, onClose, onCreated }: Props) {
                                 <button key={b.id} className="os-chipbtn" aria-pressed={picked.includes(b.mentorId)}
                                     onClick={() => 고르기(b.mentorId)} disabled={busy}
                                     style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <BotAvatar shape={b.shape} color={b.color} state="sleeping" size={28} />
+                                    <BotAvatar shape={b.shape} color={b.color} state="sleeping" size={28} faceUrl={b.avatarUrl} />
                                     {b.name}
                                 </button>
                             ))}
