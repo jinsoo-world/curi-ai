@@ -11,9 +11,21 @@ export interface BotSourceView {
     sourceType: 'pdf' | 'url' | 'youtube' | 'text'
     status: 'pending' | 'processing' | 'completed' | 'failed'
     chunkCount: number
+    /** 이 자료가 무엇인지 한 줄 설명 (메타 칸, 마이그레이션 전이면 undefined) */
+    context?: string
+    /** 내(봇 주인)가 직접 쓴 글인가 */
+    authorIsMe?: boolean
+    /** 넣은 방식 세부: file/url/youtube/text/qa/note/csv/fix */
+    sourceKind?: string
 }
 
 const KIND_ICON: Record<BotSourceView['sourceType'], string> = { pdf: '📄', url: '🔗', youtube: '▶️', text: '📝' }
+/** source_kind 가 더 잘게 가른 종류면 그 아이콘을 우선 쓴다(둘 다 source_type='text' 라 안 그러면 구분이 안 된다) */
+function kindIcon(s: BotSourceView): string {
+    if (s.sourceKind === 'qa' || s.sourceKind === 'csv' || s.sourceKind === 'fix') return '💬'
+    if (s.sourceKind === 'note') return '🗒️'
+    return KIND_ICON[s.sourceType] ?? '📄'
+}
 const STATUS_LABEL: Record<BotSourceView['status'], string> = {
     pending: '기다리는 중', processing: '읽는 중…', completed: '다 읽음', failed: '못 읽음',
 }
@@ -23,6 +35,10 @@ export default function KnowledgeList({ mentorId, onCountChange }: { mentorId: s
     const [sheet, setSheet] = useState(false)
     const [err, setErr] = useState<string | null>(null)
     const [다시보기, set다시보기] = useState(0)
+    // 자료 메타(한 줄 설명·내가 쓴 글) 인라인 편집 — 한 번에 하나만 편집한다
+    const [editingId, setEditingId] = useState<string | null>(null)
+    const [editContext, setEditContext] = useState('')
+    const [editAuthorIsMe, setEditAuthorIsMe] = useState(false)
     /** 아직 읽는 중인 자료가 있나 (있을 때만 몇 초마다 다시 본다) */
     const 읽는중 = useRef(false)
 
@@ -78,6 +94,20 @@ export default function KnowledgeList({ mentorId, onCountChange }: { mentorId: s
         await reload()
     }
 
+    const 메타편집시작 = (s: BotSourceView) => {
+        setEditingId(s.id); setEditContext(s.context ?? ''); setEditAuthorIsMe(!!s.authorIsMe)
+    }
+
+    const 메타저장 = async (id: string) => {
+        const res = await fetch('/api/os/knowledge', {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mentorId, sourceId: id, context: editContext.trim(), authorIsMe: editAuthorIsMe }),
+        })
+        if (!res.ok) { const d = await res.json().catch(() => ({})); setErr(d.error || '못 고쳤어요'); return }
+        setEditingId(null)
+        await reload()
+    }
+
     return (
         <>
             <h4>이 봇이 읽은 자료 {sources ? `(${sources.length}개)` : ''}</h4>
@@ -94,13 +124,30 @@ export default function KnowledgeList({ mentorId, onCountChange }: { mentorId: s
             )}
 
             {sources && sources.map(s => (
-                <div key={s.id} className="os-source">
-                    <span className="os-source-kind" aria-hidden>{KIND_ICON[s.sourceType] ?? '📄'}</span>
-                    <span className="os-source-title" title={s.title}>{s.title}</span>
-                    <span className={`os-source-state${s.status === 'failed' ? ' bad' : ''}${s.status === 'completed' ? ' ok' : ''}`}>
-                        {STATUS_LABEL[s.status]}
-                    </span>
-                    <button className="os-source-x" aria-label={`${s.title} 빼기`} title="빼기" onClick={() => void 빼기(s.id, s.title)}>✕</button>
+                <div key={s.id}>
+                    <div className="os-source">
+                        <span className="os-source-kind" aria-hidden>{kindIcon(s)}</span>
+                        <span className="os-source-title" title={s.title}>{s.title}</span>
+                        <span className={`os-source-state${s.status === 'failed' ? ' bad' : ''}${s.status === 'completed' ? ' ok' : ''}`}>
+                            {STATUS_LABEL[s.status]}
+                        </span>
+                        <button className="os-source-x" aria-label={`${s.title} 빼기`} title="빼기" onClick={() => void 빼기(s.id, s.title)}>✕</button>
+                    </div>
+                    {editingId === s.id ? (
+                        <div className="os-source-meta-edit">
+                            <input type="text" value={editContext} onChange={e => setEditContext(e.target.value)}
+                                maxLength={300} placeholder="이 자료가 무엇인지 한 줄로" aria-label="자료 설명" />
+                            <label>
+                                <input type="checkbox" checked={editAuthorIsMe} onChange={e => setEditAuthorIsMe(e.target.checked)} />
+                                내가 쓴 글
+                            </label>
+                            <button className="os-btn" style={{ minHeight: 32, padding: '6px 10px' }} onClick={() => void 메타저장(s.id)}>저장</button>
+                        </div>
+                    ) : (
+                        <button type="button" className="os-source-meta" onClick={() => 메타편집시작(s)}>
+                            {s.context || '설명 달기'}{s.authorIsMe ? ' · 내가 쓴 글' : ''}
+                        </button>
+                    )}
                 </div>
             ))}
 
