@@ -50,10 +50,10 @@ interface TeamState {
  * 대화는 진짜 /api/chat(공개 봇)로 간다. 저장은 안 한다. mentorId 4개는 바뀌지 않는다 — 이름, 소개만 기본 팀과 맞췄다.
  */
 const DEMO_TEAM: TeamBot[] = [
-    { id: 'demo-1', mentorId: '118bef35-26bc-4118-a446-aa96e977f9ee', name: '기획팀장', role: 'helper', shape: 'clover', color: 'green', oneLiner: '방향을 잡고 결정거리를 가져와요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 0, avatarUrl: null, greeting: '안녕하세요, 기획팀장이에요. 이번 주 뭐부터 할지 같이 정리해 볼까요?', knowledgeCount: 0, createdAt: '' },
-    { id: 'demo-2', mentorId: '20728d0a-2aed-4c4c-bc48-f26be076d0bc', name: '홍보팀장', role: 'helper', shape: 'circle', color: 'orange', oneLiner: '알리는 글과 답장 초안을 써요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 1, avatarUrl: null, greeting: '안녕하세요, 홍보팀장이에요. 다음 강의 알리는 글부터 써 드릴까요?', knowledgeCount: 0, createdAt: '' },
-    { id: 'demo-3', mentorId: '264ae26a-1b77-489c-abbd-9662b0b42e4c', name: '개발팀장', role: 'helper', shape: 'hex', color: 'blue', oneLiner: '도구와 반복 일을 정리해요', approvalMode: 'draft_only', pinned: true, hidden: false, sortOrder: 2, avatarUrl: null, greeting: '안녕하세요, 개발팀장이에요. 매주 반복하는 일 중에 자동화할 것부터 찾아 드릴게요.', knowledgeCount: 0, createdAt: '' },
-    { id: 'demo-4', mentorId: '509c022f-17aa-4f1a-8c86-6b8acfc8d170', name: '조사팀장', role: 'helper', shape: 'drop', color: 'yellow', oneLiner: '자료를 찾고 근거를 모아요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 3, avatarUrl: null, greeting: '안녕하세요, 조사팀장이에요. 궁금한 것 있으면 자료랑 출처까지 찾아 드릴게요.', knowledgeCount: 0, createdAt: '' },
+    { id: 'demo-1', mentorId: '9fc9b3fa-1721-40c6-bc4e-1b544c117483', name: '기획팀장', role: 'helper', shape: 'clover', color: 'green', oneLiner: '방향을 잡고 결정거리를 가져와요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 0, avatarUrl: null, greeting: '안녕하세요, 기획팀장이에요. 이번 주 뭐부터 할지 같이 정리해 볼까요?', knowledgeCount: 0, createdAt: '' },
+    { id: 'demo-2', mentorId: 'a5a7fc67-2238-4705-bcc7-505e52644e25', name: '홍보팀장', role: 'helper', shape: 'circle', color: 'orange', oneLiner: '알리는 글과 답장 초안을 써요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 1, avatarUrl: null, greeting: '안녕하세요, 홍보팀장이에요. 다음 강의 알리는 글부터 써 드릴까요?', knowledgeCount: 0, createdAt: '' },
+    { id: 'demo-3', mentorId: '91db92f7-5831-40a5-8941-4501fb543f56', name: '개발팀장', role: 'helper', shape: 'hex', color: 'blue', oneLiner: '도구와 반복 일을 정리해요', approvalMode: 'draft_only', pinned: true, hidden: false, sortOrder: 2, avatarUrl: null, greeting: '안녕하세요, 개발팀장이에요. 매주 반복하는 일 중에 자동화할 것부터 찾아 드릴게요.', knowledgeCount: 0, createdAt: '' },
+    { id: 'demo-4', mentorId: '94835097-6f27-4ee4-ab73-f423da271537', name: '조사팀장', role: 'helper', shape: 'drop', color: 'yellow', oneLiner: '자료를 찾고 근거를 모아요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 3, avatarUrl: null, greeting: '안녕하세요, 조사팀장이에요. 궁금한 것 있으면 자료랑 출처까지 찾아 드릴게요.', knowledgeCount: 0, createdAt: '' },
 ]
 
 const Ctx = createContext<TeamState | null>(null)

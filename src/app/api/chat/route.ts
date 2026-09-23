@@ -241,7 +241,7 @@ export async function POST(req: Request) {
         const isPremium = (userProfile as any)?.subscription_tier === 'premium'
         // 🍀 내 팀 봇과의 대화는 클로버 0 (대표 확정 0923). 대신 사용 한도 두 창(5시간 100턴 · 주간 1,000턴)으로 예산을 지킨다.
         if (ownTeamBot && user) {
-            const usage = await readUsage(createAdminClient(), user.id)
+            const usage = await readUsage(createAdminClient(), user.id, new Date(), user.email)
             if (usage.blocked) {
                 const when = usage.resetAt5h && usage.used5h >= usage.limit5h
                     ? `${untilText(usage.resetAt5h, new Date())} 다시 이야기할 수 있어요.`

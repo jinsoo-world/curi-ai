@@ -3,8 +3,8 @@
 // 대표 확정 0923: 「내 봇은 무료. 사용 한도는 한 줄로 = 퍼센트, 재설정 시기, 주간 한도 초기화」
 // 순수 계산만 여기. DB 읽기는 usage-db.ts.
 
-export const USAGE_LIMIT_5H = 100      // 5시간 창 안에서 보낼 수 있는 내 봇 대화 수
-export const USAGE_LIMIT_WEEK = 1000   // 한 주(월요일 0시 서울 기준 초기화)
+export const USAGE_LIMIT_5H = 20       // 무료 요금제 5시간 창 (대표 확정 0923: 무료 주 100번, 5시간 창은 주간의 1/5)
+export const USAGE_LIMIT_WEEK = 100    // 무료 요금제 한 주(월요일 0시 서울 기준 초기화). 대표 확정 0923
 export const WINDOW_5H_MS = 5 * 60 * 60 * 1000
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000
 

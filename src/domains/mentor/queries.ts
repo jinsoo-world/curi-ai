@@ -23,6 +23,7 @@ export async function getActiveMentors(): Promise<MentorCardData[]> {
         .from('mentors')
         .select('id, name, title, description, avatar_url, expertise, greeting_message, sample_questions, voice_sample_url, voice_id, sort_order, creator_id')
         .eq('is_active', true)
+        .not('slug', 'like', 'os-demo-%')   // 손님 시연용 팀장 4명은 마켓에 안 보인다
         .order('sort_order', { ascending: true })
 
     if (error) {
