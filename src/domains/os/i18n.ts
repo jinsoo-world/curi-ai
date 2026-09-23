@@ -83,7 +83,7 @@ const ko = {
     'usage.title': '사용량',
     'usage.5h': '이번 주',
     'usage.week': '이번 주',
-    'usage.weekLine': '주간 사용량 {pct}% ({limit}번 중 {used}번)',
+    'usage.weekLine': '주간 사용량 {pct}%',
     'usage.weekReset': '월요일 0시에 다시 채워져요',
     'usage.guest': '로그인하면 사용량이 보여요.',
     'usage.fail': '사용량을 못 읽었어요. 잠시 뒤 다시 열어 주세요.',
@@ -105,7 +105,7 @@ const ko = {
     'clover.label': '클로버',
     'clover.balance': '지금 가진 클로버 {n}개',
     'clover.counting': '지금 가진 클로버를 세고 있어요',
-    'clover.sub': '내 팀 봇과의 대화는 클로버를 쓰지 않아요. 봇 마켓의 다른 리더 봇과 대화할 때만 써요.',
+    'clover.sub': '대화는 주간 사용 한도로 세요. 클로버는 사진, 도구 같은 곳에 써요.',
     'clover.charge': '클로버 충전하기',
 
     // ── 설정: 앱 ──
@@ -249,7 +249,7 @@ const en: Record<TKey, string> = {
     'usage.title': 'Usage',
     'usage.5h': '5-hour window',
     'usage.week': 'This week',
-    'usage.weekLine': 'Weekly usage {pct}% ({used} of {limit})',
+    'usage.weekLine': 'Weekly usage {pct}%',
     'usage.weekReset': 'Refills Monday at 0:00 (Korea time)',
     'usage.guest': 'Sign in to see your usage.',
     'usage.fail': "Couldn't load usage. Please try again soon.",
@@ -271,7 +271,7 @@ const en: Record<TKey, string> = {
     'clover.label': 'Clovers',
     'clover.balance': 'You have {n} clovers',
     'clover.counting': 'Counting your clovers…',
-    'clover.sub': "Chatting with your own bots is free. Clovers are only used with other leaders' bots in the Bot Market.",
+    'clover.sub': 'Chat uses your weekly usage limit. Clovers are for things like photos and tools.',
     'clover.charge': 'Get clovers',
 
     'app.install': 'Install as app',
@@ -409,7 +409,7 @@ const ja: Record<TKey, string> = {
     'usage.title': '利用量',
     'usage.5h': '5時間の枠',
     'usage.week': '今週',
-    'usage.weekLine': '週間利用量 {pct}%({limit}回中{used}回)',
+    'usage.weekLine': '週間利用量 {pct}%',
     'usage.weekReset': '月曜0時にリセットされます(韓国時間)',
     'usage.guest': 'ログインすると利用量が表示されます。',
     'usage.fail': '利用量を読み込めませんでした。しばらくしてからもう一度お開きください。',
@@ -431,7 +431,7 @@ const ja: Record<TKey, string> = {
     'clover.label': 'クローバー',
     'clover.balance': '現在のクローバー {n}個',
     'clover.counting': 'クローバーを数えています…',
-    'clover.sub': '自分のチームのボットとの会話にはクローバーを使いません。ボットマーケットの他のリーダーのボットと話すときだけ使います。',
+    'clover.sub': '会話は週間利用上限で数えます。クローバーは写真やツールなどに使います。',
     'clover.charge': 'クローバーをチャージ',
 
     'app.install': 'アプリとして使う',
@@ -603,17 +603,17 @@ export function usageDetailL(locale: Locale, v: UsageLike, now: Date): UsageDeta
     }
     if (locale === 'ja') {
         return {
-            fiveHourText: `${v.pct5h}% 使いました(${limit5h}回中${used5h}回)`,
+            fiveHourText: `${v.pct5h}%`,
             fiveHourReset: resetAt5h ? `${untilTextL(locale, resetAt5h, now)}に回復します` : 'まだ使っていません',
-            weekText: `${v.pctWeek}%(${limitW}回中${usedW}回)`,
+            weekText: `${v.pctWeek}%`,
             weekReset: `${dayHourTextL(locale, weekResetAt)}にリセット`,
             blockedText,
         }
     }
     return {
-        fiveHourText: `${v.pct5h}% used (${used5h} of ${limit5h})`,
+        fiveHourText: `${v.pct5h}%`,
         fiveHourReset: resetAt5h ? `Refills ${untilTextL(locale, resetAt5h, now)}` : 'Not used yet',
-        weekText: `${v.pctWeek}% (${usedW} of ${limitW})`,
+        weekText: `${v.pctWeek}%`,
         weekReset: `Resets ${dayHourTextL(locale, weekResetAt)} (Korea time)`,
         blockedText,
     }

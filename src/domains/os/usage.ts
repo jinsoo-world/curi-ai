@@ -77,7 +77,7 @@ export function kstDayHourText(d: Date): string {
 
 /** 한 줄: 「사용 한도 12% / 4시간 12분 후 재설정 / 주간 3% / (월) 0시 초기화」 */
 export function usageLine(v: { pctWeek: number; limitWeek: number; usedWeek: number; weekResetAt: Date }): string {
-    return `이번 주 사용 한도 ${v.pctWeek}% (${withComma(v.limitWeek)}번 중 ${withComma(v.usedWeek)}번) / ${kstDayHourText(v.weekResetAt)} 초기화`
+    return `이번 주 사용 한도 ${v.pctWeek}% / ${kstDayHourText(v.weekResetAt)} 초기화`
 }
 
 // ── 원형 게이지 + 사용량 모달 (대표 지시 0923: 「클로드코드처럼 원형으로, 누르면 모달로 사용량(클로버)」) ──
@@ -111,9 +111,9 @@ export interface UsageLike {
 }
 
 export interface UsageDetail {
-    fiveHourText: string     // 「12% 썼어요 (100번 중 12번)」
+    fiveHourText: string     // 「12%」
     fiveHourReset: string    // 「4시간 12분 후 다시 채워져요」 / 「아직 안 썼어요」
-    weekText: string         // 「3% (1,000번 중 30번)」
+    weekText: string         // 「3%」 퍼센트만
     weekReset: string        // 「(월) 0시에 초기화」
     blockedText: string | null // 막혔을 때만. 「지금은 한도에 닿았어요. N 후 다시 쓸 수 있어요」
 }
@@ -132,9 +132,9 @@ export function usageDetail(v: UsageLike, now: Date): UsageDetail {
         blockedText = `이번 주 한도에 닿았어요. ${kstDayHourText(weekResetAt)}에 다시 쓸 수 있어요`
     }
     return {
-        fiveHourText: `${v.pct5h}% 썼어요 (${withComma(v.limit5h)}번 중 ${withComma(v.used5h)}번)`,
+        fiveHourText: `${v.pct5h}%`,
         fiveHourReset: resetAt5h ? `${untilText(resetAt5h, now)} 다시 채워져요` : '아직 안 썼어요',
-        weekText: `${v.pctWeek}% (${withComma(v.limitWeek)}번 중 ${withComma(v.usedWeek)}번)`,
+        weekText: `${v.pctWeek}%`,
         weekReset: `${kstDayHourText(weekResetAt)}에 초기화`,
         blockedText,
     }

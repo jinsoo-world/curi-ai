@@ -22,7 +22,7 @@ describe('os/usage — 사용 한도 한 줄', () => {
         expect(v.pctWeek).toBe(3)
         expect(v.resetAt5h?.toISOString()).toBe('2026-09-23T05:42:00.000Z')
         expect(v.blocked).toBe(false)
-        expect(v.line).toBe('이번 주 사용 한도 3% (1,000번 중 30번) / (월) 0시 초기화')
+        expect(v.line).toBe('이번 주 사용 한도 3% / (월) 0시 초기화')
     })
 
     it('한도에 닿으면 blocked, 퍼센트는 100 을 넘지 않는다', () => {
@@ -31,8 +31,8 @@ describe('os/usage — 사용 한도 한 줄', () => {
         expect(usageView({ now, used5h: 0, oldest5h: null, usedWeek: USAGE_LIMIT_WEEK + 50 }).pctWeek).toBe(100)
     })
 
-    it('아직 안 썼으면 0%와 분모', () => {
-        expect(usageView({ now, used5h: 0, oldest5h: null, usedWeek: 0 }).line).toContain('0% (100번 중 0번)')
+    it('아직 안 썼으면 0%', () => {
+        expect(usageView({ now, used5h: 0, oldest5h: null, usedWeek: 0 }).line).toContain('0%')
     })
 
     it('남은 시간 글자', () => {
@@ -58,11 +58,11 @@ describe('os/usage — 원형 게이지·사용량 모달 글자', () => {
         expect(ringLabel(12)).toBe('사용 한도 12%, 누르면 자세히')
     })
 
-    it('모달 글자에는 분모가 반드시 들어간다', () => {
+    it('모달 글자는 퍼센트만 보여 준다', () => {
         const d = usageDetail(v, now)
-        expect(d.fiveHourText).toBe('12% 썼어요 (100번 중 12번)')
+        expect(d.fiveHourText).toBe('12%')
         expect(d.fiveHourReset).toBe('4시간 12분 후 다시 채워져요')
-        expect(d.weekText).toBe('3% (1,000번 중 30번)')
+        expect(d.weekText).toBe('3%')
         expect(d.weekReset).toBe('(월) 0시에 초기화')
         expect(d.blockedText).toBeNull()
     })

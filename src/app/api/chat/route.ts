@@ -6,18 +6,16 @@ import { generateChatStream, getUserMemories, saveUserMessage, saveAssistantMess
 import { MAX_DAILY_FREE, MAX_DAILY_FREE_GUEST, FREE_TRIAL_OPEN } from '@/domains/chat/constants'
 import { isTrialActive } from '@/domains/trial'
 import { generateEmbedding, matchKnowledge } from '@/domains/knowledge'
-import { deductCredit, getCreditBalance } from '@/domains/credit'
 import { pickDriverFromEnv } from '@/domains/llm'
 import { getOwnedTeamBotMentor } from '@/domains/os'
 import { readUsage } from '@/domains/os/usage-db'
 import { checkChatAudience, checkVisitorBotWeeklyLimit } from '@/domains/os/audience-db'
-import { untilText, kstDayHourText } from '@/domains/os/usage'
+import { kstDayHourText } from '@/domains/os/usage'
 import { findSourcesOfChunks } from '@/domains/os/knowledge'
 import { readUrlsInText } from '@/domains/os/readers'
 // 🛡 인젝션 방어 (대표 지시 0923). 셈만 하는 함수들 = domains/chat/injection.ts, 설명 = docs/security/인젭션_방어_0923.md
 import { makeCanary, confidentialityPrompt, createOutputGuard, detectPromptExtraction, EXTRACTION_GUARD_PROMPT, checkRequestSize, INJECTION_MARK } from '@/domains/chat/injection'
 import { findConnector, markConnector, notionSearch, readConnectorSecret } from '@/domains/connectors'
-import { CREDIT_CONSTANTS } from '@/domains/credit/types'
 import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
 import { applySkills, skillsForMentor } from '@/domains/os/skills'
 // 🎛 답변 설정(목적·지침·말투·길이·창의성·출처·안내문·최신성). 트윈·리더 봇(마켓 공개봇)=Strict, 내 팀 봇=Adaptive 기본값 (domains/os/response-settings)
@@ -247,7 +245,6 @@ export async function POST(req: Request) {
         }
 
 
-        const ownTeamBot = !!(user && (await getOwnedTeamBotMentor(createAdminClient(), user.id, mentorId)))
 
         // 🔒 이 대화방이 정말 이 사람 것인지 확인한다.
         // 없으면 대화방 번호만 알면 남의 방에 아무 글이나 심을 수 있었다.
@@ -284,8 +281,8 @@ export async function POST(req: Request) {
 
         const dailyUsed = (userProfile as any)?.daily_free_used || 0
         const isPremium = (userProfile as any)?.subscription_tier === 'premium'
-        // 🍀 내 팀 봇과의 대화는 클로버 0 (대표 확정 0923). 대신 주간 한도 하나로 예산을 지킨다(5시간 창 없음, 대표 확정 0923).
-        if (ownTeamBot && user) {
+        // 로그인 회원 대화 = 주간 사용 한도로만 막는다 (대표 지시: 클로버 게이트 제거). 손님 한도는 위에서 그대로.
+        if (user) {
             const usage = await readUsage(createAdminClient(), user.id, new Date(), user.email)
             if (usage.blocked) {
                 const msg = `이번 주 사용 한도에 닿았어요. ${kstDayHourText(usage.weekResetAt)}에 다시 채워져요. 더 쓰려면 요금제를 올려 보세요.`
@@ -298,46 +295,8 @@ export async function POST(req: Request) {
                 })
                 return new Response(limitStream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' } })
             }
+            // 대화는 주간 한도로만 센다. 클로버 잔액 체크·차감·일일 무료 횟수는 쓰지 않는다.
             isFreeTrial = true
-        }
-        if (user && !isPremium && !isFreeTrial && dailyUsed >= MAX_DAILY_FREE) {
-            const encoder = new TextEncoder()
-            const limitStream = new ReadableStream({
-                start(controller) {
-                    controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ text: ERROR_MESSAGES.freeUsageDone, done: true, fullResponse: ERROR_MESSAGES.freeUsageDone })}\n\n`)
-                    )
-                    controller.close()
-                },
-            })
-            return new Response(limitStream, {
-                headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
-            })
-        }
-
-        // ── 💰 크레딧 잔액 체크 ──
-        if (user && !isFreeTrial) {
-            const { data: creditData } = await supabase
-                .from('users')
-                .select('clovers')
-                .eq('id', user.id)
-                .single()
-            const balance = creditData?.clovers ?? 0
-            if (balance < CREDIT_CONSTANTS.CHAT_COST_PER_MESSAGE) {
-                const encoder = new TextEncoder()
-                const noCreditsMsg = '클로버가 부족해요 😢\n\n미션 보상에서 클로버를 모아 다시 대화해주세요! 🍀'
-                const creditStream = new ReadableStream({
-                    start(controller) {
-                        controller.enqueue(
-                            encoder.encode(`data: ${JSON.stringify({ text: noCreditsMsg, done: true, fullResponse: noCreditsMsg, needsCredit: true })}\n\n`)
-                        )
-                        controller.close()
-                    },
-                })
-                return new Response(creditStream, {
-                    headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
-                })
-            }
         }
 
         // 시스템 프롬프트 조립 (domains/mentor)
@@ -720,16 +679,6 @@ export async function POST(req: Request) {
                         if (user) {
                             const dailyUsed = (userProfile as any)?.daily_free_used || 0
                             await incrementDailyFreeUsage(supabase, user.id, dailyUsed)
-
-                            // 💰 크레딧 차감 (무료 체험 기간에는 스킵)
-                            if (!isFreeTrial) {
-                                deductCredit({
-                                    user_id: user.id,
-                                    amount: CREDIT_CONSTANTS.CHAT_COST_PER_MESSAGE,
-                                    mentor_id: mentorId,
-                                    description: `대화 차감 (${mentor.name})`,
-                                }).catch(err => console.error('[Chat] Credit deduction failed:', err))
-                            }
 
                             // 🧠 메모리 추출 (P1 cost: 조건부 — 3턴마다만 실행)
                             // 2026-09-19: 매번 LLM 호출은 비용 과다. 대화 초반(3,6,9턴)에만 추출.

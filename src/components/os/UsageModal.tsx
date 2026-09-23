@@ -3,6 +3,7 @@
 // 대표 확정 0923: 내 봇은 무료(클로버 0). 요금은 구독 2단계 = 무료(기본) / 월 29,000원 / 월 99,000원.
 // 클로버 잔액은 CloverBar 가 이미 쓰는 창구(credit 도메인 getCreditBalance)를 그대로 쓴다.
 import { useEffect, useRef, useState } from 'react'
+import CloverIcon from '@/components/ui/CloverIcon'
 import Link from 'next/link'
 import { getCreditBalance } from '@/domains/credit'
 import { usageTone, withComma, type UsageLike } from '@/domains/os/usage'
@@ -63,7 +64,7 @@ export default function UsageModal({ data, onClose }: { data: UsageLike; onClose
                 </section>
 
                 <section className="os-usage-sec" aria-label={t('clover.label')}>
-                    <div className="os-usage-label">{t('clover.label')}</div>
+                    <div className="os-usage-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><CloverIcon size={16} /><span>{t('clover.label')}</span></div>
                     <b>{clover === null ? t('clover.counting') : t('clover.balance', { n: withComma(clover) })}</b>
                     <div className="os-usage-sub">{t('clover.sub')}</div>
                 </section>

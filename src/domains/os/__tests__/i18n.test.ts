@@ -38,7 +38,7 @@ describe('사전', () => {
 
     it('구멍({n})을 채운다. 안 준 구멍은 그대로 남긴다', () => {
         expect(t('ko', 'review.count', { n: 3 })).toBe('내 봇 3개에 같이 적용돼요.')
-        expect(t('en', 'usage.weekLine', { pct: 3, used: 30, limit: '1,000' })).toBe('Weekly usage 3% (30 of 1,000)')
+        expect(t('en', 'usage.weekLine', { pct: 3 })).toBe('Weekly usage 3%')
         expect(t('ja', 'noti.sms.to')).toBe('{phone} に送ります')
     })
 })
@@ -104,10 +104,10 @@ describe('사용량 글자 (언어별)', () => {
         expect(dayHourTextL('ja', view.weekResetAt)).toBe('(月) 0時')
     })
 
-    it('분모를 항상 같이 쓴다', () => {
-        expect(usageDetailL('en', view, now).weekText).toBe('3% (30 of 1,000)')
-        expect(usageDetailL('ja', view, now).fiveHourText).toBe('12% 使いました(100回中12回)')
-        expect(usageDetailL('ko', view, now).weekText).toBe('3% (1,000번 중 30번)')
+    it('퍼센트만 쓴다', () => {
+        expect(usageDetailL('en', view, now).weekText).toBe('3%')
+        expect(usageDetailL('ja', view, now).fiveHourText).toBe('12%')
+        expect(usageDetailL('ko', view, now).weekText).toBe('3%')
         expect(usageDetailL('en', view, now).blockedText).toBeNull()
         expect(usageDetailL('en', { ...view, blocked: true, used5h: 100, pct5h: 100 }, now).blockedText).toContain('in 1 h 35 min')
     })
