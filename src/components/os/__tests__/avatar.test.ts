@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-    ariaLabel, avatarClass, badgePx, eyeKind, eyeLayout, eyeThicknessPx, facePx,
+    ariaLabel, avatarClass, badgePx, blinkHoldMs, eyeGap, eyeKind, eyeLayout, eyeR, eyeThicknessPx, facePx,
     isDoubleBlink, nextBlinkDelay, nextWinkDelay, shouldBlink, talkBeatMs, STATE_KO, SHAPE_KO, COLOR_KO,
 } from '../avatar'
 import { SHAPES, COLORS } from '@/domains/os/presets'
@@ -18,6 +18,17 @@ describe('os/avatar — 눈 자리', () => {
             expect(g.cy - g.h / 2).toBeGreaterThan(0)
             expect(g.cy + g.h / 2).toBeLessThan(100)
         }
+    })
+
+    it('두 눈은 서로 떨어져 있다(테끼리 틈 2 이상)이고 동그란 눈이 몸 안에 든다 (대표 0923 「눈이 너무 몰렸다」)', () => {
+        for (const s of SHAPES) {
+            const g = eyeLayout(s)
+            const r = eyeR(g.w)
+            expect(eyeGap(g)).toBeGreaterThanOrEqual(2)
+            expect(g.lx - r * 1.13).toBeGreaterThan(10)   // 볼터치까지 몸 안(가장 좁은 육각 폭 10~90)
+            expect(g.rx + r * 1.13).toBeLessThan(90)
+        }
+        expect(eyeLayout('circle').rx - eyeLayout('circle').lx).toBe(30)   // 예전 20 → 1.5배
     })
 
     it('물방울은 꼭지 아래(눈이 더 아래), 클로버는 가운데 잎 사이(50)에 조금 작게', () => {
@@ -77,6 +88,12 @@ describe('os/avatar — 상태·글자', () => {
 })
 
 describe('os/avatar — 시간표(불규칙)', () => {
+    it('눈 감고 있는 시간: 쉬는 중(졸음)은 천천히 320ms, 나머지는 120ms', () => {
+        expect(blinkHoldMs('idle')).toBe(320)
+        expect(blinkHoldMs('thinking')).toBe(120)
+        expect(blinkHoldMs('working')).toBe(120)
+    })
+
     it('깜빡임 간격은 3~6초, 두 번 연속은 다섯에 하나', () => {
         expect(nextBlinkDelay(0)).toBe(3000)
         expect(nextBlinkDelay(0.5)).toBe(4500)
