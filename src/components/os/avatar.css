@@ -54,7 +54,7 @@
 .bot-avatar[data-state="thinking"] .dots.think circle:nth-child(3) { animation-delay: .4s; }
 
 /* talking 말하는 중: 몸이 글자 리듬(0.4~0.6초 랜덤, JS 가 --말함-주기 로 넣음)으로 늘었다 줄었다. 눈은 가끔 찡긋(JS) */
-.bot-avatar[data-state="talking"] .body { animation: bot-talk var(--말함-주기) ease-in-out infinite; }
+.bot-avatar[data-state="talking"] .body { animation: none; }   /* 말할 땐 입만 움직인다 (대표 0923) */
 .bot-avatar[data-state="talking"] .eye-pos { transform: scale(1.06); }
 
 /* waiting_approval 승인 기다림: 정면 응시·정지. 노란 ! 배지만 숨 쉬듯 펄스 */

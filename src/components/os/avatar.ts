@@ -113,7 +113,7 @@ export function eyeKind(state: BotState, errorShowingX: boolean): EyeKind {
 }
 
 /** 몸 위, 아래 점을 그릴 상태 */
-export function showsThinkDots(state: BotState): boolean { return state === 'thinking' }
+export function showsThinkDots(_state: BotState): boolean { return false }   // 머리 위 점 3개는 뺐다 (대표 0923 「말할 때 어색」)
 export function showsWorkDots(state: BotState): boolean { return state === 'working' }
 export function showsZ(state: BotState): boolean { return state === 'sleeping' }
 export function showsBadge(state: BotState): boolean { return state === 'waiting_approval' }
