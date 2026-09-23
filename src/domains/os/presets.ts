@@ -152,9 +152,15 @@ ${approval}
 ${job.firstTask}`
 }
 
-/** 처음 팀이 비었을 때 자동으로 만드는 3명 (대표 확정 0923 「초기 세팅은 기획팀장 / 홍보팀장 / 개발팀장」) */
+/**
+ * 처음 팀이 비었을 때 자동으로 만드는 기본 봇 (대표 확정 0923 「초기 세팅은 기획팀장 / 홍보팀장 / 개발팀장」).
+ * 4번째 봇은 부대표 추천(미확정) = 비서실장. 그록봇 원칙 「비서실장부터」(내가 매일 말하는 단 한 명)를 기본 팀에 심는다.
+ * 비서실장이 chief 라 기획팀장은 helper 로 내린다(팀에 chief 는 한 명).
+ * ⚠️ 이미 봇이 있는 계정(옛 3명 계정)에는 4번째를 보태지 않는다 = team.ts bootstrapDefaultTeam 이 비어 있을 때만 만든다.
+ */
 export const DEFAULT_TEAM: { job: string; name: string; role: 'chief' | 'helper' }[] = [
-    { job: 'planning_lead', name: '기획팀장', role: 'chief' },
+    { job: 'planning_lead', name: '기획팀장', role: 'helper' },
     { job: 'marketing_lead', name: '홍보팀장', role: 'helper' },
     { job: 'dev_lead', name: '개발팀장', role: 'helper' },
+    { job: 'chief', name: '비서실장', role: 'chief' },   // 4번째 봇은 부대표 추천(미확정)
 ]

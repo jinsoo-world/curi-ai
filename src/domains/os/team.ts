@@ -126,10 +126,15 @@ export async function createTeamBot(
     }
 }
 
-/** 고정, 숨김, 정렬만 바꾼다 (캐릭터, 승인 모드 변경은 다음 날) */
+/**
+ * 봇 편집. 팀 줄(team_bots)의 칸 = 고정, 숨김, 정렬, 승인 모드, 모양, 색, 한 줄 소개, 역할.
+ * 봇의 몸(mentors)에 있는 칸 = 이름, 인사말. 몸은 내가 만든 것(creator_profiles 가 내 것)만 바꾼다 = 리더의 공개 봇 몸은 건드리지 않는다.
+ */
+export type TeamBotPatch = Partial<Pick<TeamBot, 'pinned' | 'hidden' | 'sortOrder' | 'approvalMode' | 'shape' | 'color' | 'oneLiner' | 'role' | 'name' | 'greeting'>>
+
 export async function updateTeamBot(
     db: SupabaseClient, userId: string, teamBotId: string,
-    patch: Partial<Pick<TeamBot, 'pinned' | 'hidden' | 'sortOrder' | 'approvalMode' | 'shape' | 'color' | 'oneLiner'>>,
+    patch: TeamBotPatch,
 ) {
     const row: Record<string, unknown> = {}
     if (patch.pinned !== undefined) row.pinned = patch.pinned
@@ -139,8 +144,22 @@ export async function updateTeamBot(
     if (patch.shape !== undefined) row.shape = patch.shape
     if (patch.color !== undefined) row.color = patch.color
     if (patch.oneLiner !== undefined) row.one_liner = patch.oneLiner
-    if (Object.keys(row).length === 0) return
-    const { error } = await db.from('team_bots').update(row).eq('id', teamBotId).eq('user_id', userId)
+    if (patch.role !== undefined) row.role = patch.role
+    if (Object.keys(row).length > 0) {
+        const { error } = await db.from('team_bots').update(row).eq('id', teamBotId).eq('user_id', userId)
+        if (error) throw new Error(error.message)
+    }
+
+    const body: Record<string, unknown> = {}
+    if (patch.name !== undefined) body.name = patch.name.trim().slice(0, 20)
+    if (patch.greeting !== undefined) body.greeting_message = patch.greeting.trim().slice(0, 200)
+    if (Object.keys(body).length === 0) return
+
+    const { data: tb } = await db.from('team_bots').select('mentor_id').eq('id', teamBotId).eq('user_id', userId).maybeSingle()
+    if (!tb) throw new Error('내 팀에 없는 봇이다')
+    const { data: creator } = await db.from('creator_profiles').select('id').eq('user_id', userId).maybeSingle()
+    if (!creator) throw new Error('내가 만든 봇이 아니다')
+    const { error } = await db.from('mentors').update(body).eq('id', tb.mentor_id).eq('creator_id', creator.id)
     if (error) throw new Error(error.message)
 }
 
@@ -163,8 +182,9 @@ export async function getOwnedTeamBotMentor(db: SupabaseClient, userId: string, 
 }
 
 /**
- * 처음 팀이 비었으면 기본 3명(기획팀장, 홍보팀장, 개발팀장)을 만든다. 이미 있으면 그대로 돌려준다.
- * 두 번 눌러도 3명이 6명이 되지 않게, 만들기 전에 다시 센다.
+ * 처음 팀이 비었으면 기본 봇(DEFAULT_TEAM = 기획팀장, 홍보팀장, 개발팀장 + 비서실장)을 만든다.
+ * 봇이 하나라도 있으면(옛 3명 계정 포함) 아무것도 보태지 않고 그대로 돌려준다 = 대표 계정이 헷갈리지 않게.
+ * 두 번 눌러도 늘어나지 않게, 만들기 전에 다시 센다.
  */
 export async function bootstrapDefaultTeam(
     db: SupabaseClient,

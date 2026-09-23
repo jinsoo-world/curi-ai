@@ -1,5 +1,6 @@
-// POST /api/os/team/bootstrap → 팀이 비어 있으면 기본 3명(기획팀장·홍보팀장·개발팀장)을 만든다.
-// 대표 확정 0923 「초기 세팅은 기획팀장 / 홍보팀장 / 개발팀장」. 이미 팀이 있으면 그대로 돌려준다(두 번 눌러도 안 늘어남).
+// POST /api/os/team/bootstrap → 팀이 비어 있으면 기본 봇(기획팀장, 홍보팀장, 개발팀장 + 비서실장)을 만든다.
+// 대표 확정 0923 「초기 세팅은 기획팀장 / 홍보팀장 / 개발팀장」, 4번째 비서실장은 부대표 추천(미확정).
+// 봇이 하나라도 있으면 그대로 돌려준다(옛 3명 계정에 4번째를 보태지 않는다, 두 번 눌러도 안 늘어남).
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
