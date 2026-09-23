@@ -20,11 +20,11 @@ const SITE_URL = 'https://www.curi-ai.com'
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: '큐리AI | 내 일을 나눠 맡는 AI 봇 팀',
-    template: '%s | 큐리 AI',
+    default: '큐리AI | 인생 후반전 에이전트 OS',
+    template: '%s | 큐리AI',
   },
   description:
-    '사진 한 장만 올리면 강사 프로필·배우 프로필을 만들어 드립니다. 사진 화질 개선도 가능합니다.',
+    '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다. 밖으로 나가는 일은 내가 허용한 뒤에만.',
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.ico',
@@ -43,26 +43,26 @@ export const metadata: Metadata = {
     //    그래서 짝을 이루는 두 화면(/login·/en)에만 각자 적는다.
   },
   openGraph: {
-    title: '큐리AI | 나만의 AI를 만들고 수익화해보세요!',
-    description: '나만의 AI를 만들고 수익화해보세요! 콘텐츠 수익화, 브랜딩, 커리어 전환까지.',
+    title: '인생 후반전 에이전트 OS, 큐리AI',
+    description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다. 밖으로 나가는 일은 내가 허용한 뒤에만.',
     type: 'website',
     url: SITE_URL,
-    siteName: '큐리 AI',
+    siteName: '큐리AI',
     locale: 'ko_KR',
     images: [
       {
-        url: '/og/main.png',
+        url: '/og.png',
         width: 1200,
         height: 630,
-        alt: '큐리AI | 내 일을 나눠 맡는 AI 봇 팀',
+        alt: '큐리AI | 인생 후반전 에이전트 OS',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: '큐리AI | 나만의 AI를 만들고 수익화해보세요!',
-    description: '나만의 AI를 만들고 수익화해보세요! 콘텐츠 수익화, 브랜딩, 커리어 전환까지.',
-    images: ['/og/main.png'],
+    title: '인생 후반전 에이전트 OS, 큐리AI',
+    description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다. 밖으로 나가는 일은 내가 허용한 뒤에만.',
+    images: ['/og.png'],
   },
   robots: {
     index: true,
@@ -98,32 +98,32 @@ const jsonLd = {
       '@type': 'WebSite',
       '@id': `${SITE_URL}/#website`,
       url: SITE_URL,
-      name: '큐리 AI',
+      name: '큐리AI',
       inLanguage: 'ko-KR',
-      description: '사진 한 장으로 프로필 사진을 만들고, 나를 닮은 AI 를 만들어 파는 곳',
+      description: '인생 후반전 에이전트 OS. 이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다.',
     },
     {
       '@type': 'Organization',
       '@id': `${SITE_URL}/#org`,
-      name: '큐리 AI',
+      name: '큐리AI',
       url: SITE_URL,
       logo: `${SITE_URL}/logo.png`,
       parentOrganization: { '@type': 'Organization', name: '미션드리븐', url: 'https://curious-500.com' },
     },
     {
       '@type': 'SoftwareApplication',
-      name: '큐리 AI',
+      name: '큐리AI',
       url: SITE_URL,
-      applicationCategory: 'MultimediaApplication',
+      applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web',
       inLanguage: 'ko-KR',
       description:
-        '중장년을 위한 AI 사진 도구. 사진 한 장으로 재취업·배우 프로필 사진을 만들고, 오래된 사진의 화질을 살립니다. 얼굴과 나이를 그대로 두어 실물과 달라 보이지 않습니다.',
+        '인생 후반전 에이전트 OS. 이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다. 밖으로 나가는 일은 내가 허용한 뒤에만.',
       featureList: [
-        '재취업 프로필 사진 만들기',
-        '배우 프로필 사진 만들기',
-        '사진 화질 개선하기',
-        '나를 닮은 AI 만들기',
+        '내 봇 팀으로 일 나눠 맡기기',
+        '내 자료로 답하고 초안 만들기',
+        '승인 카드 뒤에서만 밖으로 보내기',
+        '봇 마켓에서 팀원 찾기',
       ],
       offers: {
         '@type': 'Offer',

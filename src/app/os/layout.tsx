@@ -6,6 +6,29 @@ import '@/components/os/theme.css'
 export const metadata: Metadata = {
     title: { absolute: '큐리AI' },   // 창 제목은 「큐리AI」 하나만 (대표 0923)
     description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다. 밖으로 나가는 일은 내가 허용한 뒤에만.',
+    // 카톡/아이메시지/슬랙 링크 미리보기용. 검색은 막되(index:false) OG 는 심는다.
+    openGraph: {
+        title: '인생 후반전 에이전트 OS, 큐리AI',
+        description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다. 밖으로 나가는 일은 내가 허용한 뒤에만.',
+        url: 'https://www.curi-ai.com/os',
+        siteName: '큐리AI',
+        locale: 'ko_KR',
+        type: 'website',
+        images: [
+            {
+                url: '/og.png',
+                width: 1200,
+                height: 630,
+                alt: '큐리AI | 인생 후반전 에이전트 OS',
+            },
+        ],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: '인생 후반전 에이전트 OS, 큐리AI',
+        description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다. 밖으로 나가는 일은 내가 허용한 뒤에만.',
+        images: ['/og.png'],
+    },
     robots: { index: false },   // 개인 화면. 검색에 안 올린다
 }
 
