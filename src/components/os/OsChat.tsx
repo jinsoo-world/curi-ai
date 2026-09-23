@@ -3,16 +3,18 @@
 // 캐릭터 상태: 입력 중 listening → 보내면 thinking → 첫 글자 오면 talking → 끝나면 idle. 둘 다 죽으면 error.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
+import { useRouter } from 'next/navigation'
+import { PrefetchKind } from 'next/dist/client/components/router-reducer/router-reducer-types'
 import { getVisitorId } from '@/lib/visitor'
 import { UNAVAILABLE_TEXT } from '@/domains/chat/constants'
 import type { BotState } from '@/domains/os/types'
 import { osTrack } from '@/domains/os/events'
 import { readLocalIntent } from '@/domains/os/settings'
+import { readChatCache, writeChatCache } from '@/domains/os/chat-cache'
 import BotAvatar from './BotAvatar'
 import BotMarkdown from './BotMarkdown'
-import UsageBar from './UsageBar'
-import DetailPane from './DetailPane'
-import AddKnowledgeSheet from './AddKnowledgeSheet'
+import MenuIcon, { CloseIcon, swipeToClose } from './MenuIcon'
 import PermissionCard from './PermissionCard'
 import type { CardView } from './PermissionCard'
 import { useOsTeam } from './OsShell'
@@ -26,6 +28,10 @@ import { usePhotoAttach, PhotoPlusMenu, PhotoStrip } from './PhotoAttach'
 import PhotoGrid from './PhotoGrid'
 import { photoPayload } from '@/domains/os/photos'
 // === /사진 첨부 ===
+
+// 세부칸, 자료 넣기 시트는 열 때만 내려받는다 (봇을 갈아탈 때 실을 것이 줄어든다)
+const DetailPane = dynamic(() => import('./DetailPane'), { ssr: false })
+const AddKnowledgeSheet = dynamic(() => import('./AddKnowledgeSheet'), { ssr: false })
 
 interface Msg {
     id: string
@@ -48,6 +54,7 @@ const MAX_CONTEXT = 20
 
 export default function OsChat({ mentorId }: { mentorId: string }) {
     const { team, loading, guest, openNewGroup } = useOsTeam()
+    const router = useRouter()
     const bot = useMemo(() => team.find(b => b.mentorId === mentorId) ?? null, [team, mentorId])
     const [publicBot, setPublicBot] = useState<PublicBot | null>(null)
     const [messages, setMessages] = useState<Msg[]>([])
@@ -55,24 +62,48 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
     const [state, setState] = useState<BotState>('idle')
     const [streaming, setStreaming] = useState(false)
     const [sessionId, setSessionId] = useState<string | null>(null)
-    const [detailOpen, setDetailOpen] = useState(false)   // 넓은 화면이면 켜진 채로 시작한다(아래 효과)
+    const [detailOpen, setDetailOpen] = useState(false)   // 항상 닫힌 채 시작. 열 때만 세부칸을 그린다(대표 0923 「닫힌 채로, 열 때 로딩」)
     const [addSheet, setAddSheet] = useState(false)
     const [demo, setDemo] = useState(false)
     const endRef = useRef<HTMLDivElement>(null)
+    const cacheLoaded = useRef(false)   // 되살리기 전에 빈 목록을 저장해 지워 버리는 일을 막는다
     // === 사진 첨부 ===
     const photos = usePhotoAttach()
     const [dragging, setDragging] = useState(false)
     // === /사진 첨부 ===
 
-    // 시연(?demo=1), 손님에게는 「내 것」을 저장하는 칸(체크인, 다음 한 걸음)을 안 보인다.
-    // 오른쪽 세부칸은 넓은 화면이면 열린 채, 폰이면 닫힌 채 시작한다. 그 뒤로는 ⓘ 로 사람이 정한다.
+    // 시연(?demo=1) 표식 + 이 봇과 아까 나눈 대화(탭 저장소)를 되살린다. 서버는 부르지 않는다 = 두 번째 방문은 바로 그 자리.
     useEffect(() => {
         void Promise.resolve().then(() => {
             setDemo(new URLSearchParams(window.location.search).get('demo') === '1')
-            setDetailOpen(window.matchMedia?.('(min-width: 901px)').matches ?? true)
+            const cached = readChatCache<Msg>(window.sessionStorage, mentorId)
+            if (cached) { setMessages(cached.messages); setSessionId(cached.sessionId) }
+            cacheLoaded.current = true
         })
-    }, [])
-    const 개인화숨김 = guest || demo
+    }, [mentorId])
+
+    // 말이 오갈 때마다(답이 다 온 뒤) 탭 저장소에 최근 50개를 남긴다. 되살리기 전(첫 그림)에는 쓰지 않는다
+    useEffect(() => {
+        if (streaming || !cacheLoaded.current) return
+        writeChatCache(window.sessionStorage, mentorId, { sessionId, messages })
+    }, [messages, sessionId, streaming, mentorId])
+
+    // 옆 봇들의 화면을 미리 받아 둔다. 봇을 누르면 서버를 안 기다리고 바로 바뀐다(느렸던 원인 = 클릭마다 서버 왕복 1번).
+    useEffect(() => {
+        if (loading) return
+        for (const b of team) {
+            if (b.hidden || b.mentorId === mentorId) continue
+            router.prefetch(`/os/chat/${b.mentorId}${demo ? '?demo=1' : ''}`, { kind: PrefetchKind.FULL })
+        }
+    }, [team, loading, mentorId, demo, router])
+
+    // 세부칸이 열려 있으면 Esc 로 닫는다
+    useEffect(() => {
+        if (!detailOpen) return
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDetailOpen(false) }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [detailOpen])
 
     // 내 팀에 없으면 공개 봇(리더의 봇)인지 본다
     useEffect(() => {
@@ -277,7 +308,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         : <BotAvatar shape="circle" color="white" state={state} size={36} faceUrl={publicBot?.avatar_url ?? null} name={publicBot?.name ?? name} />
 
     return (
-        <div className={`os-chat-wrap${detailOpen ? '' : ' narrow'}${dragging ? ' dragging' : ''}`}
+        <div className={`os-chat-wrap${dragging ? ' dragging' : ''}`}
             // === 사진 첨부 === 끌어다 놓기 (사진 파일만 받는다)
             onDragOver={e => { if (Array.from(e.dataTransfer.types).includes('Files')) { e.preventDefault(); setDragging(true) } }}
             onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false) }}
@@ -289,10 +320,8 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                     {avatar}
                     <span>{name}</span>
                     <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-                        {!detailOpen && (
-                            <button className="os-icon-btn os-menu" aria-label="세부 정보 열기" aria-expanded={false}
-                                title="세부 정보 열기" onClick={() => setDetailOpen(true)}>≡</button>
-                        )}
+                        <button className="os-icon-btn os-menu" aria-label="세부 정보 열기" aria-expanded={detailOpen}
+                            title="세부 정보 열기" onClick={() => setDetailOpen(v => !v)}><MenuIcon /></button>
                     </span>
                 </header>
 
@@ -335,9 +364,6 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                     <div ref={endRef} />
                 </div>
 
-                {/* 📊 사용 한도 한 줄 (내 봇은 클로버 0 — 대표 확정 0923) */}
-                <UsageBar guest={guest} refreshKey={messages.length} />
-
                 {/* === 사진 첨부 === 붙인 사진 미리보기 띠 (입력창 위) */}
                 <PhotoStrip items={photos.items} notice={photos.notice} onRemove={photos.remove} onRetry={photos.retry} />
                 {/* === /사진 첨부 === */}
@@ -364,9 +390,17 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                 </div>
             </div>
 
-            <aside className={`os-right ${detailOpen ? 'open' : 'closed'}`}>
-                <button className="os-icon-btn os-right-close" aria-label="세부 정보 닫기" title="닫기" onClick={() => setDetailOpen(false)}>≡</button>
-                <DetailPane bot={bot} publicName={publicBot?.name ?? null} />
+            {/* 오른쪽 세부칸 = 대화 위에 겹치는 서랍. 대화 폭은 그대로라 말풍선이 다시 줄 서지 않는다.
+                폰에선 88% 폭 + 어두운 배경(누르면 닫힘). 안의 내용은 열 때만 만든다(닫혀 있으면 자료, 루틴 요청 0건) */}
+            {detailOpen && <div className="os-right-back" onClick={() => setDetailOpen(false)} aria-hidden />}
+            <aside className={`os-right${detailOpen ? ' open' : ''}`} aria-hidden={!detailOpen} {...swipeToClose(() => setDetailOpen(false))}>
+                {/* 닫는 길 4개 = 이 ✕, 어두운 배경 탭, 오른쪽으로 쓸기, Esc (폰 실측 「열리면 안 닫힌다」 0923) */}
+                <div className="os-right-head">
+                    <span>세부 정보</span>
+                    <button className="os-icon-btn os-right-close" aria-label="닫기" title="닫기" tabIndex={detailOpen ? 0 : -1}
+                        onClick={() => setDetailOpen(false)}><CloseIcon /></button>
+                </div>
+                {detailOpen && <DetailPane bot={bot} publicName={publicBot?.name ?? null} />}
             </aside>
 
             {addSheet && bot && (
