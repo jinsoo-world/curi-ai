@@ -58,3 +58,26 @@ describe('방 크기', () => {
         expect(MAX_MEMBERS).toBeLessThanOrEqual(10)
     })
 })
+
+describe('봇이 끝없이 서로 답하지 않는다 (안티패턴 ㉟)', () => {
+    it('서로를 계속 불러도 두 번째 봇에서 멈춘다', () => {
+        // 첫 봇이 @글감봇 을 부르고, 글감봇이 다시 @요약봇 을 불러도 세 번째는 없다.
+        const 이름들 = 멤버
+        let 차례: string | null = 'm1'
+        let 말한횟수 = 0
+        const 말한봇: string[] = []
+        const 대사: Record<string, string> = {
+            m1: '이건 @글감봇 이 더 잘 알아요',
+            m2: '저보다 @요약봇 이 낫겠어요',
+            m3: '그럼 @비서실장 께 넘길게요',
+        }
+        while (차례 && canBotSpeakAgain(말한횟수)) {
+            말한봇.push(차례)
+            말한횟수 += 1
+            const 지목 = findMentionedBot(대사[차례], 이름들, 차례)
+            차례 = 지목 && canBotSpeakAgain(말한횟수) ? 지목.mentorId : null
+        }
+        expect(말한봇).toEqual(['m1', 'm2'])
+        expect(말한횟수).toBe(MAX_BOT_TURNS)
+    })
+})

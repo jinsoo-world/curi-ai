@@ -145,6 +145,28 @@ export async function addChannelMembers(
     return [...ch.memberMentorIds, ...mine]
 }
 
+/**
+ * 멤버 빼기 (내 방에서만).
+ * 방은 봇 2명 이상이어야 하므로 **2명 아래로는 못 뺀다** — 한 명만 남은 「그룹」은 그룹이 아니다.
+ */
+export async function removeChannelMembers(
+    db: SupabaseClient, userId: string, channelId: string, mentorIds: string[],
+): Promise<string[]> {
+    const ch = await getChannel(db, userId, channelId)
+    if (!ch) throw new Error('그 방을 못 찾았어요')
+    const 뺄것 = [...new Set(mentorIds.filter(Boolean))].filter(id => ch.memberMentorIds.includes(id))
+    if (뺄것.length === 0) return ch.memberMentorIds
+    const 남는수 = ch.memberMentorIds.length - 뺄것.length
+    if (남는수 < 2) throw new Error('그룹에는 봇이 2명 이상 있어야 해요')
+    const { error } = await db
+        .from('channel_members')
+        .delete()
+        .eq('channel_id', channelId)
+        .in('mentor_id', 뺄것)
+    if (error) throw wrap(error)
+    return ch.memberMentorIds.filter(id => !뺄것.includes(id))
+}
+
 /** 주어진 봇들 중 내 팀에 있는 것만 (순서 유지) */
 async function myMentorIds(db: SupabaseClient, userId: string, mentorIds: string[]): Promise<string[]> {
     if (mentorIds.length === 0) return []

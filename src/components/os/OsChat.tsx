@@ -16,6 +16,11 @@ import AddKnowledgeSheet from './AddKnowledgeSheet'
 import PermissionCard from './PermissionCard'
 import type { CardView } from './PermissionCard'
 import { useOsTeam } from './OsShell'
+// === 전달(relay) ===
+import { readRelayIntent } from '@/domains/agent/relay'
+import RelayBubble from './RelayBubble'
+import type { RelayView } from './RelayBubble'
+// === /전달(relay) ===
 
 interface Msg {
     id: string
@@ -25,6 +30,9 @@ interface Msg {
     sources?: { id: string; title: string }[]
     /** 밖으로 나가는 일이면 답 대신 승인 카드가 온다 */
     card?: CardView
+    // === 전달(relay) === 옆 봇이 대신 답한 말이면 「보낸 사람 ○○ → ○○」 표식을 단다
+    relay?: RelayView
+    // === /전달(relay) ===
 }
 
 interface PublicBot { id: string; name: string; avatar_url: string | null; greeting_message: string; title?: string }
@@ -32,7 +40,7 @@ interface PublicBot { id: string; name: string; avatar_url: string | null; greet
 const MAX_CONTEXT = 20
 
 export default function OsChat({ mentorId }: { mentorId: string }) {
-    const { team, loading, guest } = useOsTeam()
+    const { team, loading, guest, openNewGroup } = useOsTeam()
     const bot = useMemo(() => team.find(b => b.mentorId === mentorId) ?? null, [team, mentorId])
     const [publicBot, setPublicBot] = useState<PublicBot | null>(null)
     const [messages, setMessages] = useState<Msg[]>([])
@@ -88,14 +96,55 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         const botId = `a-${Date.now()}`
         const base = [...messages, userMsg]
 
+        // === 전달(relay) === 옆 봇에게 옮겨 달라는 말이면 여기서 끝낸다 (모델 안 부름 = 클로버 안 씀)
+        const 전달 = bot && !guest
+            ? readRelayIntent(text, team.filter(b => !b.hidden).map(b => ({ mentorId: b.mentorId, name: b.name })), mentorId)
+            : null
+        if (전달) {
+            setInput('')
+            setMessages([...base, { id: botId, role: 'assistant', content: `${전달.name}에게 옮기는 중이에요…` }])
+            setState('working')
+            try {
+                const sid = await ensureSession()
+                const res = await fetch('/api/os/relay', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, fromMentorId: mentorId, fromSessionId: sid ?? undefined }),
+                })
+                const d = await res.json()
+                if (d?.relayed) {
+                    osTrack('os_relay_sent', { from_mentor_id: mentorId, to_mentor_id: String(d.to?.mentorId ?? '') })
+                    setMessages([...base, {
+                        id: botId, role: 'assistant', content: String(d.answer ?? ''),
+                        relay: {
+                            fromName: String(d.from?.name ?? name), toName: String(d.to?.name ?? 전달.name),
+                            shape: (d.to?.shape ?? 'circle') as RelayView['shape'],
+                            color: (d.to?.color ?? 'white') as RelayView['color'],
+                            avatarUrl: d.to?.avatarUrl ?? null,
+                        },
+                    }])
+                    setState('idle')
+                    return
+                }
+                // 못 옮겼으면(로그인 전·표 없음·밖으로 나가는 말) 조용히 평소 대화로 내려간다.
+                // needsApproval 이면 아래 승인 카드 길이 그 말을 받는다.
+                setMessages([...base, { id: botId, role: 'assistant', content: '' }])
+            } catch {
+                setMessages([...base, { id: botId, role: 'assistant', content: '' }])
+            }
+        }
+        // === /전달(relay) ===
+
         // 서버를 부르기 전 가벼운 규칙 2개. 내 팀 봇일 때만 본다(공개 봇에는 자료를 못 넣는다).
         // 여기서 끝나는 말은 모델을 부르지 않는다 = 클로버를 안 쓴다.
-        const 눈치 = bot && !guest ? readLocalIntent(text) : null
+        const 눈치 = bot && !guest && !전달 ? readLocalIntent(text) : null
         if (눈치?.kind === 'group') {
+            // === 전달(relay) === 안내만 하지 않고 「그룹 채팅 만들기」 창을 바로 연다
             setInput('')
-            setMessages([...base, { id: botId, role: 'assistant', content: '여러 봇과 한 방에서 이야기하려면 왼쪽 위 ＋ → 그룹 채팅 만들기 로 만들 수 있어요.' }])
+            setMessages([...base, { id: botId, role: 'assistant', content: '여러 봇과 한 방에서 이야기하는 창을 열었어요. 넣을 봇을 골라 주세요.' }])
             setState('idle')
+            openNewGroup()
             return
+            // === /전달(relay) ===
         }
         if (눈치?.kind === 'knowledge' && bot) {
             setInput('')
@@ -198,7 +247,8 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         } finally {
             setStreaming(false)
         }
-    }, [input, streaming, messages, mentorId, guest, bot, ensureSession])
+        // === 전달(relay) === team·openNewGroup·name 이 더 들어간다
+    }, [input, streaming, messages, mentorId, guest, bot, ensureSession, team, openNewGroup, name])
 
     const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send() }
@@ -233,6 +283,10 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                     )}
                     {messages.map(m => m.role === 'user'
                         ? <div key={m.id} className="os-bubble me">{m.content}</div>
+                        // === 전달(relay) === 옆 봇이 대신 답한 말은 그 봇 얼굴·이름으로 그린다
+                        : m.relay
+                            ? <div key={m.id} style={{ display: 'contents' }}><RelayBubble view={m.relay} answer={m.content} /></div>
+                        // === /전달(relay) ===
                         : (
                             <div key={m.id} style={{ display: 'contents' }}>
                                 <div className="os-sender">{avatar}<span>{name}</span></div>
