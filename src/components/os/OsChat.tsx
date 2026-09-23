@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { PrefetchKind } from 'next/dist/client/components/router-reducer/router-reducer-types'
 import { getVisitorId } from '@/lib/visitor'
 import { UNAVAILABLE_TEXT } from '@/domains/chat/constants'
@@ -53,7 +54,7 @@ interface Msg {
     imageUrls?: string[]
 }
 
-interface PublicBot { id: string; name: string; avatar_url: string | null; greeting_message: string; title?: string }
+interface PublicBot { id: string; name: string; avatar_url: string | null; greeting_message: string; title?: string; sample_questions?: string[] }
 
 const MAX_CONTEXT = 20
 
@@ -419,7 +420,31 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                 {/* 오늘 체크인 띠 — 오늘 아직 안 했을 때만. 손님, 시연에선 안 뜬다 */}
 
                 <div className="os-messages">
-                    {greeting && messages.length === 0 && (
+                    {messages.length === 0 && !bot && publicBot && (
+                        <div className="os-chat-info">
+                            <BotAvatar shape="circle" color="white" state="idle" size={96} faceUrl={publicBot.avatar_url ?? null} name={name} />
+                            <div className="os-chat-info-name">{name}</div>
+                            {(publicBot.title || greeting) && (
+                                <div className="os-chat-info-line">{publicBot.title || greeting}</div>
+                            )}
+                            <div className="os-chat-info-qs">
+                                {(Array.isArray(publicBot.sample_questions) && publicBot.sample_questions.length > 0
+                                    ? publicBot.sample_questions.slice(0, 3)
+                                    : [`${name}에게 뭐부터 물어보면 좋아요?`]
+                                ).map((q, i) => (
+                                    <button key={i} type="button" className="os-chat-info-q" onClick={() => void send(q)}>
+                                        {q}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="os-chat-info-actions">
+                                <Link href={`/os/market/${mentorId}`} className="os-btn" style={{ textDecoration: 'none', display: 'inline-grid', placeItems: 'center' }}>
+                                    소개 다시 보기
+                                </Link>
+                            </div>
+                        </div>
+                    )}
+                    {greeting && messages.length === 0 && !(!bot && publicBot) && (
                         <>
                             <div className="os-sender">{avatar}<span>{name}</span></div>
                             <div className="os-bubble bot">{greeting}</div>

@@ -48,19 +48,68 @@
 }
 .os-back:hover { background: var(--os-말풍선); color: var(--os-글); }
 
-/* 봇 마켓 (/os/market) = 뼈대 안에서 그린다. 왼쪽 명단이 그대로 있어 봇을 누르면 바로 대화로 돌아간다 */
+/* 봇 마켓 (/os/market) = 뼈대 안에서 그린다. 얼굴 크게, 데스크톱 3열(3*n). 카드 → /os/market/[id] 소개 */
 .os-market { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 24px 40px; color: var(--os-글); }
 .os-market h1 { font-size: 22px; margin: 8px 0 4px; }
 .os-market-sub { color: var(--os-글-연); font-size: 15px; line-height: 1.5; margin: 0 0 18px; }
-.os-market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.os-market-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .os-market-card {
-    display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 10px 16px;
-    border-radius: 18px; background: var(--os-말풍선); color: var(--os-글); text-decoration: none; text-align: center; min-height: 160px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 12px 18px;
+    border-radius: 20px; background: var(--os-말풍선); color: var(--os-글); text-decoration: none; text-align: center; min-height: 200px;
 }
 .os-market-card:hover { background: var(--os-말풍선-내); }
-.os-market-name { font-size: 16px; font-weight: 600; line-height: 1.25; }
+.os-market-name { font-size: 17px; font-weight: 700; line-height: 1.25; }
 .os-market-title { font-size: 13px; color: var(--os-글-연); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .os-market-empty { color: var(--os-글-연); font-size: 15px; padding: 24px 0; }
+
+/* 마켓 봇 소개 (/os/market/[id]) */
+.os-market-intro { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 24px 48px; color: var(--os-글); max-width: 720px; }
+.os-market-intro-back { display: inline-flex; align-items: center; gap: 4px; color: var(--os-글-연); text-decoration: none; font-size: 14px; min-height: 44px; }
+.os-market-intro-back:hover { color: var(--os-글); }
+.os-market-intro-hero { display: flex; gap: 20px; align-items: flex-start; margin-top: 12px; flex-wrap: wrap; }
+.os-market-intro-photo {
+    position: relative; width: 168px; height: 168px; border-radius: 28px; overflow: hidden; flex-shrink: 0;
+    background: linear-gradient(135deg, #E8F2EC 0%, #C7E4D3 100%);
+}
+.os-market-intro-initial { width: 100%; height: 100%; display: grid; place-items: center; font-size: 64px; font-weight: 900; color: var(--os-글); }
+.os-market-intro-meta { flex: 1; min-width: 220px; }
+.os-market-intro-meta h1 { font-size: 26px; font-weight: 700; margin: 0 0 6px; line-height: 1.25; }
+.os-market-intro-line { font-size: 16px; color: var(--os-글-연); margin: 0 0 12px; line-height: 1.5; }
+.os-market-intro-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.os-market-intro-tags span {
+    font-size: 13px; padding: 4px 10px; border-radius: 999px; background: var(--os-패널, #fff);
+    border: 1px solid var(--os-선); color: var(--os-글);
+}
+.os-market-intro-block { margin-top: 28px; }
+.os-market-intro-block h2 { font-size: 17px; font-weight: 700; margin: 0 0 10px; }
+.os-market-intro-desc { font-size: 16px; line-height: 1.7; margin: 0; white-space: pre-line; }
+.os-market-intro-qs { display: flex; flex-direction: column; gap: 10px; }
+.os-market-intro-q {
+    display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px;
+    background: var(--os-말풍선); color: var(--os-글); text-decoration: none; font-size: 15px; line-height: 1.4;
+}
+.os-market-intro-q:hover { background: var(--os-말풍선-내); }
+.os-market-intro-q > span:first-child { flex: 1; }
+.os-market-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.os-market-actions-count { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--os-글-연); }
+.os-market-actions-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.os-market-actions-hint { font-size: 13px; color: var(--os-글-연); margin: 0; line-height: 1.5; }
+.os-market-actions-note { font-size: 14px; color: var(--os-글); margin: 0; }
+
+/* 대화 안 정보 카드 (마켓에서 온 공개 봇, 말이 없을 때) */
+.os-chat-info {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    gap: 10px; padding: 28px 16px 20px; margin: 8px 12px 16px; border-radius: 20px; background: var(--os-말풍선);
+}
+.os-chat-info-name { font-size: 20px; font-weight: 700; line-height: 1.3; }
+.os-chat-info-line { font-size: 15px; color: var(--os-글-연); line-height: 1.5; max-width: 36em; }
+.os-chat-info-qs { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 420px; margin-top: 8px; }
+.os-chat-info-q {
+    display: block; width: 100%; text-align: left; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--os-선);
+    background: var(--os-패널, #fff); color: var(--os-글); font-size: 14.5px; line-height: 1.4; cursor: pointer; min-height: 44px;
+}
+.os-chat-info-q:hover { background: var(--os-말풍선-내); }
+.os-chat-info-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
 
 /* 편집 시트 안 인사말 칸 */
 .os-sheet textarea.os-textarea { margin-top: 0; }
@@ -86,5 +135,11 @@
     .os-usage-tile .os-usage-ring-btn { margin: 0; padding: 4px; min-height: 0; }
     .os-usage-tile .os-usage-ring-caption { display: none; }
     .os-market { padding: 4px 14px 32px; }
+    .os-market-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .os-market-card { min-height: 180px; padding: 14px 8px 14px; gap: 8px; }
+    .os-market-name { font-size: 15px; }
+    .os-market-intro { padding: 4px 14px 40px; }
+    .os-market-intro-photo { width: 132px; height: 132px; border-radius: 22px; }
+    .os-market-intro-meta h1 { font-size: 22px; }
     .os-back { margin: 8px 10px 0; }
 }
