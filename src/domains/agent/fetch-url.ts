@@ -12,6 +12,7 @@
 //  4. 딴 데로 튕기는 것(리다이렉트)은 3번까지, **튕길 때마다 1~3 을 다시 검사**한다.
 //  5. 크기 2MB, 시간 8초를 넘기면 끊는다.
 //  6. 가져온 글은 「인용」이지 「명령」이 아니다 — 울타리는 부르는 쪽(/api/chat)이 두른다.
+//  7. 이 파일은 「안전하게 가져오기」까지만. 글로 바꾸는 일(본문 추출, 유튜브 자막)은 domains/os/readers 에 있다.
 
 import { lookup } from 'dns/promises'
 
@@ -152,7 +153,7 @@ export function normalizeUrl(raw: string): string {
     return u.toString()
 }
 
-/** 유튜브 주소인가 (자막은 못 읽으니 제목, 설명만 쓴다) */
+/** 유튜브 주소인가 (자막 읽기는 domains/os/readers/youtube.ts) */
 export function isYoutubeUrl(raw: string): boolean {
     try {
         const host = new URL(raw).hostname.replace(/^www\./, '').toLowerCase()
@@ -213,6 +214,10 @@ export interface ReadPage {
     title: string
     text: string
     kind: 'web' | 'youtube'
+    /** 유튜브면 채널 이름 (자료 제목에 같이 붙인다) */
+    channel?: string
+    /** 어떻게 읽었나 = readability(본문 추출기) / plain(태그만 걷어냄) / captions(자막) / meta(제목과 설명만) */
+    method?: 'readability' | 'plain' | 'captions' | 'meta'
 }
 export interface ReadFail {
     ok: false
@@ -222,15 +227,31 @@ export interface ReadFail {
 }
 export type ReadResult = ReadPage | ReadFail
 
+/** 안전하게 가져온 원문 (글로 바꾸는 일은 domains/os/readers 가 한다) */
+export interface FetchedPage {
+    ok: true
+    url: string
+    requestedUrl: string
+    contentType: string
+    body: string
+}
+
+export interface FetchOptions {
+    /** 이 크기까지만 읽는다 (기본 2MB) */
+    maxBytes?: number
+    /** 이 시간 안에 끝내야 한다 (기본 8초) */
+    timeoutMs?: number
+}
+
 /** 몸통을 크기 한도까지만 읽는다 (끝없이 흘려보내는 서버에 물리지 않게) */
-async function readLimitedText(res: Response, charset: string): Promise<string> {
+async function readLimitedText(res: Response, charset: string, maxBytes: number): Promise<string> {
     const body = res.body
     if (!body) return ''
     const reader = body.getReader()
     const chunks: Uint8Array[] = []
     let total = 0
     try {
-        while (total < MAX_FETCH_BYTES) {
+        while (total < maxBytes) {
             const { done, value } = await reader.read()
             if (done) break
             if (value) { chunks.push(value); total += value.byteLength }
@@ -257,9 +278,13 @@ export function pickCharset(contentType: string, head = ''): string {
 }
 
 /**
- * 주소 하나를 안전하게 읽는다. 절대 던지지 않는다 — 못 읽으면 이유를 돌려준다(지어내지 않게).
+ * 주소 하나를 안전하게 가져온다(원문 그대로). 절대 던지지 않는다. 못 읽으면 이유를 돌려준다.
+ * 글로 바꾸는 일(본문 추출, 유튜브 자막)은 domains/os/readers 의 readUrl 이 한다.
+ * 이 함수는 「안전 검사 + 크기와 시간 한도 + 튕김 따라가기」만 책임진다.
  */
-export async function fetchUrlText(rawUrl: string): Promise<ReadResult> {
+export async function fetchPageSafely(rawUrl: string, opts: FetchOptions = {}): Promise<FetchedPage | ReadFail> {
+    const maxBytes = opts.maxBytes ?? MAX_FETCH_BYTES
+    const timeoutMs = opts.timeoutMs ?? FETCH_TIMEOUT_MS
     const requestedUrl = String(rawUrl ?? '').trim()
     const fail = (reason: string): ReadFail => ({ ok: false, requestedUrl, reason })
 
@@ -276,7 +301,7 @@ export async function fetchUrlText(rawUrl: string): Promise<ReadResult> {
         try { host = new URL(current).hostname } catch { return fail('주소 모양이 이상해요') }
         if (!(await isPublicHost(host))) return fail('열 수 없는 주소예요(우리 안쪽 주소는 읽지 않아요)')
 
-        const left = FETCH_TIMEOUT_MS - (Date.now() - started)
+        const left = timeoutMs - (Date.now() - started)
         if (left <= 0) return fail('그 주소가 너무 느려서 멈췄어요')
 
         try {
@@ -306,27 +331,11 @@ export async function fetchUrlText(rawUrl: string): Promise<ReadResult> {
     const 글인가 = type.includes('text/html') || type.includes('text/plain') || type.includes('xml') || type.includes('json') || !type
     if (!글인가) return fail('글이 아니라 파일이라서 읽지 못했어요(사진, 영상, PDF 는 자료로 올려 주세요)')
 
-    const body = await readLimitedText(res, pickCharset(type)).catch(() => '')
+    // 미리 알려준 크기가 한도를 넘으면 열지 않는다 (20MB 넘는 글은 없다. 파일이거나 공격이다)
+    const declared = Number(res.headers.get('content-length') || '0')
+    if (declared > maxBytes) return fail('그 주소의 내용이 너무 커서 읽지 않았어요')
+
+    const body = await readLimitedText(res, pickCharset(type), maxBytes).catch(() => '')
     if (!body) return fail('그 주소에서 읽을 내용이 없었어요')
-    // 머리말에 적힌 인코딩이 다르면 한 번 더 맞춰 본다 — 지금은 머리글자만 보고 판단한다
-    const title = pickTitle(body, new URL(current).hostname)
-
-    if (isYoutubeUrl(current)) {
-        const desc = pickMeta(body, 'og:description')
-        return {
-            ok: true, url: current, requestedUrl, kind: 'youtube', title,
-            text: `[유튜브 영상] ${title}\n주소: ${current}\n설명: ${desc || '(설명 없음)'}\n(영상 자막은 아직 읽지 못해요. 제목과 설명만 봤어요)`.slice(0, MAX_PAGE_CHARS),
-        }
-    }
-
-    const text = htmlToText(body).slice(0, MAX_PAGE_CHARS)
-    if (text.length < 30) return fail('그 주소에서 읽을 글을 못 찾았어요(로그인이 필요한 쪽일 수 있어요)')
-    return { ok: true, url: current, requestedUrl, kind: 'web', title, text }
-}
-
-/** 여러 주소를 한꺼번에 (최대 3개, 동시에) */
-export async function fetchUrlsForChat(text: string, max = MAX_URLS_PER_MESSAGE): Promise<ReadResult[]> {
-    const urls = extractUrls(text, max)
-    if (urls.length === 0) return []
-    return Promise.all(urls.map(u => fetchUrlText(u)))
+    return { ok: true, url: current, requestedUrl, contentType: type, body }
 }

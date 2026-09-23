@@ -6,6 +6,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { addKnowledgeSource } from '@/domains/knowledge'
+import { readUrl, KNOWLEDGE_READ_OPTIONS } from '@/domains/os/readers'
+import { markInjectionPatterns } from '@/domains/chat/injection'
 
 /** 표가 아직 DB 에 없을 때 나는 Postgres 오류 번호 */
 const TABLE_MISSING = '42P01'
@@ -143,44 +145,34 @@ export async function assertRoomForMore(db: SupabaseClient, mentorId: string): P
 export async function addTextSource(db: SupabaseClient, mentorId: string, title: string, text: string) {
     const body = (text ?? '').trim().slice(0, MAX_TEXT_CHARS)
     if (body.length < 10) throw new Error('글이 너무 짧아요. 10자 이상 넣어 주세요')
-    return addKnowledgeSource(db, mentorId, (title || '붙여넣은 글').slice(0, 120), body, 'text')
+    // 🛡 글 속 「이전 지시 무시」류 문장에는 표식을 붙여 저장한다(지우지 않는다). 울타리가 이 표식을 설명한다.
+    const { text: marked, marked: count } = markInjectionPatterns(body)
+    if (count > 0) console.warn('[os/knowledge] 자료 속 명령문 표식', { mentorId, kind: 'text', count })
+    return addKnowledgeSource(db, mentorId, (title || '붙여넣은 글').slice(0, 120), marked, 'text')
 }
 
 /**
  * 링크(웹페이지, 유튜브)를 자료로 넣는다.
- * 유튜브는 자막을 우리가 못 받아오므로, 지금은 **주소와 제목만** 기억한다(지어내지 않는다).
+ * 읽는 일은 readers/readUrl 하나가 한다(대화 중 링크 읽기와 같은 함수 = 연동성).
+ *   웹 = 본문 추출(readability). 유튜브 = 자막(한국어 우선) + 제목 + 채널. 없으면 제목과 설명만.
+ * 못 읽으면 이유를 사람 말로 던진다(지어내지 않는다). 20MB, 45초를 넘으면 중단한다.
  */
 export async function addLinkSource(db: SupabaseClient, mentorId: string, rawUrl: string) {
     const url = (rawUrl ?? '').trim()
     if (!isSafeExternalUrl(url)) throw new Error('열 수 없는 주소예요. http 나 https 로 시작하는 공개 주소만 넣을 수 있어요')
 
-    const youtube = isYoutubeUrl(url)
-    let html = ''
-    try {
-        const res = await fetch(url, {
-            redirect: 'follow',
-            signal: AbortSignal.timeout(15_000),
-            headers: { 'User-Agent': 'CuriAI-Bot/1.0 (+https://curi.ai)' },
-        })
-        if (res.ok) {
-            const type = (res.headers.get('content-type') || '').toLowerCase()
-            if (type.includes('text/html') || type.includes('text/plain') || type.includes('xml')) {
-                html = (await res.text()).slice(0, 400_000)
-            }
-        }
-    } catch {
-        // 못 읽으면 아래에서 실패로 알린다. 지어내지 않는다.
-    }
+    const read = await readUrl(url, { ...KNOWLEDGE_READ_OPTIONS, maxChars: MAX_TEXT_CHARS })
+    if (!read.ok) throw new Error(read.reason)
 
-    const title = pickTitle(html, url)
-    const text = youtube
-        ? `[유튜브 영상] ${title}\n주소: ${url}\n(영상 자막은 아직 읽지 못해요. 제목과 주소만 기억합니다)`
-        : htmlToText(html).slice(0, MAX_TEXT_CHARS)
+    // 🛡 링크 글 속 명령문에도 표식을 붙인다
+    const { text, marked } = markInjectionPatterns(read.text)
+    if (marked > 0) console.warn('[os/knowledge] 자료 속 명령문 표식', { mentorId, kind: read.kind, count: marked })
 
-    if (!youtube && text.length < 50) {
+    if (read.kind !== 'youtube' && text.length < 50) {
         throw new Error('그 주소에서 읽을 글을 못 찾았어요. 다른 주소를 넣거나 글을 붙여 넣어 주세요')
     }
-    return addKnowledgeSource(db, mentorId, title, text, youtube ? 'youtube' : 'url', url)
+    console.log('[os/knowledge] 링크 읽음', { kind: read.kind, method: read.method, chars: text.length })
+    return addKnowledgeSource(db, mentorId, read.title, text, read.kind === 'youtube' ? 'youtube' : 'url', read.url)
 }
 
 /** 자료 하나 빼기 (조각까지 같이 지운다). 주인 확인은 부르는 쪽에서 먼저 한다 */
