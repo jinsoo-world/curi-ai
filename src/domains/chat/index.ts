@@ -24,3 +24,11 @@ export {
 export { generateSuggestions } from './suggestions'
 export { extractAndSaveMemories } from './memory'
 export { extractAndUpdateTopic } from './topic'
+// 🛡 인젝션 방어 (카나리, 자료 속 명령문 표식, 지침 빼내기 탐지, 크기 한도, 내부 이름 가리기)
+export {
+    makeCanary, confidentialityPrompt, createOutputGuard, CANARY_REFUSAL,
+    detectPromptExtraction, EXTRACTION_GUARD_PROMPT,
+    markInjectionPatterns, INJECTION_MARK,
+    maskInternalNames, MASK_TEXT,
+    checkRequestSize, MAX_MESSAGE_CHARS, MAX_LINKS_PER_MESSAGE,
+} from './injection'
