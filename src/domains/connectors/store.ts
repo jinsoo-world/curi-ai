@@ -7,6 +7,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { decryptSecret, encryptSecret, maskSecret, requireConnectorKey } from './crypto'
+import { extractAccessToken } from './oauth'
 import { cleanKind, type ConnectorKind, type ConnectorStatus, type ConnectorView } from './types'
 
 /** 표가 아직 DB 에 없을 때 나는 Postgres 오류 번호 */
@@ -85,7 +86,8 @@ export async function createConnector(
         kind,
         label: (String(input.label ?? '').trim() || '내 연결').slice(0, 60),
         secret_encrypted: encryptSecret(secret, key),
-        meta: { ...(input.meta ?? {}), hint: maskSecret(secret) },
+        // hint 는 끝 4자 가림이 기본. OAuth 로 붙일 땐 계정 힌트(jin@…)를 넣어 오므로 그쪽이 이긴다
+        meta: { hint: maskSecret(secret), ...(input.meta ?? {}) },
         status: 'connected',
     }).select(SELECT).single()
     if (error || !data) {
@@ -93,6 +95,16 @@ export async function createConnector(
         throw new Error(error?.message ?? '연결을 붙이지 못했어요')
     }
     return toView(data as Raw)
+}
+
+/** 같은 종류를 하나만 두고 갈아 끼운다(본인 계정 로그인으로 붙이는 연결은 공급자마다 1개) */
+export async function replaceConnector(
+    db: SupabaseClient, userId: string,
+    input: { kind: ConnectorKind; label: string; secret: string; meta?: Record<string, unknown> },
+): Promise<ConnectorView> {
+    const { error } = await db.from('connectors').delete().eq('user_id', userId).eq('kind', input.kind)
+    if (error && error.code !== TABLE_MISSING) throw new Error(error.message)
+    return createConnector(db, userId, input)
 }
 
 /** 내 연결의 열쇠를 푼다. 도구를 실제로 쓸 때만 부른다 */
@@ -107,7 +119,8 @@ export async function readConnectorSecret(
     }
     if (!data) throw new ConnectorNotMine()
     const row = data as Raw
-    return { view: toView(row), secret: decryptSecret(row.secret_encrypted, requireConnectorKey()) }
+    // 로그인(OAuth)으로 붙인 건 토큰 JSON 이 잠겨 있다. 도구가 쓰기 좋게 access_token 만 꺼내 준다
+    return { view: toView(row), secret: extractAccessToken(decryptSecret(row.secret_encrypted, requireConnectorKey())) }
 }
 
 /** 연결 하나 떼기 */

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="네이버 캘린더">
+  <rect width="64" height="64" rx="12" fill="#03C75A"/>
+  <rect x="14" y="16" width="36" height="34" rx="5" fill="#FFFFFF"/>
+  <rect x="14" y="16" width="36" height="9" rx="5" fill="#02A94C"/>
+  <rect x="14" y="21" width="36" height="4" fill="#02A94C"/>
+  <path fill="#03C75A" d="M24 30h5.2l5.6 8.4V30H40v16h-5.2l-5.6-8.4V46H24z"/>
+</svg>

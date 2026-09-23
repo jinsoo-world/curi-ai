@@ -2,5 +2,7 @@
 export * from './types'
 export * from './crypto'
 export * from './store'
+export * from './providers'
+export * from './oauth'
 export { notionSearch, notionReadPage, notionPing, NOTION_TOP_N, looksLikeNotionToken, normalizeNotionId } from './notion'
 export { slackPost, slackPing, isSlackWebhookUrl, slackWebhookHint, SLACK_MAX_CHARS } from './slack'
