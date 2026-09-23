@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { buildBotPrompt, JOBS, suggestName, findJob, SHAPES, COLORS } from '../presets'
 
 describe('os/presets — 봇 설명 조립', () => {
-    it('일 칩 6개, 도형 6종, 색 8종', () => {
-        expect(JOBS).toHaveLength(6)
+    it('일 칩 9개(기본 팀 3 + 6), 도형 6종, 색 8종', () => {
+        expect(JOBS).toHaveLength(9)
         expect(SHAPES).toHaveLength(6)
         expect(COLORS).toHaveLength(8)
     })

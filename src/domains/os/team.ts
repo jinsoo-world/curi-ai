@@ -2,7 +2,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { ensureCreatorProfile } from '@/domains/creator'
-import { buildBotPrompt, findJob } from './presets'
+import { buildBotPrompt, findJob, DEFAULT_TEAM } from './presets'
 import type { NewBotInput, TeamBot } from './types'
 
 /** 표가 아직 DB 에 없을 때(마이그레이션 미적용) 나는 Postgres 오류 번호 */
@@ -160,4 +160,23 @@ export async function getOwnedTeamBotMentor(db: SupabaseClient, userId: string, 
         .maybeSingle()
     if (error || !data) return null
     return (data as unknown as { mentors: Record<string, unknown> | null }).mentors
+}
+
+/**
+ * 처음 팀이 비었으면 기본 3명(기획팀장·홍보팀장·개발팀장)을 만든다. 이미 있으면 그대로 돌려준다.
+ * 두 번 눌러도 3명이 6명이 되지 않게, 만들기 전에 다시 센다.
+ */
+export async function bootstrapDefaultTeam(
+    db: SupabaseClient,
+    user: { id: string; displayName: string },
+): Promise<{ team: TeamBot[]; created: number }> {
+    const existing = await listTeam(db, user.id)
+    if (existing.length > 0) return { team: existing, created: 0 }
+    let created = 0
+    for (const d of DEFAULT_TEAM) {
+        const job = findJob(d.job)
+        await createTeamBot(db, user, { job: d.job, autonomy: 'always_ask', name: d.name, shape: job.shape, color: job.color, role: d.role })
+        created++
+    }
+    return { team: await listTeam(db, user.id), created }
 }

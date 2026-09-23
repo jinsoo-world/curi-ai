@@ -302,8 +302,11 @@ export async function POST(req: Request) {
 
         // 📚 RAG 지식 검색 (멘토별 지식 베이스)
         try {
-            console.log('[Chat RAG] Generating embedding, length:', lastUserMessage.length)
-            const embedding = await generateEmbedding(lastUserMessage)
+            // ⚡ 자료가 하나도 없는 봇은 검색(임베딩 호출)을 건너뛴다 — 첫 글자가 0.3~0.6초 빨라진다 (대표 「너무 느리다」 0923)
+            const { count: sourceCount } = await createAdminClient().from('knowledge_sources').select('id', { count: 'exact', head: true }).eq('mentor_id', mentorId)
+            const hasSources = (sourceCount ?? 0) > 0
+            console.log('[Chat RAG] sources:', sourceCount ?? 0, 'msg length:', lastUserMessage.length)
+            const embedding = hasSources ? await generateEmbedding(lastUserMessage) : []
             console.log('[Chat RAG] Embedding length:', embedding.length)
             if (embedding.length > 0) {
                 // 지식 검색은 admin client로 (knowledge_chunks 는 anon/authenticated 에

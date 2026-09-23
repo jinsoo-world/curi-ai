@@ -164,6 +164,16 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, fac
                 </g>
                 <g className="eye-pos eye-pos-left">{eye(geo.lx, 'left')}</g>
                 <g className="eye-pos eye-pos-right">{eye(geo.rx, 'right')}</g>
+                {/* 🍑 귀여움: 볼터치 2개 + 작은 미소 (대표 0923 「조금 더 귀엽게, 그록봇 느낌 살짝 빼고」). 자는 중·장애일 땐 미소를 감춘다 */}
+                {state !== 'error' && (
+                    <g className="cute" aria-hidden="true">
+                        <circle cx={geo.lx - 4} cy={geo.cy + 12} r="4.6" fill="rgba(255, 128, 150, 0.38)" />
+                        <circle cx={geo.rx + 4} cy={geo.cy + 12} r="4.6" fill="rgba(255, 128, 150, 0.38)" />
+                        {state !== 'sleeping' && (
+                            <path d={`M${50 - 5.5} ${geo.cy + 10.5} q5.5 4.5 11 0`} stroke={eyeColor} strokeWidth="2.2" strokeLinecap="round" fill="none" opacity="0.85" />
+                        )}
+                    </g>
+                )}
 
                 {showsThinkDots(state) && (
                     <g className="dots think">
