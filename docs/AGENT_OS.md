@@ -105,6 +105,20 @@ npm run build          # 빌드
 | 승인 카드 | `src/domains/agent/intent.ts`(규칙) · `permissions.ts`(DB) · `/api/os/chat/draft` · `/api/os/permissions*` | 규칙으로 먼저 보고 애매할 때만 솔라 미니. 허용해도 **여기서 보내지 않는다**. draft_only 봇은 카드도 안 만든다 |
 | 그룹 채팅 | `supabase/migrations/20260925_channels.sql` · `src/domains/os/channels.ts` · `/api/os/channels/*` | 사람 말 한 번에 봇은 **최대 2번**. 봇이 부를 수 있는 건 한 명, 지목당한 봇은 다시 지목 못 한다(안티패턴 ㉟) |
 
+## 9-1. 링크 바로 읽기 + 외부 연결(커넥터) — 2026-09-28 (브랜치 agent/n)
+
+- **링크 바로 읽기** = `src/domains/agent/fetch-url.ts`. 사람이 쓴 말에 주소가 있으면 `/api/chat` 이 그 자리서 열어 읽고(최대 3개) 자료와 **같은 울타리**(`fenceKnowledge`)로 시스템 프롬프트에 넣는다. `usedSources` 에 `{id:'url:…', title}` 로 붙어 답 아래 📎 에 보인다. **읽은 글은 대화 기록에 저장하지 않는다**(이번 답에만 쓰고 버린다).
+  - SSRF 방어 = http/https 만 · 안쪽 주소 차단(localhost·127.·10.·172.16~31.·192.168.·169.254.·::1·`*.supabase.co`·`*.vercel.app`) · **이름을 IP 로 풀어 한 번 더 검사**(DNS 되돌리기) · 리다이렉트 3회까지 **매번 재검사** · 2MB · 8초.
+  - 네이버 블로그는 본문이 iframe 뒤라 `PostView.naver?blogId=…&logNo=…` 로 바꿔 읽는다. 유튜브는 제목·og:description 만(자막 못 읽음).
+  - 못 읽으면 프롬프트에 「그 주소는 못 읽었어요(이유)」를 첫 줄에 밝히라고 못 박는다(지어내지 않게).
+- **읽기 ↔ 넣기 갈래** (`domains/os/settings.ts` `readLocalIntent`) = 「읽어와·요약해·읽고」 → **바로 읽기**(위 기능, null 을 돌려줘 평소 대화 길로 보낸다). 「자료로 넣어·저장·기억·추가」 → **자료 넣기**(기존 `/api/os/knowledge`). 둘 다 있으면 넣기가 이긴다.
+- **커넥터** = `supabase/migrations/20260928_connectors.sql`(`connectors` 표, RLS 본인 행만) · `src/domains/connectors/`.
+  - 열쇠는 **평문 저장 금지**. `CONNECTOR_SECRET_KEY`(32바이트) 로 AES-256-GCM. 환경변수가 없으면 연결 기능이 「준비 중」으로 꺼진다. 만들기 = `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.
+  - 노션(읽기) 도구 `notion_search` · `notion_read_page` → tool-gate **안전 목록**. 대화에서 「노션에서 … 찾아줘」 하면 `/api/chat` 이 상위 3개를 울타리로 넣는다.
+  - 슬랙(보내기) 도구 `slack_post` → tool-gate **되돌릴 수 없는 목록**(`send_message`). 승인 카드 없이는 안 나간다. 지금은 카드 생성까지(「슬랙에 올려줘」는 `intent.ts` 의 `publish` 규칙에 걸려 카드가 뜬다). 허용된 카드를 읽어 실제로 올리는 연결선은 다음 차례.
+  - API = `GET/POST/DELETE /api/os/connectors` · `POST /api/os/connectors/[id]/test`(분당 5회). 화면 = `src/components/os/ConnectorsPanel.tsx` → `/os/settings` 「연결」 칸.
+  - 카톡·인스타·큐리어스 본체는 칸만 있고 「준비 중」. 무엇이 필요하고 며칠 걸리는지 = `docs/connectors/외부연결_계획.md`.
+
 ## 8. 변경 이력
 
 - 2026-09-23 · 솔라 드라이버(`domains/llm`) + `chat/stream.ts` 되돌아가기 · 표 4개 마이그레이션 · 다크 토큰 `[data-theme="os"]` · 이 문서.

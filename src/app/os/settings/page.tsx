@@ -10,6 +10,7 @@ import { getCreditBalance } from '@/domains/credit'
 import { FONT_LABELS, FONT_SIZES, OS_TIMEZONE, applyFontSize, readFontSize, saveFontSize, type FontSize } from '@/domains/os/settings'
 import { isLowClover } from '@/domains/credit/charge-flow'
 import NotificationSettings from '@/components/os/NotificationSettings'
+import ConnectorsPanel from '@/components/os/ConnectorsPanel'
 
 export default function OsSettingsPage() {
     const router = useRouter()
@@ -91,6 +92,9 @@ export default function OsSettingsPage() {
                 </div>
                 <div className="os-set-sub" style={{ marginTop: 8 }}>지금은 끌 수 없어요. 나중에 열려요.</div>
             </div>
+
+            <h2>연결</h2>
+            <ConnectorsPanel />
 
             <h2>알림</h2>
             <NotificationSettings />

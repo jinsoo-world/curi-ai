@@ -99,12 +99,19 @@ describe('여러 개 고르는 칩', () => {
 
 describe('서버에 묻기 전에 알아채는 규칙', () => {
     it('주소 + 넣어 달라는 말이면 자료로 넣는다', () => {
-        expect(readLocalIntent('https://curious-500.com/글 이거 읽어줘')).toEqual({ kind: 'knowledge', url: 'https://curious-500.com/글' })
+        expect(readLocalIntent('https://curious-500.com/글 이거 자료로 넣어줘')).toEqual({ kind: 'knowledge', url: 'https://curious-500.com/글' })
         expect(readLocalIntent('이 링크 저장해 http://example.com/a?b=1')).toEqual({ kind: 'knowledge', url: 'http://example.com/a?b=1' })
     })
 
     it('문장 끝 마침표·닫는 괄호는 주소에서 뗀다', () => {
         expect(readLocalIntent('https://example.com/글. 기억해 줘')).toEqual({ kind: 'knowledge', url: 'https://example.com/글' })
+    })
+
+    it('「읽어와·요약해」는 자료로 넣지 않는다 — 바로 읽기는 /api/chat 이 한다', () => {
+        expect(readLocalIntent('https://curious-500.com/글 이거 읽어줘')).toBeNull()
+        expect(readLocalIntent('https://example.com 읽고 요약해 줘')).toBeNull()
+        // 읽어서 넣어 달라고 하면 넣기가 이긴다
+        expect(readLocalIntent('https://example.com 읽고 자료에 넣어줘')).toEqual({ kind: 'knowledge', url: 'https://example.com' })
     })
 
     it('주소만 있고 넣어 달라는 말이 없으면 평소대로 봇에게 물어본다', () => {

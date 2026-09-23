@@ -12,6 +12,8 @@ import { getOwnedTeamBotMentor } from '@/domains/os'
 import { readUsage } from '@/domains/os/usage-db'
 import { untilText, kstDayHourText } from '@/domains/os/usage'
 import { findSourcesOfChunks } from '@/domains/os/knowledge'
+import { fetchUrlsForChat } from '@/domains/agent/fetch-url'
+import { findConnector, markConnector, notionSearch, readConnectorSecret } from '@/domains/connectors'
 import { CREDIT_CONSTANTS } from '@/domains/credit/types'
 import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
 
@@ -386,6 +388,57 @@ export async function POST(req: Request) {
         } catch (ragErr) {
             console.error('[Chat RAG] Error:', ragErr instanceof Error ? ragErr.message : ragErr)
             // RAG 검색 실패는 대화에 영향 없음 — 지식 없이 일반 대화 진행
+        }
+
+        // 🔗 링크 바로 읽기 — 사람이 방금 쓴 말에 주소가 있으면 그 자리서 열어 읽는다(최대 3개).
+        //    저장하지 않는다(대화 기록에도 안 남는다). 이번 답 한 번에만 쓰고 버린다 = 개인정보가 안 쌓인다.
+        //    🛡 안쪽 주소(localhost·사내망·클라우드 메타데이터·우리 Supabase·우리 배포)는 fetch-url.ts 가 막는다.
+        //    🛡 읽어 온 글은 「명령」이 아니라 「인용」이다 — 자료와 똑같은 울타리를 두른다.
+        try {
+            const 읽은것 = await fetchUrlsForChat(lastUserMessage)
+            if (읽은것.length > 0) {
+                const 성공 = 읽은것.filter((r): r is Extract<typeof r, { ok: true }> => r.ok)
+                const 실패 = 읽은것.filter(r => !r.ok)
+
+                if (성공.length > 0) {
+                    const 울타리 = fenceKnowledge(성공.map(p => `${p.title} (${p.url})\n${p.text}`))
+                    systemPrompt = `[🔗 방금 읽은 링크]\n사용자가 준 주소를 방금 열어 읽었습니다. 아래 글을 근거로 답하세요.\n여기 없는 내용은 지어내지 말고 "그 글에는 없었어요"라고 밝히세요.\n\n${울타리}\n\n${systemPrompt}`
+                    usedSources = [
+                        ...usedSources,
+                        ...성공.map(p => ({ id: `url:${p.url}`, title: p.title })),
+                    ]
+                }
+                if (실패.length > 0) {
+                    const 이유 = 실패.map(f => `- ${f.requestedUrl} → ${f.reason}`).join('\n')
+                    systemPrompt = `[🔗 못 읽은 링크]\n아래 주소는 열지 못했습니다. 답 첫 줄에 "그 주소는 못 읽었어요(이유)"라고 **반드시** 밝히고,\n그 내용을 아는 척하거나 지어내지 마세요.\n${이유}\n\n${systemPrompt}`
+                }
+                console.log('[Chat URL] 읽음:', 성공.length, '못 읽음:', 실패.length)
+            }
+        } catch (urlErr) {
+            console.error('[Chat URL] Error:', urlErr instanceof Error ? urlErr.message : urlErr)
+            // 링크를 못 읽어도 대화는 그대로 간다
+        }
+
+        // 🔌 노션에서 찾아 읽기 — 「노션에서 ○○ 찾아줘」 처럼 노션을 부를 때만.
+        //    붙여 둔 연결이 없으면 아무 일도 안 한다. 읽기만 한다(쓰기 도구는 만들지 않았다).
+        if (user && /노션|notion/i.test(lastUserMessage)) {
+            try {
+                const 연결 = await findConnector(createAdminClient(), user.id, 'notion')
+                if (연결) {
+                    const { secret } = await readConnectorSecret(createAdminClient(), user.id, 연결.id)
+                    const hits = await notionSearch(secret, lastUserMessage.replace(/노션에서?|notion/gi, '').trim())
+                    await markConnector(createAdminClient(), user.id, 연결.id, 'connected')
+                    if (hits.length > 0) {
+                        const 울타리 = fenceKnowledge(hits.map(h => `${h.title}\n${h.text || '(본문을 읽지 못했어요 — 노션에서 이 문서를 통합에 공유해 주세요)'}`))
+                        systemPrompt = `[🔌 내 노션에서 찾은 문서]\n사용자의 노션에서 찾은 문서입니다. 아래 내용으로만 답하세요.\n\n${울타리}\n\n${systemPrompt}`
+                        usedSources = [...usedSources, ...hits.map(h => ({ id: `notion:${h.id}`, title: `노션 · ${h.title}` }))]
+                    }
+                    console.log('[Chat Notion] 문서:', hits.length)
+                }
+            } catch (notionErr) {
+                console.error('[Chat Notion] Error:', notionErr instanceof Error ? notionErr.message : notionErr)
+                systemPrompt = `[🔌 노션]\n노션을 열지 못했습니다. 답 첫 줄에 "노션을 읽지 못했어요(설정 → 연결에서 다시 확인해 주세요)"라고 밝히고 내용을 지어내지 마세요.\n\n${systemPrompt}`
+            }
         }
 
         // 📷 사진 첨부 — 우리 저장소에 올려둔 사진을 읽어 Gemini 에 같이 넘긴다.
