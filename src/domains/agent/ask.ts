@@ -10,6 +10,8 @@ export interface AskOptions {
     model?: string
     temperature?: number
     maxTokens?: number
+    /** 짧게 끊고 싶을 때 (사이드 비트 등). 안 주면 솔라 기본 타임아웃 */
+    signal?: AbortSignal
 }
 
 /** 솔라에게 한 번 묻고 답 전체를 문자열로 받는다. 안 되면 null */
@@ -26,6 +28,7 @@ export async function askSolar(
                 model: opts.model ?? SOLAR_MINI_MODEL,
                 temperature: opts.temperature ?? 0,
                 maxTokens: opts.maxTokens ?? 1024,
+                signal: opts.signal,
             },
         )) {
             if (chunk.text) out += chunk.text

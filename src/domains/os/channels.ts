@@ -228,6 +228,8 @@ export interface ChannelBot {
     mentorId: string
     name: string
     systemPrompt: string
+    /** team_bots.one_liner — 한 줄 소개(말투 힌트) */
+    oneLiner: string | null
     shape: string
     color: string
     avatarUrl: string | null
@@ -243,12 +245,12 @@ export async function getChannelBots(
     if (mentorIds.length === 0) return []
     const { data, error } = await db
         .from('team_bots')
-        .select('mentor_id, shape, color, mentors(name, system_prompt, avatar_url)')
+        .select('mentor_id, shape, color, one_liner, mentors(name, system_prompt, avatar_url)')
         .eq('user_id', userId)
         .in('mentor_id', mentorIds)
     if (error) throw wrap(error)
     const rows = (data ?? []) as unknown as {
-        mentor_id: string; shape: string; color: string
+        mentor_id: string; shape: string; color: string; one_liner: string | null
         mentors: { name: string; system_prompt: string | null; avatar_url: string | null } | null
     }[]
     const byId = new Map(rows.map(r => [r.mentor_id, r]))
@@ -260,6 +262,7 @@ export async function getChannelBots(
             mentorId: r.mentor_id,
             name: r.mentors?.name ?? '이름 없는 봇',
             systemPrompt: r.mentors?.system_prompt ?? '',
+            oneLiner: r.one_liner ?? null,
             shape: r.shape, color: r.color,
             avatarUrl: r.mentors?.avatar_url ?? null,
         }]
