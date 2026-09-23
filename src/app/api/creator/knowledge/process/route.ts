@@ -258,7 +258,7 @@ export async function POST(req: NextRequest) {
             try {
                 const mod = await import('xlsx')
                 // CJS/ESM 섞이면 default 에만 실리는 경우가 있어 둘 다 본다
-                const XLSX = (mod as { default?: typeof mod }).default ?? mod
+                const XLSX = (mod as unknown as { default?: typeof import('xlsx') }).default ?? mod
                 const buffer = Buffer.from(await fileData.arrayBuffer())
                 const wb = XLSX.read(buffer, { type: 'buffer' })
                 const 조각: string[] = []
