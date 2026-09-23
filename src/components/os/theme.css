@@ -1,0 +1,30 @@
+/* 화면 모드 3단계 (A11): 시스템 따르기 / 라이트 / 다크.
+   다크 = globals.css [data-theme="os"] 의 지금 값 그대로(기본).
+   라이트 = 여기서 같은 이름의 --os- 토큰만 밝은 값으로 덮어쓴다. 화면 파일은 토큰만 쓰므로 그대로 따라온다.
+   data-theme="light|dark" 는 os/layout.tsx 의 감싸는 칸(data-os-root)에 붙는다(첫 그림 전 스크립트 + LocaleProvider).
+   .os-shell 등 안쪽 요소가 data-theme="os" 를 따로 가지므로 「light 안의 os」 꼴로 더 좁게 잡는다.
+   단추 초록(#03C124)은 라이트에서도 그대로. 캐릭터 색 8종과 움직임 시간은 모드와 무관해 건드리지 않는다. */
+
+[data-theme="light"] [data-theme="os"] {
+    --os-바탕     : #FFFFFF;   /* 창 배경. 흰색 */
+    --os-패널     : #F5F5F7;   /* 왼쪽 명단, 오른쪽 세부칸 */
+    --os-말풍선   : #EFEFF2;   /* 봇 말풍선, 입력창, 카드 */
+    --os-말풍선-내: #E2E2E7;   /* 내 말풍선 (봇보다 한 톤 진하게) */
+    --os-선       : #E0E0E4;
+    --os-글       : #111114;
+    --os-글-연    : #4A4A50;
+    --os-글-흐림  : #7C7C83;
+    --os-포인트   : #1F6FEB;   /* 진행바, 링크 */
+    --os-클로버   : #03C124;   /* 우리 상징. 단추 초록 유지 */
+    --os-승인     : #E5B800;   /* 승인 기다림 배지 (흰 바탕에서 읽히게 조금 어둡게) */
+    --os-경고     : #E07B00;
+    --os-오류     : #D93025;
+
+    background: var(--os-바탕);
+    color: var(--os-글);
+}
+
+/* 라이트에서 흰 손잡이가 트랙과 겹쳐 보이지 않게 테두리 한 줄 */
+[data-theme="light"] .os-ios-switch > span { box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
+/* 어두운 반투명 배경 뒤가 흰색이면 너무 밝아 조금 더 진하게 */
+[data-theme="light"] .os-sheet-back { background: rgba(0, 0, 0, .4); }
