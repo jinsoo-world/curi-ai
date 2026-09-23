@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="인스타그램">
+  <defs>
+    <radialGradient id="ig" cx="30%" cy="107%" r="150%">
+      <stop offset="0" stop-color="#FDF497"/>
+      <stop offset="0.05" stop-color="#FDF497"/>
+      <stop offset="0.45" stop-color="#FD5949"/>
+      <stop offset="0.6" stop-color="#D6249F"/>
+      <stop offset="0.9" stop-color="#285AEB"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#ig)"/>
+  <rect x="13" y="13" width="38" height="38" rx="11" fill="none" stroke="#FFFFFF" stroke-width="4.5"/>
+  <circle cx="32" cy="32" r="9" fill="none" stroke="#FFFFFF" stroke-width="4.5"/>
+  <circle cx="43.5" cy="20.5" r="2.7" fill="#FFFFFF"/>
+</svg>

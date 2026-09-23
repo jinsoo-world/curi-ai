@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
     FONT_KEY, SIGNUP_CLOVERS,
-    applyFontSize, cleanFontSize, cloverBarView, readFontSize, readLocalIntent, saveFontSize, toggleChip,
+    applyFontSize, cleanFontSize, cloverBarView, readFontSize, readLocalIntent, saveFontSize, splitUrls, toggleChip,
 } from '../settings'
 
 /** 저장이 되는 가짜 브라우저 창고 */
@@ -125,5 +125,36 @@ describe('서버에 묻기 전에 알아채는 규칙', () => {
         expect(readLocalIntent('단톡방 만들 수 있어?')).toEqual({ kind: 'group' })
         // 주소를 넣어 달라는 말이 먼저다 (가로채지 않는다)
         expect(readLocalIntent('https://example.com 그룹 자료로 추가해')).toEqual({ kind: 'knowledge', url: 'https://example.com' })
+    })
+})
+
+describe('글자 배율 변수', () => {
+    it('크게, 작게는 --os-font-scale 을 붙이고 보통은 뗀다', () => {
+        const 변수: Record<string, string> = {}
+        const root = {
+            dataset: {} as Record<string, string | undefined>,
+            style: { setProperty: (k: string, v: string) => { 변수[k] = v }, removeProperty: (k: string) => { delete 변수[k] } },
+        }
+        applyFontSize(root, 'large')
+        expect(변수['--os-font-scale']).toBe('1.15')
+        applyFontSize(root, 'small')
+        expect(변수['--os-font-scale']).toBe('0.92')
+        applyFontSize(root, 'normal')
+        expect('--os-font-scale' in 변수).toBe(false)
+    })
+})
+
+describe('splitUrls — 붙여 넣은 글에서 주소 여러 개 나누기', () => {
+    it('줄바꿈, 빈칸, 쉼표로 나눈다', () => {
+        expect(splitUrls('https://a.com/1\nhttps://youtu.be/x, https://b.com/2 ')).toEqual([
+            'https://a.com/1', 'https://youtu.be/x', 'https://b.com/2',
+        ])
+    })
+    it('같은 주소는 한 번만, 끝 마침표는 뗀다', () => {
+        expect(splitUrls('https://a.com/1. https://a.com/1')).toEqual(['https://a.com/1'])
+    })
+    it('주소가 없으면 빈 목록', () => {
+        expect(splitUrls('')).toEqual([])
+        expect(splitUrls('그냥 글')).toEqual([])
     })
 })
