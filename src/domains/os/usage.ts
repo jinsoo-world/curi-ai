@@ -80,3 +80,64 @@ export function usageLine(v: { pct5h: number; resetAt5h: Date | null; pctWeek: n
     const reset = v.resetAt5h ? `${untilText(v.resetAt5h, v.now)} 재설정` : '아직 안 씀'
     return `사용 한도 ${v.pct5h}% / ${reset} / 주간 ${v.pctWeek}% / ${kstDayHourText(v.weekResetAt)} 초기화`
 }
+
+// ── 원형 게이지 + 사용량 모달 (대표 지시 0923: 「클로드코드처럼 원형으로, 누르면 모달로 사용량(클로버)」) ──
+
+export type UsageTone = 'ok' | 'warn' | 'full'
+
+/** 색 단계: 80% 미만 초록, 80% 이상 노랑, 100% 빨강 */
+export function usageTone(pct: number): UsageTone {
+    if (pct >= 100) return 'full'
+    if (pct >= 80) return 'warn'
+    return 'ok'
+}
+
+/** 원형 게이지 단추가 읽어 주는 글자 */
+export function ringLabel(pct: number): string {
+    return `사용 한도 ${pct}%, 누르면 자세히`
+}
+
+/** 1000 → 「1,000」 */
+export function withComma(n: number): string {
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
+/** JSON 으로 건너오면 Date 가 문자열이 된다. 둘 다 받는다 */
+export interface UsageLike {
+    used5h: number; limit5h: number; pct5h: number
+    resetAt5h: Date | string | null
+    usedWeek: number; limitWeek: number; pctWeek: number
+    weekResetAt: Date | string
+    blocked: boolean
+}
+
+export interface UsageDetail {
+    fiveHourText: string     // 「12% 썼어요 (100번 중 12번)」
+    fiveHourReset: string    // 「4시간 12분 후 다시 채워져요」 / 「아직 안 썼어요」
+    weekText: string         // 「3% (1,000번 중 30번)」
+    weekReset: string        // 「(월) 0시에 초기화」
+    blockedText: string | null // 막혔을 때만. 「지금은 한도에 닿았어요. N 후 다시 쓸 수 있어요」
+}
+
+function toDate(d: Date | string | null): Date | null {
+    if (d === null) return null
+    return d instanceof Date ? d : new Date(d)
+}
+
+/** 모달 안 글자. 분모(한도)를 반드시 같이 쓴다 */
+export function usageDetail(v: UsageLike, now: Date): UsageDetail {
+    const resetAt5h = toDate(v.resetAt5h)
+    const weekResetAt = toDate(v.weekResetAt) as Date
+    let blockedText: string | null = null
+    if (v.blocked) {
+        const at = v.used5h >= v.limit5h && resetAt5h ? resetAt5h : weekResetAt
+        blockedText = `지금은 한도에 닿았어요. ${untilText(at, now)} 다시 쓸 수 있어요`
+    }
+    return {
+        fiveHourText: `${v.pct5h}% 썼어요 (${withComma(v.limit5h)}번 중 ${withComma(v.used5h)}번)`,
+        fiveHourReset: resetAt5h ? `${untilText(resetAt5h, now)} 다시 채워져요` : '아직 안 썼어요',
+        weekText: `${v.pctWeek}% (${withComma(v.limitWeek)}번 중 ${withComma(v.usedWeek)}번)`,
+        weekReset: `${kstDayHourText(weekResetAt)}에 초기화`,
+        blockedText,
+    }
+}
