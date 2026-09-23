@@ -12,7 +12,7 @@ export default function GuestRoster() {
             className="os-row-btn"
             style={{ gridColumn: '1 / -1', textDecoration: 'none', justifyContent: 'center' }}
         >
-            리더들이 만든 봇 더 보기 → /os/market
+            리더들이 만든 봇 더 보기 →
         </Link>
     )
 }
