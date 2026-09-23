@@ -42,8 +42,9 @@ const 칸들: 칸[] = [
         icon: (<svg width="22" height="22" viewBox="0 0 24 24" {...선}><rect x="3" y="5" width="18" height="15" rx="3" /><circle cx="12" cy="12.5" r="3.5" /><path d="M8 5l1.2-2h5.6L16 5" /></svg>),
     },
     {
-        label: '채팅', href: '/chats',
-        match: (p) => p.startsWith('/chats') || p.startsWith('/chat/'),
+        // 대표 지시 0923 「채팅 탭은 프로그램(내 봇 팀, /os)으로 연동되게 통일」
+        label: '내 봇 팀', href: '/os',
+        match: (p) => p === '/os' || p.startsWith('/os/') || p.startsWith('/chats') || p.startsWith('/chat/'),
         icon: (<svg width="22" height="22" viewBox="0 0 24 24" {...선}><path d="M21 12a8 8 0 0 1-8 8H7l-4 3V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z" /></svg>),
     },
 ]

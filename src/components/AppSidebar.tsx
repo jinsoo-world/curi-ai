@@ -28,7 +28,8 @@ const 메뉴 = [
     { label: '발견', href: '/mentors' },
     { label: 'AI 만들기', href: '/creator/create' },
     { label: '프로필 사진', href: '/tools' },
-    { label: '채팅', href: '/chats' },
+    // 대표 지시 0923 「채팅 탭은 프로그램(내 봇 팀, /os)으로 연동되게 통일」. /chats 는 /os 로 넘긴다(next.config)
+    { label: '내 봇 팀', href: '/os' },
 ]
 
 export default function AppSidebar() {
@@ -130,9 +131,10 @@ export default function AppSidebar() {
         <header className="app-top">
             <div className="app-top-inner">
                 {/* 왼쪽 — 이름표 */}
-                <Link href="/" className="app-top-logo" aria-label="큐리 AI 홈">
-                    <Image src="/logo.png" alt="" width={30} height={30} style={{ borderRadius: 9 }} />
-                    <span>큐리 AI</span>
+                <Link href="/" className="app-top-logo" aria-label="큐리AI 홈">
+                    {/* 로고 = PWA 아이콘의 클로버 얼굴 하나로 통일 (대표 지시 0923). 파비콘도 같은 그림 */}
+                    <Image src="/icons/curi-192.png" alt="" width={32} height={32} style={{ borderRadius: 9 }} />
+                    <span>큐리AI</span>
                 </Link>
 
                 {/* 가운데 — 메뉴 (넓은 화면에서만) */}
@@ -150,10 +152,11 @@ export default function AppSidebar() {
 
                 {/* 오른쪽 — 남은 개수와 나 */}
                 <div className="app-top-right">
-                    <Link data-guide="guide-clover" href="/charge" className="app-top-credit" aria-label="클로버 충전하기">
+                    {/* 「충전」 → 「요금제」 (대표 확정 0923: 구독 무료/29,000/99,000 + 클로버 충전은 부가) */}
+                    <Link data-guide="guide-clover" href="/os/charge" className="app-top-credit" aria-label="요금제 보기">
                         <CloverIcon size={34} />
                         <CloverCount 값={잔액} />
-                        <span className="app-top-credit-plus">충전</span>
+                        <span className="app-top-credit-plus">요금제</span>
                     </Link>
 
                     <button
@@ -194,7 +197,7 @@ export default function AppSidebar() {
                             >
                                 {로그인함 ? (이름 ?? '내 계정') : '로그인하기'}
                             </Link>
-                            <Link href="/charge" className="app-top-sheet-credit">
+                            <Link href="/os/charge" className="app-top-sheet-credit">
                                 <CloverIcon size={15} />
                                 {잔액 === null ? '-' : 잔액.toLocaleString()}개
                             </Link>
@@ -227,7 +230,7 @@ export default function AppSidebar() {
                             <>
                                 <Link href="/creator/manage" className="app-top-sheet-item">내 AI</Link>
                                 <Link href="/invite" className="app-top-sheet-item">친구초대</Link>
-                                <Link href="/charge" className="app-top-sheet-item">클로버 충전</Link>
+                                <Link href="/os/charge" className="app-top-sheet-item">요금제</Link>
                                 <Link href="/missions" className="app-top-sheet-item">무료로 모으기</Link>
                                 <Link href="/profile" className="app-top-sheet-item">마이페이지</Link>
                                 <div className="app-top-sheet-line" />
