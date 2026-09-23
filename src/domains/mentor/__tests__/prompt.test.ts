@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildGeminiHistory } from '../prompt'
+import { buildGeminiHistory, buildSystemPrompt } from '../prompt'
 
 describe('buildGeminiHistory — 사진 첨부', () => {
     const 인사말 = '안녕하세요!'
@@ -76,5 +76,41 @@ describe('buildGeminiHistory — 사진만 보낸 과거 메시지', () => {
             { role: 'assistant', content: '' },
         ])
         expect(결과[3]).toEqual({ role: 'model', parts: [{ text: '(내용 없음)' }] })
+    })
+})
+
+describe('buildSystemPrompt — 봇 자기소개 (멘토 금지)', () => {
+    const base = {
+        system_prompt: '친절하게 답하세요.',
+        greeting_message: '안녕!',
+    }
+
+    it('거절 문구에 「멘토」를 쓰지 않고 봇 이름을 쓴다', () => {
+        const prompt = buildSystemPrompt({ ...base, name: '개발팀장' })
+        expect(prompt).toContain('저는 개발팀장으로서 대화하는 게 제 역할이에요')
+        expect(prompt).not.toContain('멘토로서')
+        expect(prompt).not.toContain('저는 멘토')
+    })
+
+    it('이름 없으면 AI 봇으로서로 거절한다', () => {
+        const prompt = buildSystemPrompt(base)
+        expect(prompt).toContain('저는 AI 봇으로서 대화하는 게 제 역할이에요')
+        expect(prompt).not.toContain('멘토로서')
+    })
+
+    it('주입 라벨에 멘토/멘티 대신 봇/사람을 쓴다', () => {
+        const prompt = buildSystemPrompt({
+            ...base,
+            name: '글감봇',
+            style_template: {
+                examples: [{ mentee: '힘들어요', mentor: '천천히 가요' }],
+            },
+        })
+        expect(prompt).toContain('[봇 스타일 가이드]')
+        expect(prompt).toContain('사람: "힘들어요"')
+        expect(prompt).toContain('봇: "천천히 가요"')
+        expect(prompt).not.toContain('[멘토 스타일 가이드]')
+        expect(prompt).not.toContain('멘티:')
+        expect(prompt).not.toMatch(/멘토:/)
     })
 })

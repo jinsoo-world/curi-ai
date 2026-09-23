@@ -1,11 +1,19 @@
 // domains/os — 답 기다리는 동안 보여주는 작업 표지 (그록식 짧은 상태 줄)
 // 가짜 도구/커넥터 이름은 쓰지 않는다. 제품 카피: 가운뎃점(·)·긴 줄표(—) 금지.
 
-export type WorkingStatusKind = 'preparing' | 'thinking' | 'working' | 'reading'
+export type WorkingStatusKind =
+    | 'preparing'
+    | 'thinking'
+    | 'searching'
+    | 'working'
+    | 'connecting'
+    | 'executing'
+    | 'reading'
 
 export interface WorkingStatus {
     kind: WorkingStatusKind
     text: string
+    /** 작업 중이면 항상 오로라 (그록식 그라데이션) */
     aurora: boolean
 }
 
@@ -20,11 +28,14 @@ export function workingStatusPhases(opts: WorkingStatusOpts = {}): WorkingStatus
     const name = (opts.botName ?? '').trim()
     const phases: WorkingStatus[] = [
         { kind: 'preparing', text: '답장 준비 중', aurora: true },
-        { kind: 'thinking', text: '생각 중', aurora: false },
-        { kind: 'working', text: name ? `${name} 작업 중` : '작업 중', aurora: false },
+        { kind: 'thinking', text: '생각 중', aurora: true },
+        { kind: 'searching', text: '찾아보는 중', aurora: true },
+        { kind: 'working', text: name ? `${name} 작업 중` : '작업 중', aurora: true },
+        { kind: 'connecting', text: name ? `${name}에 연결 중` : '연결 중', aurora: true },
+        { kind: 'executing', text: name ? `${name} 실행 중` : '실행 중', aurora: true },
     ]
     if (opts.hasFiles) {
-        phases.push({ kind: 'reading', text: '파일을 읽는 중', aurora: false })
+        phases.push({ kind: 'reading', text: '파일을 읽는 중', aurora: true })
     }
     return phases
 }

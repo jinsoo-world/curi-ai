@@ -1,5 +1,5 @@
 'use client'
-// 답 기다리는 동안: 작은 아바타 + 회전 상태 문구 (그록식). 오로라는 「답장 준비 중」.
+// 답 기다리는 동안: 작은 아바타(360°/3D) + 회전 상태 문구 + 오로라 (그록식).
 
 import { useEffect, useState, type ReactNode } from 'react'
 import { pickWorkingStatus, type WorkingStatusOpts } from '@/domains/os/working-status'
@@ -19,13 +19,13 @@ export default function WorkingStatusLine({ avatar, botName, hasFiles, className
     const status = pickWorkingStatus(elapsed, { botName, hasFiles })
     return (
         <div
-            className={`os-working-row${status.aurora ? ' os-working-row--aurora' : ''}${className ? ` ${className}` : ''}`}
+            className={`os-working-row os-working-row--aurora${className ? ` ${className}` : ''}`}
             aria-live="polite"
             aria-atomic="true"
             role="status"
         >
-            {avatar}
-            <span className={status.aurora ? 'os-aurora-text' : 'os-working-text'}>{status.text}</span>
+            {avatar ? <span className="os-working-avatar">{avatar}</span> : null}
+            <span className="os-aurora-text">{status.text}</span>
         </div>
     )
 }

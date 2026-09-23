@@ -106,7 +106,7 @@
 /* 그룹방 작업 중 표지 */
 .os-working { color: var(--os-글-연); opacity: .85; }
 
-/* 그록식 작업 상태 줄 (아바타 + 짧은 문구) */
+/* 그록식 작업 상태 줄 (아바타 360/3D + 오로라 문구) */
 .os-working-row {
     display: flex; align-items: center; gap: 8px;
     margin: 4px 0 6px 6px; min-height: 28px;
@@ -140,8 +140,53 @@
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
 }
+
+/* 아바타: 연속 rotateY 360 + 살짝 스케일 (3D 느낌), 뒤 오로라 글로우 */
+.os-working-avatar {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    perspective: 640px;
+    width: 28px; height: 28px;
+}
+.os-working-avatar::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%,
+        rgba(255, 107, 203, 0.55),
+        rgba(167, 139, 250, 0.35) 45%,
+        rgba(34, 211, 238, 0.2) 70%,
+        transparent 78%);
+    filter: blur(3px);
+    animation: os-working-glow 2.4s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+.os-working-avatar > * {
+    position: relative;
+    z-index: 1;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+    animation: os-working-face-spin 2.6s linear infinite;
+    will-change: transform;
+}
+@keyframes os-working-face-spin {
+    0%   { transform: rotateY(0deg) scale(1); }
+    40%  { transform: rotateY(180deg) scale(1.07); }
+    100% { transform: rotateY(360deg) scale(1); }
+}
+@keyframes os-working-glow {
+    0%, 100% { opacity: 0.55; transform: scale(0.92); }
+    50%      { opacity: 1; transform: scale(1.08); }
+}
 @media (prefers-reduced-motion: reduce) {
     .os-aurora-text { animation: none; background-position: 40% 50%; }
+    .os-working-avatar > * { animation: none; }
+    .os-working-avatar::before { animation: none; opacity: 0.7; }
 }
 
 /* 그록식 OG 링크 미리보기 가로 카드 */
