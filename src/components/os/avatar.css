@@ -5,8 +5,17 @@
 .bot-avatar {
     position: relative; display: inline-block; line-height: 0; flex: none;
     --배지: 18px; --얼굴: 28px; --말함-주기: 500ms;
+    /* 눈테·눈동자·입 테두리 색 고정(대표 확정 0923 오후 「캐릭터는 라이트·다크 어느 모드든 픽셀 단위로 같아야」).
+       BotAvatar.tsx 는 이 자리를 var(--os-바탕) 으로 그리는데, 라이트에서 --os-바탕 이 흰색이 되어 흰 눈 위에서 사라진다.
+       고칠 자리가 BotAvatar.tsx 안이라 이 배치 담당 밖이지만, 색은 CSS 로도 다시 덮을 수 있어 여기서 항상 어둡게 고정한다 */
+    --눈동자: #0B0B0C;
 }
 .bot-avatar svg { display: block; overflow: visible; }
+.bot-avatar .eye > circle { stroke: var(--눈동자); }
+.bot-avatar .pupil circle:first-child { fill: var(--눈동자); }
+.bot-avatar .lid rect:last-child { fill: var(--눈동자); }
+.bot-avatar .mouth { stroke: var(--눈동자); }
+.bot-avatar .eye:is(path, rect) { fill: var(--눈동자); stroke: var(--눈동자); }
 
 /* 몸: 가운데(50,50) 기준으로 늘고 줄고 흔들린다 */
 .bot-avatar .body { transform-origin: 50px 50px; transition: transform 300ms ease; }

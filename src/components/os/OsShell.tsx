@@ -45,14 +45,15 @@ interface TeamState {
 
 
 /**
- * 시연 모드 (/os?demo=1) = 표(team_bots)가 아직 없어도 격자, 캐릭터, 대화를 볼 수 있게
- * 공개 봇 4개를 팀처럼 보여준다(기본 팀도 4명이라 격자가 2×2 로 같다). 대화는 진짜 /api/chat(공개 봇)로 간다. 저장은 안 한다.
+ * 시연 모드 (/os?demo=1, 그리고 이제 손님 기본) = 표(team_bots)가 아직 없어도 격자, 캐릭터, 대화를 볼 수 있게
+ * 기본 팀과 같은 4명(기획팀장/홍보팀장/개발팀장/조사팀장)을 그대로 보여준다(기본 팀도 4명이라 격자가 2×2 로 같다).
+ * 대화는 진짜 /api/chat(공개 봇)로 간다. 저장은 안 한다. mentorId 4개는 바뀌지 않는다 — 이름, 소개만 기본 팀과 맞췄다.
  */
 const DEMO_TEAM: TeamBot[] = [
-    { id: 'demo-1', mentorId: '118bef35-26bc-4118-a446-aa96e977f9ee', name: '오재현', role: 'chief', shape: 'clover', color: 'green', oneLiner: '얼굴 안 나와도 영상은 됩니다', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 0, avatarUrl: null, greeting: '안녕하세요, 오재현입니다. 유튜브 이야기라면 무엇이든 물어보세요.', knowledgeCount: 0, createdAt: '' },
-    { id: 'demo-2', mentorId: '20728d0a-2aed-4c4c-bc48-f26be076d0bc', name: '임보라', role: 'helper', shape: 'circle', color: 'orange', oneLiner: '하루 세 줄로 시작해요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 1, avatarUrl: null, greeting: '안녕하세요, 임보라예요. 스레드 글, 오늘 세 줄부터 써 볼까요?', knowledgeCount: 0, createdAt: '' },
-    { id: 'demo-3', mentorId: '264ae26a-1b77-489c-abbd-9662b0b42e4c', name: '유선희', role: 'helper', shape: 'hex', color: 'blue', oneLiner: '내 경험을 한 권으로 묶어요', approvalMode: 'draft_only', pinned: true, hidden: false, sortOrder: 2, avatarUrl: null, greeting: '안녕하세요, 유선희입니다. 어떤 경험을 책으로 묶고 싶으세요?', knowledgeCount: 0, createdAt: '' },
-    { id: 'demo-4', mentorId: '509c022f-17aa-4f1a-8c86-6b8acfc8d170', name: '서유경', role: 'helper', shape: 'square', color: 'teal', oneLiner: '사진 한 장이면 충분해요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 3, avatarUrl: null, greeting: '안녕하세요, 서유경이에요. 사진 한 장으로 무엇을 만들어 볼까요?', knowledgeCount: 0, createdAt: '' },
+    { id: 'demo-1', mentorId: '118bef35-26bc-4118-a446-aa96e977f9ee', name: '기획팀장', role: 'helper', shape: 'clover', color: 'green', oneLiner: '방향을 잡고 결정거리를 가져와요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 0, avatarUrl: null, greeting: '안녕하세요, 기획팀장이에요. 이번 주 뭐부터 할지 같이 정리해 볼까요?', knowledgeCount: 0, createdAt: '' },
+    { id: 'demo-2', mentorId: '20728d0a-2aed-4c4c-bc48-f26be076d0bc', name: '홍보팀장', role: 'helper', shape: 'circle', color: 'orange', oneLiner: '알리는 글과 답장 초안을 써요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 1, avatarUrl: null, greeting: '안녕하세요, 홍보팀장이에요. 다음 강의 알리는 글부터 써 드릴까요?', knowledgeCount: 0, createdAt: '' },
+    { id: 'demo-3', mentorId: '264ae26a-1b77-489c-abbd-9662b0b42e4c', name: '개발팀장', role: 'helper', shape: 'hex', color: 'blue', oneLiner: '도구와 반복 일을 정리해요', approvalMode: 'draft_only', pinned: true, hidden: false, sortOrder: 2, avatarUrl: null, greeting: '안녕하세요, 개발팀장이에요. 매주 반복하는 일 중에 자동화할 것부터 찾아 드릴게요.', knowledgeCount: 0, createdAt: '' },
+    { id: 'demo-4', mentorId: '509c022f-17aa-4f1a-8c86-6b8acfc8d170', name: '조사팀장', role: 'helper', shape: 'drop', color: 'yellow', oneLiner: '자료를 찾고 근거를 모아요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 3, avatarUrl: null, greeting: '안녕하세요, 조사팀장이에요. 궁금한 것 있으면 자료랑 출처까지 찾아 드릴게요.', knowledgeCount: 0, createdAt: '' },
 ]
 
 const Ctx = createContext<TeamState | null>(null)
@@ -95,8 +96,10 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
         try {
             const res = await fetch('/api/os/team', { cache: 'no-store' })
             const data = await res.json()
-            setTeam(Array.isArray(data.team) ? data.team : [])
-            setGuest(!!data.guest)
+            const isGuest = !!data.guest
+            // 손님(로그인 전)은 팀이 없어서 늘 team=[] 이 온다 — 시연 팀 4명을 기본으로 보여준다(대표 지시 0923 「비회원도 격자, 시연 대화」)
+            setTeam(isGuest ? DEMO_TEAM : (Array.isArray(data.team) ? data.team : []))
+            setGuest(isGuest)
             setTableMissing(!!data.tableMissing)
         } catch {
             setTeam([])
@@ -302,7 +305,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                         )}
                         {!loading && guest && (
                             <div style={{ gridColumn: '1 / -1', color: 'var(--os-글-흐림)', fontSize: 14, padding: '20px 8px', textAlign: 'center', lineHeight: 1.6 }}>
-                                로그인하면 내 봇 팀이 여기 모여요.
+                                지금은 둘러보기예요. 자료 올리기, 루틴, 편집은 로그인하면 할 수 있어요.
                             </div>
                         )}
                         {!loading && guest && <GuestRoster />}

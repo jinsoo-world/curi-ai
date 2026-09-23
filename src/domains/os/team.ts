@@ -182,7 +182,7 @@ export async function getOwnedTeamBotMentor(db: SupabaseClient, userId: string, 
 }
 
 /**
- * 처음 팀이 비었으면 기본 봇(DEFAULT_TEAM = 기획팀장, 홍보팀장, 개발팀장 + 비서실장)을 만든다.
+ * 처음 팀이 비었으면 기본 봇(DEFAULT_TEAM = 기획팀장, 홍보팀장, 개발팀장, 조사팀장)을 만든다.
  * 봇이 하나라도 있으면(옛 3명 계정 포함) 아무것도 보태지 않고 그대로 돌려준다 = 대표 계정이 헷갈리지 않게.
  * 두 번 눌러도 늘어나지 않게, 만들기 전에 다시 센다.
  */
