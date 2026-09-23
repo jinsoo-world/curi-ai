@@ -284,6 +284,17 @@ export async function classifyBotKind(
     return 'public'
 }
 
+/** 이 봇에 자료가 하나라도 있나. 못 세면 true(Strict 유지 쪽이 아니라 원래 설정을 따른다) */
+export async function botHasKnowledge(db: SupabaseClient, mentorId: string): Promise<boolean> {
+    try {
+        const { count, error } = await db.from('knowledge_sources').select('id', { count: 'exact', head: true }).eq('mentor_id', mentorId)
+        if (error) return true
+        return (count ?? 0) > 0
+    } catch {
+        return true
+    }
+}
+
 /** bot_response_settings 한 줄 읽기. 표가 아직 없으면(마이그레이션 전) null (기본값으로 동작) */
 export async function fetchResponseSettingsRow(db: SupabaseClient, mentorId: string): Promise<ResponseSettingsRow | null> {
     const { data, error } = await db.from('bot_response_settings').select('*').eq('mentor_id', mentorId).maybeSingle()
@@ -306,7 +317,12 @@ export async function loadResponseSettingsForChat(
 ): Promise<ResolvedResponseSettings> {
     const kind = await classifyBotKind(db, mentorId, mentor, userId)
     const row = await fetchResponseSettingsRow(db, mentorId)
-    const settings = mergeResponseSettings(row, kind)
+    let settings = mergeResponseSettings(row, kind)
+    // 자료가 하나도 없는 봇에 Strict 를 걸면 모든 질문에 「모른다」가 나간다(손님 시연 팀장, 자료 안 올린 리더 봇).
+    // Strict 는 「자료가 있는 봇」에서만 켠다. 자료가 없으면 Adaptive 로 답한다.
+    if (settings.creativity === 'strict' && !(await botHasKnowledge(db, mentorId))) {
+        settings = { ...settings, creativity: 'adaptive' }
+    }
     return {
         settings,
         kind,
