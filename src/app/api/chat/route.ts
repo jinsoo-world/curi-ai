@@ -19,6 +19,8 @@ import { findConnector, markConnector, notionSearch, readConnectorSecret } from 
 import { CREDIT_CONSTANTS } from '@/domains/credit/types'
 import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
 import { applySkills, skillsForMentor } from '@/domains/os/skills'
+// 🎛 답변 설정(목적·지침·말투·길이·창의성·출처·안내문·최신성). 트윈·리더 봇(마켓 공개봇)=Strict, 내 팀 봇=Adaptive 기본값 (domains/os/response-settings)
+import { loadResponseSettingsForChat, applyResponseSettingsToPrompt, shouldAnswerFromKnowledge } from '@/domains/os/response-settings'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -307,6 +309,10 @@ export async function POST(req: Request) {
             memories,
         )
 
+        // 🎛 답변 설정 반영 — 목적·추가 지침·말투·길이·창의성·안내문을 프롬프트에 얹는다(domains/os/response-settings)
+        const responseSettings = await loadResponseSettingsForChat(createAdminClient(), mentorId, mentor as { creator_id?: string | null }, user?.id ?? null)
+        systemPrompt = applyResponseSettingsToPrompt(systemPrompt, responseSettings)
+
         // 🧩 사용자가 깃허브에서 내려받아 이 봇에 붙인 스킬(지침 글). 울타리 안에만 들어가고 도구 게이트는 못 넘는다(domains/os/skills)
         if (user) {
             try {
@@ -342,6 +348,8 @@ export async function POST(req: Request) {
         // 🔗 이번 답에서 읽어 본 주소들 — 마지막 조각에 readUrls 로 실어 보낸다(성공/실패 다 포함).
         //    「링크 읽기」 스킬 카드(SkillsPanel)가 이 결과를 화면에 보여 준다. 못 읽었으면 이유를 사람 말로.
         let readUrls: { url: string; title?: string; ok: boolean; reason?: string }[] = []
+        // 🎛 Strict 판정용 — 이번 턴에 찾은 지식 조각(유사도 포함). 자료가 없으면 빈 배열 그대로 남는다.
+        let ragMatches: { content: string; similarity: number }[] = []
 
         // 📚 RAG 지식 검색 (멘토별 지식 베이스)
         try {
@@ -356,6 +364,7 @@ export async function POST(req: Request) {
                 // 테이블 권한이 없어 일반 클라이언트로는 42501 permission denied 가 난다)
                 const knowledge = await matchKnowledge(createAdminClient(), embedding, mentorId)
                 console.log('[Chat RAG] Matched knowledge:', knowledge.length, 'items for mentor:', mentorId)
+                ragMatches = knowledge
                 if (knowledge.length > 0) {
                     // 🛡 자료는 「명령」이 아니라 「인용」이다 (프롬프트 인젝션 방어, 크리밋 기준 0923).
                     // 자료 안에 「이전 지시 무시하고 …」 같은 글이 숨어 있어도 울타리 안의 글은 데이터로만 읽게 한다.
@@ -406,6 +415,21 @@ export async function POST(req: Request) {
         } catch (ragErr) {
             console.error('[Chat RAG] Error:', ragErr instanceof Error ? ragErr.message : ragErr)
             // RAG 검색 실패는 대화에 영향 없음 — 지식 없이 일반 대화 진행
+        }
+
+        // 🎛 Strict 인데 자료가 없거나 관련도가 낮으면 — 모델을 부르지 않고 바로 no-answer 문구를 돌려준다(비용 절약 + 지어낸 답 방지)
+        if (!shouldAnswerFromKnowledge(responseSettings.settings, ragMatches)) {
+            const encoder = new TextEncoder()
+            const text = responseSettings.noAnswerText
+            const noAnswerStream = new ReadableStream({
+                start(controller) {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text, done: true, fullResponse: text })}\n\n`))
+                    controller.close()
+                },
+            })
+            return new Response(noAnswerStream, {
+                headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
+            })
         }
 
         // 🔗 링크 바로 읽기 — 사람이 방금 쓴 말에 주소가 있으면 그 자리서 열어 읽는다(최대 3개).
@@ -523,12 +547,12 @@ export async function POST(req: Request) {
         systemPrompt = `${systemPrompt}\n\n${confidentialityPrompt(canary)}`
 
         // Gemini 대화 히스토리 구성 (domains/mentor)
-        const geminiMessages = buildGeminiHistory(mentor.greeting_message, messages, attachedImage)
+        const geminiMessages = buildGeminiHistory(responseSettings.initialMessage || mentor.greeting_message, messages, attachedImage)
 
         // 스트리밍 응답 (domains/chat) — 어느 모델이 답하는지는 stream.ts 가 고른다.
         // 밖에서 확인할 수 있게 고른 드라이버 이름만 응답 머리글(X-Llm-Driver)에 붙인다.
         const llmDriver = pickDriverFromEnv(!!attachedImage)
-        const response = await generateChatStream(systemPrompt, geminiMessages)
+        const response = await generateChatStream(systemPrompt, geminiMessages, { maxOutputTokens: responseSettings.maxOutputTokens, recencyOn: responseSettings.recencyOn })
 
         // SSE 스트림 생성
         const encoder = new TextEncoder()
@@ -693,7 +717,7 @@ export async function POST(req: Request) {
                     }
 
                     controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ text: '', done: true, fullResponse, sources: usedSources, readUrls })}\n\n`)
+                        encoder.encode(`data: ${JSON.stringify({ text: '', done: true, fullResponse, sources: responseSettings.citationsOn ? usedSources : [], readUrls })}\n\n`)
                     )
                 } catch (error) {
                     controller.enqueue(
