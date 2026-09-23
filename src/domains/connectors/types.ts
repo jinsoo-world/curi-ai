@@ -1,6 +1,6 @@
 // domains/connectors — 「밖의 도구와 연결하기」 공통 타입.
 //
-// 13개 서비스는 사용자 본인 계정 로그인(OAuth)으로 붙는다(providers.ts). 노션·슬랙은 열쇠를 손으로 붙여 넣는 옛길도 남겨 둔다.
+// 14개 서비스는 사용자 본인 계정 로그인(OAuth)으로 붙는다(providers.ts). 노션·슬랙은 열쇠를 손으로 붙여 넣는 옛길도 남겨 둔다.
 // 계획은 docs/connectors/외부연결_계획.md, 열쇠 발급은 docs/connect/공급자_열쇠_발급.md.
 
 import { PROVIDERS, PROVIDER_IDS, type ProviderId } from './providers'

@@ -1,4 +1,4 @@
-// 공급자 등록표 13개와 OAuth 부품 — 인터넷·DB 없이 확인한다.
+// 공급자 등록표 14개와 OAuth 부품 — 인터넷·DB 없이 확인한다.
 import { describe, it, expect } from 'vitest'
 import { existsSync } from 'fs'
 import { randomBytes } from 'crypto'
@@ -14,13 +14,13 @@ const 자물쇠 = randomBytes(32)
 const 환경 = { CONNECTOR_SECRET_KEY: 자물쇠.toString('base64') }
 
 describe('공급자 등록표', () => {
-    it('정확히 13개, 이름표가 겹치지 않는다', () => {
-        expect(PROVIDERS).toHaveLength(13)
-        expect(PROVIDER_IDS).toHaveLength(13)
-        expect(new Set(PROVIDERS.map(p => p.id)).size).toBe(13)
+    it('정확히 14개, 이름표가 겹치지 않는다', () => {
+        expect(PROVIDERS).toHaveLength(14)
+        expect(PROVIDER_IDS).toHaveLength(14)
+        expect(new Set(PROVIDERS.map(p => p.id)).size).toBe(14)
         expect(PROVIDERS.map(p => p.id).sort()).toEqual([...PROVIDER_IDS].sort())
-        // 대표 지시 13개가 전부 있다
-        for (const id of ['notion', 'slack', 'kakao', 'gmail', 'google_calendar', 'naver_calendar', 'naver_blog', 'zoom', 'threads', 'youtube', 'github', 'instagram', 'curious']) {
+        // 대표 지시 13개 + 드라이브 동기화(갈래 G)로 늘어난 google_drive 가 전부 있다
+        for (const id of ['notion', 'slack', 'kakao', 'gmail', 'google_calendar', 'google_drive', 'naver_calendar', 'naver_blog', 'zoom', 'threads', 'youtube', 'github', 'instagram', 'curious']) {
             expect(findProvider(id)?.id).toBe(id)
         }
     })
@@ -46,8 +46,9 @@ describe('공급자 등록표', () => {
         expect(providerView(google, 환경).missing).toContain('관리자')
         const 열쇠있음 = { ...환경, GOOGLE_OAUTH_CLIENT_ID: 'id', GOOGLE_OAUTH_CLIENT_SECRET: 'sec' }
         expect(providerReady(google, 열쇠있음)).toBe(true)
-        expect(providerReady(findProvider('google_calendar')!, 열쇠있음)).toBe(true)   // 구글 3종은 같은 열쇠
+        expect(providerReady(findProvider('google_calendar')!, 열쇠있음)).toBe(true)   // 구글 4종은 같은 열쇠
         expect(providerReady(findProvider('youtube')!, 열쇠있음)).toBe(true)
+        expect(providerReady(findProvider('google_drive')!, 열쇠있음)).toBe(true)
         // 자물쇠가 없으면 열쇠가 있어도 꺼진다
         expect(providerReady(google, { GOOGLE_OAUTH_CLIENT_ID: 'id', GOOGLE_OAUTH_CLIENT_SECRET: 'sec' })).toBe(false)
         const curious = findProvider('curious')!
@@ -64,7 +65,7 @@ describe('공급자 등록표', () => {
 
     it('connectors.kind 목록은 공급자와 같고, 손으로 붙이는 건 노션·슬랙만', () => {
         expect([...CONNECTOR_KINDS]).toEqual([...PROVIDER_IDS])
-        expect(Object.keys(CONNECTOR_INFO)).toHaveLength(13)
+        expect(Object.keys(CONNECTOR_INFO)).toHaveLength(14)
         expect(cleanKind('gmail')).toBe('gmail')
         expect(cleanKind('twitter')).toBeNull()
         expect(isReadyKind('notion')).toBe(true)

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="구글 드라이브">
+  <rect width="64" height="64" rx="12" fill="#FFFFFF"/>
+  <path fill="#0F9D58" d="M24 10 L8 38 L16 52 L32 24 Z"/>
+  <path fill="#4285F4" d="M32 24 L48 52 L56 38 L40 10 Z"/>
+  <path fill="#FFCD40" d="M16 52 L48 52 L40 38 L24 38 Z"/>
+</svg>

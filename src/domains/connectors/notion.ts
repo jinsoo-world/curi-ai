@@ -39,7 +39,7 @@ export function normalizeNotionId(raw: string): string {
 
 type RichText = { plain_text?: string }
 type NotionProp = { type?: string; title?: RichText[] }
-type NotionPage = { id?: string; url?: string; properties?: Record<string, NotionProp> }
+type NotionPage = { id?: string; url?: string; properties?: Record<string, NotionProp>; last_edited_time?: string }
 
 /** 문서 제목 찾기. 노션은 제목 칸 이름이 문서마다 달라서 「type 이 title 인 칸」을 찾는다 */
 export function notionPageTitle(page: unknown): string {
@@ -123,4 +123,46 @@ export async function notionReadPage(token: string, rawId: string): Promise<stri
     if (!id) throw new Error('노션 문서 번호를 알아보지 못했어요')
     const data = await notionFetch(token, `/blocks/${id}/children?page_size=100`, { method: 'GET' }) as { results?: unknown[] }
     return notionBlocksToText(data?.results ?? []).slice(0, NOTION_PAGE_CHARS)
+}
+
+export interface NotionPageMeta {
+    id: string
+    title: string
+    url: string
+    /** 마지막으로 고친 시각(ISO). 동기화에서 「새로 바뀐 것만」 판단에 쓴다 */
+    lastEditedTime: string
+}
+
+/** 노션 동기화(갈래 G) — 이 통합에 공유된 문서 목록(페이지만, 최대 topN개). 고르기 화면이 부른다 */
+export async function notionListPages(token: string, topN = 50): Promise<NotionPageMeta[]> {
+    const data = await notionFetch(token, '/search', {
+        method: 'POST',
+        body: JSON.stringify({
+            filter: { value: 'page', property: 'object' },
+            sort: { direction: 'descending', timestamp: 'last_edited_time' },
+            page_size: Math.min(Math.max(topN, 1), 100),
+        }),
+    }) as { results?: unknown[] }
+    return ((data?.results ?? []) as NotionPage[])
+        .filter(p => p?.id)
+        .slice(0, topN)
+        .map(p => ({
+            id: String(p.id),
+            title: notionPageTitle(p),
+            url: String(p.url ?? ''),
+            lastEditedTime: String(p.last_edited_time ?? ''),
+        }))
+}
+
+/** 노션 동기화(갈래 G) — 문서 한 장의 지금 상태(제목·마지막 수정 시각)만 가볍게 본다. 「바뀌었나」 판단용 */
+export async function notionPageMeta(token: string, rawId: string): Promise<NotionPageMeta> {
+    const id = normalizeNotionId(rawId)
+    if (!id) throw new Error('노션 문서 번호를 알아보지 못했어요')
+    const page = await notionFetch(token, `/pages/${id}`, { method: 'GET' }) as NotionPage
+    return {
+        id: String(page?.id ?? id),
+        title: notionPageTitle(page),
+        url: String(page?.url ?? ''),
+        lastEditedTime: String(page?.last_edited_time ?? ''),
+    }
 }

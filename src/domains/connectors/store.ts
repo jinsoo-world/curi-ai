@@ -123,6 +123,46 @@ export async function readConnectorSecret(
     return { view: toView(row), secret: extractAccessToken(decryptSecret(row.secret_encrypted, requireConnectorKey())) }
 }
 
+/**
+ * 내 연결의 토큰을 **그대로**(access_token 만 꺼내지 않고) 푼다. 갈래 G 동기화가 refresh_token 을 쓰려고 부른다.
+ * 손으로 붙여 넣은 옛길(노션 통합 토큰 등)은 JSON 이 아니므로 { access_token: 그 값 } 모양으로 감싸서 돌려준다.
+ */
+export async function readConnectorTokenJson(
+    db: SupabaseClient, userId: string, id: string,
+): Promise<{ view: ConnectorView; token: Record<string, unknown> }> {
+    const { data, error } = await db.from('connectors').select(SELECT)
+        .eq('id', id).eq('user_id', userId).maybeSingle()
+    if (error) {
+        if (error.code === TABLE_MISSING) throw new ConnectorTableMissing()
+        throw new Error(error.message)
+    }
+    if (!data) throw new ConnectorNotMine()
+    const row = data as Raw
+    const plain = decryptSecret(row.secret_encrypted, requireConnectorKey())
+    let token: Record<string, unknown>
+    try {
+        const parsed = plain.startsWith('{') ? JSON.parse(plain) : null
+        token = parsed && typeof parsed === 'object' ? parsed : { access_token: plain }
+    } catch {
+        token = { access_token: plain }
+    }
+    return { view: toView(row), token }
+}
+
+/** 새로고침한 토큰(access_token 이 바뀐 것)을 다시 잠가 넣는다. refresh_token 이 새로 안 오면 옛 것을 이어서 넣어 준다 */
+export async function updateConnectorToken(
+    db: SupabaseClient, userId: string, id: string, token: Record<string, unknown>,
+): Promise<void> {
+    const key = requireConnectorKey()
+    const { error } = await db.from('connectors')
+        .update({ secret_encrypted: encryptSecret(JSON.stringify(token), key), status: 'connected' })
+        .eq('id', id).eq('user_id', userId)
+    if (error) {
+        if (error.code === TABLE_MISSING) throw new ConnectorTableMissing()
+        throw new Error(error.message)
+    }
+}
+
 /** 연결 하나 떼기 */
 export async function deleteConnector(db: SupabaseClient, userId: string, id: string): Promise<void> {
     const { error, count } = await db.from('connectors').delete({ count: 'exact' })

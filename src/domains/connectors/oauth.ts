@@ -133,6 +133,30 @@ export async function exchangeCode(
     return json
 }
 
+/**
+ * refresh_token → 새 access_token. 구글 드라이브처럼 access_token 이 짧게(1시간) 끊기는 공급자를 위한 것.
+ * 응답에 refresh_token 이 다시 안 오면(구글이 보통 그렇다) 부르는 쪽이 옛 refresh_token 을 이어서 쓴다.
+ */
+export async function refreshAccessToken(
+    p: Provider,
+    args: { refreshToken: string; clientId: string; clientSecret: string },
+    fetchImpl: typeof fetch = fetch,
+): Promise<TokenJson> {
+    const body = new URLSearchParams({ grant_type: 'refresh_token', refresh_token: args.refreshToken })
+    const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' }
+    if (p.tokenAuth === 'basic') {
+        headers.Authorization = `Basic ${Buffer.from(`${args.clientId}:${args.clientSecret}`).toString('base64')}`
+    } else {
+        body.set('client_id', args.clientId)
+        body.set('client_secret', args.clientSecret)
+    }
+    const r = await fetchImpl(p.tokenUrl, { method: 'POST', headers, body, signal: AbortSignal.timeout(15_000) })
+    if (!r.ok) throw new TokenExchangeFailed(r.status)
+    const json = await r.json().catch(() => null) as TokenJson | null
+    if (!json || typeof json !== 'object' || typeof json.access_token !== 'string' || !json.access_token) throw new TokenExchangeFailed(r.status)
+    return json
+}
+
 /** 계정 힌트 가리기: jin@mission-driven.kr → jin@… / 열정진 → 열정… (본문은 절대 다 보이지 않는다) */
 export function maskAccount(raw: string | null | undefined): string | null {
     const v = String(raw ?? '').trim()

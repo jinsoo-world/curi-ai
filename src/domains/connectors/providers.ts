@@ -1,4 +1,4 @@
-// domains/connectors — 서비스 공급자 등록표 13개.
+// domains/connectors — 서비스 공급자 등록표 14개.
 //
 // 「내 걸로 한다는 게 아니고, 큐리AI 사용자들의 계정으로 연동할 수 있게」(대표 0930)
 //  = 사용자 본인 계정으로 로그인해서 붙이는 OAuth. 우리 회사 계정을 붙이는 게 아니다.
@@ -11,9 +11,9 @@
 
 import { connectorsEnabled } from './crypto'
 
-/** 공급자 13개 (connectors.kind 와 같은 글자) */
+/** 공급자 14개 (connectors.kind 와 같은 글자) */
 export const PROVIDER_IDS = [
-    'notion', 'slack', 'kakao', 'gmail', 'google_calendar', 'naver_calendar', 'naver_blog',
+    'notion', 'slack', 'kakao', 'gmail', 'google_calendar', 'google_drive', 'naver_calendar', 'naver_blog',
     'zoom', 'threads', 'youtube', 'github', 'instagram', 'curious',
 ] as const
 export type ProviderId = typeof PROVIDER_IDS[number]
@@ -131,6 +131,11 @@ export const PROVIDERS: readonly Provider[] = [
         id: 'google_calendar', name: '구글 캘린더', logo: '/logos/google_calendar.svg',
         hint: '내 일정을 봇이 읽어요. 바꾸지는 않아요.', can: '읽기만',
         ...GOOGLE, scopes: ['openid', 'email', 'https://www.googleapis.com/auth/calendar.readonly'],
+    },
+    {
+        id: 'google_drive', name: '구글 드라이브', logo: '/logos/google_drive.svg',
+        hint: '내 드라이브 폴더에 있는 문서를 봇이 읽어요. 하루에 한 번 새로 바뀐 것만 다시 읽어요.', can: '읽기만',
+        ...GOOGLE, scopes: ['openid', 'email', 'https://www.googleapis.com/auth/drive.readonly'],
     },
     {
         id: 'naver_calendar', name: '네이버 캘린더', logo: '/logos/naver_calendar.svg',

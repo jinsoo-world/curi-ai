@@ -9,8 +9,9 @@ import { splitUrls } from '@/domains/os/settings'
 import { parseQaCsv } from '@/domains/os/csv'
 import FolderSync from './FolderSync'
 import ConnectFeedSheet from './ConnectFeedSheet'
+import CloudSync from './CloudSync'
 
-type Tab = 'file' | 'link' | 'text' | 'qa' | 'csv' | 'note' | 'folder' | 'feed'
+type Tab = 'file' | 'link' | 'text' | 'qa' | 'csv' | 'note' | 'folder' | 'cloud' | 'feed'
 
 interface Props {
     mentorId: string
@@ -251,6 +252,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                     <button className="os-tab" role="tab" aria-selected={tab === 'csv'} onClick={() => setTab('csv')} disabled={busy}>CSV 올리기</button>
                     <button className="os-tab" role="tab" aria-selected={tab === 'note'} onClick={() => setTab('note')} disabled={busy}>짧은 메모</button>
                     <button className="os-tab" role="tab" aria-selected={tab === 'folder'} onClick={() => setTab('folder')} disabled={busy}>내 폴더</button>
+                    <button className="os-tab" role="tab" aria-selected={tab === 'cloud'} onClick={() => setTab('cloud')} disabled={busy}>드라이브, 노션</button>
                     <button className="os-tab" role="tab" aria-selected={tab === 'feed'} onClick={() => setTab('feed')} disabled={busy}>계정 연결</button>
                 </div>
 
@@ -342,6 +344,10 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                     <FolderSync mentorId={mentorId} onAdded={onAdded} onBusy={setBusy} onDone={onClose} />
                 )}
 
+                {tab === 'cloud' && (
+                    <CloudSync mentorId={mentorId} onAdded={onAdded} onBusy={setBusy} onDone={onClose} />
+                )}
+
                 {tab === 'feed' && (
                     <ConnectFeedSheet mentorId={mentorId} onAdded={onAdded} onBusy={setBusy} onDone={onClose} />
                 )}
@@ -351,7 +357,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
 
                 <div className="os-sheet-foot">
                     <button className="os-btn" onClick={onClose} disabled={busy}>닫기</button>
-                    {tab !== 'file' && tab !== 'csv' && tab !== 'folder' && tab !== 'feed' && (
+                    {tab !== 'file' && tab !== 'csv' && tab !== 'folder' && tab !== 'cloud' && tab !== 'feed' && (
                         <button className="os-btn primary" onClick={넣기} disabled={busy || !넣을수있나}>
                             {busy ? '넣는 중…' : tab === 'link' && 주소개수 > 1 ? `${주소개수}개 넣기` : '넣기'}
                         </button>
