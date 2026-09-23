@@ -13,6 +13,7 @@ import { osTrack } from '@/domains/os/events'
 import type { BotColor, BotShape } from '@/domains/os/types'
 import MentionPicker from './MentionPicker'
 import { useMentionComposer } from './useMentionComposer'
+import { useComposerAutoHeight } from './useComposerAutoHeight'
 import { MsgRow, useRevealTimestamps } from './MsgRow'
 import WorkingStatusLine from './WorkingStatusLine'
 import MentionRichText from './MentionRichText'
@@ -54,6 +55,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
         [mentionBots],
     )
     const mention = useMentionComposer(mentionBots)
+    const { onScroll: onComposerScroll } = useComposerAutoHeight(inputRef, input)
 
     const load = useCallback(async () => {
         try {
@@ -305,6 +307,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                                     mention.syncFromInput(input, e.currentTarget.selectionStart ?? input.length)
                                 }
                             }}
+                            onScroll={onComposerScroll}
                             onKeyDown={e => {
                                 const keyResult = mention.onKeyWhileOpen(e)
                                 if (keyResult === 'handled') return

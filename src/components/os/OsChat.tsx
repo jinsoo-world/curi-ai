@@ -37,6 +37,7 @@ import OgLinkPreview, { isUrlOnlyText } from './OgLinkPreview'
 // === @ 멘션 ===
 import MentionPicker from './MentionPicker'
 import { useMentionComposer } from './useMentionComposer'
+import { useComposerAutoHeight } from './useComposerAutoHeight'
 import MentionRichText from './MentionRichText'
 import {
     decidePersonalMentionRoute,
@@ -117,6 +118,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
         [mentionBots],
     )
     const mention = useMentionComposer(mentionBots)
+    const { onScroll: onComposerScroll } = useComposerAutoHeight(inputRef, input)
     // === /@ 멘션 ===
 
     // 명단 상태 동그라미에 이 방 상태를 알린다
@@ -703,6 +705,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                                     }
                                 }}
                                 onKeyDown={onKey}
+                                onScroll={onComposerScroll}
                                 onFocus={() => endRef.current?.scrollIntoView({ behavior: 'smooth' })}
                                 onPaste={e => { if (photos.addFromData(e.clipboardData)) e.preventDefault() }}
                                 placeholder={`${name}에게 메시지 보내기 (@로 다른 봇 부르기)`}

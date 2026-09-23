@@ -248,8 +248,8 @@
 
 /* 입력 막대를 감싸는 칸(dock). 넓은 화면에선 그냥 지나가는 칸(배경 없음), 폰에선 아래 「오늘 체크인 안건」 참고 — 화면 맨 아래 붙는다 */
 .os-input-dock { display: flex; flex-direction: column; }
-.os-input-bar { display: flex; align-items: center; gap: 8px; margin: 12px 20px 16px; padding: 8px 8px 8px 12px; border-radius: 22px; background: var(--os-말풍선); }
-.os-input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--os-글); font-size: 17px; padding: 10px 6px; min-height: 40px; }
+.os-input-bar { display: flex; align-items: flex-end; gap: 8px; margin: 12px 20px 16px; padding: 8px 8px 8px 12px; border-radius: 22px; background: var(--os-말풍선); }
+.os-input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--os-글); font-size: 17px; line-height: 1.45; padding: 10px 6px; min-height: 40px; max-height: 180px; overflow-y: auto; }
 .os-input::placeholder { color: var(--os-글-흐림); }
 /* 원형 단추 = 정확히 40×40. globals 의 button min-height(52px)와 flex 줄어들기가 원을 세로로 늘였었다 → 둘 다 막는다.
    손가락 크기(52px)는 보이지 않는 ::after 로 채운다 */
@@ -711,10 +711,13 @@
     line-height: 1.45;
     white-space: pre-wrap;
     word-break: break-word;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     pointer-events: none;
     color: var(--os-글);
+    scrollbar-width: none;
 }
+.os-input-chip-mirror::-webkit-scrollbar { display: none; }
 .os-input--ghost {
     position: relative;
     z-index: 1;
