@@ -4,7 +4,7 @@
 
 ## 지금
 - 사이트 기본 OG = `src/app/layout.tsx` (`metadataBase` = `https://www.curi-ai.com`)
-- OG 이미지 = `public/og.png` (1200x630, 절대 URL `https://www.curi-ai.com/og.png`)
+- OG 이미지 = `public/og/curi-os.png (동일 사본 public/og.png)` (1200x630, 절대 URL `https://www.curi-ai.com/og/curi-os.png`)
 - `/os`, `/os/welcome`, `/landing` 도 같은 카드 문구와 이미지를 심음
 - 제목 기본: 「인생 후반전 에이전트 OS, 큐리AI」
 - 제품 카피에는 가운데점(·)과 긴 대시(—)를 쓰지 않는다
