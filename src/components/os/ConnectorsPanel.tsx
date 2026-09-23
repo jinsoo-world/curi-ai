@@ -3,7 +3,7 @@
 //
 // 13개 서비스를 한 줄씩: 왼쪽 32px 로고, 이름, 상태 배지, 오른쪽 단추(연결하기 / 해제).
 // 붙이는 길 = 사용자 본인 계정 로그인(OAuth). 서버 열쇠가 없는 서비스는 「준비 중」 배지 + 비활성 단추.
-// 노션·슬랙은 OAuth 열쇠가 아직 없을 때 열쇠를 손으로 붙여 넣는 옛길을 남겨 둔다.
+// 노션, 슬랙은 OAuth 열쇠가 아직 없을 때 열쇠를 손으로 붙여 넣는 옛길을 남겨 둔다.
 // ⚠️ 이 파일은 브라우저에서 돌므로 domains 의 값(crypto 를 끌고 오는 것)을 가져오지 않는다. 타입만.
 
 import { useCallback, useEffect, useState } from 'react'
@@ -30,9 +30,9 @@ const PASTE: Record<string, { placeholder: string; how: string }> = {
 const ERROR_TEXT: Record<string, string> = {
     denied: '연결을 허용하지 않아서 그대로 두었어요.',
     bad_state: '연결 시작한 지 10분이 지났거나 창이 달라요. 다시 눌러 주세요.',
-    not_ready: '이 서비스는 아직 준비 중이에요(관리자가 열쇠를 등록해야 해요).',
+    not_ready: '준비 중',
     token: '서비스가 열쇠를 주지 않았어요. 잠시 뒤 다시 해 주세요.',
-    table: '연결 기능이 아직 준비 중이에요(서버 설정이 필요해요).',
+    table: '준비 중',
     save: '연결을 저장하지 못했어요. 잠시 뒤 다시 해 주세요.',
     unknown: '모르는 서비스예요.',
 }
@@ -58,7 +58,7 @@ export default function ConnectorsPanel() {
         setLoaded(true)
     }, [])
 
-    // 효과 본문에서 바로 setState 하지 않는다(린트 규칙) — 한 박자 뒤에 읽어 온다
+    // 효과 본문에서 바로 setState 하지 않는다(린트 규칙)  -  한 박자 뒤에 읽어 온다
     useEffect(() => { void Promise.resolve().then(load) }, [load])
 
     // 서비스 로그인에서 돌아온 결과를 한 번 보여 주고 주소를 깨끗하게 한다
@@ -115,14 +115,14 @@ export default function ConnectorsPanel() {
         if (s.connected?.status === 'error') return <span className="os-svc-badge bad">다시 연결 필요</span>
         if (s.connected) return <span className="os-svc-badge on">연결됨 ({s.connected.account})</span>
         if (s.comingSoon) return <span className="os-svc-badge soon">준비 중</span>
-        if (!s.ready) return <span className="os-svc-badge soon">준비 중 (관리자가 열쇠를 등록해야 해요)</span>
+        if (!s.ready) return <span className="os-svc-badge soon">준비 중</span>
         return <span className="os-svc-badge">연결 안 됨</span>
     }
 
     return (
         <div className="os-card">
             {!enabled && loaded && (
-                <div className="os-connect-note warn" style={{ marginTop: 12 }}>연결 기능은 아직 준비 중이에요(서버 설정이 필요해요).</div>
+                <div className="os-connect-note warn" style={{ marginTop: 12 }}>준비 중</div>
             )}
             {note && <div className={`os-connect-note${note.warn ? ' warn' : ''}`} style={{ marginTop: 12 }}>{note.text}</div>}
 

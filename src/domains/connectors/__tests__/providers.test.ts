@@ -1,4 +1,4 @@
-// 공급자 등록표 14개와 OAuth 부품 — 인터넷·DB 없이 확인한다.
+// 공급자 등록표 14개와 OAuth 부품  -  인터넷, DB 없이 확인한다.
 import { describe, it, expect } from 'vitest'
 import { existsSync } from 'fs'
 import { randomBytes } from 'crypto'
@@ -19,6 +19,13 @@ describe('공급자 등록표', () => {
         expect(PROVIDER_IDS).toHaveLength(14)
         expect(new Set(PROVIDERS.map(p => p.id)).size).toBe(14)
         expect(PROVIDERS.map(p => p.id).sort()).toEqual([...PROVIDER_IDS].sort())
+        // 대표 지시 순서: 노션, 인스타, 카톡, 스레드, 네이버블로그, 네이버캘린더, 지메일, 구글캘린더, 구글드라이브, 깃허브, Zoom, 나머지, 큐리어스
+        expect(PROVIDERS.map(p => p.id)).toEqual([
+            'notion', 'instagram', 'kakao', 'threads', 'naver_blog', 'naver_calendar',
+            'gmail', 'google_calendar', 'google_drive', 'github', 'zoom',
+            'slack', 'youtube', 'curious',
+        ])
+        expect([...PROVIDER_IDS]).toEqual(PROVIDERS.map(p => p.id))
         // 대표 지시 13개 + 드라이브 동기화(갈래 G)로 늘어난 google_drive 가 전부 있다
         for (const id of ['notion', 'slack', 'kakao', 'gmail', 'google_calendar', 'google_drive', 'naver_calendar', 'naver_blog', 'zoom', 'threads', 'youtube', 'github', 'instagram', 'curious']) {
             expect(findProvider(id)?.id).toBe(id)
@@ -32,7 +39,7 @@ describe('공급자 등록표', () => {
         }
     })
 
-    it('화면 글자에 중간점·줄표가 없다', () => {
+    it('화면 글자에 중간점과 줄표가 없다', () => {
         for (const p of PROVIDERS) {
             for (const s of [p.name, p.hint, p.can]) {
                 expect(s, `${p.id}: ${s}`).not.toMatch(/[·—]/)
@@ -43,7 +50,7 @@ describe('공급자 등록표', () => {
     it('열쇠 환경변수가 없으면 준비 중, 둘 다 있으면 준비됨. 큐리어스는 열쇠가 있어도 준비 중', () => {
         const google = findProvider('gmail')!
         expect(providerReady(google, 환경)).toBe(false)
-        expect(providerView(google, 환경).missing).toContain('관리자')
+        expect(providerView(google, 환경).missing).toBe('준비 중')
         const 열쇠있음 = { ...환경, GOOGLE_OAUTH_CLIENT_ID: 'id', GOOGLE_OAUTH_CLIENT_SECRET: 'sec' }
         expect(providerReady(google, 열쇠있음)).toBe(true)
         expect(providerReady(findProvider('google_calendar')!, 열쇠있음)).toBe(true)   // 구글 4종은 같은 열쇠
@@ -56,14 +63,14 @@ describe('공급자 등록표', () => {
         expect(providerView(curious, 환경).comingSoon).toBe(true)
     })
 
-    it('화면 모양(providerView)에 열쇠 이름·값이 안 들어간다', () => {
+    it('화면 모양(providerView)에 열쇠 이름, 값이 안 들어간다', () => {
         const v = providerView(findProvider('github')!, { ...환경, GITHUB_CLIENT_ID: 'PUBLIC_ID', GITHUB_CLIENT_SECRET: 'TOP_SECRET' })
         expect(JSON.stringify(v)).not.toContain('TOP_SECRET')
         expect(JSON.stringify(v)).not.toContain('PUBLIC_ID')
         expect(JSON.stringify(v)).not.toContain('GITHUB_CLIENT')
     })
 
-    it('connectors.kind 목록은 공급자와 같고, 손으로 붙이는 건 노션·슬랙만', () => {
+    it('connectors.kind 목록은 공급자와 같고, 손으로 붙이는 건 노션, 슬랙만', () => {
         expect([...CONNECTOR_KINDS]).toEqual([...PROVIDER_IDS])
         expect(Object.keys(CONNECTOR_INFO)).toHaveLength(14)
         expect(cleanKind('gmail')).toBe('gmail')
@@ -139,7 +146,7 @@ describe('state 서명', () => {
     })
 })
 
-describe('토큰 받기·계정 힌트', () => {
+describe('토큰 받기, 계정 힌트', () => {
     const 가짜fetch = (status: number, json: unknown, spy?: (url: string, init?: RequestInit) => void): typeof fetch =>
         (async (url: string | URL | Request, init?: RequestInit) => {
             spy?.(String(url), init)
@@ -172,7 +179,7 @@ describe('토큰 받기·계정 힌트', () => {
         expect(body).toContain('state=ST')
     })
 
-    it('실패 응답·ok:false·access_token 없음은 TokenExchangeFailed 이고 문구에 열쇠가 없다', async () => {
+    it('실패 응답, ok:false, access_token 없음은 TokenExchangeFailed 이고 문구에 열쇠가 없다', async () => {
         const p = findProvider('slack')!
         const args = { code: 'c', redirectUri: 'r', clientId: 'ID', clientSecret: 'TOP_SECRET' }
         await expect(exchangeCode(p, args, 가짜fetch(401, {}))).rejects.toBeInstanceOf(TokenExchangeFailed)
