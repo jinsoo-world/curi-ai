@@ -1,5 +1,5 @@
 'use client'
-// 그룹방 대화 — 사람이 말하면 첫 답 봇이 답하고, 그 답에 「@다른봇」이 있으면 그 봇이 한 번만 이어 답한다.
+// 그룹방 대화 - 사람이 말하면 첫 답 봇이 답하고, 그 답에 「@다른봇」이 있으면 그 봇이 한 번만 이어 답한다.
 // 사람이 「@홍보팀장 …」 처럼 한 명을 콕 집으면 그 봇만 답한다.
 // 봇이 한 말 위에는 「보낸 사람 ○○」(다른 봇을 부르면 「보낸 사람 ○○ → ○○」) 표식을 붙인다.
 
@@ -8,7 +8,7 @@ import { useOsTeam } from './OsShell'
 import BotAvatar from './BotAvatar'
 import BotMarkdown from './BotMarkdown'
 import MenuIcon, { CloseIcon, swipeToClose } from './MenuIcon'
-import { findMentionedBot } from '@/domains/os/channels'
+import { findMentionedBot, pickResponders, botWorkingLabel } from '@/domains/os/channels'
 import { osTrack } from '@/domains/os/events'
 import type { BotColor, BotShape } from '@/domains/os/types'
 
@@ -22,6 +22,8 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
     const [messages, setMessages] = useState<Msg[]>([])
     const [input, setInput] = useState('')
     const [busy, setBusy] = useState(false)
+    /** 지금 답 준비 중인 봇 mentorId (작업 중 표지) */
+    const [workingIds, setWorkingIds] = useState<string[]>([])
     const [detailOpen, setDetailOpen] = useState(false)
     const [err, setErr] = useState<string | null>(null)
     const [notReady, setNotReady] = useState(false)
@@ -40,7 +42,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
     }, [channelId])
 
     useEffect(() => { void load() }, [load])
-    useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+    useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, workingIds])
 
     const send = useCallback(async () => {
         const text = input.trim()
@@ -48,6 +50,9 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
         setInput(''); setBusy(true); setErr(null)
         osTrack('os_group_message', { channel_id: channelId, members: members.length })
         setMessages(prev => [...prev, { id: `tmp-${Date.now()}`, authorKind: 'user', mentorId: null, content: text }])
+        // 서버와 같은 규칙으로 누가 답할지 미리 보여 준다
+        const upcoming = pickResponders(text, members.map(m => ({ mentorId: m.mentorId, name: m.name })))
+        setWorkingIds(upcoming.map(r => r.mentorId))
         try {
             const res = await fetch(`/api/os/channels/${channelId}/chat`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -58,8 +63,11 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
             await load()
         } catch (e) {
             setErr(e instanceof Error ? e.message : '말을 못 옮겼어요')
-        } finally { setBusy(false) }
-    }, [input, busy, channelId, load, members.length])
+        } finally {
+            setWorkingIds([])
+            setBusy(false)
+        }
+    }, [input, busy, channelId, load, members])
 
     const 멤버추가 = async (mentorId: string) => {
         const res = await fetch(`/api/os/channels/${channelId}`, {
@@ -122,7 +130,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
 
                 <div className="os-messages">
                     {messages.length === 0 && (
-                        <div className="os-bubble bot">여기서는 봇 여러 명이 같이 들어요. 물어보시면 한 명이 답하고, 자기 몫이 아니면 다른 한 명을 부를 수 있어요. 한 명만 부르려면 「@이름」으로 시작하세요.</div>
+                        <div className="os-bubble bot">여기서는 봇 여러 명이 같이 들어요. 방 전체에 말하면 진행 봇이 짧게 받은 뒤 멤버들이 차례로 답해요. 한 명만 부르려면 「@이름」으로 시작하세요.</div>
                     )}
                     {messages.map(m => m.authorKind === 'user'
                         ? <div key={m.id} className="os-bubble me">{m.content}</div>
@@ -132,7 +140,16 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                                 <div className="os-bubble bot md"><BotMarkdown text={m.content} /></div>
                             </div>
                         ))}
-                    {busy && <div className="os-bubble bot">…</div>}
+                    {workingIds.map(id => {
+                        const m = members.find(x => x.mentorId === id)
+                        if (!m) return null
+                        return (
+                            <div key={`work-${id}`} style={{ display: 'contents' }}>
+                                <div className="os-sender">{아바타(id)}<span>{m.name}</span></div>
+                                <div className="os-bubble bot os-working" aria-live="polite">{botWorkingLabel(m.name)}</div>
+                            </div>
+                        )
+                    })}
                     <div ref={endRef} />
                 </div>
 
@@ -160,7 +177,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                     <div key={m.mentorId} className="os-source">
                         <span className="os-source-kind">{아바타(m.mentorId, 24)}</span>
                         <span className="os-source-title">{m.name}</span>
-                        {i === 0 && <span className="os-source-state ok">먼저 답해요</span>}
+                        {i === 0 && <span className="os-source-state ok">진행</span>}
                         {members.length > 2 && (
                             <button className="os-btn" style={{ marginLeft: 'auto', padding: '2px 8px' }}
                                 aria-label={`${m.name} 빼기`} onClick={() => void 멤버빼기(m.mentorId)}>빼기</button>

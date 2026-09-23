@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { findMentionedBot, canBotSpeakAgain, MAX_BOT_TURNS, MAX_MEMBERS } from '../channels'
+import { findMentionedBot, canBotSpeakAgain, MAX_BOT_TURNS, MAX_MEMBERS, pickResponders, botWorkingLabel, MAX_FANOUT_BOTS } from '../channels'
 
 const 멤버 = [
     { mentorId: 'm1', name: '비서실장' },
@@ -79,5 +79,44 @@ describe('봇이 끝없이 서로 답하지 않는다 (안티패턴 ㉟)', () =>
         }
         expect(말한봇).toEqual(['m1', 'm2'])
         expect(말한횟수).toBe(MAX_BOT_TURNS)
+    })
+})
+
+
+describe('pickResponders — 방 전체 vs @한 명', () => {
+    it('@가 있으면 그 봇만 고른다', () => {
+        expect(pickResponders('이건 @글감봇 몫이에요', 멤버)).toEqual([{ mentorId: 'm2', name: '글감봇' }])
+    })
+
+    it('@가 없으면 멤버 순서대로 상한까지 고른다', () => {
+        expect(pickResponders('다들 의견 줘요', 멤버)).toEqual(멤버)
+    })
+
+    it('멤버가 상한보다 많으면 자른다', () => {
+        const many = [
+            ...멤버,
+            { mentorId: 'm4', name: '디자인봇' },
+            { mentorId: 'm5', name: '데이터봇' },
+        ]
+        expect(pickResponders('전체 회의', many)).toHaveLength(MAX_FANOUT_BOTS)
+        expect(pickResponders('전체 회의', many).map(x => x.mentorId)).toEqual(['m1', 'm2', 'm3', 'm4'])
+    })
+
+    it('멤버가 없으면 빈 배열', () => {
+        expect(pickResponders('안녕하세요', [])).toEqual([])
+    })
+})
+
+describe('botWorkingLabel — 작업 중 표지', () => {
+    it('이름 뒤에 작업 중… 을 붙인다', () => {
+        expect(botWorkingLabel('글감봇')).toBe('글감봇 작업 중…')
+    })
+    it('빈 이름은 봇 으로 부른다', () => {
+        expect(botWorkingLabel('')).toBe('봇 작업 중…')
+        expect(botWorkingLabel('   ')).toBe('봇 작업 중…')
+    })
+    it('가운뎃점이나 긴 줄표를 쓰지 않는다', () => {
+        const s = botWorkingLabel('컨텐츠봇')
+        expect(s).not.toMatch(/[·—]/)
     })
 })
