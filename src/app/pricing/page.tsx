@@ -15,7 +15,8 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import AppSidebar from '@/components/AppSidebar'
 import CloverIcon from '@/components/ui/CloverIcon'
-import { CLOVER_PACKS, discountPercent } from '@/domains/credit/packs'
+import { CLOVER_PACKS } from '@/domains/credit/packs'
+import { PLANS } from '@/domains/os/plan'
 import { TEACHER_COST } from '@/domains/studio/teacher'
 import { PHOTO_COST } from '@/domains/studio/photo'
 import { ENHANCE_COST } from '@/domains/studio/enhance'
@@ -55,8 +56,43 @@ export default function PricingPage() {
                     얼마인가요
                 </h1>
                 <p style={{ fontSize: 16, color: 'var(--먹연)', margin: '0 0 26px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                    필요할 때 한 번만 사면 됩니다. 정기 결제가 아니라 달마다 나가는 돈이 없습니다.
+                    봇 팀은 무료로 시작할 수 있어요. 더 많이 쓰고 싶을 때 요금제를 올리면 됩니다.
                 </p>
+
+                {/* 요금제 (대표 확정 0923: 무료 / 월 29,000원 / 월 99,000원). 값은 src/domains/os/plan.ts PLANS 한 표만 본다 */}
+                <section style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '20px 18px', marginBottom: 16 }}>
+                    <h2 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 4px' }}>봇 팀 요금제</h2>
+                    <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 16px' }}>
+                        내 팀 봇과의 대화는 클로버를 쓰지 않아요.
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {PLANS.map((p) => (
+                            <div key={p.id} style={{ padding: '14px 16px', border: p.recommended ? '2px solid #22c55e' : '1px solid #e4e4e7', borderRadius: 14 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                                    <div style={{ fontSize: 17, fontWeight: 800 }}>{p.name}</div>
+                                    <div style={{ fontSize: 18, fontWeight: 900, flexShrink: 0 }}>{p.price === 0 ? '0원' : `월 ${p.price.toLocaleString()}원`}</div>
+                                </div>
+                                <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    {p.perks.map((perk) => (
+                                        <li key={perk} style={{ fontSize: 14.5, color: '#3f3f46', lineHeight: 1.6, wordBreak: 'keep-all' }}>{perk}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ))}
+                    </div>
+                    <button
+                        onClick={() => router.push('/os/charge')}
+                        style={{
+                            width: '100%', marginTop: 14, padding: 16, borderRadius: 16, border: 'none',
+                            background: '#1C2321', color: '#fff', fontSize: 17, fontWeight: 800, cursor: 'pointer',
+                        }}
+                    >
+                        요금제 보기
+                    </button>
+                    <p style={{ fontSize: 14.5, color: '#a1a1aa', margin: '10px 0 0', textAlign: 'center' }}>
+                        정기 결제는 준비 중이에요. 지금은 첫 달만 결제돼요.
+                    </p>
+                </section>
 
                 {/* 사진 한 장에 얼마 */}
                 <section style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '20px 18px', marginBottom: 16 }}>
@@ -116,11 +152,11 @@ export default function PricingPage() {
                     </Link>
                 </section>
 
-                {/* 클로버 담기 */}
+                {/* 클로버 충전 (부가). 사진 N장·할인 표기는 뺐다(대표 지시 0923). 값은 0915 확정 그대로 */}
                 <section style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '20px 18px', marginBottom: 16 }}>
-                    <h2 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 4px' }}>클로버 담기</h2>
-                    <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 16px' }}>
-                        많이 담을수록 한 장당 값이 내려갑니다.
+                    <h2 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 4px' }}>클로버 충전</h2>
+                    <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 16px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                        봇 마켓의 다른 리더 봇과 대화하거나 한도를 넘겨 더 쓸 때, 그리고 사진을 만들 때 클로버를 써요. 내 팀 봇과의 대화는 클로버를 쓰지 않아요.
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {CLOVER_PACKS.map((p) => (
@@ -131,36 +167,24 @@ export default function PricingPage() {
                                     gap: 10, padding: '14px 16px', border: '1px solid #e4e4e7', borderRadius: 14,
                                 }}
                             >
-                                <div style={{ minWidth: 0 }}>
-                                    <div style={{ fontSize: 17, fontWeight: 800 }}>
-                                        사진 {Math.floor(p.clovers / TEACHER_COST).toLocaleString()}장
-                                    </div>
-                                    <div style={{ fontSize: 14.5, color: '#71717a', marginTop: 2 }}>
-                                        클로버 {p.clovers.toLocaleString()}개
-                                    </div>
+                                <div style={{ fontSize: 17, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                                    <CloverIcon size={18} /> 클로버 {p.clovers.toLocaleString()}개
                                 </div>
-                                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                    <div style={{ fontSize: 18, fontWeight: 900 }}>{p.won.toLocaleString()}원</div>
-                                    {discountPercent(p) > 0 && (
-                                        <div style={{ fontSize: 13.5, color: '#16a34a', fontWeight: 700, marginTop: 2 }}>
-                                            {discountPercent(p)}% 싸게
-                                        </div>
-                                    )}
-                                </div>
+                                <div style={{ fontSize: 18, fontWeight: 900, flexShrink: 0 }}>{p.won.toLocaleString()}원</div>
                             </div>
                         ))}
                     </div>
                     <button
-                        onClick={() => router.push('/charge')}
+                        onClick={() => router.push('/os/charge')}
                         style={{
-                            width: '100%', marginTop: 14, padding: 16, borderRadius: 16, border: 'none',
-                            background: '#1C2321', color: '#fff', fontSize: 17, fontWeight: 800, cursor: 'pointer',
+                            width: '100%', marginTop: 14, padding: 16, borderRadius: 16, border: '1.5px solid #1C2321',
+                            background: '#fff', color: '#1C2321', fontSize: 17, fontWeight: 800, cursor: 'pointer',
                         }}
                     >
                         클로버 충전하러 가기
                     </button>
                     <p style={{ fontSize: 14.5, color: '#a1a1aa', margin: '10px 0 0', textAlign: 'center' }}>
-                        충전한 클로버는 사라지지 않습니다. 쓸 때마다 하나씩 줄어듭니다.
+                        한 번 사면 끝. 정기 결제가 아니에요.
                     </p>
                 </section>
 

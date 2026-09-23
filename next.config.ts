@@ -27,6 +27,12 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['@supabase/supabase-js'],
   },
+  // 옛 주소 → 새 주소. /chats(대화 목록)는 내 봇 팀(/os)으로 통일 (대표 지시 0923)
+  async redirects() {
+    return [
+      { source: '/chats', destination: '/os', permanent: false },
+    ]
+  },
   // 클라이언트 캐시 헤더
   async headers() {
     return [
