@@ -20,6 +20,9 @@ export const SAFE_TOOLS = [
     'organize_notes',     // 정리
     'propose_next_step',  // 다음 한 걸음 제안
     'notify_owner',       // 주인(나)에게 알림 — 루틴 결과·승인 요청 도착·클로버 부족 (밖으로 안 나감)
+    'read_url',           // 링크 바로 읽기 — 밖의 공개 주소를 읽어 오기만 한다 (안쪽 주소는 fetch-url.ts 가 막는다)
+    'notion_search',      // 내 노션에서 문서 찾기 (읽기만)
+    'notion_read_page',   // 내 노션 문서 한 장 읽기 (읽기만)
 ] as const
 
 /** 사람 승인이 반드시 필요한 행동 → permission_requests.action_type 과 같은 이름 */
@@ -27,6 +30,7 @@ export const IRREVERSIBLE_TOOLS: Record<string, IrreversibleAction> = {
     send_message: 'send_message',       // 메시지·메일·문자 보내기
     send_email: 'send_message',
     send_sms: 'send_message',
+    slack_post: 'send_message',         // 슬랙 방에 글 올리기 — 올라간 글은 이미 남들이 봤다
     publish_post: 'publish',            // 게시·공개
     purchase: 'purchase',               // 구매
     transfer_money: 'transfer',         // 이체
