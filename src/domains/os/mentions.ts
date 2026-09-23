@@ -229,3 +229,49 @@ export function takePendingMentionSend(
         return null
     }
 }
+
+/** 본문에서 @이름 토큰 구간 목록 (긴 이름 우선, 겹침 제거). */
+export function mentionTokenRanges(
+    text: string,
+    botNames: readonly string[],
+): { start: number; end: number }[] {
+    const src = text ?? ''
+    if (!src || botNames.length === 0) return []
+    const names = [...botNames].filter(Boolean).sort((a, b) => b.length - a.length)
+    type Hit = { start: number; end: number }
+    const hits: Hit[] = []
+    for (const name of names) {
+        for (const at of ['@', '＠'] as const) {
+            const token = `${at}${name}`
+            let from = 0
+            while (from < src.length) {
+                const i = src.indexOf(token, from)
+                if (i < 0) break
+                const end = i + token.length
+                if (!hits.some(h => i < h.end && end > h.start)) hits.push({ start: i, end })
+                from = end
+            }
+        }
+    }
+    hits.sort((a, b) => a.start - b.start)
+    return hits
+}
+
+/**
+ * 캐럿이 @이름 토큰 한가운데에 있으면 가까운 끝으로 보낸다.
+ * (칩이 토큰보다 넓어 캐럿이 파란 알약 안에 보이는 문제 완화)
+ */
+export function snapCursorAroundMentions(
+    text: string,
+    cursor: number,
+    botNames: readonly string[],
+): number {
+    const c = Math.max(0, Math.min(cursor, (text ?? '').length))
+    for (const { start, end } of mentionTokenRanges(text, botNames)) {
+        if (c > start && c < end) {
+            return (c - start) <= (end - c) ? start : end
+        }
+    }
+    return c
+}
+

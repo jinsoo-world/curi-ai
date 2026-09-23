@@ -24,7 +24,7 @@ interface Member { mentorId: string; name: string; shape: string; color: string;
 interface Msg { id: string; authorKind: 'user' | 'bot'; mentorId: string | null; content: string; createdAt?: string }
 
 export default function OsGroupChat({ channelId }: { channelId: string }) {
-    const { team, refreshChannels } = useOsTeam()
+    const { team, refreshChannels, toggleNav, navOpen } = useOsTeam()
     const [name, setName] = useState('그룹')
     const [renaming, setRenaming] = useState(false)
     const [nameDraft, setNameDraft] = useState('')
@@ -187,6 +187,9 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
         <div className="os-chat-wrap">
             <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 <header className="os-chat-head">
+                    <button type="button" className="os-icon-btn os-nav-btn" aria-label="봇 명단 열기"
+                        aria-expanded={navOpen} aria-controls="os-nav" title="봇 명단"
+                        onClick={toggleNav}><MenuIcon /></button>
                     <span className="os-stack" aria-hidden>
                         {members.slice(0, 3).map(m => (
                             <span key={m.mentorId} className="os-stack-item">
@@ -301,10 +304,14 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                                 setInput(v)
                                 mention.syncAfterChange(v, e.target.selectionStart ?? v.length, inputRef)
                             }}
-                            onClick={e => mention.syncFromInput(input, e.currentTarget.selectionStart ?? input.length)}
+                            onClick={e => {
+                                    const c = mention.snapCaret(input, e.currentTarget.selectionStart ?? input.length, inputRef)
+                                    mention.syncFromInput(input, c)
+                                }}
                             onKeyUp={e => {
                                 if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
-                                    mention.syncFromInput(input, e.currentTarget.selectionStart ?? input.length)
+                                    const c = mention.snapCaret(input, e.currentTarget.selectionStart ?? input.length, inputRef)
+                                    mention.syncFromInput(input, c)
                                 }
                             }}
                             onScroll={onComposerScroll}

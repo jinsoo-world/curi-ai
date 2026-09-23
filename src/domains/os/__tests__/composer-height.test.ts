@@ -8,16 +8,16 @@ import {
 describe('composer-height', () => {
     it('min 미만은 min 으로', () => {
         expect(clampComposerHeight(10)).toBe(COMPOSER_MIN_PX)
-        expect(clampComposerHeight(0, 40, 180)).toBe(40)
+        expect(clampComposerHeight(0, 44, 180)).toBe(44)
     })
 
     it('max 초과는 max 로', () => {
         expect(clampComposerHeight(999)).toBe(COMPOSER_MAX_PX)
-        expect(clampComposerHeight(500, 40, 180)).toBe(180)
+        expect(clampComposerHeight(500, 44, 180)).toBe(180)
     })
 
     it('중간 값은 그대로', () => {
-        expect(clampComposerHeight(96, 40, 180)).toBe(96)
+        expect(clampComposerHeight(96, 44, 180)).toBe(96)
     })
 
     it('상수가 1줄~수 줄 범위', () => {

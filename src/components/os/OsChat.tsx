@@ -82,16 +82,39 @@ function linkCardsFor(m: Msg, prevUserText?: string): { readUrls?: ReadUrlItem[]
     return { fallbackUrls: prevUserText ? extractUrls(prevUserText) : undefined }
 }
 
+
+/** 봇 전환 첫 그림용: 탭 캐시를 동기 읽어 빈 인사/샘플이 깜빡이지 않게 한다. */
+function initialChatState(mentorId: string, freshStart: boolean): {
+    messages: Msg[]
+    sessionId: string | null
+    historyReady: boolean
+} {
+    if (freshStart) return { messages: [], sessionId: null, historyReady: true }
+    if (typeof window === 'undefined') return { messages: [], sessionId: null, historyReady: false }
+    try {
+        const cached = readChatCache<Msg>(window.sessionStorage, mentorId)
+        if (cached && cached.messages.length > 0) {
+            return { messages: cached.messages, sessionId: cached.sessionId, historyReady: true }
+        }
+        return { messages: [], sessionId: cached?.sessionId ?? null, historyReady: false }
+    } catch {
+        return { messages: [], sessionId: null, historyReady: false }
+    }
+}
+
 export default function OsChat({ mentorId, freshStart = false }: { mentorId: string; freshStart?: boolean }) {
-    const { team, loading, guest, openNewGroup, openEditBot, setBotPresence } = useOsTeam()
+    const { team, loading, guest, openNewGroup, openEditBot, setBotPresence, toggleNav, navOpen } = useOsTeam()
     const router = useRouter()
     const bot = useMemo(() => team.find(b => b.mentorId === mentorId) ?? null, [team, mentorId])
     const [publicBot, setPublicBot] = useState<PublicBot | null>(null)
-    const [messages, setMessages] = useState<Msg[]>([])
+    // 봇 전환 때 캐시를 첫 그림에 바로 올려 기본 인사/샘플 깜빡임을 막는다
+    const [boot] = useState(() => initialChatState(mentorId, freshStart))
+    const [messages, setMessages] = useState<Msg[]>(() => boot.messages)
     const [input, setInput] = useState('')
     const [state, setState] = useState<BotState>('idle')
     const [streaming, setStreaming] = useState(false)
-    const [sessionId, setSessionId] = useState<string | null>(null)
+    const [sessionId, setSessionId] = useState<string | null>(() => boot.sessionId)
+    const [historyReady, setHistoryReady] = useState(() => boot.historyReady)
     const [detailOpen, setDetailOpen] = useState(false)   // 항상 닫힌 채 시작. 열 때만 세부칸을 그린다(대표 0923 「닫힌 채로, 열 때 로딩」)
     const [addSheet, setAddSheet] = useState(false)
     const [demo, setDemo] = useState(false)
@@ -136,25 +159,37 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
             clearChatCache(window.sessionStorage, mentorId)
             setMessages([])
             setSessionId(null)
+            setHistoryReady(true)
             cacheLoadedFor.current = mentorId
             return
         }
         const cached = readChatCache<Msg>(window.sessionStorage, mentorId)
-        if (cached) {
+        if (cached && cached.messages.length > 0) {
             setMessages(cached.messages)
             setSessionId(cached.sessionId)
+            setHistoryReady(true)
+        } else if (cached) {
+            setMessages([])
+            setSessionId(cached.sessionId)
+            // 캐시가 비면 로그인 사용자는 서버 응답까지 빈 인사를 숨긴다
+            setHistoryReady(guest)
         } else {
             setMessages([])
             setSessionId(null)
+            setHistoryReady(guest)
         }
         cacheLoadedFor.current = mentorId
-    }, [mentorId, freshStart])
+    }, [mentorId, freshStart, guest])
 
     // 로그인 사용자: 서버 최근 대화방을 항상 불러 클라우드 기록을 살린다.
     // 탭 캐시에 sessionId 가 있어도 건너뛰지 않는다(봇 전환 후 빈 방처럼 보이던 원인).
     // 손님 때 탭에만 있던 말은 /api/sessions/merge 로 계정에 넘긴다.
     useEffect(() => {
-        if (guest) return
+        if (guest) {
+            // 손님은 서버 기록이 없으니 캐시만 보고 빈 화면을 바로 보여도 된다
+            setHistoryReady(true)
+            return
+        }
         let alive = true
         void (async () => {
             // 「대화 새로 시작」: 옛 세션을 불러오지 않고 클라우드에 새 세션을 만든다 (옛 기록은 DB에 남음)
@@ -171,7 +206,10 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                     if (id) {
                         setSessionId(id)
                         setMessages([])
+                        setHistoryReady(true)
                         writeChatCache(window.sessionStorage, mentorId, { sessionId: id, messages: [] })
+                    } else if (alive) {
+                        setHistoryReady(true)
                     }
                     // URL 의 ?new= 을 벗겨 새로고침 때 또 새 세션이 안 생기게 한다
                     try {
@@ -181,7 +219,10 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                             window.history.replaceState({}, '', u.pathname + (u.search ? u.search : '') + u.hash)
                         }
                     } catch { /* */ }
-                } catch { /* 새 세션 실패해도 빈 방으로 둔다 */ }
+                } catch {
+                    /* 새 세션 실패해도 빈 방으로 둔다 */
+                    if (alive) setHistoryReady(true)
+                }
                 return
             }
 
@@ -213,7 +254,8 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                 const sr = await fetch(`/api/sessions?mentorId=${encodeURIComponent(mentorId)}`, { cache: 'no-store' })
                 const sd = sr.ok ? await sr.json() as { sessions?: { id: string }[] } : null
                 const sid = sd?.sessions?.[0]?.id
-                if (!sid || !alive) return
+                if (!sid) { if (alive) setHistoryReady(true); return }
+                if (!alive) return
                 const mr = await fetch(`/api/sessions/${encodeURIComponent(sid)}/messages`, { cache: 'no-store' })
                 const md = mr.ok ? await mr.json() as { messages?: { id: string; role: string; content: string; createdAt?: string }[] } : null
                 const rows = (md?.messages ?? []).filter(m => m.role === 'user' || m.role === 'assistant').slice(-50)
@@ -229,16 +271,20 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                     }))
                     setMessages(prev => (prev.length > mapped.length ? prev : mapped))
                 }
-            } catch { /* 못 불러와도 캐시/새 대화로 이어간다 */ }
+                setHistoryReady(true)
+            } catch {
+                // 못 불러와도 캐시/새 대화로 이어간다 — 빈 인사 깜빡임을 끝낸다
+                if (alive) setHistoryReady(true)
+            }
         })()
         return () => { alive = false }
     }, [mentorId, guest, freshStart])
 
     // 말이 오갈 때마다(답이 다 온 뒤) 탭 저장소에 최근 50개를 남긴다. 이 봇 캐시를 읽기 전에는 쓰지 않는다
     useEffect(() => {
-        if (streaming || cacheLoadedFor.current !== mentorId) return
+        if (streaming || cacheLoadedFor.current !== mentorId || !historyReady) return
         writeChatCache(window.sessionStorage, mentorId, { sessionId, messages })
-    }, [messages, sessionId, streaming, mentorId])
+    }, [messages, sessionId, streaming, mentorId, historyReady])
 
     // 옆 봇들의 화면을 미리 받아 둔다. 봇을 누르면 서버를 안 기다리고 바로 바뀐다(느렸던 원인 = 클릭마다 서버 왕복 1번).
     useEffect(() => {
@@ -564,6 +610,9 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
         >
             <div className="os-chat-col">
                 <header className="os-chat-head">
+                    <button type="button" className="os-icon-btn os-nav-btn" aria-label="봇 명단 열기"
+                        aria-expanded={navOpen} aria-controls="os-nav" title="봇 명단"
+                        onClick={toggleNav}><MenuIcon /></button>
                     <button type="button" className="os-chat-head-bot" onClick={() => bot && openEditBot(bot)}
                         disabled={!bot || guest || bot.id.startsWith('demo-')}
                         title={bot && !guest && !bot.id.startsWith('demo-') ? '봇 편집' : undefined}
@@ -580,7 +629,14 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                 {/* 오늘 체크인 띠  -  오늘 아직 안 했을 때만. 손님, 시연에선 안 뜬다 */}
 
                 <div className={`os-messages${reveal.className ? ` ${reveal.className}` : ''}`} ref={reveal.ref} style={reveal.style}>
-                    {messages.length === 0 && !bot && publicBot && (
+                    {!historyReady && messages.length === 0 && (
+                        <div className="os-chat-pending" aria-busy="true" aria-label="대화 불러오는 중">
+                            <div className="os-chat-pending-bar" />
+                            <div className="os-chat-pending-bar short" />
+                            <div className="os-chat-pending-bar" />
+                        </div>
+                    )}
+                    {historyReady && messages.length === 0 && !bot && publicBot && (
                         <div className="os-chat-info">
                             <BotAvatar shape="circle" color="white" state="idle" size={96} faceUrl={publicBot.avatar_url ?? null} name={name} />
                             <div className="os-chat-info-name">{name}</div>
@@ -604,7 +660,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                             </div>
                         </div>
                     )}
-                    {greeting && messages.length === 0 && !(!bot && publicBot) && (
+                    {historyReady && greeting && messages.length === 0 && !(!bot && publicBot) && (
                         <MsgRow side="bot">
                             <div className="os-sender">{avatar}<span>{name}</span></div>
                             <div className="os-bubble bot">{greeting}</div>
@@ -698,10 +754,14 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                                     if (!streaming) setState(v ? 'listening' : 'idle')
                                     mention.syncAfterChange(v, e.target.selectionStart ?? v.length, inputRef)
                                 }}
-                                onClick={e => mention.syncFromInput(input, e.currentTarget.selectionStart ?? input.length)}
+                                onClick={e => {
+                                    const c = mention.snapCaret(input, e.currentTarget.selectionStart ?? input.length, inputRef)
+                                    mention.syncFromInput(input, c)
+                                }}
                                 onKeyUp={e => {
                                     if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
-                                        mention.syncFromInput(input, e.currentTarget.selectionStart ?? input.length)
+                                        const c = mention.snapCaret(input, e.currentTarget.selectionStart ?? input.length, inputRef)
+                                        mention.syncFromInput(input, c)
                                     }
                                 }}
                                 onKeyDown={onKey}

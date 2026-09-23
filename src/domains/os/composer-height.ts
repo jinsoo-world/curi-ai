@@ -1,8 +1,8 @@
 // 채팅 입력창 높이: 1줄에서 시작해 내용만큼 늘리고, 상한 이후만 스크롤.
 // 제품 카피에 가운뎃점·긴 줄표 금지.
 
-/** 최소 높이 (CSS .os-input min-height 와 맞춤) */
-export const COMPOSER_MIN_PX = 40
+/** 최소 높이 (CSS .os-input min-height(44) · 보내기 단추와 맞춤) */
+export const COMPOSER_MIN_PX = 44
 /** 대략 6~8줄. 이보다 크면 overflow-y auto */
 export const COMPOSER_MAX_PX = 180
 

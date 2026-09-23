@@ -5,6 +5,7 @@ import { useLayoutEffect, useCallback, type RefObject, type UIEvent } from 'reac
 import {
     applyComposerAutoHeight,
     syncComposerMirrorScroll,
+    COMPOSER_MIN_PX,
 } from '@/domains/os/composer-height'
 
 export function useComposerAutoHeight(
@@ -14,8 +15,11 @@ export function useComposerAutoHeight(
     const resize = useCallback(() => {
         const el = inputRef.current
         if (!el) return
-        applyComposerAutoHeight(el)
+        const h = applyComposerAutoHeight(el)
         syncComposerMirrorScroll(el)
+        // 1줄이면 ＋/보내기/placeholder 세로 가운데, 여러 줄이면 아래 정렬
+        const bar = el.closest('.os-input-bar')
+        if (bar) bar.classList.toggle('is-multi', h > COMPOSER_MIN_PX + 2)
     }, [inputRef])
 
     useLayoutEffect(() => {

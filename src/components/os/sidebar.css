@@ -116,24 +116,9 @@
 .os-sheet .os-field { margin-top: 14px; }
 .os-sheet .os-field-label { font-size: 13px; color: var(--os-글-흐림); margin-bottom: 8px; }
 
-/* ── 폰(≤900px) = 위쪽 가로 띠 (대표 아이폰 390px 실측 0923 「봇들 이름이 안 보인다」) ──
-   원인 = os.css 가 띠를 136px 로 자르는데 안전 영역(노치) 여백이 그 안에 들어가고, 캐릭터가 72px 라 이름이 아래로 잘려 나갔다.
-   여기선 캐릭터 52px + 이름 13px 한 줄로 96px 안에 넣고, 띠 높이는 안전 영역만큼만 더 준다. */
-@media (max-width: 900px) {
-    .os-left { max-height: calc(96px + env(safe-area-inset-top)); }
-    .os-roster { padding: 4px 10px 4px; gap: 0 2px; grid-auto-columns: 78px; align-items: start; }
-    .os-bot-tile { padding: 4px 2px 4px; gap: 3px; border-radius: 12px; }
-    .os-bot-tile .os-bot-name { font-size: 13px; line-height: 1.2; max-width: 72px; padding-bottom: 3px; }
-    /* 선택된 봇 = 이름 아래 초록 밑줄 */
-    .os-bot-tile[aria-current="true"] { background: transparent; }
-    .os-bot-tile[aria-current="true"] .os-bot-name { box-shadow: inset 0 -2px 0 var(--os-클로버); }
-    /* ＋ 단추 2개 = 띠 끝에 세로로 쌓인 한 칸 */
-    .os-add-tile { display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 6px 3px; scroll-snap-align: start; height: 100%; }
-    .os-add-tile .os-add-btn { min-height: 34px; font-size: 12.5px; padding: 2px 4px; border-radius: 10px; }
-    /* 사용 한도 원형 = 그 다음 칸. 글자(사용 한도 12%)는 원 안 숫자로 대신하므로 뺀다 */
-    .os-usage-tile { display: grid; place-items: center; padding: 6px 2px; scroll-snap-align: start; height: 100%; }
-    .os-usage-tile .os-usage-ring-btn { margin: 0; padding: 4px; min-height: 0; }
-    .os-usage-tile .os-usage-ring-caption { display: none; }
+/* ── 좁은·반쪽 화면(≤1024px) = 왼쪽 명단 서랍 (가로 띠 폐기) ──
+   서랍 안 레이아웃은 데스크톱과 같다. 시장·뒤로 여백만 손질. */
+@media (max-width: 1024px) {
     .os-market { padding: 4px 14px 32px; }
     .os-market-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .os-market-card { min-height: 180px; padding: 14px 8px 14px; gap: 8px; }
@@ -143,6 +128,7 @@
     .os-market-intro-meta h1 { font-size: 22px; }
     .os-back { margin: 8px 10px 0; }
 }
+
 
 /* @멘션 넘김: 상대 봇이 나를 부를 때 */
 .os-bot-face-wrap { position: relative; display: inline-grid; place-items: center; }

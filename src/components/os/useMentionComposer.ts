@@ -7,6 +7,7 @@ import {
     detectMentionQuery,
     filterMentionBots,
     resolveMentionCursor,
+    snapCursorAroundMentions,
 } from '@/domains/os/mentions'
 import type { MentionPickerItem } from './MentionPicker'
 
@@ -57,6 +58,23 @@ export function useMentionComposer(bots: MentionPickerItem[]) {
         setQuery('')
     }, [])
 
+    /** 칩 한가운데에 캐럿이 있으면 토큰 끝으로 옮긴다 */
+    const snapCaret = useCallback((
+        text: string,
+        cursor: number,
+        inputRef: RefObject<HTMLTextAreaElement | null>,
+    ) => {
+        const names = bots.map(b => b.name)
+        const next = snapCursorAroundMentions(text, cursor, names)
+        if (next === cursor) return cursor
+        const ta = inputRef.current
+        if (ta) {
+            ta.setSelectionRange(next, next)
+        }
+        return next
+    }, [bots])
+
+
     const insert = useCallback((text: string, cursor: number, item: MentionPickerItem) => {
         const fixed = resolveMentionCursor(text, cursor)
         const next = applyMentionInsertion(text, start, Math.max(fixed, start), item.name)
@@ -99,6 +117,7 @@ export function useMentionComposer(bots: MentionPickerItem[]) {
         syncAfterChange,
         close,
         insert,
+        snapCaret,
         onKeyWhileOpen,
         activeItem: items[activeIndex] ?? null,
         query,

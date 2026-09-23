@@ -191,9 +191,12 @@ export function faceClipId(uid: string): string {
     return `${uid}-face-clip`
 }
 
-/** 사진 얼굴 테두리 두께(px). 작은 아바타(36·44)는 3px, 그 위(72·96)는 4px */
+/** 사진 얼굴 테두리 두께(px). 칩(≤24) 1px, 작은 아바타(≤44) 2px, 그 위 3px.
+ *  예전 ≤44→3px 는 18px 멘션 칩에서 초록 반달이 얼굴을 가렸다. */
 export function faceBorderPx(size: number): number {
-    return size <= 44 ? 3 : 4
+    if (size <= 24) return 1
+    if (size <= 44) return 2
+    return 3
 }
 
 /** 사진 얼굴이 쉬는 중일 때 갸웃거리는 간격(ms) = 6~9초. rand 는 0~1(검사할 때 고정값을 넣는다) */

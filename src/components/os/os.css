@@ -59,6 +59,27 @@
 
 /* 대화 */
 .os-chat-head { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--os-선); font-size: 16px; font-weight: 600; }
+
+/* 봇 전환 직후 — 기록 오기 전 중립 뼈대 (기본 인사/샘플 카드 깜빡임 방지) */
+.os-chat-pending {
+    display: flex; flex-direction: column; gap: 12px;
+    padding: 28px 20px; max-width: 420px;
+}
+.os-chat-pending-bar {
+    height: 14px; border-radius: 8px;
+    background: color-mix(in srgb, var(--os-글-흐림) 22%, var(--os-말풍선));
+    animation: os-pending-pulse 1.2s ease-in-out infinite;
+}
+.os-chat-pending-bar.short { width: 62%; }
+@keyframes os-pending-pulse {
+    0%, 100% { opacity: .55; }
+    50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .os-chat-pending-bar { animation: none; }
+}
+
+.os-nav-btn { display: none; flex: 0 0 auto; }
 .os-messages {
     --os-reveal: 0px;
     --os-time-w: 72px;
@@ -248,8 +269,10 @@
 
 /* 입력 막대를 감싸는 칸(dock). 넓은 화면에선 그냥 지나가는 칸(배경 없음), 폰에선 아래 「오늘 체크인 안건」 참고 — 화면 맨 아래 붙는다 */
 .os-input-dock { display: flex; flex-direction: column; }
-.os-input-bar { display: flex; align-items: flex-end; gap: 8px; margin: 12px 20px 16px; padding: 8px 8px 8px 12px; border-radius: 22px; background: var(--os-말풍선); }
-.os-input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--os-글); font-size: 17px; line-height: 1.45; padding: 10px 6px; min-height: 40px; max-height: 180px; overflow-y: auto; }
+.os-input-bar { display: flex; align-items: center; gap: 8px; margin: 12px 20px 16px; padding: 6px 8px 6px 12px; border-radius: 22px; background: var(--os-말풍선); }
+/* 여러 줄로 커지면 ＋/보내기를 아래에 붙인다 (useComposerAutoHeight 가 is-multi 를 단다) */
+.os-input-bar.is-multi { align-items: flex-end; }
+.os-input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--os-글); font-size: 17px; line-height: 1.45; padding: 8px 6px; min-height: 44px; max-height: 180px; overflow-y: auto; box-sizing: border-box; }
 .os-input::placeholder { color: var(--os-글-흐림); }
 /* 원형 단추 = 정확히 40×40. globals 의 button min-height(52px)와 flex 줄어들기가 원을 세로로 늘였었다 → 둘 다 막는다.
    손가락 크기(52px)는 보이지 않는 ::after 로 채운다 */
@@ -368,45 +391,63 @@
 
 /* 캐릭터(도형 1 + 눈 2)의 모양, 움직임은 avatar.css 로 옮겼다 (BotAvatar.tsx 가 불러온다) */
 
-/* 좁은 화면(폰) = 명단은 위 가로 띠, 오른쪽 세부는 감춤 */
-@media (max-width: 900px) {
-    .os-shell { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
-    .os-left { border-right: 0; border-bottom: 1px solid var(--os-선); max-height: 136px; }
-    /* 명단 = 손가락으로 옆으로 넘기는 띠. 한 칸씩 걸리게(snap), 끝에서 화면이 같이 튕기지 않게(overscroll) */
-    .os-roster {
-        grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 84px;
-        overflow-x: auto; overflow-y: hidden; padding: 6px 10px 8px;
-        scroll-snap-type: x proximity; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+/* 좁은·반쪽 화면(≤1024px) = 왼쪽 명단은 햄버거 서랍(화면 밖). 위 가로 띠를 쓰지 않는다.
+   (반쪽 아이맥에서 단체방「이름」줄이 대화 머리 위에 비치던 원인 = 옛 가로 띠 + .os-groups 미숨김) */
+@media (max-width: 1024px) {
+    .os-shell { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); position: relative; }
+    .os-left {
+        position: fixed; top: 0; left: 0; bottom: 0; width: min(300px, 88vw);
+        z-index: 50; max-height: none; height: 100dvh;
+        border-right: 1px solid var(--os-선); border-bottom: 0;
+        transform: translateX(-105%); visibility: hidden;
+        transition: transform .25s ease, visibility 0s linear .25s;
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        overflow-x: hidden; overflow-y: auto;
+        box-shadow: none;
     }
-    .os-roster::-webkit-scrollbar { display: none; }
-    /* 칸 = 캐릭터 + 이름만. 한 줄 소개 칩은 폰에선 숨긴다(높이 150 안에 안 들어가 잘렸다). title 로는 남아 있다 */
-    .os-bot-tile { scroll-snap-align: start; padding: 10px 6px 8px; gap: 6px; }
-    .os-bot-tile .os-chip { display: none; }
-    .os-bot-name { max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .os-search, .os-left-bottom { display: none; }
+    .os-left.is-open {
+        transform: none; visibility: visible;
+        transition: transform .25s ease;
+        box-shadow: 12px 0 32px var(--os-그림자, rgba(0, 0, 0, .35));
+    }
+    .os-nav-back {
+        position: fixed; inset: 0; z-index: 49;
+        border: 0; padding: 0; margin: 0; cursor: pointer;
+        background: var(--os-덮개, rgba(0, 0, 0, .55));
+    }
+    /* 서랍 안에서는 데스크톱과 같은 격자 명단(가로 띠 아님) */
+    .os-roster {
+        display: grid; grid-template-columns: 1fr 1fr; grid-auto-flow: row;
+        grid-auto-columns: unset; gap: 10px 8px;
+        overflow-x: hidden; overflow-y: auto; padding: 8px 12px;
+        scroll-snap-type: none;
+    }
+    .os-bot-tile { scroll-snap-align: unset; }
+    .os-bot-tile .os-chip { display: -webkit-box; }
+    .os-bot-name { max-width: 100%; white-space: normal; }
+    .os-search, .os-left-bottom, .os-groups, .os-add-row { display: flex; }
     .os-bubble { max-width: 86%; }
     .os-cite, .os-permit, .os-first-tasks { max-width: 86%; }
-    /* 위쪽 봇 띠가 136px 를 넘쳐 대화 머리를 덮지 않게 */
-    .os-left { overflow: hidden; }
-    /* 앱으로 설치해 열면(주소창 없음) 노치, 홈 표시줄이 화면을 가린다 → 그만큼 띄운다 */
-    .os-left { padding-top: env(safe-area-inset-top); }
     .os-plus { top: calc(14px + env(safe-area-inset-top)); }
 
-    /* 폰 = 입력 막대를 CTA 처럼 화면 맨 아래 붙인다(대표 실측 0923 「하단 여백 있으면 안 됨, 입력창이 떠 있다」).
-       원인 = 예전엔 dock 없이 입력 막대 하나에만 margin(위12·좌우20·아래16+안전영역)을 줘서 옆·아래로 뜬 알약이 되고,
-       그 아래 남는 칸이 배경(대화 배경과 다르면 흰 띠로 보임)으로 비었다.
-       고침 = dock 을 대화 배경과 같은 색으로 화면 맨 아래(sticky)에 붙이고, 그 안의 알약은 옆 여백만 살짝 남긴다.
-       바닥 여백은 오직 홈 표시줄 안전영역(env safe-area-inset-bottom)만 — 그 이상 비워두지 않는다. */
+    /* 대화 머리 왼쪽 = 명단 서랍 단추(넓은 화면에선 숨김) */
+    .os-nav-btn { display: grid; }
+
     .os-input-dock {
         position: sticky; bottom: 0; z-index: 10;
         background: var(--os-바탕);
         padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
     }
     .os-input-bar { margin: 0; }
-    /* 키보드가 올라오면 보이는 화면이 줄어든다(visualViewport, OsChat.tsx 가 잰다) — 그 값을 통째로 써서
-       화면 전체(os-shell)를 그 높이로 맞춘다. 그러면 이 안의 dock 은 그대로 맨 아래 = 키보드 바로 위에 온다.
-       못 재면(옛 브라우저) 100dvh 그대로 */
     .os-shell { height: var(--os-vvh, 100dvh); }
+}
+@media (min-width: 1025px) {
+    .os-nav-btn { display: none !important; }
+    .os-nav-back { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .os-left, .os-left.is-open { transition: none; }
 }
 
 /* 첫 일 시키기 칩 (FirstTaskChips) = 인사말 아래, 첫 메시지 전에만 */
@@ -417,7 +458,7 @@
 /* 손님 명단 (GuestRoster) = 로그인 전 왼쪽에 공개 봇 3개 */
 .os-guest-roster { grid-column: 1 / -1; padding: 4px 4px 8px; }
 .os-guest-roster-title { font-size: 13px; color: var(--os-글-흐림); text-align: center; margin-bottom: 6px; }
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
     .os-guest-roster { display: none; }
 }
 
@@ -549,7 +590,7 @@
 .os-right h4 { font-size: 15px; margin: 16px 0 8px; }
 .os-right .os-card { font-size: 17px; padding: 12px; }
 .os-right .os-source, .os-right .os-routine { font-size: 17px; padding: 12px; }
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
     .os-right { position: fixed; width: min(88vw, 360px); border-left: 1px solid var(--os-선); z-index: 45; padding-top: env(safe-area-inset-top); padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
     .os-right-back { display: block; position: fixed; inset: 0; z-index: 44; background: var(--os-덮개, rgba(0, 0, 0, .55)); }
 }
@@ -601,7 +642,7 @@
 
 /* 끌어다 놓는 동안 대화 영역 테두리 */
 .os-chat-wrap.dragging .os-messages { outline: 2px dashed var(--os-포인트); outline-offset: -8px; border-radius: 18px; }
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
     .os-photo-strip-wrap { margin: 0 12px; }
 }
 /* === /사진 첨부 === */
@@ -655,21 +696,26 @@
 
 /* === @멘션 칩 (입력·말풍선) === */
 .os-mention-chip {
+    /* 원자 블록: 캐럿이 칩 안으로 들어가 보이지 않게 하고, 뒤 글자와 한 줄 높이를 맞춘다 */
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    vertical-align: middle;
+    vertical-align: -0.12em;
     max-width: 100%;
-    margin: 0 2px;
-    padding: 2px 8px 2px 3px;
+    margin: 0 3px 0 1px;
+    padding: 1px 8px 1px 2px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--os-포인트, #6c5ce7) 16%, var(--os-말풍선));
     border: 1px solid color-mix(in srgb, var(--os-포인트, #6c5ce7) 28%, transparent);
     color: var(--os-글);
     font-size: 0.92em;
     font-weight: 600;
-    line-height: 1.3;
+    line-height: 1.35;
     white-space: nowrap;
+    user-select: none;
+    -webkit-user-select: none;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
 }
 .os-mention-chip-face {
     flex: 0 0 auto;
@@ -679,6 +725,24 @@
     overflow: hidden;
     display: grid;
     place-items: center;
+    /* BotAvatar SVG/테두리가 원을 넘치지 않게 */
+    line-height: 0;
+}
+.os-mention-chip-face .bot-avatar,
+.os-mention-chip-face .bot-avatar svg {
+    width: 18px !important;
+    height: 18px !important;
+    display: block;
+    overflow: hidden;
+    border-radius: 50%;
+}
+.os-mention-chip-face .bot-avatar.has-face .face-border {
+    /* 칩에선 테두리 반달이 얼굴을 가리지 않게 숨김 (크기는 faceBorderPx 도 줄임) */
+    display: none;
+}
+.os-mention-chip-face .bot-avatar.has-face .body {
+    /* 칩에선 숨·갸웃 애니메이션 끄기 */
+    animation: none !important;
 }
 .os-mention-chip-fallback {
     width: 18px;
@@ -706,7 +770,7 @@
 .os-input-chip-mirror {
     position: absolute;
     inset: 0;
-    padding: 10px 6px;
+    padding: 8px 6px;
     font-size: 17px;
     line-height: 1.45;
     white-space: pre-wrap;

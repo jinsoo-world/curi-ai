@@ -156,10 +156,12 @@ describe('os/avatar — 사진 얼굴 (대표 0923 「있는 사진은 그걸 �
     })
 
     it('테두리는 작은 아바타 3px, 큰 아바타 4px', () => {
-        expect(faceBorderPx(36)).toBe(3)
-        expect(faceBorderPx(44)).toBe(3)
-        expect(faceBorderPx(72)).toBe(4)
-        expect(faceBorderPx(96)).toBe(4)
+        expect(faceBorderPx(18)).toBe(1)
+        expect(faceBorderPx(24)).toBe(1)
+        expect(faceBorderPx(36)).toBe(2)
+        expect(faceBorderPx(44)).toBe(2)
+        expect(faceBorderPx(72)).toBe(3)
+        expect(faceBorderPx(96)).toBe(3)
     })
 
     it('갸웃 간격은 6~9초', () => {

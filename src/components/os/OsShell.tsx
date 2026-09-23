@@ -48,6 +48,11 @@ interface TeamState {
     openEditBot: (bot: TeamBot) => void
     /** 채팅이 알려 주는 봇 상태 (명단 동그라미) */
     setBotPresence: (mentorId: string, state: BotState) => void
+    /** 좁은 화면에서 왼쪽 명단 서랍 열림 */
+    navOpen: boolean
+    openNav: () => void
+    closeNav: () => void
+    toggleNav: () => void
 }
 
 
@@ -93,7 +98,8 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     const [channelNameDraft, setChannelNameDraft] = useState('')
     const [query, setQuery] = useState('')
     const [demo, setDemo] = useState(false)   // 시연(?demo=1). 서버와 첫 그림이 같아야 해서 효과에서 한 박자 뒤에 읽는다
-    const [phone, setPhone] = useState(false) // 좁은 화면(≤900px). 사용 한도 원형과 ＋ 단추가 명단 띠 끝으로 옮겨 간다
+    const [phone, setPhone] = useState(false) // 좁은 화면(≤1024px). 왼쪽 명단은 햄버거 서랍
+    const [navOpen, setNavOpen] = useState(false)
     const [menu, setMenu] = useState<CtxMenu | null>(null)
     const bootstrapped = useRef(false)   // 기본 봇 만들기는 한 세션에 한 번만
     const pressTimer = useRef<number | null>(null)
@@ -187,13 +193,26 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
         osTrack('os_view')
         applyFontSize(document.documentElement, readFontSize(window.localStorage))
         void Promise.resolve().then(() => setDemo(new URLSearchParams(window.location.search).get('demo') === '1'))
-        const mq = window.matchMedia?.('(max-width: 900px)')
+        const mq = window.matchMedia?.('(max-width: 1024px)')
         if (!mq) return
-        const apply = () => setPhone(mq.matches)
+        const apply = () => {
+            setPhone(mq.matches)
+            if (!mq.matches) setNavOpen(false)
+        }
         void Promise.resolve().then(apply)
         mq.addEventListener('change', apply)
         return () => mq.removeEventListener('change', apply)
     }, [])
+
+    // 방을 바꾸면 좁은 화면 명단 서랍을 닫는다
+    useEffect(() => { setNavOpen(false) }, [pathname])
+
+    useEffect(() => {
+        if (!navOpen) return
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setNavOpen(false) }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [navOpen])
 
     // 설정, 봇 마켓 같은 한 장 화면에서 「대화로 돌아가기」. 앱으로 설치해 열면 브라우저 뒤로 단추가 없어서 이 단추가 유일한 길이다
     const goBack = useCallback(() => {
@@ -239,11 +258,16 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
         setBotPresenceMap(prev => (prev[mentorId] === state ? prev : { ...prev, [mentorId]: state }))
     }, [])
 
+    const openNav = useCallback(() => setNavOpen(true), [])
+    const closeNav = useCallback(() => setNavOpen(false), [])
+    const toggleNav = useCallback(() => setNavOpen(v => !v), [])
+
     const value = useMemo<TeamState>(() => ({
         team, loading, guest, tableMissing, refresh, openNewBot: () => setSheet(true),
         channels, refreshChannels, openNewGroup: () => setGroupSheet(true),
         openEditBot, setBotPresence,
-    }), [team, loading, guest, tableMissing, refresh, channels, refreshChannels, openEditBot, setBotPresence])
+        navOpen, openNav, closeNav, toggleNav,
+    }), [team, loading, guest, tableMissing, refresh, channels, refreshChannels, openEditBot, setBotPresence, navOpen, openNav, closeNav, toggleNav])
 
     // ── 우클릭 / 길게 누르기 메뉴 ──────────────────────────────
     const openMenu = useCallback((bot: TeamBot, x: number, y: number) => {
@@ -324,7 +348,10 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     return (
         <Ctx.Provider value={value}>
             <div className="os-shell" data-theme="os">
-                <aside className="os-left" style={{ position: 'relative' }}>
+                {phone && navOpen && (
+                    <button type="button" className="os-nav-back" aria-label="명단 닫기" onClick={closeNav} />
+                )}
+                <aside className={`os-left${navOpen ? ' is-open' : ''}`} id="os-nav">
                     <label className="os-search">
                         <span aria-hidden>🔍</span>
                         <input
@@ -386,12 +413,10 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                         )}
                         {!loading && guest && <GuestRoster />}
                         {/* 폰 = 명단이 가로 띠라 ＋ 단추 2개와 사용 한도 원형을 띠 끝에 둔다 */}
-                        {phone && <div className="os-add-tile" role="listitem">{addButtons}</div>}
-                        {phone && !guest && !demo && <div className="os-usage-tile" role="listitem"><UsageBar guest={guest} /></div>}
                     </div>
 
                     {/* 격자 아래 가로 단추 2개 (넓은 화면). 옛 오른쪽 위 ＋ 타일과 ⌘N 을 이 둘로 갈음 */}
-                    {!phone && <div className="os-add-row">{addButtons}</div>}
+                    <div className="os-add-row">{addButtons}</div>
 
                     {/* 그룹 채팅 = 겹친 아바타 + 이름. 표가 없으면 이 칸 자체가 안 보인다 */}
                     {channels.length > 0 && (
@@ -446,7 +471,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                     <InstallPrompt />
                     <div className="os-left-bottom">
                         {/* 사용 한도 원형 = 「봇 마켓」 줄 바로 위 (대표 지시 0923). 누르면 사용량 모달 */}
-                        {!phone && !demo && <div className="os-usage-slot"><UsageBar guest={guest} /></div>}
+                        {!demo && <div className="os-usage-slot"><UsageBar guest={guest} /></div>}
                         {/* 봇 마켓은 뼈대 안(/os/market)에서 그린다 = 왼쪽 명단이 남아 있어 뒤로도, 봇 타일로도 대화로 돌아온다 */}
                         <Link href={`/os/market${q}`} className="os-row-btn" aria-current={pathname.startsWith('/os/market')} style={{ textDecoration: 'none' }}><IconStore /> <span>봇 마켓</span></Link>
                         <Link href="/os/connect" className="os-row-btn" aria-current={pathname.startsWith('/os/connect')} style={{ textDecoration: 'none' }}><IconPlug /> <span>연결</span></Link>

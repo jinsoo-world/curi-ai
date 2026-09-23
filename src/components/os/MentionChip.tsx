@@ -2,7 +2,7 @@
 // @멘션 전달 표식 = 프로필 사진 + 이름 칩 (말풍선 입력창 공통)
 
 import BotAvatar from './BotAvatar'
-import type { BotColor, BotShape } from '@/domains/os/types'
+import type { BotColor } from '@/domains/os/types'
 import type { MentionChipBot } from '@/domains/os/mention-chips'
 
 export function MentionChip({
@@ -18,8 +18,9 @@ export function MentionChip({
         <span className="os-mention-chip" contentEditable={false} data-mention-name={name}>
             <span className="os-mention-chip-face" aria-hidden>
                 {bot ? (
+                    // 칩은 항상 원 — 클로버 자름틀·두꺼운 테두리가 얼굴을 가리지 않게
                     <BotAvatar
-                        shape={(bot.shape as BotShape) || 'circle'}
+                        shape="circle"
                         color={(bot.color as BotColor) || 'white'}
                         state="idle"
                         size={18}
