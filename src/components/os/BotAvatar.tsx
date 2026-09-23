@@ -10,6 +10,7 @@ import {
     faceBorderPx, faceClipId, faceTiltPeriodMs, isDoubleBlink, nextBlinkDelay, nextWinkDelay, shouldBlink, showsBadge,
     showsFace, showsFaceThinkDots, showsThinkDots, showsWorkDots, showsZ, startDrowsyTimer, talkBeatMs,
 } from './avatar'
+import { borderCssFromHex, extractFaceBorderColor } from './faceBorderColor'
 import './avatar.css'
 
 const PATHS: Record<BotShape, string> = {
@@ -72,6 +73,23 @@ function useTimers() {
     return { set, clearAll }
 }
 
+
+/** 사진 얼굴 테두리: URL 에서 악센트 색을 뽑아 stroke 에 쓴다. 실패·CORS 면 봇 색 변수로 폴백. URL 캐시는 faceBorderColor 모듈 Map */
+function useFaceBorderStroke(faceUrl: string | null | undefined, enabled: boolean, fallback: string): string {
+    const [stroke, setStroke] = useState(fallback)
+    useEffect(() => {
+        if (!enabled || !faceUrl) { setStroke(fallback); return }
+        let cancelled = false
+        setStroke(fallback) // URL 바뀌는 동안 잠깐 기본색, 뽑히면 교체
+        extractFaceBorderColor(faceUrl).then((hex) => {
+            if (cancelled) return
+            setStroke(borderCssFromHex(hex, fallback))
+        })
+        return () => { cancelled = true }
+    }, [faceUrl, enabled, fallback])
+    return enabled ? stroke : fallback
+}
+
 export default function BotAvatar({ shape, color, state = 'idle', size = 72, idleAfterMs = IDLE_DROWSY_MS, faceUrl, name, title }: BotAvatarProps) {
     const fill = `var(--봇-${color})`
     const geo = eyeLayout(shape)
@@ -91,6 +109,8 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, idl
     const hasFace = showsFace(faceUrl, faceError)
     const faceClip = faceClipId(uid)
     const faceBorderW = faceBorderPx(size) * (100 / size)   // px → 100 좌표계 단위로 환산(테두리가 크기와 무관하게 3~4px로 보이게)
+    // 사진 있을 때만 테두리 색을 사진에서 뽑는다(그린 눈 아바타는 fill 그대로). CEO: 전부 연두 링 → 사진별 악센트
+    const faceBorderStroke = useFaceBorderStroke(faceUrl, hasFace, fill)
     const [tiltMs] = useState(() => faceTiltPeriodMs(Math.random()))   // idle 갸웃 간격 6~9초, 봇마다 달라 보이게 한 번만 뽑는다
 
     // 0) 졸음 = 쉬는 중이 5분(+봇마다 0~20초) 이어지면 눈꺼풀이 천천히 내려온다. 상태가 바뀌면(말을 걸면) 바로 뜬다
@@ -219,9 +239,9 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, idl
                             <g className="face-border">
                                 {shape === 'clover'
                                     ? CLOVER.map(([cx, cy, r]) => (
-                                        <circle key={`b-${cx}-${cy}`} cx={cx} cy={cy} r={r} fill="none" stroke={fill} strokeWidth={faceBorderW} />
+                                        <circle key={`b-${cx}-${cy}`} cx={cx} cy={cy} r={r} fill="none" stroke={faceBorderStroke} strokeWidth={faceBorderW} />
                                     ))
-                                    : <path d={PATHS[shape]} fill="none" stroke={fill} strokeWidth={faceBorderW} />}
+                                    : <path d={PATHS[shape]} fill="none" stroke={faceBorderStroke} strokeWidth={faceBorderW} />}
                             </g>
                         </>
                     ) : (
