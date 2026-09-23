@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useOsTeam } from './OsShell'
 import BotAvatar from './BotAvatar'
 import BotMarkdown from './BotMarkdown'
+import MenuIcon, { CloseIcon, swipeToClose } from './MenuIcon'
 import { findMentionedBot } from '@/domains/os/channels'
 import { osTrack } from '@/domains/os/events'
 import type { BotColor, BotShape } from '@/domains/os/types'
@@ -115,7 +116,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                     </span>
                     <span>{name}</span>
                     <span style={{ marginLeft: 'auto' }}>
-                        <button className="os-icon-btn" aria-label="멤버 보기" title="멤버" onClick={() => setDetailOpen(v => !v)}>ⓘ</button>
+                        <button className="os-icon-btn os-menu" aria-label="멤버 보기" aria-expanded={detailOpen} title="멤버" onClick={() => setDetailOpen(v => !v)}><MenuIcon /></button>
                     </span>
                 </header>
 
@@ -145,7 +146,15 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                 </div>
             </div>
 
-            <aside className={`os-right${detailOpen ? ' open' : ''}`}>
+            {/* 멤버 칸 = 대화 위에 겹치는 서랍 (OsChat 과 같은 모양). 폰에선 88% 폭 + 어두운 배경 */}
+            {detailOpen && <div className="os-right-back" onClick={() => setDetailOpen(false)} aria-hidden />}
+            <aside className={`os-right${detailOpen ? ' open' : ''}`} aria-hidden={!detailOpen} {...swipeToClose(() => setDetailOpen(false))}>
+                <div className="os-right-head">
+                    <span>멤버</span>
+                    <button className="os-icon-btn os-right-close" aria-label="닫기" title="닫기" tabIndex={detailOpen ? 0 : -1}
+                        onClick={() => setDetailOpen(false)}><CloseIcon /></button>
+                </div>
+                {detailOpen && <>
                 <h4>멤버 ({members.length}명)</h4>
                 {members.map((m, i) => (
                     <div key={m.mentorId} className="os-source">
@@ -167,6 +176,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                             ＋ {b.name}
                         </button>
                     ))}
+                </>}
             </aside>
         </div>
     )

@@ -16,9 +16,8 @@
 }
 .os-main { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 
-/* 가운데+오른쪽 (대화 화면 안에서 2열) */
-.os-chat-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; height: 100%; min-height: 0; }
-.os-right { background: var(--os-패널); border-left: 1px solid var(--os-선); padding: 20px; overflow-y: auto; }
+/* 가운데(대화) 한 열. 오른쪽 세부칸은 그 위에 겹치는 서랍이라(아래 「오른쪽 세부칸」) 열고 닫아도 대화 폭, 말풍선 줄은 그대로다 */
+.os-chat-wrap { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); height: 100%; min-height: 0; overflow: hidden; }
 
 /* 왼쪽 명단 */
 .os-search { margin: 16px 16px 8px; padding: 12px 14px; border-radius: 14px; background: var(--os-말풍선); color: var(--os-글-연); font-size: 15px; display: flex; gap: 8px; align-items: center; }
@@ -41,16 +40,22 @@
 
 /* 대화 */
 .os-chat-head { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--os-선); font-size: 16px; font-weight: 600; }
-.os-messages { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; }
-.os-bubble { max-width: 72%; padding: 12px 16px; border-radius: 18px; background: var(--os-말풍선); font-size: 16px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+.os-messages { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; }
+.os-bubble { max-width: 72%; padding: 12px 16px; border-radius: 18px; background: var(--os-말풍선); font-size: 17px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
 .os-bubble.me { align-self: flex-end; background: var(--os-말풍선-내); }
 .os-bubble.bot { align-self: flex-start; }
 .os-sender { font-size: 12.5px; color: var(--os-글-흐림); margin: 4px 0 -6px 6px; display: flex; align-items: center; gap: 6px; }
 .os-input-bar { display: flex; align-items: center; gap: 8px; margin: 12px 20px 16px; padding: 8px 8px 8px 12px; border-radius: 22px; background: var(--os-말풍선); }
-.os-input { flex: 1; background: transparent; border: 0; outline: 0; color: var(--os-글); font-size: 16px; padding: 10px 6px; min-height: 40px; }
+.os-input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--os-글); font-size: 17px; padding: 10px 6px; min-height: 40px; }
 .os-input::placeholder { color: var(--os-글-흐림); }
-.os-icon-btn { width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; color: var(--os-글-연); font-size: 18px; cursor: pointer; display: grid; place-items: center; }
+/* 원형 단추 = 정확히 40×40. globals 의 button min-height(52px)와 flex 줄어들기가 원을 세로로 늘였었다 → 둘 다 막는다.
+   손가락 크기(52px)는 보이지 않는 ::after 로 채운다 */
+.os-icon-btn { position: relative; width: 40px; height: 40px; min-height: 0; aspect-ratio: 1 / 1; flex: 0 0 auto; padding: 0; line-height: 1; border-radius: 50%; border: 0; background: transparent; color: var(--os-글-연); font-size: 18px; cursor: pointer; display: grid; place-items: center; }
+.os-icon-btn::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; }
+.os-icon-btn svg { width: 20px; height: 20px; display: block; flex: 0 0 auto; }
 .os-icon-btn:hover { background: var(--os-말풍선-내); color: var(--os-글); }
+/* 입력창 안 단추(＋, ↑) = 정확히 44×44 원 (대표 폰 실측 0923 「보내기가 타원으로 깨진다」) */
+.os-input-bar .os-icon-btn { width: 44px; height: 44px; flex: 0 0 44px; }
 .os-send { background: var(--os-글); color: var(--os-바탕); }
 .os-send:disabled { opacity: .35; cursor: default; }
 .os-clover-bar { display: flex; align-items: center; gap: 8px; margin: 0 20px; font-size: 13.5px; color: var(--os-글-연); }
@@ -85,7 +90,7 @@
 .os-permit[data-status="denied"] { border-color: var(--os-선); opacity: .75; }
 .os-permit[data-status="allowed"], .os-permit[data-status="edited_allowed"] { border-color: color-mix(in srgb, var(--os-클로버) 55%, var(--os-선)); }
 .os-permit-head { display: flex; align-items: center; gap: 8px; font-size: 16px; }
-.os-permit-badge { width: 20px; height: 20px; border-radius: 50%; background: var(--os-승인); color: #000; font-weight: 800; font-size: 13px; display: grid; place-items: center; flex: 0 0 auto; }
+.os-permit-badge { width: 20px; height: 20px; border-radius: 50%; background: var(--os-승인); color: var(--os-승인-글, #000); font-weight: 800; font-size: 13px; display: grid; place-items: center; flex: 0 0 auto; }
 .os-permit-kind { margin-left: auto; font-size: 12.5px; color: var(--os-글-흐림); }
 .os-permit-to { font-size: 13.5px; color: var(--os-글-연); margin-top: 8px; }
 .os-permit-label { font-size: 12.5px; color: var(--os-글-흐림); margin: 12px 0 6px; }
@@ -111,7 +116,7 @@
 .os-notice { margin: 12px 16px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--os-경고) 18%, transparent); color: var(--os-경고); font-size: 13.5px; line-height: 1.5; }
 
 /* 새 봇 만들기 시트 */
-.os-sheet-back { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: grid; place-items: center; z-index: 50; padding: 16px; }
+.os-sheet-back { position: fixed; inset: 0; background: var(--os-덮개, rgba(0,0,0,.55)); display: grid; place-items: center; z-index: 50; padding: 16px; }
 .os-sheet { width: min(560px, 100%); max-height: 90dvh; overflow-y: auto; background: var(--os-패널); border: 1px solid var(--os-선); border-radius: 22px; padding: 22px; color: var(--os-글); }
 .os-sheet h3 { font-size: 20px; margin: 0 0 4px; }
 .os-sheet .os-step { font-size: 13px; color: var(--os-글-흐림); margin-bottom: 16px; }
@@ -148,15 +153,14 @@
     .os-bot-tile .os-chip { display: none; }
     .os-bot-name { max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .os-search, .os-left-bottom { display: none; }
-    .os-chat-wrap { grid-template-columns: 1fr; }
-    .os-right { display: none; }
-    .os-right.open { display: block; position: fixed; inset: auto 0 0 0; max-height: 70dvh; border-radius: 22px 22px 0 0; z-index: 40; }
-    .os-bubble { max-width: 88%; }
+    .os-bubble { max-width: 86%; }
+    .os-cite, .os-permit, .os-first-tasks { max-width: 86%; }
+    /* 위쪽 봇 띠가 136px 를 넘쳐 대화 머리를 덮지 않게 */
+    .os-left { overflow: hidden; }
     /* 앱으로 설치해 열면(주소창 없음) 노치, 홈 표시줄이 화면을 가린다 → 그만큼 띄운다 */
     .os-left { padding-top: env(safe-area-inset-top); }
     .os-plus { top: calc(14px + env(safe-area-inset-top)); }
     .os-input-bar { margin-bottom: calc(16px + env(safe-area-inset-bottom)); }
-    .os-right.open { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
 }
 
 /* 첫 일 시키기 칩 (FirstTaskChips) = 인사말 아래, 첫 메시지 전에만 */
@@ -172,9 +176,10 @@
 }
 
 /* ── 글자 크기 3단 (설정 → document.documentElement.dataset.font) ── */
-[data-font="small"] .os-bubble { font-size: 15px; }
-[data-font="large"] .os-bubble { font-size: 18px; }
-[data-font="large"] .os-input { font-size: 18px; }
+/* 말풍선, 입력창은 17px 아래로 안 내려간다(대표 0923). 「작게」는 17 그대로, 「크게」는 19 */
+[data-font="small"] .os-bubble { font-size: 17px; }
+[data-font="large"] .os-bubble { font-size: 19px; }
+[data-font="large"] .os-input { font-size: 19px; }
 
 /* ── 봇 답 마크다운 (굵게, 목록, 링크만) ── */
 .os-bubble.md { white-space: normal; }
@@ -211,7 +216,7 @@
 .os-routine-switch { width: 44px; height: 26px; border-radius: 13px; border: 0; flex: 0 0 auto; cursor: pointer; position: relative; background: var(--os-말풍선-내); transition: background .15s; }
 .os-routine-switch[data-on="true"] { background: var(--os-클로버); }
 .os-routine-switch:disabled { cursor: default; opacity: .8; }
-.os-routine-switch > span { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 10px; background: #fff; transition: left .15s; }
+.os-routine-switch > span { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 10px; background: var(--os-글); transition: left .15s; }
 .os-routine-switch[data-on="true"] > span { left: 21px; }
 .os-routine-when { font-size: 13px; color: var(--os-글-연); margin-top: 4px; }
 .os-routine-last { font-size: 12.5px; color: var(--os-글-흐림); margin-top: 4px; line-height: 1.45; }
@@ -231,24 +236,36 @@
 .os-set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
 .os-set-sub { font-size: 13px; color: var(--os-글-흐림); margin-top: 2px; line-height: 1.5; }
 
-/* ── 오른쪽 세부칸 여닫기 (대표 지시 0923: 데스크톱에서도 ⓘ 로 닫힌다) ── */
-/* 넓은 화면 기본 = 열림. 닫으면 칸이 사라지고 대화가 그 자리를 쓴다 */
-.os-right.closed { display: none; }
-.os-chat-wrap.narrow { grid-template-columns: minmax(0, 1fr); }
-
-/* 오른쪽 세부칸 = 닫기 햄버거(≡)가 칸 오른쪽 위에 붙는다 (대표 0923). 폰에선 오른쪽에서 나오는 서랍 */
-.os-right { position: relative; padding-top: 52px; }
-.os-right-close { position: absolute; top: 8px; right: 10px; font-size: 22px; }
-.os-menu { font-size: 22px; }
-.os-usage-bar { display: flex; align-items: center; gap: 8px; margin: 0 20px 6px; font-size: 13px; color: var(--os-글-흐림); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.os-usage-bar[data-warn] { color: var(--os-경고); }
+/* ── 오른쪽 세부칸 = 대화 위에 겹치는 서랍 (대표 0923: 「햄버거 열고 닫을 때 정렬이 깨진다」) ──
+   예전엔 세부칸이 대화 옆 열이라 열릴 때 대화 폭이 300px 줄어 말풍선이 다시 줄을 섰다.
+   지금은 absolute 로 대화 위에 얹고 오른쪽에서 0.25초 미끄러져 나온다 → 대화는 한 픽셀도 안 움직인다.
+   기본 = 닫힘(기억 안 함). 넓은 화면 = 그림자만, 폰 = 전체 폭 + 어두운 배경(누르면 닫힘). 여닫는 단추는 둘 다 ≡ */
+.os-right {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 320px; max-width: 100%;
+    background: var(--os-패널); border-left: 1px solid var(--os-선); padding: 0 16px 20px; overflow-y: auto; overflow-x: hidden;
+    font-size: 17px;
+    transform: translateX(100%); visibility: hidden; z-index: 30;
+    transition: transform .25s ease, visibility 0s linear .25s;
+}
+.os-right.open { transform: none; visibility: visible; transition: transform .25s ease; box-shadow: -12px 0 32px var(--os-그림자, rgba(0, 0, 0, .35)); }
+/* 서랍 맨 위 = 제목 + 닫기 ✕ (스크롤해도 위에 붙어 있다) */
+.os-right-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 -16px 4px; padding: 8px 10px 6px 16px; background: var(--os-패널); font-size: 15px; font-weight: 600; color: var(--os-글-연); }
+.os-right-close { flex: 0 0 auto; }
+.os-right-back { display: none; }
+/* 서랍 안 글자 = 대화창과 같은 17px, 카드 여백 12px, 제목 15px (대표 폰 실측 0923 「글자가 너무 크다」 = 칸은 넓고 글자는 들쭉날쭉했다) */
+.os-right h4 { font-size: 15px; margin: 16px 0 8px; }
+.os-right .os-card { font-size: 17px; padding: 12px; }
+.os-right .os-source, .os-right .os-routine { font-size: 17px; padding: 12px; }
 @media (max-width: 900px) {
-    .os-right.open { position: fixed; top: 0; right: 0; bottom: 0; left: auto; width: min(86vw, 340px); max-height: none; border-radius: 0; border-left: 1px solid var(--os-선); box-shadow: -12px 0 32px rgba(0, 0, 0, .5); z-index: 40; }
-    .os-chat-wrap { grid-template-columns: 1fr; }
+    .os-right { position: fixed; width: min(88vw, 360px); border-left: 1px solid var(--os-선); z-index: 45; padding-top: env(safe-area-inset-top); padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+    .os-right-back { display: block; position: fixed; inset: 0; z-index: 44; background: var(--os-덮개, rgba(0, 0, 0, .55)); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .os-right, .os-right.open { transition: none; }
 }
 /* === 사진 첨부 === (PhotoAttach·PhotoGrid. 둥글기 14px·그림자 0 6px 18px rgba(0,0,0,.35) 는 대표 지시 0923 값) */
 .os-plus-wrap { position: relative; flex: 0 0 auto; }
-.os-plus-menu { position: absolute; left: 0; bottom: calc(100% + 8px); min-width: 220px; padding: 6px; border-radius: var(--둥근-소); background: var(--os-패널); border: 1px solid var(--os-선); box-shadow: 0 6px 18px rgba(0,0,0,.35); z-index: 20; display: flex; flex-direction: column; gap: 2px; }
+.os-plus-menu { position: absolute; left: 0; bottom: calc(100% + 8px); min-width: 220px; padding: 6px; border-radius: var(--둥근-소); background: var(--os-패널); border: 1px solid var(--os-선); box-shadow: 0 6px 18px var(--os-그림자, rgba(0,0,0,.35)); z-index: 20; display: flex; flex-direction: column; gap: 2px; }
 .os-plus-item { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 10px 12px; border: 0; border-radius: 12px; background: transparent; color: var(--os-글); font-size: 15px; cursor: pointer; min-height: 44px; }
 .os-plus-item small { margin-left: auto; color: var(--os-글-흐림); font-size: 12.5px; }
 .os-plus-item:hover:not(:disabled) { background: var(--os-말풍선); }
@@ -257,13 +274,13 @@
 .os-photo-strip-wrap { margin: 0 20px; display: flex; flex-direction: column; gap: 6px; }
 .os-photo-notice { font-size: 13px; color: var(--os-경고); padding: 0 6px; }
 .os-photo-strip { display: flex; align-items: center; gap: 10px; padding: 8px 6px 12px; overflow-x: auto; }
-.os-photo-thumb { position: relative; flex: 0 0 auto; width: 72px; height: 72px; border-radius: 14px; overflow: hidden; background: var(--os-말풍선); box-shadow: 0 6px 18px rgba(0,0,0,.35); transition: transform .15s ease, box-shadow .15s ease; }
-.os-photo-thumb:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(0,0,0,.45); }
+.os-photo-thumb { position: relative; flex: 0 0 auto; width: 72px; height: 72px; border-radius: 14px; overflow: hidden; background: var(--os-말풍선); box-shadow: 0 6px 18px var(--os-그림자, rgba(0,0,0,.35)); transition: transform .15s ease, box-shadow .15s ease; }
+.os-photo-thumb:hover { transform: translateY(-2px); box-shadow: 0 10px 22px var(--os-그림자-진, rgba(0,0,0,.45)); }
 .os-photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .os-photo-thumb[data-state="uploading"] img { opacity: .55; }
-.os-photo-thumb[data-state="error"] { box-shadow: 0 0 0 2px var(--os-오류), 0 6px 18px rgba(0,0,0,.35); }
+.os-photo-thumb[data-state="error"] { box-shadow: 0 0 0 2px var(--os-오류), 0 6px 18px var(--os-그림자, rgba(0,0,0,.35)); }
 .os-photo-thumb[data-state="error"] img { opacity: .4; }
-.os-photo-spin { position: absolute; inset: 0; margin: auto; width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.25); border-top-color: var(--os-글); animation: os-photo-spin .8s linear infinite; }
+.os-photo-spin { position: absolute; inset: 0; margin: auto; width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid color-mix(in srgb, var(--os-글) 25%, transparent); border-top-color: var(--os-글); animation: os-photo-spin .8s linear infinite; }
 @keyframes os-photo-spin { to { transform: rotate(360deg); } }
 .os-photo-retry { position: absolute; inset: 0; margin: auto; width: 44px; height: 26px; border: 0; border-radius: 8px; background: var(--os-오류); color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer; min-height: 0; }
 .os-photo-x { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; min-height: 0; border: 0; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; font-size: 15px; line-height: 1; cursor: pointer; display: grid; place-items: center; }
@@ -277,15 +294,15 @@
 .os-photo-grid[data-cols="1"] { grid-template-columns: 1fr; }
 .os-photo-grid[data-cols="2"] { grid-template-columns: 1fr 1fr; }
 .os-photo-grid[data-cols="3"] { grid-template-columns: 1fr 1fr 1fr; }
-.os-photo-cell { display: block; padding: 0; border: 0; min-height: 0; border-radius: 14px; overflow: hidden; background: var(--os-말풍선); cursor: zoom-in; box-shadow: 0 6px 18px rgba(0,0,0,.35); transition: transform .15s ease; aspect-ratio: 1 / 1; }
+.os-photo-cell { display: block; padding: 0; border: 0; min-height: 0; border-radius: 14px; overflow: hidden; background: var(--os-말풍선); cursor: zoom-in; box-shadow: 0 6px 18px var(--os-그림자, rgba(0,0,0,.35)); transition: transform .15s ease; aspect-ratio: 1 / 1; }
 .os-photo-grid[data-cols="1"] .os-photo-cell { aspect-ratio: auto; max-height: 360px; }
 .os-photo-cell:hover { transform: translateY(-2px); }
 .os-photo-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.os-photo-grid[data-cols="1"] .os-photo-cell img { max-height: 360px; object-fit: contain; background: #000; }
+.os-photo-grid[data-cols="1"] .os-photo-cell img { max-height: 360px; object-fit: contain; background: var(--os-바탕); }
 
 /* 크게 보기 덮개 */
-.os-photo-view { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.88); display: grid; place-items: center; padding: 24px; cursor: zoom-out; }
-.os-photo-view img { max-width: 100%; max-height: 100%; border-radius: 14px; box-shadow: 0 6px 18px rgba(0,0,0,.35); cursor: default; }
+.os-photo-view { position: fixed; inset: 0; z-index: 60; background: var(--os-덮개-진, rgba(0,0,0,.88)); display: grid; place-items: center; padding: 24px; cursor: zoom-out; }
+.os-photo-view img { max-width: 100%; max-height: 100%; border-radius: 14px; box-shadow: 0 6px 18px var(--os-그림자, rgba(0,0,0,.35)); cursor: default; }
 .os-photo-view-count { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); font-size: 13.5px; color: var(--os-글-연); }
 .os-photo-view-x { position: fixed; top: 14px; right: 14px; width: 40px; height: 40px; min-height: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.12); color: #fff; font-size: 22px; cursor: pointer; display: grid; place-items: center; }
 
