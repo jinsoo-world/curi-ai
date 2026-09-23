@@ -19,7 +19,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export const dynamic = 'force-dynamic'
 
 /** 이 수보다 적으면 화면에 안 보여준다 */
-export const 최소선 = 300
+const 최소선 = 300
 
 async function 세기(): Promise<number> {
     const admin = createAdminClient()

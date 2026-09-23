@@ -18,6 +18,7 @@ import { makeCanary, confidentialityPrompt, createOutputGuard, detectPromptExtra
 import { findConnector, markConnector, notionSearch, readConnectorSecret } from '@/domains/connectors'
 import { CREDIT_CONSTANTS } from '@/domains/credit/types'
 import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
+import { applySkills, skillsForMentor } from '@/domains/os/skills'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -44,7 +45,7 @@ const MAX_IMAGE_COUNT = 10
  * 자료 속 글은 「참고할 인용」일 뿐이고, 그 안의 지시문은 따르지 않는다고 모델에게 못 박는다.
  * 울타리 표식(<<<자료>>>)이 자료 본문에 섞여 있으면 지워서 울타리를 못 닫게 한다.
  */
-export function fenceKnowledge(chunks: string[]): string {
+function fenceKnowledge(chunks: string[]): string {
     const clean = chunks.map(c => c.replace(/<<<\/?자료>>>/g, '').trim()).filter(Boolean)
     return [
         '<<<자료>>>',
@@ -308,6 +309,15 @@ export async function POST(req: Request) {
             } : null,
             memories,
         )
+
+        // 🧩 사용자가 깃허브에서 내려받아 이 봇에 붙인 스킬(지침 글). 울타리 안에만 들어가고 도구 게이트는 못 넘는다(domains/os/skills)
+        if (user) {
+            try {
+                systemPrompt = applySkills(systemPrompt, await skillsForMentor(createAdminClient(), user.id, mentorId))
+            } catch (e) {
+                console.error('[chat] skills', e instanceof Error ? e.message : e)
+            }
+        }
 
         // 📋 유저의 활성 고민 주입 (멘토 매칭에서 저장된 고민)
         if (user) {

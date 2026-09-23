@@ -18,7 +18,7 @@ import NewBotSheet from './NewBotSheet'
 import GuestRoster from './GuestRoster'
 import NewGroupSheet from './NewGroupSheet'
 import UsageBar from './UsageBar'
-import { IconStore, IconGear, IconUser, IconLogin, IconBack } from './Icons'
+import { IconStore, IconGear, IconUser, IconLogin, IconBack, IconPlug } from './Icons'
 import InstallPrompt from '@/components/pwa/InstallPrompt'
 import './os.css'
 import './sidebar.css'
@@ -342,6 +342,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                         {!phone && !demo && <div className="os-usage-slot"><UsageBar guest={guest} /></div>}
                         {/* 봇 마켓은 뼈대 안(/os/market)에서 그린다 = 왼쪽 명단이 남아 있어 뒤로도, 봇 타일로도 대화로 돌아온다 */}
                         <Link href={`/os/market${q}`} className="os-row-btn" aria-current={pathname.startsWith('/os/market')} style={{ textDecoration: 'none' }}><IconStore /> <span>봇 마켓</span></Link>
+                        <Link href="/os/connect" className="os-row-btn" aria-current={pathname.startsWith('/os/connect')} style={{ textDecoration: 'none' }}><IconPlug /> <span>연결</span></Link>
                         <Link href="/os/settings" className="os-row-btn" aria-current={pathname.startsWith('/os/settings')} style={{ textDecoration: 'none' }}><IconGear /> <span>설정</span></Link>
                         {guest
                             ? <Link href="/login?next=/os" className="os-row-btn" style={{ textDecoration: 'none' }}><IconLogin /> <span>로그인</span></Link>

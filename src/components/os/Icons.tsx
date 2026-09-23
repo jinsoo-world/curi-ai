@@ -64,3 +64,11 @@ export function IconBack(p: SVGProps<SVGSVGElement>) {
         </svg>
     )
 }
+/** 연결 = 플러그 */
+export function IconPlug(p: SVGProps<SVGSVGElement>) {
+    return (
+        <svg {...base(p)}>
+            <path d="M9 3v5" /><path d="M15 3v5" /><path d="M6 8h12v3a6 6 0 0 1-12 0z" /><path d="M12 17v4" />
+        </svg>
+    )
+}
