@@ -195,10 +195,10 @@ describe('generateLookBanterLines — LLM / 폴백', () => {
         expect(got.notice).toContain('색')
         expect(got.reply.length).toBeGreaterThan(1)
         expect(ask).toHaveBeenCalledOnce()
-        const [sys, user] = ask.mock.calls[0]
-        expect(sys).toContain('JSON')
-        expect(user).toContain('기획팀장')
-        expect(user).toContain('홍보팀장')
+        const call = ask.mock.calls[0] as unknown as [string, string]
+        expect(call[0]).toContain('JSON')
+        expect(call[1]).toContain('기획팀장')
+        expect(call[1]).toContain('홍보팀장')
         expect(buildLookBanterSystemPrompt()).toContain('JSON')
     })
     it('솔라가 null 이면 template 폴백', async () => {
