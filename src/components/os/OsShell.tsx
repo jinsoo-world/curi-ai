@@ -6,6 +6,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { TeamBot } from '@/domains/os/types'
+import { osTrack } from '@/domains/os/events'
+import { applyFontSize, readFontSize } from '@/domains/os/settings'
 import BotAvatar from './BotAvatar'
 import NewBotSheet from './NewBotSheet'
 import GuestRoster from './GuestRoster'
@@ -94,6 +96,12 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     useEffect(() => { void refresh() }, [refresh])
     useEffect(() => { void refreshChannels() }, [refreshChannels])
 
+    // 이 화면에 왔다(획득) + 설정에서 고른 글자 크기를 되살린다. 둘 다 한 번만
+    useEffect(() => {
+        osTrack('os_view')
+        applyFontSize(document.documentElement, readFontSize(window.localStorage))
+    }, [])
+
     // ⌘/Ctrl + N = 새 봇 (그록봇의 ⌘1 문법을 한 키로)
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
@@ -151,7 +159,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                                     onClick={() => router.push(href)}
                                     title={b.oneLiner ?? b.name}
                                 >
-                                    <BotAvatar shape={b.shape} color={b.color} state={current ? 'listening' : 'idle'} size={72} faceUrl={b.avatarUrl} />
+                                    <BotAvatar shape={b.shape} color={b.color} state={current ? 'listening' : 'idle'} size={72} faceUrl={b.avatarUrl} name={b.name} />
                                     <span className="os-bot-name">{b.name}</span>
                                     {b.oneLiner && <span className="os-chip">{b.oneLiner}</span>}
                                 </button>
@@ -194,6 +202,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
 
                     <div className="os-left-bottom">
                         <Link href="/mentors" className="os-row-btn" style={{ textDecoration: 'none' }}>🏪 <span>둘러보기 (리더들의 봇)</span></Link>
+                        <Link href="/os/settings" className="os-row-btn" style={{ textDecoration: 'none' }}>⚙ <span>설정</span></Link>
                         {guest
                             ? <Link href="/login?next=/os" className="os-row-btn" style={{ textDecoration: 'none' }}>👤 <span>로그인</span></Link>
                             : <Link href="/profile" className="os-row-btn" style={{ textDecoration: 'none' }}>👤 <span>내 계정</span></Link>}

@@ -6,8 +6,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getVisitorId } from '@/lib/visitor'
 import { UNAVAILABLE_TEXT } from '@/domains/chat/constants'
 import type { BotState } from '@/domains/os/types'
+import { osTrack } from '@/domains/os/events'
 import BotAvatar from './BotAvatar'
+import BotMarkdown from './BotMarkdown'
+import CheckinStrip from './CheckinStrip'
+import CloverBar from './CloverBar'
 import DetailPane from './DetailPane'
+import NextStepLink from './NextStepLink'
 import AddKnowledgeSheet from './AddKnowledgeSheet'
 import PermissionCard from './PermissionCard'
 import type { CardView } from './PermissionCard'
@@ -38,7 +43,12 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
     const [sessionId, setSessionId] = useState<string | null>(null)
     const [detailOpen, setDetailOpen] = useState(false)
     const [addSheet, setAddSheet] = useState(false)
+    const [demo, setDemo] = useState(false)
     const endRef = useRef<HTMLDivElement>(null)
+
+    // 시연(?demo=1)·손님에게는 「내 것」을 저장하는 칸(체크인·다음 한 걸음)을 안 보인다
+    useEffect(() => { setDemo(new URLSearchParams(window.location.search).get('demo') === '1') }, [])
+    const 개인화숨김 = guest || demo
 
     // 내 팀에 없으면 공개 봇(리더의 봇)인지 본다
     useEffect(() => {
@@ -68,6 +78,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
     const send = useCallback(async () => {
         const text = input.trim()
         if (!text || streaming) return
+        osTrack('os_message_sent', { mentor_id: mentorId, guest })
         const userMsg: Msg = { id: `u-${Date.now()}`, role: 'user', content: text }
         const botId = `a-${Date.now()}`
         const base = [...messages, userMsg]
@@ -89,6 +100,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                     })
                     const draftData = await draftRes.json()
                     if (draftData?.card) {
+                        osTrack('os_approval_shown', { card_id: String(draftData.card.id ?? ''), action_type: String(draftData.card.actionType ?? '') })
                         setMessages([...base, { id: botId, role: 'assistant', content: '', card: draftData.card as CardView }])
                         setState('waiting_approval')
                         setStreaming(false)
@@ -159,8 +171,8 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
     }
 
     const avatar = bot
-        ? <BotAvatar shape={bot.shape} color={bot.color} state={state} size={36} faceUrl={bot.avatarUrl} />
-        : <BotAvatar shape="circle" color="white" state={state} size={36} faceUrl={publicBot?.avatar_url ?? null} />
+        ? <BotAvatar shape={bot.shape} color={bot.color} state={state} size={36} faceUrl={bot.avatarUrl} name={bot.name} />
+        : <BotAvatar shape="circle" color="white" state={state} size={36} faceUrl={publicBot?.avatar_url ?? null} name={publicBot?.name ?? name} />
 
     return (
         <div className="os-chat-wrap">
@@ -172,6 +184,9 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                         <button className="os-icon-btn" aria-label="세부 정보" title="세부 정보" onClick={() => setDetailOpen(v => !v)}>ⓘ</button>
                     </span>
                 </header>
+
+                {/* 오늘 체크인 띠 — 오늘 아직 안 했을 때만. 손님·시연에선 안 뜬다 */}
+                <CheckinStrip hidden={개인화숨김} />
 
                 <div className="os-messages">
                     {greeting && messages.length === 0 && (
@@ -188,16 +203,27 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                                 {m.card
                                     ? <PermissionCard
                                         card={m.card}
-                                        onDecided={(c) => { setMessages(prev => prev.map(x => x.id === m.id ? { ...x, card: c } : x)); setState('idle') }}
+                                        onDecided={(c) => {
+                                            osTrack('os_approval_decided', { card_id: c.id, action_type: c.actionType, status: c.status })
+                                            setMessages(prev => prev.map(x => x.id === m.id ? { ...x, card: c } : x))
+                                            setState('idle')
+                                        }}
                                     />
-                                    : <div className="os-bubble bot">{m.content || (state === 'thinking' ? '…' : '')}</div>}
+                                    : <div className="os-bubble bot md">{m.content ? <BotMarkdown text={m.content} /> : (state === 'thinking' ? '…' : '')}</div>}
                                 {m.sources && m.sources.length > 0 && (
                                     <div className="os-cite">📎 참고한 자료: {m.sources.map(s => s.title).join(' · ')}</div>
+                                )}
+                                {/* 답 아래 작은 링크 — 봇이 말을 다 끝낸 뒤에만 */}
+                                {!m.card && !개인화숨김 && !streaming && m.content && (
+                                    <NextStepLink answer={m.content} mentorId={mentorId} />
                                 )}
                             </div>
                         ))}
                     <div ref={endRef} />
                 </div>
+
+                {/* 🍀 클로버 잔량 — 입력창 바로 위. 원화 환산은 안 적는다 */}
+                <CloverBar guest={guest} />
 
                 <div className="os-input-bar">
                     <button

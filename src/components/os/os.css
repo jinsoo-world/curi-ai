@@ -164,3 +164,63 @@
 @media (max-width: 900px) {
     .os-guest-roster { display: none; }
 }
+
+/* ── 글자 크기 3단 (설정 → document.documentElement.dataset.font) ── */
+[data-font="small"] .os-bubble { font-size: 15px; }
+[data-font="large"] .os-bubble { font-size: 18px; }
+[data-font="large"] .os-input { font-size: 18px; }
+
+/* ── 봇 답 마크다운 (굵게·목록·링크만) ── */
+.os-bubble.md { white-space: normal; }
+.os-bubble.md > :first-child { margin-top: 0; }
+.os-bubble.md > :last-child { margin-bottom: 0; }
+.os-bubble.md p { margin: 0 0 8px; }
+.os-bubble.md ul, .os-bubble.md ol { margin: 0 0 8px; padding-left: 20px; }
+.os-bubble.md li { margin: 2px 0; }
+.os-bubble.md a { color: var(--os-포인트); }
+.os-bubble.md code { background: var(--os-말풍선-내); border-radius: 6px; padding: 1px 5px; font-size: .92em; }
+
+/* ── 오늘 체크인 띠 (대화 목록 위) ── */
+.os-checkin { margin: 12px 24px 0; padding: 14px 16px; border-radius: 18px; background: var(--os-말풍선); border: 1px solid var(--os-선); }
+.os-checkin-head { display: flex; align-items: center; gap: 10px; font-size: 16px; color: var(--os-글); }
+.os-checkin-head b { margin-right: auto; }
+.os-checkin-head .os-linkbtn { flex: 0 0 auto; padding: 4px 0; font-size: 13px; color: var(--os-글-흐림); }
+.os-checkin-label { font-size: 12.5px; color: var(--os-글-흐림); margin: 12px 0 6px; }
+.os-checkin-input { width: 100%; margin-top: 12px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--os-선); background: var(--os-바탕); color: var(--os-글); font-size: 15px; font-family: inherit; }
+
+/* ── 봇 말풍선 아래 「＋ 다음 한 걸음으로」 ── */
+.os-nextstep-link { align-self: flex-start; border: 0; background: transparent; color: var(--os-글-흐림); font-size: 12.5px; cursor: pointer; padding: 2px 6px; margin: -6px 0 2px; }
+.os-nextstep-link:hover { color: var(--os-포인트); }
+.os-nextstep-done { align-self: flex-start; font-size: 12.5px; color: var(--os-클로버); margin: -6px 0 2px 6px; }
+.os-nextstep { align-self: flex-start; width: 420px; max-width: min(72%, 420px); background: var(--os-말풍선); border-radius: 14px; padding: 12px 14px; }
+
+/* ── 클로버 잔량 띠 안의 충전 링크 ── */
+.os-clover-bar .os-clover-charge { margin-left: auto; color: var(--os-포인트); text-decoration: none; font-size: 13.5px; padding: 6px 10px; border-radius: 10px; }
+.os-clover-bar .os-clover-charge:hover { background: var(--os-말풍선); }
+
+/* ── 루틴 (오른쪽 세부칸) ── */
+.os-routine { background: var(--os-말풍선); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; font-size: 14.5px; color: var(--os-글); }
+.os-routine-top { display: flex; align-items: center; gap: 8px; }
+.os-routine-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.os-routine-switch { width: 44px; height: 26px; border-radius: 13px; border: 0; flex: 0 0 auto; cursor: pointer; position: relative; background: var(--os-말풍선-내); transition: background .15s; }
+.os-routine-switch[data-on="true"] { background: var(--os-클로버); }
+.os-routine-switch:disabled { cursor: default; opacity: .8; }
+.os-routine-switch > span { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 10px; background: #fff; transition: left .15s; }
+.os-routine-switch[data-on="true"] > span { left: 21px; }
+.os-routine-when { font-size: 13px; color: var(--os-글-연); margin-top: 4px; }
+.os-routine-last { font-size: 12.5px; color: var(--os-글-흐림); margin-top: 4px; line-height: 1.45; }
+.os-routine-note { font-size: 13px; color: var(--os-글-연); margin-top: 8px; line-height: 1.5; }
+.os-routine-note.bad { color: var(--os-오류); }
+
+/* ── 「이번 주」 카드 ── */
+.os-week-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 0; }
+.os-week-row b { color: var(--os-글); font-size: 15px; }
+
+/* ── 설정 화면 (/os/settings) ── */
+.os-settings { max-width: 640px; width: 100%; margin: 0 auto; padding: 24px 20px 60px; overflow-y: auto; color: var(--os-글); }
+.os-settings h1 { font-size: 24px; margin: 0 0 4px; }
+.os-settings h2 { font-size: 14px; color: var(--os-글-흐림); font-weight: 600; margin: 26px 0 8px; }
+.os-settings .os-card { background: var(--os-말풍선); border-radius: 16px; padding: 14px 16px; font-size: 15px; line-height: 1.55; color: var(--os-글-연); }
+.os-settings .os-card b { color: var(--os-글); }
+.os-set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.os-set-sub { font-size: 13px; color: var(--os-글-흐림); margin-top: 2px; line-height: 1.5; }
