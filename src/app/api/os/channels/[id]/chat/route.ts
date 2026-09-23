@@ -2,9 +2,10 @@
 //
 // 돌아가는 순서 (한 번에 끝. 스트림 아님)
 //   ① 사람 말 저장
-//   ② 「첫 답 봇」 하나가 답한다 (방에 처음 넣은 봇 = 기본 비서실장 자리)
-//   ③ 그 답에 「@다른봇」이 있으면 그 봇이 **딱 한 번** 이어 답한다
-//   ④ 거기서 끝. 두 번째 봇이 또 누구를 불러도 아무도 답하지 않는다 (그록봇 안티패턴 ㉟)
+//   ② 사람이 「@홍보팀장 …」 처럼 한 명을 콕 집으면 **그 봇만** 답하고 끝난다
+//   ③ 아니면 「첫 답 봇」 하나가 답한다 (방에 처음 넣은 봇 = 기본 비서실장 자리)
+//   ④ 그 답에 「@다른봇」이 있으면 그 봇이 **딱 한 번** 이어 답한다
+//   ⑤ 거기서 끝. 두 번째 봇이 또 누구를 불러도 아무도 답하지 않는다 (그록봇 안티패턴 ㉟)
 //
 // 🔒 남의 방은 getChannel 이 null 을 돌려줘서 여기서 끝난다.
 import { NextResponse } from 'next/server'
@@ -67,7 +68,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
         const 새말: ChannelMessage[] = [사람말]
         let 봇이말한횟수 = 0
-        let 말할봇: ChannelBot | null = bots[0]           // 첫 답 봇 = 방에 처음 넣은 봇
+
+        // 사람이 「@이름」으로 한 명을 콕 집었나. 집었으면 그 봇만 답하고 다른 봇은 안 끼어든다.
+        const 콕집음 = findMentionedBot(text, bots.map(b => ({ mentorId: b.mentorId, name: b.name })))
+        let 말할봇: ChannelBot | null = 콕집음
+            ? bots.find(b => b.mentorId === 콕집음.mentorId) ?? bots[0]
+            : bots[0]                                    // 첫 답 봇 = 방에 처음 넣은 봇
         let 앞선봇: string | null = null
 
         while (말할봇 && canBotSpeakAgain(봇이말한횟수)) {
@@ -84,8 +90,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
             봇이말한횟수 += 1
             앞선봇 = 말할봇.mentorId
 
-            // 답 속에 「@다른봇」이 있으면 그 봇이 한 번만 이어 답한다
-            const 지목: { mentorId: string; name: string } | null = 답
+            // 답 속에 「@다른봇」이 있으면 그 봇이 한 번만 이어 답한다.
+            // 단 사람이 한 명을 콕 집은 경우엔 그 봇 하나로 끝낸다(부른 사람만 답한다).
+            const 지목: { mentorId: string; name: string } | null = (답 && !콕집음)
                 ? findMentionedBot(내용, bots.map(b => ({ mentorId: b.mentorId, name: b.name })), 앞선봇)
                 : null
             말할봇 = (지목 && canBotSpeakAgain(봇이말한횟수))

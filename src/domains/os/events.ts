@@ -1,7 +1,7 @@
 'use client'
-// domains/os — 에이전트 OS 화면에서 세는 8개 (AARRR).
+// domains/os — 에이전트 OS 화면에서 세는 10개 (AARRR).
 //
-// 왜 8개뿐인가 = 세는 자리가 많으면 아무도 안 본다. 손님이 「와서 → 봇을 만들고 → 말을 걸고 →
+// 왜 이것만 세나 = 세는 자리가 많으면 아무도 안 본다. 손님이 「와서 → 봇을 만들고 → 말을 걸고 →
 // 승인하고 → 매일 들르고 → 반복(루틴)을 켜고 → 자료를 넣는」 길만 센다.
 //
 //   획득(A) os_view          누가 이 화면에 왔나
@@ -11,6 +11,8 @@
 //   유지(R) os_checkin_done  오늘 체크인을 했나
 //   유지(R) os_routine_created 반복을 켰나            ← 다시 오는 가장 센 신호
 //   수익(R) os_knowledge_added 자기 자료를 넣었나     ← 갈아타기 어려워지는 지점
+//   활성(A) os_relay_sent      봇이 옆 봇에게 말을 옮겼나 (봇끼리 전달)
+//   활성(A) os_group_message   그룹방에서 말을 걸었나
 //
 // ⛔ 개인정보는 절대 넣지 않는다. 이름·전화·메시지 본문·자료 제목 금지. ID 와 개수만.
 
@@ -25,6 +27,8 @@ export type OsEvent =
     | 'os_checkin_done'
     | 'os_routine_created'
     | 'os_knowledge_added'
+    | 'os_relay_sent'
+    | 'os_group_message'
 
 /** 붙여도 되는 값 = 숫자·참거짓·짧은 갈래 이름·ID. 본문·이름은 안 된다 */
 export type OsEventProps = Record<string, string | number | boolean | null | undefined>
