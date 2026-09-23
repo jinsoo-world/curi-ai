@@ -3,6 +3,7 @@
 
 import { useState } from 'react'
 import type { TeamBot } from '@/domains/os/types'
+import AudienceSheet from './AudienceSheet'
 import KnowledgeList from './KnowledgeList'
 import RoutinePanel from './RoutinePanel'
 import ResponseSettingsSheet from './ResponseSettingsSheet'
@@ -20,6 +21,7 @@ export default function DetailPane({ bot, publicName, demo = false }: { bot: Tea
     const 시연 = demo || !!bot?.id.startsWith('demo-')
     const [답변설정열림, set답변설정열림] = useState(false)
     const [답변설정펼침, set답변설정펼침] = useState(false)
+    const [audienceOpen, setAudienceOpen] = useState(false)
     if (!bot) {
         return (
             <div>
@@ -58,6 +60,15 @@ export default function DetailPane({ bot, publicName, demo = false }: { bot: Tea
                     )}
                 </>
             )}
+
+            {/* 갈래 I — 누가 이 봇과 대화할 수 있나(Audience). 시연 봇은 진짜 봇이 아니라 안 연다 */}
+            {!시연 && (
+                <button type="button" className="os-btn" style={{ width: '100%', textAlign: 'left', marginBottom: 4 }}
+                    onClick={() => setAudienceOpen(true)}>
+                    누가 대화할 수 있나요 →
+                </button>
+            )}
+            {audienceOpen && <AudienceSheet mentorId={bot.mentorId} botName={bot.name} onClose={() => setAudienceOpen(false)} />}
 
             {/* 자료는 진짜 목록이다 (3일차). 넣고 빼는 것도 여기서 한다. 시연 봇은 목록을 부르지 않는다 */}
             {시연

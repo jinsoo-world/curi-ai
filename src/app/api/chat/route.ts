@@ -10,6 +10,7 @@ import { deductCredit, getCreditBalance } from '@/domains/credit'
 import { pickDriverFromEnv } from '@/domains/llm'
 import { getOwnedTeamBotMentor } from '@/domains/os'
 import { readUsage } from '@/domains/os/usage-db'
+import { checkChatAudience } from '@/domains/os/audience-db'
 import { untilText, kstDayHourText } from '@/domains/os/usage'
 import { findSourcesOfChunks } from '@/domains/os/knowledge'
 import { readUrlsInText } from '@/domains/os/readers'
@@ -203,6 +204,25 @@ export async function POST(req: Request) {
         if (!mentor) {
             return new Response('Mentor not found', { status: 404 })
         }
+
+        // 🎯 Audience — 이 사람이 이 봇과 대화해도 되나 (Just Me / Insiders / Public / Anonymous, domains/os/audience)
+        const audienceGate = await checkChatAudience(
+            createAdminClient(),
+            mentor as { id: string; is_active?: boolean | null; creator_id?: string | null },
+            { userId: user?.id ?? null, email: user?.email ?? null },
+        )
+        if (!audienceGate.allowed) {
+            const msg = audienceGate.message ?? '이 봇과는 지금 대화할 수 없어요'
+            const encoder = new TextEncoder()
+            const gateStream = new ReadableStream({
+                start(controller) {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: msg, done: true, fullResponse: msg, audienceBlocked: true })}\n\n`))
+                    controller.close()
+                },
+            })
+            return new Response(gateStream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' } })
+        }
+
         // 🍀 내 팀 봇(team_bots 에 내 것으로 등록)인가 — 대표 확정 0923 「내 봇은 무료로 해」
         const ownTeamBot = !!(user && (await getOwnedTeamBotMentor(createAdminClient(), user.id, mentorId)))
 
