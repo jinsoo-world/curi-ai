@@ -16,6 +16,7 @@ import {
 import type { ChannelBot, ChannelMessage } from '@/domains/os/channels'
 import { askChat } from '@/domains/agent/ask'
 import { UNAVAILABLE_TEXT } from '@/domains/chat/constants'
+import { GROUP_SERVER_GAP_MS, sleep } from '@/domains/os/group-stagger'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -133,14 +134,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
                 새말.push(저장)
             }
             if (members.length > 0) {
-                const 기록 = 대화기록([...지난말, ...새말], bots)
-                const 결과 = await Promise.all(members.map(async (말할봇) => {
+                // 멤버는 한 명씩 이어서 답한다 (Promise.all 동시 덤프 금지). 짧은 간격으로 말풍선이 겹치지 않게.
+                for (let i = 0; i < members.length; i++) {
+                    const 말할봇 = members[i]!
+                    const 기록 = 대화기록([...지난말, ...새말], bots)
                     const 내용 = await 봇한줄(말할봇, bots, 기록, 'member')
-                    return { mentorId: 말할봇.mentorId, 내용 }
-                }))
-                for (const r of 결과) {
-                    const 저장 = await saveChannelMessage(db, id, { authorKind: 'bot', mentorId: r.mentorId, content: r.내용 })
+                    const 저장 = await saveChannelMessage(db, id, { authorKind: 'bot', mentorId: 말할봇.mentorId, content: 내용 })
                     새말.push(저장)
+                    if (i < members.length - 1) await sleep(GROUP_SERVER_GAP_MS)
                 }
             }
         }

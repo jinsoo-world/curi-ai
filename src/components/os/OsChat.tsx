@@ -12,7 +12,7 @@ import { UNAVAILABLE_TEXT } from '@/domains/chat/constants'
 import type { BotState } from '@/domains/os/types'
 import { osTrack } from '@/domains/os/events'
 import { readLocalIntent } from '@/domains/os/settings'
-import { readChatCache, writeChatCache } from '@/domains/os/chat-cache'
+import { readChatCache, writeChatCache, clearChatCache } from '@/domains/os/chat-cache'
 import BotAvatar from './BotAvatar'
 import BotMarkdown from './BotMarkdown'
 import MenuIcon, { CloseIcon, swipeToClose } from './MenuIcon'
@@ -37,6 +37,7 @@ import OgLinkPreview, { isUrlOnlyText } from './OgLinkPreview'
 // === @ 멘션 ===
 import MentionPicker from './MentionPicker'
 import { useMentionComposer } from './useMentionComposer'
+import MentionRichText from './MentionRichText'
 import {
     decidePersonalMentionRoute,
     emitBotCall,
@@ -80,7 +81,7 @@ function linkCardsFor(m: Msg, prevUserText?: string): { readUrls?: ReadUrlItem[]
     return { fallbackUrls: prevUserText ? extractUrls(prevUserText) : undefined }
 }
 
-export default function OsChat({ mentorId }: { mentorId: string }) {
+export default function OsChat({ mentorId, freshStart = false }: { mentorId: string; freshStart?: boolean }) {
     const { team, loading, guest, openNewGroup, openEditBot, setBotPresence } = useOsTeam()
     const router = useRouter()
     const bot = useMemo(() => team.find(b => b.mentorId === mentorId) ?? null, [team, mentorId])
@@ -109,6 +110,12 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         })),
         [team],
     )
+    const chipBots = useMemo(
+        () => mentionBots.map(b => ({
+            mentorId: b.mentorId, name: b.name, shape: b.shape, color: b.color, avatarUrl: b.avatarUrl,
+        })),
+        [mentionBots],
+    )
     const mention = useMentionComposer(mentionBots)
     // === /@ 멘션 ===
 
@@ -122,6 +129,14 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
     useEffect(() => {
         setDemo(new URLSearchParams(window.location.search).get('demo') === '1')
         cacheLoadedFor.current = null
+        if (freshStart) {
+            // 「대화 새로 시작」: 탭 캐시를 비우고 빈 방으로 시작한다 (옛 클라우드 세션은 지우지 않는다)
+            clearChatCache(window.sessionStorage, mentorId)
+            setMessages([])
+            setSessionId(null)
+            cacheLoadedFor.current = mentorId
+            return
+        }
         const cached = readChatCache<Msg>(window.sessionStorage, mentorId)
         if (cached) {
             setMessages(cached.messages)
@@ -131,7 +146,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
             setSessionId(null)
         }
         cacheLoadedFor.current = mentorId
-    }, [mentorId])
+    }, [mentorId, freshStart])
 
     // 로그인 사용자: 서버 최근 대화방을 항상 불러 클라우드 기록을 살린다.
     // 탭 캐시에 sessionId 가 있어도 건너뛰지 않는다(봇 전환 후 빈 방처럼 보이던 원인).
@@ -140,6 +155,34 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         if (guest) return
         let alive = true
         void (async () => {
+            // 「대화 새로 시작」: 옛 세션을 불러오지 않고 클라우드에 새 세션을 만든다 (옛 기록은 DB에 남음)
+            if (freshStart) {
+                try {
+                    const res = await fetch('/api/sessions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mentorId }),
+                    })
+                    const d = await res.json() as { session?: { id: string } }
+                    const id = d?.session?.id ?? null
+                    if (!alive) return
+                    if (id) {
+                        setSessionId(id)
+                        setMessages([])
+                        writeChatCache(window.sessionStorage, mentorId, { sessionId: id, messages: [] })
+                    }
+                    // URL 의 ?new= 을 벗겨 새로고침 때 또 새 세션이 안 생기게 한다
+                    try {
+                        const u = new URL(window.location.href)
+                        if (u.searchParams.has('new')) {
+                            u.searchParams.delete('new')
+                            window.history.replaceState({}, '', u.pathname + (u.search ? u.search : '') + u.hash)
+                        }
+                    } catch { /* */ }
+                } catch { /* 새 세션 실패해도 빈 방으로 둔다 */ }
+                return
+            }
+
             const cached = readChatCache<Msg>(window.sessionStorage, mentorId)
             const realSid = cached?.sessionId && !cached.sessionId.startsWith('guest-') ? cached.sessionId : null
 
@@ -187,7 +230,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
             } catch { /* 못 불러와도 캐시/새 대화로 이어간다 */ }
         })()
         return () => { alive = false }
-    }, [mentorId, guest])
+    }, [mentorId, guest, freshStart])
 
     // 말이 오갈 때마다(답이 다 온 뒤) 탭 저장소에 최근 50개를 남긴다. 이 봇 캐시를 읽기 전에는 쓰지 않는다
     useEffect(() => {
@@ -245,13 +288,15 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         if (guest) return null
         if (sessionId) return sessionId
         try {
-            // 이미 이 봇 대화방이 있으면 재사용한다. 새로 만들면 예전 말이 안 보이는 「빈 방」이 된다.
-            const sr = await fetch(`/api/sessions?mentorId=${encodeURIComponent(mentorId)}`, { cache: 'no-store' })
-            const sd = sr.ok ? await sr.json() as { sessions?: { id: string }[] } : null
-            const existing = sd?.sessions?.[0]?.id
-            if (existing) {
-                setSessionId(existing)
-                return existing
+            // 대화 새로 시작 직후엔 옛 방을 재사용하지 않는다 (빈 새 세션을 유지)
+            if (!freshStart) {
+                const sr = await fetch(`/api/sessions?mentorId=${encodeURIComponent(mentorId)}`, { cache: 'no-store' })
+                const sd = sr.ok ? await sr.json() as { sessions?: { id: string }[] } : null
+                const existing = sd?.sessions?.[0]?.id
+                if (existing) {
+                    setSessionId(existing)
+                    return existing
+                }
             }
             const res = await fetch('/api/sessions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mentorId }) })
             const d = await res.json()
@@ -259,7 +304,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
             if (id) setSessionId(id)
             return id
         } catch { return null }
-    }, [guest, sessionId, mentorId])
+    }, [guest, sessionId, mentorId, freshStart])
 
     // overrideText 가 있으면 입력창 내용 대신 그 질문을 그대로 다시 보낸다(입력창은 지우지 않는다).
     const send = useCallback(async (overrideText?: string) => {
@@ -567,11 +612,11 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                         ? (m.imageUrls && m.imageUrls.length > 0
                             // === 사진 첨부 === 사진 격자 + 글
                             ? <MsgRow key={m.id} side="me" createdAt={m.createdAt}>
-                                <div className="os-bubble me has-photos"><PhotoGrid urls={m.imageUrls} />{m.content && !isUrlOnlyText(m.content) && <div className="os-photo-text">{m.content}</div>}</div>
+                                <div className="os-bubble me has-photos"><PhotoGrid urls={m.imageUrls} />{m.content && !isUrlOnlyText(m.content) && <div className="os-photo-text"><MentionRichText text={m.content} bots={chipBots} /></div>}</div>
                                 {m.content ? <OgLinkPreview text={m.content} className="os-og-cards--me" /> : null}
                               </MsgRow>
                             : <MsgRow key={m.id} side="me" createdAt={m.createdAt}>
-                                {!isUrlOnlyText(m.content) && <div className="os-bubble me">{m.content}</div>}
+                                {!isUrlOnlyText(m.content) && <div className="os-bubble me"><MentionRichText text={m.content} bots={chipBots} /></div>}
                                 <OgLinkPreview text={m.content} className="os-og-cards--me" />
                               </MsgRow>)
                         // === 전달(relay) === 옆 봇이 대신 답한 말은 그 봇 얼굴, 이름으로 그린다
@@ -595,7 +640,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                                                 }}
                                             />
                                             : (m.content && !isUrlOnlyText(m.content)
-                                                ? <div className="os-bubble bot md"><BotMarkdown text={m.content} /></div>
+                                                ? <div className="os-bubble bot md"><MentionRichText text={m.content} bots={chipBots} markdown /></div>
                                                 : null)}
                                         {m.content && !m.card && <OgLinkPreview text={m.content} />}
                                         {m.sources && m.sources.length > 0 && (
@@ -635,10 +680,15 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                                     emptyQuery={!mention.query}
                                 />
                             )}
+                            <div className="os-input-chip-host">
+                            <div className="os-input-chip-mirror" aria-hidden>
+                                {input ? <MentionRichText text={input} bots={chipBots} /> : null}
+                            </div>
                             <textarea
                                 ref={inputRef}
-                                className="os-input"
+                                className="os-input os-input--ghost"
                                 rows={1}
+                                spellCheck={false}
                                 value={input}
                                 onChange={e => {
                                     const v = e.target.value
@@ -661,6 +711,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                                 aria-expanded={mention.open}
                                 style={{ resize: 'none' }}
                             />
+                            </div>
                         </div>
                         <button className="os-icon-btn os-send" aria-label="보내기"
                             disabled={(!input.trim() && photos.urls.length === 0) || streaming || photos.uploading || photos.failed}

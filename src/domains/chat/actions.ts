@@ -1,4 +1,4 @@
-// domains/chat — 채팅 데이터 변경 액션
+// domains/chat  -  채팅 데이터 변경 액션
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -81,7 +81,7 @@ export async function incrementDailyFreeUsage(
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
 
-    // 먼저 리셋 날짜 확인 — 오늘 이전이면 카운트 리셋
+    // 먼저 리셋 날짜 확인  -  오늘 이전이면 카운트 리셋
     const { data: userData } = await db
         .from('users')
         .select('daily_free_reset_at')
@@ -122,6 +122,8 @@ export async function createChatSession(
             mentor_id: mentorId,
             title: title || null,
             message_count: 0,
+            // 새 방이 목록 맨 위 (대화 새로 시작 후 새로고침해도 이 빈 세션이 열린다)
+            last_message_at: new Date().toISOString(),
         })
         .select()
         .single()

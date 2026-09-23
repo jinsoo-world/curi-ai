@@ -46,3 +46,10 @@ export function writeChatCache<M extends MsgLike>(store: StoreWrite | null | und
         /* 저장소가 막혀 있어도(사생활 모드, 꽉 찼음) 대화는 계속된다 */
     }
 }
+
+
+/** 이 봇 탭 캐시를 지운다. 「대화 새로 시작」에서 예전 말을 안 보이게 할 때 쓴다 */
+export function clearChatCache(store: StoreWrite | null | undefined, mentorId: string): void {
+    if (!store) return
+    try { store.removeItem(chatCacheKey(mentorId)) } catch { /* */ }
+}

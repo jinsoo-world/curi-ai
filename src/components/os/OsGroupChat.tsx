@@ -15,6 +15,8 @@ import MentionPicker from './MentionPicker'
 import { useMentionComposer } from './useMentionComposer'
 import { MsgRow, useRevealTimestamps } from './MsgRow'
 import WorkingStatusLine from './WorkingStatusLine'
+import MentionRichText from './MentionRichText'
+import { GROUP_THINK_MS, GROUP_GAP_MS, sleep } from '@/domains/os/group-stagger'
 import OgLinkPreview, { isUrlOnlyText } from './OgLinkPreview'
 
 interface Member { mentorId: string; name: string; shape: string; color: string; avatarUrl: string | null }
@@ -44,6 +46,12 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
             mentorId: m.mentorId, name: m.name, shape: m.shape, color: m.color, avatarUrl: m.avatarUrl,
         })),
         [members],
+    )
+    const chipBots = useMemo(
+        () => mentionBots.map(b => ({
+            mentorId: b.mentorId, name: b.name, shape: b.shape, color: b.color, avatarUrl: b.avatarUrl,
+        })),
+        [mentionBots],
     )
     const mention = useMentionComposer(mentionBots)
 
@@ -88,10 +96,12 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
         if (!text || busy) return
         setInput(''); setBusy(true); setErr(null)
         osTrack('os_group_message', { channel_id: channelId, members: members.length })
-        setMessages(prev => [...prev, { id: `tmp-${Date.now()}`, authorKind: 'user', mentorId: null, content: text, createdAt: new Date().toISOString() }])
-        // 서버와 같은 규칙으로 누가 답할지 미리 보여 준다
+        const userMsg = { id: `tmp-${Date.now()}`, authorKind: 'user' as const, mentorId: null, content: text, createdAt: new Date().toISOString() }
+        setMessages(prev => [...prev, userMsg])
+        // 서버와 같은 규칙으로 누가 답할지. @한 명이면 그 봇만 (간격 없음)
         const upcoming = pickResponders(text, members.map(m => ({ mentorId: m.mentorId, name: m.name })))
-        setWorkingIds(upcoming.map(r => r.mentorId))
+        // 기다리는 동안에는 첫 봇만 「생각 중」으로 보여 동시 폭주를 피한다
+        setWorkingIds(upcoming[0] ? [upcoming[0].mentorId] : [])
         try {
             const res = await fetch(`/api/os/channels/${channelId}/chat`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -99,9 +109,31 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
             })
             const data = await res.json()
             if (!res.ok) throw new Error(data.error || '말을 못 옮겼어요')
-            await load()
+            const botMsgs = (Array.isArray(data.messages) ? data.messages : []).filter(
+                (m: { authorKind?: string }) => m.authorKind === 'bot',
+            ) as Msg[]
+            // 답을 한 봇씩: 생각 중 → 말풍선 (여러 명이면 짧은 간격). @한 명이면 한 번만
+            if (botMsgs.length === 0) {
+                await load()
+            } else {
+                for (let i = 0; i < botMsgs.length; i++) {
+                    const msg = botMsgs[i]!
+                    setWorkingIds(msg.mentorId ? [msg.mentorId] : [])
+                    await sleep(GROUP_THINK_MS)
+                    setWorkingIds([])
+                    setMessages(prev => {
+                        // 같은 id 가 이미 있으면 덮지 않는다
+                        if (prev.some(x => x.id === msg.id)) return prev
+                        return [...prev, msg]
+                    })
+                    if (i < botMsgs.length - 1) await sleep(GROUP_GAP_MS)
+                }
+                // id 시각을 서버와 맞춘다 (이미 보이는 말은 유지)
+                await load()
+            }
         } catch (e) {
             setErr(e instanceof Error ? e.message : '말을 못 옮겼어요')
+            setWorkingIds([])
         } finally {
             setWorkingIds([])
             setBusy(false)
@@ -202,14 +234,14 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                     {messages.map(m => m.authorKind === 'user'
                         ? (
                             <MsgRow key={m.id} side="me" createdAt={m.createdAt}>
-                                {!isUrlOnlyText(m.content) && <div className="os-bubble me">{m.content}</div>}
+                                {!isUrlOnlyText(m.content) && <div className="os-bubble me"><MentionRichText text={m.content} bots={chipBots} /></div>}
                                 <OgLinkPreview text={m.content} className="os-og-cards--me" />
                             </MsgRow>
                         )
                         : (
                             <MsgRow key={m.id} side="bot" createdAt={m.createdAt}>
                                 <div className="os-sender">{아바타(m.mentorId)}<span>{보낸사람(m)}</span></div>
-                                {!isUrlOnlyText(m.content) && <div className="os-bubble bot md"><BotMarkdown text={m.content} /></div>}
+                                {!isUrlOnlyText(m.content) && <div className="os-bubble bot md"><MentionRichText text={m.content} bots={chipBots} markdown /></div>}
                                 <OgLinkPreview text={m.content} />
                             </MsgRow>
                         ))}
@@ -252,10 +284,15 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                                 emptyQuery={!mention.query}
                             />
                         )}
+                        <div className="os-input-chip-host">
+                        <div className="os-input-chip-mirror" aria-hidden>
+                            {input ? <MentionRichText text={input} bots={chipBots} /> : null}
+                        </div>
                         <textarea
                             ref={inputRef}
-                            className="os-input"
+                            className="os-input os-input--ghost"
                             rows={1}
+                            spellCheck={false}
                             value={input}
                             onChange={e => {
                                 const v = e.target.value
@@ -297,6 +334,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                             aria-expanded={mention.open}
                             style={{ resize: 'none' }}
                         />
+                        </div>
                     </div>
                     <button className="os-icon-btn os-send" aria-label="보내기" disabled={!input.trim() || busy} onClick={() => void send()}>↑</button>
                 </div>
