@@ -1,16 +1,20 @@
-// 2) 봇 팀 화면 흐름: 타일 3개 → 첫 타일 클릭 → 대화 머리에 봇 이름 → 입력창 → 입력하면 캐릭터가 듣는 상태
+// 2) 봇 팀 화면 흐름: 타일 4개 → 첫 타일 클릭 → 대화 머리에 봇 이름 → 입력창 → 입력하면 캐릭터가 듣는 상태
 // 3) 폰 크기에서 가로 스크롤 없음
 import { test, expect } from '@playwright/test'
 import { watchConsole, settle } from './helpers'
 
-test('시연 팀: 타일 3개 → 첫 봇 대화 → 입력 중 캐릭터 listening', async ({ page, baseURL }) => {
+test('시연 팀: 타일 4개 → 첫 봇 대화 → 입력 중 캐릭터 listening', async ({ page, baseURL }) => {
     const watch = watchConsole(page, baseURL!)
     await page.goto('/os?demo=1', { waitUntil: 'domcontentloaded' })
     await settle(page)
 
-    // 왼쪽 명단에 시연 봇 3개
+    // 폰은 명단이 서랍에 들어가 있다(0923 반쪽 화면 서랍). 열어야 이름이 보인다
+    const drawer = page.getByRole('button', { name: '봇 명단 열기' })
+    if (await drawer.isVisible()) await drawer.click()
+
+    // 왼쪽 명단에 시연 봇 4개(기본 팀과 같다)
     const tiles = page.locator('.os-shell .os-roster .os-bot-tile')
-    await expect(tiles, '봇 타일이 3개여야 한다').toHaveCount(3)
+    await expect(tiles, '봇 타일이 4개여야 한다').toHaveCount(4)
 
     // 첫 타일 이름을 읽고 클릭
     const firstName = (await tiles.first().locator('.os-bot-name').innerText()).trim()
