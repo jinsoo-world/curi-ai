@@ -7,7 +7,7 @@
 .os-row-btn { font-size: 17px; }
 
 /* 타일은 Link 다. 밑줄 없이, 길게 눌러도 아이폰 링크 미리보기(callout)가 안 뜨게 */
-.os-bot-tile { text-decoration: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.os-bot-tile { overflow: hidden; text-decoration: none; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 
 /* 격자 아래 가로 단추 2개 = ＋ 개인봇 / ＋ 단체방 (옛 오른쪽 위 ＋ 타일과 ⌘N 을 대신한다) */
 .os-add-row { display: flex; gap: 6px; padding: 4px 12px 10px; }

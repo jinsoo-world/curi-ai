@@ -23,16 +23,33 @@
 
 /* 왼쪽 명단 */
 .os-search { margin: 16px 16px 8px; padding: 12px 14px; border-radius: 14px; background: var(--os-말풍선); color: var(--os-글-연); font-size: 15px; display: flex; gap: 8px; align-items: center; }
-.os-roster { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 4px; padding: 8px 12px; overflow-y: auto; flex: 1; align-content: start; }
+.os-roster {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px 8px; padding: 8px 12px;
+    overflow-y: auto; flex: 1; align-content: start; align-items: start; grid-auto-rows: auto;
+}
 .os-bot-tile {
     display: flex; flex-direction: column; align-items: center; gap: 8px;
     padding: 14px 6px 12px; border-radius: 18px; border: 0; background: transparent; color: var(--os-글);
     cursor: pointer; text-align: center; min-height: var(--손가락);
+    height: auto; overflow: hidden; min-width: 0; width: 100%; box-sizing: border-box; isolation: isolate;
 }
 .os-bot-tile:hover { background: color-mix(in srgb, var(--os-말풍선) 70%, transparent); }
 .os-bot-tile[aria-current="true"] { background: var(--os-말풍선); }
-.os-bot-name { font-size: 15px; font-weight: 600; line-height: 1.2; }
-.os-chip { font-size: 12.5px; color: var(--os-글-연); background: var(--os-말풍선); padding: 3px 8px; border-radius: 8px; }
+.os-bot-name {
+    font-size: 15px; font-weight: 600; line-height: 1.25;
+    max-width: 100%; min-width: 0; overflow-wrap: anywhere; word-break: break-word;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+.os-chip {
+    font-size: 12.5px; color: var(--os-글-연); background: var(--os-말풍선); padding: 3px 8px; border-radius: 8px;
+    max-width: 100%; min-width: 0; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+/* 봇이 많으면 아바타/소개를 줄여 겹치지 않게 (OsShell 이 data-dense 를 붙인다) */
+.os-roster[data-dense="1"] { gap: 8px 6px; }
+.os-roster[data-dense="1"] .os-bot-tile { padding: 10px 4px 8px; gap: 6px; }
+.os-roster[data-dense="1"] .os-bot-name { font-size: 13px; }
+.os-roster[data-dense="1"] .os-chip { display: none; }
 .os-left-bottom { border-top: 1px solid var(--os-선); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
 .os-row-btn { display: flex; align-items: center; gap: 12px; padding: 12px 10px; border-radius: 12px; background: transparent; border: 0; color: var(--os-글); font-size: 16px; cursor: pointer; width: 100%; text-align: left; min-height: 48px; }
 .os-row-btn svg { flex: 0 0 auto; color: var(--os-글-연); }
@@ -47,6 +64,9 @@
 .os-bubble.me { align-self: flex-end; background: var(--os-말풍선-내); }
 .os-bubble.bot { align-self: flex-start; }
 .os-sender { font-size: 12.5px; color: var(--os-글-흐림); margin: 4px 0 -6px 6px; display: flex; align-items: center; gap: 6px; }
+/* 그룹방 작업 중 표지 */
+.os-working { color: var(--os-글-연); opacity: .85; }
+
 /* 입력 막대를 감싸는 칸(dock). 넓은 화면에선 그냥 지나가는 칸(배경 없음), 폰에선 아래 「오늘 체크인 안건」 참고 — 화면 맨 아래 붙는다 */
 .os-input-dock { display: flex; flex-direction: column; }
 .os-input-bar { display: flex; align-items: center; gap: 8px; margin: 12px 20px 16px; padding: 8px 8px 8px 12px; border-radius: 22px; background: var(--os-말풍선); }

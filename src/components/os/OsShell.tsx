@@ -269,7 +269,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                         <div className="os-notice">봇 팀 표가 아직 준비 중이에요. 관리자가 표를 적용하면 바로 쓸 수 있어요.</div>
                     )}
 
-                    <div className="os-roster" role="list">
+                    <div className="os-roster" role="list" data-dense={visible.length >= 6 ? "1" : "0"}>
                         {visible.map(b => {
                             // Link + prefetch = 화면에 보이는 순간 그 봇 화면을 미리 받아 둔다 → 누르면 서버를 안 기다린다 (대표 지시 0923 「전환이 느려」)
                             // 주소를 쌓는(push) 보통 링크라 봇 A → 봇 B → 뒤로 = A 가 된다
@@ -292,7 +292,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                                     onClick={e => { if (suppressClick.current) { e.preventDefault(); suppressClick.current = false } }}
                                 >
                                     {/* 폰 띠는 96px 안에 캐릭터+이름이 들어가야 해서 52px (넓은 화면 격자는 72px 그대로) */}
-                                    <BotAvatar shape={b.shape} color={b.color} state={current ? 'listening' : 'idle'} size={phone ? 52 : 72} faceUrl={b.avatarUrl} name={b.name} />
+                                    <BotAvatar shape={b.shape} color={b.color} state={current ? 'listening' : 'idle'} size={phone ? 52 : (visible.length >= 6 ? 56 : 72)} faceUrl={b.avatarUrl} name={b.name} />
                                     <span className="os-bot-name">{b.name}</span>
                                     {b.oneLiner && <span className="os-chip">{b.oneLiner}</span>}
                                 </Link>
