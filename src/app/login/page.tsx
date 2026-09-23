@@ -2,6 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
+import BotAvatar from '@/components/os/BotAvatar'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { safeNextPath } from '@/lib/safe-next'
@@ -188,15 +189,7 @@ export default function LoginPage() {
             }}>
                 {/* Logo */}
                 <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                    <img
-                        src="/logo.png"
-                        alt="큐리 AI"
-                        style={{
-                            width: 80, height: 80, objectFit: 'contain',
-                            marginBottom: 16,
-                            display: 'block', margin: '0 auto 16px',
-                        }}
-                    />
+                    <span style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}><BotAvatar shape="clover" color="green" state="talking" size={96} name="큐리AI" /></span>
                     <h1 style={{
                         fontSize: 28, fontWeight: 800, color: '#18181b',
                         letterSpacing: '-0.03em', marginBottom: 6,

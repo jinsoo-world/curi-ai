@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.ico',
-    apple: '/icons/apple-touch-icon-180.png?v=3',
+    apple: '/icons/apple-touch-icon-180.png?v=4',
   },
   // 아이폰 「홈 화면에 추가」 = 주소창 없이 앱처럼 열리고, 상태바가 화면 위에 겹친다(검정 바탕이라 자연스럽다)
   appleWebApp: {

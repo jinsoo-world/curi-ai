@@ -98,6 +98,30 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         })
     }, [mentorId])
 
+    // 탭 저장소가 비었으면(새 탭, 다른 기기, 로그인 직후) 서버에 쌓인 이 봇과의 최근 대화방을 불러온다.
+    // 대표 0923 「로그인을 하면 해당 계정에 대화들이 팀장들 대화방에 쌓여야지 왜 자꾸 초기화되냐」
+    useEffect(() => {
+        if (guest) return
+        let alive = true
+        void (async () => {
+            await Promise.resolve()
+            if (readChatCache<Msg>(window.sessionStorage, mentorId)) return
+            try {
+                const sr = await fetch(`/api/sessions?mentorId=${encodeURIComponent(mentorId)}`, { cache: 'no-store' })
+                const sd = sr.ok ? await sr.json() as { sessions?: { id: string }[] } : null
+                const sid = sd?.sessions?.[0]?.id
+                if (!sid || !alive) return
+                const mr = await fetch(`/api/sessions/${encodeURIComponent(sid)}/messages`, { cache: 'no-store' })
+                const md = mr.ok ? await mr.json() as { messages?: { id: string; role: string; content: string }[] } : null
+                const rows = (md?.messages ?? []).filter(m => m.role === 'user' || m.role === 'assistant').slice(-50)
+                if (!alive) return
+                setSessionId(sid)
+                if (rows.length) setMessages(prev => prev.length > 0 ? prev : rows.map(m => ({ id: m.id, role: m.role as Msg['role'], content: m.content })))
+            } catch { /* 못 불러와도 새 대화로 시작한다 */ }
+        })()
+        return () => { alive = false }
+    }, [mentorId, guest])
+
     // 말이 오갈 때마다(답이 다 온 뒤) 탭 저장소에 최근 50개를 남긴다. 되살리기 전(첫 그림)에는 쓰지 않는다
     useEffect(() => {
         if (streaming || !cacheLoaded.current) return

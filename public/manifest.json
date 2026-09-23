@@ -7,16 +7,16 @@
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
-  "background_color": "#0B0B0C",
+  "background_color": "#FFFFFF",
   "theme_color": "#0B0B0C",
   "orientation": "any",
   "lang": "ko",
   "dir": "ltr",
   "icons": [
-    { "src": "/icons/curi-192.png?v=3", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/curi-512.png?v=3", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/curi-maskable-192.png?v=3", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icons/curi-maskable-512.png?v=3", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/icons/curi-192.png?v=4", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/curi-512.png?v=4", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/curi-maskable-192.png?v=4", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/curi-maskable-512.png?v=4", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
     {
@@ -24,14 +24,14 @@
       "short_name": "내 팀",
       "description": "내 봇 팀 명단으로 바로 가기",
       "url": "/os",
-      "icons": [{ "src": "/icons/curi-192.png?v=3", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/icons/curi-192.png?v=4", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "새 봇",
       "short_name": "새 봇",
       "description": "새 봇 만들기 창을 바로 열기",
       "url": "/os?new=1",
-      "icons": [{ "src": "/icons/curi-192.png?v=3", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/icons/curi-192.png?v=4", "sizes": "192x192", "type": "image/png" }]
     }
   ],
   "categories": ["productivity", "education"]
