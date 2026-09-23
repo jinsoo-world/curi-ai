@@ -14,7 +14,7 @@ type Axis = 'h' | 'v' | null
 
 /**
  * `.os-messages` 에 붙인다. ref + CSS 변수(--os-reveal) + revealing 클래스.
- * 세로 스크롤·텍스트 선택은 가로로 확실히 끌 때만 가로로 잠근다.
+ * 세로 스크롤, 텍스트 선택은 가로로 확실히 끌 때만 가로로 잠근다.
  */
 export function useRevealTimestamps() {
     const ref = useRef<HTMLDivElement>(null)

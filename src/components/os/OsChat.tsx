@@ -57,7 +57,7 @@ interface Msg {
     createdAt?: string
     /** 이 답에 쓴 자료 (있으면 말풍선 아래 「참고한 자료」로 보인다) */
     sources?: { id: string; title: string }[]
-    /** 이 답을 쓰며 실제로 열어 읽은 링크 (성공·실패 다 옴). 아직 서버가 안 주면 undefined — LinkCards 가 sources 로 대신 그린다 */
+    /** 이 답을 쓰며 실제로 열어 읽은 링크 (성공, 실패 다 옴). 아직 서버가 안 주면 undefined  -  LinkCards 가 sources 로 대신 그린다 */
     readUrls?: ReadUrlItem[]
     /** 밖으로 나가는 일이면 답 대신 승인 카드가 온다 */
     card?: CardView
@@ -93,7 +93,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
     const [sessionId, setSessionId] = useState<string | null>(null)
     const [detailOpen, setDetailOpen] = useState(false)   // 항상 닫힌 채 시작. 열 때만 세부칸을 그린다(대표 0923 「닫힌 채로, 열 때 로딩」)
     const [addSheet, setAddSheet] = useState(false)
-    /** 「답 고치기」로 연 시트 — 고칠 질문·봇이 한 답 */
+    /** 「답 고치기」로 연 시트  -  고칠 질문, 봇이 한 답 */
     const [fixTarget, setFixTarget] = useState<{ question: string; answer: string } | null>(null)
     const [demo, setDemo] = useState(false)
     const endRef = useRef<HTMLDivElement>(null)
@@ -131,7 +131,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
     }, [mentorId])
     // === /@ 멘션 ===
 
-    // 로그인 직후·새 탭: 손님 때 탭에만 있던 말은 계정으로 넘기고, 아니면 서버 최근 대화방을 불러온다.
+    // 로그인 직후, 새 탭: 손님 때 탭에만 있던 말은 계정으로 넘기고, 아니면 서버 최근 대화방을 불러온다.
     // 대표 0923 「로그인을 하면 해당 계정에 대화들이 팀장들 대화방에 쌓여야지 왜 자꾸 초기화되냐」
     // 옛 /chat 경로만 /api/sessions/merge 를 썼고 /os 는 안 써서, 손님→로그인 순간 방이 비는 것처럼 보였다.
     useEffect(() => {
@@ -431,7 +431,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                             }
                             // 마지막 조각에 「이 답에 쓴 자료」가 실려 온다
                             if (d.done && Array.isArray(d.sources)) sources = d.sources
-                            // 곧 온다: 실제로 열어 읽은 링크(성공·실패). 없으면 위 sources 로 LinkCards 가 대신 그린다
+                            // 곧 온다: 실제로 열어 읽은 링크(성공, 실패). 없으면 위 sources 로 LinkCards 가 대신 그린다
                             if (d.done && Array.isArray(d.readUrls)) readUrls = d.readUrls
                             if (d.done && d.guestLimit) window.dispatchEvent(new CustomEvent('curi:login-nudge', { detail: { reason: 'limit' } }))
                         } catch { /* 조각 하나 깨진 건 넘어간다 */ }
@@ -474,7 +474,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send() }
     }
 
-    // === @ 멘션 === 이 방으로 넘어온 대기 말이 있으면 한 번만 보낸다 (봇·세션 준비 후)
+    // === @ 멘션 === 이 방으로 넘어온 대기 말이 있으면 한 번만 보낸다 (봇, 세션 준비 후)
     useEffect(() => {
         if (pendingSent.current || loading || streaming) return
         if (!bot && !publicBot) return
@@ -510,7 +510,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                     </span>
                 </header>
 
-                {/* 오늘 체크인 띠 — 오늘 아직 안 했을 때만. 손님, 시연에선 안 뜬다 */}
+                {/* 오늘 체크인 띠  -  오늘 아직 안 했을 때만. 손님, 시연에선 안 뜬다 */}
 
                 <div className={`os-messages${reveal.className ? ` ${reveal.className}` : ''}`} ref={reveal.ref} style={reveal.style}>
                     {messages.length === 0 && !bot && publicBot && (
@@ -584,7 +584,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                                         {!m.card && (
                                             <LinkCards {...linkCardsFor(m, messages[i - 1]?.role === 'user' ? messages[i - 1].content : undefined)} />
                                         )}
-                                        {/* 답 고치기 - 내 팀 봇일 때만(공개 봇·손님은 자료를 못 넣는다), 바로 앞이 내 말일 때만 */}
+                                        {/* 답 고치기 - 내 팀 봇일 때만(공개 봇, 손님은 자료를 못 넣는다), 바로 앞이 내 말일 때만 */}
                                         {!m.card && bot && !guest && m.content && messages[i - 1]?.role === 'user' && (
                                             <button type="button" className="os-fix-trigger"
                                                 onClick={() => setFixTarget({ question: messages[i - 1].content, answer: m.content })}>
@@ -598,7 +598,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                     <div ref={endRef} />
                 </div>
 
-                {/* 입력 막대 dock — 폰에선 화면 맨 아래 붙는다(os.css). 미리보기 띠 + 막대를 한 칸으로 묶어야
+                {/* 입력 막대 dock  -  폰에선 화면 맨 아래 붙는다(os.css). 미리보기 띠 + 막대를 한 칸으로 묶어야
                     그 아래 빈 배경이 흰 띠로 안 남는다(대표 폰 실측 0923) */}
                 <div className="os-input-dock">
                     {/* === 사진 첨부 === 붙인 사진 미리보기 띠 (입력창 위) */}
