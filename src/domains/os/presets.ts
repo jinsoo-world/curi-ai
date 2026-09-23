@@ -46,6 +46,14 @@ export const JOBS: JobPreset[] = [
         shape: 'hex', color: 'blue', oneLiner: '도구와 반복 일을 정리해요',
     },
     {
+        id: 'research_lead',
+        label: '조사팀장',
+        owns: '필요한 자료, 링크, 근거를 찾아 정리하고 출처를 남긴다. 모르면 모른다고 먼저 말한다',
+        output: '질문 1개당 근거 자료 목록(출처 링크 포함) + 요약 한 줄 + 확실하지 않은 것은 따로 표시',
+        firstTask: '「이거 사실인지 자료 찾아서 출처랑 같이 알려 줘」라고 해 보세요',
+        shape: 'drop', color: 'yellow', oneLiner: '자료를 찾고 근거를 모아요',
+    },
+    {
         id: 'fan_reply',
         label: '팬 질문 답장 초안',
         owns: '팬, 수강생, 독자가 보낸 질문에 내 말투로 답장 초안을 만든다',
@@ -78,14 +86,6 @@ export const JOBS: JobPreset[] = [
         shape: 'egg', color: 'brown', oneLiner: '할 일과 미룬 일을 챙겨요',
     },
     {
-        id: 'chief',
-        label: '비서실장 (내가 매일 말하는 한 명)',
-        owns: '내가 매일 말하는 단 한 명. 다른 봇의 일을 모아 결정이 필요한 것만 가져온다',
-        output: '오늘 결정할 것 1~3개 (출처, 왜 중요한지, 제안 다음 걸음)',
-        firstTask: '「이번 주 상황을 정리해 줘」라고 해 보세요',
-        shape: 'clover', color: 'green', oneLiner: '결정이 필요한 것만 가져와요',
-    },
-    {
         id: 'custom',
         label: '직접 쓰기',
         owns: '',
@@ -108,9 +108,9 @@ export const COLORS: BotColor[] = ['orange', 'teal', 'magenta', 'blue', 'brown',
 /** 이름 자동 제안 (사용자가 바꿀 수 있다) */
 export function suggestName(jobId: string): string {
     const table: Record<string, string> = {
-        planning_lead: '기획팀장', marketing_lead: '홍보팀장', dev_lead: '개발팀장',
+        planning_lead: '기획팀장', marketing_lead: '홍보팀장', dev_lead: '개발팀장', research_lead: '조사팀장',
         fan_reply: '답장봇', content_ideas: '글감봇', lecture_digest: '요약봇',
-        schedule: '일정봇', chief: '비서실장', custom: '새 봇',
+        schedule: '일정봇', custom: '새 봇',
     }
     return table[jobId] ?? '새 봇'
 }
@@ -153,14 +153,13 @@ ${job.firstTask}`
 }
 
 /**
- * 처음 팀이 비었을 때 자동으로 만드는 기본 봇 (대표 확정 0923 「초기 세팅은 기획팀장 / 홍보팀장 / 개발팀장」).
- * 4번째 봇은 부대표 추천(미확정) = 비서실장. 그록봇 원칙 「비서실장부터」(내가 매일 말하는 단 한 명)를 기본 팀에 심는다.
- * 비서실장이 chief 라 기획팀장은 helper 로 내린다(팀에 chief 는 한 명).
- * ⚠️ 이미 봇이 있는 계정(옛 3명 계정)에는 4번째를 보태지 않는다 = team.ts bootstrapDefaultTeam 이 비어 있을 때만 만든다.
+ * 처음 팀이 비었을 때 자동으로 만드는 기본 봇 (대표 확정 0923 「기획팀장 / 홍보팀장 / 개발팀장 / 조사팀장」 4명 통일).
+ * 넷 다 helper. 「비서실장」(chief) 은 기본 팀에서 뺐다 — 필요하면 사람이 직접 만들거나 편집에서 역할을 바꾼다.
+ * ⚠️ 이미 봇이 있는 계정(옛 팀)에는 보태지 않는다 = team.ts bootstrapDefaultTeam 이 비어 있을 때만 만든다.
  */
 export const DEFAULT_TEAM: { job: string; name: string; role: 'chief' | 'helper' }[] = [
     { job: 'planning_lead', name: '기획팀장', role: 'helper' },
     { job: 'marketing_lead', name: '홍보팀장', role: 'helper' },
     { job: 'dev_lead', name: '개발팀장', role: 'helper' },
-    { job: 'chief', name: '비서실장', role: 'chief' },   // 4번째 봇은 부대표 추천(미확정)
+    { job: 'research_lead', name: '조사팀장', role: 'helper' },
 ]
