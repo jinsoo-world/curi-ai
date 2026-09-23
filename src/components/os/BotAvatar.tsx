@@ -221,6 +221,7 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, idl
             className={`${avatarClass({ blinking, wink, drowsy, faceUrl: hasFace ? faceUrl : undefined })}${showsBadge(state) ? ' has-badge' : ''}${hasFace && faceRim === 'shadow' ? ' face-rim-shadow' : ''}`}
             data-state={state}
             data-shape={shape}
+            data-face-rim={hasFace ? faceRim : undefined}
             role="img"
             aria-label={ariaLabel(name ?? title, state)}
             title={title}

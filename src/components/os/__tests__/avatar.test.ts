@@ -195,6 +195,40 @@ describe('os/avatar — 사진 얼굴 (대표 0923 「있는 사진은 그걸 �
 })
 
 
+
+describe('BotAvatar faceRim — 사진 얼굴 테두리', () => {
+    it('faceRim=shadow 이면 face-border 없고 face-rim-shadow 와 data-face-rim=shadow', () => {
+        const html = renderToStaticMarkup(createElement(BotAvatar, {
+            shape: 'circle', color: 'white', state: 'idle', size: 112,
+            faceUrl: 'https://example.com/face.jpg', faceRim: 'shadow', name: '마켓봇',
+        }))
+        expect(html).toContain('has-face')
+        expect(html).toContain('face-rim-shadow')
+        expect(html).toContain('data-face-rim="shadow"')
+        expect(html).not.toContain('face-border')
+    })
+
+    it('faceRim=none 이면 face-border 와 face-rim-shadow 둘 다 없다', () => {
+        const html = renderToStaticMarkup(createElement(BotAvatar, {
+            shape: 'circle', color: 'white', state: 'idle', size: 112,
+            faceUrl: 'https://example.com/face.jpg', faceRim: 'none', name: '마켓봇',
+        }))
+        expect(html).toContain('data-face-rim="none"')
+        expect(html).not.toContain('face-border')
+        expect(html).not.toContain('face-rim-shadow')
+    })
+
+    it('faceRim 기본(color) 이면 face-border 가 있다', () => {
+        const html = renderToStaticMarkup(createElement(BotAvatar, {
+            shape: 'circle', color: 'blue', state: 'idle', size: 72,
+            faceUrl: 'https://example.com/face.jpg', name: '명단봇',
+        }))
+        expect(html).toContain('face-border')
+        expect(html).toContain('data-face-rim="color"')
+        expect(html).not.toContain('face-rim-shadow')
+    })
+})
+
 describe('presenceTone — 상태 동그라미 색', () => {
     it('가능=초록, 바쁨=노랑, 장애=빨강, 잠=회색', () => {
         expect(presenceTone('idle')).toBe('green')

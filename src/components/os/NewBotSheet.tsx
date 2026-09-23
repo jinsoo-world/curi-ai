@@ -361,7 +361,7 @@ function MarketTab({ guest, onClose, onLinked }: { guest: boolean; onClose: () =
                     {bots.map(b => (
                         <div key={b.mentorId} className="os-market-import-card">
                             <div className="os-market-import-avatar">
-                                <BotAvatar shape="circle" color="white" state="idle" size={56} faceUrl={b.avatarUrl} name={b.name} />
+                                <BotAvatar shape="circle" color="white" state="idle" size={56} faceUrl={b.avatarUrl} faceRim="shadow" name={b.name} />
                                 {b.creatorAvatarUrl && (
                                     // eslint-disable-next-line @next/next/no-img-element
                                     <img className="os-market-import-overlay" src={b.creatorAvatarUrl} alt={b.creatorName ?? '리더'} />

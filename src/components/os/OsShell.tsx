@@ -439,7 +439,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                                 >
                                     {/* 폰 띠는 96px 안에 캐릭터+이름이 들어가야 해서 52px (넓은 화면 격자는 72px 그대로) */}
                                     <span className="os-bot-face-wrap">
-                                        <BotAvatar shape={b.shape} color={b.color} state={presence} size={phone ? 52 : (visible.length >= 6 ? 56 : 72)} faceUrl={b.avatarUrl} name={b.name} />
+                                        <BotAvatar shape={b.shape} color={b.color} state={presence} size={phone ? 52 : (visible.length >= 6 ? 56 : 72)} faceUrl={b.avatarUrl} faceRim="shadow" name={b.name} />
                                         {unread && <span className="os-bot-unread" aria-label="새 메시지" />}
                                     </span>
                                     <span className="os-bot-name">{b.name}</span>

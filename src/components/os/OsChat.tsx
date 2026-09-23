@@ -638,7 +638,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                     )}
                     {historyReady && messages.length === 0 && !bot && publicBot && (
                         <div className="os-chat-info">
-                            <BotAvatar shape="circle" color="white" state="idle" size={96} faceUrl={publicBot.avatar_url ?? null} name={name} />
+                            <BotAvatar shape="circle" color="white" state="idle" size={96} faceUrl={publicBot.avatar_url ?? null} faceRim="shadow" name={name} />
                             <div className="os-chat-info-name">{name}</div>
                             {(publicBot.title || greeting) && (
                                 <div className="os-chat-info-line">{publicBot.title || greeting}</div>
