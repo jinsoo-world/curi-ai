@@ -49,7 +49,7 @@ describe('llm/sse — 서버가 흘려주는 조각 읽기', () => {
 
     it('마지막 조각의 사용량(토큰 수)을 꺼낸다', () => {
         const u = extractUsage('{"choices":[],"usage":{"prompt_tokens":57,"completion_tokens":29,"total_tokens":86}}')
-        expect(u).toEqual({ prompt: 57, completion: 29 })
+        expect(u).toEqual({ prompt: 57, completion: 29, total: 86 })
         expect(extractUsage('{"choices":[{"delta":{"content":"x"}}]}')).toBeNull()
     })
 })

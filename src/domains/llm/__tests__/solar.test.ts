@@ -30,7 +30,7 @@ describe('llm/solar — 업스테이지 솔라 스트림', () => {
         expect(chunks.filter(c => c.text).map(c => c.text)).toEqual(['안녕', '하세요'])
         const last = chunks[chunks.length - 1]
         expect(last.done).toBe(true)
-        expect(last.usage).toEqual({ prompt: 10, completion: 4 })
+        expect(last.usage).toEqual({ prompt: 10, completion: 4, total: 14 })
 
         const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit]
         expect(url).toBe('https://api.upstage.ai/v1/chat/completions')

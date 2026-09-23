@@ -81,4 +81,16 @@ describe('chat/stream — 드라이버 고르기와 되돌아가기', () => {
         expect(out).toEqual(['반은 '])
         expect(geminiMock).not.toHaveBeenCalled()
     })
+
+    it('솔라가 사용량을 주면 마지막에 usage 조각을 흘려보낸다(화면은 text 만 써도 됨)', async () => {
+        async function* withUsage() {
+            yield { text: '안녕' }
+            yield { done: true, usage: { prompt: 11, completion: 3, total: 14 } }
+        }
+        solarMock.mockReturnValue(withUsage())
+        const chunks: { text?: string; usage?: unknown }[] = []
+        for await (const c of await generateChatStream('시스템', history)) chunks.push(c)
+        expect(chunks.filter(c => c.text).map(c => c.text)).toEqual(['안녕'])
+        expect(chunks.at(-1)?.usage).toEqual({ prompt: 11, completion: 3, total: 14 })
+    })
 })

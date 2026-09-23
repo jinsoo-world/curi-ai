@@ -585,6 +585,8 @@ export async function POST(req: Request) {
         const stream = new ReadableStream({
             async start(controller) {
                 let fullResponse = ''
+                /** 솔라가 돌려준 실제 토큰만. 없으면 null — 가짜 숫자 금지 */
+                let llmUsage: { prompt: number; completion: number; total: number } | null = null
                 // 🧹 내부 사고 패턴 필터링 정규식
                 // (생각), (분석), (판단) 등 괄호 안 사고 과정 + 관련 분석 라벨 제거
                 const thinkingPatterns = [
@@ -611,6 +613,7 @@ export async function POST(req: Request) {
                 try {
                     let rawResponse = ''
                     for await (const chunk of response) {
+                        if (chunk.usage) llmUsage = chunk.usage
                         const text = chunk.text || ''
                         if (text) {
                             rawResponse += text
@@ -666,9 +669,17 @@ export async function POST(req: Request) {
                                 session_id: sessionId,
                                 role: 'assistant',
                                 content: fullResponse,
+                                // LLM 이 돌려준 사용량만 저장. 없으면 칸을 넣지 않아 NULL.
+                                ...(llmUsage
+                                    ? {
+                                        prompt_tokens: llmUsage.prompt,
+                                        completion_tokens: llmUsage.completion,
+                                        tokens_used: llmUsage.total,
+                                    }
+                                    : {}),
                             })
                             if (assistantMsgErr) console.error('[Chat Save] assistantMessage INSERT failed:', JSON.stringify(assistantMsgErr))
-                            else console.log('[Chat Save] assistantMessage saved OK')
+                            else console.log(`[Chat Save] assistantMessage saved OK tokens=${llmUsage ? `${llmUsage.prompt}/${llmUsage.completion}/${llmUsage.total}` : 'n/a'}`)
 
                             const { error: updateErr } = await adminDb
                                 .from('chat_sessions')

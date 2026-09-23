@@ -5,17 +5,17 @@
 //  2. 솔라가 첫 글자도 못 내고 죽으면 Gemini 로 되돌아가고
 //  3. 둘 다 죽으면 오류 대신 「쉬는 중」 한 줄을 내놓는다 (전체가 죽지 않는다)
 //
-// 화면 쪽 약속 = chunk.text 만 본다. 그 모양은 바꾸지 않았다.
+// 화면 쪽 약속 = chunk.text 만 본다. usage 는 서버 저장용(선택)이라 화면은 무시해도 된다.
 
 import { generateChatStream as generateGeminiStream } from './gemini'
 import { geminiToOpenAi, pickDriverFromEnv, solarChatStream, SOLAR_CHAT_MODEL } from '@/domains/llm'
-import type { LlmChunk } from '@/domains/llm'
+import type { LlmChunk, LlmUsage } from '@/domains/llm'
 import type { GeminiMessage } from './types'
 
 import { UNAVAILABLE_TEXT } from './constants'
 export { UNAVAILABLE_TEXT }
 
-type TextChunk = { text?: string }
+type TextChunk = { text?: string; usage?: LlmUsage | null }
 
 /** 답변 설정(domains/os/response-settings) 이 계산해 넘기는 길이·최신성 조정. 안 주면 기존 동작 그대로 */
 export interface ChatStreamOptions {
@@ -49,6 +49,8 @@ async function* solarWithFallback(
             if (chunk.done) usage = chunk.usage
         }
         console.log(`[LLM] driver=solar model=${SOLAR_CHAT_MODEL} ms=${Date.now() - started} prompt=${usage?.prompt ?? '?'} completion=${usage?.completion ?? '?'}`)
+        // 실제 토큰만 넘긴다. 없으면 usage 조각을 안 보낸다(가짜 숫자 금지).
+        if (usage) yield { usage }
         return
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)

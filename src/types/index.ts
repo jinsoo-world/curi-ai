@@ -63,6 +63,8 @@ export interface Message {
     content: string
     input_method: 'text' | 'stt'
     tokens_used: number | null
+    prompt_tokens?: number | null
+    completion_tokens?: number | null
     created_at: string
 }
 

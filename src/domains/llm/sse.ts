@@ -67,12 +67,15 @@ export function extractDeltaText(payload: string): string {
     }
 }
 
-/** 마지막 조각에 실려 오는 사용량. 없으면 null */
+/** 마지막 조각에 실려 오는 사용량. 없으면 null (가짜 숫자를 만들지 않는다) */
 export function extractUsage(payload: string): LlmUsage | null {
     try {
         const u = JSON.parse(payload)?.usage
         if (!u || typeof u.prompt_tokens !== 'number') return null
-        return { prompt: u.prompt_tokens, completion: u.completion_tokens ?? 0 }
+        const prompt = u.prompt_tokens
+        const completion = typeof u.completion_tokens === 'number' ? u.completion_tokens : 0
+        const total = typeof u.total_tokens === 'number' ? u.total_tokens : prompt + completion
+        return { prompt, completion, total }
     } catch {
         return null
     }

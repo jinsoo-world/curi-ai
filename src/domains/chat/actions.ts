@@ -21,17 +21,26 @@ export async function saveUserMessage(
 }
 
 /**
- * AI 응답 메시지 저장
+ * AI 응답 메시지 저장.
+ * usage 가 있으면 prompt/completion/total 을 함께 넣는다. 없으면 토큰 칸은 NULL.
  */
 export async function saveAssistantMessage(
     db: SupabaseClient,
     sessionId: string,
     content: string,
+    usage?: { prompt: number; completion: number; total: number } | null,
 ) {
     const { error } = await db.from('messages').insert({
         session_id: sessionId,
         role: 'assistant',
         content,
+        ...(usage
+            ? {
+                prompt_tokens: usage.prompt,
+                completion_tokens: usage.completion,
+                tokens_used: usage.total,
+            }
+            : {}),
     })
     if (error) {
         console.error('[Chat Actions] saveAssistantMessage error:', JSON.stringify(error))

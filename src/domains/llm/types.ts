@@ -20,8 +20,10 @@ export interface LlmChunk {
     usage?: LlmUsage | null
 }
 
-/** 토큰 사용량 (비용 계측용) */
+/** 토큰 사용량 (비용 계측용). LLM 이 돌려준 값만. 없으면 만들지 않는다 */
 export interface LlmUsage {
     prompt: number
     completion: number
+    /** 총합. API total_tokens 가 있으면 그걸, 없으면 prompt+completion */
+    total: number
 }
