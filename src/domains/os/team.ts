@@ -1,4 +1,4 @@
-// domains/os — 봇 팀 읽기·쓰기 (서버에서만 부른다. db 는 service_role 이라 user_id 를 여기서 반드시 건다)
+// domains/os — 봇 팀 읽기, 쓰기 (서버에서만 부른다. db 는 service_role 이라 user_id 를 여기서 반드시 건다)
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { ensureCreatorProfile } from '@/domains/creator'
@@ -63,7 +63,7 @@ export async function listTeam(db: SupabaseClient, userId: string): Promise<Team
 }
 
 /**
- * 새 봇 만들기 = mentors 한 줄(봇의 몸) + team_bots 한 줄(팀 소속·캐릭터).
+ * 새 봇 만들기 = mentors 한 줄(봇의 몸) + team_bots 한 줄(팀 소속, 캐릭터).
  * 개인 봇은 공개 목록에 안 뜨게 is_active=false 로 넣는다(공개 목록은 is_active=true 만 뽑는다).
  */
 export async function createTeamBot(
@@ -126,7 +126,7 @@ export async function createTeamBot(
     }
 }
 
-/** 고정·숨김·정렬만 바꾼다 (캐릭터·승인 모드 변경은 다음 날) */
+/** 고정, 숨김, 정렬만 바꾼다 (캐릭터, 승인 모드 변경은 다음 날) */
 export async function updateTeamBot(
     db: SupabaseClient, userId: string, teamBotId: string,
     patch: Partial<Pick<TeamBot, 'pinned' | 'hidden' | 'sortOrder' | 'approvalMode' | 'shape' | 'color' | 'oneLiner'>>,
@@ -163,7 +163,7 @@ export async function getOwnedTeamBotMentor(db: SupabaseClient, userId: string, 
 }
 
 /**
- * 처음 팀이 비었으면 기본 3명(기획팀장·홍보팀장·개발팀장)을 만든다. 이미 있으면 그대로 돌려준다.
+ * 처음 팀이 비었으면 기본 3명(기획팀장, 홍보팀장, 개발팀장)을 만든다. 이미 있으면 그대로 돌려준다.
  * 두 번 눌러도 3명이 6명이 되지 않게, 만들기 전에 다시 센다.
  */
 export async function bootstrapDefaultTeam(

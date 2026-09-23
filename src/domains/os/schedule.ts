@@ -4,9 +4,9 @@
 // 크론이 새벽에 두 번 돌거나 토요일에 도는 사고를 막을 수 있다.
 //
 // 규칙
-//  · 창은 예정 시각부터 5분. 앞당겨 돌지 않는다(크론이 5분마다 오니 늦어도 5분 안에는 잡힌다).
-//  · 같은 날 같은 시간대에 이미 돌았으면 건너뛴다(크론이 여러 번 와도 한 번만).
-//  · 요일을 안 고른 「주 1회」는 돌지 않는다 — 넓은 트리거 금지(기획 §11).
+//  / 창은 예정 시각부터 5분. 앞당겨 돌지 않는다(크론이 5분마다 오니 늦어도 5분 안에는 잡힌다).
+//  / 같은 날 같은 시간대에 이미 돌았으면 건너뛴다(크론이 여러 번 와도 한 번만).
+//  / 요일을 안 고른 「주 1회」는 돌지 않는다 — 넓은 트리거 금지(기획 §11).
 
 export type ScheduleKind = 'daily' | 'weekdays' | 'weekly'
 export type OnMissingData = 'report_failure' | 'skip'
@@ -133,7 +133,7 @@ export interface RoutinePromptInput {
 
 /**
  * 루틴이 돌 때 봇에게 건네는 말 한 덩어리.
- * 봇의 성격·말투는 mentors.system_prompt 가 맡고, 여기는 「이번 일」만 적는다.
+ * 봇의 성격, 말투는 mentors.system_prompt 가 맡고, 여기는 「이번 일」만 적는다.
  */
 export function buildRoutinePrompt(r: RoutinePromptInput): string {
     const 없을때 = r.on_missing_data === 'skip'
@@ -154,7 +154,7 @@ export function buildRoutinePrompt(r: RoutinePromptInput): string {
         '',
         '[지킬 것]',
         없을때,
-        `- 밖으로 나가는 일(메시지 보내기·게시·구매·이체·삭제)은 **직접 하지 않는다**. 초안까지만 만들고 사람이 허용할 때까지 기다린다.`,
+        `- 밖으로 나가는 일(메시지 보내기, 게시, 구매, 이체, 삭제)은 **직접 하지 않는다**. 초안까지만 만들고 사람이 허용할 때까지 기다린다.`,
     ]
     const 경계 = (r.approval_boundary ?? '').trim()
     if (경계) 줄.push(`- 승인 경계: ${경계}`)

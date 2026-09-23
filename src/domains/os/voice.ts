@@ -59,12 +59,12 @@ const PARTICLES = [
 
 const EMOJI_RE = /\p{Extended_Pictographic}/u
 
-/** 문장 끝 기호·따옴표·괄호를 떼고 알맹이만 남긴다 */
+/** 문장 끝 기호, 따옴표, 괄호를 떼고 알맹이만 남긴다 */
 function stripTail(s: string): string {
-    return s.replace(/[.!?~…·"'”’)\]』」】\s]+$/u, '')
+    return s.replace(/[.!?~…, "'”’)\]』」】\s]+$/u, '')
 }
 
-/** 글을 문장으로 나눈다. 마침표·물음표·느낌표·줄바꿈이 경계다 */
+/** 글을 문장으로 나눈다. 마침표, 물음표, 느낌표, 줄바꿈이 경계다 */
 export function splitSentences(text: string): string[] {
     return String(text ?? '')
         .replace(/\r/g, '')
@@ -218,7 +218,7 @@ export function buildVoiceGuide(profile: VoiceProfile): string {
     }
 
     // 사람이 아니라 기계가 쓴 티가 나는 것들을 못 박아 막는다 (대표 지시 「AI 티 제로」)
-    lines.push(`- 줄표(—)와 중간점(·)으로 낱말을 늘어놓지 않는다. 담백한 평문과 줄바꿈으로 쓴다.`)
+    lines.push(`- 줄표(—)와 중간점(, )으로 낱말을 늘어놓지 않는다. 담백한 평문과 줄바꿈으로 쓴다.`)
     lines.push(`- 「먼저」「또한」「마지막으로」처럼 번호 매기는 말버릇을 쓰지 않는다.`)
 
     return `[말투 규칙 — 주인이 실제로 쓴 글 ${profile.sampleCount}편, 문장 ${profile.sentenceCount}개에서 뽑았다]\n${lines.join('\n')}`

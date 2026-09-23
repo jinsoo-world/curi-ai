@@ -121,7 +121,7 @@ export async function deleteConnector(db: SupabaseClient, userId: string, id: st
     if (!count) throw new ConnectorNotMine()
 }
 
-/** 방금 썼다·고장 났다 표시 */
+/** 방금 썼다, 고장 났다 표시 */
 export async function markConnector(
     db: SupabaseClient, userId: string, id: string, status: ConnectorStatus,
 ): Promise<void> {

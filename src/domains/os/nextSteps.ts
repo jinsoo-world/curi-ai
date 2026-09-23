@@ -1,4 +1,4 @@
-// domains/os — 「다음 한 걸음」(미룬 일) 읽기·쓰기. 서버에서만 부른다(user_id 를 여기서 건다).
+// domains/os — 「다음 한 걸음」(미룬 일) 읽기, 쓰기. 서버에서만 부른다(user_id 를 여기서 건다).
 //
 // 봇이 답 끝에 낸 제안을 사람이 한 번 눌러 저장하는 자리다.
 // 표(next_steps)는 20260923_agent_os_p0.sql 에 있다. 아직 없으면 「준비 중」으로 조용히 비운다.
@@ -55,7 +55,7 @@ export async function createNextStep(
     return toStep(data as unknown as Row)
 }
 
-/** 끝냈다/다시 열었다, 기한·글 고치기 */
+/** 끝냈다/다시 열었다, 기한, 글 고치기 */
 export async function patchNextStep(
     db: SupabaseClient, userId: string, id: string,
     patch: { done?: boolean; text?: string; dueOn?: string | null },
@@ -71,7 +71,7 @@ export async function patchNextStep(
 
 /**
  * 봇 답의 마지막 문장 = 「다음 한 걸음」 기본값.
- * 사람이 고쳐서 저장하니 완벽할 필요는 없다. 다만 표·목록 기호는 떼고 한 문장만 남긴다.
+ * 사람이 고쳐서 저장하니 완벽할 필요는 없다. 다만 표, 목록 기호는 떼고 한 문장만 남긴다.
  */
 export function guessNextStep(answer: string): string {
     const 줄들 = (answer ?? '')

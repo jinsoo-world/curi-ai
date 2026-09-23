@@ -1,4 +1,4 @@
-// domains/connectors — 밖의 도구 연결. 화면·API 는 여기서만 가져다 쓴다.
+// domains/connectors — 밖의 도구 연결. 화면, API 는 여기서만 가져다 쓴다.
 export * from './types'
 export * from './crypto'
 export * from './store'

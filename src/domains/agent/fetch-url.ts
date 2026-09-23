@@ -4,13 +4,13 @@
 // 이건 **이번 답 한 번에만 쓰고 버리는** 읽기다. 저장하지 않으니 규칙이 더 빡빡하다.
 //
 // 지켜야 할 것 (보안설계 §B 보너스 위협 = SSRF, §F-4 프롬프트 인젝션)
-//  1. http/https 만. file:·ftp:·javascript: 는 아예 거절.
-//  2. 우리 안쪽 주소는 막는다 — localhost·127.·10.·172.16~31.·192.168.·169.254.(클라우드 메타데이터)·::1·
-//     우리 Supabase 호스트·*.vercel.app.
+//  1. http/https 만. file:, ftp:, javascript: 는 아예 거절.
+//  2. 우리 안쪽 주소는 막는다 — localhost, 127., 10., 172.16~31., 192.168., 169.254.(클라우드 메타데이터), ::1, 
+//     우리 Supabase 호스트, *.vercel.app.
 //  3. 주소를 보고 막는 것만으론 뚫린다(남의 도메인이 169.254.169.254 를 가리킬 수 있다).
 //     그래서 **이름을 실제 번호(IP)로 풀어 본 뒤** 그 번호가 사설 대역이면 거절한다.
 //  4. 딴 데로 튕기는 것(리다이렉트)은 3번까지, **튕길 때마다 1~3 을 다시 검사**한다.
-//  5. 크기 2MB·시간 8초를 넘기면 끊는다.
+//  5. 크기 2MB, 시간 8초를 넘기면 끊는다.
 //  6. 가져온 글은 「인용」이지 「명령」이 아니다 — 울타리는 부르는 쪽(/api/chat)이 두른다.
 
 import { lookup } from 'dns/promises'
@@ -35,7 +35,7 @@ const URL_IN_TEXT = /https?:\/\/[^\s<>"'()[\]]+/gi
 
 /**
  * 사람이 쓴 말에서 주소만 골라낸다(앞에서부터 최대 3개, 같은 주소는 한 번만).
- * 문장 끝에 딸려온 마침표·괄호·따옴표는 떼어 낸다.
+ * 문장 끝에 딸려온 마침표, 괄호, 따옴표는 떼어 낸다.
  */
 export function extractUrls(text: string, max = MAX_URLS_PER_MESSAGE): string[] {
     const found = String(text ?? '').match(URL_IN_TEXT) ?? []
@@ -52,7 +52,7 @@ export function extractUrls(text: string, max = MAX_URLS_PER_MESSAGE): string[] 
 
 /* ────────────────────────── 안전한 주소인가 ────────────────────────── */
 
-/** 번호 주소(IP)가 우리 안쪽·사설 대역인가 */
+/** 번호 주소(IP)가 우리 안쪽, 사설 대역인가 */
 export function isPrivateIp(ip: string): boolean {
     const addr = String(ip ?? '').trim().toLowerCase().replace(/^\[|\]$/g, '')
     if (!addr) return true
@@ -69,7 +69,7 @@ export function isPrivateIp(ip: string): boolean {
         if (a === 172 && b >= 16 && b <= 31) return true
         if (a === 192 && b === 168) return true
         if (a === 100 && b >= 64 && b <= 127) return true   // 통신사 공유 대역
-        if (a >= 224) return true                     // 멀티캐스트·예약
+        if (a >= 224) return true                     // 멀티캐스트, 예약
         return false
     }
 
@@ -88,7 +88,7 @@ export function isBlockedHost(hostname: string): boolean {
     if (host.endsWith('.local') || host.endsWith('.internal') || host.endsWith('.home.arpa')) return true
     if (host === 'metadata.google.internal') return true
     if (host.endsWith('.vercel.app') || host === 'vercel.app') return true     // 우리 배포 주소
-    if (host.endsWith('.supabase.co') || host.endsWith('.supabase.in')) return true  // 우리 DB·저장소
+    if (host.endsWith('.supabase.co') || host.endsWith('.supabase.in')) return true  // 우리 DB, 저장소
 
     // 우리 Supabase 주소는 환경변수로도 한 번 더 막는다
     const base = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -152,7 +152,7 @@ export function normalizeUrl(raw: string): string {
     return u.toString()
 }
 
-/** 유튜브 주소인가 (자막은 못 읽으니 제목·설명만 쓴다) */
+/** 유튜브 주소인가 (자막은 못 읽으니 제목, 설명만 쓴다) */
 export function isYoutubeUrl(raw: string): boolean {
     try {
         const host = new URL(raw).hostname.replace(/^www\./, '').toLowerCase()
@@ -163,10 +163,10 @@ export function isYoutubeUrl(raw: string): boolean {
 /* ────────────────────────── HTML 에서 글만 뽑기 ────────────────────────── */
 
 const ENTITIES: Record<string, string> = {
-    '&nbsp;': ' ', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&apos;': "'", '&middot;': '·',
+    '&nbsp;': ' ', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&apos;': "'", '&middot;': ', ',
 }
 
-/** 웹페이지 HTML → 사람이 읽는 글만 (스크립트·스타일·태그 제거) */
+/** 웹페이지 HTML → 사람이 읽는 글만 (스크립트, 스타일, 태그 제거) */
 export function htmlToText(html: string): string {
     return String(html ?? '')
         .replace(/<script[\s\S]*?<\/script>/gi, ' ')
@@ -263,7 +263,7 @@ export async function fetchUrlText(rawUrl: string): Promise<ReadResult> {
     const requestedUrl = String(rawUrl ?? '').trim()
     const fail = (reason: string): ReadFail => ({ ok: false, requestedUrl, reason })
 
-    if (!isSafeFetchUrl(requestedUrl)) return fail('열 수 없는 주소예요(공개된 http·https 주소만 읽을 수 있어요)')
+    if (!isSafeFetchUrl(requestedUrl)) return fail('열 수 없는 주소예요(공개된 http, https 주소만 읽을 수 있어요)')
 
     let current = normalizeUrl(requestedUrl)
     const started = Date.now()
@@ -304,7 +304,7 @@ export async function fetchUrlText(rawUrl: string): Promise<ReadResult> {
 
     const type = (res.headers.get('content-type') || '').toLowerCase()
     const 글인가 = type.includes('text/html') || type.includes('text/plain') || type.includes('xml') || type.includes('json') || !type
-    if (!글인가) return fail('글이 아니라 파일이라서 읽지 못했어요(사진·영상·PDF 는 자료로 올려 주세요)')
+    if (!글인가) return fail('글이 아니라 파일이라서 읽지 못했어요(사진, 영상, PDF 는 자료로 올려 주세요)')
 
     const body = await readLimitedText(res, pickCharset(type)).catch(() => '')
     if (!body) return fail('그 주소에서 읽을 내용이 없었어요')

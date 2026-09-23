@@ -1,7 +1,7 @@
 // domains/connectors — 「밖의 도구와 연결하기」 공통 타입.
 //
-// 1차로 진짜 붙는 것 = 노션(읽기) · 슬랙(보내기).
-// 카톡·인스타·큐리어스 본체는 칸만 있고 「준비 중」이다(심사·전용 API 가 있어야 열린다).
+// 1차로 진짜 붙는 것 = 노션(읽기) / 슬랙(보내기).
+// 카톡, 인스타, 큐리어스 본체는 칸만 있고 「준비 중」이다(심사, 전용 API 가 있어야 열린다).
 // 계획은 docs/connectors/외부연결_계획.md.
 
 /** 연결 종류 5가지 */
@@ -64,7 +64,7 @@ export const CONNECTOR_INFO: Record<ConnectorKind, ConnectorMeta> = {
 
 export type ConnectorStatus = 'connected' | 'error'
 
-/** 화면·API 가 주고받는 모양. **열쇠는 절대 들어가지 않는다** */
+/** 화면, API 가 주고받는 모양. **열쇠는 절대 들어가지 않는다** */
 export interface ConnectorView {
     id: string
     kind: ConnectorKind

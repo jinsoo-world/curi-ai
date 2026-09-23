@@ -99,13 +99,13 @@ export async function listPermissionRequests(
 
 /**
  * 카드에 답한다. **아직 답하지 않은(pending) 내 카드**만 바뀐다.
- * 이미 답한 카드를 다시 바꾸려 하면 null 을 돌려준다(두 번 누르기·뒤늦은 창 방지).
+ * 이미 답한 카드를 다시 바꾸려 하면 null 을 돌려준다(두 번 누르기, 뒤늦은 창 방지).
  */
 export async function decidePermissionRequest(
     db: SupabaseClient, userId: string, id: string,
     decision: PermissionStatus, decidedPayload?: Record<string, unknown> | null,
 ): Promise<PermissionCardRow | null> {
-    if (!DECISIONS.includes(decision)) throw new Error('허용·거절·고쳐서 허용 중 하나여야 한다')
+    if (!DECISIONS.includes(decision)) throw new Error('허용, 거절, 고쳐서 허용 중 하나여야 한다')
     if (decision === 'edited_allowed' && (!decidedPayload || Object.keys(decidedPayload).length === 0)) {
         throw new Error('고쳐서 허용하려면 고친 내용이 있어야 한다')
     }

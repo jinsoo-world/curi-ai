@@ -21,6 +21,11 @@ import { readRelayIntent } from '@/domains/agent/relay'
 import RelayBubble from './RelayBubble'
 import type { RelayView } from './RelayBubble'
 // === /전달(relay) ===
+// === 사진 첨부 ===
+import { usePhotoAttach, PhotoPlusMenu, PhotoStrip } from './PhotoAttach'
+import PhotoGrid from './PhotoGrid'
+import { photoPayload } from '@/domains/os/photos'
+// === /사진 첨부 ===
 
 interface Msg {
     id: string
@@ -33,6 +38,8 @@ interface Msg {
     // === 전달(relay) === 옆 봇이 대신 답한 말이면 「보낸 사람 ○○ → ○○」 표식을 단다
     relay?: RelayView
     // === /전달(relay) ===
+    /** === 사진 첨부 === 내 말풍선에 붙인 사진들 (우리 저장소 주소, 최대 10) */
+    imageUrls?: string[]
 }
 
 interface PublicBot { id: string; name: string; avatar_url: string | null; greeting_message: string; title?: string }
@@ -52,6 +59,10 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
     const [addSheet, setAddSheet] = useState(false)
     const [demo, setDemo] = useState(false)
     const endRef = useRef<HTMLDivElement>(null)
+    // === 사진 첨부 ===
+    const photos = usePhotoAttach()
+    const [dragging, setDragging] = useState(false)
+    // === /사진 첨부 ===
 
     // 시연(?demo=1), 손님에게는 「내 것」을 저장하는 칸(체크인, 다음 한 걸음)을 안 보인다.
     // 오른쪽 세부칸은 넓은 화면이면 열린 채, 폰이면 닫힌 채 시작한다. 그 뒤로는 ⓘ 로 사람이 정한다.
@@ -90,9 +101,12 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
 
     const send = useCallback(async () => {
         const text = input.trim()
-        if (!text || streaming) return
-        osTrack('os_message_sent', { mentor_id: mentorId, guest })
-        const userMsg: Msg = { id: `u-${Date.now()}`, role: 'user', content: text }
+        // === 사진 첨부 === 사진만 보내도 된다. 올리는 중이거나 실패한 장이 남아 있으면 기다린다.
+        const photoUrls = photos.urls
+        if ((!text && photoUrls.length === 0) || streaming || photos.uploading || photos.failed) return
+        osTrack('os_message_sent', { mentor_id: mentorId, guest, photos: photoUrls.length })
+        const userMsg: Msg = { id: `u-${Date.now()}`, role: 'user', content: text, ...(photoUrls.length ? { imageUrls: photoUrls } : {}) }
+        // === /사진 첨부 ===
         const botId = `a-${Date.now()}`
         const base = [...messages, userMsg]
 
@@ -125,7 +139,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                     setState('idle')
                     return
                 }
-                // 못 옮겼으면(로그인 전·표 없음·밖으로 나가는 말) 조용히 평소 대화로 내려간다.
+                // 못 옮겼으면(로그인 전, 표 없음, 밖으로 나가는 말) 조용히 평소 대화로 내려간다.
                 // needsApproval 이면 아래 승인 카드 길이 그 말을 받는다.
                 setMessages([...base, { id: botId, role: 'assistant', content: '' }])
             } catch {
@@ -136,7 +150,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
 
         // 서버를 부르기 전 가벼운 규칙 2개. 내 팀 봇일 때만 본다(공개 봇에는 자료를 못 넣는다).
         // 여기서 끝나는 말은 모델을 부르지 않는다 = 클로버를 안 쓴다.
-        const 눈치 = bot && !guest && !전달 ? readLocalIntent(text) : null
+        const 눈치 = bot && !guest && !전달 && text ? readLocalIntent(text) : null
         if (눈치?.kind === 'group') {
             // === 전달(relay) === 안내만 하지 않고 「그룹 채팅 만들기」 창을 바로 연다
             setInput('')
@@ -167,6 +181,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         }
         setMessages([...base, { id: botId, role: 'assistant', content: '' }])
         setInput('')
+        photos.clear()   // === 사진 첨부 === 보냈으니 띠를 비운다
         setStreaming(true)
         setState('thinking')
 
@@ -175,7 +190,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
 
             // ① 밖으로 내보내는 말인지 먼저 본다. 맞으면 봇은 답하지 않고 승인 카드가 뜬다.
             //    (보내기, 게시, 구매, 이체, 삭제는 내가 허용하기 전엔 나가지 않는다)
-            if (!guest) {
+            if (!guest && text) {
                 try {
                     const draftRes = await fetch('/api/os/chat/draft', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -201,7 +216,10 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
             const res = await fetch('/api/chat', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    messages: base.slice(-MAX_CONTEXT).map(m => ({ role: m.role, content: m.content })),
+                    // === 사진 첨부 === 지난 메시지의 첫 장은 imageUrl 로 같이 보낸다(서버가 최근 3통 안 사진을 되짚어 본다)
+                    messages: base.slice(-MAX_CONTEXT).map(m => ({ role: m.role, content: m.content, ...(m.imageUrls?.[0] ? { imageUrl: m.imageUrls[0] } : {}) })),
+                    ...photoPayload(photoUrls),
+                    // === /사진 첨부 ===
                     mentorId,
                     sessionId: sid ?? undefined,
                     inputMethod: 'text',
@@ -247,8 +265,8 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         } finally {
             setStreaming(false)
         }
-        // === 전달(relay) === team·openNewGroup·name 이 더 들어간다
-    }, [input, streaming, messages, mentorId, guest, bot, ensureSession, team, openNewGroup, name])
+        // === 전달(relay), 사진 첨부 === team, openNewGroup, name, photos 가 더 들어간다
+    }, [input, streaming, messages, mentorId, guest, bot, ensureSession, team, openNewGroup, name, photos])
 
     const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send() }
@@ -259,7 +277,13 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         : <BotAvatar shape="circle" color="white" state={state} size={36} faceUrl={publicBot?.avatar_url ?? null} name={publicBot?.name ?? name} />
 
     return (
-        <div className={`os-chat-wrap${detailOpen ? '' : ' narrow'}`}>
+        <div className={`os-chat-wrap${detailOpen ? '' : ' narrow'}${dragging ? ' dragging' : ''}`}
+            // === 사진 첨부 === 끌어다 놓기 (사진 파일만 받는다)
+            onDragOver={e => { if (Array.from(e.dataTransfer.types).includes('Files')) { e.preventDefault(); setDragging(true) } }}
+            onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false) }}
+            onDrop={e => { setDragging(false); if (photos.addFromData(e.dataTransfer)) e.preventDefault() }}
+            // === /사진 첨부 ===
+        >
             <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 <header className="os-chat-head">
                     {avatar}
@@ -282,8 +306,11 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                         </>
                     )}
                     {messages.map(m => m.role === 'user'
-                        ? <div key={m.id} className="os-bubble me">{m.content}</div>
-                        // === 전달(relay) === 옆 봇이 대신 답한 말은 그 봇 얼굴·이름으로 그린다
+                        ? (m.imageUrls && m.imageUrls.length > 0
+                            // === 사진 첨부 === 사진 격자 + 글
+                            ? <div key={m.id} className="os-bubble me has-photos"><PhotoGrid urls={m.imageUrls} />{m.content && <div className="os-photo-text">{m.content}</div>}</div>
+                            : <div key={m.id} className="os-bubble me">{m.content}</div>)
+                        // === 전달(relay) === 옆 봇이 대신 답한 말은 그 봇 얼굴, 이름으로 그린다
                         : m.relay
                             ? <div key={m.id} style={{ display: 'contents' }}><RelayBubble view={m.relay} answer={m.content} /></div>
                         // === /전달(relay) ===
@@ -311,25 +338,29 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                 {/* 📊 사용 한도 한 줄 (내 봇은 클로버 0 — 대표 확정 0923) */}
                 <UsageBar guest={guest} refreshKey={messages.length} />
 
+                {/* === 사진 첨부 === 붙인 사진 미리보기 띠 (입력창 위) */}
+                <PhotoStrip items={photos.items} notice={photos.notice} onRemove={photos.remove} onRetry={photos.retry} />
+                {/* === /사진 첨부 === */}
+
                 <div className="os-input-bar">
-                    <button
-                        className="os-icon-btn"
-                        aria-label="자료 넣기"
-                        title={bot ? '자료 넣기 (PDF, 링크, 유튜브, 글)' : '내 팀의 봇에만 자료를 넣을 수 있어요'}
-                        disabled={!bot}
-                        onClick={() => setAddSheet(true)}
-                    >＋</button>
+                    {/* === 사진 첨부 === ＋ 메뉴: 사진 붙이기 / 자료 넣기 */}
+                    <PhotoPlusMenu canKnowledge={!!bot} onPickPhotos={photos.add} onKnowledge={() => setAddSheet(true)} />
+                    {/* === /사진 첨부 === */}
                     <textarea
                         className="os-input"
                         rows={1}
                         value={input}
                         onChange={e => { setInput(e.target.value); if (!streaming) setState(e.target.value ? 'listening' : 'idle') }}
                         onKeyDown={onKey}
+                        onPaste={e => { if (photos.addFromData(e.clipboardData)) e.preventDefault() }}   // === 사진 첨부 === 붙여넣기
                         placeholder={`${name}에게 메시지 보내기`}
                         aria-label="메시지"
                         style={{ resize: 'none' }}
                     />
-                    <button className="os-icon-btn os-send" aria-label="보내기" disabled={!input.trim() || streaming} onClick={() => void send()}>↑</button>
+                    <button className="os-icon-btn os-send" aria-label="보내기"
+                        disabled={(!input.trim() && photos.urls.length === 0) || streaming || photos.uploading || photos.failed}
+                        title={photos.uploading ? '사진을 올리는 중이에요' : photos.failed ? '실패한 사진을 빼거나 다시 시도해 주세요' : undefined}
+                        onClick={() => void send()}>↑</button>
                 </div>
             </div>
 

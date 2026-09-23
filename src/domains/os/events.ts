@@ -14,7 +14,7 @@
 //   활성(A) os_relay_sent      봇이 옆 봇에게 말을 옮겼나 (봇끼리 전달)
 //   활성(A) os_group_message   그룹방에서 말을 걸었나
 //
-// ⛔ 개인정보는 절대 넣지 않는다. 이름·전화·메시지 본문·자료 제목 금지. ID 와 개수만.
+// ⛔ 개인정보는 절대 넣지 않는다. 이름, 전화, 메시지 본문, 자료 제목 금지. ID 와 개수만.
 
 import posthog from 'posthog-js'
 
@@ -30,7 +30,7 @@ export type OsEvent =
     | 'os_relay_sent'
     | 'os_group_message'
 
-/** 붙여도 되는 값 = 숫자·참거짓·짧은 갈래 이름·ID. 본문·이름은 안 된다 */
+/** 붙여도 되는 값 = 숫자, 참거짓, 짧은 갈래 이름, ID. 본문, 이름은 안 된다 */
 export type OsEventProps = Record<string, string | number | boolean | null | undefined>
 
 export function osTrack(event: OsEvent, props: OsEventProps = {}): void {

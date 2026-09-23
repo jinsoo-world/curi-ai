@@ -10,9 +10,9 @@ import { addKnowledgeSource } from '@/domains/knowledge'
 /** 표가 아직 DB 에 없을 때 나는 Postgres 오류 번호 */
 const TABLE_MISSING = '42P01'
 
-/** 봇 하나가 읽을 수 있는 자료 수·크기 (기존 크리에이터 창구와 같은 값) */
+/** 봇 하나가 읽을 수 있는 자료 수, 크기 (기존 크리에이터 창구와 같은 값) */
 export const MAX_SOURCES_PER_BOT = 10
-/** 링크·글로 넣을 때 본문 최대 길이 (너무 긴 글은 잘라 넣는다) */
+/** 링크, 글로 넣을 때 본문 최대 길이 (너무 긴 글은 잘라 넣는다) */
 export const MAX_TEXT_CHARS = 100_000
 
 export class BotNotMine extends Error {
@@ -77,8 +77,8 @@ export function isYoutubeUrl(url: string): boolean {
 
 /**
  * 밖에서 가져와도 되는 주소인가 (SSRF 막기).
- * 우리 서버가 남이 적어준 주소를 그대로 열면, 사내망·클라우드 메타데이터 주소를 대신 읽어 줄 수 있다.
- * http/https 만, 그리고 사설·루프백 주소는 막는다.
+ * 우리 서버가 남이 적어준 주소를 그대로 열면, 사내망, 클라우드 메타데이터 주소를 대신 읽어 줄 수 있다.
+ * http/https 만, 그리고 사설, 루프백 주소는 막는다.
  */
 export function isSafeExternalUrl(raw: string): boolean {
     let u: URL
@@ -100,7 +100,7 @@ export function isSafeExternalUrl(raw: string): boolean {
     return true
 }
 
-/** 웹페이지 HTML 에서 읽을 글만 뽑는다 (태그·스크립트 제거) */
+/** 웹페이지 HTML 에서 읽을 글만 뽑는다 (태그, 스크립트 제거) */
 export function htmlToText(html: string): string {
     return html
         .replace(/<script[\s\S]*?<\/script>/gi, ' ')
@@ -147,7 +147,7 @@ export async function addTextSource(db: SupabaseClient, mentorId: string, title:
 }
 
 /**
- * 링크(웹페이지·유튜브)를 자료로 넣는다.
+ * 링크(웹페이지, 유튜브)를 자료로 넣는다.
  * 유튜브는 자막을 우리가 못 받아오므로, 지금은 **주소와 제목만** 기억한다(지어내지 않는다).
  */
 export async function addLinkSource(db: SupabaseClient, mentorId: string, rawUrl: string) {

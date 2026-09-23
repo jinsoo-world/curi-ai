@@ -1,4 +1,4 @@
-// domains/os — 루틴 읽기·쓰기·한 번 돌리기 (서버에서만 부른다).
+// domains/os — 루틴 읽기, 쓰기, 한 번 돌리기 (서버에서만 부른다).
 //
 // db 는 service_role 이라 RLS 를 우회한다. 그래서 여기 모든 질의에 user_id 를 반드시 건다.
 // 시간 규칙은 전부 schedule.ts(순수)에 있고 여기는 DB 와 모델만 만진다.
@@ -114,7 +114,7 @@ export async function createRoutine(db: SupabaseClient, userId: string, input: N
     return toRoutine(data as unknown as Row)
 }
 
-/** 켜기·끄기와 칸 고치기 */
+/** 켜기, 끄기와 칸 고치기 */
 export async function updateRoutine(
     db: SupabaseClient, userId: string, id: string,
     patch: Partial<Pick<BotRoutine, 'enabled' | 'title' | 'instruction' | 'scheduleKind' | 'runAtLocal' | 'weekday' | 'inputSource' | 'expectedOutput' | 'onMissingData' | 'approvalBoundary'>>,

@@ -1,7 +1,7 @@
 'use client'
 // 연결 설정 조각 — /os/settings 안에 끼운다: <ConnectorsPanel />
 //
-// 노션·슬랙은 지금 붙일 수 있고, 카톡·인스타·큐리어스는 칸만 있고 「준비 중」이다.
+// 노션, 슬랙은 지금 붙일 수 있고, 카톡, 인스타, 큐리어스는 칸만 있고 「준비 중」이다.
 // 붙여 넣은 열쇠는 다시 보여 주지 않는다(끝 4자만). 색은 os 토큰만 쓴다.
 
 import { useCallback, useEffect, useState } from 'react'
@@ -90,7 +90,7 @@ export default function ConnectorsPanel() {
             <div style={row}>
                 <div>
                     <b>연결</b>
-                    <div style={sub}>내 노션·슬랙을 봇에게 이어 줘요. 읽기는 알아서, 보내기는 꼭 물어보고 해요.</div>
+                    <div style={sub}>내 노션, 슬랙을 봇에게 이어 줘요. 읽기는 알아서, 보내기는 꼭 물어보고 해요.</div>
                 </div>
             </div>
 
@@ -125,7 +125,7 @@ export default function ConnectorsPanel() {
                             <div key={c.id} style={{ ...row, marginTop: 8 }}>
                                 <div>
                                     <span>{c.label} {c.secretHint}</span>
-                                    <div style={sub}>{c.status === 'error' ? '⚠ 지난번에 닿지 못했어요' : `쓸 수 있어요 · ${info.can}`}</div>
+                                    <div style={sub}>{c.status === 'error' ? '⚠ 지난번에 닿지 못했어요' : `쓸 수 있어요 / ${info.can}`}</div>
                                 </div>
                                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                                     <button type="button" className="os-btn" style={{ minHeight: 44 }} disabled={busy} onClick={() => void 확인(c)}>확인</button>

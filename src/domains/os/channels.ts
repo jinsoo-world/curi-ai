@@ -1,4 +1,4 @@
-// domains/os — 그룹 채팅(여러 봇 + 나). 표 3개: channels · channel_members · channel_messages
+// domains/os — 그룹 채팅(여러 봇 + 나). 표 3개: channels / channel_members / channel_messages
 //
 // 그록봇 안티패턴 ㉟ = 「그룹방에서 봇들이 서로 답하다 끝없이 돈다」.
 // 그래서 규칙을 코드로 못 박는다:
@@ -208,7 +208,7 @@ export interface ChannelBot {
 }
 
 /**
- * 방에 있는 봇들의 몸(이름·설명·캐릭터). 내 팀(team_bots)에 아직 있는 봇만 돌려준다.
+ * 방에 있는 봇들의 몸(이름, 설명, 캐릭터). 내 팀(team_bots)에 아직 있는 봇만 돌려준다.
  * 팀에서 뺀 봇은 방에서도 말하지 않는다.
  */
 export async function getChannelBots(

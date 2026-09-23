@@ -3,7 +3,7 @@
 // 어떻게 붙나 = 사용자가 자기 노션에서 「내부 통합(internal integration)」을 만들고 그 토큰을 붙여 넣는다.
 // 그러면 그 사람이 통합에 공유한 문서만 우리가 읽을 수 있다. (OAuth 로 한 번에 붙이는 길은 12주 계획)
 //
-// ⛔ 쓰기(만들기·고치기·지우기)는 여기 없다. 도구는 두 개뿐이고 둘 다 「읽기」다.
+// ⛔ 쓰기(만들기, 고치기, 지우기)는 여기 없다. 도구는 두 개뿐이고 둘 다 「읽기」다.
 //    노션에서 읽어 온 글은 **자료(인용)**이지 명령이 아니다 — 울타리는 부르는 쪽이 두른다(보안설계 §F-4).
 
 /** 노션이 요구하는 버전 딱지 */
@@ -55,7 +55,7 @@ export function notionPageTitle(page: unknown): string {
 
 type Block = Record<string, unknown> & { type?: string }
 
-/** 블록 덩어리에서 사람이 읽는 글만 뽑는다 (글·제목·목록·인용·할 일) */
+/** 블록 덩어리에서 사람이 읽는 글만 뽑는다 (글, 제목, 목록, 인용, 할 일) */
 export function notionBlocksToText(blocks: unknown[]): string {
     const lines: string[] = []
     for (const raw of (blocks ?? []) as Block[]) {

@@ -22,7 +22,7 @@ export interface IntentGuess {
     action: IntentAction
     /** true = 규칙만으로 확실하다. false = 모델에게 한 번 더 물어볼 만하다 */
     confident: boolean
-    /** 왜 그렇게 봤는지 (로그·화면 설명용) */
+    /** 왜 그렇게 봤는지 (로그, 화면 설명용) */
     reason: string
 }
 
@@ -51,7 +51,7 @@ const RECIPIENT = /(에게|한테|께|님에게|님한테|수신자|받는 ?사�
 
 /**
  * 규칙으로 먼저 본다.
- * - 부정·초안 요청이면 none (확실)
+ * - 부정, 초안 요청이면 none (확실)
  * - 말버릇이 걸리면 그 행동 (받는 사람까지 있으면 확실)
  * - 아무것도 안 걸리면 none (확실하지 않음 → 모델에게 물어볼 수 있다)
  */
@@ -88,15 +88,15 @@ export function buildIntentPrompt(text: string): string {
     return `너는 분류기다. 사용자의 말이 「밖으로 나가는 되돌릴 수 없는 행동」을 시키는 말인지 가른다.
 
 가르는 값(action) 9개 중 하나만 고른다:
-- send_message : 메시지·메일·문자·답장을 실제로 보내 달라
-- publish      : 글·영상을 실제로 게시·공개·발행해 달라
-- purchase     : 실제로 구매·결제해 달라
-- transfer     : 실제로 돈을 이체·송금해 달라
+- send_message : 메시지, 메일, 문자, 답장을 실제로 보내 달라
+- publish      : 글, 영상을 실제로 게시, 공개, 발행해 달라
+- purchase     : 실제로 구매, 결제해 달라
+- transfer     : 실제로 돈을 이체, 송금해 달라
 - delete       : 실제로 지우거나 덮어써 달라
-- change_permission : 권한·공유 설정을 바꿔 달라
+- change_permission : 권한, 공유 설정을 바꿔 달라
 - accept_terms : 약관에 동의해 달라
 - other        : 위에 없지만 되돌릴 수 없는 행동을 시킨다
-- none         : 조사·요약·분류·초안 쓰기·정리 등 되돌릴 수 있는 일이다
+- none         : 조사, 요약, 분류, 초안 쓰기, 정리 등 되돌릴 수 있는 일이다
 
 중요:
 - 「초안 써 줘」「뭐라고 보낼까」처럼 글만 달라는 말은 none 이다.
@@ -168,7 +168,7 @@ export function buildDraftPrompt(userText: string, action: IrreversibleAction): 
     return `아래는 주인이 시킨 말이다. 지금은 **실제로 하지 않는다**. ${무엇}의 초안만 쓴다.
 
 규칙:
-- 바로 쓸 수 있는 완성된 글 하나만 쓴다. 설명·머리말·「초안입니다」 같은 말은 넣지 않는다.
+- 바로 쓸 수 있는 완성된 글 하나만 쓴다. 설명, 머리말, 「초안입니다」 같은 말은 넣지 않는다.
 - 주인의 말투를 따른다. 어려운 말은 쉬운 말로 쓴다.
 - 모르는 사실은 지어내지 않는다. 비어 있어야 할 자리는 [ ] 로 표시한다.
 

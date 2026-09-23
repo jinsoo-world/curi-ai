@@ -1,7 +1,7 @@
 // domains/os — 「이번 주」 카드 숫자 (순수 계산). DB 읽기는 api 가 하고 여기는 세기만 한다.
 //
 // 그록봇 「주간 로스터 리뷰」의 아주 작은 첫 판(기획 §11).
-// 네 칸만 본다: 미룬 일 몇 개(가장 오래된 게 며칠째) · 승인 카드 처리 수 · 체크인 며칠 · 읽은 자료 수.
+// 네 칸만 본다: 미룬 일 몇 개(가장 오래된 게 며칠째) / 승인 카드 처리 수 / 체크인 며칠 / 읽은 자료 수.
 // 숫자에는 늘 분모가 될 기간(이번 주)이 붙는다.
 
 import { seoulClock } from './schedule'
@@ -11,7 +11,7 @@ export interface WeeklySummary {
     openNextSteps: number
     /** 그중 가장 오래 묵은 것이 며칠째인가 */
     oldestDays: number
-    /** 이번 주에 허용·거절·고쳐서 허용으로 답한 승인 카드 수 */
+    /** 이번 주에 허용, 거절, 고쳐서 허용으로 답한 승인 카드 수 */
     approvalsDecided: number
     /** 이번 주에 체크인한 날 수 (같은 날 여러 줄은 하루) */
     checkinDays: number

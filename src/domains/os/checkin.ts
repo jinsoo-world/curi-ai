@@ -55,7 +55,7 @@ export function buildCheckinSummary(c: CheckinValue, day: string): string {
     if (c.mood !== null && c.mood !== undefined) 조각.push(`기분 ${c.mood}/5`)
     if (c.energy !== null && c.energy !== undefined) 조각.push(`에너지 ${c.energy}/5`)
     const did = cleanDid(c.did)
-    if (did.length) 조각.push(`한 일 ${did.join('·')}`)
+    if (did.length) 조각.push(`한 일 ${did.join(', ')}`)
     const blocked = (c.blocked ?? '').trim()
     if (blocked) 조각.push(`막힌 일 ${blocked.slice(0, 120)}`)
 
