@@ -1,161 +1,136 @@
 'use client'
-// 말풍선 줄 + 오른쪽 시각. 메시지 목록을 왼쪽으로 끌면(터치/마우스/트랙패드) 시각이 드러나고
-// 손을 떼면 고무줄처럼 돌아온다 (Grok 채팅과 같은 느낌).
+// 말풍선 줄. 누르면 아래에 시각 + 복사 단추가 열린다 (밀어서 시각 드러내기는 없앤다).
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import {
+    createContext, useCallback, useContext, useEffect, useId, useRef, useState,
+    type MouseEvent, type ReactNode,
+} from 'react'
 import { formatMessageTime } from '@/domains/os/message-time'
+import { plainMessageCopyText } from '@/domains/os/copy-text'
 
-/** 시각 칸 폭(px). CSS --os-time-w 와 맞춰 둔다 */
-export const MSG_TIME_W = 72
-const AXIS_LOCK = 8
-const WHEEL_IDLE_MS = 140
-
-type Axis = 'h' | 'v' | null
-
-/**
- * `.os-messages` 에 붙인다. ref + CSS 변수(--os-reveal) + revealing 클래스.
- * 세로 스크롤, 텍스트 선택은 가로로 확실히 끌 때만 가로로 잠근다.
- */
-export function useRevealTimestamps() {
-    const ref = useRef<HTMLDivElement>(null)
-    const [reveal, setReveal] = useState(0)
-    const [active, setActive] = useState(false)
-    const revealRef = useRef(0)
-    const axisRef = useRef<Axis>(null)
-    const startX = useRef(0)
-    const startY = useRef(0)
-    const startReveal = useRef(0)
-    const pointerId = useRef<number | null>(null)
-    const wheelTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-    const rafBack = useRef<number | null>(null)
-
-    const setRevealBoth = useCallback((v: number) => {
-        const next = Math.max(0, Math.min(MSG_TIME_W, v))
-        revealRef.current = next
-        setReveal(next)
-    }, [])
-
-    const snapBack = useCallback(() => {
-        if (rafBack.current != null) cancelAnimationFrame(rafBack.current)
-        setActive(false)
-        const tick = () => {
-            const cur = revealRef.current
-            if (cur <= 0.5) {
-                setRevealBoth(0)
-                rafBack.current = null
-                return
-            }
-            setRevealBoth(cur * 0.72)
-            rafBack.current = requestAnimationFrame(tick)
-        }
-        rafBack.current = requestAnimationFrame(tick)
-    }, [setRevealBoth])
-
-    useEffect(() => {
-        const el = ref.current
-        if (!el) return
-
-        const onPointerDown = (e: PointerEvent) => {
-            if (e.button !== 0 && e.pointerType === 'mouse') return
-            const t = e.target as HTMLElement | null
-            if (t?.closest('textarea, input, button, a, [contenteditable="true"]')) return
-            if (rafBack.current != null) {
-                cancelAnimationFrame(rafBack.current)
-                rafBack.current = null
-            }
-            pointerId.current = e.pointerId
-            axisRef.current = null
-            startX.current = e.clientX
-            startY.current = e.clientY
-            startReveal.current = revealRef.current
-        }
-
-        const onPointerMove = (e: PointerEvent) => {
-            if (pointerId.current !== e.pointerId) return
-            const dx = e.clientX - startX.current
-            const dy = e.clientY - startY.current
-            if (axisRef.current == null) {
-                if (Math.abs(dx) < AXIS_LOCK && Math.abs(dy) < AXIS_LOCK) return
-                axisRef.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
-                if (axisRef.current === 'h') {
-                    setActive(true)
-                    try { el.setPointerCapture(e.pointerId) } catch { /* 캡처 실패해도 진행 */ }
-                }
-            }
-            if (axisRef.current !== 'h') return
-            e.preventDefault()
-            // 왼쪽으로 끌면 dx < 0 → reveal 증가
-            setRevealBoth(startReveal.current - dx)
-        }
-
-        const onPointerUp = (e: PointerEvent) => {
-            if (pointerId.current !== e.pointerId) return
-            const wasH = axisRef.current === 'h'
-            pointerId.current = null
-            axisRef.current = null
-            try { el.releasePointerCapture(e.pointerId) } catch { /* */ }
-            if (wasH) snapBack()
-        }
-
-        const onWheel = (e: WheelEvent) => {
-            // 트랙패드 가로 스크롤(또는 shift+휠). 세로가 더 크면 건드리지 않는다
-            const absX = Math.abs(e.deltaX)
-            const absY = Math.abs(e.deltaY)
-            if (absX < 1 || absX < absY) return
-            e.preventDefault()
-            if (rafBack.current != null) {
-                cancelAnimationFrame(rafBack.current)
-                rafBack.current = null
-            }
-            setActive(true)
-            // deltaX > 0 = 오른쪽으로 스크롤 내용 = 왼쪽으로 밀어 드러냄
-            setRevealBoth(revealRef.current + e.deltaX)
-            if (wheelTimer.current) clearTimeout(wheelTimer.current)
-            wheelTimer.current = setTimeout(() => snapBack(), WHEEL_IDLE_MS)
-        }
-
-        el.addEventListener('pointerdown', onPointerDown)
-        el.addEventListener('pointermove', onPointerMove, { passive: false })
-        el.addEventListener('pointerup', onPointerUp)
-        el.addEventListener('pointercancel', onPointerUp)
-        el.addEventListener('wheel', onWheel, { passive: false })
-        return () => {
-            el.removeEventListener('pointerdown', onPointerDown)
-            el.removeEventListener('pointermove', onPointerMove)
-            el.removeEventListener('pointerup', onPointerUp)
-            el.removeEventListener('pointercancel', onPointerUp)
-            el.removeEventListener('wheel', onWheel)
-            if (wheelTimer.current) clearTimeout(wheelTimer.current)
-            if (rafBack.current != null) cancelAnimationFrame(rafBack.current)
-        }
-    }, [setRevealBoth, snapBack])
-
-    const style = { ['--os-reveal' as string]: `${reveal}px` } as CSSProperties
-    const className = active ? 'os-messages--revealing' : undefined
-    return { ref, style, className, reveal }
+type MetaCtx = {
+    openId: string | null
+    setOpenId: (id: string | null) => void
 }
 
-/** 한 메시지 묶음(보낸이+말풍선+부가 UI) + 오른쪽 시각 칸 */
+const MsgMetaContext = createContext<MetaCtx | null>(null)
+
+/** 목록을 감싸면 한 번에 한 줄만 메타(시각, 복사)가 열린다. 없어도 MsgRow 단독으로 동작한다. */
+export function MsgMetaProvider({ children }: { children: ReactNode }) {
+    const [openId, setOpenId] = useState<string | null>(null)
+    useEffect(() => {
+        const onPointerDown = (e: PointerEvent) => {
+            const t = e.target as HTMLElement | null
+            if (t?.closest('.os-msg-row')) return
+            setOpenId(null)
+        }
+        document.addEventListener('pointerdown', onPointerDown)
+        return () => document.removeEventListener('pointerdown', onPointerDown)
+    }, [])
+    return (
+        <MsgMetaContext.Provider value={{ openId, setOpenId }}>
+            {children}
+        </MsgMetaContext.Provider>
+    )
+}
+
+/** @deprecated 밀어서 시각 드러내기는 클릭 메타로 대체. 호환용 빈 훅. */
+export function useRevealTimestamps(): {
+    ref: { current: null }
+    style: undefined
+    className: undefined
+    reveal: number
+} {
+    return { ref: { current: null }, style: undefined, className: undefined, reveal: 0 }
+}
+
 export function MsgRow({
     side,
     createdAt,
+    copyText,
+    rowId,
     children,
 }: {
     side: 'me' | 'bot'
     createdAt?: string | null
+    /** 복사할 평문. 없으면 복사 단추 숨김 */
+    copyText?: string | null
+    /** 한 줄만 열리게 할 때 쓰는 안정 id. 없으면 내부 id */
+    rowId?: string
     children: ReactNode
 }) {
+    const autoId = useId()
+    const id = rowId ?? autoId
+    const ctx = useContext(MsgMetaContext)
+    const [localOpen, setLocalOpen] = useState(false)
+    const open = ctx ? ctx.openId === id : localOpen
+    const rowRef = useRef<HTMLDivElement>(null)
+    const [copied, setCopied] = useState(false)
     const label = formatMessageTime(createdAt)
+    const canCopy = !!(copyText && copyText.trim())
+
+    const setOpen = useCallback((next: boolean) => {
+        if (ctx) ctx.setOpenId(next ? id : null)
+        else setLocalOpen(next)
+    }, [ctx, id])
+
+    // Provider 없을 때 바깥 클릭으로 닫기
+    useEffect(() => {
+        if (ctx || !open) return
+        const onPointerDown = (e: PointerEvent) => {
+            const t = e.target as Node | null
+            if (t && rowRef.current?.contains(t)) return
+            setLocalOpen(false)
+        }
+        document.addEventListener('pointerdown', onPointerDown)
+        return () => document.removeEventListener('pointerdown', onPointerDown)
+    }, [ctx, open])
+
+    const onRowClick = (e: MouseEvent) => {
+        const t = e.target as HTMLElement | null
+        // 링크, 단추, 입력은 토글하지 않는다 (복사 단추는 아래에서 stop)
+        if (t?.closest('a, button, input, textarea, [contenteditable="true"]')) return
+        setOpen(!open)
+    }
+
+    const onCopy = async (e: MouseEvent) => {
+        e.stopPropagation()
+        if (!canCopy) return
+        const plain = plainMessageCopyText(copyText)
+        try {
+            await navigator.clipboard.writeText(plain)
+            setCopied(true)
+            window.setTimeout(() => setCopied(false), 1200)
+        } catch {
+            // 클립보드 거부 시 조용히 무시
+        }
+    }
+
     return (
-        <div className={`os-msg-row ${side}`}>
+        <div
+            ref={rowRef}
+            className={`os-msg-row ${side}${open ? ' is-open' : ''}`}
+            data-side={side}
+            onClick={onRowClick}
+        >
             <div className="os-msg-main">{children}</div>
-            <time
-                className="os-msg-time"
-                dateTime={createdAt || undefined}
-                aria-hidden={label ? undefined : true}
-            >
-                {label}
-            </time>
+            {open && (label || canCopy) && (
+                <div className={`os-msg-meta ${side}`} role="group" aria-label="메시지 정보">
+                    {label ? (
+                        <time className="os-msg-time" dateTime={createdAt || undefined}>{label}</time>
+                    ) : <span className="os-msg-time" />}
+                    {canCopy && (
+                        <button
+                            type="button"
+                            className="os-msg-copy"
+                            onClick={onCopy}
+                            aria-label={copied ? '복사됨' : '메시지 복사'}
+                        >
+                            {copied ? '복사됨' : '복사'}
+                        </button>
+                    )}
+                </div>
+            )}
         </div>
     )
 }

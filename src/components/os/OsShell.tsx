@@ -11,6 +11,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { BotState, TeamBot } from '@/domains/os/types'
+import { SIDEBAR_AWAKE_MS, sidebarEyeState } from '@/domains/os/sidebar-eyes'
 import {
     BOT_CALL_EVENT, addBotCallUnread, clearBotCallUnread, readBotCallUnread,
 } from '@/domains/os/mentions'
@@ -59,7 +60,7 @@ interface TeamState {
 /**
  * 시연 모드 (/os?demo=1, 그리고 이제 손님 기본) = 표(team_bots)가 아직 없어도 격자, 캐릭터, 대화를 볼 수 있게
  * 기본 팀과 같은 4명(기획팀장/홍보팀장/개발팀장/조사팀장)을 그대로 보여준다(기본 팀도 4명이라 격자가 2×2 로 같다).
- * 대화는 진짜 /api/chat(공개 봇)로 간다. 저장은 안 한다. mentorId 4개는 바뀌지 않는다 — 이름, 소개만 기본 팀과 맞췄다.
+ * 대화는 진짜 /api/chat(공개 봇)로 간다. 저장은 안 한다. mentorId 4개는 바뀌지 않는다  -  이름, 소개만 기본 팀과 맞췄다.
  */
 const DEMO_TEAM: TeamBot[] = [
     { id: 'demo-1', mentorId: '9fc9b3fa-1721-40c6-bc4e-1b544c117483', name: '기획팀장', role: 'helper', shape: 'clover', color: 'green', oneLiner: '방향을 잡고 결정거리를 가져와요', approvalMode: 'always_ask', pinned: true, hidden: false, sortOrder: 0, avatarUrl: null, systemPrompt: '', greeting: '안녕하세요, 기획팀장이에요. 이번 주 뭐부터 할지 같이 정리해 볼까요?', knowledgeCount: 0, createdAt: '' },
@@ -92,6 +93,24 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     const [unreadIds, setUnreadIds] = useState<string[]>([])
     const [callingIds, setCallingIds] = useState<string[]>([])
     const [botPresence, setBotPresenceMap] = useState<Record<string, BotState>>({})
+    /** 명단에서 고른 봇/그룹 눈을 잠시 뜨게 하는 키 + 타이머 (30초) */
+    const [awakeKey, setAwakeKey] = useState<string | null>(null)
+    const [sidebarAwake, setSidebarAwake] = useState(false)
+    const awakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const bumpSidebarAwake = useCallback((key: string | null) => {
+        if (awakeTimerRef.current) {
+            clearTimeout(awakeTimerRef.current)
+            awakeTimerRef.current = null
+        }
+        setAwakeKey(key)
+        if (!key) { setSidebarAwake(false); return }
+        setSidebarAwake(true)
+        awakeTimerRef.current = setTimeout(() => {
+            setSidebarAwake(false)
+            awakeTimerRef.current = null
+        }, SIDEBAR_AWAKE_MS)
+    }, [])
+
     const [groupSheet, setGroupSheet] = useState(false)
     const [channels, setChannels] = useState<ChannelView[]>([])
     const [renamingChannelId, setRenamingChannelId] = useState<string | null>(null)
@@ -115,7 +134,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
             const res = await fetch('/api/os/team', { cache: 'no-store' })
             const data = await res.json()
             const isGuest = !!data.guest
-            // 손님(로그인 전)은 팀이 없어서 늘 team=[] 이 온다 — 시연 팀 4명을 기본으로 보여준다(대표 지시 0923 「비회원도 격자, 시연 대화」)
+            // 손님(로그인 전)은 팀이 없어서 늘 team=[] 이 온다  -  시연 팀 4명을 기본으로 보여준다(대표 지시 0923 「비회원도 격자, 시연 대화」)
             setTeam(isGuest ? DEMO_TEAM : (Array.isArray(data.team) ? data.team : []))
             setGuest(isGuest)
             setTableMissing(!!data.tableMissing)
@@ -161,7 +180,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
         }
     }, [channelNameDraft, channels])
 
-    // @멘션 넘김: 상대 봇이 「나를 부른다」 — 읽지 않음 + 잠깐 펄스
+    // @멘션 넘김: 상대 봇이 「나를 부른다」  -  읽지 않음 + 잠깐 펄스
     useEffect(() => {
         if (typeof window === 'undefined') return
         setUnreadIds(readBotCallUnread(window.sessionStorage))
@@ -188,7 +207,30 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     }, [pathname])
 
 
-    // 이 화면에 왔다(획득) + 설정에서 고른 글자 크기를 되살린다 + 시연인지, 폰인지 읽는다
+    // 봇/그룹을 고르면 눈을 뜨고 30초 뒤 다시 반쯤 감는다
+    useEffect(() => {
+        const bot = pathname.match(/^\/os\/chat\/([^/?#]+)/)
+        const group = pathname.match(/^\/os\/group\/([^/?#]+)/)
+        const key = bot ? `bot:${bot[1]}` : group ? `group:${group[1]}` : null
+        bumpSidebarAwake(key)
+        return () => {
+            if (awakeTimerRef.current) {
+                clearTimeout(awakeTimerRef.current)
+                awakeTimerRef.current = null
+            }
+        }
+    }, [pathname, bumpSidebarAwake])
+
+    // 고른 봇이 대화로 busy 가 되면 눈 뜬 타이머를 다시 잰다
+    useEffect(() => {
+        if (!awakeKey?.startsWith('bot:')) return
+        const mentorId = awakeKey.slice(4)
+        const presence = botPresence[mentorId]
+        if (presence && presence !== 'idle' && presence !== 'sleeping') {
+            bumpSidebarAwake(awakeKey)
+        }
+    }, [botPresence, awakeKey, bumpSidebarAwake])
+// 이 화면에 왔다(획득) + 설정에서 고른 글자 크기를 되살린다 + 시연인지, 폰인지 읽는다
     useEffect(() => {
         osTrack('os_view')
         applyFontSize(document.documentElement, readFontSize(window.localStorage))
@@ -371,7 +413,11 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                             // Link + prefetch = 화면에 보이는 순간 그 봇 화면을 미리 받아 둔다 → 누르면 서버를 안 기다린다 (대표 지시 0923 「전환이 느려」)
                             // 주소를 쌓는(push) 보통 링크라 봇 A → 봇 B → 뒤로 = A 가 된다
                             const current = isCurrent(b)
-                            const presence = botPresence[b.mentorId] ?? (current ? 'listening' : 'idle')
+                            const presence = sidebarEyeState({
+                                selected: current,
+                                awake: sidebarAwake && awakeKey === `bot:${b.mentorId}`,
+                                presence: botPresence[b.mentorId],
+                            })
                             const calling = callingIds.includes(b.mentorId)
                             const unread = unreadIds.includes(b.mentorId)
                             return (
@@ -448,7 +494,17 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                                             <span className="os-stack" aria-hidden>
                                                 {c.members.slice(0, 3).map(m => (
                                                     <span key={m.mentorId} className="os-stack-item">
-                                                        <BotAvatar shape={m.shape as TeamBot['shape']} color={m.color as TeamBot['color']} state="idle" size={24} />
+                                                        <BotAvatar
+                                                            shape={m.shape as TeamBot['shape']}
+                                                            color={m.color as TeamBot['color']}
+                                                            state={sidebarEyeState({
+                                                                selected: pathname === href,
+                                                                awake: sidebarAwake && awakeKey === `group:${c.id}`,
+                                                                presence: null,
+                                                            })}
+                                                            size={24}
+                                                            faceUrl={m.avatarUrl}
+                                                        />
                                                     </span>
                                                 ))}
                                                 {c.members.length > 3 && <span className="os-stack-more">+{c.members.length - 3}</span>}

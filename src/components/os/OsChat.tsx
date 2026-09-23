@@ -31,7 +31,7 @@ import { usePhotoAttach, PhotoPlusMenu, PhotoStrip } from './PhotoAttach'
 import PhotoGrid from './PhotoGrid'
 import { photoPayload } from '@/domains/os/photos'
 // === /사진 첨부 ===
-import { MsgRow, useRevealTimestamps } from './MsgRow'
+import { MsgRow, MsgMetaProvider } from './MsgRow'
 import WorkingStatusLine from './WorkingStatusLine'
 import OgLinkPreview, { isUrlOnlyText } from './OgLinkPreview'
 // === @ 멘션 ===
@@ -124,7 +124,6 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
     const photos = usePhotoAttach()
     const [dragging, setDragging] = useState(false)
     // === /사진 첨부 ===
-    const reveal = useRevealTimestamps()
     // === @ 멘션 ===
     const inputRef = useRef<HTMLTextAreaElement>(null)
     const inputWrapRef = useRef<HTMLDivElement>(null)
@@ -628,7 +627,8 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
 
                 {/* 오늘 체크인 띠  -  오늘 아직 안 했을 때만. 손님, 시연에선 안 뜬다 */}
 
-                <div className={`os-messages${reveal.className ? ` ${reveal.className}` : ''}`} ref={reveal.ref} style={reveal.style}>
+                <div className="os-messages">
+                    <MsgMetaProvider>
                     {!historyReady && messages.length === 0 && (
                         <div className="os-chat-pending" aria-busy="true" aria-label="대화 불러오는 중">
                             <div className="os-chat-pending-bar" />
@@ -669,20 +669,20 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                     {messages.map((m, i) => m.role === 'user'
                         ? (m.imageUrls && m.imageUrls.length > 0
                             // === 사진 첨부 === 사진 격자 + 글
-                            ? <MsgRow key={m.id} side="me" createdAt={m.createdAt}>
+                            ? <MsgRow key={m.id} rowId={m.id} side="me" createdAt={m.createdAt} copyText={m.content}>
                                 <div className="os-bubble me has-photos"><PhotoGrid urls={m.imageUrls} />{m.content && !isUrlOnlyText(m.content) && <div className="os-photo-text"><MentionRichText text={m.content} bots={chipBots} /></div>}</div>
                                 {m.content ? <OgLinkPreview text={m.content} className="os-og-cards--me" /> : null}
                               </MsgRow>
-                            : <MsgRow key={m.id} side="me" createdAt={m.createdAt}>
+                            : <MsgRow key={m.id} rowId={m.id} side="me" createdAt={m.createdAt} copyText={m.content}>
                                 {!isUrlOnlyText(m.content) && <div className="os-bubble me"><MentionRichText text={m.content} bots={chipBots} /></div>}
                                 <OgLinkPreview text={m.content} className="os-og-cards--me" />
                               </MsgRow>)
                         // === 전달(relay) === 옆 봇이 대신 답한 말은 그 봇 얼굴, 이름으로 그린다
                         : m.relay
-                            ? <MsgRow key={m.id} side="bot" createdAt={m.createdAt}><RelayBubble view={m.relay} answer={m.content} /></MsgRow>
+                            ? <MsgRow key={m.id} rowId={m.id} side="bot" createdAt={m.createdAt} copyText={m.content}><RelayBubble view={m.relay} answer={m.content} /></MsgRow>
                         // === /전달(relay) ===
                         : (
-                            <MsgRow key={m.id} side="bot" createdAt={m.createdAt}>
+                            <MsgRow key={m.id} rowId={m.id} side="bot" createdAt={m.createdAt} copyText={m.content}>
                                 {(!m.content && !m.card && (streaming || state === 'thinking')) ? (
                                     <WorkingStatusLine botName={name} avatar={avatar} />
                                 ) : (
@@ -712,6 +712,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                             </MsgRow>
                         ))}
                     <div ref={endRef} />
+                </MsgMetaProvider>
                 </div>
 
                 {/* 입력 막대 dock  -  폰에선 화면 맨 아래 붙는다(os.css). 미리보기 띠 + 막대를 한 칸으로 묶어야

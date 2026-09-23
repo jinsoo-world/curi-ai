@@ -1,4 +1,4 @@
-/* 에이전트 OS 화면 — 3열 뼈대 + 캐릭터 움직임 (그록봇 문법). 색, 시간 값은 globals.css [data-theme="os"] 토큰만 쓴다 */
+/* 에이전트 OS 화면  -  3열 뼈대 + 캐릭터 움직임 (그록봇 문법). 색, 시간 값은 globals.css [data-theme="os"] 토큰만 쓴다 */
 
 .os-shell {
     display: grid;
@@ -18,7 +18,7 @@
 
 /* 가운데(대화) 한 열. 오른쪽 세부칸은 그 위에 겹치는 서랍이라(아래 「오른쪽 세부칸」) 열고 닫아도 대화 폭, 말풍선 줄은 그대로다 */
 .os-chat-wrap { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); height: 100%; min-height: 0; overflow: hidden; }
-/* 대화 한 칸(머리말+말풍선+입력막대). height:100% 를 못박아 둔다 — grid 늘이기에만 기대면 브라우저마다 안 늘어나 아래에 빈 칸(폰 실측 0923 흰 띠)이 남는다 */
+/* 대화 한 칸(머리말+말풍선+입력막대). height:100% 를 못박아 둔다  -  grid 늘이기에만 기대면 브라우저마다 안 늘어나 아래에 빈 칸(폰 실측 0923 흰 띠)이 남는다 */
 .os-chat-col { display: flex; flex-direction: column; min-height: 0; height: 100%; }
 
 /* 왼쪽 명단 */
@@ -60,7 +60,7 @@
 /* 대화 */
 .os-chat-head { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--os-선); font-size: 16px; font-weight: 600; }
 
-/* 봇 전환 직후 — 기록 오기 전 중립 뼈대 (기본 인사/샘플 카드 깜빡임 방지) */
+/* 봇 전환 직후  -  기록 오기 전 중립 뼈대 (기본 인사/샘플 카드 깜빡임 방지) */
 .os-chat-pending {
     display: flex; flex-direction: column; gap: 12px;
     padding: 28px 20px; max-width: 420px;
@@ -81,45 +81,49 @@
 
 .os-nav-btn { display: none; flex: 0 0 auto; }
 .os-messages {
-    --os-reveal: 0px;
-    --os-time-w: 72px;
     flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px 24px;
     display: flex; flex-direction: column; gap: 12px;
     touch-action: pan-y;
 }
-/* 왼쪽으로 끌면 말풍선이 밀리고 오른쪽 시각이 드러난다 */
+/* 말풍선 줄: 클릭하면 아래에 시각 + 복사 */
 .os-msg-row {
-    display: flex; align-items: flex-end; gap: 0;
-    width: calc(100% + var(--os-time-w));
+    display: flex; flex-direction: column; gap: 4px;
+    width: 100%;
     flex-shrink: 0;
-    transform: translateX(calc(-1 * var(--os-reveal)));
-    will-change: transform;
-}
-.os-messages:not(.os-messages--revealing) .os-msg-row {
-    transition: transform .22s cubic-bezier(.2, .8, .2, 1);
+    cursor: pointer;
 }
 .os-msg-main {
-    width: calc(100% - var(--os-time-w));
-    flex: 0 0 auto;
+    width: 100%;
     min-width: 0;
     display: flex; flex-direction: column; gap: 12px;
 }
 .os-msg-row.me .os-msg-main { align-items: flex-end; }
 .os-msg-row.bot .os-msg-main { align-items: flex-start; }
+.os-msg-meta {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 4px;
+    min-height: 22px;
+}
+.os-msg-meta.me { justify-content: flex-end; }
+.os-msg-meta.bot { justify-content: flex-start; }
 .os-msg-time {
-    flex: 0 0 var(--os-time-w);
-    width: var(--os-time-w);
-    box-sizing: border-box;
-    padding: 0 4px 6px 8px;
     font-size: 11px;
     line-height: 1.25;
     color: var(--os-글-흐림);
     white-space: nowrap;
-    text-align: left;
     user-select: none;
-    pointer-events: none;
-    /* 드러나기 전에는 overflow-x 로 잘리므로 불투명해도 보인다 */
 }
+.os-msg-copy {
+    border: 0;
+    background: color-mix(in srgb, var(--os-글-흐림) 16%, transparent);
+    color: var(--os-글-흐림);
+    font-size: 11px;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 999px;
+    cursor: pointer;
+}
+.os-msg-copy:hover { color: var(--os-글); background: color-mix(in srgb, var(--os-글-흐림) 28%, transparent); }
 .os-bubble { max-width: 72%; padding: 12px 16px; border-radius: 18px; background: var(--os-말풍선); font-size: 17px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
 .os-bubble.me { align-self: flex-end; background: var(--os-말풍선-내); }
 .os-bubble.bot { align-self: flex-start; }
@@ -267,7 +271,7 @@
     /* 내 말 쪽도 같은 카드 톤 (말풍선 색과 구분) */
 }
 
-/* 입력 막대를 감싸는 칸(dock). 넓은 화면에선 그냥 지나가는 칸(배경 없음), 폰에선 아래 「오늘 체크인 안건」 참고 — 화면 맨 아래 붙는다 */
+/* 입력 막대를 감싸는 칸(dock). 넓은 화면에선 그냥 지나가는 칸(배경 없음), 폰에선 아래 「오늘 체크인 안건」 참고  -  화면 맨 아래 붙는다 */
 .os-input-dock { display: flex; flex-direction: column; }
 .os-input-bar { display: flex; align-items: center; gap: 8px; margin: 12px 20px 16px; padding: 6px 8px 6px 12px; border-radius: 22px; background: var(--os-말풍선); }
 /* 여러 줄로 커지면 ＋/보내기를 아래에 붙인다 (useComposerAutoHeight 가 is-multi 를 단다) */
@@ -291,7 +295,7 @@
 .os-right .os-card { background: var(--os-말풍선); border-radius: 14px; padding: 12px 14px; font-size: 14.5px; color: var(--os-글-연); line-height: 1.5; }
 .os-right .os-card b { color: var(--os-글); }
 
-/* 이 봇이 읽은 자료 — 한 줄 = 종류 + 제목 + 상태 + 빼기 */
+/* 이 봇이 읽은 자료  -  한 줄 = 종류 + 제목 + 상태 + 빼기 */
 .os-source { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 12px; background: var(--os-말풍선); margin-bottom: 6px; font-size: 14px; color: var(--os-글); }
 .os-source-kind { flex: 0 0 auto; line-height: 0; }
 .os-source-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -301,7 +305,7 @@
 .os-source-x { flex: 0 0 auto; width: 26px; height: 26px; border: 0; border-radius: 8px; background: transparent; color: var(--os-글-흐림); cursor: pointer; font-size: 13px; }
 .os-source-x:hover { background: var(--os-말풍선-내); color: var(--os-글); }
 
-/* 자료 한 줄 밑 — 한 줄 설명·내가 쓴 글인지 (누르면 고친다) */
+/* 자료 한 줄 밑  -  한 줄 설명, 내가 쓴 글인지 (누르면 고친다) */
 .os-source-meta { display: block; width: 100%; text-align: left; background: transparent; border: 0; padding: 2px 10px 8px; margin-top: -4px; font-size: 12px; color: var(--os-글-흐림); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .os-source-meta:hover { color: var(--os-글); }
 .os-source-meta-edit { display: flex; gap: 6px; align-items: center; padding: 0 10px 10px; margin-top: -4px; }
@@ -330,7 +334,7 @@
 .os-cite { align-self: flex-start; max-width: 72%; font-size: 12.5px; color: var(--os-글-흐림); margin: -6px 0 2px 6px; line-height: 1.5; }
 
 
-/* 봇이 이번 답을 쓰며 읽은 페이지 (LinkCards) — 말풍선 위 작은 카드 줄 */
+/* 봇이 이번 답을 쓰며 읽은 페이지 (LinkCards)  -  말풍선 위 작은 카드 줄 */
 .os-link-cards { align-self: flex-start; max-width: 86%; display: flex; flex-wrap: wrap; gap: 6px; margin: -6px 0 2px 6px; }
 .os-link-card { display: inline-flex; align-items: center; gap: 6px; max-width: 260px; padding: 5px 10px; border-radius: 10px; background: var(--os-말풍선); color: var(--os-글-연); font-size: 12.5px; line-height: 1.4; text-decoration: none; }
 .os-link-card-dot { flex: 0 0 auto; width: 6px; height: 6px; border-radius: 50%; background: var(--os-클로버); }
@@ -339,7 +343,7 @@
 .os-link-card.failed .os-link-card-dot { background: var(--os-글-흐림); }
 .os-link-card:not(.failed):hover { background: var(--os-말풍선-내); color: var(--os-글); }
 
-/* 승인 카드 — 말풍선 자리에 뜬다 */
+/* 승인 카드  -  말풍선 자리에 뜬다 */
 .os-permit { align-self: flex-start; max-width: 88%; background: var(--os-말풍선); border: 1px solid color-mix(in srgb, var(--os-승인) 45%, var(--os-선)); border-radius: 18px; padding: 14px 16px; color: var(--os-글); }
 .os-permit[data-status="denied"] { border-color: var(--os-선); opacity: .75; }
 .os-permit[data-status="allowed"], .os-permit[data-status="edited_allowed"] { border-color: color-mix(in srgb, var(--os-클로버) 55%, var(--os-선)); }
@@ -356,7 +360,7 @@
 .os-permit[data-status="denied"] .os-permit-done { color: var(--os-글-흐림); }
 .os-permit-note { margin-top: 10px; font-size: 12.5px; color: var(--os-글-흐림); line-height: 1.5; }
 
-/* 그룹 채팅 — 겹친 아바타 */
+/* 그룹 채팅  -  겹친 아바타 */
 .os-groups { border-top: 1px solid var(--os-선); padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; }
 .os-groups .os-row-btn[aria-current="true"] { background: var(--os-말풍선); }
 .os-stack { display: inline-flex; align-items: center; flex: 0 0 auto; }
@@ -391,7 +395,7 @@
 
 /* 캐릭터(도형 1 + 눈 2)의 모양, 움직임은 avatar.css 로 옮겼다 (BotAvatar.tsx 가 불러온다) */
 
-/* 좁은·반쪽 화면(≤1024px) = 왼쪽 명단은 햄버거 서랍(화면 밖). 위 가로 띠를 쓰지 않는다.
+/* 좁은, 반쪽 화면(≤1024px) = 왼쪽 명단은 햄버거 서랍(화면 밖). 위 가로 띠를 쓰지 않는다.
    (반쪽 아이맥에서 단체방「이름」줄이 대화 머리 위에 비치던 원인 = 옛 가로 띠 + .os-groups 미숨김) */
 @media (max-width: 1024px) {
     .os-shell { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); position: relative; }
@@ -597,7 +601,7 @@
 @media (prefers-reduced-motion: reduce) {
     .os-right, .os-right.open { transition: none; }
 }
-/* === 사진 첨부 === (PhotoAttach·PhotoGrid. 둥글기 14px·그림자 0 6px 18px rgba(0,0,0,.35) 는 대표 지시 0923 값) */
+/* === 사진 첨부 === (PhotoAttach, PhotoGrid. 둥글기 14px, 그림자 0 6px 18px rgba(0,0,0,.35) 는 대표 지시 0923 값) */
 .os-plus-wrap { position: relative; flex: 0 0 auto; }
 .os-plus-menu { position: absolute; left: 0; bottom: calc(100% + 8px); min-width: 220px; padding: 6px; border-radius: var(--둥근-소); background: var(--os-패널); border: 1px solid var(--os-선); box-shadow: 0 6px 18px var(--os-그림자, rgba(0,0,0,.35)); z-index: 20; display: flex; flex-direction: column; gap: 2px; }
 .os-plus-item { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 10px 12px; border: 0; border-radius: 12px; background: transparent; color: var(--os-글); font-size: 15px; cursor: pointer; min-height: 44px; }
@@ -621,7 +625,7 @@
 .os-photo-x:hover { background: rgba(0,0,0,.85); }
 .os-photo-count { flex: 0 0 auto; font-size: 12.5px; color: var(--os-글-흐림); padding-left: 4px; }
 
-/* 내 말풍선 안 격자 — 사진이 있으면 말풍선 안쪽 여백을 줄여 사진이 가장자리에 붙는다 */
+/* 내 말풍선 안 격자  -  사진이 있으면 말풍선 안쪽 여백을 줄여 사진이 가장자리에 붙는다 */
 .os-bubble.me.has-photos { padding: 6px; max-width: min(72%, 420px); }
 .os-bubble.me.has-photos .os-photo-text { padding: 8px 10px 6px; }
 .os-photo-grid { display: grid; gap: 6px; }
@@ -659,7 +663,7 @@
     box-shadow: 0 0 0 1px var(--os-선);
 }
 
-/* 대화 헤더: 얼굴·이름 누르면 봇 편집 */
+/* 대화 헤더: 얼굴, 이름 누르면 봇 편집 */
 .os-chat-head-bot {
     display: inline-flex; align-items: center; gap: 10px; border: 0; background: transparent;
     color: inherit; font: inherit; padding: 0; cursor: pointer; min-width: 0; text-align: left;
@@ -694,7 +698,7 @@
 }
 
 
-/* === @멘션 칩 (입력·말풍선) === */
+/* === @멘션 칩 (입력, 말풍선) === */
 .os-mention-chip {
     /* 원자 블록: 캐럿이 칩 안으로 들어가 보이지 않게 하고, 뒤 글자와 한 줄 높이를 맞춘다 */
     display: inline-flex;
@@ -741,7 +745,7 @@
     display: none;
 }
 .os-mention-chip-face .bot-avatar.has-face .body {
-    /* 칩에선 숨·갸웃 애니메이션 끄기 */
+    /* 칩에선 숨, 갸웃 애니메이션 끄기 */
     animation: none !important;
 }
 .os-mention-chip-fallback {

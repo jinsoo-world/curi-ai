@@ -14,7 +14,7 @@ import type { BotColor, BotShape } from '@/domains/os/types'
 import MentionPicker from './MentionPicker'
 import { useMentionComposer } from './useMentionComposer'
 import { useComposerAutoHeight } from './useComposerAutoHeight'
-import { MsgRow, useRevealTimestamps } from './MsgRow'
+import { MsgRow, MsgMetaProvider } from './MsgRow'
 import WorkingStatusLine from './WorkingStatusLine'
 import MentionRichText from './MentionRichText'
 import { GROUP_THINK_MS, GROUP_GAP_MS, sleep } from '@/domains/os/group-stagger'
@@ -38,7 +38,6 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
     const [err, setErr] = useState<string | null>(null)
     const [notReady, setNotReady] = useState(false)
     const endRef = useRef<HTMLDivElement>(null)
-    const reveal = useRevealTimestamps()
     const inputRef = useRef<HTMLTextAreaElement>(null)
     const inputWrapRef = useRef<HTMLDivElement>(null)
 
@@ -193,7 +192,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                     <span className="os-stack" aria-hidden>
                         {members.slice(0, 3).map(m => (
                             <span key={m.mentorId} className="os-stack-item">
-                                <BotAvatar shape={m.shape as BotShape} color={m.color as BotColor} state="idle" size={28} faceUrl={m.avatarUrl} />
+                                <BotAvatar shape={m.shape as BotShape} color={m.color as BotColor} state="listening" size={28} faceUrl={m.avatarUrl} />
                             </span>
                         ))}
                         {members.length > 3 && <span className="os-stack-more">+{members.length - 3}</span>}
@@ -230,7 +229,8 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                     </span>
                 </header>
 
-                <div className={`os-messages${reveal.className ? ` ${reveal.className}` : ''}`} ref={reveal.ref} style={reveal.style}>
+                <div className="os-messages">
+                    <MsgMetaProvider>
                     {messages.length === 0 && (
                         <MsgRow side="bot">
                             <div className="os-bubble bot">여기서는 봇 여러 명이 같이 들어요. 방 전체에 말하면 진행 봇이 짧게 받은 뒤 멤버들이 차례로 답해요. 한 명만 부르려면 「@이름」으로 시작하세요.</div>
@@ -238,13 +238,13 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                     )}
                     {messages.map(m => m.authorKind === 'user'
                         ? (
-                            <MsgRow key={m.id} side="me" createdAt={m.createdAt}>
+                            <MsgRow key={m.id} rowId={m.id} side="me" createdAt={m.createdAt} copyText={m.content}>
                                 {!isUrlOnlyText(m.content) && <div className="os-bubble me"><MentionRichText text={m.content} bots={chipBots} /></div>}
                                 <OgLinkPreview text={m.content} className="os-og-cards--me" />
                             </MsgRow>
                         )
                         : (
-                            <MsgRow key={m.id} side="bot" createdAt={m.createdAt}>
+                            <MsgRow key={m.id} rowId={m.id} side="bot" createdAt={m.createdAt} copyText={m.content}>
                                 <div className="os-sender">{아바타(m.mentorId)}<span>{보낸사람(m)}</span></div>
                                 {!isUrlOnlyText(m.content) && <div className="os-bubble bot md"><MentionRichText text={m.content} bots={chipBots} markdown /></div>}
                                 <OgLinkPreview text={m.content} />
@@ -260,6 +260,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                         )
                     })}
                     <div ref={endRef} />
+                </MsgMetaProvider>
                 </div>
 
                 {err && <div className="os-notice">{err}</div>}
