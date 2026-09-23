@@ -5,6 +5,7 @@ import { useState } from 'react'
 import type { TeamBot } from '@/domains/os/types'
 import AudienceSheet from './AudienceSheet'
 import KnowledgeList from './KnowledgeList'
+import FeedList from './FeedList'
 import RoutinePanel from './RoutinePanel'
 import ResponseSettingsSheet from './ResponseSettingsSheet'
 
@@ -73,7 +74,7 @@ export default function DetailPane({ bot, publicName, demo = false }: { bot: Tea
             {/* 자료는 진짜 목록이다 (3일차). 넣고 빼는 것도 여기서 한다. 시연 봇은 목록을 부르지 않는다 */}
             {시연
                 ? <><h4>자료</h4><div className="os-card">시연 봇에는 자료를 넣을 수 없어요. 내 팀 봇에서 넣어 주세요.</div></>
-                : <KnowledgeList mentorId={bot.mentorId} />}
+                : <><KnowledgeList mentorId={bot.mentorId} /><FeedList mentorId={bot.mentorId} /></>}
 
             {/* 루틴 = 목록, 만들기, 시험 실행 (5일차) */}
             <RoutinePanel mentorId={bot.mentorId} botName={bot.name} />

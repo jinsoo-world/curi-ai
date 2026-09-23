@@ -7,8 +7,9 @@ import { 올릴수있는파일, 고르기필터, 안내문구 } from '@/domains/
 import { osTrack } from '@/domains/os/events'
 import { splitUrls } from '@/domains/os/settings'
 import FolderSync from './FolderSync'
+import ConnectFeedSheet from './ConnectFeedSheet'
 
-type Tab = 'file' | 'link' | 'text' | 'folder'
+type Tab = 'file' | 'link' | 'text' | 'folder' | 'feed'
 
 interface Props {
     mentorId: string
@@ -151,6 +152,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                     <button className="os-tab" role="tab" aria-selected={tab === 'link'} onClick={() => setTab('link')} disabled={busy}>링크, 유튜브</button>
                     <button className="os-tab" role="tab" aria-selected={tab === 'text'} onClick={() => setTab('text')} disabled={busy}>글 붙여넣기</button>
                     <button className="os-tab" role="tab" aria-selected={tab === 'folder'} onClick={() => setTab('folder')} disabled={busy}>내 폴더</button>
+                    <button className="os-tab" role="tab" aria-selected={tab === 'feed'} onClick={() => setTab('feed')} disabled={busy}>계정 연결</button>
                 </div>
 
                 {tab === 'file' && (
@@ -204,12 +206,16 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                     <FolderSync mentorId={mentorId} onAdded={onAdded} onBusy={setBusy} onDone={onClose} />
                 )}
 
+                {tab === 'feed' && (
+                    <ConnectFeedSheet mentorId={mentorId} onAdded={onAdded} onBusy={setBusy} onDone={onClose} />
+                )}
+
                 {msg && <div className="os-notice" style={{ margin: '14px 0 0', background: 'color-mix(in srgb, var(--os-클로버) 18%, transparent)', color: 'var(--os-클로버)' }}>{msg}</div>}
                 {err && <div className="os-notice" style={{ margin: '14px 0 0' }}>{err}</div>}
 
                 <div className="os-sheet-foot">
                     <button className="os-btn" onClick={onClose} disabled={busy}>닫기</button>
-                    {tab !== 'file' && tab !== 'folder' && (
+                    {tab !== 'file' && tab !== 'folder' && tab !== 'feed' && (
                         <button className="os-btn primary" onClick={넣기} disabled={busy || !넣을수있나}>
                             {busy ? '넣는 중…' : tab === 'link' && 주소개수 > 1 ? `${주소개수}개 넣기` : '넣기'}
                         </button>

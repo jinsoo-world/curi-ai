@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import AddKnowledgeSheet from './AddKnowledgeSheet'
+import { KNOWLEDGE_CHANGED_EVENT } from '@/domains/os/feeds/events'
 
 export interface BotSourceView {
     id: string
@@ -67,6 +68,13 @@ export default function KnowledgeList({ mentorId, onCountChange }: { mentorId: s
         timer = setTimeout(tick, 0)
         return () => { alive = false; if (timer) clearTimeout(timer) }
     }, [load, 다시보기])
+
+    // 연결한 계정에서 글을 가져오거나 지우면(FeedList) 목록을 다시 본다
+    useEffect(() => {
+        const h = () => { void reload() }
+        window.addEventListener(KNOWLEDGE_CHANGED_EVENT, h)
+        return () => window.removeEventListener(KNOWLEDGE_CHANGED_EVENT, h)
+    }, [reload])
 
     const 빼기 = async (id: string, title: string) => {
         if (!window.confirm(`「${title}」을 뺄까요? 봇이 이 자료를 더 이상 못 읽어요.`)) return
