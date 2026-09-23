@@ -1,70 +1,117 @@
-// 큐리 AI — Service Worker
-// 오프라인 폴백 + 정적 자산 캐싱
+// 큐리AI 서비스 워커 = 브라우저 뒤에서 조용히 돌며 「앱 껍데기」를 저장해 두고, 인터넷이 끊기면 안내 화면을 보여준다.
+// 파일은 블록 2개로 나눈다. 각 블록은 서로 다른 사람이 손대도 부딪히지 않게 표식 안에만 쓴다.
+//   1) === 캐시·오프라인 (설치형 앱) ===   ← 이 파일의 지금 내용
+//   2) === push (메시징) ===               ← 파일 끝. 알림(푸시) 담당이 채운다
 
-const CACHE_NAME = 'curi-ai-v1'
+// === 캐시·오프라인 (설치형 앱) ===
+
+// 껍데기 저장소 이름. 껍데기 파일을 바꾸면 끝 숫자를 올린다 → 옛 저장소는 아래 activate 에서 지워진다.
+const SHELL_CACHE = 'curi-ai-shell-v2'
 const OFFLINE_URL = '/offline.html'
 
-// 캐시할 정적 자산
-const PRECACHE_URLS = [
-    '/',
-    '/offline.html',
+// 설치할 때 미리 저장하는 것 = 인터넷 없이도 보여야 하는 최소한
+const SHELL_URLS = [
+    OFFLINE_URL,
     '/manifest.json',
+    '/icons/curi-192.png',
+    '/icons/curi-512.png',
 ]
 
-// Service Worker 설치
+// 설치 = 껍데기 저장 + 바로 새 워커로 교체
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(PRECACHE_URLS)
-        })
+        caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_URLS)),
     )
     self.skipWaiting()
 })
 
-// 활성화 — 이전 캐시 정리
+// 켜질 때 = 이름이 다른(옛) 저장소는 전부 지운다
 self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames
-                    .filter((name) => name !== CACHE_NAME)
-                    .map((name) => caches.delete(name))
-            )
-        })
+        caches.keys().then((names) =>
+            Promise.all(
+                names
+                    .filter((name) => name.startsWith('curi-ai-') && name !== SHELL_CACHE)
+                    .map((name) => caches.delete(name)),
+            ),
+        ),
     )
     self.clients.claim()
 })
 
-// 네트워크 요청 처리 — 네트워크 우선, 실패 시 캐시 → 오프라인 페이지
+// 요청 처리 규칙
+//  - API(/api/…)·다른 사이트 요청·GET 아닌 것 = 손대지 않는다 (대화·결제·로그인은 절대 저장 금지)
+//  - 화면 이동(navigate) = 인터넷 먼저 → 안 되면 오프라인 안내
+//  - /_next/static/… (이름에 지문이 박힌 파일) = 저장한 게 있으면 그걸 먼저, 없으면 받아서 저장
+//  - 아이콘·매니페스트·이미지 = 저장한 걸 보여주고 뒤에서 새로 받아 둔다
 self.addEventListener('fetch', (event) => {
-    // API 요청은 캐시하지 않음
-    if (event.request.url.includes('/api/')) return
+    const req = event.request
+    if (req.method !== 'GET') return
 
-    // 네비게이션 요청 (페이지 이동)
-    if (event.request.mode === 'navigate') {
+    const url = new URL(req.url)
+    if (url.origin !== self.location.origin) return          // 다른 사이트(글꼴 CDN·저장소)는 브라우저가 알아서
+    if (url.pathname.startsWith('/api/')) return              // API 는 저장 금지
+    if (url.pathname.startsWith('/sw.js')) return
+
+    if (req.mode === 'navigate') {
         event.respondWith(
-            fetch(event.request).catch(() => {
-                return caches.match(OFFLINE_URL)
-            })
+            fetch(req).catch(async () => {
+                const cache = await caches.open(SHELL_CACHE)
+                return (await cache.match(OFFLINE_URL)) || Response.error()
+            }),
         )
         return
     }
 
-    // 일반 자산 — 네트워크 우선, 캐시 폴백
-    event.respondWith(
-        fetch(event.request)
-            .then((response) => {
-                // 성공한 응답 캐시
-                if (response.ok) {
-                    const clone = response.clone()
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, clone)
-                    })
-                }
-                return response
-            })
-            .catch(() => {
-                return caches.match(event.request)
-            })
-    )
+    if (url.pathname.startsWith('/_next/static/')) {
+        event.respondWith(cacheFirst(req))
+        return
+    }
+
+    if (
+        url.pathname.startsWith('/icons/') ||
+        url.pathname === '/manifest.json' ||
+        req.destination === 'image' ||
+        req.destination === 'font'
+    ) {
+        event.respondWith(staleWhileRevalidate(req))
+        return
+    }
+    // 나머지(RSC 데이터 등)는 평소처럼 인터넷으로
 })
+
+async function cacheFirst(req) {
+    const cache = await caches.open(SHELL_CACHE)
+    const hit = await cache.match(req)
+    if (hit) return hit
+    const res = await fetch(req)
+    if (res.ok) cache.put(req, res.clone())
+    return res
+}
+
+async function staleWhileRevalidate(req) {
+    const cache = await caches.open(SHELL_CACHE)
+    const hit = await cache.match(req)
+    const refresh = fetch(req)
+        .then((res) => {
+            if (res.ok) cache.put(req, res.clone())
+            return res
+        })
+        .catch(() => hit)
+    return hit || refresh
+}
+
+// 화면에서 「지금 바로 새 버전으로」 라고 하면 기다리지 않고 교체
+self.addEventListener('message', (event) => {
+    if (event.data === 'SKIP_WAITING') self.skipWaiting()
+})
+
+// === 캐시·오프라인 끝 ===
+
+
+// === push (메시징) ===
+// 여기부터는 알림(푸시) 담당이 채운다.
+//   self.addEventListener('push', …)               ← 서버가 보낸 알림을 받아 띄운다
+//   self.addEventListener('notificationclick', …)  ← 알림을 누르면 /os 로 연다
+// 위 캐시 블록은 건드리지 말고 이 아래에만 쓴다.
+// === push 끝 ===

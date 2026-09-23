@@ -2,72 +2,72 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>오프라인 | 큐리 AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0B0B0C">
+    <title>인터넷이 끊겼어요 | 큐리AI</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
-            background: linear-gradient(180deg, #f0f9ff 0%, #faf8f5 100%);
+            font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+            background: #0B0B0C;
+            color: #F2F2F7;
             min-height: 100dvh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 32px;
+            padding: 32px 24px;
+            padding-top: calc(32px + env(safe-area-inset-top));
+            padding-bottom: calc(32px + env(safe-area-inset-bottom));
+            -webkit-font-smoothing: antialiased;
         }
-        .container {
-            text-align: center;
-            max-width: 400px;
+        .box { text-align: center; max-width: 380px; }
+        .clover {
+            width: 88px; height: 88px; margin: 0 auto 24px;
+            animation: float 3s ease-in-out infinite;
         }
-        .icon {
-            font-size: 64px;
-            margin-bottom: 24px;
-            animation: bounce 2s ease-in-out infinite;
+        h1 { font-size: 24px; font-weight: 800; line-height: 1.3; margin-bottom: 12px; }
+        p { font-size: 17px; color: #A1A1A6; line-height: 1.6; margin-bottom: 28px; }
+        button {
+            width: 100%; min-height: 56px;
+            background: #22C55E; color: #0B0B0C;
+            border: 0; border-radius: 16px;
+            font-size: 18px; font-weight: 800; cursor: pointer;
+            font-family: inherit;
         }
-        h1 {
-            font-size: 24px;
-            font-weight: 800;
-            color: #18181b;
-            margin-bottom: 12px;
-        }
-        p {
-            font-size: 16px;
-            color: #71717a;
-            line-height: 1.6;
-            margin-bottom: 32px;
-        }
-        .retry-btn {
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            color: #fff;
-            border: none;
-            padding: 14px 32px;
-            border-radius: 14px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 4px 16px rgba(34,197,94,0.3);
-            transition: transform 0.15s;
-        }
-        .retry-btn:active {
-            transform: scale(0.97);
-        }
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-12px); }
-        }
+        button:active { transform: scale(.98); }
+        .small { margin-top: 18px; font-size: 14px; color: #6E6E73; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        @media (prefers-reduced-motion: reduce) { .clover { animation: none; } }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="icon">📡</div>
-        <h1>인터넷 연결이 필요해요</h1>
+    <div class="box">
+        <svg class="clover" viewBox="0 0 100 100" aria-hidden="true">
+            <g fill="#22C55E">
+                <circle cx="35" cy="35" r="18"/>
+                <circle cx="65" cy="35" r="18"/>
+                <circle cx="35" cy="65" r="18"/>
+                <circle cx="65" cy="65" r="18"/>
+            </g>
+            <circle cx="50" cy="50" r="6" fill="#0B0B0C"/>
+            <g fill="#0B0B0C">
+                <ellipse cx="41" cy="46" rx="3" ry="5"/>
+                <ellipse cx="59" cy="46" rx="3" ry="5"/>
+            </g>
+        </svg>
+        <h1>인터넷이 끊겼어요</h1>
         <p>
-            멘토와 대화하려면 인터넷이 필요합니다.<br>
-            Wi-Fi나 데이터를 확인하고 다시 시도해주세요.
+            봇과 이야기하려면 인터넷이 필요해요.<br>
+            와이파이나 데이터가 켜져 있는지 보고<br>
+            아래를 눌러 주세요.
         </p>
-        <button class="retry-btn" onclick="location.reload()">
-            다시 시도하기
-        </button>
+        <button onclick="location.reload()">다시 열기</button>
+        <div class="small">인터넷이 돌아오면 저절로 다시 열려요.</div>
     </div>
+    <script>
+        // 인터넷이 돌아오면 손대지 않아도 다시 연다
+        window.addEventListener('online', function () { location.reload() })
+    </script>
 </body>
 </html>

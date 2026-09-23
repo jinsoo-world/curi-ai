@@ -8,6 +8,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import type { TeamBot } from '@/domains/os/types'
 import BotAvatar from './BotAvatar'
 import NewBotSheet from './NewBotSheet'
+import InstallPrompt from '@/components/pwa/InstallPrompt'
 import './os.css'
 
 interface TeamState {
@@ -67,8 +68,9 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
 
     useEffect(() => { void refresh() }, [refresh])
 
-    // ⌘/Ctrl + N = 새 봇 (그록봇의 ⌘1 문법을 한 키로)
+    // ⌘/Ctrl + N = 새 봇 (그록봇의 ⌘1 문법을 한 키로). /os?new=1 (앱 아이콘 길게 눌러 「새 봇」)도 같은 창
     useEffect(() => {
+        if (new URLSearchParams(window.location.search).get('new') === '1') setSheet(true)
         const onKey = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') { e.preventDefault(); setSheet(true) }
         }
@@ -138,6 +140,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                         )}
                     </div>
 
+                    <InstallPrompt />
                     <div className="os-left-bottom">
                         <Link href="/mentors" className="os-row-btn" style={{ textDecoration: 'none' }}>🏪 <span>둘러보기 (리더들의 봇)</span></Link>
                         {guest
