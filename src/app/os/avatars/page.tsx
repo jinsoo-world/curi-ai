@@ -39,6 +39,11 @@ export default function AvatarsPage() {
                 </div>
             </section>
 
+            <section style={{ marginBottom: 28 }}>
+                <h2 style={sectionH2}>사진 얼굴 (프로필 사진 있으면 그대로 몸에 채운다)</h2>
+                <BotAvatar shape="clover" color="green" state="thinking" size={96} name="사진봇" faceUrl="/logo.png" />
+            </section>
+
             {STATES.map(state => (
                 <section key={state} style={{ marginBottom: 28 }}>
                     <h2 style={sectionH2}>

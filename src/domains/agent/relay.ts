@@ -139,3 +139,26 @@ export function withRelayAnswerHeader(toName: string, answer: string): string {
 export function relaySentLine(fromName: string, toName: string): string {
     return `${fromName} → ${toName}에게 전달했어요`
 }
+
+// ---------- 턴 상한 (대표 지시 0923 「최대 2턴」) ----------
+//
+// 왜 필요한가 = 봇끼리 계속 옮겨 주면 사람 없이 둘이 대화가 끝없이 돈다.
+// 「건너가고 돌아오는 것」 한 번이 1턴이다. 원래 방에 「【…의 답】」로 시작하는 줄이
+// 이미 몇 번 쌓였는지 세어서, 상한에 닿으면 옆 봇을 다시 부르지 않고 정리 문구만 돌려준다.
+
+/** 봇끼리 옮기고 답하기를 허락하는 최대 턴 수 */
+export const RELAY_MAX_TURNS = 2
+
+/** 상한을 넘으면 보여 주는 정리 문구 */
+export const RELAY_TURN_LIMIT_TEXT = '여기까지 정리했어요. 이어서 하실까요?'
+
+/** 「【…의 답】」로 시작하는 줄인가 (돌아온 답의 표식) */
+const 답표식 = /^【.+의 답】/
+
+/**
+ * 원래 방에 이미 쌓인 「옆 봇의 답」이 몇 번인지 센다.
+ * 순수 함수 — role/content 배열만 본다(DB 호출은 route.ts 가 한다).
+ */
+export function countRelayTurns(messages: readonly { role: string; content: string }[]): number {
+    return (messages ?? []).filter(m => m.role === 'assistant' && 답표식.test((m.content ?? '').trim())).length
+}

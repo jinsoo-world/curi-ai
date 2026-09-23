@@ -17,7 +17,7 @@ describe('os/usage — 사용 한도 한 줄', () => {
     })
 
     it('퍼센트, 재설정 시각, 막힘 판정', () => {
-        const v = usageView({ now, used5h: 12, oldest5h: new Date(now.getTime() - 48 * 60_000), usedWeek: 30 })
+        const v = usageView({ now, used5h: 12, oldest5h: new Date(now.getTime() - 48 * 60_000), usedWeek: 30, limit5h: 100, limitWeek: 1000 })
         expect(v.pct5h).toBe(12)
         expect(v.pctWeek).toBe(3)
         expect(v.resetAt5h?.toISOString()).toBe('2026-09-23T05:42:00.000Z')
@@ -43,7 +43,7 @@ describe('os/usage — 사용 한도 한 줄', () => {
 })
 
 describe('os/usage — 원형 게이지·사용량 모달 글자', () => {
-    const v = usageView({ now, used5h: 12, oldest5h: new Date(now.getTime() - 48 * 60_000), usedWeek: 30 })
+    const v = usageView({ now, used5h: 12, oldest5h: new Date(now.getTime() - 48 * 60_000), usedWeek: 30, limit5h: 100, limitWeek: 1000 })
 
     it('색 단계: 80 미만 ok, 80 이상 warn, 100 full', () => {
         expect(usageTone(0)).toBe('ok')

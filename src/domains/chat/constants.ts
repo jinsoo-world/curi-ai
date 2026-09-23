@@ -33,7 +33,7 @@ export const MAX_DAILY_FREE = 8
  * 2026-09-19: 10 → 8로 통일 (로그인·비로그인 동일 무료 할당)
  * 대화 1턴마다 구글 AI 비용이 나가고 자동충전 월 한도가 3만원(약 5,000턴)이라 무제한은 위험하다.
  */
-export const MAX_DAILY_FREE_GUEST = 8
+export const MAX_DAILY_FREE_GUEST = 10   // 대표 0923: 「로그인하면 대화 한도 2배」 = 무료 회원 5시간 창 20번
 
 /** 유저 메모리 조회 제한 */
 export const MAX_MEMORY_ITEMS = 10

@@ -7,12 +7,13 @@
 // 칸은 옛 「AI 만들기」(/creator/create) 기본정보 탭에 있는 것만 = 이름, 한줄 소개, 인사말 (+ 봇 팀 고유의 역할, 도형, 색, 승인 모드).
 // 저장은 PATCH /api/os/team/[id]. 페이지 이동 없이 대화 화면 위에 뜬다.
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { JOBS, AUTONOMY, SHAPES, COLORS, suggestName, findJob } from '@/domains/os/presets'
 import type { ApprovalMode, BotColor, BotRole, BotShape, TeamBot } from '@/domains/os/types'
 import { osTrack } from '@/domains/os/events'
 import BotAvatar from './BotAvatar'
+import type { MarketBot } from '@/app/api/os/market/route'
 
 interface Props {
     guest: boolean
@@ -158,6 +159,8 @@ function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => 
 }
 
 function CreateBotSheet({ guest, onClose, onCreated, onWantGroup }: Omit<Props, 'edit' | 'onSaved'>) {
+    // 새로 만들기(3걸음) / 봇 마켓에서 가져오기(다른 리더가 만든 공개 봇을 내 팀에 넣기) — 대표 지시 0923
+    const [tab, setTab] = useState<'new' | 'market'>('new')
     const [step, setStep] = useState<1 | 2 | 3>(1)
     const [job, setJob] = useState<string>('')
     const [customJob, setCustomJob] = useState('')
@@ -201,7 +204,13 @@ function CreateBotSheet({ guest, onClose, onCreated, onWantGroup }: Omit<Props, 
     return (
         <div className="os-sheet-back" data-theme="os" onClick={onClose} role="dialog" aria-modal="true" aria-label="새 봇 만들기">
             <div className="os-sheet" onClick={e => e.stopPropagation()}>
-                {guest ? (
+                <div className="os-tabs" role="tablist" aria-label="봇 추가 방법">
+                    <button type="button" className="os-tab" role="tab" aria-selected={tab === 'new'} onClick={() => setTab('new')}>새로 만들기</button>
+                    <button type="button" className="os-tab" role="tab" aria-selected={tab === 'market'} onClick={() => setTab('market')}>봇 마켓에서 가져오기</button>
+                </div>
+                {tab === 'market' ? (
+                    <MarketTab guest={guest} onClose={onClose} onLinked={onCreated} />
+                ) : guest ? (
                     <>
                         <h3>내 봇 팀을 만들려면 로그인이 필요해요</h3>
                         <p style={{ color: 'var(--os-글-연)', lineHeight: 1.6, marginTop: 8 }}>구글이나 카카오로 10초면 돼요. 만든 봇은 나만 볼 수 있어요.</p>
@@ -287,6 +296,86 @@ function CreateBotSheet({ guest, onClose, onCreated, onWantGroup }: Omit<Props, 
                         </div>
                     </>
                 )}
+            </div>
+        </div>
+    )
+}
+
+/** 「봇 마켓에서 가져오기」 탭 = 다른 리더가 만든 공개 봇 목록. 눌러 팀에 넣으면 격자에 바로 나타난다(onCreated 재사용). */
+function MarketTab({ guest, onClose, onLinked }: { guest: boolean; onClose: () => void; onLinked: (bot: TeamBot) => void | Promise<void> }) {
+    const [bots, setBots] = useState<MarketBot[] | null>(null)
+    const [busyId, setBusyId] = useState<string | null>(null)
+    const [note, setNote] = useState<string | null>(null)
+
+    useEffect(() => {
+        let alive = true
+        fetch('/api/os/market').then(r => r.json()).then(d => { if (alive) setBots(Array.isArray(d.bots) ? d.bots : []) }).catch(() => { if (alive) setBots([]) })
+        return () => { alive = false }
+    }, [])
+
+    const link = async (bot: MarketBot) => {
+        if (guest) return
+        setBusyId(bot.mentorId); setNote(null)
+        try {
+            const res = await fetch('/api/os/team/link', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mentorId: bot.mentorId }),
+            })
+            const data = await res.json().catch(() => ({}))
+            if (!res.ok) { setNote(data.error ?? '팀에 넣지 못했어요'); return }
+            osTrack('os_bot_created', { job: 'market', autonomy: 'market', shape: 'circle', color: 'white' })
+            setBots(prev => prev ? prev.map(b => b.mentorId === bot.mentorId ? { ...b, inTeam: true } : b) : prev)
+            // onCreated 는 mentorId 만 쓴다(OsShell). 모양·색은 표 기본값이라 여기선 자리만 채운다.
+            await onLinked({
+                id: '', mentorId: bot.mentorId, name: bot.name, role: 'helper', shape: 'circle', color: 'white',
+                oneLiner: bot.oneLiner, approvalMode: 'always_ask', pinned: false, hidden: false, sortOrder: 0,
+                avatarUrl: bot.avatarUrl, greeting: '', knowledgeCount: 0, createdAt: '',
+            })
+        } catch {
+            setNote('연결이 잠깐 끊겼어요. 다시 눌러 주세요.')
+        } finally {
+            setBusyId(null)
+        }
+    }
+
+    return (
+        <div>
+            <div className="os-step">리더들이 만든 공개 봇이에요. 팀에 넣으면 왼쪽 격자에서 바로 이야기할 수 있어요.</div>
+            {bots === null ? (
+                <div style={{ color: 'var(--os-글-흐림)', fontSize: 14, padding: '24px 0', textAlign: 'center' }}>불러오는 중…</div>
+            ) : bots.length === 0 ? (
+                <div style={{ color: 'var(--os-글-흐림)', fontSize: 14, padding: '24px 0', textAlign: 'center' }}>아직 공개 봇이 없어요.</div>
+            ) : (
+                <div className="os-market-import-list">
+                    {bots.map(b => (
+                        <div key={b.mentorId} className="os-market-import-card">
+                            <div className="os-market-import-avatar">
+                                <BotAvatar shape="circle" color="white" state="idle" size={56} faceUrl={b.avatarUrl} name={b.name} />
+                                {b.creatorAvatarUrl && (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img className="os-market-import-overlay" src={b.creatorAvatarUrl} alt={b.creatorName ?? '리더'} />
+                                )}
+                            </div>
+                            <div className="os-market-import-body">
+                                <div className="os-market-import-name">{b.name}</div>
+                                {b.oneLiner && <div className="os-market-import-line">{b.oneLiner}</div>}
+                                <div className="os-market-import-count">{b.linkCount > 0 ? `${b.linkCount}명이 팀에 넣었어요` : '아직 넣은 사람이 없어요'}</div>
+                            </div>
+                            {guest ? (
+                                <Link href="/login?next=/os" className="os-btn" style={{ textDecoration: 'none', display: 'inline-grid', placeItems: 'center' }}>로그인하면 넣을 수 있어요</Link>
+                            ) : b.inTeam ? (
+                                <button type="button" className="os-btn" disabled>이미 있어요</button>
+                            ) : (
+                                <button type="button" className="os-btn primary" disabled={busyId === b.mentorId} onClick={() => void link(b)}>
+                                    {busyId === b.mentorId ? '넣는 중' : '팀에 넣기'}
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+            {note && <div className="os-notice" style={{ margin: '10px 0 0' }}>{note}</div>}
+            <div className="os-sheet-foot">
+                <button type="button" className="os-btn" onClick={onClose}>닫기</button>
             </div>
         </div>
     )

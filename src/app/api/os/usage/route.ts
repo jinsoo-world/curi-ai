@@ -11,7 +11,7 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ guest: true })
     try {
-        const v = await readUsage(createAdminClient(), user.id)
+        const v = await readUsage(createAdminClient(), user.id, new Date(), user.email)
         return NextResponse.json(v)
     } catch (e) {
         console.error('[os/usage]', e instanceof Error ? e.message : e)

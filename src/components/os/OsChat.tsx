@@ -17,6 +17,8 @@ import BotMarkdown from './BotMarkdown'
 import MenuIcon, { CloseIcon, swipeToClose } from './MenuIcon'
 import PermissionCard from './PermissionCard'
 import type { CardView } from './PermissionCard'
+import LinkCards, { extractUrls } from './LinkCards'
+import type { ReadUrlItem } from './LinkCards'
 import { useOsTeam } from './OsShell'
 // === 전달(relay) ===
 import { readRelayIntent } from '@/domains/agent/relay'
@@ -39,6 +41,8 @@ interface Msg {
     content: string
     /** 이 답에 쓴 자료 (있으면 말풍선 아래 「참고한 자료」로 보인다) */
     sources?: { id: string; title: string }[]
+    /** 이 답을 쓰며 실제로 열어 읽은 링크 (성공·실패 다 옴). 아직 서버가 안 주면 undefined — LinkCards 가 sources 로 대신 그린다 */
+    readUrls?: ReadUrlItem[]
     /** 밖으로 나가는 일이면 답 대신 승인 카드가 온다 */
     card?: CardView
     // === 전달(relay) === 옆 봇이 대신 답한 말이면 「보낸 사람 ○○ → ○○」 표식을 단다
@@ -51,6 +55,15 @@ interface Msg {
 interface PublicBot { id: string; name: string; avatar_url: string | null; greeting_message: string; title?: string }
 
 const MAX_CONTEXT = 20
+
+/** LinkCards 에 줄 것을 고른다: 서버가 실제로 읽은 링크(readUrls) > 자료로 쓴 링크(sources, "url:" 로 시작하는 것) > 방금 사용자 말 속 주소.
+ *  위가 있으면 아래는 안 본다. */
+function linkCardsFor(m: Msg, prevUserText?: string): { readUrls?: ReadUrlItem[]; fallbackUrls?: string[] } {
+    if (m.readUrls && m.readUrls.length > 0) return { readUrls: m.readUrls }
+    const fromSources = m.sources?.filter(s => s.id.startsWith('url:')).map(s => ({ url: s.id.slice(4), title: s.title, ok: true }))
+    if (fromSources && fromSources.length > 0) return { readUrls: fromSources }
+    return { fallbackUrls: prevUserText ? extractUrls(prevUserText) : undefined }
+}
 
 export default function OsChat({ mentorId }: { mentorId: string }) {
     const { team, loading, guest, openNewGroup } = useOsTeam()
@@ -97,6 +110,22 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         }
     }, [team, loading, mentorId, demo, router])
 
+    // 폰에서 키보드가 올라오면 보이는 화면(visualViewport)이 줄어든다. 그 높이를 화면 전체 칸(os-shell)에 그대로 먹여
+    // 입력 막대가 늘 그 화면 맨 아래(=키보드 바로 위)에 오게 한다(os.css `.os-shell { height: var(--os-vvh) }`, 폰 폭에서만).
+    useEffect(() => {
+        const vv = typeof window !== 'undefined' ? window.visualViewport : null
+        if (!vv) return
+        const onResize = () => document.documentElement.style.setProperty('--os-vvh', `${vv.height}px`)
+        onResize()
+        vv.addEventListener('resize', onResize)
+        vv.addEventListener('scroll', onResize)
+        return () => {
+            vv.removeEventListener('resize', onResize)
+            vv.removeEventListener('scroll', onResize)
+            document.documentElement.style.removeProperty('--os-vvh')
+        }
+    }, [])
+
     // 세부칸이 열려 있으면 Esc 로 닫는다
     useEffect(() => {
         if (!detailOpen) return
@@ -136,6 +165,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         const photoUrls = photos.urls
         if ((!text && photoUrls.length === 0) || streaming || photos.uploading || photos.failed) return
         osTrack('os_message_sent', { mentor_id: mentorId, guest, photos: photoUrls.length })
+        if (guest) window.dispatchEvent(new Event('curi:guest-sent'))
         const userMsg: Msg = { id: `u-${Date.now()}`, role: 'user', content: text, ...(photoUrls.length ? { imageUrls: photoUrls } : {}) }
         // === /사진 첨부 ===
         const botId = `a-${Date.now()}`
@@ -265,6 +295,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
             let full = ''
             let first = true
             let sources: { id: string; title: string }[] = []
+            let readUrls: ReadUrlItem[] = []
             while (true) {
                 const { done, value } = await reader.read()
                 if (done) break
@@ -283,13 +314,16 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                             }
                             // 마지막 조각에 「이 답에 쓴 자료」가 실려 온다
                             if (d.done && Array.isArray(d.sources)) sources = d.sources
+                            // 곧 온다: 실제로 열어 읽은 링크(성공·실패). 없으면 위 sources 로 LinkCards 가 대신 그린다
+                            if (d.done && Array.isArray(d.readUrls)) readUrls = d.readUrls
+                            if (d.done && d.guestLimit) window.dispatchEvent(new CustomEvent('curi:login-nudge', { detail: { reason: 'limit' } }))
                         } catch { /* 조각 하나 깨진 건 넘어간다 */ }
                     }
                 }
             }
             setState(full.includes(UNAVAILABLE_TEXT) ? 'error' : 'idle')
             if (!full) setMessages([...base, { id: botId, role: 'assistant', content: UNAVAILABLE_TEXT }])
-            else if (sources.length > 0) setMessages([...base, { id: botId, role: 'assistant', content: full, sources }])
+            else if (sources.length > 0 || readUrls.length > 0) setMessages([...base, { id: botId, role: 'assistant', content: full, sources, readUrls }])
         } catch {
             setState('error')
             setMessages([...base, { id: botId, role: 'assistant', content: UNAVAILABLE_TEXT }])
@@ -315,7 +349,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
             onDrop={e => { setDragging(false); if (photos.addFromData(e.dataTransfer)) e.preventDefault() }}
             // === /사진 첨부 ===
         >
-            <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div className="os-chat-col">
                 <header className="os-chat-head">
                     {avatar}
                     <span>{name}</span>
@@ -334,7 +368,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                             <div className="os-bubble bot">{greeting}</div>
                         </>
                     )}
-                    {messages.map(m => m.role === 'user'
+                    {messages.map((m, i) => m.role === 'user'
                         ? (m.imageUrls && m.imageUrls.length > 0
                             // === 사진 첨부 === 사진 격자 + 글
                             ? <div key={m.id} className="os-bubble me has-photos"><PhotoGrid urls={m.imageUrls} />{m.content && <div className="os-photo-text">{m.content}</div>}</div>
@@ -359,34 +393,42 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                                 {m.sources && m.sources.length > 0 && (
                                     <div className="os-cite">📎 참고한 자료: {m.sources.map(s => s.title).join(', ')}</div>
                                 )}
+                                {!m.card && (
+                                    <LinkCards {...linkCardsFor(m, messages[i - 1]?.role === 'user' ? messages[i - 1].content : undefined)} />
+                                )}
                             </div>
                         ))}
                     <div ref={endRef} />
                 </div>
 
-                {/* === 사진 첨부 === 붙인 사진 미리보기 띠 (입력창 위) */}
-                <PhotoStrip items={photos.items} notice={photos.notice} onRemove={photos.remove} onRetry={photos.retry} />
-                {/* === /사진 첨부 === */}
-
-                <div className="os-input-bar">
-                    {/* === 사진 첨부 === ＋ 메뉴: 사진 붙이기 / 자료 넣기 */}
-                    <PhotoPlusMenu canKnowledge={!!bot} onPickPhotos={photos.add} onKnowledge={() => setAddSheet(true)} />
+                {/* 입력 막대 dock — 폰에선 화면 맨 아래 붙는다(os.css). 미리보기 띠 + 막대를 한 칸으로 묶어야
+                    그 아래 빈 배경이 흰 띠로 안 남는다(대표 폰 실측 0923) */}
+                <div className="os-input-dock">
+                    {/* === 사진 첨부 === 붙인 사진 미리보기 띠 (입력창 위) */}
+                    <PhotoStrip items={photos.items} notice={photos.notice} onRemove={photos.remove} onRetry={photos.retry} />
                     {/* === /사진 첨부 === */}
-                    <textarea
-                        className="os-input"
-                        rows={1}
-                        value={input}
-                        onChange={e => { setInput(e.target.value); if (!streaming) setState(e.target.value ? 'listening' : 'idle') }}
-                        onKeyDown={onKey}
-                        onPaste={e => { if (photos.addFromData(e.clipboardData)) e.preventDefault() }}   // === 사진 첨부 === 붙여넣기
-                        placeholder={`${name}에게 메시지 보내기`}
-                        aria-label="메시지"
-                        style={{ resize: 'none' }}
-                    />
-                    <button className="os-icon-btn os-send" aria-label="보내기"
-                        disabled={(!input.trim() && photos.urls.length === 0) || streaming || photos.uploading || photos.failed}
-                        title={photos.uploading ? '사진을 올리는 중이에요' : photos.failed ? '실패한 사진을 빼거나 다시 시도해 주세요' : undefined}
-                        onClick={() => void send()}>↑</button>
+
+                    <div className="os-input-bar">
+                        {/* === 사진 첨부 === ＋ 메뉴: 사진 붙이기 / 자료 넣기 */}
+                        <PhotoPlusMenu canKnowledge={!!bot} onPickPhotos={photos.add} onKnowledge={() => setAddSheet(true)} />
+                        {/* === /사진 첨부 === */}
+                        <textarea
+                            className="os-input"
+                            rows={1}
+                            value={input}
+                            onChange={e => { setInput(e.target.value); if (!streaming) setState(e.target.value ? 'listening' : 'idle') }}
+                            onKeyDown={onKey}
+                            onFocus={() => endRef.current?.scrollIntoView({ behavior: 'smooth' })}   // 키보드가 올라오며 마지막 말이 가려지지 않게
+                            onPaste={e => { if (photos.addFromData(e.clipboardData)) e.preventDefault() }}   // === 사진 첨부 === 붙여넣기
+                            placeholder={`${name}에게 메시지 보내기`}
+                            aria-label="메시지"
+                            style={{ resize: 'none' }}
+                        />
+                        <button className="os-icon-btn os-send" aria-label="보내기"
+                            disabled={(!input.trim() && photos.urls.length === 0) || streaming || photos.uploading || photos.failed}
+                            title={photos.uploading ? '사진을 올리는 중이에요' : photos.failed ? '실패한 사진을 빼거나 다시 시도해 주세요' : undefined}
+                            onClick={() => void send()}>↑</button>
+                    </div>
                 </div>
             </div>
 

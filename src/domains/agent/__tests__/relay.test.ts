@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
     readRelayIntent, relayPrefix, withRelayPrefix, relayAnswerHeader,
     withRelayAnswerHeader, relaySentLine, hasFinalConsonant,
+    countRelayTurns, RELAY_MAX_TURNS,
 } from '../relay'
 
 const 팀 = [
@@ -93,5 +94,24 @@ describe('표식 — 사용자 눈에 「누가 → 누구」가 보인다', () 
 
     it('화면 회색 줄은 「A → B에게 전달했어요」', () => {
         expect(relaySentLine('기획팀장', '홍보팀장')).toBe('기획팀장 → 홍보팀장에게 전달했어요')
+    })
+})
+
+describe('countRelayTurns — 턴 상한(최대 2턴)', () => {
+    it('「【…의 답】」 표식이 붙은 봇 답만 센다', () => {
+        const 방 = [
+            { role: 'user', content: '홍보팀장에게 전달해 줘: 초안 봐 주세요' },
+            { role: 'assistant', content: '【홍보팀장의 답】\n확인했어요' },
+            { role: 'user', content: '고마워' },
+            { role: 'assistant', content: '천만에요' },   // 표식 없음 = 안 센다
+            { role: 'assistant', content: '【홍보팀장의 답】\n한 번 더 답했어요' },
+        ]
+        expect(countRelayTurns(방)).toBe(2)
+        expect(countRelayTurns(방) >= RELAY_MAX_TURNS).toBe(true)
+    })
+
+    it('표식이 하나도 없으면 0, 빈 방도 0', () => {
+        expect(countRelayTurns([{ role: 'assistant', content: '그냥 답' }])).toBe(0)
+        expect(countRelayTurns([])).toBe(0)
     })
 })

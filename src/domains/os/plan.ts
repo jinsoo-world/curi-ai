@@ -49,13 +49,13 @@ export const PLANS: Plan[] = [
         id: 'basic',
         name: '베이직',
         price: 29000,
-        limit5h: USAGE_LIMIT_5H * 3,
-        limitWeek: USAGE_LIMIT_WEEK * 3,
+        limit5h: 100,   // 대표 확정 0923: 베이직 주 500번
+        limitWeek: 500,
         maxBots: 10,
         recommended: true,
         perks: [
             '봇 10개까지',
-            `한도 3배 (5시간에 ${(USAGE_LIMIT_5H * 3).toLocaleString()}번, 주에 ${(USAGE_LIMIT_WEEK * 3).toLocaleString()}번)`,
+            '한도 5배 (5시간에 100번, 주에 500번)',
             '외부 연결 (노션, 슬랙, 카카오톡, 인스타그램, 큐리어스)',
             '아침 루틴',
             '그룹 대화',
@@ -65,12 +65,12 @@ export const PLANS: Plan[] = [
         id: 'pro',
         name: '프로',
         price: 99000,
-        limit5h: USAGE_LIMIT_5H * 10,
-        limitWeek: USAGE_LIMIT_WEEK * 10,
+        limit5h: 300,   // 대표 확정 0923: 프로 주 1,500번
+        limitWeek: 1500,
         maxBots: null,
         perks: [
             '봇 무제한',
-            `한도 10배 (5시간에 ${(USAGE_LIMIT_5H * 10).toLocaleString()}번, 주에 ${(USAGE_LIMIT_WEEK * 10).toLocaleString()}번)`,
+            '한도 15배 (5시간에 300번, 주에 1,500번)',
             '사진 첨부 10장',
             '봇끼리 전달',
             '우선 처리',

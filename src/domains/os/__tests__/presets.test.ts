@@ -38,14 +38,14 @@ describe('os/presets — 봇 설명 조립', () => {
     })
 
     it('이름 제안은 일마다 다르고 모르는 일이면 「새 봇」', () => {
-        expect(suggestName('chief')).toBe('비서실장')
+        expect(suggestName('research_lead')).toBe('조사팀장')
         expect(suggestName('없는것')).toBe('새 봇')
     })
 
-    it('기본 팀은 4명(기획, 홍보, 개발 + 비서실장)이고 비서실장 한 명만 chief 다', () => {
+    it('기본 팀은 4명(기획, 홍보, 개발, 조사)이고 전부 helper 다(비서실장 없음)', () => {
         expect(DEFAULT_TEAM).toHaveLength(4)
-        expect(DEFAULT_TEAM.map(d => d.name)).toEqual(['기획팀장', '홍보팀장', '개발팀장', '비서실장'])
-        expect(DEFAULT_TEAM.filter(d => d.role === 'chief').map(d => d.job)).toEqual(['chief'])
+        expect(DEFAULT_TEAM.map(d => d.name)).toEqual(['기획팀장', '홍보팀장', '개발팀장', '조사팀장'])
+        expect(DEFAULT_TEAM.every(d => d.role === 'helper')).toBe(true)
         for (const d of DEFAULT_TEAM) expect(JOBS.some(j => j.id === d.job)).toBe(true)
     })
 })

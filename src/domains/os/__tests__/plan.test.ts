@@ -10,10 +10,10 @@ describe('os/plan — 요금제 표 (무료 / 베이직 29,000 / 프로 99,000)'
         expect(PLANS.map(p => p.price)).toEqual([0, 29000, 99000])
     })
 
-    it('무료 한도는 usage.ts 와 같은 5시간 100번 / 주 1,000번. 베이직 3배, 프로 10배', () => {
-        expect(planLimits('free')).toEqual({ limit5h: 100, limitWeek: 1000, maxBots: 4 })
-        expect(planLimits('basic')).toEqual({ limit5h: 300, limitWeek: 3000, maxBots: 10 })
-        expect(planLimits('pro')).toEqual({ limit5h: 1000, limitWeek: 10000, maxBots: null })
+    it('대표 확정 0923 한도: 무료 주 100번, 베이직 주 500번, 프로 주 1,500번 (5시간 창은 주간의 1/5)', () => {
+        expect(planLimits('free')).toEqual({ limit5h: 20, limitWeek: 100, maxBots: 4 })
+        expect(planLimits('basic')).toEqual({ limit5h: 100, limitWeek: 500, maxBots: 10 })
+        expect(planLimits('pro')).toEqual({ limit5h: 300, limitWeek: 1500, maxBots: null })
     })
 
     it('유료 요금제만 결제 가능. 무료는 결제 대상이 아니다', () => {

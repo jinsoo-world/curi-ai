@@ -4,9 +4,51 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import type { SkillView } from '@/domains/os/skills'
+import { BUILTIN_SKILLS } from '@/domains/os/skills'
 import type { TeamBot } from '@/domains/os/types'
 
 const 예시 = 'https://github.com/이름/저장소 또는 https://github.com/이름/저장소/tree/main/skills/이름'
+
+/** localStorage 에서 켜짐 값을 읽는다. 서버가 없어 실패해도(개인정보 보호 모드 등) 기본값으로 산다 */
+function readBuiltinEnabled(key: string, fallback: boolean): boolean {
+    try {
+        const v = window.localStorage.getItem(key)
+        return v === null ? fallback : v === '1'
+    } catch { return fallback }
+}
+
+function writeBuiltinEnabled(key: string, enabled: boolean): void {
+    try { window.localStorage.setItem(key, enabled ? '1' : '0') } catch { /* 못 저장해도 화면은 그대로 산다 */ }
+}
+
+/** 내장 스킬 하나 — 지울 수 없다. 켜고 끄는 값만 이 브라우저에 저장한다 */
+function BuiltinSkillCard({ id, name, description, storageKey, defaultEnabled }: { id: string; name: string; description: string; storageKey: string; defaultEnabled: boolean }) {
+    const [enabled, setEnabled] = useState(defaultEnabled)
+    useEffect(() => { setEnabled(readBuiltinEnabled(storageKey, defaultEnabled)) }, [storageKey, defaultEnabled])
+
+    const 토글 = () => {
+        const next = !enabled
+        setEnabled(next)
+        writeBuiltinEnabled(storageKey, next)
+    }
+
+    return (
+        <div className="os-skill" data-builtin={id}>
+            <div className="os-skill-head">
+                <div className="os-skill-body">
+                    <div className="os-svc-name">
+                        <b>{name}</b>
+                        <span className={`os-svc-badge${enabled ? ' on' : ''}`}>{enabled ? '켜짐' : '꺼짐'}</span>
+                        <span className="os-svc-badge">내장</span>
+                    </div>
+                    <div className="os-svc-hint">{description}</div>
+                </div>
+                <button type="button" role="switch" aria-checked={enabled} aria-label={`${name} 켜기 끄기`} className="os-connect-switch"
+                    onClick={토글}><span /></button>
+            </div>
+        </div>
+    )
+}
 
 export default function SkillsPanel() {
     const [skills, setSkills] = useState<SkillView[]>([])
@@ -84,6 +126,8 @@ export default function SkillsPanel() {
 
     return (
         <div className="os-card">
+            {BUILTIN_SKILLS.map(b => <BuiltinSkillCard key={b.id} {...b} />)}
+
             <div style={{ padding: '12px 0' }}>
                 <b>깃허브 주소 붙이기</b>
                 <div className="os-svc-hint">스킬 폴더나 저장소 주소를 붙이면 SKILL.md(없으면 README.md)를 가져와요. 공개 저장소만 돼요.</div>

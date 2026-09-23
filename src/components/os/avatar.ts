@@ -147,6 +147,34 @@ export function showsWorkDots(state: BotState): boolean { return state === 'work
 export function showsZ(state: BotState): boolean { return state === 'sleeping' }
 export function showsBadge(state: BotState): boolean { return state === 'waiting_approval' }
 
+/** 사진 얼굴 —————————————————————————————————————————————
+ * 봇에 프로필 사진이 있으면 그린 얼굴 대신 사진을 도형 안에 채운다(대표 0923 「있는 사진은 그걸 써. 생동감 있게」).
+ * 불러오다 실패(onError)하면 faceError 가 true 로 바뀌어 여기서 false 가 되고, 그린 캐릭터 얼굴로 조용히 되돌아간다 */
+export function showsFace(faceUrl: string | null | undefined, faceError: boolean): boolean {
+    return Boolean(faceUrl) && !faceError
+}
+
+/** 사진을 도형 모양으로 자르는 clipPath id. 화면에 봇이 여럿이라 uid(useId) 로 서로 겹치지 않게 만든다 */
+export function faceClipId(uid: string): string {
+    return `${uid}-face-clip`
+}
+
+/** 사진 얼굴 테두리 두께(px). 작은 아바타(36·44)는 3px, 그 위(72·96)는 4px */
+export function faceBorderPx(size: number): number {
+    return size <= 44 ? 3 : 4
+}
+
+/** 사진 얼굴이 쉬는 중일 때 갸웃거리는 간격(ms) = 6~9초. rand 는 0~1(검사할 때 고정값을 넣는다) */
+export function faceTiltPeriodMs(rand: number): number {
+    const r = Math.min(Math.max(rand, 0), 0.999999)
+    return Math.round(6000 + r * 3000)
+}
+
+/** 사진 얼굴 + 생각 중일 때만 몸 아래에 점 3개(눈이 없어 위 점 대신 아래에 둔다) */
+export function showsFaceThinkDots(hasFace: boolean, state: BotState): boolean {
+    return hasFace && state === 'thinking'
+}
+
 /** 최상위 span 에 붙는 class 목록 (data-state 와 함께 CSS 가 읽는다) */
 export function avatarClass(opts: { blinking: boolean; wink: 'L' | 'R' | null; drowsy?: boolean; faceUrl?: string | null }): string {
     const c = ['bot-avatar']
