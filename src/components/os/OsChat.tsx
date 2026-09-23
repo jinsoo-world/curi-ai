@@ -98,14 +98,42 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         })
     }, [mentorId])
 
-    // 탭 저장소가 비었으면(새 탭, 다른 기기, 로그인 직후) 서버에 쌓인 이 봇과의 최근 대화방을 불러온다.
+    // 로그인 직후·새 탭: 손님 때 탭에만 있던 말은 계정으로 넘기고, 아니면 서버 최근 대화방을 불러온다.
     // 대표 0923 「로그인을 하면 해당 계정에 대화들이 팀장들 대화방에 쌓여야지 왜 자꾸 초기화되냐」
+    // 옛 /chat 경로만 /api/sessions/merge 를 썼고 /os 는 안 써서, 손님→로그인 순간 방이 비는 것처럼 보였다.
     useEffect(() => {
         if (guest) return
         let alive = true
         void (async () => {
             await Promise.resolve()
-            if (readChatCache<Msg>(window.sessionStorage, mentorId)) return
+            const cached = readChatCache<Msg>(window.sessionStorage, mentorId)
+            const realSid = cached?.sessionId && !cached.sessionId.startsWith('guest-') ? cached.sessionId : null
+
+            // 손님으로 나눈 말(세션 id 없음)이 탭에 남아 있으면 계정 대화방으로 이관
+            if (cached && cached.messages.length > 0 && !realSid) {
+                try {
+                    const mergeRes = await fetch('/api/sessions/merge', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            mentorId,
+                            messages: cached.messages.map(m => ({ role: m.role, content: m.content })),
+                        }),
+                    })
+                    const mergeData = await mergeRes.json() as { session?: { id: string } }
+                    if (mergeRes.ok && mergeData.session?.id && alive) {
+                        const sid = mergeData.session.id
+                        setSessionId(sid)
+                        setMessages(prev => prev.length > 0 ? prev : cached.messages)
+                        writeChatCache(window.sessionStorage, mentorId, { sessionId: sid, messages: cached.messages })
+                        return
+                    }
+                } catch { /* 이관 실패해도 아래 서버 복원으로 이어간다 */ }
+            }
+
+            // 이미 계정 세션이 탭에 있으면 첫 효과에서 그린 내용을 그대로 둔다
+            if (realSid) return
+
             try {
                 const sr = await fetch(`/api/sessions?mentorId=${encodeURIComponent(mentorId)}`, { cache: 'no-store' })
                 const sd = sr.ok ? await sr.json() as { sessions?: { id: string }[] } : null
