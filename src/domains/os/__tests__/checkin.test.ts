@@ -20,7 +20,7 @@ describe('os/checkin — 기억에 남길 한 줄', () => {
         expect(s).toContain('2026-09-26')
         expect(s).toContain('기분 4/5')
         expect(s).toContain('에너지 2/5')
-        expect(s).toContain('강의·영상')
+        expect(s).toContain('강의, 영상')
         expect(s).toContain('편집이 안 끝났다')
     })
 
