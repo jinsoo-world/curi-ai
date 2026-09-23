@@ -82,3 +82,14 @@ describe('os/photos — 사진 첨부 규칙', () => {
         expect(out.slice(2)).toEqual([3, 4, 5])
     })
 })
+
+import { PHOTO_UPLOAD_MAX_EDGE, PHOTO_UPLOAD_QUALITY } from '../compress-photo'
+
+describe('os/compress-photo — 올리기 전 줄이기 상수', () => {
+    it('긴 변 한도와 품질이 합리적이다 (아바타·대화 공통)', () => {
+        expect(PHOTO_UPLOAD_MAX_EDGE).toBeGreaterThanOrEqual(1024)
+        expect(PHOTO_UPLOAD_MAX_EDGE).toBeLessThanOrEqual(2048)
+        expect(PHOTO_UPLOAD_QUALITY).toBeGreaterThan(0.5)
+        expect(PHOTO_UPLOAD_QUALITY).toBeLessThanOrEqual(0.95)
+    })
+})

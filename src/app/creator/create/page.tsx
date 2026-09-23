@@ -8,6 +8,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import AppSidebar from '@/components/AppSidebar'
 import { PhotoDrop } from '@/components/studio/PhotoDrop'
+import { compressPhotoForUpload } from '@/domains/os/compress-photo'
 import { createClient } from '@/lib/supabase/client'
 import { 올릴수있는파일, 고르기필터 } from '@/domains/knowledge/files'
 
@@ -244,10 +245,12 @@ export default function CreatorCreatePage() {
             // 프로필 이미지 업로드 (있는 경우)
             let avatarUrl = ''
             if (avatarFile) {
-                const ext = avatarFile.name.split('.').pop()
+                // 올리기 전 긴 변 줄이기 (체감 속도). 서버도 1024 로 한 번 더 맞춘다.
+                const ready = await compressPhotoForUpload(avatarFile, { maxEdge: 1024, quality: 0.88 })
+                const ext = ready.name.split('.').pop() || 'jpg'
                 const fileName = `mentor-avatar-${Date.now()}.${ext}`
                 const formData = new FormData()
-                formData.append('file', avatarFile)
+                formData.append('file', ready)
                 formData.append('fileName', fileName)
                 formData.append('bucket', 'mentor-avatars')
 

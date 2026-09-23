@@ -4,7 +4,8 @@
 // 대표 지적 2026-09-14 「파일 끌어다놓는 방식은 왜 안돼」
 // 컴퓨터에서는 끌어다 놓는 게 파일 창을 여는 것보다 빠르고, 화면을 캡처해
 // 바로 붙여넣는 사람도 많다.
-import { useState, useRef, useCallback, useEffect, type ReactNode } from 'react'
+import { useState, useRef, useCallback, useEffect, type ReactNode, type CSSProperties } from 'react'
+import { cropSquareJpeg } from '@/domains/os/compress-photo'
 
 const MAX_BYTES = 4 * 1024 * 1024
 
@@ -42,6 +43,19 @@ export function PhotoDrop({
     const fileRef = useRef<HTMLInputElement>(null)
     const cameraRef = useRef<HTMLInputElement>(null)
     const [dragging, setDragging] = useState(false)
+    // 아바타 1:1 미리보기에서 사진을 끌어 얼굴 위치를 맞춘다 (object-position %)
+    const [pos, setPos] = useState({ x: 50, y: 50 })
+    const posRef = useRef(pos)
+    const pan = useRef<{ x: number; y: number; ox: number; oy: number; moved: boolean; id: number } | null>(null)
+    const frameRef = useRef<HTMLDivElement>(null)
+    const cropBusy = useRef(false)
+
+    // 새 사진을 고르면 가운데로 되돌린다
+    useEffect(() => {
+        const next = { x: 50, y: 50 }
+        posRef.current = next
+        setPos(next)
+    }, [preview])
 
     const handleFile = useCallback((f: File | null | undefined) => {
         if (!f) return
@@ -103,37 +117,89 @@ export function PhotoDrop({
                     maxWidth: '100%',
                     boxSizing: 'border-box',
                 }}>
-                    {/* avatar: 작은 1:1 크롬. default: 크게 보여 올린 걸 바로 알게 함 */}
-                    <button
-                        type="button"
-                        onClick={() => fileRef.current?.click()}
-                        aria-label="다른 사진으로 바꾸기"
+                    {/* avatar: 1:1 크롬에서 끌어 위치 맞춤. default: 크게 보여 올린 걸 바로 알게 함 */}
+                    <div
+                        ref={frameRef}
+                        role={isAvatar ? 'img' : undefined}
+                        aria-label={isAvatar ? '프로필 사진. 끌어서 위치를 맞춰요' : undefined}
+                        onClick={!isAvatar ? () => fileRef.current?.click() : undefined}
+                        onPointerDown={isAvatar ? (e) => {
+                            if (e.button !== 0 && e.pointerType === 'mouse') return
+                            pan.current = { x: e.clientX, y: e.clientY, ox: pos.x, oy: pos.y, moved: false, id: e.pointerId }
+                            e.currentTarget.setPointerCapture(e.pointerId)
+                        } : undefined}
+                        onPointerMove={isAvatar ? (e) => {
+                            const p = pan.current
+                            if (!p || p.id !== e.pointerId) return
+                            const dx = e.clientX - p.x
+                            const dy = e.clientY - p.y
+                            if (Math.abs(dx) + Math.abs(dy) > 4) p.moved = true
+                            const box = frameRef.current?.getBoundingClientRect()
+                            const w = box?.width || avatarSize
+                            const h = box?.height || avatarSize
+                            // 끄는 방향과 사진이 같이 움직이게 (cover 잘림 안에서 %)
+                            const nx = Math.max(0, Math.min(100, p.ox - (dx / w) * 100))
+                            const ny = Math.max(0, Math.min(100, p.oy - (dy / h) * 100))
+                            posRef.current = { x: nx, y: ny }
+                            setPos(posRef.current)
+                        } : undefined}
+                        onPointerUp={isAvatar ? async (e) => {
+                            const p = pan.current
+                            if (!p || p.id !== e.pointerId) return
+                            pan.current = null
+                            try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* */ }
+                            if (!p.moved) return
+                            if (cropBusy.current || !preview) return
+                            cropBusy.current = true
+                            try {
+                                const file = await cropSquareJpeg(preview, posRef.current.x, posRef.current.y, 1024, 0.88)
+                                if (!file) return
+                                const url = URL.createObjectURL(file)
+                                // dataURL 대신 blob URL 을 읽혀 onPicked 가 File 로 바꾸게 한다
+                                const reader = new FileReader()
+                                reader.onload = () => {
+                                    onPicked(String(reader.result), 'image/jpeg')
+                                    URL.revokeObjectURL(url)
+                                }
+                                reader.readAsDataURL(file)
+                            } finally {
+                                cropBusy.current = false
+                            }
+                        } : undefined}
+                        onPointerCancel={isAvatar ? () => { pan.current = null } : undefined}
                         style={{
                             position: 'relative', display: 'block',
                             width: isAvatar ? avatarSize : '100%',
                             maxWidth: '100%',
                             padding: 0, border: 'none', background: 'none',
-                            cursor: 'pointer', marginBottom: isAvatar ? 8 : 12,
-                        }}
+                            cursor: isAvatar ? 'grab' : 'pointer',
+                            marginBottom: isAvatar ? 8 : 12,
+                            touchAction: isAvatar ? 'none' : undefined,
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                        } as CSSProperties}
                     >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={preview} alt="올린 사진" style={{
+                        <img src={preview} alt="올린 사진" draggable={false} style={{
                             width: '100%',
                             aspectRatio: '1 / 1',
                             height: isAvatar ? avatarSize : undefined,
                             objectFit: 'cover',
+                            objectPosition: `${pos.x}% ${pos.y}%`,
                             borderRadius: isAvatar ? 12 : 14,
                             display: 'block',
+                            pointerEvents: 'none',
                         }} />
                         <span style={{
                             position: 'absolute', right: isAvatar ? 6 : 10, bottom: isAvatar ? 6 : 10,
                             background: 'rgba(0,0,0,0.62)', color: '#fff',
                             fontSize: isAvatar ? 12 : 15, fontWeight: 700,
                             padding: isAvatar ? '5px 10px' : '8px 14px', borderRadius: 999,
+                            pointerEvents: 'none',
                         }}>
-                            눌러서 바꾸기
+                            {isAvatar ? '끌어서 맞춤' : '눌러서 바꾸기'}
                         </span>
-                    </button>
+                    </div>
                     <div style={{
                         display: 'flex', alignItems: 'center',
                         justifyContent: 'space-between', gap: 8,
@@ -151,13 +217,19 @@ export function PhotoDrop({
                             }} aria-hidden>✓</span>
                             {successLabel}
                         </span>
-                        <button onClick={() => fileRef.current?.click()} style={{
+                        <button type="button" onClick={() => fileRef.current?.click()} style={{
                             background: '#f4f4f5', border: 'none', borderRadius: 12,
                             padding: isAvatar ? '8px 12px' : '12px 18px',
                             fontSize: isAvatar ? 13 : 15, color: '#3f3f46',
                             cursor: 'pointer', fontWeight: 700,
                         }}>다른 사진으로</button>
                     </div>
+                    {isAvatar && (
+                        <p style={{
+                            margin: '8px 0 0', fontSize: 12, color: '#71717a',
+                            lineHeight: 1.45, wordBreak: 'keep-all',
+                        }}>사진을 끌어 얼굴 위치를 맞출 수 있어요</p>
+                    )}
                 </div>
             ) : (
                 <button
