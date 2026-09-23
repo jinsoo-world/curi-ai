@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { SIDEBAR_AWAKE_MS, isBusyPresence, sidebarEyeState } from '../sidebar-eyes'
 
 describe('sidebarEyeState', () => {
-    it('고르지 않으면 자는 중', () => {
-        expect(sidebarEyeState({ selected: false, awake: true })).toBe('sleeping')
-        expect(sidebarEyeState({ selected: false, awake: false, presence: 'talking' })).toBe('sleeping')
+    it('고르지 않으면 쉬는 중(눈 뜸)', () => {
+        expect(sidebarEyeState({ selected: false, awake: true })).toBe('idle')
+        expect(sidebarEyeState({ selected: false, awake: false, presence: 'talking' })).toBe('idle')
     })
 
     it('고르고 깨어 있으면 듣는 중', () => {
@@ -13,9 +13,9 @@ describe('sidebarEyeState', () => {
         expect(sidebarEyeState({ selected: true, awake: true, presence: 'sleeping' })).toBe('listening')
     })
 
-    it('고르고 잠들면 자는 중', () => {
-        expect(sidebarEyeState({ selected: true, awake: false })).toBe('sleeping')
-        expect(sidebarEyeState({ selected: true, awake: false, presence: 'idle' })).toBe('sleeping')
+    it('고른 뒤 타이머가 끝나면 쉬는 중(눈 뜸, 잠들지 않음)', () => {
+        expect(sidebarEyeState({ selected: true, awake: false })).toBe('idle')
+        expect(sidebarEyeState({ selected: true, awake: false, presence: 'idle' })).toBe('idle')
     })
 
     it('대화 busy 상태는 고른 칸에서 우선', () => {

@@ -73,9 +73,9 @@
 .bot-avatar.has-face[data-state="idle"] .body {
     animation: bot-face-breathe 4s ease-in-out infinite, bot-face-tilt var(--갸웃-주기, 7500ms) ease-in-out infinite;
 }
-/* listening: 눈이 없어 몸 전체가 살짝 커지고, 테두리가 밝아져 「듣고 있다」를 보인다 */
-.bot-avatar.has-face[data-state="listening"] .body { scale: 1.04; }
-.bot-avatar.has-face[data-state="listening"] .face-border { filter: brightness(1.4); }
+/* listening: 사진 얼굴은 몸·테두리로 「듣고 있다」를 더 또렷하게 (클릭 시 idle→listening 점프) */
+.bot-avatar.has-face[data-state="listening"] .body { scale: 1.09; }
+.bot-avatar.has-face[data-state="listening"] .face-border { filter: brightness(1.55); }
 /* thinking: 테두리가 점선 고리가 되어 천천히 돈다 + 몸 아래 점 3개(다른 애니메이션 재사용) */
 .bot-avatar.has-face[data-state="thinking"] .face-border { stroke-dasharray: 6 5; animation: bot-face-ring-spin 3s linear infinite; }
 /* talking: 테두리 두께가 8→4→8 로 맥동 + 몸이 1↔1.03 으로만 커졌다 줄었다(흔들지 않는다) */
@@ -101,9 +101,12 @@
 /* idle 쉬는 중: 눈 뜨고 아주 느린 숨. 깜빡임은 JS(3~6초). 5분 지나면 위 is-drowsy 가 붙어 졸기 시작한다 */
 .bot-avatar[data-state="idle"] .body { animation: bot-breathe var(--호흡-주기, 5000ms) ease-in-out infinite; }
 
-/* listening 듣는 중: 눈이 커지고 입력창(아래) 쪽으로 시선, 몸이 살짝 기울어 귀 기울임 */
-.bot-avatar[data-state="listening"] .eye-pos { transform: translate(0, 6%) scale(1.22); }
-.bot-avatar[data-state="listening"] .body { transform: rotate(-3deg) translateY(1px); }
+/* listening 듣는 중: 눈 크게 + 짧은 pop, 몸이 조금 더 기울어 귀 기울임 (클릭 시 idle과 분명한 차이) */
+.bot-avatar[data-state="listening"] .eye-pos {
+    transform: translate(0, 6%) scale(1.42);
+    animation: bot-listen-eye-pop 420ms cubic-bezier(.3, 1.35, .4, 1) 1;
+}
+.bot-avatar[data-state="listening"] .body { transform: rotate(-5deg) translateY(1px); }
 
 /* thinking 생각 중: 눈 크게 뜨고 눈동자만 좌우로 천천히 훑음. 몸은 가만히 */
 .bot-avatar[data-state="thinking"] .eye-pos { transform: scale(1.08); }
@@ -141,6 +144,7 @@
 @keyframes bot-read    { 0%, 100% { transform: translateX(-26%); } 45% { transform: translateX(8%); } 55% { transform: translateX(8%); } 60% { transform: translateX(-26%); } }
 @keyframes bot-talk    { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.03, .97); } }
 @keyframes bot-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.025, 1.015); } }
+@keyframes bot-listen-eye-pop { 0% { transform: translate(0, 6%) scale(1.12); } 55% { transform: translate(0, 6%) scale(1.48); } 100% { transform: translate(0, 6%) scale(1.42); } }
 @keyframes bot-shake   { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
 @keyframes bot-dot     { 0%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-1px); } }
 @keyframes bot-pulse   { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 2px var(--os-패널); } 50% { transform: scale(1.12); box-shadow: 0 0 0 2px var(--os-패널), 0 0 0 6px color-mix(in srgb, var(--os-승인) 35%, transparent); } }
@@ -161,5 +165,5 @@
 /* 입: 말할 때 벌어졌다 오므라진다 (0923 동그란 눈·o 입) */
 .bot-avatar .mouth { transform-box: fill-box; transform-origin: center; }
 .bot-avatar[data-state="talking"] .mouth { animation: bot-mouth .28s ease-in-out infinite alternate; }
-.bot-avatar[data-state="listening"] .mouth { transform: scale(1.15, 1.25); }
+.bot-avatar[data-state="listening"] .mouth { transform: scale(1.2, 1.32); }
 @keyframes bot-mouth { from { transform: scaleY(.55); } to { transform: scale(1.1, 1.25); } }
