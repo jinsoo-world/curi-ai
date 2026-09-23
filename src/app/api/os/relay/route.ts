@@ -13,7 +13,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { readRelayIntent, withRelayPrefix, withRelayAnswerHeader } from '@/domains/agent/relay'
+import { readRelayIntent, withRelayPrefix, withRelayAnswerHeader, countRelayTurns, RELAY_MAX_TURNS, RELAY_TURN_LIMIT_TEXT } from '@/domains/agent/relay'
 import { classifyByRules } from '@/domains/agent/intent'
 import { askSolar } from '@/domains/agent/ask'
 import { assertBotOwned } from '@/domains/os/knowledge'
@@ -66,15 +66,20 @@ async function ensureSession(db: SupabaseClient, userId: string, mentorId: strin
     return (made as { id: string }).id
 }
 
-/** 그 방 최근 말 몇 줄 (오래된 것 → 새것 순) */
-async function recentLines(db: SupabaseClient, sessionId: string): Promise<string> {
+/** 그 방 최근 말 (role/content 그대로) — 턴 수 세기·문맥 조립 둘 다에 쓴다 */
+async function recentRows(db: SupabaseClient, sessionId: string): Promise<{ role: string; content: string }[]> {
     const { data } = await db
         .from('messages')
         .select('role, content')
         .eq('session_id', sessionId)
         .order('created_at', { ascending: false })
         .limit(CONTEXT_MESSAGES)
-    const rows = ((data ?? []) as { role: string; content: string }[]).reverse()
+    return ((data ?? []) as { role: string; content: string }[]).reverse()
+}
+
+/** 그 방 최근 말 몇 줄 (오래된 것 → 새것 순, 사람이 읽는 문맥 글로) */
+async function recentLines(db: SupabaseClient, sessionId: string): Promise<string> {
+    const rows = await recentRows(db, sessionId)
     return rows.map(r => `${r.role === 'assistant' ? '나' : '주인'}: ${r.content}`).join('\n')
 }
 
@@ -117,6 +122,26 @@ export async function POST(req: Request) {
         const to = team.find(b => b.mentor_id === intent.mentorId)
         if (!to) return NextResponse.json({ relayed: false })
         const toName = to.mentors?.name ?? intent.name
+
+        // ②-0 턴 상한 — 원래 방에 옆 봇 답이 이미 RELAY_MAX_TURNS번 쌓였으면 더 건너가지 않는다(무한 왕복 방지)
+        if (fromSessionId) {
+            const 지난말 = await recentRows(db, fromSessionId)
+            if (countRelayTurns(지난말) >= RELAY_MAX_TURNS) {
+                await saveLine(db, fromSessionId, 'user', text)
+                await saveLine(db, fromSessionId, 'assistant', RELAY_TURN_LIMIT_TEXT)
+                return NextResponse.json({
+                    relayed: true,
+                    capped: true,
+                    from: { mentorId: fromMentorId, name: fromName },
+                    to: {
+                        mentorId: intent.mentorId, name: toName,
+                        shape: to.shape, color: to.color, avatarUrl: to.mentors?.avatar_url ?? null,
+                    },
+                    sent: intent.message,
+                    answer: RELAY_TURN_LIMIT_TEXT,
+                })
+            }
+        }
 
         // ②-1 옮기려는 말 자체가 밖으로 나가는 일이면 여기서 옮기지 않는다 → 기존 승인 카드 경로
         const 의도 = classifyByRules(intent.message)
