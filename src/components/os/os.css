@@ -396,20 +396,27 @@
 [data-font="small"] .os-bubble { font-size: 17px; }
 [data-font="large"] .os-bubble { font-size: 19px; }
 
-/* ── @ 멘션 픽커 (Grok 식) ── */
+/* ── @ 멘션 픽커 (Grok 식, body 포털 + fixed) ── */
 .os-input-wrap { position: relative; flex: 1; min-width: 0; display: flex; }
 .os-input-wrap .os-input { width: 100%; }
 .os-mention-pop {
-    position: absolute; left: 0; right: 0; bottom: calc(100% + 8px);
-    z-index: 40; max-height: min(360px, 50vh); overflow-y: auto;
+    /* left/width/bottom/z-index 는 MentionPicker 인라인(getBoundingClientRect) */
+    max-height: min(360px, 50vh); overflow-y: auto;
     border-radius: 14px; background: var(--os-패널);
     border: 1px solid var(--os-선);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, .28);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .32);
     padding: 6px;
+    pointer-events: auto;
 }
+[data-theme="light"] .os-mention-pop,
 [data-theme="light"] [data-theme="os"] .os-mention-pop {
-    box-shadow: 0 10px 28px rgba(0, 0, 0, .12);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .14);
     background: #FFFFFF;
+    border-color: rgba(0, 0, 0, .12);
+}
+.os-mention-heading {
+    padding: 6px 10px 4px; font-size: 12px; font-weight: 600;
+    color: var(--os-글-흐림); letter-spacing: .02em;
 }
 .os-mention-section { display: flex; flex-direction: column; gap: 2px; }
 .os-mention-section + .os-mention-section {

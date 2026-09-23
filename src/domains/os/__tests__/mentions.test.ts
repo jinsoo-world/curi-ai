@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
     detectMentionQuery,
+    resolveMentionCursor,
     filterMentionBots,
     applyMentionInsertion,
     stripMentionToken,
@@ -18,6 +19,16 @@ const 팀 = [
 describe('detectMentionQuery', () => {
     it('@ 만 치면 빈 검색어로 연다', () => {
         expect(detectMentionQuery('@', 1)).toEqual({ start: 0, query: '' })
+    })
+
+    it('bare @ 도 연다 (커서 = 길이)', () => {
+        expect(detectMentionQuery('@', '@'.length)).toEqual({ start: 0, query: '' })
+    })
+
+    it('전각 ＠ 도 @ 처럼 연다', () => {
+        expect(detectMentionQuery('＠', 1)).toEqual({ start: 0, query: '' })
+        expect(detectMentionQuery('＠글', 2)).toEqual({ start: 0, query: '글' })
+        expect(detectMentionQuery('안녕 ＠요', 5)).toEqual({ start: 3, query: '요' })
     })
 
     it('@글 치면 검색어를 뽑는다', () => {
@@ -38,6 +49,33 @@ describe('detectMentionQuery', () => {
 
     it('공백을 치면 닫힌다', () => {
         expect(detectMentionQuery('@글 ', 3)).toBeNull()
+    })
+})
+
+describe('resolveMentionCursor', () => {
+    it('커서 0 인데 끝이 @ 이면 끝으로 고친다 (모바일 selectionStart=0)', () => {
+        expect(resolveMentionCursor('@', 0)).toBe(1)
+        expect(detectMentionQuery('@', resolveMentionCursor('@', 0))).toEqual({ start: 0, query: '' })
+    })
+
+    it('커서 0 인데 끝이 전각 ＠ 이면 끝으로 고친다', () => {
+        expect(resolveMentionCursor('＠', 0)).toBe(1)
+        expect(detectMentionQuery('＠', resolveMentionCursor('＠', 0))).toEqual({ start: 0, query: '' })
+    })
+
+    it('커서 0 이고 @검색어가 끝이면 길이로 고친다', () => {
+        expect(resolveMentionCursor('@글', 0)).toBe(2)
+        expect(detectMentionQuery('@글', resolveMentionCursor('@글', 0))).toEqual({ start: 0, query: '글' })
+    })
+
+    it('진짜로 커서 0 이고 @ 가 아니면 0 유지', () => {
+        expect(resolveMentionCursor('안녕', 0)).toBe(0)
+        expect(resolveMentionCursor('', 0)).toBe(0)
+    })
+
+    it('커서가 이미 뒤에 있으면 그대로', () => {
+        expect(resolveMentionCursor('@글', 2)).toBe(2)
+        expect(resolveMentionCursor('안녕 @', 4)).toBe(4)
     })
 })
 

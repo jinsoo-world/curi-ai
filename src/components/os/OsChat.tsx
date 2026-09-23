@@ -105,6 +105,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
     const reveal = useRevealTimestamps()
     // === @ 멘션 ===
     const inputRef = useRef<HTMLTextAreaElement>(null)
+    const inputWrapRef = useRef<HTMLDivElement>(null)
     const mentionBots = useMemo(
         () => team.filter(b => !b.hidden).map(b => ({
             mentorId: b.mentorId, name: b.name, shape: b.shape, color: b.color, avatarUrl: b.avatarUrl,
@@ -609,7 +610,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                         {/* === 사진 첨부 === ＋ 메뉴: 사진 붙이기 / 자료 넣기 */}
                         <PhotoPlusMenu canKnowledge={!!bot} onPickPhotos={photos.add} onKnowledge={() => setAddSheet(true)} />
                         {/* === /사진 첨부 === */}
-                        <div className="os-input-wrap">
+                        <div className="os-input-wrap" ref={inputWrapRef}>
                             {mention.open && (
                                 <MentionPicker
                                     items={mention.items}
@@ -617,7 +618,9 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                                     onHover={mention.setActiveIndex}
                                     onSelect={applyMention}
                                     onClose={mention.close}
+                                    anchorRef={inputWrapRef}
                                     showPluginStub
+                                    emptyQuery={!mention.query}
                                 />
                             )}
                             <textarea
@@ -629,7 +632,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                                     const v = e.target.value
                                     setInput(v)
                                     if (!streaming) setState(v ? 'listening' : 'idle')
-                                    mention.syncFromInput(v, e.target.selectionStart ?? v.length)
+                                    mention.syncAfterChange(v, e.target.selectionStart ?? v.length, inputRef)
                                 }}
                                 onClick={e => mention.syncFromInput(input, e.currentTarget.selectionStart ?? input.length)}
                                 onKeyUp={e => {

@@ -13,27 +13,47 @@ export interface MentionBot {
 
 /** 커서 앞에서 지금 치고 있는 @검색어. 없으면 null = 픽커를 닫는다 */
 export interface MentionQuery {
-    /** text 안에서 '@' 가 시작되는 인덱스 */
+    /** text 안에서 '@' / '＠' 가 시작되는 인덱스 */
     start: number
     /** '@' 뒤, 커서 앞까지 (공백·@ 를 만나기 전) */
     query: string
 }
 
+/** 반각 @ 와 전각 ＠ 모두 멘션 트리거로 본다 */
+const AT_CHARS = '@＠'
+
 /**
  * 커서 위치에서 「@검색어」를 뽑는다.
- * - 줄 시작이나 공백 뒤의 @ 만 본다 (이메일 주소 안의 @ 는 안 연다).
+ * - 줄 시작이나 공백 뒤의 @ / ＠ 만 본다 (이메일 주소 안의 @ 는 안 연다).
  * - query 는 공백·새 @ 전까지.
  */
 export function detectMentionQuery(text: string, cursor: number): MentionQuery | null {
     const t = text ?? ''
     const c = Math.max(0, Math.min(cursor ?? 0, t.length))
     const before = t.slice(0, c)
-    // (^|공백)@검색어$ — 검색어에 공백·@ 없음
-    const m = before.match(/(?:^|[\s\u3000])@([^\s@]*)$/)
+    // (^|공백)[@＠]검색어$ — 검색어에 공백·@·＠ 없음
+    const m = before.match(/(?:^|[\s\u3000])[@＠]([^\s@＠]*)$/)
     if (!m) return null
-    const at = before.lastIndexOf('@')
+    let at = -1
+    for (let i = before.length - 1; i >= 0; i--) {
+        if (AT_CHARS.includes(before[i]!)) { at = i; break }
+    }
     if (at < 0) return null
     return { start: at, query: m[1] ?? '' }
+}
+
+/**
+ * onChange 직후 selectionStart 가 0 으로 남는 경우(모바일·IME)를 고친다.
+ * 커서가 0 인데 문자열 끝이 @검색어면 끝(또는 매치 끝)을 커서로 쓴다.
+ */
+export function resolveMentionCursor(text: string, cursor: number): number {
+    const t = text ?? ''
+    const reported = Math.max(0, Math.min(cursor ?? 0, t.length))
+    if (reported > 0) return reported
+    if (!t) return 0
+    // 끝이 @검색어면 그 구간을 치고 있는 중으로 본다 (selectionStart=0 버그)
+    if (detectMentionQuery(t, t.length)) return t.length
+    return reported
 }
 
 /** 이름으로 필터 (대소문자 무시). 빈 검색어면 전부. */
@@ -44,7 +64,7 @@ export function filterMentionBots<T extends MentionBot>(bots: readonly T[], quer
     return list.filter(b => b.name.toLowerCase().includes(q))
 }
 
-/** @검색어 자리를 「@이름 」으로 바꾼다. 커서도 이름 뒤 공백으로. */
+/** @검색어 자리를 「@이름 」으로 바꾼다. 커서도 이름 뒤 공백으로. 전각 ＠ 도 반각 @ 로 정규화. */
 export function applyMentionInsertion(
     text: string,
     start: number,
@@ -60,15 +80,19 @@ export function applyMentionInsertion(
     return { text: before + token + after, cursor: before.length + token.length }
 }
 
-/** 본문에서 「@이름」 한 번을 떼어 낸다 (앞뒤 공백 정리). */
+/** 본문에서 「@이름」 한 번을 떼어 낸다 (앞뒤 공백 정리). 전각 ＠이름 도 본다. */
 export function stripMentionToken(text: string, name: string): string {
     const n = (name ?? '').trim()
     if (!n) return (text ?? '').trim()
-    const token = `@${n}`
     const t = text ?? ''
-    const at = t.indexOf(token)
-    if (at < 0) return t.trim()
-    return (t.slice(0, at) + t.slice(at + token.length)).replace(/\s+/g, ' ').trim()
+    for (const at of ['@', '＠'] as const) {
+        const token = `${at}${n}`
+        const idx = t.indexOf(token)
+        if (idx >= 0) {
+            return (t.slice(0, idx) + t.slice(idx + token.length)).replace(/\s+/g, ' ').trim()
+        }
+    }
+    return t.trim()
 }
 
 export type PersonalMentionDecision =

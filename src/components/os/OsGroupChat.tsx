@@ -35,6 +35,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
     const endRef = useRef<HTMLDivElement>(null)
     const reveal = useRevealTimestamps()
     const inputRef = useRef<HTMLTextAreaElement>(null)
+    const inputWrapRef = useRef<HTMLDivElement>(null)
 
     const mentionBots = useMemo(
         () => members.map(m => ({
@@ -178,7 +179,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                 {err && <div className="os-notice">{err}</div>}
 
                 <div className="os-input-bar">
-                    <div className="os-input-wrap">
+                    <div className="os-input-wrap" ref={inputWrapRef}>
                         {mention.open && (
                             <MentionPicker
                                 items={mention.items}
@@ -197,7 +198,9 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                                     })
                                 }}
                                 onClose={mention.close}
+                                anchorRef={inputWrapRef}
                                 showPluginStub
+                                emptyQuery={!mention.query}
                             />
                         )}
                         <textarea
@@ -208,7 +211,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                             onChange={e => {
                                 const v = e.target.value
                                 setInput(v)
-                                mention.syncFromInput(v, e.target.selectionStart ?? v.length)
+                                mention.syncAfterChange(v, e.target.selectionStart ?? v.length, inputRef)
                             }}
                             onClick={e => mention.syncFromInput(input, e.currentTarget.selectionStart ?? input.length)}
                             onKeyUp={e => {
