@@ -1,0 +1,151 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import {
+    detectMentionQuery,
+    filterMentionBots,
+    applyMentionInsertion,
+    stripMentionToken,
+    decidePersonalMentionRoute,
+    stashPendingMentionSend,
+    takePendingMentionSend,
+} from '../mentions'
+
+const 팀 = [
+    { mentorId: 'm1', name: '비서실장' },
+    { mentorId: 'm2', name: '글감봇' },
+    { mentorId: 'm3', name: '요약봇' },
+]
+
+describe('detectMentionQuery', () => {
+    it('@ 만 치면 빈 검색어로 연다', () => {
+        expect(detectMentionQuery('@', 1)).toEqual({ start: 0, query: '' })
+    })
+
+    it('@글 치면 검색어를 뽑는다', () => {
+        expect(detectMentionQuery('@글', 2)).toEqual({ start: 0, query: '글' })
+    })
+
+    it('문장 중간 공백 뒤 @ 만 연다', () => {
+        expect(detectMentionQuery('안녕 @요', 5)).toEqual({ start: 3, query: '요' })
+    })
+
+    it('이메일 안의 @ 는 안 연다', () => {
+        expect(detectMentionQuery('a@b.com', 3)).toBeNull()
+    })
+
+    it('커서가 @ 앞이면 안 연다', () => {
+        expect(detectMentionQuery('@글감', 0)).toBeNull()
+    })
+
+    it('공백을 치면 닫힌다', () => {
+        expect(detectMentionQuery('@글 ', 3)).toBeNull()
+    })
+})
+
+describe('filterMentionBots', () => {
+    it('빈 검색어면 전부', () => {
+        expect(filterMentionBots(팀, '')).toHaveLength(3)
+    })
+
+    it('이름으로 걸러 낸다', () => {
+        expect(filterMentionBots(팀, '글').map(b => b.name)).toEqual(['글감봇'])
+        expect(filterMentionBots(팀, '봇').map(b => b.mentorId)).toEqual(['m2', 'm3'])
+    })
+
+    it('이름 없는 항목은 뺀다', () => {
+        expect(filterMentionBots([{ mentorId: 'x', name: '' }], '')).toEqual([])
+    })
+})
+
+describe('applyMentionInsertion', () => {
+    it('@검색어를 @이름 으로 바꾼다', () => {
+        expect(applyMentionInsertion('@글', 0, 2, '글감봇')).toEqual({
+            text: '@글감봇 ',
+            cursor: '@글감봇 '.length,
+        })
+    })
+
+    it('앞뒤 글을 지킨다', () => {
+        expect(applyMentionInsertion('안녕 @요 부탁', 3, 5, '요약봇')).toEqual({
+            text: '안녕 @요약봇  부탁',
+            cursor: '안녕 @요약봇 '.length,
+        })
+    })
+})
+
+describe('stripMentionToken', () => {
+    it('@이름을 떼어 낸다', () => {
+        expect(stripMentionToken('@글감봇 내일 초안', '글감봇')).toBe('내일 초안')
+        expect(stripMentionToken('내일 @글감봇 초안', '글감봇')).toBe('내일 초안')
+    })
+
+    it('멘션만 있으면 빈 문자열', () => {
+        expect(stripMentionToken('@글감봇', '글감봇')).toBe('')
+        expect(stripMentionToken('@글감봇   ', '글감봇')).toBe('')
+    })
+})
+
+describe('decidePersonalMentionRoute — 1:1 소환/넘기기', () => {
+    it('멘션 없으면 stay', () => {
+        expect(decidePersonalMentionRoute('안녕하세요', 팀, 'm1')).toEqual({ action: 'stay' })
+    })
+
+    it('지금 봇을 @하면 stay (평소 대화)', () => {
+        expect(decidePersonalMentionRoute('@비서실장 일정 알려줘', 팀, 'm1')).toEqual({ action: 'stay' })
+    })
+
+    it('다른 봇 @만 있으면 switch (LLM 안 부름)', () => {
+        expect(decidePersonalMentionRoute('@글감봇', 팀, 'm1')).toEqual({
+            action: 'switch', mentorId: 'm2', name: '글감봇',
+        })
+        expect(decidePersonalMentionRoute('@글감봇   ', 팀, 'm1')).toEqual({
+            action: 'switch', mentorId: 'm2', name: '글감봇',
+        })
+    })
+
+    it('다른 봇 @ + 내용이면 route (그 봇이 답)', () => {
+        expect(decidePersonalMentionRoute('@요약봇 이 문단 줄여 줘', 팀, 'm1')).toEqual({
+            action: 'route', mentorId: 'm3', name: '요약봇', message: '이 문단 줄여 줘',
+        })
+    })
+
+    it('빈 말·빈 팀이면 stay', () => {
+        expect(decidePersonalMentionRoute('', 팀, 'm1')).toEqual({ action: 'stay' })
+        expect(decidePersonalMentionRoute('@글감봇', [], 'm1')).toEqual({ action: 'stay' })
+    })
+})
+
+describe('pending mention send (세션 저장소)', () => {
+    let mem: Record<string, string>
+    let storage: Storage
+
+    beforeEach(() => {
+        mem = {}
+        storage = {
+            get length() { return Object.keys(mem).length },
+            clear: () => { mem = {} },
+            getItem: (k: string) => mem[k] ?? null,
+            setItem: (k: string, v: string) => { mem[k] = v },
+            removeItem: (k: string) => { delete mem[k] },
+            key: () => null,
+        } as Storage
+    })
+
+    it('같은 봇이면 말을 꺼내고 지운다', () => {
+        stashPendingMentionSend(storage, 'm2', '초안 부탁')
+        expect(takePendingMentionSend(storage, 'm2')).toBe('초안 부탁')
+        expect(takePendingMentionSend(storage, 'm2')).toBeNull()
+    })
+
+    it('다른 봇이면 null (키는 남겨 둔다)', () => {
+        stashPendingMentionSend(storage, 'm2', '초안')
+        expect(takePendingMentionSend(storage, 'm1')).toBeNull()
+        expect(takePendingMentionSend(storage, 'm2')).toBe('초안')
+    })
+
+    it('빈 말·잘못된 저장은 무시', () => {
+        stashPendingMentionSend(storage, 'm2', '   ')
+        expect(storage.getItem('curi:pending-mention-send')).toBeNull()
+        storage.setItem('curi:pending-mention-send', '{')
+        expect(takePendingMentionSend(storage, 'm2')).toBeNull()
+    })
+})

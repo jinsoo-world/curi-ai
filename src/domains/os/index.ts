@@ -16,3 +16,9 @@ export { listRoutines, getRoutine, createRoutine, updateRoutine, deleteRoutine, 
 export type { BotRoutine, NewRoutineInput, RunResult } from './routines'
 export { listNextSteps, createNextStep, patchNextStep, guessNextStep, NextStepTableMissing } from './nextSteps'
 export type { NextStep } from './nextSteps'
+export {
+    detectMentionQuery, filterMentionBots, applyMentionInsertion,
+    stripMentionToken, decidePersonalMentionRoute,
+    stashPendingMentionSend, takePendingMentionSend,
+} from './mentions'
+export type { MentionBot, MentionQuery, PersonalMentionDecision } from './mentions'

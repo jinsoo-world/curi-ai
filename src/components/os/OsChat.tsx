@@ -31,6 +31,16 @@ import { usePhotoAttach, PhotoPlusMenu, PhotoStrip } from './PhotoAttach'
 import PhotoGrid from './PhotoGrid'
 import { photoPayload } from '@/domains/os/photos'
 // === /사진 첨부 ===
+import { MsgRow, useRevealTimestamps } from './MsgRow'
+// === @ 멘션 ===
+import MentionPicker from './MentionPicker'
+import { useMentionComposer } from './useMentionComposer'
+import {
+    decidePersonalMentionRoute,
+    stashPendingMentionSend,
+    takePendingMentionSend,
+} from '@/domains/os/mentions'
+// === /@ 멘션 ===
 
 // 세부칸, 자료 넣기 시트는 열 때만 내려받는다 (봇을 갈아탈 때 실을 것이 줄어든다)
 const DetailPane = dynamic(() => import('./DetailPane'), { ssr: false })
@@ -41,6 +51,8 @@ interface Msg {
     id: string
     role: 'user' | 'assistant'
     content: string
+    /** 서버/보낸 시각(ISO). 없으면 시각 칸을 비운다 */
+    createdAt?: string
     /** 이 답에 쓴 자료 (있으면 말풍선 아래 「참고한 자료」로 보인다) */
     sources?: { id: string; title: string }[]
     /** 이 답을 쓰며 실제로 열어 읽은 링크 (성공·실패 다 옴). 아직 서버가 안 주면 undefined — LinkCards 가 sources 로 대신 그린다 */
@@ -88,6 +100,17 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
     const photos = usePhotoAttach()
     const [dragging, setDragging] = useState(false)
     // === /사진 첨부 ===
+    const reveal = useRevealTimestamps()
+    // === @ 멘션 ===
+    const inputRef = useRef<HTMLTextAreaElement>(null)
+    const mentionBots = useMemo(
+        () => team.filter(b => !b.hidden).map(b => ({
+            mentorId: b.mentorId, name: b.name, shape: b.shape, color: b.color, avatarUrl: b.avatarUrl,
+        })),
+        [team],
+    )
+    const mention = useMentionComposer(mentionBots)
+    // === /@ 멘션 ===
 
     // 시연(?demo=1) 표식 + 이 봇과 아까 나눈 대화(탭 저장소)를 되살린다. 서버는 부르지 않는다 = 두 번째 방문은 바로 그 자리.
     useEffect(() => {
@@ -98,6 +121,13 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
             cacheLoaded.current = true
         })
     }, [mentorId])
+
+    // === @ 멘션 === 다른 방에서 @봇 + 내용으로 넘어온 말을 이 방에서 보낸다 (LLM은 여기서만)
+    const pendingSent = useRef(false)
+    useEffect(() => {
+        pendingSent.current = false
+    }, [mentorId])
+    // === /@ 멘션 ===
 
     // 로그인 직후·새 탭: 손님 때 탭에만 있던 말은 계정으로 넘기고, 아니면 서버 최근 대화방을 불러온다.
     // 대표 0923 「로그인을 하면 해당 계정에 대화들이 팀장들 대화방에 쌓여야지 왜 자꾸 초기화되냐」
@@ -141,11 +171,11 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                 const sid = sd?.sessions?.[0]?.id
                 if (!sid || !alive) return
                 const mr = await fetch(`/api/sessions/${encodeURIComponent(sid)}/messages`, { cache: 'no-store' })
-                const md = mr.ok ? await mr.json() as { messages?: { id: string; role: string; content: string }[] } : null
+                const md = mr.ok ? await mr.json() as { messages?: { id: string; role: string; content: string; createdAt?: string }[] } : null
                 const rows = (md?.messages ?? []).filter(m => m.role === 'user' || m.role === 'assistant').slice(-50)
                 if (!alive) return
                 setSessionId(sid)
-                if (rows.length) setMessages(prev => prev.length > 0 ? prev : rows.map(m => ({ id: m.id, role: m.role as Msg['role'], content: m.content })))
+                if (rows.length) setMessages(prev => prev.length > 0 ? prev : rows.map(m => ({ id: m.id, role: m.role as Msg['role'], content: m.content, createdAt: (m as { createdAt?: string }).createdAt })))
             } catch { /* 못 불러와도 새 대화로 시작한다 */ }
         })()
         return () => { alive = false }
@@ -222,6 +252,32 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         // === 사진 첨부 === 사진만 보내도 된다. 올리는 중이거나 실패한 장이 남아 있으면 기다린다.
         const photoUrls = photos.urls
         if ((!text && photoUrls.length === 0) || streaming || photos.uploading || photos.failed) return
+
+        // === @ 멘션 === 다른 팀 봇을 부르면 그 방으로 옮기거나(멘션만) / 그 봇에게 말을 넘긴다(멘션+내용). LLM은 안 부른다.
+        if (!overrideText && text && photoUrls.length === 0) {
+            const decision = decidePersonalMentionRoute(
+                text,
+                team.filter(b => !b.hidden).map(b => ({ mentorId: b.mentorId, name: b.name })),
+                mentorId,
+            )
+            if (decision.action === 'switch') {
+                setInput('')
+                mention.close()
+                osTrack('os_mention_switch', { from_mentor_id: mentorId, to_mentor_id: decision.mentorId })
+                router.push(`/os/chat/${decision.mentorId}${demo ? '?demo=1' : ''}`)
+                return
+            }
+            if (decision.action === 'route') {
+                setInput('')
+                mention.close()
+                stashPendingMentionSend(typeof window !== 'undefined' ? window.sessionStorage : null, decision.mentorId, decision.message)
+                osTrack('os_mention_route', { from_mentor_id: mentorId, to_mentor_id: decision.mentorId })
+                router.push(`/os/chat/${decision.mentorId}${demo ? '?demo=1' : ''}`)
+                return
+            }
+        }
+        // === /@ 멘션 ===
+
         osTrack('os_message_sent', { mentor_id: mentorId, guest, photos: photoUrls.length })
         if (guest) window.dispatchEvent(new Event('curi:guest-sent'))
         const userMsg: Msg = { id: `u-${Date.now()}`, role: 'user', content: text, ...(photoUrls.length ? { imageUrls: photoUrls } : {}) }
@@ -389,11 +445,45 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
             setStreaming(false)
         }
         // === 전달(relay), 사진 첨부 === team, openNewGroup, name, photos 가 더 들어간다
-    }, [input, streaming, messages, mentorId, guest, bot, ensureSession, team, openNewGroup, name, photos])
+    }, [input, streaming, messages, mentorId, guest, bot, ensureSession, team, openNewGroup, name, photos, mention, router, demo])
+
+    const applyMention = (item: { mentorId: string; name: string }) => {
+        const el = inputRef.current
+        const cursor = el?.selectionStart ?? input.length
+        const next = mention.insert(input, cursor, item)
+        setInput(next.text)
+        setState(next.text ? 'listening' : 'idle')
+        requestAnimationFrame(() => {
+            const ta = inputRef.current
+            if (!ta) return
+            ta.focus()
+            ta.setSelectionRange(next.cursor, next.cursor)
+        })
+    }
 
     const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        const keyResult = mention.onKeyWhileOpen(e)
+        if (keyResult === 'handled') return
+        if (keyResult === 'select' && mention.activeItem) {
+            applyMention(mention.activeItem)
+            return
+        }
         if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send() }
     }
+
+    // === @ 멘션 === 이 방으로 넘어온 대기 말이 있으면 한 번만 보낸다 (봇·세션 준비 후)
+    useEffect(() => {
+        if (pendingSent.current || loading || streaming) return
+        if (!bot && !publicBot) return
+        const pending = takePendingMentionSend(
+            typeof window !== 'undefined' ? window.sessionStorage : null,
+            mentorId,
+        )
+        if (!pending) return
+        pendingSent.current = true
+        void send(pending)
+    }, [loading, streaming, bot, publicBot, mentorId, send])
+    // === /@ 멘션 ===
 
     const avatar = bot
         ? <BotAvatar shape={bot.shape} color={bot.color} state={state} size={36} faceUrl={bot.avatarUrl} name={bot.name} />
@@ -501,18 +591,44 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                         {/* === 사진 첨부 === ＋ 메뉴: 사진 붙이기 / 자료 넣기 */}
                         <PhotoPlusMenu canKnowledge={!!bot} onPickPhotos={photos.add} onKnowledge={() => setAddSheet(true)} />
                         {/* === /사진 첨부 === */}
-                        <textarea
-                            className="os-input"
-                            rows={1}
-                            value={input}
-                            onChange={e => { setInput(e.target.value); if (!streaming) setState(e.target.value ? 'listening' : 'idle') }}
-                            onKeyDown={onKey}
-                            onFocus={() => endRef.current?.scrollIntoView({ behavior: 'smooth' })}   // 키보드가 올라오며 마지막 말이 가려지지 않게
-                            onPaste={e => { if (photos.addFromData(e.clipboardData)) e.preventDefault() }}   // === 사진 첨부 === 붙여넣기
-                            placeholder={`${name}에게 메시지 보내기`}
-                            aria-label="메시지"
-                            style={{ resize: 'none' }}
-                        />
+                        <div className="os-input-wrap">
+                            {mention.open && (
+                                <MentionPicker
+                                    items={mention.items}
+                                    activeIndex={mention.activeIndex}
+                                    onHover={mention.setActiveIndex}
+                                    onSelect={applyMention}
+                                    onClose={mention.close}
+                                    showPluginStub
+                                />
+                            )}
+                            <textarea
+                                ref={inputRef}
+                                className="os-input"
+                                rows={1}
+                                value={input}
+                                onChange={e => {
+                                    const v = e.target.value
+                                    setInput(v)
+                                    if (!streaming) setState(v ? 'listening' : 'idle')
+                                    mention.syncFromInput(v, e.target.selectionStart ?? v.length)
+                                }}
+                                onClick={e => mention.syncFromInput(input, e.currentTarget.selectionStart ?? input.length)}
+                                onKeyUp={e => {
+                                    if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+                                        mention.syncFromInput(input, e.currentTarget.selectionStart ?? input.length)
+                                    }
+                                }}
+                                onKeyDown={onKey}
+                                onFocus={() => endRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                                onPaste={e => { if (photos.addFromData(e.clipboardData)) e.preventDefault() }}
+                                placeholder={`${name}에게 메시지 보내기 (@로 다른 봇 부르기)`}
+                                aria-label="메시지"
+                                aria-autocomplete="list"
+                                aria-expanded={mention.open}
+                                style={{ resize: 'none' }}
+                            />
+                        </div>
                         <button className="os-icon-btn os-send" aria-label="보내기"
                             disabled={(!input.trim() && photos.urls.length === 0) || streaming || photos.uploading || photos.failed}
                             title={photos.uploading ? '사진을 올리는 중이에요' : photos.failed ? '실패한 사진을 빼거나 다시 시도해 주세요' : undefined}

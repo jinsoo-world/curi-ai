@@ -3,7 +3,7 @@
 // 사람이 「@홍보팀장 …」 처럼 한 명을 콕 집으면 그 봇만 답한다.
 // 봇이 한 말 위에는 「보낸 사람 ○○」(다른 봇을 부르면 「보낸 사람 ○○ → ○○」) 표식을 붙인다.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOsTeam } from './OsShell'
 import BotAvatar from './BotAvatar'
 import BotMarkdown from './BotMarkdown'
@@ -11,6 +11,8 @@ import MenuIcon, { CloseIcon, swipeToClose } from './MenuIcon'
 import { findMentionedBot, pickResponders, botWorkingLabel } from '@/domains/os/channels'
 import { osTrack } from '@/domains/os/events'
 import type { BotColor, BotShape } from '@/domains/os/types'
+import MentionPicker from './MentionPicker'
+import { useMentionComposer } from './useMentionComposer'
 
 interface Member { mentorId: string; name: string; shape: string; color: string; avatarUrl: string | null }
 interface Msg { id: string; authorKind: 'user' | 'bot'; mentorId: string | null; content: string }
@@ -28,6 +30,15 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
     const [err, setErr] = useState<string | null>(null)
     const [notReady, setNotReady] = useState(false)
     const endRef = useRef<HTMLDivElement>(null)
+    const inputRef = useRef<HTMLTextAreaElement>(null)
+
+    const mentionBots = useMemo(
+        () => members.map(m => ({
+            mentorId: m.mentorId, name: m.name, shape: m.shape, color: m.color, avatarUrl: m.avatarUrl,
+        })),
+        [members],
+    )
+    const mention = useMentionComposer(mentionBots)
 
     const load = useCallback(async () => {
         try {
@@ -156,9 +167,74 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                 {err && <div className="os-notice">{err}</div>}
 
                 <div className="os-input-bar">
-                    <textarea className="os-input" rows={1} value={input} onChange={e => setInput(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send() } }}
-                        placeholder={`${name}에 메시지 보내기 (한 명만 부르려면 @이름)`} aria-label="메시지" style={{ resize: 'none' }} />
+                    <div className="os-input-wrap">
+                        {mention.open && (
+                            <MentionPicker
+                                items={mention.items}
+                                activeIndex={mention.activeIndex}
+                                onHover={mention.setActiveIndex}
+                                onSelect={(item) => {
+                                    const el = inputRef.current
+                                    const cursor = el?.selectionStart ?? input.length
+                                    const next = mention.insert(input, cursor, item)
+                                    setInput(next.text)
+                                    requestAnimationFrame(() => {
+                                        const ta = inputRef.current
+                                        if (!ta) return
+                                        ta.focus()
+                                        ta.setSelectionRange(next.cursor, next.cursor)
+                                    })
+                                }}
+                                onClose={mention.close}
+                                showPluginStub
+                            />
+                        )}
+                        <textarea
+                            ref={inputRef}
+                            className="os-input"
+                            rows={1}
+                            value={input}
+                            onChange={e => {
+                                const v = e.target.value
+                                setInput(v)
+                                mention.syncFromInput(v, e.target.selectionStart ?? v.length)
+                            }}
+                            onClick={e => mention.syncFromInput(input, e.currentTarget.selectionStart ?? input.length)}
+                            onKeyUp={e => {
+                                if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+                                    mention.syncFromInput(input, e.currentTarget.selectionStart ?? input.length)
+                                }
+                            }}
+                            onKeyDown={e => {
+                                const keyResult = mention.onKeyWhileOpen(e)
+                                if (keyResult === 'handled') return
+                                if (keyResult === 'select' && mention.activeItem) {
+                                    e.preventDefault()
+                                    const item = mention.activeItem
+                                    const el = inputRef.current
+                                    const cursor = el?.selectionStart ?? input.length
+                                    const next = mention.insert(input, cursor, item)
+                                    setInput(next.text)
+                                    requestAnimationFrame(() => {
+                                        const ta = inputRef.current
+                                        if (!ta) return
+                                        ta.focus()
+                                        ta.setSelectionRange(next.cursor, next.cursor)
+                                    })
+                                    return
+                                }
+                                if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                                    e.preventDefault()
+                                    void send()
+                                }
+                            }}
+                            placeholder={`${name}에 메시지 보내기 (@이름으로 한 명만)`}
+                            aria-label="메시지"
+                            aria-autocomplete="list"
+                            aria-expanded={mention.open}
+                            style={{ resize: 'none' }}
+                        />
+                    </div>
                     <button className="os-icon-btn os-send" aria-label="보내기" disabled={!input.trim() || busy} onClick={() => void send()}>↑</button>
                 </div>
             </div>
