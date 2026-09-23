@@ -382,7 +382,7 @@ export async function POST(req: Request) {
             if (embedding.length > 0) {
                 // 지식 검색은 admin client로 (knowledge_chunks 는 anon/authenticated 에
                 // 테이블 권한이 없어 일반 클라이언트로는 42501 permission denied 가 난다)
-                const knowledge = await matchKnowledge(createAdminClient(), embedding, mentorId)
+                const knowledge = await matchKnowledge(createAdminClient(), embedding, mentorId, undefined, undefined, lastUserMessage)
                 console.log('[Chat RAG] Matched knowledge:', knowledge.length, 'items for mentor:', mentorId)
                 ragMatches = knowledge
                 if (knowledge.length > 0) {

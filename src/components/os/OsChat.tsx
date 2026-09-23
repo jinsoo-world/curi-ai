@@ -34,6 +34,7 @@ import { photoPayload } from '@/domains/os/photos'
 // 세부칸, 자료 넣기 시트는 열 때만 내려받는다 (봇을 갈아탈 때 실을 것이 줄어든다)
 const DetailPane = dynamic(() => import('./DetailPane'), { ssr: false })
 const AddKnowledgeSheet = dynamic(() => import('./AddKnowledgeSheet'), { ssr: false })
+const FixAnswerSheet = dynamic(() => import('./FixAnswerSheet'), { ssr: false })
 
 interface Msg {
     id: string
@@ -77,6 +78,8 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
     const [sessionId, setSessionId] = useState<string | null>(null)
     const [detailOpen, setDetailOpen] = useState(false)   // 항상 닫힌 채 시작. 열 때만 세부칸을 그린다(대표 0923 「닫힌 채로, 열 때 로딩」)
     const [addSheet, setAddSheet] = useState(false)
+    /** 「답 고치기」로 연 시트 — 고칠 질문·봇이 한 답 */
+    const [fixTarget, setFixTarget] = useState<{ question: string; answer: string } | null>(null)
     const [demo, setDemo] = useState(false)
     const endRef = useRef<HTMLDivElement>(null)
     const cacheLoaded = useRef(false)   // 되살리기 전에 빈 목록을 저장해 지워 버리는 일을 막는다
@@ -159,8 +162,10 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         } catch { return null }
     }, [guest, sessionId, mentorId])
 
-    const send = useCallback(async () => {
-        const text = input.trim()
+    // overrideText 가 있으면(「답 고치기」의 「다시 물어보기」) 입력창 내용 대신 그 질문을 그대로 다시 보낸다.
+    // 이때는 입력창(내가 지금 쓰던 글)을 지우지 않는다.
+    const send = useCallback(async (overrideText?: string) => {
+        const text = (overrideText ?? input).trim()
         // === 사진 첨부 === 사진만 보내도 된다. 올리는 중이거나 실패한 장이 남아 있으면 기다린다.
         const photoUrls = photos.urls
         if ((!text && photoUrls.length === 0) || streaming || photos.uploading || photos.failed) return
@@ -176,7 +181,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
             ? readRelayIntent(text, team.filter(b => !b.hidden).map(b => ({ mentorId: b.mentorId, name: b.name })), mentorId)
             : null
         if (전달) {
-            setInput('')
+            if (!overrideText) setInput('')
             setMessages([...base, { id: botId, role: 'assistant', content: `${전달.name}에게 옮기는 중이에요…` }])
             setState('working')
             try {
@@ -214,7 +219,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
         const 눈치 = bot && !guest && !전달 && text ? readLocalIntent(text) : null
         if (눈치?.kind === 'group') {
             // === 전달(relay) === 안내만 하지 않고 「그룹 채팅 만들기」 창을 바로 연다
-            setInput('')
+            if (!overrideText) setInput('')
             setMessages([...base, { id: botId, role: 'assistant', content: '여러 봇과 한 방에서 이야기하는 창을 열었어요. 넣을 봇을 골라 주세요.' }])
             setState('idle')
             openNewGroup()
@@ -222,7 +227,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
             // === /전달(relay) ===
         }
         if (눈치?.kind === 'knowledge' && bot) {
-            setInput('')
+            if (!overrideText) setInput('')
             setMessages([...base, { id: botId, role: 'assistant', content: '자료에 넣었어요. 읽는 데 잠시 걸려요 📎' }])
             setState('idle')
             try {
@@ -241,7 +246,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
             return
         }
         setMessages([...base, { id: botId, role: 'assistant', content: '' }])
-        setInput('')
+        if (!overrideText) setInput('')
         photos.clear()   // === 사진 첨부 === 보냈으니 띠를 비운다
         setStreaming(true)
         setState('thinking')
@@ -396,6 +401,13 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                                 {!m.card && (
                                     <LinkCards {...linkCardsFor(m, messages[i - 1]?.role === 'user' ? messages[i - 1].content : undefined)} />
                                 )}
+                                {/* 답 고치기 — 내 팀 봇일 때만(공개 봇·손님은 자료를 못 넣는다), 바로 앞이 내 말일 때만 */}
+                                {!m.card && bot && !guest && m.content && messages[i - 1]?.role === 'user' && (
+                                    <button type="button" className="os-fix-trigger"
+                                        onClick={() => setFixTarget({ question: messages[i - 1].content, answer: m.content })}>
+                                        답 고치기
+                                    </button>
+                                )}
                             </div>
                         ))}
                     <div ref={endRef} />
@@ -447,6 +459,16 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
 
             {addSheet && bot && (
                 <AddKnowledgeSheet mentorId={bot.mentorId} onClose={() => setAddSheet(false)} onAdded={() => { }} />
+            )}
+
+            {fixTarget && bot && (
+                <FixAnswerSheet
+                    mentorId={bot.mentorId}
+                    question={fixTarget.question}
+                    currentAnswer={fixTarget.answer}
+                    onClose={() => setFixTarget(null)}
+                    onRetry={(q) => void send(q)}
+                />
             )}
         </div>
     )

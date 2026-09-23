@@ -11,6 +11,8 @@ import { markInjectionPatterns } from '@/domains/chat/injection'
 
 /** 표가 아직 DB 에 없을 때 나는 Postgres 오류 번호 */
 const TABLE_MISSING = '42P01'
+/** 표에 아직 없는 칸을 적어 넣었을 때 나는 Postgres 오류 번호 (컬럼 없음) */
+const COLUMN_MISSING = '42703'
 
 /** 봇 하나가 읽을 수 있는 자료 수, 크기 (기존 크리에이터 창구와 같은 값) */
 export const MAX_SOURCES_PER_BOT = 10
@@ -49,23 +51,43 @@ export interface BotSource {
     status: 'pending' | 'processing' | 'completed' | 'failed'
     chunkCount: number
     createdAt: string
+    /** 이 자료가 무엇인지 한 줄 설명 (메타 칸, 마이그레이션 전이면 undefined) */
+    context?: string
+    /** 내(봇 주인)가 직접 쓴 글인가 */
+    authorIsMe?: boolean
+    /** 넣은 방식 세부: file/url/youtube/text/qa/note/csv/fix */
+    sourceKind?: string
+    /** 인용·출처 주소 */
+    citationUrl?: string
+}
+
+const BASE_COLS = 'id, title, source_type, processing_status, chunk_count, created_at'
+const META_COLS = `${BASE_COLS}, context, author_is_me, source_kind, citation_url`
+
+type SourceRow = {
+    id: string; title: string; source_type: BotSourceType
+    processing_status: BotSource['status']; chunk_count: number | null; created_at: string
+    context?: string | null; author_is_me?: boolean | null; source_kind?: string | null; citation_url?: string | null
+}
+
+function toBotSource(r: SourceRow): BotSource {
+    return {
+        id: r.id, title: r.title, sourceType: r.source_type,
+        status: r.processing_status, chunkCount: r.chunk_count ?? 0, createdAt: r.created_at,
+        context: r.context ?? undefined, authorIsMe: r.author_is_me ?? undefined,
+        sourceKind: r.source_kind ?? undefined, citationUrl: r.citation_url ?? undefined,
+    }
 }
 
 /** 이 봇이 읽은 자료 목록 (주인 확인은 부르는 쪽에서 먼저 한다) */
 export async function listBotSources(db: SupabaseClient, mentorId: string): Promise<BotSource[]> {
-    const { data, error } = await db
-        .from('knowledge_sources')
-        .select('id, title, source_type, processing_status, chunk_count, created_at')
-        .eq('mentor_id', mentorId)
-        .order('created_at', { ascending: false })
-    if (error) throw new Error(error.message)
-    return ((data ?? []) as {
-        id: string; title: string; source_type: BotSourceType
-        processing_status: BotSource['status']; chunk_count: number | null; created_at: string
-    }[]).map(r => ({
-        id: r.id, title: r.title, sourceType: r.source_type,
-        status: r.processing_status, chunkCount: r.chunk_count ?? 0, createdAt: r.created_at,
-    }))
+    const metaRes = await db.from('knowledge_sources').select(META_COLS).eq('mentor_id', mentorId).order('created_at', { ascending: false })
+    if (!metaRes.error) return ((metaRes.data ?? []) as unknown as SourceRow[]).map(toBotSource)
+    // 메타 칸이 아직 없으면(마이그레이션 전) 옛 칸만으로 한 번 더 — 목록 자체가 안 나오는 사고를 막는다
+    if (metaRes.error.code !== COLUMN_MISSING) throw new Error(metaRes.error.message)
+    const baseRes = await db.from('knowledge_sources').select(BASE_COLS).eq('mentor_id', mentorId).order('created_at', { ascending: false })
+    if (baseRes.error) throw new Error(baseRes.error.message)
+    return ((baseRes.data ?? []) as unknown as SourceRow[]).map(toBotSource)
 }
 
 /** 유튜브 주소인가 */
@@ -141,14 +163,62 @@ export async function assertRoomForMore(db: SupabaseClient, mentorId: string): P
     }
 }
 
-/** 글(붙여넣기)을 자료로 넣는다 */
-export async function addTextSource(db: SupabaseClient, mentorId: string, title: string, text: string) {
+/**
+ * 글(붙여넣기 / 짧은 메모)을 자료로 넣는다.
+ * sourceKind 로 「길게 붙여넣은 글(text)」과 「짧은 메모(note)」를 자료 목록에서 구분한다(검색 방식은 같다).
+ */
+export async function addTextSource(db: SupabaseClient, mentorId: string, title: string, text: string, sourceKind: string = 'text') {
     const body = (text ?? '').trim().slice(0, MAX_TEXT_CHARS)
     if (body.length < 10) throw new Error('글이 너무 짧아요. 10자 이상 넣어 주세요')
     // 🛡 글 속 「이전 지시 무시」류 문장에는 표식을 붙여 저장한다(지우지 않는다). 울타리가 이 표식을 설명한다.
     const { text: marked, marked: count } = markInjectionPatterns(body)
     if (count > 0) console.warn('[os/knowledge] 자료 속 명령문 표식', { mentorId, kind: 'text', count })
-    return addKnowledgeSource(db, mentorId, (title || '붙여넣은 글').slice(0, 120), marked, 'text')
+    return addKnowledgeSource(db, mentorId, (title || '붙여넣은 글').slice(0, 120), marked, 'text', undefined, {
+        meta: { sourceKind, fetchedAt: new Date().toISOString() },
+    })
+}
+
+/**
+ * Q&A 한 쌍(질문+답)을 자료로 넣는다 — 직접 쓰기 / CSV 올리기 / 「답 고치기」가 전부 이 함수를 쓴다.
+ * 청크는 쪼개지 않고 질문+답 그대로 하나 — 그래야 비슷한 질문이 왔을 때 「질문 그대로 검색」(matchKnowledge 가산점)이 통한다.
+ */
+export async function addQaSource(
+    db: SupabaseClient, mentorId: string, question: string, answer: string,
+    meta?: { context?: string; authorIsMe?: boolean; sourceKind?: string },
+) {
+    const q = (question ?? '').trim().slice(0, 500)
+    const a = (answer ?? '').trim().slice(0, MAX_TEXT_CHARS)
+    if (q.length < 2) throw new Error('질문을 적어 주세요')
+    if (a.length < 1) throw new Error('답을 적어 주세요')
+    // 🛡 답 속 「이전 지시 무시」류 문장에도 표식을 붙인다
+    const { text: markedAnswer, marked } = markInjectionPatterns(a)
+    if (marked > 0) console.warn('[os/knowledge] 자료 속 명령문 표식', { mentorId, kind: 'qa', count: marked })
+    const content = `질문: ${q}\n답: ${markedAnswer}`
+    return addKnowledgeSource(db, mentorId, q.slice(0, 120), content, 'text', undefined, {
+        singleChunk: true,
+        meta: {
+            context: meta?.context,
+            authorIsMe: meta?.authorIsMe ?? true,
+            sourceKind: meta?.sourceKind ?? 'qa',
+            fetchedAt: new Date().toISOString(),
+        },
+    })
+}
+
+/** 자료의 메타(무엇인지 한 줄, 내가 쓴 글인지)를 고친다. 주인 확인은 부르는 쪽에서 먼저 한다 */
+export async function updateBotSourceMeta(
+    db: SupabaseClient, mentorId: string, sourceId: string,
+    patch: { context?: string; authorIsMe?: boolean },
+): Promise<void> {
+    const row: Record<string, unknown> = {}
+    if (patch.context !== undefined) row.context = patch.context.slice(0, 300)
+    if (patch.authorIsMe !== undefined) row.author_is_me = patch.authorIsMe
+    if (Object.keys(row).length === 0) return
+    const { error } = await db.from('knowledge_sources').update(row).eq('id', sourceId).eq('mentor_id', mentorId)
+    if (error) {
+        if (error.code === COLUMN_MISSING) throw new Error('아직 이 기능을 쓸 수 없어요. 잠시 뒤 다시 해 주세요')
+        throw new Error(error.message)
+    }
 }
 
 /**
