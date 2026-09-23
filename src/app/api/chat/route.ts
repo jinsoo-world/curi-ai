@@ -9,6 +9,8 @@ import { generateEmbedding, matchKnowledge } from '@/domains/knowledge'
 import { deductCredit, getCreditBalance } from '@/domains/credit'
 import { pickDriverFromEnv } from '@/domains/llm'
 import { getOwnedTeamBotMentor } from '@/domains/os'
+import { readUsage } from '@/domains/os/usage-db'
+import { untilText, kstDayHourText } from '@/domains/os/usage'
 import { findSourcesOfChunks } from '@/domains/os/knowledge'
 import { CREDIT_CONSTANTS } from '@/domains/credit/types'
 import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
@@ -226,9 +228,25 @@ export async function POST(req: Request) {
 
         const dailyUsed = (userProfile as any)?.daily_free_used || 0
         const isPremium = (userProfile as any)?.subscription_tier === 'premium'
-        // 🍀 내 팀 봇과의 대화는 클로버를 쓰지 않는다(대표 확정 0923). 예산 보호 안전선 = 하루 300턴(솔라 1턴 약 2원).
-        const OWN_BOT_FREE_DAILY_CAP = 300
-        if (ownTeamBot && dailyUsed < OWN_BOT_FREE_DAILY_CAP) isFreeTrial = true
+        // 🍀 내 팀 봇과의 대화는 클로버 0 (대표 확정 0923). 대신 사용 한도 두 창(5시간 100턴 · 주간 1,000턴)으로 예산을 지킨다.
+        if (ownTeamBot && user) {
+            const usage = await readUsage(createAdminClient(), user.id)
+            if (usage.blocked) {
+                const when = usage.resetAt5h && usage.used5h >= usage.limit5h
+                    ? `${untilText(usage.resetAt5h, new Date())} 다시 이야기할 수 있어요.`
+                    : `${kstDayHourText(usage.weekResetAt)}에 주간 한도가 초기화돼요.`
+                const msg = `오늘 사용 한도에 닿았어요. ${when}`
+                const enc = new TextEncoder()
+                const limitStream = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue(enc.encode(`data: ${JSON.stringify({ text: msg, done: true, fullResponse: msg, usageLimit: true })}\n\n`))
+                        controller.close()
+                    },
+                })
+                return new Response(limitStream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' } })
+            }
+            isFreeTrial = true
+        }
         if (user && !isPremium && !isFreeTrial && dailyUsed >= MAX_DAILY_FREE) {
             const encoder = new TextEncoder()
             const limitStream = new ReadableStream({

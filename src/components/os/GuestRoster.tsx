@@ -1,6 +1,6 @@
 'use client'
 // 손님(로그인 전) 왼쪽 명단 = 리더들이 만든 공개 봇 3개를 「둘러보기」 타일로 보여준다.
-// 이름·얼굴은 /api/mentors/[id] 에서 가져오고, 못 가져오면 여기 적힌 이름으로 그린다.
+// 이름, 얼굴은 /api/mentors/[id] 에서 가져오고, 못 가져오면 여기 적힌 이름으로 그린다.
 // 손님이 타일을 누르면 그 봇과 바로 대화할 수 있다(손님 대화는 저장하지 않는다).
 
 import { useEffect, useState } from 'react'
@@ -11,7 +11,7 @@ import BotAvatar from './BotAvatar'
 interface Seed { mentorId: string; name: string; shape: BotShape; color: BotColor }
 interface Loaded { name: string; title: string | null; avatarUrl: string | null }
 
-// 리더 공개 봇 3개 (시연 팀과 같은 명단). 모양·색은 캐릭터용이라 여기서 정한다
+// 리더 공개 봇 3개 (시연 팀과 같은 명단). 모양, 색은 캐릭터용이라 여기서 정한다
 const SEEDS: Seed[] = [
     { mentorId: '118bef35-26bc-4118-a446-aa96e977f9ee', name: '오재현', shape: 'clover', color: 'green' },
     { mentorId: '20728d0a-2aed-4c4c-bc48-f26be076d0bc', name: '임보라', shape: 'circle', color: 'orange' },

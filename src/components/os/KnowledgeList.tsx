@@ -1,6 +1,6 @@
 'use client'
 // 오른쪽 세부칸의 「이 봇이 읽은 자료」 — 진짜 목록 + 넣기 + 빼기.
-// 상태 = 기다리는 중(pending) · 읽는 중(processing) · 다 읽음(completed) · 못 읽음(failed)
+// 상태 = 기다리는 중(pending) / 읽는 중(processing) / 다 읽음(completed) / 못 읽음(failed)
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import AddKnowledgeSheet from './AddKnowledgeSheet'
@@ -82,7 +82,7 @@ export default function KnowledgeList({ mentorId, onCountChange }: { mentorId: s
             {sources === null && <div className="os-card">불러오는 중…</div>}
 
             {sources && sources.length === 0 && !err && (
-                <div className="os-card">아직 읽은 자료가 없어요.<br /><span style={{ fontSize: 13 }}>PDF·링크·유튜브·붙여넣은 글을 넣을 수 있어요.</span></div>
+                <div className="os-card">아직 읽은 자료가 없어요.<br /><span style={{ fontSize: 13 }}>PDF, 링크, 유튜브, 붙여넣은 글을 넣을 수 있어요.</span></div>
             )}
 
             {sources && sources.map(s => (

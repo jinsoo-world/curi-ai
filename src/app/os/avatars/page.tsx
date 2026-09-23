@@ -1,4 +1,4 @@
-// /os/avatars — 캐릭터 시연판. 도형 6 × 색 8 × 상태 8 을 한눈에 (개발·대표 확인용, 검색 안 올림)
+// /os/avatars — 캐릭터 시연판. 도형 6 × 색 8 × 상태 8 을 한눈에 (개발, 대표 확인용, 검색 안 올림)
 import type { Metadata } from 'next'
 import BotAvatar from '@/components/os/BotAvatar'
 import { COLOR_KO, SHAPE_KO, STATE_KO } from '@/components/os/avatar'
@@ -22,7 +22,7 @@ export default function AvatarsPage() {
             </p>
 
             <section style={{ marginBottom: 28 }}>
-                <h2 style={sectionH2}>크기 4종 · 리더 얼굴 배지 · 승인 배지</h2>
+                <h2 style={sectionH2}>크기 4종 / 리더 얼굴 배지 / 승인 배지</h2>
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: 22, flexWrap: 'wrap' }}>
                     {SIZES.map(s => (
                         <div key={s} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>

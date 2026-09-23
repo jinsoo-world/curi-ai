@@ -1,7 +1,7 @@
 'use client'
 // 새 봇 만들기 = 3걸음, 전부 칩만 누른다 (기획 §13).
-//  ① 이 봇이 맡을 일 한 가지  ② 어디까지 알아서?  ③ 모양·색 + 이름
-// 그림 생성 없이 도형+색이라 즉시·비용 0.
+//  ① 이 봇이 맡을 일 한 가지  ② 어디까지 알아서?  ③ 모양, 색 + 이름
+// 그림 생성 없이 도형+색이라 즉시, 비용 0.
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -74,7 +74,7 @@ export default function NewBotSheet({ guest, onClose, onCreated, onWantGroup }: 
                 ) : step === 1 ? (
                     <>
                         <h3>이 봇이 맡을 일 한 가지</h3>
-                        <div className="os-step">1 / 3 · 봇 하나는 일 하나만 맡아요. 그래야 잘해요.</div>
+                        <div className="os-step">1 / 3 / 봇 하나는 일 하나만 맡아요. 그래야 잘해요.</div>
                         <div className="os-chips">
                             {JOBS.map(j => (
                                 <button key={j.id} className="os-chipbtn" aria-pressed={job === j.id} onClick={() => pickJob(j.id)}>
@@ -102,7 +102,7 @@ export default function NewBotSheet({ guest, onClose, onCreated, onWantGroup }: 
                 ) : step === 2 ? (
                     <>
                         <h3>어디까지 알아서 할까요?</h3>
-                        <div className="os-step">2 / 3 · 밖으로 나가는 일(보내기·게시·결제·삭제)은 늘 내가 허용한 뒤에만.</div>
+                        <div className="os-step">2 / 3 / 밖으로 나가는 일(보내기, 게시, 결제, 삭제)은 늘 내가 허용한 뒤에만.</div>
                         <div className="os-chips" style={{ flexDirection: 'column' }}>
                             {AUTONOMY.map(a => (
                                 <button key={a.id} className="os-chipbtn" aria-pressed={autonomy === a.id} onClick={() => setAutonomy(a.id)}>
@@ -118,7 +118,7 @@ export default function NewBotSheet({ guest, onClose, onCreated, onWantGroup }: 
                 ) : (
                     <>
                         <h3>모양과 색, 그리고 이름</h3>
-                        <div className="os-step">3 / 3 · 명단에 이렇게 보여요.</div>
+                        <div className="os-step">3 / 3 / 명단에 이렇게 보여요.</div>
                         <div style={{ display: 'flex', gap: 18, alignItems: 'center', marginBottom: 16 }}>
                             <BotAvatar shape={shape} color={color} state="idle" size={96} />
                             <div style={{ flex: 1 }}>

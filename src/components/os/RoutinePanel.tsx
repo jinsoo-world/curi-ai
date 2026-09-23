@@ -1,6 +1,6 @@
 'use client'
 // 오른쪽 세부칸의 「루틴」 = 이 봇이 정해진 때에 반복하는 일.
-// 창구는 이미 다 있다(4일차). 여기는 화면만 붙인다: 목록 · 만들기 폼(6확인) · 시험 실행.
+// 창구는 이미 다 있다(4일차). 여기는 화면만 붙인다: 목록 / 만들기 폼(6확인) / 시험 실행.
 //
 // 규칙(그록봇에서 배운 것) = 루틴은 **꺼진 채로 태어난다**. 사람이 「시험 실행」을 눈으로 보고 켠다.
 // 결과는 대화방에 봇 답으로 들어가므로, 시험이 끝나면 「대화방을 확인하세요」라고만 알린다.
@@ -169,7 +169,7 @@ export default function RoutinePanel({ mentorId, botName }: { mentorId: string; 
 
             {open && (
                 <div className="os-card" style={{ marginTop: 8 }}>
-                    <div style={{ fontSize: 13, color: 'var(--os-글-흐림)' }}>맡을 봇 · <b style={{ color: 'var(--os-글)' }}>{botName}</b></div>
+                    <div style={{ fontSize: 13, color: 'var(--os-글-흐림)' }}>맡을 봇 / <b style={{ color: 'var(--os-글)' }}>{botName}</b></div>
 
                     <label style={label} htmlFor="rt-title">이름 (무슨 일인지 한 줄)</label>
                     <input id="rt-title" style={field} value={title} maxLength={40} onChange={e => setTitle(e.target.value)} placeholder="아침 글감 5개" />

@@ -1,7 +1,7 @@
 'use client'
 // 「📱 앱으로 설치」 안내. 기기마다 설치 길이 달라서 셋으로 나눈다.
-//   1) 크롬·안드로이드·맥 크롬·엣지 = 브라우저가 beforeinstallprompt 를 주면 단추 하나로 설치
-//   2) 아이폰·아이패드 사파리     = 설치 단추가 없다. 「공유 → 홈 화면에 추가」 3걸음을 큰 글씨로
+//   1) 크롬, 안드로이드, 맥 크롬, 엣지 = 브라우저가 beforeinstallprompt 를 주면 단추 하나로 설치
+//   2) 아이폰, 아이패드 사파리     = 설치 단추가 없다. 「공유 → 홈 화면에 추가」 3걸음을 큰 글씨로
 //   3) 맥 사파리                   = 「파일 → Dock에 추가」 한 줄
 // 이미 앱으로 열려 있으면(standalone) 아무것도 그리지 않는다.
 // 좁은 화면(폰)에서는 왼쪽 명단이 접히므로 아래 띠로 뜨고, 닫으면 7일 동안 다시 안 뜬다.
@@ -102,7 +102,7 @@ export default function InstallPrompt() {
                         <h3>앱처럼 설치하기</h3>
                         {kind === 'ios' && (
                             <>
-                                <div className="os-step">아이폰·아이패드 사파리에서 세 번만 누르면 끝나요.</div>
+                                <div className="os-step">아이폰, 아이패드 사파리에서 세 번만 누르면 끝나요.</div>
                                 <ol className="pwa-steps">
                                     <li><b>1</b><span>화면 아래(또는 위) <b>공유 단추</b> <span aria-hidden>⎋</span>를 눌러요.<br /><small>네모에서 화살표가 위로 나가는 모양이에요.</small></span></li>
                                     <li><b>2</b><span>목록을 조금 내려 <b>「홈 화면에 추가」</b>를 눌러요.</span></li>
@@ -123,7 +123,7 @@ export default function InstallPrompt() {
                         )}
                         {(kind === 'button' || kind === 'other') && (
                             <>
-                                <div className="os-step">크롬·엣지에서는 주소창 오른쪽 끝 설치 아이콘을 눌러도 돼요.</div>
+                                <div className="os-step">크롬, 엣지에서는 주소창 오른쪽 끝 설치 아이콘을 눌러도 돼요.</div>
                                 <ol className="pwa-steps">
                                     <li><b>1</b><span>주소창 오른쪽 끝 <b>설치 아이콘</b>(모니터에 화살표) 또는 메뉴 ⋮ → <b>「큐리AI 설치」</b></span></li>
                                     <li><b>2</b><span><b>「설치」</b>를 눌러요.</span></li>

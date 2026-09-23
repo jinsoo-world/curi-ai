@@ -1,7 +1,7 @@
 'use client'
 // 봇 말풍선 아래 작은 링크 「＋ 다음 한 걸음으로」.
 // 누르면 답의 마지막 문장을 기본값으로 넣어 주고, 사람이 한 번 고쳐서 저장한다.
-// 손님·시연에서는 안 보인다(저장할 곳이 없다).
+// 손님, 시연에서는 안 보인다(저장할 곳이 없다).
 
 import { useState } from 'react'
 import { guessNextStep } from '@/domains/os/nextSteps'

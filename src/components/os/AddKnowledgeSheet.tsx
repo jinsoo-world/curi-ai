@@ -1,5 +1,5 @@
 'use client'
-// 「자료 넣기」 시트 — 파일 · 링크(유튜브 포함) · 붙여넣은 글 셋 중 하나.
+// 「자료 넣기」 시트 — 파일 / 링크(유튜브 포함) / 붙여넣은 글 셋 중 하나.
 // 넣는 순간 봇이 읽기 시작하고, 상태(기다리는 중 → 읽는 중 → 다 읽음)가 오른쪽 세부칸에 보인다.
 
 import { useRef, useState } from 'react'
@@ -101,7 +101,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
 
                 <div className="os-tabs" role="tablist">
                     <button className="os-tab" role="tab" aria-selected={tab === 'file'} onClick={() => setTab('file')} disabled={busy}>파일</button>
-                    <button className="os-tab" role="tab" aria-selected={tab === 'link'} onClick={() => setTab('link')} disabled={busy}>링크·유튜브</button>
+                    <button className="os-tab" role="tab" aria-selected={tab === 'link'} onClick={() => setTab('link')} disabled={busy}>링크, 유튜브</button>
                     <button className="os-tab" role="tab" aria-selected={tab === 'text'} onClick={() => setTab('text')} disabled={busy}>글 붙여넣기</button>
                 </div>
 
@@ -118,7 +118,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                             {busy ? '넣는 중…' : '내 컴퓨터에서 파일 고르기'}
                         </button>
                         <div style={{ color: 'var(--os-글-흐림)', fontSize: 13, marginTop: 8, lineHeight: 1.5 }}>
-                            {안내문구} · 파일 하나 10MB 까지
+                            {안내문구} / 파일 하나 10MB 까지
                         </div>
                     </div>
                 )}

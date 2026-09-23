@@ -1,7 +1,7 @@
 'use client'
-// 캐릭터 = 도형 1 + 눈 2 (그록봇 문법) + 네잎클로버. 라이브러리 0, 그림 생성 API 0 = 비용 0·즉시.
-// 움직임은 data-state 하나로 avatar.css 가 바꾸고, 「불규칙」이 필요한 것(깜빡임·찡긋·말 리듬·장애 눈)만 여기 JS 가 시간을 잡는다.
-// 눈 자리·글자 계산은 avatar.ts(순수 함수)에 있다. 색·모양 이름은 team_bots 표의 값과 같다.
+// 캐릭터 = 도형 1 + 눈 2 (그록봇 문법) + 네잎클로버. 라이브러리 0, 그림 생성 API 0 = 비용 0, 즉시.
+// 움직임은 data-state 하나로 avatar.css 가 바꾸고, 「불규칙」이 필요한 것(깜빡임, 찡긋, 말 리듬, 장애 눈)만 여기 JS 가 시간을 잡는다.
+// 눈 자리, 글자 계산은 avatar.ts(순수 함수)에 있다. 색, 모양 이름은 team_bots 표의 값과 같다.
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { BotColor, BotShape, BotState } from '@/domains/os/types'
@@ -35,7 +35,7 @@ export interface BotAvatarProps {
     shape: BotShape
     color: BotColor
     state?: BotState
-    /** 화면 픽셀. 36(대화 머리)·44(도형 고르기)·72(명단)·96(새 봇 미리보기) 를 쓴다 */
+    /** 화면 픽셀. 36(대화 머리), 44(도형 고르기), 72(명단), 96(새 봇 미리보기) 를 쓴다 */
     size?: number
     /** 리더 얼굴 사진(만든 사람 배지). 있으면 오른쪽 아래에 붙는다 */
     faceUrl?: string | null
@@ -44,7 +44,7 @@ export interface BotAvatarProps {
     title?: string
 }
 
-/** 브라우저의 「움직임 줄이기」 설정. 켜져 있으면 JS 시간표(깜빡임·찡긋)를 아예 안 돌린다 */
+/** 브라우저의 「움직임 줄이기」 설정. 켜져 있으면 JS 시간표(깜빡임, 찡긋)를 아예 안 돌린다 */
 function useReducedMotion(): boolean {
     const [reduced, setReduced] = useState(false)
     useEffect(() => {
@@ -130,6 +130,8 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, fac
         '--말함-주기': `${talkBeat}ms`,
     } as CSSProperties
 
+    // 👀 동그란 눈 = 검은 테 + 흰 눈알 + 검은 눈동자(살짝 위, 바깥) + 흰 반짝 점 (대표 0923 「눈은 동그랗게, 검정 안에 흰 점」)
+    const R = geo.w * 1.2
     const eye = (x: number, side: 'left' | 'right') => {
         const cls = `eye eye-${side}`
         if (kind === 'x') {
@@ -140,10 +142,17 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, fac
             )
         }
         if (kind === 'flat') {
-            const w = geo.w + 4
+            const w = R * 2
             return <rect className={cls} x={x - w / 2} y={geo.cy - 1.6} width={w} height={3.2} rx={1.6} fill={eyeColor} />
         }
-        return <rect className={cls} x={x - geo.w / 2} y={geo.cy - geo.h / 2} width={geo.w} height={geo.h} rx={geo.w / 2} fill={eyeColor} />
+        const dir = side === 'left' ? 1 : 1   // 두 눈동자가 같은 쪽(오른쪽 위)을 본다 = 생각하는 표정
+        return (
+            <g className={cls}>
+                <circle cx={x} cy={geo.cy} r={R} fill="#fff" stroke={eyeColor} strokeWidth={R * 0.26} />
+                <circle cx={x + dir * R * 0.18} cy={geo.cy - R * 0.12} r={R * 0.6} fill={eyeColor} />
+                <circle cx={x + dir * R * 0.42} cy={geo.cy - R * 0.4} r={R * 0.2} fill="#fff" />
+            </g>
+        )
     }
 
     return (
@@ -164,13 +173,14 @@ export default function BotAvatar({ shape, color, state = 'idle', size = 72, fac
                 </g>
                 <g className="eye-pos eye-pos-left">{eye(geo.lx, 'left')}</g>
                 <g className="eye-pos eye-pos-right">{eye(geo.rx, 'right')}</g>
-                {/* 🍑 귀여움: 볼터치 2개 + 작은 미소 (대표 0923 「조금 더 귀엽게, 그록봇 느낌 살짝 빼고」). 자는 중·장애일 땐 미소를 감춘다 */}
+                {/* 🍑 귀여움: 볼터치 2개 + 작은 미소 (대표 0923 「조금 더 귀엽게, 그록봇 느낌 살짝 빼고」). 자는 중, 장애일 땐 미소를 감춘다 */}
                 {state !== 'error' && (
                     <g className="cute" aria-hidden="true">
-                        <circle cx={geo.lx - 4} cy={geo.cy + 12} r="4.6" fill="rgba(255, 128, 150, 0.38)" />
-                        <circle cx={geo.rx + 4} cy={geo.cy + 12} r="4.6" fill="rgba(255, 128, 150, 0.38)" />
+                        <circle cx={geo.lx - R * 0.9} cy={geo.cy + R * 1.3} r={R * 0.48} fill="rgba(255, 128, 150, 0.38)" />
+                        <circle cx={geo.rx + R * 0.9} cy={geo.cy + R * 1.3} r={R * 0.48} fill="rgba(255, 128, 150, 0.38)" />
                         {state !== 'sleeping' && (
-                            <path d={`M${50 - 5.5} ${geo.cy + 10.5} q5.5 4.5 11 0`} stroke={eyeColor} strokeWidth="2.2" strokeLinecap="round" fill="none" opacity="0.85" />
+                            <rect className="mouth" x={50 - R * 0.36} y={geo.cy + R * 1.45} width={R * 0.72} height={R * 0.9} rx={R * 0.36}
+                                fill="#fff" stroke={eyeColor} strokeWidth={R * 0.2} />
                         )}
                     </g>
                 )}

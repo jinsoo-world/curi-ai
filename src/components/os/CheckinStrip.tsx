@@ -3,7 +3,7 @@
 //
 // 왜 = 봇(디지털 나)이 「요즘 어떻게 지내는지」를 알아야 다음 한 걸음을 제안할 수 있다.
 // 글로 쓰라면 아무도 안 쓴다 → 전부 칩으로 고르고, 막힌 일 한 줄만 선택. 30초 안에 끝난다.
-// 손님·시연(?demo=1)에서는 아예 안 보인다(저장할 곳이 없다).
+// 손님, 시연(?demo=1)에서는 아예 안 보인다(저장할 곳이 없다).
 
 import { useEffect, useState } from 'react'
 import { DID_CHIPS, ENERGY_LABELS, MOOD_LABELS } from '@/domains/os/checkin'
@@ -27,7 +27,7 @@ export default function CheckinStrip({ hidden = false }: { hidden?: boolean }) {
         fetch('/api/os/checkin', { cache: 'no-store' })
             .then(r => r.json())
             .then(d => {
-                // 오늘 이미 했거나 · 손님이거나 · 표가 아직 없으면 띠를 안 그린다
+                // 오늘 이미 했거나 / 손님이거나 / 표가 아직 없으면 띠를 안 그린다
                 if (alive && !d.checkin && !d.guest && !d.tableMissing) setShow(true)
             })
             .catch(() => { })

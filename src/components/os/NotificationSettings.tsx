@@ -1,6 +1,6 @@
 'use client'
 // 알림 설정 조각 — /os/settings 안에 끼운다: <NotificationSettings />
-// 푸시 켜기(권한·구독) · 문자 토글(번호는 가려서) · 이메일 토글 · 조용한 시간. 색은 os 토큰만 쓴다.
+// 푸시 켜기(권한, 구독) / 문자 토글(번호는 가려서) / 이메일 토글 / 조용한 시간. 색은 os 토큰만 쓴다.
 
 import { useCallback, useEffect, useState } from 'react'
 import { enablePush, disablePush, getPushState, needsHomeScreen, type PushState } from '@/lib/push-client'
@@ -84,7 +84,7 @@ export default function NotificationSettings() {
     const pushHint = push === 'unsupported' ? '이 브라우저는 푸시를 지원하지 않아요'
         : push === 'denied' ? '브라우저 설정에서 알림이 차단돼 있어요'
         : needsHomeScreen() ? '아이폰은 「홈 화면에 추가」한 앱에서 켤 수 있어요'
-        : pushOn ? '이 기기로 알림이 와요' : '루틴 결과·승인 요청이 오면 바로 알려 드려요'
+        : pushOn ? '이 기기로 알림이 와요' : '루틴 결과, 승인 요청이 오면 바로 알려 드려요'
 
     return (
         <div>
@@ -104,7 +104,7 @@ export default function NotificationSettings() {
                     <Toggle label="문자" on={prefs.sms} disabled={!info.smsAvailable || !info.phoneMasked} onChange={v => patch({ sms: v })} />
                 </div>
                 <div style={row}>
-                    <div><b>이메일</b><div style={sub}>{info.emailMasked || '이메일이 없어요'}{!info.emailAvailable && ' · 서버 준비 중'}</div></div>
+                    <div><b>이메일</b><div style={sub}>{info.emailMasked || '이메일이 없어요'}{!info.emailAvailable && ' / 서버 준비 중'}</div></div>
                     <Toggle label="이메일" on={prefs.email} disabled={!info.emailMasked} onChange={v => patch({ email: v })} />
                 </div>
             </div>
@@ -117,7 +117,7 @@ export default function NotificationSettings() {
                     <input type="time" aria-label="조용한 시간 끝" style={timeInput} value={prefs.quietTo ?? '08:00'} onChange={e => patch({ quietTo: e.target.value })} />
                     <span style={{ color: 'var(--os-글-연)' }}>까지</span>
                 </div>
-                <div style={sub}>이 시간엔 푸시·문자를 보내지 않아요. 이메일은 가요. (한국 시간)</div>
+                <div style={sub}>이 시간엔 푸시, 문자를 보내지 않아요. 이메일은 가요. (한국 시간)</div>
             </div>
             {note && <div className="os-card" style={{ marginTop: 10, color: 'var(--os-경고)' }}>{note}</div>}
         </div>

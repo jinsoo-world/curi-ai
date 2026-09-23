@@ -1,5 +1,5 @@
 // 손님용 첫 화면 (/os/welcome) = 큐리AI 가 무엇인지 3화면 분량을 한 페이지에.
-// 손님 = 4060 강사·작가·크리에이터. 글자 17px 이상, 단추 52px 이상, 색은 [data-theme="os"] 토큰만.
+// 손님 = 4060 강사, 작가, 크리에이터. 글자 17px 이상, 단추 52px 이상, 색은 [data-theme="os"] 토큰만.
 // OsShell 은 이 주소에서 뼈대(왼쪽 명단)를 그리지 않는다 → 여기서 data-theme 을 직접 씌운다.
 
 import type { Metadata } from 'next'
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     robots: { index: true },   // 손님이 처음 밟는 소개 화면이라 검색에 올린다
 }
 
-// 첫 화면에 세울 봇 3명 = 프리셋 그대로 (답장봇·글감봇·비서실장)
+// 첫 화면에 세울 봇 3명 = 프리셋 그대로 (답장봇, 글감봇, 비서실장)
 const SHOWCASE = [
     { job: 'fan_reply', name: '답장봇', state: 'talking' as const },
     { job: 'content_ideas', name: '글감봇', state: 'thinking' as const },

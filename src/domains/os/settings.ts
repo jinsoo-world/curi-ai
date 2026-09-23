@@ -1,13 +1,13 @@
 // domains/os — 화면 설정에서 쓰는 「셈만 하는」 함수들.
 //
-// 왜 도메인에 두나 = 글자 크기 저장·클로버 띠 문구·칩 고르기는 화면마다 조금씩 다르게 베껴 쓰기 쉽다.
-// 한 곳에 두고 시험을 붙여 두면 어느 화면에서도 같은 답이 나온다. 브라우저·DB 는 여기서 만지지 않는다.
+// 왜 도메인에 두나 = 글자 크기 저장, 클로버 띠 문구, 칩 고르기는 화면마다 조금씩 다르게 베껴 쓰기 쉽다.
+// 한 곳에 두고 시험을 붙여 두면 어느 화면에서도 같은 답이 나온다. 브라우저, DB 는 여기서 만지지 않는다.
 
 import { isLowClover } from '@/domains/credit/charge-flow'
 
 /* ────────────────────────── 글자 크기 ────────────────────────── */
 
-/** 3단. 화면에는 한국어로, 저장·CSS 에는 영어로 (CSS 선택자에 한글을 넣지 않는다) */
+/** 3단. 화면에는 한국어로, 저장, CSS 에는 영어로 (CSS 선택자에 한글을 넣지 않는다) */
 export const FONT_SIZES = ['small', 'normal', 'large'] as const
 export type FontSize = typeof FONT_SIZES[number]
 
@@ -16,7 +16,7 @@ export const FONT_LABELS: Record<FontSize, string> = { small: '작게', normal: 
 /** 브라우저에 적어 두는 열쇠 */
 export const FONT_KEY = 'curi_os_font'
 
-/** 봇 팀 화면이 쓰는 시간대. 루틴·체크인·이번 주가 모두 이 달력을 본다 */
+/** 봇 팀 화면이 쓰는 시간대. 루틴, 체크인, 이번 주가 모두 이 달력을 본다 */
 export const OS_TIMEZONE = 'Asia/Seoul'
 
 /** 우리가 아는 값이면 그대로, 아니면 기본값 */
@@ -113,7 +113,7 @@ export function readLocalIntent(text: string): LocalIntent {
 
     const m = 말.match(URL_RE)
     if (m && 넣어달라.test(말)) {
-        // 문장 끝 따옴표·마침표가 주소에 딸려오는 것만 떼어 낸다
+        // 문장 끝 따옴표, 마침표가 주소에 딸려오는 것만 떼어 낸다
         return { kind: 'knowledge', url: m[0].replace(/[.,!?)\]]+$/, '') }
     }
     // 주소를 넣어 달라는 말이 아니면서 그룹 이야기면 안내

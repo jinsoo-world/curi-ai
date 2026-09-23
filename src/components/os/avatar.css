@@ -95,3 +95,9 @@
     .bot-avatar .dots circle { opacity: .7; }
     .bot-avatar .zz-1 { opacity: .8; }
 }
+
+/* 입: 말할 때 벌어졌다 오므라진다 (0923 동그란 눈·o 입) */
+.bot-avatar .mouth { transform-box: fill-box; transform-origin: center; }
+.bot-avatar[data-state="talking"] .mouth { animation: bot-mouth .28s ease-in-out infinite alternate; }
+.bot-avatar[data-state="listening"] .mouth { transform: scale(1.15, 1.25); }
+@keyframes bot-mouth { from { transform: scaleY(.55); } to { transform: scale(1.1, 1.25); } }

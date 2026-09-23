@@ -1,5 +1,5 @@
-// 캐릭터(봇 아바타) 계산만 모아 둔 순수 함수. 화면(React)·움직임(CSS)은 여기 값을 받아 쓴다.
-// 순수 함수라 vitest 로 바로 검사한다. 브라우저 물건(window·문서)은 여기서 쓰지 않는다.
+// 캐릭터(봇 아바타) 계산만 모아 둔 순수 함수. 화면(React), 움직임(CSS)은 여기 값을 받아 쓴다.
+// 순수 함수라 vitest 로 바로 검사한다. 브라우저 물건(window, 문서)은 여기서 쓰지 않는다.
 
 import type { BotColor, BotShape, BotState } from '@/domains/os/types'
 
@@ -35,7 +35,7 @@ export function eyeThicknessPx(shape: BotShape, size: number): number {
     return (eyeLayout(shape).w / 100) * size
 }
 
-/** 「!」 배지·리더 얼굴 배지의 픽셀 크기. 작은 아바타에서도 읽히는 최소값을 지킨다 */
+/** 「!」 배지, 리더 얼굴 배지의 픽셀 크기. 작은 아바타에서도 읽히는 최소값을 지킨다 */
 export function badgePx(size: number): number {
     return Math.max(14, Math.round(size * 0.25))
 }
@@ -43,7 +43,7 @@ export function facePx(size: number): number {
     return Math.max(14, Math.round(size * 0.4))
 }
 
-/** 도형·색 → 한국어 (시연 페이지·읽어 주기용) */
+/** 도형, 색 → 한국어 (시연 페이지, 읽어 주기용) */
 export const SHAPE_KO: Record<BotShape, string> = {
     circle: '원', hex: '육각', square: '둥근네모', egg: '달걀', drop: '물방울', clover: '네잎클로버',
 }
@@ -51,7 +51,7 @@ export const COLOR_KO: Record<BotColor, string> = {
     orange: '주황', teal: '청록', magenta: '자홍', blue: '파랑', brown: '갈색', green: '연두', yellow: '노랑', white: '흰',
 }
 
-/** 상태 → 사람이 읽는 한국어. aria-label·시연 페이지에 쓴다 */
+/** 상태 → 사람이 읽는 한국어. aria-label, 시연 페이지에 쓴다 */
 export const STATE_KO: Record<BotState, string> = {
     idle: '쉬는 중',
     listening: '듣는 중',
@@ -69,7 +69,7 @@ export function ariaLabel(name: string | null | undefined, state: BotState): str
     return `${who}, ${STATE_KO[state]}`
 }
 
-/** 눈을 자연스럽게 깜빡이는 상태. 나머지는 눈이 감겨 있거나(자는 중·장애) 찡긋으로 대신한다(말하는 중) */
+/** 눈을 자연스럽게 깜빡이는 상태. 나머지는 눈이 감겨 있거나(자는 중, 장애) 찡긋으로 대신한다(말하는 중) */
 export const BLINK_STATES: ReadonlySet<BotState> = new Set<BotState>(['idle', 'listening', 'thinking', 'working', 'waiting_approval'])
 
 export function shouldBlink(state: BotState): boolean {
@@ -112,7 +112,7 @@ export function eyeKind(state: BotState, errorShowingX: boolean): EyeKind {
     return 'open'
 }
 
-/** 몸 위·아래 점을 그릴 상태 */
+/** 몸 위, 아래 점을 그릴 상태 */
 export function showsThinkDots(state: BotState): boolean { return state === 'thinking' }
 export function showsWorkDots(state: BotState): boolean { return state === 'working' }
 export function showsZ(state: BotState): boolean { return state === 'sleeping' }

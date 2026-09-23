@@ -1,4 +1,4 @@
-/* 에이전트 OS 화면 — 3열 뼈대 + 캐릭터 움직임 (그록봇 문법). 색·시간 값은 globals.css [data-theme="os"] 토큰만 쓴다 */
+/* 에이전트 OS 화면 — 3열 뼈대 + 캐릭터 움직임 (그록봇 문법). 색, 시간 값은 globals.css [data-theme="os"] 토큰만 쓴다 */
 
 .os-shell {
     display: grid;
@@ -33,7 +33,8 @@
 .os-bot-name { font-size: 15px; font-weight: 600; line-height: 1.2; }
 .os-chip { font-size: 12.5px; color: var(--os-글-연); background: var(--os-말풍선); padding: 3px 8px; border-radius: 8px; }
 .os-left-bottom { border-top: 1px solid var(--os-선); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
-.os-row-btn { display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-radius: 12px; background: transparent; border: 0; color: var(--os-글); font-size: 15px; cursor: pointer; width: 100%; text-align: left; min-height: 44px; }
+.os-row-btn { display: flex; align-items: center; gap: 12px; padding: 12px 10px; border-radius: 12px; background: transparent; border: 0; color: var(--os-글); font-size: 16px; cursor: pointer; width: 100%; text-align: left; min-height: 48px; }
+.os-row-btn svg { flex: 0 0 auto; color: var(--os-글-연); }
 .os-row-btn:hover { background: var(--os-말풍선); }
 .os-plus { position: absolute; right: 14px; top: 14px; width: 36px; height: 36px; border-radius: 10px; border: 0; background: transparent; color: var(--os-글-연); font-size: 22px; cursor: pointer; }
 .os-plus:hover { background: var(--os-말풍선); color: var(--os-글); }
@@ -129,7 +130,7 @@
 .os-shape-pick { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 16px; background: var(--os-말풍선); border: 2px solid transparent; cursor: pointer; }
 .os-shape-pick[aria-pressed="true"] { border-color: var(--os-클로버); }
 
-/* 캐릭터(도형 1 + 눈 2)의 모양·움직임은 avatar.css 로 옮겼다 (BotAvatar.tsx 가 불러온다) */
+/* 캐릭터(도형 1 + 눈 2)의 모양, 움직임은 avatar.css 로 옮겼다 (BotAvatar.tsx 가 불러온다) */
 
 /* 좁은 화면(폰) = 명단은 위 가로 띠, 오른쪽 세부는 감춤 */
 @media (max-width: 900px) {
@@ -151,7 +152,7 @@
     .os-right { display: none; }
     .os-right.open { display: block; position: fixed; inset: auto 0 0 0; max-height: 70dvh; border-radius: 22px 22px 0 0; z-index: 40; }
     .os-bubble { max-width: 88%; }
-    /* 앱으로 설치해 열면(주소창 없음) 노치·홈 표시줄이 화면을 가린다 → 그만큼 띄운다 */
+    /* 앱으로 설치해 열면(주소창 없음) 노치, 홈 표시줄이 화면을 가린다 → 그만큼 띄운다 */
     .os-left { padding-top: env(safe-area-inset-top); }
     .os-plus { top: calc(14px + env(safe-area-inset-top)); }
     .os-input-bar { margin-bottom: calc(16px + env(safe-area-inset-bottom)); }
@@ -175,7 +176,7 @@
 [data-font="large"] .os-bubble { font-size: 18px; }
 [data-font="large"] .os-input { font-size: 18px; }
 
-/* ── 봇 답 마크다운 (굵게·목록·링크만) ── */
+/* ── 봇 답 마크다운 (굵게, 목록, 링크만) ── */
 .os-bubble.md { white-space: normal; }
 .os-bubble.md > :first-child { margin-top: 0; }
 .os-bubble.md > :last-child { margin-bottom: 0; }
@@ -234,3 +235,14 @@
 /* 넓은 화면 기본 = 열림. 닫으면 칸이 사라지고 대화가 그 자리를 쓴다 */
 .os-right.closed { display: none; }
 .os-chat-wrap.narrow { grid-template-columns: minmax(0, 1fr); }
+
+/* 오른쪽 세부칸 = 닫기 햄버거(≡)가 칸 오른쪽 위에 붙는다 (대표 0923). 폰에선 오른쪽에서 나오는 서랍 */
+.os-right { position: relative; padding-top: 52px; }
+.os-right-close { position: absolute; top: 8px; right: 10px; font-size: 22px; }
+.os-menu { font-size: 22px; }
+.os-usage-bar { display: flex; align-items: center; gap: 8px; margin: 0 20px 6px; font-size: 13px; color: var(--os-글-흐림); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.os-usage-bar[data-warn] { color: var(--os-경고); }
+@media (max-width: 900px) {
+    .os-right.open { position: fixed; top: 0; right: 0; bottom: 0; left: auto; width: min(86vw, 340px); max-height: none; border-radius: 0; border-left: 1px solid var(--os-선); box-shadow: -12px 0 32px rgba(0, 0, 0, .5); z-index: 40; }
+    .os-chat-wrap { grid-template-columns: 1fr; }
+}

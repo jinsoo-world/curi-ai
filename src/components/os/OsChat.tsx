@@ -10,9 +10,8 @@ import { osTrack } from '@/domains/os/events'
 import { readLocalIntent } from '@/domains/os/settings'
 import BotAvatar from './BotAvatar'
 import BotMarkdown from './BotMarkdown'
-import CloverBar from './CloverBar'
+import UsageBar from './UsageBar'
 import DetailPane from './DetailPane'
-import NextStepLink from './NextStepLink'
 import AddKnowledgeSheet from './AddKnowledgeSheet'
 import PermissionCard from './PermissionCard'
 import type { CardView } from './PermissionCard'
@@ -46,7 +45,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
     const [demo, setDemo] = useState(false)
     const endRef = useRef<HTMLDivElement>(null)
 
-    // 시연(?demo=1)·손님에게는 「내 것」을 저장하는 칸(체크인·다음 한 걸음)을 안 보인다.
+    // 시연(?demo=1), 손님에게는 「내 것」을 저장하는 칸(체크인, 다음 한 걸음)을 안 보인다.
     // 오른쪽 세부칸은 넓은 화면이면 열린 채, 폰이면 닫힌 채 시작한다. 그 뒤로는 ⓘ 로 사람이 정한다.
     useEffect(() => {
         void Promise.resolve().then(() => {
@@ -126,7 +125,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
             const sid = await ensureSession()
 
             // ① 밖으로 내보내는 말인지 먼저 본다. 맞으면 봇은 답하지 않고 승인 카드가 뜬다.
-            //    (보내기·게시·구매·이체·삭제는 내가 허용하기 전엔 나가지 않는다)
+            //    (보내기, 게시, 구매, 이체, 삭제는 내가 허용하기 전엔 나가지 않는다)
             if (!guest) {
                 try {
                     const draftRes = await fetch('/api/os/chat/draft', {
@@ -216,12 +215,14 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                     {avatar}
                     <span>{name}</span>
                     <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-                        <button className="os-icon-btn" aria-label="세부 정보" aria-expanded={detailOpen}
-                            title={detailOpen ? '세부 정보 닫기' : '세부 정보 열기'} onClick={() => setDetailOpen(v => !v)}>ⓘ</button>
+                        {!detailOpen && (
+                            <button className="os-icon-btn os-menu" aria-label="세부 정보 열기" aria-expanded={false}
+                                title="세부 정보 열기" onClick={() => setDetailOpen(true)}>≡</button>
+                        )}
                     </span>
                 </header>
 
-                {/* 오늘 체크인 띠 — 오늘 아직 안 했을 때만. 손님·시연에선 안 뜬다 */}
+                {/* 오늘 체크인 띠 — 오늘 아직 안 했을 때만. 손님, 시연에선 안 뜬다 */}
 
                 <div className="os-messages">
                     {greeting && messages.length === 0 && (
@@ -246,25 +247,21 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
                                     />
                                     : <div className="os-bubble bot md">{m.content ? <BotMarkdown text={m.content} /> : (state === 'thinking' ? '…' : '')}</div>}
                                 {m.sources && m.sources.length > 0 && (
-                                    <div className="os-cite">📎 참고한 자료: {m.sources.map(s => s.title).join(' · ')}</div>
-                                )}
-                                {/* 답 아래 작은 링크 — 봇이 말을 다 끝낸 뒤에만 */}
-                                {!m.card && !개인화숨김 && !streaming && m.content && (
-                                    <NextStepLink answer={m.content} mentorId={mentorId} />
+                                    <div className="os-cite">📎 참고한 자료: {m.sources.map(s => s.title).join(', ')}</div>
                                 )}
                             </div>
                         ))}
                     <div ref={endRef} />
                 </div>
 
-                {/* 🍀 클로버 잔량 — 입력창 바로 위. 원화 환산은 안 적는다 */}
-                <CloverBar guest={guest} />
+                {/* 📊 사용 한도 한 줄 (내 봇은 클로버 0 — 대표 확정 0923) */}
+                <UsageBar guest={guest} refreshKey={messages.length} />
 
                 <div className="os-input-bar">
                     <button
                         className="os-icon-btn"
                         aria-label="자료 넣기"
-                        title={bot ? '자료 넣기 (PDF·링크·유튜브·글)' : '내 팀의 봇에만 자료를 넣을 수 있어요'}
+                        title={bot ? '자료 넣기 (PDF, 링크, 유튜브, 글)' : '내 팀의 봇에만 자료를 넣을 수 있어요'}
                         disabled={!bot}
                         onClick={() => setAddSheet(true)}
                     >＋</button>
@@ -283,6 +280,7 @@ export default function OsChat({ mentorId }: { mentorId: string }) {
             </div>
 
             <aside className={`os-right ${detailOpen ? 'open' : 'closed'}`}>
+                <button className="os-icon-btn os-right-close" aria-label="세부 정보 닫기" title="닫기" onClick={() => setDetailOpen(false)}>≡</button>
                 <DetailPane bot={bot} publicName={publicBot?.name ?? null} />
             </aside>
 

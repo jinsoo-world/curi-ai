@@ -1,6 +1,6 @@
 'use client'
-// 설정 (/os/settings) = 일반 · 알림 · 사용량 · 로그아웃. 왼쪽 명단 아래 「⚙ 설정」으로 들어온다.
-// 손님 = 4060 강사·작가. 글자는 크게, 단추는 44px 이상, 색은 [data-theme="os"] 토큰만.
+// 설정 (/os/settings) = 일반 / 알림 / 사용량 / 로그아웃. 왼쪽 명단 아래 「⚙ 설정」으로 들어온다.
+// 손님 = 4060 강사, 작가. 글자는 크게, 단추는 44px 이상, 색은 [data-theme="os"] 토큰만.
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -75,7 +75,7 @@ export default function OsSettingsPage() {
 
             <div className="os-card" style={{ marginTop: 8 }}>
                 <div className="os-set-row">
-                    <div><b>시간대</b><div className="os-set-sub">루틴·체크인·이번 주가 보는 달력이에요.</div></div>
+                    <div><b>시간대</b><div className="os-set-sub">루틴, 체크인, 이번 주가 보는 달력이에요.</div></div>
                     <span>{OS_TIMEZONE} (한국)</span>
                 </div>
             </div>
@@ -84,7 +84,7 @@ export default function OsSettingsPage() {
                 <div className="os-set-row">
                     <div>
                         <b>승인 모드</b>
-                        <div className="os-set-sub">보내기·게시·구매·이체·삭제는 카드로 물어보고, 내가 허용해야만 나가요.</div>
+                        <div className="os-set-sub">보내기, 게시, 구매, 이체, 삭제는 카드로 물어보고, 내가 허용해야만 나가요.</div>
                     </div>
                     <button type="button" role="switch" aria-checked aria-disabled className="os-routine-switch" data-on="true" disabled
                         aria-label="승인 모드 (지금은 끌 수 없어요)"><span /></button>

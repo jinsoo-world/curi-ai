@@ -1,6 +1,6 @@
 'use client'
 // 에이전트 OS 뼈대 = 왼쪽 봇 명단(격자) + 가운데(자식 화면). 그록봇 화면 실측(기획 §13).
-// 팀 명단은 여기서 한 번 불러 아래 화면(대화·세부칸)이 useOsTeam() 으로 같이 쓴다.
+// 팀 명단은 여기서 한 번 불러 아래 화면(대화, 세부칸)이 useOsTeam() 으로 같이 쓴다.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -12,6 +12,7 @@ import BotAvatar from './BotAvatar'
 import NewBotSheet from './NewBotSheet'
 import GuestRoster from './GuestRoster'
 import NewGroupSheet from './NewGroupSheet'
+import { IconStore, IconGear, IconUser, IconLogin } from './Icons'
 import InstallPrompt from '@/components/pwa/InstallPrompt'
 import './os.css'
 
@@ -37,7 +38,7 @@ interface TeamState {
 
 
 /**
- * 시연 모드 (/os?demo=1) = 표(team_bots)가 아직 없어도 격자·캐릭터·대화를 볼 수 있게
+ * 시연 모드 (/os?demo=1) = 표(team_bots)가 아직 없어도 격자, 캐릭터, 대화를 볼 수 있게
  * 공개 봇 3개를 팀처럼 보여준다. 대화는 진짜 /api/chat(공개 봇)로 간다. 저장은 안 한다.
  */
 const DEMO_TEAM: TeamBot[] = [
@@ -222,11 +223,11 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
 
                     <InstallPrompt />
                     <div className="os-left-bottom">
-                        <Link href="/mentors" className="os-row-btn" style={{ textDecoration: 'none' }}>🏪 <span>둘러보기 (리더들의 봇)</span></Link>
-                        <Link href="/os/settings" className="os-row-btn" style={{ textDecoration: 'none' }}>⚙ <span>설정</span></Link>
+                        <Link href="/mentors" className="os-row-btn" style={{ textDecoration: 'none' }}><IconStore /> <span>봇 마켓</span></Link>
+                        <Link href="/os/settings" className="os-row-btn" style={{ textDecoration: 'none' }}><IconGear /> <span>설정</span></Link>
                         {guest
-                            ? <Link href="/login?next=/os" className="os-row-btn" style={{ textDecoration: 'none' }}>👤 <span>로그인</span></Link>
-                            : <Link href="/profile" className="os-row-btn" style={{ textDecoration: 'none' }}>👤 <span>내 계정</span></Link>}
+                            ? <Link href="/login?next=/os" className="os-row-btn" style={{ textDecoration: 'none' }}><IconLogin /> <span>로그인</span></Link>
+                            : <Link href="/profile" className="os-row-btn" style={{ textDecoration: 'none' }}><IconUser /> <span>내 계정</span></Link>}
                     </div>
                 </aside>
 

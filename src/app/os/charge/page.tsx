@@ -1,7 +1,7 @@
 'use client'
 
 // 봇 팀 클로버 충전 (/os/charge) = 옛 /charge 와 결제 속은 같고 겉만 다크 OS.
-// 손님 = 4060 강사·작가·크리에이터. 글자 17px 이상, 단추 52px 이상, 색은 [data-theme="os"] 토큰만.
+// 손님 = 4060 강사, 작가, 크리에이터. 글자 17px 이상, 단추 52px 이상, 색은 [data-theme="os"] 토큰만.
 // ⛔ 클로버 1개가 몇 원인지(원화 환산)는 화면에 적지 않는다(대표 확정 0915). 묶음 가격은 적는다.
 // 어디서 왔는지(?from=/os/chat/…)를 기억해 「돌아가기」와 결제 뒤 도착지로 쓴다.
 import { useEffect, useState } from 'react'
@@ -32,7 +32,7 @@ export default function OsChargePage() {
     useEffect(() => {
         const supabase = createClient()
         supabase.auth.getSession().then(async ({ data }) => {
-            // 어디서 왔는지 기억한다. 주소에 없으면 앞서 적어 둔 것을 쓴다(새로고침·결제창에서 돌아온 경우)
+            // 어디서 왔는지 기억한다. 주소에 없으면 앞서 적어 둔 것을 쓴다(새로고침, 결제창에서 돌아온 경우)
             try {
                 const q = new URLSearchParams(window.location.search)
                 const 저장된 = sessionStorage.getItem(OS_RETURN_KEY)
@@ -116,7 +116,7 @@ export default function OsChargePage() {
                                     </div>
                                     <div className="osc-pack-right">
                                         {r.discount > 0 && (
-                                            <div><span className={`osc-badge${r.recommended ? ' rec' : ''}`}>{r.recommended ? `가장 많이 골라요 · ${r.discount}%` : `${r.discount}% 할인`}</span></div>
+                                            <div><span className={`osc-badge${r.recommended ? ' rec' : ''}`}>{r.recommended ? `가장 많이 골라요 / ${r.discount}%` : `${r.discount}% 할인`}</span></div>
                                         )}
                                         <div className="osc-pack-won">{r.won.toLocaleString()}원</div>
                                     </div>

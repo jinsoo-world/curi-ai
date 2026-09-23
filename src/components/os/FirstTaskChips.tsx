@@ -46,7 +46,7 @@ const TASKS: Record<string, [string, string, string]> = {
     ],
 }
 
-// 직접 쓴 일·공개 봇 = 어떤 봇에게도 통하는 작은 일
+// 직접 쓴 일, 공개 봇 = 어떤 봇에게도 통하는 작은 일
 const COMMON: [string, string, string] = [
     '네가 맡은 일을 한 줄로 설명해 줘',
     '30초 안에 확인할 수 있는 작은 일 하나 해 줘',
