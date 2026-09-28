@@ -21,8 +21,8 @@
 .wel-kicker { font-size: 17px; font-weight: 700; color: var(--os-클로버); letter-spacing: .04em; margin-bottom: 10px; }
 .wel-h1 { font-size: 34px; line-height: 1.3; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 20px; }
 .wel-h2 { font-size: 28px; line-height: 1.35; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 16px; }
-.wel-lead { font-size: 18px; color: var(--os-글-연); margin: 0 auto 4px; max-width: 520px; line-height: 1.6; }
 .wel-p { font-size: 17px; color: var(--os-글-연); margin: 0 auto 16px; max-width: 560px; }
+.wel-team { font-size: 20px; font-weight: 700; color: var(--os-글); margin: 0 auto; }
 .wel-note { font-size: 17px; color: var(--os-글-흐림); margin-top: 18px; }
 
 /* ① 캐릭터 3개 */
@@ -98,7 +98,6 @@
     .wel-sec { padding: 48px 20px; }
     .wel-h1 { font-size: 28px; margin-bottom: 12px; }
     .wel-hero { padding-top: 32px; }
-    .wel-lead { font-size: 17px; }
     .wel-bots { gap: 10px; }
     .wel-h2 { font-size: 24px; }
 }

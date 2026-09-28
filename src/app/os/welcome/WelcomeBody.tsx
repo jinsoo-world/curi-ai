@@ -33,7 +33,6 @@ export default function WelcomeBody() {
             <section className="wel-sec wel-hero">
                 <p className="wel-kicker">{t('wel.kicker')}</p>
                 <h1 className="wel-h1"><Lines text={t('wel.h1short')} /></h1>
-                <p className="wel-lead">{t('wel.lead')}</p>
                 <Link href="/login?next=%2Fos&provider=kakao" className="wel-cta wel-cta-kakao"><KakaoMark size={22} /><span>{t('wel.ctaKakao')}</span></Link>
                 {/* 위계 (대표 0928): 카카오 = 구글(같은 크기, 바로 아래) > 먼저 둘러보기(작은 글자 단추) */}
                 <Link href="/login?next=%2Fos&provider=google" className="wel-google wel-google-wide"><GoogleMark size={22} /><span>{t('wel.ctaGoogle')}</span></Link>
@@ -46,7 +45,7 @@ export default function WelcomeBody() {
                         </div>
                     ))}
                 </div>
-                <p className="wel-p">{t('wel.p1')}</p>
+                <p className="wel-team">{t('wel.team')}</p>
             </section>
 
             {/* ② 승인 카드 */}
