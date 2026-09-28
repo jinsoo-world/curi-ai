@@ -48,8 +48,16 @@
 }
 .wel-sub:hover { background: var(--os-말풍선); }
 /* 카카오 단추는 카카오 노랑, 구글은 그 아래 글자 단추(44px) */
-.wel-cta.wel-cta-kakao { background: #FEE500; color: #191919; margin-top: 22px; }
-.wel-alt { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 6px; padding: 0 12px; color: var(--os-글-연); font-size: 16px; text-decoration: underline; text-underline-offset: 3px; }
+.wel-cta.wel-cta-kakao { background: #FEE500; color: #191919; margin-top: 22px; gap: 10px; }
+/* 구글 = 흰 바탕 + 테두리 + 네 색 G (공식 모양). 첫 화면에선 작은 단추, 마지막 칸에선 넓은 단추 */
+.wel-google {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    min-height: 48px; margin: 12px auto 0; padding: 0 20px; border-radius: 14px;
+    background: #fff; color: #1f1f1f; border: 1px solid #c7c7cc;
+    font-size: 16px; font-weight: 700; text-decoration: none;
+}
+.wel-google:hover { background: #f7f7f8; }
+.wel-google.wel-google-wide { display: flex; width: 100%; max-width: 420px; min-height: 56px; margin-top: 10px; border-radius: 18px; font-size: 18px; }
 
 /* ② 승인 카드 그림 */
 .wel-card {

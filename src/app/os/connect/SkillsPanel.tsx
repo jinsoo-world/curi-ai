@@ -3,7 +3,7 @@
 // 스킬은 「자료」다. 켜고 끄고, 어느 봇에 붙일지 고르고, 지울 수 있다. 본문은 화면에 안 보여 준다(글자 수만).
 
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
+import SocialStartLinks from '@/components/os/SocialStartLinks'
 import type { SkillView } from '@/domains/os/skills'
 import { BUILTIN_SKILLS } from '@/domains/os/skills'
 import type { TeamBot } from '@/domains/os/types'
@@ -135,7 +135,7 @@ export default function SkillsPanel() {
                 {guest ? (
                     <div className="os-connect-login" style={{ marginTop: 10, marginBottom: 0 }}>
                         <b>로그인하면 스킬을 가져올 수 있어요</b>
-                        <Link className="os-btn primary" href="/login?next=%2Fos%2Fconnect%3Ftab%3Dskills">로그인하기</Link>
+                        <SocialStartLinks next="/os/connect?tab=skills" />
                     </div>
                 ) : (
                 <div className="os-connect-form" style={{ marginTop: 8 }}>

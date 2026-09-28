@@ -8,7 +8,7 @@
 // ⚠️ 이 파일은 브라우저에서 돌므로 domains 의 값(crypto 를 끌고 오는 것)을 가져오지 않는다. 타입만.
 
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
+import SocialStartLinks from './SocialStartLinks'
 import type { ProviderView } from '@/domains/connectors/providers'
 import { splitConnectServices } from '@/domains/os/connect-split'
 import './connect.css'
@@ -130,7 +130,7 @@ export default function ConnectorsPanel() {
             <div className="os-connect-login">
                 <b>로그인하면 연결할 수 있어요</b>
                 <span>내 계정으로 로그인한 뒤 서비스를 붙여요.</span>
-                <Link className="os-btn primary" href="/login?next=/os/connect">로그인하기</Link>
+                <SocialStartLinks next="/os/connect" />
             </div>
         )}
         {note && <div className={`os-connect-note${note.warn ? ' warn' : ''}`} style={{ marginBottom: 12 }}>{note.text}</div>}

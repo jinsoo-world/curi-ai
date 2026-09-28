@@ -34,7 +34,7 @@
 .os-connect-login { display: flex; flex-direction: column; gap: 6px; padding: 16px; margin-bottom: 12px; border-radius: 16px; background: color-mix(in srgb, var(--os-클로버) 12%, var(--os-말풍선)); border: 1px solid color-mix(in srgb, var(--os-클로버) 40%, transparent); }
 .os-connect-login b { font-size: calc(17px * var(--os-font-scale, 1)); color: var(--os-글); }
 .os-connect-login span { font-size: calc(15px * var(--os-font-scale, 1)); color: var(--os-글-연); line-height: 1.5; }
-.os-connect-login .os-btn { align-self: flex-start; min-height: 48px; padding: 12px 20px; margin-top: 6px; font-size: calc(16px * var(--os-font-scale, 1)); text-decoration: none; display: inline-flex; align-items: center; }
+.os-connect-login .os-social-start { margin-top: 6px; }
 .os-connect .os-card + .os-card { margin-top: 12px; }
 .os-soon { padding: 14px 16px 16px; }
 .os-soon-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }

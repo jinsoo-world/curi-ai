@@ -4,6 +4,7 @@
 
 import Link from 'next/link'
 import BotAvatar from '@/components/os/BotAvatar'
+import { KakaoMark, GoogleMark } from '@/components/brand/SocialMarks'
 import { useLocale } from '@/components/os/LocaleProvider'
 import { JOBS } from '@/domains/os/presets'
 import type { TKey } from '@/domains/os/i18n'
@@ -33,9 +34,9 @@ export default function WelcomeBody() {
                 <p className="wel-kicker">{t('wel.kicker')}</p>
                 <h1 className="wel-h1"><Lines text={t('wel.h1short')} /></h1>
                 <p className="wel-lead">{t('wel.lead')}</p>
-                <Link href="/login?next=%2Fos&provider=kakao" className="wel-cta wel-cta-kakao">{t('wel.ctaKakao')}</Link>
+                <Link href="/login?next=%2Fos&provider=kakao" className="wel-cta wel-cta-kakao"><KakaoMark size={22} /><span>{t('wel.ctaKakao')}</span></Link>
                 <Link href="/os?demo=1" className="wel-sub">{t('wel.tour')}</Link>
-                <Link href="/login?next=%2Fos&provider=google" className="wel-alt">{t('wel.ctaGoogle')}</Link>
+                <Link href="/login?next=%2Fos&provider=google" className="wel-google"><GoogleMark /><span>{t('wel.ctaGoogle')}</span></Link>
                 <div className="wel-bots" aria-hidden>
                     {SHOWCASE.map(s => (
                         <div key={s.job} className="wel-bot">
@@ -82,7 +83,8 @@ export default function WelcomeBody() {
                     <li><b>3</b><span>{t('wel.step3')}</span></li>
                 </ol>
                 <p className="wel-p">{t('wel.p4')}</p>
-                <Link href="/login?next=/os" className="wel-cta">{t('wel.cta')}</Link>
+                <Link href="/login?next=%2Fos&provider=kakao" className="wel-cta wel-cta-kakao"><KakaoMark size={22} /><span>{t('wel.ctaKakao')}</span></Link>
+                <Link href="/login?next=%2Fos&provider=google" className="wel-google wel-google-wide"><GoogleMark /><span>{t('wel.ctaGoogle')}</span></Link>
                 <Link href="/os?demo=1" className="wel-sub">{t('wel.tour')}</Link>
                 <p className="wel-foot">
                     <Link href="/terms">{t('wel.terms')}</Link>

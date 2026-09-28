@@ -258,9 +258,10 @@
 .os-head-btn[aria-expanded="true"] { background: var(--os-말풍선-내); border-color: var(--os-글-연); }
 
 /* 로그인 전이라 막힌 답 아래 로그인 단추 (대표 승인 0928 사용성 1번) */
-.os-login-gate { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; max-width: 86%; }
+.os-login-gate { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; max-width: 100%; }
 .os-login-gate-note { flex-basis: 100%; font-size: 15px; color: var(--os-글-연); line-height: 1.5; }
-.os-login-gate-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 20px; border-radius: 14px; font-size: 16px; font-weight: 700; text-decoration: none; }
+.os-social-start { display: flex; flex-wrap: wrap; gap: 8px; }
+.os-login-gate-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 14px; border-radius: 14px; font-size: 16px; font-weight: 700; text-decoration: none; }
 .os-login-gate-btn.kakao { background: #FEE500; color: #191919; }
 .os-login-gate-btn.google { background: #fff; color: #1f1f1f; border: 1px solid #c7c7cc; }
 /* 입력창 안 단추(＋, ↑) = 정확히 44×44 원 (대표 폰 실측 0923 「보내기가 타원으로 깨진다」) */

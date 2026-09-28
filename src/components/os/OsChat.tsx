@@ -18,7 +18,8 @@ import BotMarkdown from './BotMarkdown'
 import { CloseIcon, swipeToClose } from './MenuIcon'
 import { PeopleIcon, InfoIcon } from './Icons'
 import FirstTaskChips from './FirstTaskChips'
-import { isLoginGateReply, loginHref } from '@/domains/os/audience'
+import { isLoginGateReply } from '@/domains/os/audience'
+import SocialStartLinks from './SocialStartLinks'
 import { markFirstChatDone } from '@/components/pwa/install-rules'
 import PermissionCard from './PermissionCard'
 import type { CardView } from './PermissionCard'
@@ -740,8 +741,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                                         {m.loginGate && (
                                             <div className="os-login-gate" role="group" aria-label="로그인하고 이어서 대화하기">
                                                 <div className="os-login-gate-note">로그인하면 바로 이어서 대화할 수 있어요.</div>
-                                                <a className="os-login-gate-btn kakao" href={loginHref(hereForLogin(), 'kakao')}>카카오로 시작</a>
-                                                <a className="os-login-gate-btn google" href={loginHref(hereForLogin(), 'google')}>구글로 시작</a>
+                                                <SocialStartLinks next={hereForLogin()} />
                                             </div>
                                         )}
                                         {m.content && !m.card && !m.loginGate && <OgLinkPreview text={m.content} />}
