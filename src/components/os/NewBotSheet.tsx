@@ -489,6 +489,23 @@ function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => v
         }
     }
 
+    // /home 에서 링크를 넣고 온 분은 입력 칸을 다시 보여 주지 않는다 (대표 지시 0929 「왜 또 넣으래」). 못 만들었을 때만 칸을 연다
+    if (!draft && initial && !err && unreadOnly.length === 0) return (
+        <>
+            <div className="os-step">넣어 주신 곳을 읽고 나를 닮은 봇 초안을 만들고 있어요</div>
+            <div className="os-field" style={{ display: 'grid', gap: 6 }}>
+                {filled.map(l => (
+                    <div key={l} style={{ fontSize: 14, color: 'var(--os-글-연)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l}</div>
+                ))}
+            </div>
+            <div className="os-step" role="status" aria-live="polite">{busy ? stepText : '곧 시작해요'}</div>
+            <div className="os-sheet-foot">
+                <button type="button" className="os-btn" onClick={onClose} disabled={busy}>닫기</button>
+                <button type="button" className="os-btn primary" disabled>만드는 중</button>
+            </div>
+        </>
+    )
+
     if (!draft) return (
         <>
             <div className="os-step">{TWIN_DRAFT_COPY.intro}</div>
