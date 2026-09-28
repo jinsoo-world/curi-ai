@@ -114,7 +114,7 @@ export function fuseRrf(row: Pick<HybridRow, 'vec_rank' | 'kw_rank'>): number {
 }
 
 /** 낱말로만 걸린 조각도 벡터 유사도가 이 값보다 너무 낮으면 버린다 (흔한 낱말 하나로 엉뚱한 조각이 끼는 것 방지) */
-const KEYWORD_ONLY_SIM_MARGIN = 0.15
+const KEYWORD_ONLY_SIM_MARGIN = 0.10
 
 /**
  * 벡터 유사도 기반 지식 검색 (+ 낱말 검색 합치기)
