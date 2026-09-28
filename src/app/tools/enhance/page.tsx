@@ -14,7 +14,6 @@ import ToolHero from '@/components/studio/ToolHero'
 import Image from 'next/image'
 import KeepNotice from '@/components/studio/KeepNotice'
 import ShareTool from '@/components/studio/ShareTool'
-import AdSlot from '@/components/AdSlot'
 import { 센다 } from '@/lib/track'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { useSticky } from '@/components/studio/useSticky'
@@ -212,8 +211,6 @@ export default function EnhancePage() {
                     )}
                 </div>
 
-                {/* 광고(애드센스) — 무료 화면에만, 본문 끝난 뒤 */}
-                <AdSlot />
             </div>
         </main>
     )

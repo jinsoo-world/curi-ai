@@ -9,7 +9,6 @@ import { AGES, DEFAULT_AGE_ID } from '@/domains/studio/photo'
 import { RATIOS, DEFAULT_RATIO_ID } from '@/domains/studio/ratios'
 import PhotoToolShell from '@/components/studio/PhotoToolShell'
 import AppSidebar from '@/components/AppSidebar'
-import AdSlot from '@/components/AdSlot'
 import { 센다 } from '@/lib/track'
 import { 브라우저표식 } from '@/lib/browser-mark'
 import { useSticky } from '@/components/studio/useSticky'
@@ -212,8 +211,6 @@ function TeacherPhotoPage안쪽() {
                 </칸>
             </PhotoToolShell>
 
-            {/* 광고(애드센스) — 무료 화면에만, 본문 끝난 뒤 */}
-            <AdSlot />
         </main>
     )
 }

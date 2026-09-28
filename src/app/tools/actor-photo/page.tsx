@@ -21,7 +21,6 @@ import { HERO_PHOTO_KEY } from '@/components/studio/PhotoHero'
 import { useStickyPhoto } from '@/components/studio/useStickyPhoto'
 import KeepNotice from '@/components/studio/KeepNotice'
 import ShareTool from '@/components/studio/ShareTool'
-import AdSlot from '@/components/AdSlot'
 import { 센다 } from '@/lib/track'
 import { useGuest } from '@/components/studio/useGuest'
 import { useClover } from '@/components/studio/useClover'
@@ -452,8 +451,6 @@ function ActorPhotoPage안쪽() {
                     ))}
                 </div>
 
-                {/* 광고(애드센스) — 무료 화면에만, 본문 끝난 뒤 */}
-                <AdSlot />
             </div>
         </main>
     )

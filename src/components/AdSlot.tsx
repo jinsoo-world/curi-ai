@@ -12,13 +12,21 @@ declare global {
     }
 }
 
+/** 광고 스위치. 대표 결정 0928 「광고 없음」(N2, D8)으로 꺼 둔다. 사이트 스크립트도 layout.tsx 에서 뺐다 */
+const ADS_ENABLED = false
+
 type AdSlotProps = {
     /** 광고 단위 ID. 안 주면 자동 광고 형식(전면 지정 없이 구글이 알아서 채움)으로 뜬다. */
     slot?: string
     className?: string
 }
 
-export default function AdSlot({ slot, className }: AdSlotProps) {
+export default function AdSlot(props: AdSlotProps) {
+    if (!ADS_ENABLED) return null
+    return <AdSlotInner {...props} />
+}
+
+function AdSlotInner({ slot, className }: AdSlotProps) {
     // React 18/19 StrictMode(개발 모드)에서는 effect 가 두 번 돈다.
     // push 를 두 번 하면 애드센스가 콘솔에 에러를 찍으므로, ref 로 "이미 한 번 밀었다"를 기억해 두 번째는 건너뛴다.
     const 이미밀었음 = useRef(false)

@@ -216,14 +216,7 @@ export default function RootLayout({
             font-display: optional;
           }
         ` }} />
-        {/* 구글 애드센스 — 사이트 소유권 확인용.
-            광고를 어디에 띄울지는 애드센스 쪽 설정으로 정한다.
-            채팅 화면에는 붙이지 않는다(대화가 끊기고 정책 위험). */}
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2184886903448753"
-          crossOrigin="anonymous"
-        />
+        {/* 광고 스크립트(구글 애드센스)는 뺐다. 대표 결정 0928: 광고 없음 (N2, D8) */}
 
         {/* JSON-LD 구조화 데이터 */}
         <script
