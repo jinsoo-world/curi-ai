@@ -39,6 +39,20 @@ function metaRow(meta?: KnowledgeSourceMeta): Record<string, unknown> {
 }
 
 /**
+ * 못 읽은 이유를 적는 칸. 지금은 있는 summary 칸을 실패일 때만 이유 칸으로 쓴다(표를 바꾸지 않음).
+ * 이유 전용 칸(마이그레이션)이 생기면 이 이름 하나만 바꾼다.
+ */
+export const FAIL_REASON_COL = 'summary'
+
+/** 못 읽은 이유를 화면에 보일 한 줄로 (길면 자르고, 기술 말은 사람 말로) */
+export function failReasonLine(e: unknown): string {
+    const raw = (e instanceof Error ? e.message : String(e ?? '')).replace(/\s+/g, ' ').trim()
+    if (!raw || /fetch failed|ECONN|ETIMEDOUT|timeout|aborted/i.test(raw)) return '잠시 연결이 끊겼어요'
+    if (/조각 저장 실패|embedding|임베딩/i.test(raw)) return '글을 저장하다 멈췄어요'
+    return raw.slice(0, 100)
+}
+
+/**
  * 지식 소스 등록 + 청크 분할 + 임베딩 생성
  *
  * opts.singleChunk = true 면 문단이 여러 개라도 조각을 쪼개지 않고 통째로 하나만 저장한다.
@@ -119,8 +133,9 @@ export async function addKnowledgeSource(
         return source
     } catch (error) {
         // 처리 실패
+        // 못 읽은 이유 한 줄은 summary 칸에 둔다(실패일 때만. 표는 바꾸지 않는다). 화면이 「다시 시도」와 함께 보여 준다
         await db.from('knowledge_sources')
-            .update({ processing_status: 'failed' })
+            .update({ processing_status: 'failed', [FAIL_REASON_COL]: failReasonLine(error) })
             .eq('id', source.id)
 
         console.error('[Knowledge] Processing failed:', error)

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { isSafeExternalUrl, isYoutubeUrl, htmlToText, pickTitle, assertBotOwned, BotNotMine, assertRoomForMore, USABLE_SOURCE_FILTER, MAX_SOURCES_PER_BOT } from '../knowledge'
+import { isSafeExternalUrl, isYoutubeUrl, htmlToText, pickTitle, assertBotOwned, BotNotMine, assertRoomForMore, USABLE_SOURCE_FILTER, MAX_SOURCES_PER_BOT, isUnusableSource, retryBotSource } from '../knowledge'
 
 describe('isSafeExternalUrl — 우리 서버가 대신 열어도 되는 주소인가', () => {
     it('평범한 공개 주소는 통과', () => {
@@ -130,5 +130,55 @@ describe('assertRoomForMore — 쓸 수 있는 자료만 자리를 차지한다'
     it('쓸 수 있는 자료가 10개면 막는다', async () => {
         const { db } = fakeDb(ok(MAX_SOURCES_PER_BOT))
         await expect(assertRoomForMore(db, 'm1')).rejects.toThrow()
+    })
+})
+
+describe('못 읽은 자료 다시 시도', () => {
+    it('실패, 또는 다 끝났는데 조각 0개면 못 읽은 자료', () => {
+        expect(isUnusableSource('failed', 0)).toBe(true)
+        expect(isUnusableSource('completed', 0)).toBe(true)
+        expect(isUnusableSource('completed', 3)).toBe(false)
+        expect(isUnusableSource('processing', 0)).toBe(false)
+    })
+
+    // 부른 것을 적어 두는 가짜 DB. select 는 row 하나를 돌려준다
+    function fakeDb(row: Record<string, unknown> | null) {
+        const log: { table: string; op: string; arg?: unknown; eqs: [string, unknown][] }[] = []
+        const from = (table: string) => {
+            const entry = { table, op: 'select', arg: undefined as unknown, eqs: [] as [string, unknown][] }
+            log.push(entry)
+            const q: any = {
+                select: () => q,
+                update: (v: unknown) => { entry.op = 'update'; entry.arg = v; return q },
+                delete: () => { entry.op = 'delete'; return q },
+                eq: (k: string, v: unknown) => { entry.eqs.push([k, v]); return q },
+                maybeSingle: async () => ({ data: row, error: null }),
+                then: (res: (v: unknown) => void) => res({ error: null }),
+            }
+            return q
+        }
+        return { db: { from } as unknown as SupabaseClient, log }
+    }
+
+    it('파일은 조각을 비우고 기다리는 중으로 돌려 다시 읽게 한다 (이유 칸도 비움)', async () => {
+        const { db, log } = fakeDb({ id: 's1', title: 'a.pdf', source_type: 'pdf', original_url: 'm1/1-file.pdf', content: null, processing_status: 'failed', chunk_count: 0, source_kind: null })
+        await expect(retryBotSource(db, 'm1', 's1')).resolves.toEqual({ mode: 'process', sourceId: 's1' })
+        expect(log.find(l => l.table === 'knowledge_chunks')?.op).toBe('delete')
+        const up = log.find(l => l.op === 'update')
+        expect(up?.arg).toMatchObject({ processing_status: 'pending', chunk_count: 0 })
+        expect(up?.eqs).toContainEqual(['mentor_id', 'm1'])
+    })
+    it('다 읽은 자료는 다시 읽지 않는다', async () => {
+        const { db } = fakeDb({ id: 's1', title: 'a', source_type: 'text', original_url: null, content: '글'.repeat(20), processing_status: 'completed', chunk_count: 2, source_kind: null })
+        await expect(retryBotSource(db, 'm1', 's1')).rejects.toThrow('이미 다 읽은 자료예요')
+    })
+    it('남의 봇 자료 번호면 못 찾는다', async () => {
+        const { db, log } = fakeDb(null)
+        await expect(retryBotSource(db, 'm1', 'x')).rejects.toThrow('그 자료를 못 찾았어요')
+        expect(log[0].eqs).toContainEqual(['mentor_id', 'm1'])
+    })
+    it('원본이 없으면 빼고 다시 넣어 달라고 한다', async () => {
+        const { db } = fakeDb({ id: 's1', title: 'a', source_type: 'text', original_url: null, content: null, processing_status: 'failed', chunk_count: 0, source_kind: null })
+        await expect(retryBotSource(db, 'm1', 's1')).rejects.toThrow('다시 읽을 원본이 없어요')
     })
 })

@@ -8,12 +8,15 @@ import { 클로버알림 } from '@/lib/clover-bus'
 
 type Link = { id: string; url: string; platform: string; status: 'read' | 'pending' | 'failed'; added_count: number; note: string | null }
 const STATUS: Record<Link['status'], string> = { read: '읽음', pending: '준비 중', failed: '못 읽음' }
+/** 대표 글 붙여넣기를 받는 곳 (서버 classifySnsLink 의 paste 와 같다) */
+const PASTE_PLATFORMS = ['naver_blog', 'brunch']
 
 export default function SnsLinkCard() {
     const [links, setLinks] = useState<Link[]>([])
     const [url, setUrl] = useState('')
     const [busy, setBusy] = useState(false)
     const [msg, setMsg] = useState('')
+    const [retryId, setRetryId] = useState<string | null>(null)
     // 네이버 블로그, 브런치 = 대표 글 붙여넣기 칸
     const [pasteUrl, setPasteUrl] = useState<string | null>(null)
     const [posts, setPosts] = useState<string[]>(() => Array(PASTE_MAX_POSTS).fill(''))
@@ -27,21 +30,25 @@ export default function SnsLinkCard() {
     }, [])
     useEffect(() => { void Promise.resolve().then(load) }, [load])
 
-    const add = async () => {
-        if (!url.trim() || busy) return
+    /** 링크 넣기. 못 읽은 링크의 「다시 시도」도 같은 길로 다시 읽는다 */
+    const add = async (target?: string) => {
+        const u = (target ?? url).trim()
+        if (!u || busy) return
         setBusy(true)
+        setRetryId(target ? (links.find(l => l.url === target)?.id ?? null) : null)
         setMsg('읽는 중이에요. 30초쯤 걸릴 수 있어요')
         try {
-            const r = await fetch('/api/os/sns-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, source: 'settings' }) })
+            const r = await fetch('/api/os/sns-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: u, source: 'settings' }) })
             const d = await r.json().catch(() => ({}))
             setMsg(d.error || d.message || '')
             if (typeof d.balance === 'number') 클로버알림(d.balance)
-            if (r.ok && d.status === 'paste') setPasteUrl(url.trim())
-            if (r.ok) { setUrl(''); void load() }
+            if (r.ok && d.status === 'paste') setPasteUrl(u)
+            if (r.ok) { if (!target) setUrl(''); void load() }
         } catch {
             setMsg('인터넷 연결을 확인하고 다시 해 주세요')
         } finally {
             setBusy(false)
+            setRetryId(null)
         }
     }
 
@@ -87,11 +94,21 @@ export default function SnsLinkCard() {
                     </div>
                 )}
                 {links.map(l => (
-                    <div key={l.id} className="os-set-line">
-                        <div className="os-set-text" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.url}</div>
-                        {l.status !== 'read' && (l.platform === 'naver_blog' || l.platform === 'brunch')
-                            ? <button type="button" className="os-btn" onClick={() => setPasteUrl(l.url)}>글 붙여넣기</button>
-                            : <span className="os-set-value">{STATUS[l.status]}{l.status === 'read' && l.added_count > 0 ? ` ${l.added_count}건` : ''}</span>}
+                    <div key={l.id}>
+                        <div className="os-set-line">
+                            <div className="os-set-text" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.url}</div>
+                            {l.status === 'failed'
+                                ? <button type="button" className="os-btn" disabled={busy} onClick={() => void add(l.url)}>{retryId === l.id ? '읽는 중' : '다시 시도'}</button>
+                                : l.status === 'pending' && PASTE_PLATFORMS.includes(l.platform)
+                                ? <button type="button" className="os-btn" onClick={() => setPasteUrl(l.url)}>글 붙여넣기</button>
+                                : <span className="os-set-value">{STATUS[l.status]}</span>}
+                        </div>
+                        {l.status === 'failed' && (
+                            <div className="os-set-sub" role="status" style={{ color: 'var(--os-경고)', display: 'flex', gap: 8, alignItems: 'center' }}>
+                                <span style={{ flex: 1, minWidth: 0 }}>{l.note ? `못 읽었어요. ${l.note}` : '못 읽었어요'}</span>
+                                {PASTE_PLATFORMS.includes(l.platform) && <button type="button" className="os-btn" onClick={() => setPasteUrl(l.url)}>글 붙여넣기</button>}
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>

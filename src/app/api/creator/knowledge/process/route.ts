@@ -1,5 +1,6 @@
 // /api/creator/knowledge/process — 업로드된 파일 텍스트 추출 + 임베딩
 import { NextRequest, NextResponse } from 'next/server'
+import { FAIL_REASON_COL } from '@/domains/knowledge/actions'
 import { requireMentorOwner } from '@/lib/mentor-owner'
 import { generateEmbedding, splitIntoChunksWithHeadings, contextualEmbeddingText } from '@/domains/knowledge/embedding'
 import { askSideText } from '@/domains/llm/side-text'
@@ -205,6 +206,8 @@ function extractTextFromUpstage(pd: Record<string, unknown>): string {
 }
 
 export async function POST(req: NextRequest) {
+    // 못 읽으면 「못 읽음」과 이유 한 줄을 남긴다 (화면이 「다시 시도」와 함께 보여 준다). 이유는 summary 칸(실패일 때만)
+    let failSource: ((why: string) => Promise<void>) | null = null
     try {
         const { sourceId, mentorId } = await req.json()
 
@@ -215,11 +218,15 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: owner.error }, { status: owner.status })
         }
         const admin = owner.admin
+        failSource = async (why: string) => {
+            await admin.from('knowledge_sources').update({ processing_status: 'failed', [FAIL_REASON_COL]: why.slice(0, 120) }).eq('id', sourceId).eq('mentor_id', mentorId)
+        }
 
         const { data: source, error: srcErr } = await admin
             .from('knowledge_sources')
             .select('*')
             .eq('id', sourceId)
+            .eq('mentor_id', mentorId)
             .single()
 
         if (srcErr || !source) {
@@ -236,9 +243,7 @@ export async function POST(req: NextRequest) {
             .download(source.original_url)
 
         if (dlError || !fileData) {
-            await admin.from('knowledge_sources')
-                .update({ processing_status: 'failed' })
-                .eq('id', sourceId)
+            await failSource('올린 파일을 못 찾았어요. 빼고 다시 올려 주세요')
             return NextResponse.json({ error: '파일 다운로드 실패' }, { status: 500 })
         }
 
@@ -510,15 +515,14 @@ export async function POST(req: NextRequest) {
         }
 
         if (!textContent.trim()) {
-            await admin.from('knowledge_sources')
-                .update({ processing_status: 'failed' })
-                .eq('id', sourceId)
             let 이유 = '텍스트를 추출할 수 없습니다.'
             if (ext === 'pdf') {
                 이유 = 'PDF에서 글자를 못 뽑았어요. 스캔본(사진만 있는 PDF)이거나 암호가 걸린 파일일 수 있어요. 글자를 드래그해 고를 수 있는 PDF로 다시 올려 주세요.'
             } else if (['xlsx', 'xls', 'csv'].includes(ext)) {
                 이유 = '엑셀/CSV에서 글자를 못 뽑았어요. 암호가 걸려 있거나 칸이 비어 있는 표일 수 있어요.'
             }
+            await failSource(ext === 'pdf' ? '글자를 못 뽑았어요. 스캔본이거나 암호가 걸린 PDF일 수 있어요'
+                : ['xlsx', 'xls', 'csv'].includes(ext) ? '표에서 글자를 못 뽑았어요' : '이 파일에서 글자를 못 뽑았어요')
             return NextResponse.json({ error: 이유 }, { status: 400 })
         }
 
@@ -563,6 +567,11 @@ export async function POST(req: NextRequest) {
             }
         }
         console.log(`[Process] Embedding result: ${successCount}/${chunks.length} chunks OK`)
+        // 조각이 하나도 안 들어갔으면 「다 읽음」이 아니라 「못 읽음」이다 (예전에는 조각 0개로 다 읽음이 됐다)
+        if (successCount === 0) {
+            await failSource('글을 저장하다 멈췄어요. 다시 시도해 주세요')
+            return NextResponse.json({ error: '봇이 글을 저장하지 못했어요. 다시 시도해 주세요' }, { status: 500 })
+        }
 
         await admin.from('knowledge_sources')
             .update({
@@ -580,6 +589,8 @@ export async function POST(req: NextRequest) {
         })
     } catch (error: unknown) {
         console.error('[Process API] Error:', error)
+        // 예전에는 여기서 「읽는 중」으로 영영 남았다
+        if (failSource) await failSource('읽다가 멈췄어요. 다시 시도해 주세요').catch(() => {})
         const message = error instanceof Error ? error.message : '처리 중 오류'
         return NextResponse.json({ error: message }, { status: 500 })
     }

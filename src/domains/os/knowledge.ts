@@ -6,6 +6,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { addKnowledgeSource } from '@/domains/knowledge'
+import { failReasonLine, FAIL_REASON_COL } from '@/domains/knowledge/actions'
 import { readUrl, KNOWLEDGE_READ_OPTIONS } from '@/domains/os/readers'
 import { markInjectionPatterns } from '@/domains/chat/injection'
 
@@ -60,23 +61,36 @@ export interface BotSource {
     sourceKind?: string
     /** 인용·출처 주소 */
     citationUrl?: string
+    /** 못 읽었을 때 이유 한 줄 (모르면 비어 있다) */
+    failReason?: string
 }
 
 const BASE_COLS = 'id, title, source_type, processing_status, chunk_count, created_at'
-const META_COLS = `${BASE_COLS}, context, author_is_me, source_kind, citation_url`
+const META_COLS = `${BASE_COLS}, context, author_is_me, source_kind, citation_url, ${FAIL_REASON_COL}`
 
 type SourceRow = {
     id: string; title: string; source_type: BotSourceType
     processing_status: BotSource['status']; chunk_count: number | null; created_at: string
     context?: string | null; author_is_me?: boolean | null; source_kind?: string | null; citation_url?: string | null
+    [FAIL_REASON_COL]?: string | null
 }
 
+/** 못 읽은 자료 = 처리 실패, 또는 다 끝났는데 조각이 0개 (봇이 한 글자도 못 읽는다) */
+export function isUnusableSource(status: string, chunkCount: number | null | undefined): boolean {
+    return status === 'failed' || (status === 'completed' && (chunkCount ?? 0) === 0)
+}
+
+export const EMPTY_SOURCE_REASON = '읽을 글을 못 찾았어요'
+
 function toBotSource(r: SourceRow): BotSource {
+    const bad = isUnusableSource(r.processing_status, r.chunk_count)
     return {
         id: r.id, title: r.title, sourceType: r.source_type,
-        status: r.processing_status, chunkCount: r.chunk_count ?? 0, createdAt: r.created_at,
+        status: bad ? 'failed' : r.processing_status, chunkCount: r.chunk_count ?? 0, createdAt: r.created_at,
         context: r.context ?? undefined, authorIsMe: r.author_is_me ?? undefined,
         sourceKind: r.source_kind ?? undefined, citationUrl: r.citation_url ?? undefined,
+        // summary 칸은 실패한 자료에서만 이유로 읽는다 (다 읽은 자료의 summary 는 요약이다)
+        failReason: bad ? (r.processing_status === 'failed' ? (String(r[FAIL_REASON_COL] ?? '')).trim() || undefined : EMPTY_SOURCE_REASON) : undefined,
     }
 }
 
@@ -253,6 +267,54 @@ export async function addLinkSource(db: SupabaseClient, mentorId: string, rawUrl
     }
     console.log('[os/knowledge] 링크 읽음', { kind: read.kind, method: read.method, chars: text.length })
     return addKnowledgeSource(db, mentorId, read.title, text, read.kind === 'youtube' ? 'youtube' : 'url', read.url)
+}
+
+/**
+ * 못 읽은 자료 다시 읽기 (「다시 시도」). 주인 확인은 부르는 쪽에서 먼저 한다.
+ *   파일 = 조각을 비우고 「기다리는 중」으로 돌린다 → 화면이 기존 창구(/api/creator/knowledge/process)를 다시 부른다 (mode: 'process')
+ *   링크, 유튜브 = 다시 읽어 새 자료로 넣고, 성공하면 못 읽은 옛 자료를 뺀다 (mode: 'done')
+ *   글 = 저장된 원문으로 다시 조각을 만든다 (mode: 'done')
+ * 실패하면 이유를 던진다. 옛 자료는 그대로 남아 다시 시도할 수 있다.
+ */
+export async function retryBotSource(db: SupabaseClient, mentorId: string, sourceId: string, opts: { userId?: string } = {}): Promise<{ mode: 'process' | 'done'; sourceId: string }> {
+    const { data, error } = await db
+        .from('knowledge_sources')
+        .select('id, title, source_type, original_url, content, processing_status, chunk_count, source_kind')
+        .eq('id', sourceId)
+        .eq('mentor_id', mentorId)       // 🔒 다른 봇의 자료 번호를 적어 보내도 안 된다
+        .maybeSingle()
+    if (error) throw new Error(error.message)
+    if (!data) throw new Error('그 자료를 못 찾았어요')
+    const row = data as { id: string; title: string; source_type: BotSourceType; original_url: string | null; content: string | null; processing_status: string; chunk_count: number | null; source_kind: string | null }
+    if (!isUnusableSource(row.processing_status, row.chunk_count)) throw new Error('이미 다 읽은 자료예요')
+
+    const path = row.original_url ?? ''
+    if (path && !/^https?:\/\//i.test(path)) {
+        // 파일: 남은 조각을 비우고 처음부터 다시 읽게 한다
+        await db.from('knowledge_chunks').delete().eq('source_id', row.id)
+        const { error: upErr } = await db.from('knowledge_sources')
+            .update({ processing_status: 'pending', chunk_count: 0, [FAIL_REASON_COL]: null })
+            .eq('id', row.id).eq('mentor_id', mentorId)
+        if (upErr) throw new Error(upErr.message)
+        return { mode: 'process', sourceId: row.id }
+    }
+
+    let fresh: { id: string }
+    if (path) {
+        fresh = await addLinkSource(db, mentorId, path, { userId: opts.userId }) as { id: string }
+    } else if ((row.content ?? '').trim().length >= 10) {
+        try {
+            fresh = await addKnowledgeSource(db, mentorId, row.title, row.content as string, row.source_type, undefined, {
+                meta: row.source_kind ? { sourceKind: row.source_kind } : undefined,
+            }) as { id: string }
+        } catch (e) {
+            throw new Error(failReasonLine(e))
+        }
+    } else {
+        throw new Error('다시 읽을 원본이 없어요. 빼고 다시 넣어 주세요')
+    }
+    await removeBotSource(db, mentorId, row.id)
+    return { mode: 'done', sourceId: fresh.id }
 }
 
 /** 자료 하나 빼기 (조각까지 같이 지운다). 주인 확인은 부르는 쪽에서 먼저 한다 */

@@ -18,6 +18,8 @@ export interface BotSourceView {
     authorIsMe?: boolean
     /** 넣은 방식 세부: file/url/youtube/text/qa/note/csv/fix */
     sourceKind?: string
+    /** 못 읽었을 때 이유 한 줄 */
+    failReason?: string
 }
 
 const KIND_ICON: Record<BotSourceView['sourceType'], string> = { pdf: '📄', url: '🔗', youtube: '▶️', text: '📝' }
@@ -40,6 +42,9 @@ export default function KnowledgeList({ mentorId, onCountChange }: { mentorId: s
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editContext, setEditContext] = useState('')
     const [editAuthorIsMe, setEditAuthorIsMe] = useState(false)
+    // 「다시 시도」 중인 자료와, 다시 해도 안 됐을 때 그 줄에 보일 이유
+    const [retrying, setRetrying] = useState<string | null>(null)
+    const [retryNote, setRetryNote] = useState<Record<string, string>>({})
     /** 아직 읽는 중인 자료가 있나 (있을 때만 몇 초마다 다시 본다) */
     const 읽는중 = useRef(false)
 
@@ -102,6 +107,35 @@ export default function KnowledgeList({ mentorId, onCountChange }: { mentorId: s
         await reload()
     }
 
+    /** 못 읽은 자료 다시 읽기. 파일은 기존 읽기 창구를 다시 부르고, 링크와 글은 서버가 바로 다시 읽는다 */
+    const 다시시도 = async (s: BotSourceView) => {
+        if (retrying) return
+        setRetrying(s.id)
+        setRetryNote(prev => { const n = { ...prev }; delete n[s.id]; return n })
+        try {
+            const res = await fetch('/api/os/knowledge', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mentorId, kind: 'retry', sourceId: s.id }),
+            })
+            const d = await res.json().catch(() => ({}))
+            if (!res.ok) throw new Error(d.error || '다시 읽지 못했어요')
+            if (d.mode === 'process') {
+                await load()
+                const r2 = await fetch('/api/creator/knowledge/process', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sourceId: d.sourceId, mentorId }),
+                })
+                const d2 = await r2.json().catch(() => ({}))
+                if (!r2.ok) throw new Error(d2.error || '다시 읽지 못했어요')
+            }
+        } catch (e) {
+            setRetryNote(prev => ({ ...prev, [s.id]: e instanceof Error ? e.message : '다시 읽지 못했어요' }))
+        } finally {
+            setRetrying(null)
+            await reload()
+        }
+    }
+
     const 메타편집시작 = (s: BotSourceView) => {
         setEditingId(s.id); setEditContext(s.context ?? ''); setEditAuthorIsMe(!!s.authorIsMe)
     }
@@ -141,6 +175,15 @@ export default function KnowledgeList({ mentorId, onCountChange }: { mentorId: s
                         </span>
                         <button className="os-source-x" aria-label={`${s.title} 빼기`} title="빼기" onClick={() => void 빼기(s.id, s.title)}>✕</button>
                     </div>
+                    {s.status === 'failed' && (
+                        <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '2px 0 6px', fontSize: 13, color: 'var(--os-경고)' }}>
+                            <span style={{ flex: 1, minWidth: 0 }}>{retryNote[s.id] || (s.failReason ? `못 읽었어요. ${s.failReason}` : '못 읽었어요')}</span>
+                            <button type="button" className="os-btn" style={{ minHeight: 32, padding: '6px 10px', flexShrink: 0 }}
+                                disabled={retrying !== null} onClick={() => void 다시시도(s)}>
+                                {retrying === s.id ? '읽는 중' : '다시 시도'}
+                            </button>
+                        </div>
+                    )}
                     {editingId === s.id ? (
                         <div className="os-source-meta-edit">
                             <input type="text" value={editContext} onChange={e => setEditContext(e.target.value)}

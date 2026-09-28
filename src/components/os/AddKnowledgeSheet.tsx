@@ -120,8 +120,9 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
             return
         }
         setUrls(실패.map(f => f.url))
-        setMsg(성공 > 0 ? `${목록.length}개 중 ${성공}개 넣었어요` : null)
-        setErr(`${실패.length}개는 못 넣었어요. 남긴 주소를 고쳐서 다시 「넣기」를 눌러 주세요. (${실패[0].why})`)
+        setMsg(성공 > 0 ? '나머지는 넣었어요' : null)
+        // 못 읽은 주소만 칸에 남기고 이유 한 줄. 아래 단추가 「다시 시도」로 바뀐다
+        setErr(`못 읽었어요. ${실패[0].why}`)
     }
 
     /** Q&A 한 쌍을 직접 써서 넣는다. 질문+답을 하나로 기억해서 비슷한 질문에 이 답을 앞세운다 */
@@ -289,7 +290,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                         <button type="button" className="os-btn" style={{ minHeight: 44 }} disabled={busy}
                             onClick={() => setUrls(prev => [...prev, ''])}>＋ 주소 더 넣기</button>
                         <div style={{ color: 'var(--os-글-흐림)', fontSize: 13, lineHeight: 1.5 }}>
-                            주소를 여러 줄 붙여 넣으면 알아서 나눠요. 유튜브는 아직 제목과 주소만 기억해요. 영상 속 말은 못 읽어요.
+                            주소를 여러 줄 붙여 넣으면 알아서 나눠요. 유튜브는 자막과 설명을 읽어요.
                         </div>
                     </div>
                 )}
@@ -359,7 +360,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                     <button className="os-btn" onClick={onClose} disabled={busy}>닫기</button>
                     {tab !== 'file' && tab !== 'csv' && tab !== 'folder' && tab !== 'cloud' && tab !== 'feed' && (
                         <button className="os-btn primary" onClick={넣기} disabled={busy || !넣을수있나}>
-                            {busy ? '넣는 중…' : tab === 'link' && 주소개수 > 1 ? `${주소개수}개 넣기` : '넣기'}
+                            {busy ? '넣는 중…' : err && tab === 'link' ? '다시 시도' : tab === 'link' && 주소개수 > 1 ? `${주소개수}개 넣기` : '넣기'}
                         </button>
                     )}
                 </div>

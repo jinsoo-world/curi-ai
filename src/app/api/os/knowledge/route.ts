@@ -1,5 +1,5 @@
 // GET    /api/os/knowledge?mentorId=  → 이 봇이 읽은 자료 목록
-// POST   /api/os/knowledge            → 자료 넣기 (링크·유튜브·붙여넣은 글·Q&A·짧은 메모)
+// POST   /api/os/knowledge            → 자료 넣기 (링크·유튜브·붙여넣은 글·Q&A·짧은 메모), kind=retry 면 못 읽은 자료 다시 읽기
 // PATCH  /api/os/knowledge            → 자료 메타 고치기 (한 줄 설명·내가 쓴 글인지)
 // DELETE /api/os/knowledge            → 자료 빼기
 //
@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
     assertBotOwned, assertRoomForMore, listBotSources, addLinkSource, addTextSource, addQaSource,
-    updateBotSourceMeta, removeBotSource, BotNotMine,
+    updateBotSourceMeta, removeBotSource, retryBotSource, BotNotMine,
 } from '@/domains/os/knowledge'
 
 export const dynamic = 'force-dynamic'
@@ -51,6 +51,10 @@ export async function POST(req: NextRequest) {
     try {
         const db = createAdminClient()
         await assertBotOwned(db, user.id, mentorId)
+        // 「다시 시도」: 못 읽은 자료는 자리 셈에 안 들어가니 자리 확인 없이 다시 읽는다
+        if (kind === 'retry') {
+            return NextResponse.json(await retryBotSource(db, mentorId, String(body.sourceId ?? ''), { userId: user.id }))
+        }
         await assertRoomForMore(db, mentorId)
 
         if (kind === 'url') {
