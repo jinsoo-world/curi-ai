@@ -14,6 +14,8 @@ import { splitConnectServices } from '@/domains/os/connect-split'
 import './connect.css'
 
 type Service = ProviderView & {
+    /** 서버가 알려 주는 「토큰 붙여 넣기로 지금 붙일 수 있음」 */
+    paste?: boolean
     connected: { id: string; account: string; status: 'connected' | 'error' } | null
 }
 
@@ -38,6 +40,12 @@ const ERROR_TEXT: Record<string, string> = {
     table: '준비 중',
     save: '연결을 저장하지 못했어요. 잠시 뒤 다시 해 주세요.',
     unknown: '모르는 서비스예요.',
+}
+
+/** 토큰 붙여 넣기로 붙일 수 있나. 서버 값(paste)을 먼저 믿고, 옛 서버면 화면이 짐작한다 */
+function canPaste(s: Service, enabled: boolean): boolean {
+    if (!PASTE[s.id] || s.connected) return false
+    return s.paste ?? (enabled && !s.ready && !s.comingSoon)
 }
 
 export default function ConnectorsPanel() {
@@ -118,11 +126,11 @@ export default function ConnectorsPanel() {
         if (s.connected?.status === 'error') return <span className="os-svc-badge bad">다시 연결 필요</span>
         if (s.connected) return <span className="os-svc-badge on">연결됨 ({s.connected.account})</span>
         if (s.comingSoon) return <span className="os-svc-badge soon">준비 중</span>
-        if (!s.ready && !(enabled && PASTE[s.id])) return <span className="os-svc-badge soon">준비 중</span>
+        if (!s.ready && !canPaste(s, enabled)) return <span className="os-svc-badge soon">준비 중</span>
         return <span className="os-svc-badge">연결 안 됨</span>
     }
 
-    const { active, soon, needLogin } = splitConnectServices(services, { enabled, loggedIn, pasteIds: Object.keys(PASTE) })
+    const { active, soon, needLogin } = splitConnectServices(services, { enabled, loggedIn, pasteIds: services.filter(s => canPaste(s, enabled)).map(s => s.id) })
 
     return (
         <>
@@ -138,7 +146,7 @@ export default function ConnectorsPanel() {
         {active.length > 0 && (
         <div className="os-card">
             {active.map(s => {
-                const paste = !s.ready && !s.comingSoon && enabled && PASTE[s.id]
+                const paste = canPaste(s, enabled)
                 const canConnect = s.ready && enabled
                 return (
                     <div key={s.id}>
