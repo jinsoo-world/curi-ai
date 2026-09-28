@@ -3,6 +3,8 @@
 // 대표 승인 0928 23:53 (리서치 S1, S3, S4). SNS, 블로그 링크를 넣으면 저장 없이 봇 초안을 만들어 보여 주고,
 // 주인이 고친 뒤 「만들기」를 눌러야 봇이 생긴다. 근거가 없는 칸은 「추정」으로 표시한다.
 
+import { isMarketHost } from '@/domains/home/link-guide'
+
 /** 초안 요청 한도 (설정값). 사용자 하루 5번, 전체 하루 500번 */
 export const TWIN_DRAFT_USER_DAILY = 5
 export const TWIN_DRAFT_GLOBAL_DAILY = 500
@@ -50,6 +52,7 @@ export function draftLinkKind(raw: string): DraftLinkKind {
     const is = (h: string) => host === h || host.endsWith(`.${h}`)
     if (is('instagram.com') || is('threads.net') || is('threads.com') || is('x.com') || is('twitter.com') || is('tiktok.com') || is('facebook.com') || is('fb.com')) return 'link'
     if (host === 'blog.naver.com' || host === 'rss.blog.naver.com' || is('brunch.co.kr')) return 'paste'
+    if (isMarketHost(host)) return 'paste'
     return 'read'
 }
 

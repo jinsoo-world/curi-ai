@@ -17,7 +17,6 @@ import AppSidebar from '@/components/AppSidebar'
 import CloverIcon from '@/components/ui/CloverIcon'
 import { CLOVER_PACKS } from '@/domains/credit/packs'
 import { PLANS } from '@/domains/os/plan'
-import { TEACHER_COST } from '@/domains/studio/teacher'
 import { PHOTO_COST } from '@/domains/studio/photo'
 import { ENHANCE_COST } from '@/domains/studio/enhance'
 import { TOOLS } from '@/domains/studio/tools'
@@ -63,7 +62,7 @@ export default function PricingPage() {
                 <section style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '20px 18px', marginBottom: 16 }}>
                     <h2 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 4px' }}>봇 팀 요금제</h2>
                     <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 16px' }}>
-                        내 팀 봇과의 대화는 클로버를 쓰지 않아요.
+                        이번 달 사용량 안에서는 클로버를 쓰지 않아요.
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {PLANS.map((p) => (
@@ -130,8 +129,8 @@ export default function PricingPage() {
                     <h2 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 12px' }}>돈 안 내고 할 수 있는 것</h2>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {[
-                            '가입 안 해도 하루 3장까지 만들어 볼 수 있어요 (흐린 미리보기)',
-                            `가입하면 클로버 ${SIGNUP_CLOVERS}개를 드려요 (사진 ${Math.floor(SIGNUP_CLOVERS / TEACHER_COST)}장)`,
+                            '가입 안 해도 흐린 미리보기로 만들어 볼 수 있어요',
+                            `가입하면 클로버 ${SIGNUP_CLOVERS}개를 드려요`,
                             `무료 체험권을 받으면 ${TRIAL_DAYS}일 동안 쓸 수 있고 클로버 ${TRIAL_CLOVERS}개를 더 드려요`,
                             '친구가 내 링크로 가입하면 클로버 100개를 받아요',
                         ].map((t) => (
@@ -156,7 +155,7 @@ export default function PricingPage() {
                 <section style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '20px 18px', marginBottom: 16 }}>
                     <h2 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 4px' }}>클로버 충전</h2>
                     <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 16px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                        봇 마켓의 다른 리더 봇과 대화하거나 한도를 넘겨 더 쓸 때, 그리고 사진을 만들 때 클로버를 써요. 내 팀 봇과의 대화는 클로버를 쓰지 않아요.
+                        봇 마켓의 다른 리더 봇과 대화하거나 한도를 넘겨 더 쓸 때, 그리고 사진을 만들 때 클로버를 써요. 이번 달 사용량 안에서는 클로버를 쓰지 않아요.
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {CLOVER_PACKS.map((p) => (

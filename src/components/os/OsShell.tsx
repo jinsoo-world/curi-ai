@@ -16,6 +16,7 @@ import {
     BOT_CALL_EVENT, addBotCallUnread, clearBotCallUnread, readBotCallUnread,
 } from '@/domains/os/mentions'
 import { osTrack } from '@/domains/os/events'
+import { readHomeDraft } from '@/domains/home/draft-store'
 import { collapseRoster, readRosterExpanded, toggleLabel, writeRosterExpanded } from '@/domains/os/roster-collapse'
 import { applyFontSize, readFontSize } from '@/domains/os/settings'
 import BotAvatar from './BotAvatar'
@@ -300,6 +301,13 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         if (new URLSearchParams(window.location.search).get('new') === '1') setSheet(true)
     }, [])
+    // /home 에서 넣어 둔 주소가 브라우저에 남아 있으면 (가입 직후, 첫 설정을 마친 뒤) 만들기 창을 연다
+    const homeResume = useRef(false)
+    useEffect(() => {
+        if (homeResume.current || loading || guest || pathname.startsWith('/os/start')) return
+        homeResume.current = true
+        if (readHomeDraft(window.localStorage)) setSheet(true)
+    }, [loading, guest, pathname])
 
     const visible = useMemo(() => {
         const q = query.trim()

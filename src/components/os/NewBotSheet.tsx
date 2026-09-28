@@ -20,6 +20,7 @@ import {
     DRAFT_LINK_LABEL, TWIN_DRAFT_CONSENTS, TWIN_DRAFT_COPY, TWIN_DRAFT_MAX_LINKS, TWIN_DRAFT_MAX_PASTES, draftLinkKind,
     type DraftField, type TwinDraft,
 } from '@/domains/os/twin-draft-shared'
+import { clearHomeDraft, readHomeDraft, type HomeDraft } from '@/domains/home/draft-store'
 
 interface Props {
     guest: boolean
@@ -195,7 +196,9 @@ function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => 
 
 function CreateBotSheet({ guest, onClose, onCreated, onWantGroup }: Omit<Props, 'edit' | 'onSaved'>) {
     // 새로 만들기(3걸음) / 봇 마켓에서 가져오기(다른 리더가 만든 공개 봇을 내 팀에 넣기) — 대표 지시 0923
-    const [tab, setTab] = useState<'new' | 'link' | 'market'>('new')
+    // /home 에서 넣어 둔 주소가 있으면 「내 링크로 만들기」로 바로 연다 (가입 직후 이어 만들기)
+    const [homeDraft] = useState<HomeDraft | null>(() => (guest || typeof window === 'undefined') ? null : readHomeDraft(window.localStorage))
+    const [tab, setTab] = useState<'new' | 'link' | 'market'>(() => homeDraft ? 'link' : 'new')
     const [step, setStep] = useState<1 | 2>(1)
     const [job, setJob] = useState<string>('')
     const [customJob, setCustomJob] = useState('')
@@ -246,7 +249,7 @@ function CreateBotSheet({ guest, onClose, onCreated, onWantGroup }: Omit<Props, 
                 {tab === 'market' ? (
                     <MarketTab guest={guest} onClose={onClose} onLinked={onCreated} />
                 ) : tab === 'link' && !guest ? (
-                    <LinkDraftTab onClose={onClose} onCreated={onCreated} />
+                    <LinkDraftTab onClose={onClose} onCreated={onCreated} initial={homeDraft} />
                 ) : guest ? (
                     <>
                         <h3>내 봇 팀을 만들려면 로그인이 필요해요</h3>
@@ -403,10 +406,10 @@ function MarketTab({ guest, onClose, onLinked }: { guest: boolean; onClose: () =
 }
 
 /** 「내 링크로 만들기」 = 동의 2개, 링크 3개, 붙여넣기 → 저장 없는 초안 → 편집 칸과 같은 칸으로 고치고 만들기 */
-function LinkDraftTab({ onClose, onCreated }: { onClose: () => void; onCreated: (bot: TeamBot) => void | Promise<void> }) {
-    const [agree, setAgree] = useState<boolean[]>(() => TWIN_DRAFT_CONSENTS.map(() => false))
-    const [links, setLinks] = useState<string[]>(() => Array(TWIN_DRAFT_MAX_LINKS).fill(''))
-    const [pastes, setPastes] = useState<string[]>(() => Array(TWIN_DRAFT_MAX_PASTES).fill(''))
+function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => void; onCreated: (bot: TeamBot) => void | Promise<void>; initial?: HomeDraft | null }) {
+    const [agree, setAgree] = useState<boolean[]>(() => TWIN_DRAFT_CONSENTS.map((_, i) => initial?.consents[i] === true))
+    const [links, setLinks] = useState<string[]>(() => Array.from({ length: TWIN_DRAFT_MAX_LINKS }, (_, i) => initial?.links[i] ?? ''))
+    const [pastes, setPastes] = useState<string[]>(() => Array.from({ length: TWIN_DRAFT_MAX_PASTES }, (_, i) => initial?.pastes[i] ?? ''))
     const [busy, setBusy] = useState(false)
     const [err, setErr] = useState<string | null>(null)
     const [unreadOnly, setUnreadOnly] = useState<{ url: string; reason: string }[]>([])
@@ -446,6 +449,16 @@ function LinkDraftTab({ onClose, onCreated }: { onClose: () => void; onCreated: 
             setBusy(false)
         }
     }
+
+    // /home 에서 넘어온 것은 한 번만 이어 만든다. 브라우저 보관분은 바로 지운다
+    const resumed = useRef(false)
+    useEffect(() => {
+        if (!initial || resumed.current) return
+        resumed.current = true
+        clearHomeDraft(typeof window === 'undefined' ? null : window.localStorage)
+        if (canDraft) void makeDraft()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     const create = async () => {
         if (!draft) return

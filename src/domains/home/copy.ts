@@ -1,0 +1,73 @@
+// domains/home: /home 화면 글 (한 곳에 모아 둔다. 가운데점, 긴 줄표, 횟수 없음을 테스트가 지킨다)
+
+export const HOME_COPY = {
+    nav: {
+        pricing: '가격 안내',
+        team: '내 봇 팀',
+        more: '더보기',
+        market: '봇 마켓',
+        photo: '사진 도구',
+        invite: '친구 초대',
+        help: '도움말',
+        login: '로그인',
+        me: '내 정보',
+    },
+    title: '내 SNS 주소만 넣으면, 나처럼 말하는 AI가 생겨요',
+    sub: '인스타, 블로그, 유튜브, 스레드, 파는 상품 주소를 넣어 보세요. 파일을 올려도 돼요.',
+    chips: [
+        { id: 'instagram', label: '인스타그램', example: 'instagram.com/내아이디' },
+        { id: 'blog', label: '블로그', example: '내이름.tistory.com' },
+        { id: 'youtube', label: '유튜브', example: 'youtube.com/@내채널' },
+        { id: 'threads', label: '스레드', example: 'threads.net/@내아이디' },
+        { id: 'shop', label: '상품', example: '내 쇼핑몰 상품 주소' },
+        { id: 'file', label: '파일', example: '' },
+    ],
+    placeholder: '주소나 아이디를 붙여 넣어 주세요',
+    make: '내 AI 만들기',
+    safe: '내 계정만 넣어 주세요. 공개된 글만 읽고, 비밀번호는 묻지 않아요.',
+    direct: '주소가 없어도 괜찮아요. 직접 설명해서 만들기',
+    fileNote: '파일은 가입한 뒤 자료 넣기에서 올리면 돼요',
+    added: '넣은 주소',
+    remove: '빼기',
+    addMore: '주소를 더 넣으려면 위 칸에 붙여 넣어 주세요',
+    pasteLabel: '내 글 몇 개를 복사해 붙여 넣어 주세요',
+    pastePlaceholder: '내가 쓴 글을 그대로 붙여 넣어 주세요',
+    directLabel: '어떤 일을 맡기고 싶나요, 무엇을 팔고 싶나요?',
+    directPlaceholder: '예: 동네 꽃집을 해요. 손님 문의에 제 말투로 답해 주면 좋겠어요',
+    directUrl: '상품이나 콘텐츠 주소 (없어도 돼요)',
+    directShort: '조금만 더 자세히 써 주세요',
+    draft: '초안 만들기',
+    draftNote: '가입하면 바로 이어서 초안을 만들어요',
+    feedTitle: '지금 만들어지는 AI',
+    feedNote: '실제 활동이에요. 이름은 가려서 보여 드려요',
+    stepsTitle: '이렇게 만들어져요',
+    steps: [
+        { t: '주소를 넣어요', d: '내 SNS나 블로그 주소면 돼요' },
+        { t: '초안을 확인하고 고쳐요', d: '소개, 말투, 자료를 보고 고쳐요' },
+        { t: '내 봇 팀에서 바로 일을 맡겨요', d: '만든 AI가 내 팀에 들어와요' },
+    ],
+    jobsTitle: '무엇을 맡길 수 있나요',
+    marketTitle: '봇 마켓에 올리면 수익이 쌓여요',
+    marketBody: '다른 분이 내 봇과 대화하면 수익이 쌓여요. 정산 기준은 준비 중이에요.',
+    marketBtn: '봇 마켓 보기',
+    faqTitle: '안심하세요',
+    faq: [
+        { q: '내 계정만 넣어 주세요', a: '내가 운영하는 곳만 읽어요. 다른 분 계정은 넣지 말아 주세요.' },
+        { q: '공개 글만 읽어요', a: '비밀번호는 묻지 않아요. 누구나 볼 수 있는 글만 읽어요.' },
+        { q: '만든 AI는 언제든 지울 수 있어요', a: '내 봇 팀에서 봇을 빼거나 자료를 지우면 돼요.' },
+        { q: '비공개 계정은 어떻게 하나요?', a: '비공개 글은 읽지 않아요. 보여 주고 싶은 글만 복사해 넣어 주세요.' },
+        { q: '돈이 드나요?', a: '무료로 시작해요. 더 쓰고 싶을 때 요금제를 올리면 돼요.' },
+    ],
+    priceTitle: '가격',
+    priceBody: '무료로 시작하세요. 더 쓰고 싶을 때 요금제를 올리면 돼요.',
+    priceBtn: '가격 안내 보기',
+    sticky: 'AI 만들기',
+} as const
+
+/** 누적 숫자 한 줄 (기준 넘은 것만). 숫자는 데이터베이스 그대로, 올림 없음 */
+export function homeStatsLine(s: { bots: number | null; chats: number | null }): string {
+    const parts: string[] = []
+    if (s.bots != null) parts.push(`만든 봇 ${s.bots.toLocaleString('ko-KR')}개`)
+    if (s.chats != null) parts.push(`나눈 대화 ${s.chats.toLocaleString('ko-KR')}번`)
+    return parts.length ? `지금까지 큐리AI에서 ${parts.join(', ')}` : ''
+}

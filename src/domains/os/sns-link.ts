@@ -7,6 +7,7 @@
 //   (DB 함수 grant_sns_link_bonus_keyed 가 계정 중복과 주소 중복을 막는다).
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { resolveChannelInput } from './feeds/youtube'
+import { isMarketHost } from '@/domains/home/link-guide'
 import { createFeed, listFeeds, syncFeed, loadExistingSources, type FeedKind } from './feeds'
 import { isSafeFetchUrl } from '@/domains/agent/fetch-url'
 import { MAX_SOURCES_PER_BOT, addTextSource, assertRoomForMore } from './knowledge'
@@ -14,7 +15,7 @@ import { bootstrapDefaultTeam } from './team'
 import { JOBS } from './presets'
 import { firstJobFor, SNS_BONUS_CLOVERS, SNS_KEY_TAKEN_LINE, SNS_PASTE_LINE, SNS_PASTE_MAX_POSTS, SNS_PASTE_MIN_CHARS, SNS_PENDING_LINE, SNS_READ_LINE, SNS_SUCCESS_LINE } from './onboarding'
 
-export type SnsPlatform = 'youtube' | 'naver_blog' | 'brunch' | 'tistory' | 'substack' | 'rss' | 'website' | 'instagram' | 'threads' | 'x' | 'tiktok' | 'facebook'
+export type SnsPlatform = 'youtube' | 'naver_blog' | 'brunch' | 'tistory' | 'substack' | 'rss' | 'website' | 'instagram' | 'threads' | 'x' | 'tiktok' | 'facebook' | 'market'
 
 /** 붙여넣기 한 편 최소 글자, 최대 편수 (화면과 같이 쓰도록 onboarding.ts에 둔다) */
 export const PASTE_MIN_CHARS = SNS_PASTE_MIN_CHARS
@@ -61,6 +62,8 @@ export function classifySnsLink(raw: unknown): SnsTarget {
         return { url: `https://blog.naver.com/${id}`, platform: 'naver_blog', feed: null, paste: true }
     }
     if (is('brunch.co.kr')) return { url, platform: 'brunch', feed: null, paste: true }
+    // 큰 장터 상품(스마트스토어, 쿠팡 등)은 약관 확인 전까지 자동으로 읽지 않는다. 링크만 저장 (보너스 없음)
+    if (isMarketHost(host)) return { url, platform: 'market', feed: null }
     // 티스토리는 주인이 켠 공식 RSS(/rss). robots.txt 도 막지 않는다
     if (is('tistory.com') && host !== 'tistory.com') return { url, platform: 'tistory', feed: { kind: 'podcast', handleOrUrl: `https://${u.hostname.toLowerCase()}/rss` } }
     if (is('substack.com')) return { url, platform: 'substack', feed: { kind: 'substack', handleOrUrl: url } }

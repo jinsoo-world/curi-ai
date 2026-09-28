@@ -32,6 +32,7 @@ export const UNREAD_REASON = {
     paste: '네이버 블로그와 브런치는 글을 붙여넣어 주세요',
     empty: '읽을 글을 못 찾았어요',
     time: '시간이 모자라 못 읽었어요',
+    market: '큰 장터 상품은 상품 설명을 붙여 넣어 주세요',
 } as const
 
 /** 붙여넣은 글 정리: 빈 것, 너무 짧은 것 빼고 3편까지 */
@@ -82,7 +83,14 @@ async function readOneLink(link: string, hasPaste: boolean, deadline: number): P
         return { texts: [], unread: { url: link, reason: e instanceof Error ? e.message : '주소를 확인해 주세요' } }
     }
     if (t.paste) return hasPaste ? { texts: [] } : { texts: [], unread: { url: t.url, reason: UNREAD_REASON.paste } }
-    if (!t.feed) return { texts: [], unread: { url: t.url, reason: UNREAD_REASON.linkOnly } }
+    if (!t.feed) return { texts: [], unread: { url: t.url, reason: t.platform === 'market' ? UNREAD_REASON.market : UNREAD_REASON.linkOnly } }
+    // 일반 웹의 글 하나, 상품 하나 주소는 그 쪽만 읽는다 (사이트 전체 목차를 돌지 않는다)
+    if (t.feed.kind === 'website' && new URL(t.url).pathname.replace(/\/+$/, '') !== '') {
+        const left = deadline - Date.now()
+        if (left < 3_000) return { texts: [], unread: { url: t.url, reason: UNREAD_REASON.time } }
+        const r = await readUrl(t.url, { timeoutMs: Math.min(12_000, left - 1_000), maxChars: PER_SOURCE_CHARS * 2 })
+        return r.ok ? { texts: [{ title: r.title || t.url, url: t.url, text: r.text }] } : { texts: [], unread: { url: t.url, reason: r.reason } }
+    }
     try {
         const r = await FETCHERS[t.feed.kind](fakeFeed(t.feed.kind, t.feed.handleOrUrl), null, { maxItems: 3, deadline })
         const texts = r.items.filter(i => (i.text ?? '').trim().length > 0).map(i => ({ title: i.title || t.url, url: i.url, text: i.text as string }))

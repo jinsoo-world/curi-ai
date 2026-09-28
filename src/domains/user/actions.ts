@@ -87,7 +87,7 @@ const RESERVED_HANDLES = new Set([
     'admin', 'api', 'auth', 'login', 'mentors', 'chat', 'chats',
     'creator', 'billing', 'onboarding', 'pricing', 'privacy',
     'profile', 'terms', '_next', 'favicon', 'public', 'static',
-    'settings', 'help', 'support', 'about', 'blog', 'app',
+    'settings', 'help', 'support', 'about', 'blog', 'app', 'home',
 ])
 
 // handle 형식: 영문 소문자 + 숫자 + 하이픈, 3~30자
