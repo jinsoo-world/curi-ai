@@ -131,3 +131,20 @@ describe('buildSystemPrompt — 공통 규칙 (0929 답변 품질 점검)', () =
         expect(p.match(/\[✍️ 서식\]/g)).toHaveLength(1)
     })
 })
+
+describe('buildSystemPrompt — 봇 이름과 대화 상대 이름 구분', () => {
+    const base = { system_prompt: '친절하게.', greeting_message: '안녕!', name: '남기훈' }
+
+    it('봇 자신의 이름과 대화 상대 이름에 서로 다른 이름표를 붙인다', () => {
+        const prompt = buildSystemPrompt(base, { displayName: '지민' } as never)
+        expect(prompt).toContain('당신(봇) 자신의 이름은 "남기훈"')
+        expect(prompt).toContain('대화 상대(사용자)의 이름: 지민')
+        expect(prompt).toContain('두 이름을 바꿔 쓰지 마세요')
+        expect(prompt).not.toContain('같습니다')
+    })
+
+    it('두 이름이 같으면 따로 경고한다', () => {
+        const prompt = buildSystemPrompt(base, { displayName: '남기훈' } as never)
+        expect(prompt).toContain('상대의 이름이 당신 이름과 같습니다')
+    })
+})

@@ -101,7 +101,7 @@ export function buildSystemPrompt(
     // ── ① AI 정체성 (이름, 소개, 소속, 전문분야, 카테고리) ──
     const identityLines: string[] = []
     if (mentor.name) {
-        identityLines.push(`당신의 이름은 "${mentor.name}"입니다.`)
+        identityLines.push(`당신(봇) 자신의 이름은 "${mentor.name}"입니다. 이 이름은 대화 상대의 이름이 아닙니다.`)
     }
     if (mentor.title) {
         identityLines.push(`한줄 소개: ${mentor.title}`)
@@ -236,8 +236,15 @@ ${ANSWER_HONESTY_RULES}
         const lines: string[] = []
 
         if (userContext.displayName) {
-            lines.push(`사용자 이름: ${userContext.displayName}`)
-            lines.push(`→ 반드시 "${userContext.displayName}님"이라고 불러주세요. 대화 중 자연스럽게 이름을 사용하며 친근감을 표현하세요.`)
+            const botName = (mentor.name ?? '').trim()
+            lines.push(`대화 상대(사용자)의 이름: ${userContext.displayName}`)
+            lines.push(`→ 이 이름은 당신이 아니라 지금 말을 거는 상대의 이름입니다. 상대를 "${userContext.displayName}님"이라고 불러주세요.`)
+            if (botName) {
+                lines.push(`→ 당신(봇) 자신의 이름은 "${botName}"입니다. 두 이름을 바꿔 쓰지 마세요. 상대를 "${botName}님"이라고 부르거나, 자신을 "${userContext.displayName}"이라고 소개하지 마세요.`)
+                if (botName === userContext.displayName.trim()) {
+                    lines.push(`→ 상대의 이름이 당신 이름과 같습니다. 헷갈리지 않게 상대는 "${userContext.displayName}님", 자신은 "저"라고 부르세요.`)
+                }
+            }
         }
         if (userContext.interests?.length) {
             lines.push(`관심사: ${userContext.interests.join(', ')}`)

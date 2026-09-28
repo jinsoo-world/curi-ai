@@ -7,3 +7,10 @@ describe('가격 일정 충돌 기본값 (대표 승인 0929 01:03)', () => {
         expect(ANSWER_HONESTY_RULES).toContain('확인 중')
     })
 })
+
+describe('자료에 없는 가격·일정은 범위로도 짐작 금지', () => {
+    it('범위·짐작 금지와 상세페이지 안내를 담는다', () => {
+        expect(ANSWER_HONESTY_RULES).toContain('범위, 평균, 짐작으로도 말하지 마세요')
+        expect(ANSWER_HONESTY_RULES).toContain('상세페이지')
+    })
+})
