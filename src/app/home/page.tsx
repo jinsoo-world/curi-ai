@@ -1,14 +1,15 @@
 // /home 첫 화면 (대표 지시 0928 23:53). 첫 주소(/)가 여기로 온다. 로그인 뒤 첫 화면은 그대로 /os.
 // 광고 칸 없음. 활동 줄과 누적 숫자는 실제 기록만, 기준보다 적으면 숨긴다.
 // 예시 데이터는 NEXT_PUBLIC_HOME_FEED_DUMMY 를 켰을 때만. 그때는 「예시 데이터」 표시가 항상 붙는다.
-// 모양은 큐리어스 본체(curious-500.com) 디자인 토대를 따른다 (home.css). 넓은 화면에서 활동 칸은 오른쪽.
+// 모양은 탈잉(taling.me) 첫 화면 구성을 따른다 (대표 지시 0929 01:07, home.css): 흰 바탕, 굵은 구역 제목과 오른쪽 「보기」 글자 단추, 좁은 화면은 구역 사이 회색 띠.
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import Image from 'next/image'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { loadHomeActivity, type HomeActivity } from '@/domains/home/feed'
 import { HOME_DUMMY_LABEL, HOME_FEED_DUMMY, HOME_STATS_DUMMY, homeFeedDummyOn } from '@/domains/home/feed-dummy'
-import { HOME_COPY, homeStatsLine } from '@/domains/home/copy'
+import { HOME_COPY, homeStatsLine, homeStatsParts } from '@/domains/home/copy'
 import { JOBS } from '@/domains/os/presets'
 import { PLANS } from '@/domains/os/plan'
 import HomeTopBar from '@/components/home/HomeTopBar'
@@ -50,41 +51,51 @@ export default async function HomePage() {
     const c = HOME_COPY
     const { feed, stats, dummy } = await activity()
     const statsLine = homeStatsLine(stats)
+    const statsParts = homeStatsParts(stats)
     const jobs = JOBS.filter(j => j.id !== 'custom' && j.oneLiner)
+    const Chevron = () => <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden><path d="M6 3.5l4.5 4.5L6 12.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
 
     return (
         <div className="hm">
             <HomeTopBar />
             <main className="hm-main">
-                <div className={`hm-hero ${feed.length > 0 || statsLine ? '' : 'solo'}`}>
-                    <HomeMake />
+                <HomeMake />
 
-                    {(feed.length > 0 || statsLine) && (
-                        <aside className="hm-side">
-                            {feed.length > 0 && (
-                                <section className="hm-feed" aria-label={c.feedTitle}>
-                                    <div className="hm-feed-head">
-                                        <span className="hm-feed-title">{c.feedTitle}</span>
-                                        {dummy ? <span className="hm-dummy">{HOME_DUMMY_LABEL}</span> : <span className="hm-feed-note">{c.feedNote}</span>}
-                                    </div>
-                                    <ul className="hm-feed-list">
-                                        {feed.map(f => <li key={f.key}>{f.text} <span className="hm-ago">({f.ago})</span></li>)}
-                                    </ul>
-                                </section>
-                            )}
-
-                            {statsLine && (
-                                <p className="hm-stats">
-                                    {statsLine}
-                                    {dummy && <span className="hm-dummy">{HOME_DUMMY_LABEL}</span>}
-                                </p>
-                            )}
-                        </aside>
-                    )}
-                </div>
+                {(feed.length > 0 || statsLine) && (
+                    <section className="hm-sec hm-live" aria-label={c.feedTitle}>
+                        {feed.length > 0 && (
+                            <div className="hm-sec-head">
+                                <div>
+                                    <h2>{c.feedTitle}{dummy && <span className="hm-dummy">{HOME_DUMMY_LABEL}</span>}</h2>
+                                    {!dummy && <p className="hm-sec-sub">{c.feedNote}</p>}
+                                </div>
+                            </div>
+                        )}
+                        {statsLine && (
+                            <div className="hm-stats" aria-label={statsLine}>
+                                <span className="hm-stats-lead">{statsParts.lead}{dummy && feed.length === 0 && <span className="hm-dummy">{HOME_DUMMY_LABEL}</span>}</span>
+                                <div className="hm-stats-nums">
+                                    {statsParts.parts.map(p => (
+                                        <span key={p.label} className="hm-stat"><span className="hm-stat-l">{p.label}</span><strong>{p.value}</strong></span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {feed.length > 0 && (
+                            <ul className="hm-feed-list">
+                                {feed.map(f => (
+                                    <li key={f.key}>
+                                        <span className="hm-feed-ico" aria-hidden><Image src="/icons/curi-192.png" alt="" width={22} height={22} /></span>
+                                        <span className="hm-feed-txt">{f.text}<span className="hm-ago">{f.ago}</span></span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </section>
+                )}
 
                 <section className="hm-sec">
-                    <h2>{c.stepsTitle}</h2>
+                    <div className="hm-sec-head"><h2>{c.stepsTitle}</h2></div>
                     <ol className="hm-steps">
                         {c.steps.map((s, i) => (
                             <li key={s.t}><span className="hm-step-n">{i + 1}</span><strong>{s.t}</strong><span>{s.d}</span></li>
@@ -93,20 +104,22 @@ export default async function HomePage() {
                 </section>
 
                 <section className="hm-sec">
-                    <h2>{c.jobsTitle}</h2>
+                    <div className="hm-sec-head"><h2>{c.jobsTitle}</h2></div>
                     <div className="hm-jobs">
                         {jobs.map(j => <HomeJobCard key={j.id} label={j.label} oneLiner={j.oneLiner} />)}
                     </div>
                 </section>
 
                 <section className="hm-sec hm-market">
-                    <h2>{c.marketTitle}</h2>
-                    <p>{c.marketBody}</p>
-                    <Link href="/mentors" className="hm-btn ghost">{c.marketBtn}</Link>
+                    <div className="hm-sec-head">
+                        <h2>{c.marketTitle}</h2>
+                        <Link href="/mentors" className="hm-more-link">{c.marketBtn}<Chevron /></Link>
+                    </div>
+                    <p className="hm-sec-sub">{c.marketBody}</p>
                 </section>
 
                 <section className="hm-sec" id="faq">
-                    <h2>{c.faqTitle}</h2>
+                    <div className="hm-sec-head"><h2>{c.faqTitle}</h2></div>
                     <div className="hm-faq">
                         {c.faq.map(f => (
                             <details key={f.q}>
@@ -118,8 +131,11 @@ export default async function HomePage() {
                 </section>
 
                 <section className="hm-sec">
-                    <h2>{c.priceTitle}</h2>
-                    <p>{c.priceBody}</p>
+                    <div className="hm-sec-head">
+                        <h2>{c.priceTitle}</h2>
+                        <Link href="/os/charge" className="hm-more-link">{c.priceBtn}<Chevron /></Link>
+                    </div>
+                    <p className="hm-sec-sub">{c.priceBody}</p>
                     <div className="hm-plans">
                         {PLANS.map(p => (
                             <div key={p.id} className={`hm-plan ${p.recommended ? 'rec' : ''}`}>
@@ -129,7 +145,6 @@ export default async function HomePage() {
                             </div>
                         ))}
                     </div>
-                    <Link href="/os/charge" className="hm-btn ghost">{c.priceBtn}</Link>
                 </section>
             </main>
             <HomeStickyCta />

@@ -23,6 +23,7 @@ export const HOME_COPY = {
         { id: 'file', label: '파일', example: '' },
     ],
     placeholder: '주소나 아이디를 붙여 넣어 주세요',
+    multi: '여러 자료 입력 가능',
     make: '내 AI 만들기',
     safe: '내 계정만 넣어 주세요. 공개된 글만 읽고, 비밀번호는 묻지 않아요.',
     direct: '주소가 없어도 괜찮아요. 직접 설명해서 만들기',
@@ -64,10 +65,16 @@ export const HOME_COPY = {
     sticky: 'AI 만들기',
 } as const
 
-/** 누적 숫자 한 줄 (기준 넘은 것만). 숫자는 데이터베이스 그대로, 올림 없음 */
+/** 누적 숫자 조각 (기준 넘은 것만). 숫자는 데이터베이스 그대로, 올림 없음. /home 은 큰 숫자 카드로 보여 준다 */
+export function homeStatsParts(s: { bots: number | null; chats: number | null }): { lead: string; parts: { label: string; value: string }[] } {
+    const parts: { label: string; value: string }[] = []
+    if (s.bots != null) parts.push({ label: '만든 봇', value: `${s.bots.toLocaleString('ko-KR')}개` })
+    if (s.chats != null) parts.push({ label: '나눈 대화', value: `${s.chats.toLocaleString('ko-KR')}번` })
+    return { lead: '지금까지 큐리AI에서', parts }
+}
+
+/** 누적 숫자 한 줄 (기준 넘은 것만) */
 export function homeStatsLine(s: { bots: number | null; chats: number | null }): string {
-    const parts: string[] = []
-    if (s.bots != null) parts.push(`만든 봇 ${s.bots.toLocaleString('ko-KR')}개`)
-    if (s.chats != null) parts.push(`나눈 대화 ${s.chats.toLocaleString('ko-KR')}번`)
-    return parts.length ? `지금까지 큐리AI에서 ${parts.join(', ')}` : ''
+    const { lead, parts } = homeStatsParts(s)
+    return parts.length ? `${lead} ${parts.map(p => `${p.label} ${p.value}`).join(', ')}` : ''
 }

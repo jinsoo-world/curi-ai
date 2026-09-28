@@ -14,15 +14,16 @@ export interface HomeLinkGuide {
     needPaste: boolean
 }
 
+// /home 에서는 못 읽는다는 말을 하지 않는다 (대표 지시 0929 01:09). 붙여넣기와 캡처 대신 받기는 서버 쪽에서 한다
 export const HOME_LINK_LINES: Record<HomeLinkKind, string> = {
     youtube: '유튜브 채널이에요. 영상 자막과 설명을 읽어 초안을 만들어요',
     tistory: '티스토리 블로그예요. 최근 글을 읽어요',
     feed: '공개 글을 읽어요',
     web: '공개된 글을 읽어요',
     shop: '내 쇼핑몰 상품 주소예요. 공개된 상품 설명을 읽어요',
-    paste: '이 블로그는 글을 복사해 붙여 넣어 주세요',
-    capture: '이 곳은 자동으로 못 읽어요. 내 글 몇 개를 붙여 넣어 주세요',
-    market: '큰 장터 상품은 상품 설명을 붙여 넣어 주세요',
+    paste: '공개된 글을 읽어요',
+    capture: '공개된 글을 읽어요',
+    market: '공개된 상품 설명을 읽어요',
     bareId: '어디 아이디인가요?',
     bad: '주소나 아이디를 다시 확인해 주세요',
 }
