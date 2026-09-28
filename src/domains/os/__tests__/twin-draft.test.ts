@@ -32,8 +32,8 @@ describe('S1 동의와 링크 판별', () => {
             ['https://www.youtube.com/@curi', 'read'],
             ['https://abc.tistory.com', 'read'],
             ['https://example.com/blog', 'read'],
-            ['https://blog.naver.com/curi', 'paste'],
-            ['https://brunch.co.kr/@curi', 'paste'],
+            ['https://blog.naver.com/curi', 'read'],
+            ['https://brunch.co.kr/@curi', 'read'],
             ['https://www.instagram.com/curi', 'link'],
             ['https://www.facebook.com/curi', 'link'],
             ['https://www.threads.net/@curi', 'link'],
@@ -41,7 +41,7 @@ describe('S1 동의와 링크 판별', () => {
         for (const [url, kind] of cases) {
             expect(draftLinkKind(url)).toBe(kind)
             const t = classifySnsLink(url)
-            const server = t.paste ? 'paste' : t.feed ? 'read' : 'link'
+            const server = t.feed ? 'read' : t.paste ? 'paste' : 'link'
             expect(server).toBe(kind)
         }
         expect(draftLinkKind('')).toBe('bad')
@@ -62,17 +62,14 @@ describe('S3 입력 정리', () => {
 })
 
 describe('S3 읽기 (저장 안 함, 인터넷 안 쓰는 경우)', () => {
-    it('링크만 저장되는 곳과 붙여넣기 곳은 이유와 함께 못 읽은 링크로', async () => {
-        const r = await collectDraftSources(['https://www.instagram.com/curi', 'https://blog.naver.com/curi'], [], Date.now() + 5_000)
+    it('링크만 저장되는 곳은 이유와 함께 못 읽은 링크로', async () => {
+        const r = await collectDraftSources(['https://www.tiktok.com/@curi'], [], Date.now() + 5_000)
         expect(r.texts).toEqual([])
-        expect(r.unread).toEqual([
-            { url: 'https://www.instagram.com/curi', reason: UNREAD_REASON.linkOnly },
-            { url: 'https://blog.naver.com/curi', reason: UNREAD_REASON.paste },
-        ])
+        expect(r.unread).toEqual([{ url: 'https://www.tiktok.com/@curi', reason: UNREAD_REASON.linkOnly }])
     })
-    it('붙여넣은 글이 있으면 네이버는 못 읽은 링크에 안 들어가고 글이 자료가 된다', async () => {
+    it('붙여넣은 글은 자료가 된다', async () => {
         const post = '저는 매일 아침 글을 씁니다. '.repeat(5)
-        const r = await collectDraftSources(['https://blog.naver.com/curi'], [post], Date.now() + 5_000)
+        const r = await collectDraftSources([], [post], Date.now() + 5_000)
         expect(r.unread).toEqual([])
         expect(r.texts).toEqual([{ title: '붙여넣은 글 1', url: '', text: post }])
     })

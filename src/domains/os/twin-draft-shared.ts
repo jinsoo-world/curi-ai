@@ -22,7 +22,7 @@ export const TWIN_DRAFT_COPY = {
     tab: '내 링크로 만들기',
     intro: '내 SNS, 블로그 링크로 나를 닮은 봇 초안을 만들어요',
     linkPlaceholder: 'https://youtube.com/@내채널',
-    pasteLabel: '네이버 블로그, 브런치 글 붙여넣기',
+    pasteLabel: '글 붙여넣기 (자동으로 못 읽을 때)',
     make: '초안 만들기',
     making: '글을 읽고 초안을 쓰는 중이에요',
     create: '이대로 만들기',
@@ -51,7 +51,6 @@ export function draftLinkKind(raw: string): DraftLinkKind {
     const host = u.hostname.replace(/^(www|m)\./, '').toLowerCase()
     const is = (h: string) => host === h || host.endsWith(`.${h}`)
     if (is('instagram.com') || is('threads.net') || is('threads.com') || is('x.com') || is('twitter.com') || is('tiktok.com') || is('facebook.com') || is('fb.com')) return 'link'
-    if (host === 'blog.naver.com' || host === 'rss.blog.naver.com' || is('brunch.co.kr')) return 'paste'
     if (isMarketHost(host)) return 'paste'
     return 'read'
 }

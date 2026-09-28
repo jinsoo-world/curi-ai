@@ -1,7 +1,8 @@
 // 계정 연결 = 인터넷 없이 확인할 수 있는 해석기 시험 (RSS, Atom, 사이트맵, robots.txt, 채널 번호)
 import { describe, it, expect } from 'vitest'
-import { parseFeed, parseSitemap, discoverFeedLinks, looksLikeFeed, newerThan, pickCandidates, isPasteOnlyHost, fetchFeed } from '../rss'
-import { extractChannelId, resolveChannelInput } from '../youtube'
+import { parseFeed, parseSitemap, discoverFeedLinks, looksLikeFeed, newerThan, pickCandidates } from '../rss'
+import { extractChannelId, resolveChannelInput, channelFeedUrl, parseChannelsList } from '../youtube'
+import { parseVideosList, isoDurationToSec } from '../../readers/youtube'
 import { parseRobots, robotsAllows, robotsBlocksAll } from '../website'
 import { substackFeedUrl } from '../podcast'
 
@@ -148,6 +149,7 @@ describe('유튜브 채널 번호 찾기', () => {
         expect(extractChannelId(html)).toBe('UCabcdefghijklmnopqrstuv')
         expect(extractChannelId('{"externalId":"UCyyyyyyyyyyyyyyyyyyyyyy"}')).toBe('UCyyyyyyyyyyyyyyyyyyyyyy')
         expect(extractChannelId('<html>없음</html>')).toBeNull()
+        expect(channelFeedUrl('UCabcdefghijklmnopqrstuv')).toBe('https://www.youtube.com/feeds/videos.xml?channel_id=UCabcdefghijklmnopqrstuv')
     })
 })
 
@@ -182,16 +184,16 @@ describe('공식 YouTube Data API 응답 해석 (공개 피드가 안 될 때)',
     })
 })
 
-describe('자동 읽기 안 하는 곳 (네이버 블로그, 브런치)', () => {
-    it('주소를 알아본다', () => {
-        expect(isPasteOnlyHost('https://rss.blog.naver.com/abc.xml')).toBe(true)
-        expect(isPasteOnlyHost('blog.naver.com/abc')).toBe(true)
-        expect(isPasteOnlyHost('https://m.blog.naver.com/abc/1')).toBe(true)
-        expect(isPasteOnlyHost('https://brunch.co.kr/@abc')).toBe(true)
-        expect(isPasteOnlyHost('https://abc.tistory.com/rss')).toBe(false)
-        expect(isPasteOnlyHost('https://n.news.naver.com/mnews/article/001/1')).toBe(false)
+describe('공식 YouTube Data API 응답 (열쇠가 있을 때 보탬)', () => {
+    it('channels.list → 채널 번호', () => {
+        expect(parseChannelsList(JSON.stringify({ items: [{ id: 'UC' + 'a'.repeat(22) }] }))).toBe('UC' + 'a'.repeat(22))
+        expect(parseChannelsList('{"items":[]}')).toBeNull()
+        expect(parseChannelsList('깨진 글')).toBeNull()
     })
-    it('피드로 읽지 않고 바로 안내한다(인터넷 안 씀)', async () => {
-        expect(await fetchFeed('https://rss.blog.naver.com/abc.xml')).toEqual({ error: '네이버 블로그와 브런치는 설정에서 글을 붙여넣어 주세요' })
+    it('videos.list → 제목, 설명, 길이', () => {
+        const m = parseVideosList(JSON.stringify({ items: [{ snippet: { title: '제목', channelTitle: '채널', description: '설명', publishedAt: '2026-09-01T00:00:00Z' }, contentDetails: { duration: 'PT1H2M3S' } }] }))
+        expect(m).toEqual({ title: '제목', channel: '채널', description: '설명', publishedAt: '2026-09-01T00:00:00Z', durationSec: 3723 })
+        expect(isoDurationToSec('PT45S')).toBe(45)
+        expect(parseVideosList('{}')).toBeNull()
     })
 })

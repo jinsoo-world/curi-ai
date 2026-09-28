@@ -1,6 +1,6 @@
 // domains/home: /home 첫 화면 입력칸 즉시 판별 (브라우저에서 돈다. 서버 코드 없음). 대표 지시 0928 23:53, 설계안 3.1.
 // 서버의 classifySnsLink(sns-link.ts)와 같은 갈래에 티스토리, 브런치, 아이디만, 상품 주소 규칙을 더했다.
-// 읽는 방법: 유튜브는 공식 API, 티스토리는 RSS, 공개 웹은 robots.txt 를 지켜 읽는다. 나머지는 붙여넣기.
+// 읽는 방법: 유튜브는 자막과 설명, 네이버 블로그와 티스토리는 RSS, 브런치와 공개 웹은 웹으로 읽는다. SNS 는 붙여넣기.
 
 export type HomeLinkKind = 'youtube' | 'tistory' | 'feed' | 'web' | 'shop' | 'paste' | 'capture' | 'market' | 'bareId' | 'bad'
 
@@ -15,7 +15,7 @@ export interface HomeLinkGuide {
 }
 
 export const HOME_LINK_LINES: Record<HomeLinkKind, string> = {
-    youtube: '유튜브 채널이에요. 영상 제목과 설명을 읽어 초안을 만들어요',
+    youtube: '유튜브 채널이에요. 영상 자막과 설명을 읽어 초안을 만들어요',
     tistory: '티스토리 블로그예요. 최근 글을 읽어요',
     feed: '공개 글을 읽어요',
     web: '공개된 글을 읽어요',
@@ -62,7 +62,7 @@ export function homeLinkGuide(raw: string): HomeLinkGuide {
     const is = (h: string) => host === h || host.endsWith(`.${h}`)
 
     if (CAPTURE.some(is)) return g('capture', url, true)
-    if (host === 'blog.naver.com' || host === 'rss.blog.naver.com' || is('brunch.co.kr')) return g('paste', url, true)
+    if (host === 'blog.naver.com' || host === 'rss.blog.naver.com' || is('brunch.co.kr')) return g('feed', url)
     if (isMarketHost(host)) return g('market', url, true)
     if (host === 'youtube.com' || host === 'youtu.be') return g('youtube', url)
     if (is('tistory.com') && host !== 'tistory.com') return g('tistory', url)

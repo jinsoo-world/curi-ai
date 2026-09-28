@@ -17,8 +17,8 @@ describe('homeLinkGuide', () => {
     it.each([
         ['https://www.youtube.com/@curi', 'youtube'],
         ['abc.tistory.com', 'tistory'],
-        ['https://blog.naver.com/abc', 'paste'],
-        ['brunch.co.kr/@abc', 'paste'],
+        ['https://blog.naver.com/abc', 'feed'],
+        ['brunch.co.kr/@abc', 'feed'],
         ['https://www.instagram.com/abc', 'capture'],
         ['threads.net/@abc', 'capture'],
         ['https://smartstore.naver.com/shop/products/123', 'market'],
@@ -35,7 +35,7 @@ describe('homeLinkGuide', () => {
         expect(homeLinkGuide(raw).kind).toBe(kind)
     })
     it('asks for paste on paste, capture, market', () => {
-        expect(homeLinkGuide('blog.naver.com/a').needPaste).toBe(true)
+        expect(homeLinkGuide('blog.naver.com/a').needPaste).toBe(false)   // 대표 결정 0929: 네이버 블로그는 다시 자동으로 읽는다
         expect(homeLinkGuide('instagram.com/a').needPaste).toBe(true)
         expect(homeLinkGuide('coupang.com/vp/1').needPaste).toBe(true)
         expect(homeLinkGuide('youtube.com/@a').needPaste).toBe(false)

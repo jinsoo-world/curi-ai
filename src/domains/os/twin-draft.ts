@@ -1,6 +1,6 @@
 // domains/os: 「내 링크로 만들기」 초안 (서버 전용). 대표 승인 0928 23:53, 리서치 S3.
 //
-// 저장하지 않는다. 링크를 읽고(공식 방법만: 유튜브 Data API, 티스토리 RSS, 일반 웹 robots.txt 지킴),
+// 저장하지 않는다. 링크를 읽고(유튜브, 네이버 블로그 RSS, 티스토리 RSS, 일반 웹),
 // 붙여넣은 글과 합쳐 기존 저가 모델에 한 번 물어 초안 JSON 을 받는다.
 // 봇 설명은 twin.ts(금지선 포함)로 조립하고, voice.ts 말투 규칙에 모델이 읽은 말투 초안을 덧붙인다(지우지 않음).
 // 인스타그램, 페이스북, 스레드, X, 틱톡은 읽지 않고 「못 읽은 링크」로 이유와 함께 돌려준다.
@@ -29,7 +29,7 @@ export interface DraftSources { texts: DraftText[]; unread: { url: string; reaso
 
 export const UNREAD_REASON = {
     linkOnly: '이 곳은 지금 글을 읽지 않고 링크만 저장돼요',
-    paste: '네이버 블로그와 브런치는 글을 붙여넣어 주세요',
+    paste: '이 곳은 글을 붙여넣어 주세요',
     empty: '읽을 글을 못 찾았어요',
     time: '시간이 모자라 못 읽었어요',
     market: '큰 장터 상품은 상품 설명을 붙여 넣어 주세요',
@@ -82,7 +82,7 @@ async function readOneLink(link: string, hasPaste: boolean, deadline: number): P
         }
         return { texts: [], unread: { url: link, reason: e instanceof Error ? e.message : '주소를 확인해 주세요' } }
     }
-    if (t.paste) return hasPaste ? { texts: [] } : { texts: [], unread: { url: t.url, reason: UNREAD_REASON.paste } }
+    if (t.paste && !t.feed) return hasPaste ? { texts: [] } : { texts: [], unread: { url: t.url, reason: UNREAD_REASON.paste } }
     if (!t.feed) return { texts: [], unread: { url: t.url, reason: t.platform === 'market' ? UNREAD_REASON.market : UNREAD_REASON.linkOnly } }
     // 일반 웹의 글 하나, 상품 하나 주소는 그 쪽만 읽는다 (사이트 전체 목차를 돌지 않는다)
     if (t.feed.kind === 'website' && new URL(t.url).pathname.replace(/\/+$/, '') !== '') {

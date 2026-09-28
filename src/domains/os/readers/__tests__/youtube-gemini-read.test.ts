@@ -1,6 +1,8 @@
-// readYoutube 가 Gemini 정리를 글로 쓰는지 (정리 함수는 가짜). 자막 도구는 더는 부르지 않는다
+// readYoutube 가 자막이 막혔을 때 Gemini 정리를 글로 쓰는지 (정리 함수는 가짜)
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
+const getVideoDetails = vi.fn()
+vi.mock('youtube-caption-extractor', () => ({ getVideoDetails: (...a: unknown[]) => getVideoDetails(...a) }))
 const getYoutubeDigest = vi.fn()
 const keepAlive = vi.fn(async () => {})
 vi.mock('../youtube-gemini', async (orig) => ({ ...(await orig<typeof import('../youtube-gemini')>()), getYoutubeDigest: (...a: unknown[]) => getYoutubeDigest(...a), keepAlive: (...a: unknown[]) => keepAlive(...(a as [])) }))
@@ -13,6 +15,7 @@ const DIGEST = '[요약]\n창업 팀 이야기.\n\n[핵심]\n- 역할 나누기 
 
 beforeEach(() => {
     cacheClear()
+    getVideoDetails.mockReset().mockRejectedValue(new Error('LOGIN_REQUIRED'))
     getYoutubeDigest.mockReset()
     keepAlive.mockClear()
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
@@ -25,7 +28,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('readYoutube + Gemini 정리', () => {
-    it('정리를 글로 쓴다 (정리본이라고 적는다)', async () => {
+    it('자막이 막히면 정리를 글로 쓴다 (정리본이라고 적는다)', async () => {
         getYoutubeDigest.mockResolvedValue({ ok: true, text: DIGEST, model: 'gemini-3.5-flash-lite', from: 'gemini' })
         const r = await readYoutube('https://youtu.be/abcdefghijk', { gemini: { userId: 'u1', waitMs: 1000 }, maxChars: 12000 })
         expect(r.ok).toBe(true)
@@ -34,6 +37,7 @@ describe('readYoutube + Gemini 정리', () => {
         expect(r.text).toContain('[영상 정리]')
         expect(r.text).toContain('정리본')
         expect(r.text).toContain('[1:30] 기준 세 가지')
+        expect(r.text).toContain('설명 글')
         expect(getYoutubeDigest).toHaveBeenCalledWith(expect.objectContaining({ videoId: 'abcdefghijk', userId: 'u1', title: '창업 팀 꾸리기' }))
     })
     it('gemini 옵션이 없으면 부르지 않는다 (자동 가져오기 등)', async () => {
@@ -41,11 +45,11 @@ describe('readYoutube + Gemini 정리', () => {
         expect(getYoutubeDigest).not.toHaveBeenCalled()
         expect(r.ok && r.method).toBe('meta')
     })
-    it('자막 도구와 youtubei 는 부르지 않는다 (약관 위험 제거 0928)', async () => {
-        getYoutubeDigest.mockResolvedValue({ ok: true, text: DIGEST, model: 'm', from: 'gemini' })
-        await readYoutube('https://youtu.be/abcdefghijk', { gemini: { userId: 'u1', waitMs: 1000 } })
-        const urls = (fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls.map(c => String(c[0]))
-        expect(urls.some(u => u.includes('youtubei') || u.startsWith('https://www.youtube.com/watch'))).toBe(false)
+    it('자막이 있으면 부르지 않는다 (무료 길 먼저)', async () => {
+        getVideoDetails.mockReset().mockResolvedValue({ title: 't', description: '', subtitles: [{ text: '안녕하세요 오늘은 창업 이야기를 합니다', start: '0', dur: '3' }] })
+        const r = await readYoutube('https://youtu.be/abcdefghijk', { gemini: { userId: 'u1' } })
+        expect(getYoutubeDigest).not.toHaveBeenCalled()
+        expect(r.ok && r.method).toBe('captions')
     })
     it('시간 안에 못 끝나면 설명만으로 답하고 뒤에서 계속한다', async () => {
         getYoutubeDigest.mockReturnValue(new Promise(() => {}))

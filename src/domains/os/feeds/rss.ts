@@ -24,7 +24,6 @@ import {
     decodeXml, toIso, looksLikeFeed, parseFeed, discoverFeedLinks, parseSitemap,
 } from './parse'
 import type { ParsedFeedEntry, ParsedSitemap } from './parse'
-import { isPasteOnlyHost, PASTE_ONLY_NOTE } from '../paste-only'
 
 // 해석기는 parse.ts 로 옮겼다. 예전처럼 여기서도 꺼내 쓸 수 있게 그대로 내보낸다.
 export { decodeXml, toIso, looksLikeFeed, parseFeed, discoverFeedLinks, parseSitemap }
@@ -39,12 +38,9 @@ export function withScheme(raw: string): string {
     return /^https?:\/\//i.test(t) ? t : `https://${t.replace(/^\/+/, '')}`
 }
 
-// 자동 읽기를 하지 않는 곳 (네이버 블로그, 브런치). 규칙은 paste-only.ts 한 곳
-export { isPasteOnlyHost, PASTE_ONLY_NOTE }
 
 /** 피드 주소 하나를 안전하게 가져와 해석한다. 피드가 아니면 null (던지지 않는다) */
 export async function fetchFeed(url: string): Promise<{ url: string; entries: ParsedFeedEntry[] } | { error: string } | null> {
-    if (isPasteOnlyHost(url)) return { error: PASTE_ONLY_NOTE }
     const page = await fetchPageSafely(url, { maxBytes: FEED_MAX_BYTES, timeoutMs: FEED_TIMEOUT_MS })
     if (!page.ok) return { error: page.reason }
     if (!looksLikeFeed(page.body)) return null
@@ -56,7 +52,6 @@ export async function fetchFeed(url: string): Promise<{ url: string; entries: Pa
  * 주소 자체가 피드면 그대로, 웹페이지면 그 안의 「RSS 링크」를 따라간다. 못 찾으면 던진다.
  */
 export async function loadFeedFrom(url: string): Promise<{ url: string; entries: ParsedFeedEntry[] }> {
-    if (isPasteOnlyHost(url)) throw new Error(PASTE_ONLY_NOTE)
     const page = await fetchPageSafely(url, { maxBytes: FEED_MAX_BYTES, timeoutMs: FEED_TIMEOUT_MS })
     if (!page.ok) throw new Error(page.reason)
     if (looksLikeFeed(page.body)) return { url: page.url, entries: parseFeed(page.body) }

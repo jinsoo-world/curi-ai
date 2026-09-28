@@ -3,19 +3,19 @@ import { classifySnsLink, cleanPastedPosts, snsCanonicalKey, PASTE_MIN_CHARS } f
 import { SNS_SUCCESS_LINE, SNS_BONUS_CLOVERS } from '../onboarding'
 
 describe('classifySnsLink', () => {
-    it('네이버 블로그는 자동으로 읽지 않고 붙여넣기로 받는다 (약관 위험 제거 0928)', () => {
+    it('네이버 블로그는 공개 RSS 로 자동으로 읽고, 못 읽으면 붙여넣기 (대표 결정 0929)', () => {
         const c = classifySnsLink('blog.naver.com/passionjin')
-        expect(c.feed).toBe(null)
+        expect(c.feed).toEqual({ kind: 'podcast', handleOrUrl: 'https://rss.blog.naver.com/passionjin.xml' })
         expect(c.paste).toBe(true)
         expect(c.url).toBe('https://blog.naver.com/passionjin')
         expect(classifySnsLink('https://m.blog.naver.com/passionjin/223000').url).toBe('https://blog.naver.com/passionjin')
         expect(classifySnsLink('https://blog.naver.com/PostView.naver?blogId=abc_1&logNo=1').url).toBe('https://blog.naver.com/abc_1')
-        expect(classifySnsLink('https://rss.blog.naver.com/abc_1.xml').feed).toBe(null)
+        expect(classifySnsLink('https://rss.blog.naver.com/abc_1.xml').feed?.handleOrUrl).toBe('https://rss.blog.naver.com/abc_1.xml')
         expect(() => classifySnsLink('https://blog.naver.com/PostView.naver')).toThrow()
     })
-    it('브런치도 붙여넣기, 티스토리는 공식 RSS', () => {
+    it('브런치는 웹으로 읽고 못 읽으면 붙여넣기, 티스토리는 공식 RSS', () => {
         expect(classifySnsLink('https://brunch.co.kr/@me').paste).toBe(true)
-        expect(classifySnsLink('https://brunch.co.kr/@me').feed).toBe(null)
+        expect(classifySnsLink('https://brunch.co.kr/@me').feed).toEqual({ kind: 'website', handleOrUrl: 'https://brunch.co.kr/@me' })
         expect(classifySnsLink('https://myblog.tistory.com/12').feed).toEqual({ kind: 'podcast', handleOrUrl: 'https://myblog.tistory.com/rss' })
     })
     it('같은 블로그는 같은 열쇠 (보너스 한 주소 한 계정)', () => {

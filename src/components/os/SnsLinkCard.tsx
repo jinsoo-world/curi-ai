@@ -1,6 +1,6 @@
 'use client'
 // 설정 > 일반 「내 SNS, 블로그」 (대표 승인 0928 23:29). 링크를 넣으면 공개 글을 읽어 내 봇 자료에 넣는다.
-// 유튜브 채널(공식 API), 티스토리, RSS, 일반 웹은 읽는다. 네이버 블로그와 브런치는 대표 글 3편 붙여넣기(대표 결정 0928 23:53).
+// 유튜브 채널, 네이버 블로그, 브런치, 티스토리, RSS, 일반 웹은 읽는다(대표 결정 0929). 못 읽으면 대표 글 붙여넣기를 연다.
 // 인스타그램, 페이스북, 스레드, X, 틱톡은 링크만 저장한다(준비 중).
 import { useCallback, useEffect, useState } from 'react'
 import { SNS_HINT, SNS_PASTE_MAX_POSTS as PASTE_MAX_POSTS, SNS_PASTE_MIN_CHARS as PASTE_MIN_CHARS } from '@/domains/os/onboarding'
@@ -89,7 +89,7 @@ export default function SnsLinkCard() {
                 {links.map(l => (
                     <div key={l.id} className="os-set-line">
                         <div className="os-set-text" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.url}</div>
-                        {l.status === 'pending' && (l.platform === 'naver_blog' || l.platform === 'brunch')
+                        {l.status !== 'read' && (l.platform === 'naver_blog' || l.platform === 'brunch')
                             ? <button type="button" className="os-btn" onClick={() => setPasteUrl(l.url)}>글 붙여넣기</button>
                             : <span className="os-set-value">{STATUS[l.status]}{l.status === 'read' && l.added_count > 0 ? ` ${l.added_count}건` : ''}</span>}
                     </div>

@@ -1,7 +1,7 @@
 // SNS, 블로그 링크 연동 (대표 승인 0928 23:29). 서버 전용.
-// 받은 링크를 이미 있는 「계정 연결」(feeds: 유튜브 채널(공식 API), 티스토리 RSS, RSS, 일반 웹)로 읽어 그 사람 봇의 자료에 넣는다.
-// 대표 결정 0928 23:53 「약관 위험 제거」: 네이버 블로그(rss.blog.naver.com robots.txt 전면 금지, 약관 자동 수집 금지)와
-//   브런치(AI 크롤러 금지)는 자동으로 읽지 않고 「대표 글 3편 붙여넣기」로 받는다(pasteSnsPosts).
+// 받은 링크를 이미 있는 「계정 연결」(feeds: 유튜브 채널, 네이버 블로그 RSS, 티스토리 RSS, RSS, 일반 웹)로 읽어 그 사람 봇의 자료에 넣는다.
+// 대표 결정 0929 00:54 「SNS 주소만 넣으면 나처럼 말하는 AI」: 네이버 블로그와 브런치도 다시 자동으로 읽는다.
+//   못 읽었을 때만 「대표 글 3편 붙여넣기」(pasteSnsPosts)를 보탬으로 연다.
 //   인스타그램, 페이스북, 스레드, X, 틱톡은 링크만 저장한다(준비 중).
 // 자료가 실제로 들어갔을 때만 클로버 50개를 계정당 한 번, 같은 주소로는 한 계정만 준다
 //   (DB 함수 grant_sns_link_bonus_keyed 가 계정 중복과 주소 중복을 막는다).
@@ -27,7 +27,7 @@ export interface SnsTarget {
     platform: SnsPlatform
     /** 읽을 수 있으면 계정 연결 종류와 넣을 값, 못 읽으면 null (준비 중) */
     feed: { kind: FeedKind; handleOrUrl: string } | null
-    /** 자동으로 읽지 않고 대표 글 붙여넣기로 받는 곳 (네이버 블로그, 브런치) */
+    /** 대표 글 붙여넣기를 받을 수 있는 곳. feed 가 있으면 자동으로 읽고, 못 읽었을 때만 붙여넣기를 연다 */
     paste?: boolean
 }
 
@@ -58,10 +58,11 @@ export function classifySnsLink(raw: unknown): SnsTarget {
     if (host === 'blog.naver.com' || host === 'rss.blog.naver.com') {
         const id = (u.searchParams.get('blogId') || u.pathname.split('/').filter(Boolean)[0] || '').replace(/\.xml$/, '')
         if (!/^[A-Za-z0-9_-]{2,40}$/.test(id) || /\.naver$/i.test(id)) throw new Error('네이버 블로그 주소를 확인해 주세요. 예: blog.naver.com/아이디')
-        // 자동 읽기(rss.blog.naver.com) 끔. 대표 글 붙여넣기로 받는다
-        return { url: `https://blog.naver.com/${id}`, platform: 'naver_blog', feed: null, paste: true }
+        // 공개 RSS 로 읽는다(대표 결정 0929). 못 읽으면 붙여넣기
+        return { url: `https://blog.naver.com/${id}`, platform: 'naver_blog', feed: { kind: 'podcast', handleOrUrl: `https://rss.blog.naver.com/${id}.xml` }, paste: true }
     }
-    if (is('brunch.co.kr')) return { url, platform: 'brunch', feed: null, paste: true }
+    // 브런치는 일반 웹처럼 읽는다(예전 그대로). 못 읽으면 붙여넣기
+    if (is('brunch.co.kr')) return { url, platform: 'brunch', feed: { kind: 'website', handleOrUrl: url }, paste: true }
     // 큰 장터 상품(스마트스토어, 쿠팡 등)은 약관 확인 전까지 자동으로 읽지 않는다. 링크만 저장 (보너스 없음)
     if (isMarketHost(host)) return { url, platform: 'market', feed: null }
     // 티스토리는 주인이 켠 공식 RSS(/rss). robots.txt 도 막지 않는다
@@ -123,7 +124,7 @@ export async function connectSnsLink(db: Db, a: { userId: string; displayName: s
     if (linkErr || !link) throw new Error('링크를 저장하지 못했어요')
     const base = { platform: target.platform, added: 0, bonus: 0, alreadyGranted: false }
 
-    if (target.paste) {
+    if (target.paste && !target.feed) {
         await db.from('user_sns_links').update({ status: 'pending', note: '글 붙여넣기', updated_at: now() }).eq('id', link.id)
         return { ...base, status: 'paste', message: SNS_PASTE_LINE }
     }
@@ -160,6 +161,8 @@ export async function connectSnsLink(db: Db, a: { userId: string; displayName: s
     await db.from('user_sns_links').update({
         status, mentor_id: mentorId, feed_id: feedId, added_count: total, note: added > 0 ? null : note, updated_at: now(),
     }).eq('id', link.id)
+    // 자동으로 못 읽었고 붙여넣기를 받는 곳이면 붙여넣기 칸을 연다 (링크는 실패로 남아 다시 시도할 수 있다)
+    if (status !== 'read' && target.paste) return { ...base, status: 'paste', message: SNS_PASTE_LINE }
     if (status !== 'read') return { ...base, status, message: note || '읽지 못했어요' }
 
     return grantBonus(db, a.userId, link.id, target, { ...base, status, added, message: SNS_READ_LINE })
@@ -202,7 +205,7 @@ export function cleanPastedPosts(raw: unknown): { posts: string[]; tooShort: num
  */
 export async function pasteSnsPosts(db: Db, a: { userId: string; displayName: string; url: unknown; posts: unknown }): Promise<SnsConnectResult> {
     const target = classifySnsLink(a.url)
-    if (!target.paste) throw new Error('이 주소는 붙여넣기 없이 주소만 넣으면 돼요')
+    if (!target.paste) throw new Error('이 주소는 주소만 넣으면 돼요')
     const { posts, tooShort } = cleanPastedPosts(a.posts)
     if (posts.length === 0) throw new Error(tooShort > 0 ? `글이 너무 짧아요. 한 편에 ${PASTE_MIN_CHARS}자 이상 붙여넣어 주세요` : '글을 붙여넣어 주세요')
     const now = () => new Date().toISOString()

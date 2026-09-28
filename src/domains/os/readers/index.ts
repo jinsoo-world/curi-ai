@@ -27,7 +27,6 @@ import { readGithub } from './github'
 import { extractNaverBlog, extractNaverNews, naverBlogMobileUrl } from './naver'
 import { feedToText, looksLikeFeed, discoverFeedLinks, kstStamp } from './feed'
 import { cacheGet, cacheSet } from './cache'
-import { isPasteOnlyHost, PASTE_ONLY_CHAT_NOTE } from '../paste-only'
 
 export type { ReadResult, ReadPage, ReadFail } from '@/domains/agent/fetch-url'
 export { extractArticle } from './article'
@@ -81,8 +80,6 @@ export async function readUrl(rawUrl: string, opts: ReadOptions = {}): Promise<R
 
     // 🛡 어디로 가든 첫 줄은 안전 검사다 (유튜브 흉내 주소도 여기서 걸린다)
     if (!isSafeFetchUrl(requestedUrl)) return fail('열 수 없는 주소예요(공개된 http, https 주소만 읽을 수 있어요)')
-    // 네이버 블로그, 브런치 글은 열지 않는다 (약관 위험 제거, 대표 결정 0928 23:53). 붙여넣기 안내 한 줄
-    if (isPasteOnlyHost(requestedUrl)) return fail(PASTE_ONLY_CHAT_NOTE)
 
     const key = `${o.maxChars}|${requestedUrl}`
     const hit = cacheGet(key)
@@ -159,8 +156,6 @@ async function readWeb(requestedUrl: string, o: Opts, kind: LinkKind): Promise<R
     }
 
     const host = hostOf(page.url)
-    // 짧은 주소(naver.me 등)가 네이버 블로그, 브런치로 보냈으면 읽은 것을 버린다
-    if (isPasteOnlyHost(page.url)) return fail(PASTE_ONLY_CHAT_NOTE)
 
     // 2) 네이버 뉴스
     if (host === 'n.news.naver.com' || host === 'news.naver.com' || host === 'm.news.naver.com') {
