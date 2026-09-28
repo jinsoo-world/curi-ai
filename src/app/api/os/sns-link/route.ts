@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || '주인'
     try {
         if (body.action === 'paste') {
-            const r = await pasteSnsPosts(createAdminClient(), { userId: user.id, displayName, url: body.url, posts: body.posts })
+            const r = await pasteSnsPosts(createAdminClient(), { userId: user.id, displayName, url: body.url, posts: body.posts, images: body.images })
             return NextResponse.json(r)
         }
         const r = await connectSnsLink(createAdminClient(), {

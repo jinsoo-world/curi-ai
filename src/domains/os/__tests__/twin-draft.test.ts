@@ -34,9 +34,10 @@ describe('S1 동의와 링크 판별', () => {
             ['https://example.com/blog', 'read'],
             ['https://blog.naver.com/curi', 'read'],
             ['https://brunch.co.kr/@curi', 'read'],
-            ['https://www.instagram.com/curi', 'link'],
-            ['https://www.facebook.com/curi', 'link'],
-            ['https://www.threads.net/@curi', 'link'],
+            ['https://www.instagram.com/curi', 'paste'],
+            ['https://www.facebook.com/curi', 'paste'],
+            ['https://www.threads.net/@curi', 'paste'],
+            ['https://www.tiktok.com/@curi', 'link'],
         ]
         for (const [url, kind] of cases) {
             expect(draftLinkKind(url)).toBe(kind)

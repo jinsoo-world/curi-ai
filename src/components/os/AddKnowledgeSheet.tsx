@@ -10,8 +10,12 @@ import { parseQaCsv } from '@/domains/os/csv'
 import FolderSync from './FolderSync'
 import ConnectFeedSheet from './ConnectFeedSheet'
 import CloudSync from './CloudSync'
+import { shrinkImage } from '@/lib/image-shrink'
 
-type Tab = 'file' | 'link' | 'text' | 'qa' | 'csv' | 'note' | 'folder' | 'cloud' | 'feed'
+/** SNS 캡처는 한 번에 5장까지 (서버 SCREENSHOT_MAX_IMAGES 와 같다) */
+const CAPTURE_MAX = 5
+
+type Tab = 'file' | 'link' | 'sns' | 'text' | 'qa' | 'csv' | 'note' | 'folder' | 'cloud' | 'feed'
 
 interface Props {
     mentorId: string
@@ -34,6 +38,11 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
     const [busy, setBusy] = useState(false)
     const [msg, setMsg] = useState<string | null>(null)
     const [err, setErr] = useState<string | null>(null)
+    // 인스타그램, 페이스북, 스레드: 캡처(줄인 사진)와 붙여넣은 글
+    const [snsUrl, setSnsUrl] = useState('')
+    const [shots, setShots] = useState<string[]>([])
+    const [snsText, setSnsText] = useState('')
+    const shotRef = useRef<HTMLInputElement>(null)
     const fileRef = useRef<HTMLInputElement>(null)
     const csvRef = useRef<HTMLInputElement>(null)
 
@@ -209,8 +218,45 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
         }
     }
 
+    /** 캡처 고르기: 긴 변 1280px 로 줄여 담는다 (5장까지) */
+    const 캡처고르기 = async (files: FileList | null) => {
+        if (!files) return
+        setErr(null)
+        try {
+            const picked = Array.from(files).filter(f => f.type.startsWith('image/')).slice(0, CAPTURE_MAX - shots.length)
+            const small = await Promise.all(picked.map(f => shrinkImage(f)))
+            setShots(prev => [...prev, ...small].slice(0, CAPTURE_MAX))
+        } catch (e) {
+            setErr(e instanceof Error ? e.message : '사진을 못 열었어요')
+        } finally {
+            if (shotRef.current) shotRef.current.value = ''
+        }
+    }
+
+    const sns넣기 = async () => {
+        setBusy(true); setErr(null); setMsg(shots.length > 0 ? '캡처에서 글을 읽는 중이에요…' : '봇이 읽는 중이에요…')
+        try {
+            const res = await fetch('/api/os/knowledge', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mentorId, kind: 'sns', url: snsUrl.trim(), images: shots, text: snsText }),
+            })
+            const data = await res.json().catch(() => ({}))
+            if (!res.ok) throw new Error(data.error || '넣지 못했어요')
+            osTrack('os_knowledge_added', { mentor_id: mentorId, kind: 'sns' })
+            await onAdded()
+            setMsg('다 읽었어요')
+            setTimeout(onClose, 700)
+        } catch (e) {
+            setMsg(null)
+            setErr(`못 읽었어요. ${e instanceof Error ? e.message : ''}`.trim())
+        } finally {
+            setBusy(false)
+        }
+    }
+
     const 넣기 = async () => {
         if (tab === 'link') { await 링크넣기(); return }
+        if (tab === 'sns') { await sns넣기(); return }
         if (tab === 'qa') { await qa넣기(); return }
         if (tab === 'note') { await note넣기(); return }
         setBusy(true); setErr(null); setMsg('봇이 읽는 중이에요…')
@@ -235,6 +281,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
 
     const 주소개수 = splitUrls(urls.join('\n')).length
     const 넣을수있나 = tab === 'link' ? 주소개수 > 0
+        : tab === 'sns' ? shots.length > 0 || snsText.trim().length >= 10
         : tab === 'qa' ? qaQuestion.trim().length >= 2 && qaAnswer.trim().length >= 1
         : tab === 'note' ? noteText.trim().length >= 5
         : text.trim().length >= 10
@@ -248,6 +295,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                 <div className="os-tabs" role="tablist">
                     <button className="os-tab" role="tab" aria-selected={tab === 'file'} onClick={() => setTab('file')} disabled={busy}>파일</button>
                     <button className="os-tab" role="tab" aria-selected={tab === 'link'} onClick={() => setTab('link')} disabled={busy}>링크, 유튜브</button>
+                    <button className="os-tab" role="tab" aria-selected={tab === 'sns'} onClick={() => setTab('sns')} disabled={busy}>인스타, 스레드</button>
                     <button className="os-tab" role="tab" aria-selected={tab === 'text'} onClick={() => setTab('text')} disabled={busy}>글 붙여넣기</button>
                     <button className="os-tab" role="tab" aria-selected={tab === 'qa'} onClick={() => setTab('qa')} disabled={busy}>Q&amp;A 쓰기</button>
                     <button className="os-tab" role="tab" aria-selected={tab === 'csv'} onClick={() => setTab('csv')} disabled={busy}>CSV 올리기</button>
@@ -291,6 +339,34 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                             onClick={() => setUrls(prev => [...prev, ''])}>＋ 주소 더 넣기</button>
                         <div style={{ color: 'var(--os-글-흐림)', fontSize: 13, lineHeight: 1.5 }}>
                             주소를 여러 줄 붙여 넣으면 알아서 나눠요. 유튜브는 자막과 설명을 읽어요.
+                        </div>
+                    </div>
+                )}
+
+                {tab === 'sns' && (
+                    <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
+                        <input type="text" value={snsUrl} onChange={e => setSnsUrl(e.target.value)} disabled={busy} maxLength={300}
+                            placeholder="내 인스타그램, 페이스북, 스레드 주소 (선택)" aria-label="SNS 주소" />
+                        <input ref={shotRef} type="file" accept="image/png,image/jpeg,image/webp" multiple style={{ display: 'none' }}
+                            onChange={e => void 캡처고르기(e.target.files)} />
+                        <button type="button" className="os-btn" style={{ minHeight: 44 }} disabled={busy || shots.length >= CAPTURE_MAX}
+                            onClick={() => shotRef.current?.click()}>화면 캡처 올리기</button>
+                        {shots.length > 0 && (
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                {shots.map((src, i) => (
+                                    <div key={i} style={{ position: 'relative' }}>
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={src} alt={`캡처 ${i + 1}`} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--os-선)' }} />
+                                        <button type="button" className="os-source-x" aria-label={`캡처 ${i + 1} 빼기`} disabled={busy}
+                                            style={{ position: 'absolute', top: -6, right: -6 }} onClick={() => setShots(prev => prev.filter((_, j) => j !== i))}>✕</button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <textarea className="os-textarea" value={snsText} onChange={e => setSnsText(e.target.value)} disabled={busy}
+                            rows={5} placeholder="또는 내 글을 복사해 붙여넣기" aria-label="SNS 글" />
+                        <div style={{ color: 'var(--os-글-흐림)', fontSize: 13, lineHeight: 1.5 }}>
+                            캡처에서 글만 옮겨 적어요. 다른 사람 댓글은 빼요.
                         </div>
                     </div>
                 )}

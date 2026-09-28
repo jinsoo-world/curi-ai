@@ -2,7 +2,7 @@
 // 받은 링크를 이미 있는 「계정 연결」(feeds: 유튜브 채널, 네이버 블로그 RSS, 티스토리 RSS, RSS, 일반 웹)로 읽어 그 사람 봇의 자료에 넣는다.
 // 대표 결정 0929 00:54 「SNS 주소만 넣으면 나처럼 말하는 AI」: 네이버 블로그와 브런치도 다시 자동으로 읽는다.
 //   못 읽었을 때만 「대표 글 3편 붙여넣기」(pasteSnsPosts)를 보탬으로 연다.
-//   인스타그램, 페이스북, 스레드, X, 틱톡은 링크만 저장한다(준비 중).
+//   인스타그램, 페이스북, 스레드는 화면 캡처 올리기나 글 붙여넣기로 받는다(대표 결정 0929). X, 틱톡은 링크만 저장한다(준비 중).
 // 자료가 실제로 들어갔을 때만 클로버 50개를 계정당 한 번, 같은 주소로는 한 계정만 준다
 //   (DB 함수 grant_sns_link_bonus_keyed 가 계정 중복과 주소 중복을 막는다).
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -11,9 +11,11 @@ import { isMarketHost } from '@/domains/home/link-guide'
 import { createFeed, listFeeds, syncFeed, loadExistingSources, type FeedKind } from './feeds'
 import { isSafeFetchUrl } from '@/domains/agent/fetch-url'
 import { MAX_SOURCES_PER_BOT, addTextSource, assertRoomForMore } from './knowledge'
+import { parseScreenshotImages, readScreenshots } from './screenshot-read'
+import { snsLabelOf } from './sns-capture'
 import { bootstrapDefaultTeam } from './team'
 import { JOBS } from './presets'
-import { firstJobFor, SNS_BONUS_CLOVERS, SNS_KEY_TAKEN_LINE, SNS_PASTE_LINE, SNS_PASTE_MAX_POSTS, SNS_PASTE_MIN_CHARS, SNS_PENDING_LINE, SNS_READ_LINE, SNS_SUCCESS_LINE } from './onboarding'
+import { firstJobFor, SNS_BONUS_CLOVERS, SNS_KEY_TAKEN_LINE, SNS_PASTE_LINE, SNS_CAPTURE_LINE, SNS_PASTE_MAX_POSTS, SNS_PASTE_MIN_CHARS, SNS_PENDING_LINE, SNS_READ_LINE, SNS_SUCCESS_LINE } from './onboarding'
 
 export type SnsPlatform = 'youtube' | 'naver_blog' | 'brunch' | 'tistory' | 'substack' | 'rss' | 'website' | 'instagram' | 'threads' | 'x' | 'tiktok' | 'facebook' | 'market'
 
@@ -44,12 +46,12 @@ export function classifySnsLink(raw: unknown): SnsTarget {
     const host = u.hostname.replace(/^(www|m)\./, '').toLowerCase()
     const is = (h: string) => host === h || host.endsWith(`.${h}`)
 
-    if (is('instagram.com')) return { url, platform: 'instagram', feed: null }
-    if (is('threads.net') || is('threads.com')) return { url, platform: 'threads', feed: null }
+    // 인스타그램, 스레드, 페이스북 = 자동으로 못 읽는다(로그인 벽). 캡처나 글 붙여넣기로 받는다
+    if (is('instagram.com')) return { url, platform: 'instagram', feed: null, paste: true }
+    if (is('threads.net') || is('threads.com')) return { url, platform: 'threads', feed: null, paste: true }
     if (is('x.com') || is('twitter.com')) return { url, platform: 'x', feed: null }
     if (is('tiktok.com')) return { url, platform: 'tiktok', feed: null }
-    // 페이스북은 로그인 벽이라 일반 웹으로 읽으면 실패한다. 링크만 저장 (준비 중, 보너스 없음)
-    if (is('facebook.com') || is('fb.com')) return { url, platform: 'facebook', feed: null }
+    if (is('facebook.com') || is('fb.com')) return { url, platform: 'facebook', feed: null, paste: true }
 
     if (host === 'youtube.com' || host === 'youtu.be') {
         if (!resolveChannelInput(url)) throw new Error('유튜브는 채널 주소(@핸들)를 넣어 주세요')
@@ -125,8 +127,8 @@ export async function connectSnsLink(db: Db, a: { userId: string; displayName: s
     const base = { platform: target.platform, added: 0, bonus: 0, alreadyGranted: false }
 
     if (target.paste && !target.feed) {
-        await db.from('user_sns_links').update({ status: 'pending', note: '글 붙여넣기', updated_at: now() }).eq('id', link.id)
-        return { ...base, status: 'paste', message: SNS_PASTE_LINE }
+        await db.from('user_sns_links').update({ status: 'pending', note: '캡처나 글 붙여넣기', updated_at: now() }).eq('id', link.id)
+        return { ...base, status: 'paste', message: SNS_CAPTURE_LINE }
     }
     if (!target.feed) {
         await db.from('user_sns_links').update({ status: 'pending', note: '준비 중', updated_at: now() }).eq('id', link.id)
@@ -203,11 +205,18 @@ export function cleanPastedPosts(raw: unknown): { posts: string[]; tooShort: num
  * 네이버 블로그, 브런치: 대표 글(최대 3편)을 붙여넣으면 한 자료로 묶어 내 봇에 넣는다(자료 칸 하나만 씀).
  * 저장되면 보너스 조건 충족 (계정당 한 번, 같은 주소 한 계정).
  */
-export async function pasteSnsPosts(db: Db, a: { userId: string; displayName: string; url: unknown; posts: unknown }): Promise<SnsConnectResult> {
+export async function pasteSnsPosts(db: Db, a: { userId: string; displayName: string; url: unknown; posts: unknown; images?: unknown }): Promise<SnsConnectResult> {
     const target = classifySnsLink(a.url)
     if (!target.paste) throw new Error('이 주소는 주소만 넣으면 돼요')
-    const { posts, tooShort } = cleanPastedPosts(a.posts)
-    if (posts.length === 0) throw new Error(tooShort > 0 ? `글이 너무 짧아요. 한 편에 ${PASTE_MIN_CHARS}자 이상 붙여넣어 주세요` : '글을 붙여넣어 주세요')
+    // 캡처가 있으면 글을 옮겨 적어 한 편으로 더한다 (300자 규칙은 똑같이 적용)
+    const images = parseScreenshotImages(a.images)
+    const fromImages = images.length > 0 ? await readScreenshots(images, { route: '/api/os/sns-link', userId: a.userId }) : []
+    if (images.length > 0 && fromImages.length === 0 && !(Array.isArray(a.posts) && a.posts.some(p => String(p ?? '').trim()))) {
+        throw new Error('캡처에서 글을 못 찾았어요. 글이 보이게 다시 캡처해 주세요')
+    }
+    const pastedList = [...(Array.isArray(a.posts) ? a.posts : []), ...(fromImages.length ? [fromImages.join('\n\n')] : [])]
+    const { posts, tooShort } = cleanPastedPosts(pastedList)
+    if (posts.length === 0) throw new Error(tooShort > 0 ? `글이 너무 짧아요. 한 편에 ${PASTE_MIN_CHARS}자 이상 넣어 주세요` : '글을 붙여넣어 주세요')
     const now = () => new Date().toISOString()
     const { data: link, error: linkErr } = await db.from('user_sns_links')
         .upsert({ user_id: a.userId, url: target.url, platform: target.platform, source: 'settings', updated_at: now() }, { onConflict: 'user_id,url' })
@@ -216,7 +225,7 @@ export async function pasteSnsPosts(db: Db, a: { userId: string; displayName: st
     const mentorId = await pickBot(db, a.userId, a.displayName)
     if (!mentorId) throw new Error('봇을 먼저 만들어 주세요')
     await assertRoomForMore(db, mentorId)
-    const label = target.platform === 'naver_blog' ? '네이버 블로그' : '브런치'
+    const label = snsLabelOf(target.url)
     const body = posts.map((p, i) => `[글 ${i + 1}]\n${p}`).join('\n\n')
     await addTextSource(db, mentorId, `내 ${label} 대표 글 ${posts.length}편`, `출처: ${target.url}\n\n${body}`, 'sns_paste')
     const total = (link.added_count ?? 0) + posts.length

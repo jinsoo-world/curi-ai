@@ -5,11 +5,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { SNS_HINT, SNS_PASTE_MAX_POSTS as PASTE_MAX_POSTS, SNS_PASTE_MIN_CHARS as PASTE_MIN_CHARS } from '@/domains/os/onboarding'
 import { 클로버알림 } from '@/lib/clover-bus'
+import { shrinkImage } from '@/lib/image-shrink'
 
 type Link = { id: string; url: string; platform: string; status: 'read' | 'pending' | 'failed'; added_count: number; note: string | null }
 const STATUS: Record<Link['status'], string> = { read: '읽음', pending: '준비 중', failed: '못 읽음' }
 /** 대표 글 붙여넣기를 받는 곳 (서버 classifySnsLink 의 paste 와 같다) */
-const PASTE_PLATFORMS = ['naver_blog', 'brunch']
+const PASTE_PLATFORMS = ['naver_blog', 'brunch', 'instagram', 'facebook', 'threads']
 
 export default function SnsLinkCard() {
     const [links, setLinks] = useState<Link[]>([])
@@ -20,6 +21,15 @@ export default function SnsLinkCard() {
     // 네이버 블로그, 브런치 = 대표 글 붙여넣기 칸
     const [pasteUrl, setPasteUrl] = useState<string | null>(null)
     const [posts, setPosts] = useState<string[]>(() => Array(PASTE_MAX_POSTS).fill(''))
+    // 인스타그램, 페이스북, 스레드는 화면 캡처도 받는다 (5장까지, 줄여서 보낸다)
+    const [shots, setShots] = useState<string[]>([])
+    const pickShots = async (files: FileList | null) => {
+        if (!files) return
+        try {
+            const small = await Promise.all(Array.from(files).filter(f => f.type.startsWith('image/')).slice(0, 5 - shots.length).map(f => shrinkImage(f)))
+            setShots(prev => [...prev, ...small].slice(0, 5))
+        } catch { setMsg('사진을 못 열었어요') }
+    }
 
     const load = useCallback(async () => {
         try {
@@ -57,11 +67,11 @@ export default function SnsLinkCard() {
         setBusy(true)
         setMsg('저장하는 중이에요')
         try {
-            const r = await fetch('/api/os/sns-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'paste', url: pasteUrl, posts }) })
+            const r = await fetch('/api/os/sns-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'paste', url: pasteUrl, posts, images: shots }) })
             const d = await r.json().catch(() => ({}))
             setMsg(d.error || d.message || '')
             if (typeof d.balance === 'number') 클로버알림(d.balance)
-            if (r.ok) { setPasteUrl(null); setPosts(Array(PASTE_MAX_POSTS).fill('')); void load() }
+            if (r.ok) { setPasteUrl(null); setPosts(Array(PASTE_MAX_POSTS).fill('')); setShots([]); void load() }
         } catch {
             setMsg('인터넷 연결을 확인하고 다시 해 주세요')
         } finally {
@@ -82,14 +92,19 @@ export default function SnsLinkCard() {
                 {msg && <div className="os-set-sub" role="status">{msg}</div>}
                 {pasteUrl && (
                     <div className="os-set-paste" style={{ display: 'grid', gap: 8, marginTop: 8 }}>
-                        <div className="os-set-sub">대표 글을 붙여넣어 주세요. 한 편에 {PASTE_MIN_CHARS}자 이상</div>
+                        <div className="os-set-sub">대표 글을 붙여넣거나 화면 캡처를 올려 주세요. 한 편에 {PASTE_MIN_CHARS}자 이상</div>
+                        <label className="os-btn" style={{ justifySelf: 'start', cursor: 'pointer' }}>
+                            화면 캡처 올리기{shots.length > 0 ? ' (더 올리기)' : ''}
+                            <input type="file" accept="image/png,image/jpeg,image/webp" multiple style={{ display: 'none' }} onChange={e => { void pickShots(e.target.files); e.target.value = '' }} />
+                        </label>
+                        {shots.length > 0 && <div className="os-set-sub">캡처를 올렸어요. 저장하면 글만 옮겨 적어요</div>}
                         {posts.map((p, i) => (
                             <textarea key={i} value={p} rows={4} maxLength={20000} placeholder={`글 ${i + 1}`} onChange={e => setPosts(prev => prev.map((x, j) => j === i ? e.target.value : x))}
                                 style={{ width: '100%', fontSize: 16, padding: 10, borderRadius: 12, border: '1px solid var(--os-선)', background: 'var(--os-말풍선)', color: 'var(--os-글)', resize: 'vertical' }} />
                         ))}
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                             <button type="button" className="os-btn" onClick={() => setPasteUrl(null)}>닫기</button>
-                            <button type="button" className="os-btn primary" disabled={busy || posts.every(p => !p.trim())} onClick={() => void savePaste()}>{busy ? '저장 중' : '글 저장하기'}</button>
+                            <button type="button" className="os-btn primary" disabled={busy || (posts.every(p => !p.trim()) && shots.length === 0)} onClick={() => void savePaste()}>{busy ? '저장 중' : '글 저장하기'}</button>
                         </div>
                     </div>
                 )}

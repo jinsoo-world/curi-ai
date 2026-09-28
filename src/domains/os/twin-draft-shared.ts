@@ -50,7 +50,8 @@ export function draftLinkKind(raw: string): DraftLinkKind {
     if (!/^https?:$/.test(u.protocol) || !u.hostname.includes('.')) return 'bad'
     const host = u.hostname.replace(/^(www|m)\./, '').toLowerCase()
     const is = (h: string) => host === h || host.endsWith(`.${h}`)
-    if (is('instagram.com') || is('threads.net') || is('threads.com') || is('x.com') || is('twitter.com') || is('tiktok.com') || is('facebook.com') || is('fb.com')) return 'link'
+    if (is('instagram.com') || is('threads.net') || is('threads.com') || is('facebook.com') || is('fb.com')) return 'paste'
+    if (is('x.com') || is('twitter.com') || is('tiktok.com')) return 'link'
     if (isMarketHost(host)) return 'paste'
     return 'read'
 }

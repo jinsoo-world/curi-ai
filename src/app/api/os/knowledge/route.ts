@@ -12,6 +12,7 @@ import {
     assertBotOwned, assertRoomForMore, listBotSources, addLinkSource, addTextSource, addQaSource,
     updateBotSourceMeta, removeBotSource, retryBotSource, BotNotMine,
 } from '@/domains/os/knowledge'
+import { addSnsCaptureSource } from '@/domains/os/sns-capture'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -57,6 +58,11 @@ export async function POST(req: NextRequest) {
         }
         await assertRoomForMore(db, mentorId)
 
+        if (kind === 'sns') {
+            // 인스타그램, 페이스북, 스레드: 캡처(글을 옮겨 적음)나 붙여넣은 글
+            const source = await addSnsCaptureSource(db, mentorId, { url: body.url, images: body.images, text: body.text, userId: user.id })
+            return NextResponse.json({ source: { id: (source as { id: string }).id } })
+        }
         if (kind === 'url') {
             const source = await addLinkSource(db, mentorId, String(body.url ?? ''), { userId: user.id })
             return NextResponse.json({ source: { id: (source as { id: string }).id } })

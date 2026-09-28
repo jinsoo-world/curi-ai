@@ -300,6 +300,8 @@ export const SNS_PENDING_LINE = '이 곳은 아직 읽을 수 없어 링크만 �
 export const SNS_PASTE_MIN_CHARS = 300
 export const SNS_PASTE_MAX_POSTS = 3
 export const SNS_PASTE_LINE = '자동으로 못 읽었어요. 대표 글을 붙여넣어 주세요'
+/** 인스타그램, 페이스북, 스레드 = 캡처 올리기나 글 붙여넣기 */
+export const SNS_CAPTURE_LINE = '이 곳은 화면 캡처를 올리거나 글을 붙여넣어 주세요'
 /** 온보딩에서 자동으로 못 읽었을 때 (붙여넣기는 설정에서) */
 export const SNS_PASTE_LATER_LINE = '자동으로 못 읽었어요. 설정에서 글을 붙여넣을 수 있어요'
 export const SNS_KEY_TAKEN_LINE = '내 글로 봇이 배웠어요. 이 주소는 다른 계정이 이미 보너스를 받았어요'
