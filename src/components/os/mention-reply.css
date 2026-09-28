@@ -1,0 +1,16 @@
+/* 1:1 방 @멘션: 「양치는영이 기획팀장에게 물어봤어요: …」 한 줄 안내 (가운데, 흐린 글씨, 한 줄) */
+.os-handoff-note {
+    align-self: center;
+    max-width: 86%;
+    margin: 2px auto 6px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: var(--os-말풍선);
+    color: var(--os-글-흐림);
+    font-size: 12.5px;
+    line-height: 1.6;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

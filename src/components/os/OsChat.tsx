@@ -2,7 +2,7 @@
 // 봇과 대화 (가운데 열) + 오른쪽 세부칸. 기존 /api/chat 을 그대로 쓴다 (스트림 모양 동일).
 // 캐릭터 상태: 입력 중 listening → 보내면 thinking → 첫 글자 오면 talking → 끝나면 idle. 둘 다 죽으면 error.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -52,10 +52,10 @@ import { useMentionComposer } from './useMentionComposer'
 import { useComposerAutoHeight } from './useComposerAutoHeight'
 import MentionRichText from './MentionRichText'
 import {
-    decidePersonalMentionRoute,
-    emitBotCall,
-    handoffAckLine,
-} from '@/domains/os/mentions'
+    planMentionReplies, attributeLines, contextForBot, askRowContent, nextChainTarget, stripMentions, isAskRow, MAX_CHAIN_HOPS,
+} from '@/domains/os/mention-reply'
+import type { ReplyBot } from '@/domains/os/mention-reply'
+import './mention-reply.css'
 // === /@ 멘션 ===
 
 // 세부칸, 자료 넣기 시트는 열 때만 내려받는다 (봇을 갈아탈 때 실을 것이 줄어든다)
@@ -110,6 +110,47 @@ function linkCardsFor(m: Msg, prevUserText?: string): { readUrls?: ReadUrlItem[]
     return { fallbackUrls: prevUserText ? extractUrls(prevUserText) : undefined }
 }
 
+
+/** === @ 멘션 === /api/chat 한 번 부르고 스트림을 끝까지 읽는다 (불린 봇 답에 쓴다. 평소 대화 길은 아래 send 안에 그대로) */
+interface StreamedAnswer {
+    full: string
+    sources: { id: string; title: string }[]
+    readUrls: ReadUrlItem[]
+    loginGate: boolean
+    planLimited: boolean
+    askOverage: boolean
+}
+async function streamChatAnswer(body: Record<string, unknown>, onText: (snapshot: string) => void): Promise<StreamedAnswer> {
+    const out: StreamedAnswer = { full: '', sources: [], readUrls: [], loginGate: false, planLimited: false, askOverage: false }
+    const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    if (!res.ok || !res.body) throw new Error(`chat ${res.status}`)
+    const reader = res.body.getReader()
+    const dec = new TextDecoder()
+    let buf = ''
+    while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += dec.decode(value, { stream: true })
+        const parts = buf.split('\n\n'); buf = parts.pop() || ''
+        for (const part of parts) {
+            for (const line of part.split('\n')) {
+                if (!line.startsWith('data: ')) continue
+                try {
+                    const d = JSON.parse(line.slice(6))
+                    if (isLoginGateReply(d)) out.loginGate = true
+                    if (d.text) { out.full += d.text; onText(out.full) }
+                    if (d.done && Array.isArray(d.sources)) out.sources = d.sources
+                    if (d.done && Array.isArray(d.readUrls)) out.readUrls = d.readUrls
+                    if (d.done && d.guestLimit) window.dispatchEvent(new CustomEvent('curi:login-nudge', { detail: { reason: 'limit' } }))
+                    if (d.done && d.usageLimit && !d.visitorBotLimit) out.planLimited = true
+                    if (d.done && d.overageAsk) out.askOverage = true
+                    if (d.done && typeof d.cloverBalance === 'number') 클로버알림(d.cloverBalance)
+                } catch { /* 조각 하나 깨진 건 넘어간다 */ }
+            }
+        }
+    }
+    return out
+}
 
 /** 봇 전환 첫 그림용: 탭 캐시를 동기 읽어 빈 인사/샘플이 깜빡이지 않게 한다. */
 function initialChatState(mentorId: string, freshStart: boolean): {
@@ -177,6 +218,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
         [mentionBots],
     )
     const mention = useMentionComposer(mentionBots)
+    const replyBots = useMemo(() => mentionBots.map(b => ({ mentorId: b.mentorId, name: b.name })), [mentionBots])
     const { onScroll: onComposerScroll } = useComposerAutoHeight(inputRef, input)
     // === /@ 멘션 ===
 
@@ -365,6 +407,8 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
 
     const name = bot?.name ?? publicBot?.name ?? '봇'
     const greeting = bot?.greeting ?? publicBot?.greeting_message ?? ''
+    // === @ 멘션 === 줄마다 누가 말했는지 (불린 봇 답은 그 봇 얼굴, 이름으로. 한 줄 안내도 여기서 나온다)
+    const lines = useMemo(() => attributeLines(messages, { mentorId, name }, replyBots), [messages, mentorId, name, replyBots])
     // 가입 온보딩 답 = 온보딩이 고른 내 팀 첫 봇의 첫 화면에만 (시연 봇, 공개 봇은 제외)
     const surveyHelp = useSurveyHelp(bot?.mentorId)
     const firstHelp = bot && !bot.id.startsWith('demo-') ? surveyHelp : null
@@ -399,6 +443,21 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
     const [retryText, setRetryText] = useState<string | null>(null)
     const cloverOkOnce = useRef(false)
 
+    // 답을 다 받은 뒤 사용량을 한 번 읽어 원형 게이지를 고치고, 80% 를 넘었으면 이번 달 한 번만 알림 카드
+    const refreshUsage = useCallback((botId: string) => {
+        void fetch('/api/os/usage', { cache: 'no-store' }).then(r => r.json()).then(u => {
+            if (!isUsageLike(u)) return
+            window.dispatchEvent(new CustomEvent(USAGE_EVENT, { detail: u }))
+            if (!u.warn) return
+            const period = String(u.resetAt)
+            try {
+                if (window.localStorage.getItem(USAGE_WARN_SEEN_KEY) === period) return
+                window.localStorage.setItem(USAGE_WARN_SEEN_KEY, period)
+            } catch { /* 저장 막힘이면 이번엔 보여 준다 */ }
+            setMessages(prev => prev.map(x => x.id === botId ? { ...x, usageCard: 'warn', usagePct: u.pct } : x))
+        }).catch(() => { /* 못 읽어도 대화는 산다 */ })
+    }, [])
+
     const send = useCallback(async (overrideText?: string) => {
         const text = (overrideText ?? input).trim()
         // === 사진 첨부 === 사진만 보내도 된다. 올리는 중이거나 실패한 장이 남아 있으면 기다린다.
@@ -406,43 +465,80 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
         if ((!text && photoUrls.length === 0) || streaming || photos.uploading || photos.failed) return
         markFirstSent()   // 온보딩 칩과 예시는 첫 메시지 전까지만
 
-        // === @ 멘션 === 다른 팀 봇을 부르면 **지금 방에 남긴 채** 넘긴다. 왼쪽 명단이 상대 봇을 부른다.
-        if (!overrideText && text && photoUrls.length === 0) {
-            const decision = decidePersonalMentionRoute(
-                text,
-                team.filter(b => !b.hidden).map(b => ({ mentorId: b.mentorId, name: b.name })),
-                mentorId,
-            )
-            if (decision.action === 'handoff') {
-                setInput('')
-                mention.close()
-                const nowIso = new Date().toISOString()
-                const userMsg: Msg = { id: `u-${Date.now()}`, role: 'user', content: text, createdAt: nowIso }
-                const ack = handoffAckLine(decision.name)
-                const botId = `a-${Date.now()}`
-                setMessages(prev => [...prev, userMsg, { id: botId, role: 'assistant', createdAt: nowIso, content: ack }])
-                setState('idle')
-                emitBotCall(typeof window !== 'undefined' ? window : null, decision.mentorId)
-                osTrack('os_mention_handoff', { from_mentor_id: mentorId, to_mentor_id: decision.mentorId })
-                if (!guest) {
-                    void (async () => {
-                        try {
-                            const sid = await ensureSession()
-                            await fetch('/api/os/mention-handoff', {
-                                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    text,
-                                    fromMentorId: mentorId,
-                                    toMentorId: decision.mentorId,
-                                    fromSessionId: sid ?? undefined,
-                                    message: decision.message,
-                                }),
-                            })
-                        } catch { /* 화면 안내는 이미 남겼다 */ }
-                    })()
+        // === @ 멘션 === 다른 팀 봇을 부르면 **그 봇이 이 방에서 직접** 답한다 (domains/os/mention-reply).
+        //   불린 봇마다 /api/chat 을 그 봇 mentorId + 이 방 sessionId 로 부른다 = 제 지침, 제 말투, 평소 사용량(한도, 클로버) 그대로.
+        //   여러 명이면 순서대로. 봇이 답 속에서 다른 봇을 @부르면 한 번만 더 이어진다.
+        const 멘션 = text && photoUrls.length === 0 ? planMentionReplies(text, replyBots, mentorId) : null
+        if (멘션) {
+            if (!overrideText) setInput('')
+            mention.close()
+            osTrack('os_mention_handoff', { from_mentor_id: mentorId, to_mentor_id: 멘션.targets[0]!.mentorId, targets: 멘션.targets.length })
+            if (guest) window.dispatchEvent(new Event('curi:guest-sent'))
+            const room: ReplyBot = { mentorId, name }
+            let list: Msg[] = [...messages, { id: `u-${Date.now()}`, role: 'user', content: text, createdAt: new Date().toISOString() }]
+            setMessages(list)
+            setStreaming(true)
+            setState('thinking')
+            const cloverOk = CLOVER_OVERAGE_ENABLED && !guest ? (cloverOkOnce.current || readCloverAuto(window.localStorage)) : undefined
+            cloverOkOnce.current = false
+            const 차례: { to: ReplyBot; from: ReplyBot; question: string; asRow: boolean }[] =
+                멘션.targets.map((to, k) => ({ to, from: room, question: 멘션.question, asRow: k > 0 }))
+            let 이어짐 = 0
+            let 막힘 = false
+            let lastBotId: string | null = null
+            try {
+                const sid = await ensureSession()
+                for (let k = 0; k < 차례.length; k++) {
+                    const job = 차례[k]!
+                    const at = new Date().toISOString()
+                    // 두 번째 봇부터는 「[물어봄] …」 줄이 사람 말 자리에 남는다 (저장, 사용량 1회)
+                    if (job.asRow) list = [...list, { id: `q-${Date.now()}-${k}`, role: 'user', content: askRowContent(job.from.name, job.to.name, job.question), createdAt: at }]
+                    const ctx = list.slice(-MAX_CONTEXT)
+                    const botId = `a-${Date.now()}-${k}`
+                    lastBotId = botId
+                    list = [...list, { id: botId, role: 'assistant', content: '', createdAt: at }]
+                    setMessages(list)
+                    setState('thinking')
+                    const 문맥 = contextForBot(ctx, attributeLines(ctx, room, replyBots), job.to.mentorId)
+                    const r = await streamChatAnswer({
+                        messages: 문맥.map(m => ({ role: m.role, content: m.content })),
+                        mentorId: job.to.mentorId,
+                        sessionId: sid ?? undefined,
+                        inputMethod: 'text',
+                        visitorId: guest ? getVisitorId() : undefined,
+                        ...(guest ? { guestMessageCount: 0 } : {}),
+                        ...(cloverOk !== undefined ? { cloverOk } : {}),
+                    }, snapshot => {
+                        setState('talking')
+                        setMessages(list.map(m => m.id === botId ? { ...m, content: snapshot } : m))
+                    })
+                    list = list.map(m => m.id !== botId ? m : {
+                        ...m,
+                        content: r.full || UNAVAILABLE_TEXT,
+                        ...(r.loginGate ? { loginGate: true } : {}),
+                        ...(r.sources.length > 0 || r.readUrls.length > 0 ? { sources: r.sources, readUrls: r.readUrls } : {}),
+                        ...(r.planLimited ? { usageCard: 'limit' as const } : {}),
+                    })
+                    setMessages(list)
+                    if (r.planLimited) { if (r.askOverage) setOverageAsk(text); 막힘 = true; break }
+                    if (r.loginGate) { 막힘 = true; break }
+                    if (!r.full || r.full.includes(UNAVAILABLE_TEXT)) continue
+                    const 다음 = 이어짐 < MAX_CHAIN_HOPS ? nextChainTarget(r.full, replyBots, job.to.mentorId) : null
+                    if (다음) {
+                        이어짐 += 1
+                        차례.splice(k + 1, 0, { to: 다음, from: job.to, question: stripMentions(r.full, replyBots), asRow: true })
+                    }
                 }
-                return
+                setState(list[list.length - 1]?.content.includes(UNAVAILABLE_TEXT) ? 'error' : 'idle')
+                if (!막힘 && !guest && lastBotId) refreshUsage(lastBotId)
+                if (!막힘) { try { markFirstChatDone(window.localStorage) } catch { /* 저장 막힘 */ } }
+            } catch {
+                setState('error')
+                setMessages(list.map(m => m.role === 'assistant' && !m.content ? { ...m, content: UNAVAILABLE_TEXT } : m))
+            } finally {
+                setStreaming(false)
             }
+            return
         }
         // === /@ 멘션 ===
 
@@ -561,7 +657,8 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     // === 사진 첨부 === 지난 메시지의 첫 장은 imageUrl 로 같이 보낸다(서버가 최근 3통 안 사진을 되짚어 본다)
-                    messages: base.slice(-MAX_CONTEXT).map(m => ({ role: m.role, content: m.content, ...(m.imageUrls?.[0] ? { imageUrl: m.imageUrls[0] } : {}) })),
+                    // === @ 멘션 === 옆 봇이 이 방에서 한 말은 「(○○의 말)」로 적어 넘긴다 (제 말로 착각하지 않게)
+                    messages: contextForBot(base, attributeLines(base, { mentorId, name }, replyBots), mentorId).slice(-MAX_CONTEXT).map(m => ({ role: m.role, content: m.content, ...(m.imageUrls?.[0] ? { imageUrl: m.imageUrls[0] } : {}) })),
                     ...photoPayload(photoUrls),
                     // === /사진 첨부 ===
                     mentorId,
@@ -625,18 +722,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                 setMessages(prev => prev.map(x => x.id === botId ? { ...x, usageCard: 'limit' } : x))
                 if (askOverage) setOverageAsk(text)
             } else if (!guest && full && !loginGate && !full.includes(UNAVAILABLE_TEXT)) {
-                // 답을 다 받은 뒤 사용량을 한 번 읽어 원형 게이지를 고치고, 80% 를 넘었으면 이번 달 한 번만 알림 카드
-                void fetch('/api/os/usage', { cache: 'no-store' }).then(r => r.json()).then(u => {
-                    if (!isUsageLike(u)) return
-                    window.dispatchEvent(new CustomEvent(USAGE_EVENT, { detail: u }))
-                    if (!u.warn) return
-                    const period = String(u.resetAt)
-                    try {
-                        if (window.localStorage.getItem(USAGE_WARN_SEEN_KEY) === period) return
-                        window.localStorage.setItem(USAGE_WARN_SEEN_KEY, period)
-                    } catch { /* 저장 막힘이면 이번엔 보여 준다 */ }
-                    setMessages(prev => prev.map(x => x.id === botId ? { ...x, usageCard: 'warn', usagePct: u.pct } : x))
-                }).catch(() => { /* 못 읽어도 대화는 산다 */ })
+                refreshUsage(botId)
             }
             // 봇 답을 끝까지 받았다 = 「앱으로 설치」 안내를 이제 보여도 된다(첫 방문엔 안 띄움)
             if (full && !loginGate && !full.includes(UNAVAILABLE_TEXT)) { try { markFirstChatDone(window.localStorage) } catch { /* 저장 막힘 */ } }
@@ -647,7 +733,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
             setStreaming(false)
         }
         // === 전달(relay), 사진 첨부 === team, openNewGroup, name, photos 가 더 들어간다
-    }, [input, streaming, messages, mentorId, guest, bot, ensureSession, team, openNewGroup, name, photos, mention])
+    }, [input, streaming, messages, mentorId, guest, bot, ensureSession, team, openNewGroup, name, photos, mention, replyBots, refreshUsage])
 
     // 확인 창에서 「클로버로 이어 쓰기」: 막힌 말과 안내를 지우고 같은 말을 다시 보낸다 (effect 본문에서 바로 setState 하지 않는다 = 린트 규칙)
     useEffect(() => {
@@ -660,7 +746,12 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
         setOverageAsk(null)
         if (!t) return
         cloverOkOnce.current = true
-        setMessages(prev => prev.slice(0, -2))
+        // 막힌 사람 말부터 뒤를 지운다 (평소 대화 = 끝 2줄, @멘션 = 안내 줄과 불린 봇 답까지)
+        setMessages(prev => {
+            let k = prev.length - 1
+            while (k >= 0 && !(prev[k]!.role === 'user' && !isAskRow(prev[k]!.content))) k--
+            return k >= 0 ? prev.slice(0, k) : prev.slice(0, -2)
+        })
         setRetryText(t)
     }
 
@@ -782,7 +873,20 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                             {bot && <FirstTaskChips bot={bot} disabled={streaming} onPick={t => void send(t)} override={firstHelp ? FIRST_HELP_CHIPS[firstHelp] : undefined} />}
                         </MsgRow>
                     )}
-                    {messages.map((m, i) => m.role === 'user'
+                    {messages.map((m, i) => {
+                        // === @ 멘션 === 한 줄 안내, 불린 봇 얼굴과 이름
+                        const line = lines[i]
+                        if (line?.kind === 'note') return <div key={m.id} className="os-handoff-note" role="note">{line.text}</div>
+                        const 안내 = line?.kind === 'user' && line.noteAfter
+                            ? <div className="os-handoff-note" role="note">{line.noteAfter}</div>
+                            : null
+                        const 옆봇 = line?.kind === 'bot' && line.speaker.mentorId !== mentorId ? line.speaker : null
+                        const 옆봇팀 = 옆봇 ? mentionBots.find(b => b.mentorId === 옆봇.mentorId) ?? null : null
+                        const 말한이름 = 옆봇 ? 옆봇.name : name
+                        const 얼굴 = (size: number, st: BotState) => 옆봇
+                            ? <BotAvatar shape={옆봇팀?.shape ?? 'circle'} color={옆봇팀?.color ?? 'white'} state={st} size={size} faceUrl={옆봇팀?.avatarUrl ?? null} name={옆봇.name} />
+                            : null
+                        const 줄: React.ReactNode = m.role === 'user'
                         ? (m.imageUrls && m.imageUrls.length > 0
                             // === 사진 첨부 === 사진 격자 + 글
                             ? <MsgRow key={m.id} rowId={m.id} side="me" createdAt={m.createdAt} copyText={m.content}>
@@ -800,10 +904,10 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                         : (
                             <MsgRow key={m.id} rowId={m.id} side="bot" createdAt={m.createdAt} copyText={m.content}>
                                 {(!m.content && !m.card && (streaming || state === 'thinking')) ? (
-                                    <TypingIndicator name={name} avatar={typingAvatar} />
+                                    <TypingIndicator name={말한이름} avatar={얼굴(28, 'idle') ?? typingAvatar} />
                                 ) : (
                                     <>
-                                        <div className="os-sender">{avatar}<span>{name}</span></div>
+                                        <div className="os-sender">{얼굴(36, i === messages.length - 1 ? state : 'idle') ?? avatar}<span>{말한이름}</span></div>
                                         {m.card
                                             ? <PermissionCard
                                                 card={m.card}
@@ -833,7 +937,9 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                                     </>
                                 )}
                             </MsgRow>
-                        ))}
+                        )
+                        return 안내 ? <Fragment key={m.id}>{줄}{안내}</Fragment> : 줄
+                    })}
                     <div ref={endRef} />
                 </MsgMetaProvider>
                 </div>
