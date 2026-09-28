@@ -8,6 +8,7 @@
  */
 import { useEffect } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
+import { ensureVisitorIds, recordFirstTouch } from '@/lib/first-touch'
 
 const 잠금열쇠 = 'curi:visit-logged'
 
@@ -16,6 +17,11 @@ export default function VisitTracker() {
     const params = useSearchParams()
 
     useEffect(() => {
+        // 어느 화면이든 처음 열면 방문자 표식과 처음 들어온 길을 남긴다 (가입 저장 때 함께 간다)
+        try {
+            ensureVisitorIds(localStorage)
+            recordFirstTouch(localStorage, { params: new URLSearchParams(params.toString()), referrer: document.referrer, host: location.host, path: pathname })
+        } catch { /* 저장이 막힌 브라우저 */ }
         try {
             if (sessionStorage.getItem(잠금열쇠)) return
         } catch { /* 저장이 막힌 브라우저면 그냥 한 번 보낸다 */ }
@@ -28,8 +34,7 @@ export default function VisitTracker() {
 
         let anon = ''
         try {
-            anon = localStorage.getItem('curi_anon') || ''
-            if (!anon) { anon = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('curi_anon', anon) }
+            anon = ensureVisitorIds(localStorage).anonId
         } catch { /* 표식을 못 만들면 비워 보낸다 */ }
 
         void fetch('/api/track/visit', {

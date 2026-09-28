@@ -183,3 +183,18 @@ describe('one pricing page (/os/charge)', () => {
         expect(readFileSync('next.config.ts', 'utf8')).toMatch(/source: '\/pricing', destination: '\/os\/charge', permanent: false/)
     })
 })
+
+import { HOME_COPY as HC } from '@/domains/home/copy'
+describe('home 곳 고르기 순서와 SNS 안내', () => {
+    it('블로그, 유튜브가 먼저이고 첫 칸이 블로그', () => {
+        expect(HC.chips.map(c => c.id)).toEqual(['blog', 'youtube', 'instagram', 'threads', 'shop', 'file'])
+    })
+    it('SNS 안내는 3단계, 캡처와 붙여넣기를 말한다', () => {
+        expect(HC.snsGuide).toHaveLength(3)
+        expect(HC.snsGuide[0]).toBe('게시글 3개를 캡처해서 올리거나, 글을 복사해 붙여 넣어 주세요')
+    })
+    it('파일 안내에 쪽 수 숫자를 쓰지 않고 무료로도 올릴 수 있다고 말한다', () => {
+        expect(HC.fileNote).toContain('무료')
+        expect(HC.fileNote).not.toMatch(/\d/)
+    })
+})

@@ -184,6 +184,12 @@ export default function HomeMake() {
             )}
             {tried && guide?.kind === 'bad' && <p className="hm-guide bad" aria-live="polite">{guide.line}</p>}
             {fileNote && <p className="hm-guide">{c.fileNote}</p>}
+            {(source === 'instagram' || source === 'threads') && !fileNote && (
+                <div className="hm-guide" aria-live="polite">
+                    <strong>{c.snsGuideTitle}</strong>
+                    <ol>{c.snsGuide.map(t => <li key={t}>{t}</li>)}</ol>
+                </div>
+            )}
 
             <p className="hm-safe">{c.safe}</p>
             <button type="button" className="hm-direct" onClick={() => { setDirect(true); setPanel(true); window.setTimeout(() => descBox.current?.focus(), 50) }}>{c.direct}</button>
