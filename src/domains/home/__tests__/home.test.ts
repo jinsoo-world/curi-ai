@@ -196,7 +196,7 @@ describe('home 곳 고르기 순서와 SNS 안내', () => {
     })
     it('SNS 안내는 3단계, 캡처와 붙여넣기를 말한다', () => {
         expect(HC.snsGuide).toHaveLength(3)
-        expect(HC.snsGuide[0]).toBe('게시글 3개를 캡처해서 올리거나, 글을 복사해 붙여 넣어 주세요')
+        expect(HC.snsGuide[0]).toBe('위 칸에 내 계정 주소를 넣어 주세요')
     })
     it('파일 안내에 쪽 수 숫자를 쓰지 않고 무료로도 올릴 수 있다고 말한다', () => {
         expect(HC.fileNote).toContain('무료')

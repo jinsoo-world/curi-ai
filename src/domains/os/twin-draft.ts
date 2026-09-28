@@ -10,6 +10,7 @@ import { FETCHERS } from './feeds'
 import type { KnowledgeFeed } from './feeds'
 import { readUrl, youtubeVideoId } from './readers'
 import { readThreads } from './readers/threads'
+import { readInstagram } from './readers/instagram'
 import { analyzeVoice, buildVoiceGuide } from './voice'
 import { buildTwinPrompt, TWIN_HARD_LIMITS } from './twin'
 import { askSideText } from '@/domains/llm/side-text'
@@ -83,6 +84,13 @@ async function readOneLink(link: string, hasPaste: boolean, deadline: number, us
             return r.ok ? { texts: [{ title: r.title || '유튜브 영상', url: link, text: r.text }] } : { texts: [], unread: { url: link, reason: r.reason } }
         }
         return { texts: [], unread: { url: link, reason: e instanceof Error ? e.message : '주소를 확인해 주세요' } }
+    }
+    if (t.platform === 'instagram') {
+        const left = deadline - Date.now()
+        if (left < 3_000) return { texts: [], unread: { url: t.url, reason: UNREAD_REASON.time } }
+        const r = await readInstagram(t.url, { timeoutMs: Math.min(10_000, left - 1_000), max: 5 })
+        if (r.ok) return { texts: [{ title: '인스타그램', url: t.url, text: r.posts.map(p => p.text).join('\n\n---\n\n').slice(0, PER_SOURCE_CHARS * 2) }] }
+        return hasPaste ? { texts: [] } : { texts: [], unread: { url: t.url, reason: UNREAD_REASON.paste } }
     }
     if (t.platform === 'threads') {
         const left = deadline - Date.now()
