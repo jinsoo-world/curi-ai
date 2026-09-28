@@ -54,6 +54,35 @@ async function probe(videoId: string) {
     return out
 }
 
+const WEB_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+
+async function probeExtra(videoId: string) {
+    const out: Record<string, unknown> = {}
+    let t = Date.now()
+    try {
+        const res = await fetch('https://www.youtube.com/youtubei/v1/next?prettyPrint=false', {
+            method: 'POST', signal: AbortSignal.timeout(6_000),
+            headers: { 'Content-Type': 'application/json', 'User-Agent': WEB_UA, Origin: 'https://www.youtube.com' },
+            body: JSON.stringify({ context: { client: { clientName: 'WEB', clientVersion: '2.20250925.01.00', hl: 'ko', gl: 'KR' } }, videoId }),
+        })
+        const s = await res.text()
+        out.next = { http: res.status, len: s.length, ms: Date.now() - t, hasDesc: s.includes('attributedDescription'), chapters: (s.match(/macroMarkersListItemRenderer/g) ?? []).length, head: s.slice(0, 120) }
+    } catch (e) { out.next = { error: e instanceof Error ? e.message : 'err' } }
+    t = Date.now()
+    try {
+        const res = await fetch(`https://www.youtube.com/watch?v=${videoId}&hl=ko`, { signal: AbortSignal.timeout(6_000), headers: { 'User-Agent': WEB_UA, 'Accept-Language': 'ko' } })
+        const s = await res.text()
+        out.watch = { http: res.status, len: s.length, ms: Date.now() - t, shortDescription: s.includes('shortDescription'), captionTracks: s.includes('captionTracks'), bot: /봇이 아님|not a bot|LOGIN_REQUIRED/.test(s) }
+    } catch (e) { out.watch = { error: e instanceof Error ? e.message : 'err' } }
+    t = Date.now()
+    try {
+        const res = await fetch(`https://r.jina.ai/https://www.youtube.com/watch?v=${videoId}`, { signal: AbortSignal.timeout(15_000) })
+        const s = await res.text()
+        out.jina = { http: res.status, len: s.length, ms: Date.now() - t, chapters: (s.match(/&t=\d+s/g) ?? []).length }
+    } catch (e) { out.jina = { error: e instanceof Error ? e.message : 'err', ms: Date.now() - t } }
+    return out
+}
+
 export async function GET(req: Request) {
     const rl = await checkRateLimit(createAdminClient(), rateLimitKey('link-diag', undefined, undefined, req), 3, 60)
     if (!rl.allowed) return NextResponse.json({ error: 'slow down' }, { status: 429 })
@@ -66,6 +95,6 @@ export async function GET(req: Request) {
             ? { u, ok: true, ms: Date.now() - t, source: r.source, method: r.method, len: r.text.length, title: r.title, head: r.text.slice(0, 160) }
             : { u, ok: false, ms: Date.now() - t, reason: r.reason }
     }))
-    const youtube = await probe('A0LQFQphEBg')
-    return NextResponse.json({ region, reads, youtube })
+    const [youtube, extra] = await Promise.all([probe('A0LQFQphEBg'), probeExtra('A0LQFQphEBg')])
+    return NextResponse.json({ region, reads, youtube, extra })
 }
