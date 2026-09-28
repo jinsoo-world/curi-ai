@@ -228,11 +228,12 @@ export async function updateBotSourceMeta(
  *   웹 = 본문 추출(readability). 유튜브 = 자막(한국어 우선) + 제목 + 채널. 없으면 제목과 설명만.
  * 못 읽으면 이유를 사람 말로 던진다(지어내지 않는다). 20MB, 45초를 넘으면 중단한다.
  */
-export async function addLinkSource(db: SupabaseClient, mentorId: string, rawUrl: string) {
+export async function addLinkSource(db: SupabaseClient, mentorId: string, rawUrl: string, opts: { userId?: string } = {}) {
     const url = (rawUrl ?? '').trim()
     if (!isSafeExternalUrl(url)) throw new Error('열 수 없는 주소예요. http 나 https 로 시작하는 공개 주소만 넣을 수 있어요')
 
-    const read = await readUrl(url, { ...KNOWLEDGE_READ_OPTIONS, maxChars: MAX_TEXT_CHARS })
+    // 유튜브 자막이 막히면 Gemini 정리 (넣은 사람 하루 한도로 센다, 35초까지 기다린다)
+    const read = await readUrl(url, { ...KNOWLEDGE_READ_OPTIONS, maxChars: MAX_TEXT_CHARS, gemini: opts.userId ? { userId: opts.userId, waitMs: 35_000 } : undefined })
     if (!read.ok) throw new Error(read.reason)
 
     // 🛡 링크 글 속 명령문에도 표식을 붙인다

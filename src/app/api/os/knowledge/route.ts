@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
         await assertRoomForMore(db, mentorId)
 
         if (kind === 'url') {
-            const source = await addLinkSource(db, mentorId, String(body.url ?? ''))
+            const source = await addLinkSource(db, mentorId, String(body.url ?? ''), { userId: user.id })
             return NextResponse.json({ source: { id: (source as { id: string }).id } })
         }
         if (kind === 'text') {

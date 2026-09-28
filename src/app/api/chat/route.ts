@@ -366,7 +366,8 @@ export async function POST(req: Request) {
         //    이번 말에 주소가 없으면 바로 앞 사용자 말의 주소를 다시 읽는다(이어 묻기, 같은 서버면 10분 기억에서 바로 나온다)
         const 링크차례 = linkTextForTurn((Array.isArray(messages) ? messages : [])
             .filter((m: { role?: string }) => m?.role === 'user').slice(-3).map((m: { content?: unknown }) => String(m?.content ?? '')))
-        const 링크읽기 = 링크차례.text ? readUrlsInText(링크차례.text).catch(() => []) : Promise.resolve([])
+        // 유튜브 자막이 막히면(Vercel) Gemini 정리를 쓴다. 누가 불렀는지로 하루 한도를 센다 (youtube-gemini.ts)
+        const 링크읽기 = 링크차례.text ? readUrlsInText(링크차례.text, undefined, { gemini: { userId: user?.id ?? null } }).catch(() => []) : Promise.resolve([])
 
         // 📚 RAG 지식 검색 (멘토별 지식 베이스)
         try {

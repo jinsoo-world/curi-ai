@@ -89,7 +89,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         //    이번 말에 주소가 없으면 바로 앞 사람 말(최대 2개)의 주소를 다시 읽는다(이어 묻기)
         const 지난말 = await listChannelMessages(db, user.id, id)
         const 링크차례 = linkTextForTurn([...지난말.filter(m => m.authorKind === 'user').slice(-2).map(m => m.content), text])
-        const 읽은것 = 링크차례.text ? await readUrlsInText(링크차례.text).catch(() => []) : []
+        const 읽은것 = 링크차례.text ? await readUrlsInText(링크차례.text, undefined, { gemini: { userId: user.id } }).catch(() => []) : []
         const 링크 = 읽은것.length > 0 ? buildLinkPrompt(읽은것, { fromHistory: 링크차례.fromHistory }) : null
         const 링크글 = 링크?.prefix ?? ''
         const readUrls: ReadUrlView[] = 링크?.readUrls ?? []

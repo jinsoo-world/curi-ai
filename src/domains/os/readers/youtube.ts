@@ -9,9 +9,13 @@
 //   - 자막이 없다 → 제목과 설명만 기억하고 「이 영상은 자막이 없어요」
 //   - 비공개, 삭제, 연령 제한 → 「이 영상은 열 수 없어요」
 // ⚠ 유튜브가 데이터센터 IP(Vercel)를 막을 때가 있다. 그때도 oEmbed 제목은 대개 살아 있어 제목만 저장된다.
+// 0928 대표 결정: 자막이 막히면 (부른 쪽이 gemini 옵션을 줬을 때만) Gemini 에게 영상을 한 번 보여 주고
+//   한국어 구간 정리를 받는다 = youtube-gemini.ts (영상마다 한 번만 돈, 하루 한도, 실패하면 지금처럼 설명만).
 
 import { fetchPageSafely } from '@/domains/agent/fetch-url'
 import type { ReadPage, ReadFail } from '@/domains/agent/fetch-url'
+import { getYoutubeDigest, digestWithin, keepAlive, geminiYoutubeConfig } from './youtube-gemini'
+import type { DigestOutcome } from './youtube-gemini'
 
 /** 자막 한 조각 (도구가 주는 모양, start 와 dur 은 초를 글자로) */
 interface Caption { text: string; start?: string | number; dur?: string | number }
@@ -180,6 +184,15 @@ async function fetchOEmbed(videoId: string, timeoutMs: number): Promise<OEmbed> 
 export interface YoutubeOptions {
     timeoutMs?: number
     maxChars?: number
+    /** 자막이 막혔을 때 Gemini 정리를 쓴다. 누가 부르는지(하루 한도)와 기다려 줄 시간. 안 주면 쓰지 않는다 */
+    gemini?: { userId: string | null; waitMs?: number }
+}
+
+/** 「1:02:05」, 「3:05」 → 초. 모양이 다르면 0 */
+export function clockToSec(v: string): number {
+    const parts = String(v ?? '').trim().split(':').map(Number)
+    if (parts.length < 2 || parts.length > 3 || parts.some(n => !Number.isFinite(n))) return 0
+    return parts.reduce((a, n) => a * 60 + n, 0)
 }
 
 /**
@@ -215,6 +228,12 @@ export async function readYoutube(rawUrl: string, opts: YoutubeOptions = {}): Pr
     // 자막을 못 받았으면(Vercel 서버 IP 는 유튜브가 「봇 확인」으로 막는다) 설명, 챕터, 조회수라도 받는다.
     //   1순위 = next 창구 (서버 IP 에서도 열림, 0928 실측). 2순위 = 영상 웹페이지 (집, 사무실 IP 에서만 열림)
     const blocked = !details
+    const noCaptions = joinCaptions(details?.subtitles ?? []).length < 20
+    // 자막이 없으면 Gemini 정리를 먼저 출발시킨다(설명, 챕터 받기와 시간이 겹치게). 저장된 정리가 있으면 돈 없이 바로 나온다
+    const digestStarted = Date.now()
+    const digestP: Promise<DigestOutcome> | null = noCaptions && opts.gemini
+        ? getYoutubeDigest({ videoId: id, userId: opts.gemini.userId, title: oembed.title ?? '', channel: oembed.author_name ?? '' })
+        : null
     let next: NextInfo | null = null
     if (!details || (details.subtitles ?? []).length === 0) {
         const left = timeoutMs - (Date.now() - started)
@@ -229,9 +248,17 @@ export async function readYoutube(rawUrl: string, opts: YoutubeOptions = {}): Pr
         }
     }
 
+    let digest: DigestOutcome | null = null
+    if (digestP) {
+        const waitMs = opts.gemini?.waitMs ?? geminiYoutubeConfig().chatWaitMs
+        digest = await digestWithin(digestP, Math.max(0, waitMs - (Date.now() - digestStarted)))
+        // 시간 안에 못 끝났으면 응답 뒤에도 끝까지 해서 저장한다 (다음 질문부터 영상 내용으로 답한다)
+        if (!digest.ok && digest.reason === 'waiting') void keepAlive(digestP)
+    }
+
     const videoTitle = (oembed.title || (details?.title && details.title !== 'No title found' ? details.title : '') || '').trim()
     const channel = (oembed.author_name || '').trim()
-    if (!videoTitle && !details && !next) {
+    if (!videoTitle && !details && !next && !digest?.ok) {
         return fail(/not playable|ERROR|LOGIN_REQUIRED|UNPLAYABLE/i.test(detailsError)
             ? '이 영상은 열 수 없어요(비공개, 삭제, 연령 제한 영상일 수 있어요)'
             : '이 영상 정보를 지금 받아오지 못했어요. 잠시 후 다시 넣어 주세요')
@@ -260,11 +287,28 @@ export async function readYoutube(rawUrl: string, opts: YoutubeOptions = {}): Pr
     const stats = [next?.views, next?.date ? `올린 날 ${next.date}` : ''].filter(Boolean).join(' | ')
     const head = [...baseHead, stats, `주소: ${url}`].filter(Boolean).join('\n')
 
+    // 자막 대신 Gemini 정리 (말 그대로의 자막이 아니라 정리본이라고 글에 적는다)
+    if (digest?.ok) {
+        const maxMin = geminiYoutubeConfig().maxMinutes
+        const lastChapter = Math.max(0, ...(next?.chapters ?? []).map(c => clockToSec(c.at)))
+        const clipNote = lastChapter > maxMin * 60 ? `\n(영상이 ${maxMin}분보다 길어 앞 ${maxMin}분까지만 정리했어요)` : ''
+        const note = `\n\n[영상 정리] (자막을 직접 받지 못해 AI가 영상을 보고 들은 내용을 정리했어요. 말 그대로의 자막이 아니라 정리본이고, [분:초]는 영상 속 시각입니다)${clipNote}`
+        const body = digest.text.trim()
+        const room = maxChars - head.length - note.length - body.length - 20
+        const desc = description && room > 200 ? `\n\n[설명]\n${description.slice(0, Math.min(800, room - 20))}${description.length > Math.min(800, room - 20) ? ' …' : ''}` : ''
+        const text = `${head}${note}\n${body}${desc}`.slice(0, maxChars)
+        return { ok: true, url, requestedUrl, title, text, kind: 'youtube', channel, method: 'gemini', source: 'youtube' }
+    }
+
     // 자막이 없다 → 제목, 설명, 챕터만. 그 사실을 글에 적어 봇이 영상 속 말을 아는 척하지 않게 한다.
     const chapters = next?.chapters ?? []
     const chaptersInDesc = chapters.length > 0 && description.includes(chapters[Math.min(1, chapters.length - 1)].title)
     const chapterPart = chapters.length && !chaptersInDesc ? `\n\n[챕터]\n${chapters.map(c => `${c.at} ${c.title}`).join('\n')}` : ''
-    const why = blocked
+    const why = digest && !digest.ok && digest.reason === 'waiting'
+        ? '(AI가 이 영상을 정리하는 중이에요. 이번 답은 제목, 설명, 챕터만 보고 합니다. 잠시 뒤 다시 물으면 영상 내용으로 답할 수 있어요)'
+        : digest && !digest.ok && digest.reason === 'user-limit'
+        ? '(오늘 새 영상 정리 한도를 다 써서 제목, 설명, 챕터만 보고 답합니다. 영상 속에서 한 말은 모릅니다)'
+        : blocked
         ? '(지금은 이 영상의 자막을 가져오지 못했어요. 제목, 설명, 챕터만 보고 답합니다. 영상 속에서 한 말은 모릅니다)'
         : '(이 영상은 자막이 없어요. 제목, 설명, 챕터만 보고 답합니다. 영상 속에서 한 말은 모릅니다)'
     const text = `${head}\n\n[설명]\n${description || '(설명 없음)'}${chapterPart}\n\n${why}`.slice(0, maxChars)

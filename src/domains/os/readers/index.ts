@@ -30,7 +30,9 @@ import { cacheGet, cacheSet } from './cache'
 
 export type { ReadResult, ReadPage, ReadFail } from '@/domains/agent/fetch-url'
 export { extractArticle } from './article'
-export { readYoutube, youtubeVideoId, joinCaptions, descriptionFromWatchPage, parseNextInfo, captionsToTimedText, clock } from './youtube'
+export { readYoutube, youtubeVideoId, joinCaptions, descriptionFromWatchPage, parseNextInfo, captionsToTimedText, clock, clockToSec } from './youtube'
+export { geminiYoutubeConfig, getYoutubeDigest, digestMemoryClear, costUsd, usageFrom, isUsableDigest, kstDayStart } from './youtube-gemini'
+export type { DigestStore, DigestOutcome, GeminiYoutubeConfig } from './youtube-gemini'
 export { classifyUrl, parseGithubUrl, looksLikeFeedUrl } from './router'
 export type { LinkKind, GithubTarget } from './router'
 export { extractNaverNews, extractNaverBlog, naverBlogMobileUrl } from './naver'
@@ -46,12 +48,14 @@ export interface ReadOptions {
     timeoutMs?: number
     /** 글자 수 한도 (넘으면 잘라 넣는다) */
     maxChars?: number
+    /** 유튜브 자막이 막혔을 때 Gemini 정리를 쓴다 (누가 부르는지 = 하루 한도). 안 주면 안 쓴다(자동 가져오기 등) */
+    gemini?: { userId: string | null; waitMs?: number }
 }
 
 /** 자료로 저장할 때 쓰는 한도 = 20MB, 45초 (서버 실행 한도 60초 안에서 저장까지 끝나야 한다) */
-export const KNOWLEDGE_READ_OPTIONS: Required<ReadOptions> = { maxBytes: 20 * 1024 * 1024, timeoutMs: 45_000, maxChars: 100_000 }
+export const KNOWLEDGE_READ_OPTIONS: Required<Omit<ReadOptions, 'gemini'>> = { maxBytes: 20 * 1024 * 1024, timeoutMs: 45_000, maxChars: 100_000 }
 /** 대화 중 바로 읽을 때 쓰는 한도 = 2MB, 8초, 1만 2천 자 (답이 늦어지면 안 된다) */
-export const CHAT_READ_OPTIONS: Required<ReadOptions> = { maxBytes: MAX_FETCH_BYTES, timeoutMs: FETCH_TIMEOUT_MS, maxChars: MAX_PAGE_CHARS }
+export const CHAT_READ_OPTIONS: Required<Omit<ReadOptions, 'gemini'>> = { maxBytes: MAX_FETCH_BYTES, timeoutMs: FETCH_TIMEOUT_MS, maxChars: MAX_PAGE_CHARS }
 
 /** 이보다 짧은 본문은 「얇다」로 본다 (첫 화면, 목록 페이지). 얇으면 RSS 링크를 찾아 본다 */
 const THIN_ARTICLE_CHARS = 400
@@ -87,15 +91,18 @@ export async function readUrl(rawUrl: string, opts: ReadOptions = {}): Promise<R
     } catch {
         r = fail('그 주소를 읽다가 문제가 생겼어요')
     }
-    if (r.ok) cacheSet(key, r)
+    // 유튜브 「설명만」 결과는 기억하지 않는다: 뒤에서 끝난 Gemini 정리를 다음 질문에서 바로 쓰게
+    if (r.ok && !(r.kind === 'youtube' && r.method === 'meta')) cacheSet(key, r)
     return r
 }
 
-async function routeRead(requestedUrl: string, o: Required<ReadOptions>): Promise<ReadResult> {
+type Opts = Required<Omit<ReadOptions, 'gemini'>> & Pick<ReadOptions, 'gemini'>
+
+async function routeRead(requestedUrl: string, o: Opts): Promise<ReadResult> {
     const kind = classifyUrl(requestedUrl)
 
     if (kind === 'youtube') {
-        return readYoutube(requestedUrl, { timeoutMs: o.timeoutMs, maxChars: o.maxChars })
+        return readYoutube(requestedUrl, { timeoutMs: o.timeoutMs, maxChars: o.maxChars, gemini: o.gemini })
     }
 
     const started = Date.now()
@@ -125,7 +132,7 @@ function ok(requestedUrl: string, url: string, title: string, text: string, maxC
 }
 
 /** 웹페이지 (기사, 블로그, 피드) 읽기 */
-async function readWeb(requestedUrl: string, o: Required<ReadOptions>, kind: LinkKind): Promise<ReadResult> {
+async function readWeb(requestedUrl: string, o: Opts, kind: LinkKind): Promise<ReadResult> {
     const fail = (reason: string): ReadFail => ({ ok: false, requestedUrl, reason })
     const started = Date.now()
     const left = () => o.timeoutMs - (Date.now() - started)
@@ -218,11 +225,11 @@ function articleHeader(html: string, title: string, url: string): string {
 }
 
 /** 사람 말 속 주소를 골라(최대 max개) 한꺼번에 읽는다. 대화용 한도, 링크 수에 맞춘 글자 수를 쓴다 */
-export async function readUrlsInText(text: string, max = MAX_URLS_PER_MESSAGE): Promise<ReadResult[]> {
+export async function readUrlsInText(text: string, max = MAX_URLS_PER_MESSAGE, extra: Pick<ReadOptions, 'gemini'> = {}): Promise<ReadResult[]> {
     const urls = extractUrls(text, max)
     if (urls.length === 0) return []
     const maxChars = linkBudget(urls.length)
-    return Promise.all(urls.map(u => readUrl(u, { ...CHAT_READ_OPTIONS, maxChars })))
+    return Promise.all(urls.map(u => readUrl(u, { ...CHAT_READ_OPTIONS, maxChars, ...extra })))
 }
 
 /**

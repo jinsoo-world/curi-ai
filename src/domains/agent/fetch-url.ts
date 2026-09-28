@@ -228,7 +228,7 @@ export interface ReadPage {
      * 어떻게 읽었나 = readability(본문 추출기) / plain(태그만 걷어냄) / captions(자막) / meta(제목과 설명만)
      * / feed(RSS, Atom 글 목록) / github(GitHub 공개 API) / naver(네이버 뉴스, 블로그 본문 칸)
      */
-    method?: 'readability' | 'plain' | 'captions' | 'meta' | 'feed' | 'github' | 'naver'
+    method?: 'readability' | 'plain' | 'captions' | 'gemini' | 'meta' | 'feed' | 'github' | 'naver'
     /** 어느 길로 읽었나 (readers/router.ts 의 classifyUrl) */
     source?: 'youtube' | 'github' | 'naver-blog' | 'naver-news' | 'feed' | 'web'
 }
