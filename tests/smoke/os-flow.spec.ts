@@ -47,3 +47,25 @@ test('폰 크기에서 가로 스크롤 없음', async ({ page }, testInfo) => {
         expect(scrollWidth, `${path} 가 옆으로 넘친다 (문서 ${scrollWidth}px > 화면 ${innerWidth}px)`).toBeLessThanOrEqual(innerWidth)
     }
 })
+
+// 0928 대표 실측: 폰에서 명단 서랍을 열면 봇 타일이 서로 겹쳤다(격자 줄이 서랍 높이에 맞춰 눌림). 손님, 시연 둘 다 본다
+test('명단 봇 타일끼리 겹치지 않음', async ({ page }) => {
+    for (const path of ['/os', '/os?demo=1']) {
+        await page.goto(path, { waitUntil: 'domcontentloaded' })
+        await settle(page)
+        const drawer = page.getByRole('button', { name: '봇 명단 열기' })
+        if (await drawer.isVisible()) await drawer.click()
+        const tiles = page.locator('.os-shell .os-roster .os-bot-tile')
+        await expect(tiles.first()).toBeVisible()
+        const overlaps = await tiles.evaluateAll(els => {
+            const rs = els.map(e => e.getBoundingClientRect())
+            const hits: string[] = []
+            for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) {
+                const a = rs[i], b = rs[j]
+                if (a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1) hits.push(`${i}-${j}`)
+            }
+            return hits
+        })
+        expect(overlaps, `${path} 명단 타일이 겹친다: ${overlaps.join(', ')}`).toEqual([])
+    }
+})
