@@ -2,12 +2,15 @@
 // 서비스 연결 목록 = /os/connect 「서비스」 탭. (옛 자리였던 /os/settings 에서도 그대로 끼울 수 있다)
 //
 // 13개 서비스를 한 줄씩: 왼쪽 32px 로고, 이름, 상태 배지, 오른쪽 단추(연결하기 / 해제).
-// 붙이는 길 = 사용자 본인 계정 로그인(OAuth). 서버 열쇠가 없는 서비스는 「준비 중」 배지 + 비활성 단추.
+// 붙이는 길 = 사용자 본인 계정 로그인(OAuth). 아직 못 붙이는 서비스는 회색 단추 대신 아래 「곧 열려요」 한 칸에 이름만 모은다.
+// 로그인 전이면 맨 위에 「로그인하면 연결할 수 있어요」 + 로그인 단추 (대표 승인 0928 사용성 7번).
 // 노션, 슬랙은 OAuth 열쇠가 아직 없을 때 열쇠를 손으로 붙여 넣는 옛길을 남겨 둔다.
 // ⚠️ 이 파일은 브라우저에서 돌므로 domains 의 값(crypto 를 끌고 오는 것)을 가져오지 않는다. 타입만.
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import type { ProviderView } from '@/domains/connectors/providers'
+import { splitConnectServices } from '@/domains/os/connect-split'
 import './connect.css'
 
 type Service = ProviderView & {
@@ -119,14 +122,22 @@ export default function ConnectorsPanel() {
         return <span className="os-svc-badge">연결 안 됨</span>
     }
 
-    return (
-        <div className="os-card">
-            {!enabled && loaded && (
-                <div className="os-connect-note warn" style={{ marginTop: 12 }}>준비 중</div>
-            )}
-            {note && <div className={`os-connect-note${note.warn ? ' warn' : ''}`} style={{ marginTop: 12 }}>{note.text}</div>}
+    const { active, soon, needLogin } = splitConnectServices(services, { enabled, loggedIn, pasteIds: Object.keys(PASTE) })
 
-            {services.map(s => {
+    return (
+        <>
+        {loaded && needLogin && (
+            <div className="os-connect-login">
+                <b>로그인하면 연결할 수 있어요</b>
+                <span>내 계정으로 로그인한 뒤 서비스를 붙여요.</span>
+                <Link className="os-btn primary" href="/login?next=/os/connect">로그인하기</Link>
+            </div>
+        )}
+        {note && <div className={`os-connect-note${note.warn ? ' warn' : ''}`} style={{ marginBottom: 12 }}>{note.text}</div>}
+
+        {active.length > 0 && (
+        <div className="os-card">
+            {active.map(s => {
                 const paste = !s.ready && !s.comingSoon && enabled && PASTE[s.id]
                 const canConnect = s.ready && enabled
                 return (
@@ -147,9 +158,9 @@ export default function ConnectorsPanel() {
                                         onClick={() => { setPasteOpen(pasteOpen === s.id ? null : s.id); setSecret(''); setNote(null) }}>
                                         {pasteOpen === s.id ? '닫기' : '열쇠 붙이기'}
                                     </button>
-                                ) : (
-                                    <button type="button" className="os-btn primary" disabled={!canConnect || busy} onClick={() => 연결하기(s)}>연결하기</button>
-                                )}
+                                ) : canConnect ? (
+                                    <button type="button" className="os-btn primary" disabled={busy} onClick={() => 연결하기(s)}>연결하기</button>
+                                ) : null}
                             </div>
                         </div>
 
@@ -166,7 +177,25 @@ export default function ConnectorsPanel() {
                 )
             })}
 
-            {loaded && services.length === 0 && <div className="os-svc-hint" style={{ padding: '12px 0' }}>목록을 읽지 못했어요. 잠시 뒤 다시 열어 주세요.</div>}
         </div>
+        )}
+
+        {soon.length > 0 && (
+            <div className="os-card os-soon" aria-label="곧 열려요">
+                <div className="os-soon-head"><b>곧 열려요</b><span>준비되면 여기서 바로 붙일 수 있어요.</span></div>
+                <ul className="os-soon-list">
+                    {soon.map(s => (
+                        <li key={s.id} title={s.hint}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={s.logo} alt="" width={24} height={24} />
+                            <span>{s.name}</span>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        )}
+
+        {loaded && services.length === 0 && <div className="os-card"><div className="os-svc-hint" style={{ padding: '12px 0' }}>목록을 읽지 못했어요. 잠시 뒤 다시 열어 주세요.</div></div>}
+        </>
     )
 }

@@ -23,7 +23,7 @@ import NewBotSheet from './NewBotSheet'
 import GuestRoster from './GuestRoster'
 import NewGroupSheet from './NewGroupSheet'
 import UsageBar from './UsageBar'
-import { IconStore, IconGear, IconUser, IconLogin, IconBack, IconPlug } from './Icons'
+import { IconStore, IconGear, IconUser, IconLogin, IconBack, IconPlug, PeopleIcon } from './Icons'
 import InstallPrompt from '@/components/pwa/InstallPrompt'
 import './os.css'
 import './sidebar.css'
@@ -407,7 +407,8 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     // 손님 소개 화면(/os/welcome)은 한 장짜리라 뼈대(왼쪽 명단) 없이 그린다
     if (pathname.startsWith('/os/welcome')) return <>{children}</>
 
-    const 한장화면 = pathname.startsWith('/os/settings') || pathname.startsWith('/os/market')
+    // 한 장짜리 화면 = 위에 「대화로 돌아가기」(폰은 「명단」 단추도 옆에). 연결 화면도 여기 든다 (대표 승인 0928 사용성 2번)
+    const 한장화면 = pathname.startsWith('/os/settings') || pathname.startsWith('/os/market') || pathname.startsWith('/os/connect')
     const q = demo ? '?demo=1' : ''
 
     const addButtons = (
@@ -487,12 +488,12 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                             >{toggleLabel(rosterExpanded, roster.hiddenCount)}</button>
                         )}
                         {!loading && visible.length === 0 && !guest && (
-                            <div style={{ gridColumn: '1 / -1', color: 'var(--os-글-흐림)', fontSize: 14, padding: '20px 8px', textAlign: 'center', lineHeight: 1.6 }}>
+                            <div style={{ gridColumn: '1 / -1', color: 'var(--os-글-연)', fontSize: 15, padding: '20px 8px', textAlign: 'center', lineHeight: 1.6 }}>
                                 아직 팀이 없어요.<br />아래 「＋ 개인봇」으로 첫 봇을 만들어요.
                             </div>
                         )}
                         {!loading && guest && (
-                            <div style={{ gridColumn: '1 / -1', color: 'var(--os-글-흐림)', fontSize: 14, padding: '20px 8px', textAlign: 'center', lineHeight: 1.6 }}>
+                            <div style={{ gridColumn: '1 / -1', color: 'var(--os-글-연)', fontSize: 15, padding: '20px 8px', textAlign: 'center', lineHeight: 1.6 }}>
                                 지금은 둘러보기예요. 자료 올리기, 루틴, 편집은 로그인하면 할 수 있어요.
                             </div>
                         )}
@@ -586,7 +587,14 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
 
                 <section className="os-main">
                     {한장화면 && (
-                        <button type="button" className="os-back" onClick={goBack}><IconBack /> <span>대화로 돌아가기</span></button>
+                        <div className="os-onepage-bar">
+                            <button type="button" className="os-back" onClick={goBack}><IconBack /> <span>대화로 돌아가기</span></button>
+                            {phone && (
+                                <button type="button" className="os-back os-back-roster" aria-label="봇 명단 열기" aria-controls="os-nav" aria-expanded={navOpen} onClick={openNav}>
+                                    <PeopleIcon /> <span>명단</span>
+                                </button>
+                            )}
+                        </div>
                     )}
                     {children}
                 </section>

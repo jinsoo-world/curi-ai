@@ -18,7 +18,11 @@ export default async function OsMarketPage({ searchParams }: { searchParams: Pro
     return (
         <div className="os-market">
             <h1>봇 마켓</h1>
-            <p className="os-market-sub">리더들이 만든 공개 봇이에요. 얼굴을 누르면 소개를 먼저 보여 줘요. 왼쪽 명단을 누르면 내 봇 대화로 돌아가요.</p>
+            <p className="os-market-sub">
+                리더들이 만든 공개 봇이에요. 얼굴을 누르면 소개를 먼저 보여 줘요.{' '}
+                <span className="os-only-wide">왼쪽 명단을 누르면 내 봇 대화로 돌아가요.</span>
+                <span className="os-only-narrow">위 「대화로 돌아가기」나 「명단」을 누르면 내 봇 대화로 돌아가요.</span>
+            </p>
             {mentors.length === 0 ? (
                 <div className="os-market-empty">아직 공개 봇이 없어요.</div>
             ) : (

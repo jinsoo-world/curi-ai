@@ -3,6 +3,7 @@
 // 스킬은 「자료」다. 켜고 끄고, 어느 봇에 붙일지 고르고, 지울 수 있다. 본문은 화면에 안 보여 준다(글자 수만).
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import type { SkillView } from '@/domains/os/skills'
 import { BUILTIN_SKILLS } from '@/domains/os/skills'
 import type { TeamBot } from '@/domains/os/types'
@@ -131,13 +132,19 @@ export default function SkillsPanel() {
             <div style={{ padding: '12px 0' }}>
                 <b>깃허브 주소 붙이기</b>
                 <div className="os-svc-hint">스킬 폴더나 저장소 주소를 붙이면 SKILL.md(없으면 README.md)를 가져와요. 공개 저장소만 돼요.</div>
+                {guest ? (
+                    <div className="os-connect-login" style={{ marginTop: 10, marginBottom: 0 }}>
+                        <b>로그인하면 스킬을 가져올 수 있어요</b>
+                        <Link className="os-btn primary" href="/login?next=%2Fos%2Fconnect%3Ftab%3Dskills">로그인하기</Link>
+                    </div>
+                ) : (
                 <div className="os-connect-form" style={{ marginTop: 8 }}>
                     <input className="os-connect-input" value={url} placeholder={예시} disabled={guest || busy}
                         onChange={e => setUrl(e.target.value)} autoComplete="off" spellCheck={false} inputMode="url"
                         onKeyDown={e => { if (e.key === 'Enter') void 가져오기() }} />
                     <button type="button" className="os-btn primary" disabled={guest || busy || !url.trim()} onClick={() => void 가져오기()}>가져오기</button>
                 </div>
-                {guest && <div className="os-svc-hint" style={{ marginTop: 6 }}>로그인하면 스킬을 가져올 수 있어요.</div>}
+                )}
             </div>
 
             {note && <div className={`os-connect-note${note.warn ? ' warn' : ''}`} style={{ marginBottom: 8 }}>{note.text}</div>}
