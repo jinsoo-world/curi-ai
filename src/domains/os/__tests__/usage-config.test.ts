@@ -1,15 +1,35 @@
 import { describe, it, expect } from 'vitest'
 import {
     CLOVER_OVERAGE_ENABLED, CLOVER_COST, chatCloverCost, cloverBalanceNote, packAnswerHint, readCloverAuto, fillCopy, USAGE_COPY, REFUND_NOTICE, PLAN_REASON,
+    OVERAGE_COPY, overageStep, MONTHLY_LIMITS,
 } from '../usage-config'
+import { usageView } from '../usage'
 
-describe('usage-config: 클로버 이어 쓰기 스위치 (대표 확인 전 꺼짐)', () => {
-    it('스위치는 꺼져 있고, 꺼진 동안은 옛 동작 그대로', () => {
-        expect(CLOVER_OVERAGE_ENABLED).toBe(false)
-        expect(chatCloverCost()).toBe(100)            // 옛 상수 그대로 (지금 어디서도 빼지 않음)
-        expect(packAnswerHint(2000)).toBe('')         // 묶음 옆 횟수 표기 없음
-        expect(cloverBalanceNote()).toBe('대화는 클로버를 쓰지 않아요')
-        expect(readCloverAuto({ getItem: () => '1' })).toBe(false)
+describe('usage-config: 클로버 이어 쓰기 스위치 (대표 승인 0928 23:53 켬)', () => {
+    it('스위치가 켜져 있고, 켜진 동작이 같이 켜진다', () => {
+        expect(CLOVER_OVERAGE_ENABLED).toBe(true)
+        expect(chatCloverCost()).toBe(5)
+        expect(chatCloverCost({ photo: true })).toBe(15)
+        expect(packAnswerHint(2000)).toBe('(텍스트 답변 약 400회)')
+        expect(cloverBalanceNote()).toBe('이번 달 한도 안에서는 클로버를 쓰지 않아요')
+        expect(readCloverAuto({ getItem: () => '1' })).toBe(true)
+        expect(readCloverAuto({ getItem: () => null })).toBe(false)
+        expect(fillCopy(OVERAGE_COPY.confirm, chatCloverCost())).toBe('이번 달 답변을 모두 쓰셨어요. 이어서 쓰시면 답변 1회에 클로버 5개가 쓰여요(사진을 붙이면 15개).')
+    })
+
+    it('순서: 월 한도를 먼저 쓰고, 다 쓴 뒤에만 클로버', () => {
+        const now = new Date('2026-10-15T03:00:00Z')
+        const at = (used: number) => usageView({ now, used, limit: MONTHLY_LIMITS.free, plan: 'free' })
+        // 29번째까지는 한도 안 = 클로버 안 씀 (이어 쓰기를 골라 둔 사람도)
+        expect(overageStep({ blocked: at(29).blocked, cloverOk: true })).toBe('free')
+        expect(overageStep({ blocked: at(29).blocked })).toBe('free')
+        // 30번을 다 쓰면 먼저 묻고, 고른 요청에서만 뺀다
+        expect(overageStep({ blocked: at(30).blocked })).toBe('ask')
+        expect(overageStep({ blocked: at(30).blocked, cloverOk: 'yes' })).toBe('ask')
+        expect(overageStep({ blocked: at(30).blocked, cloverOk: true })).toBe('charge')
+        // 스위치를 끄면 옛 동작 (막기만)
+        expect(overageStep({ blocked: true, cloverOk: true }, false)).toBe('block')
+        expect(overageStep({ blocked: false, cloverOk: true }, false)).toBe('free')
     })
 
     it('rev5 소모표', () => {

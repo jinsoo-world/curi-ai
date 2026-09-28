@@ -20,13 +20,13 @@ export const MONTHLY_COUNT_SINCE = '2026-09-28T15:00:00Z'
 /** 이만큼 쓰면 대화 안에 미리 알림 카드를 띄운다(퍼센트) */
 export const USAGE_WARN_PCT = 80
 
-// ── 클로버 이어 쓰기 (요금 정책 rev5 A안, 대표 확인 전이라 꺼 둠) ──
+// ── 클로버 이어 쓰기 (요금 정책 rev5 A안, 대표 승인 0928 23:53 켬) ──
 // 순서: 월 한도를 먼저 쓰고, 다 쓴 뒤에만 클로버(내 팀 봇, 리더 봇 같음).
 // CLOVER_OVERAGE_ENABLED 가 false 인 동안은 지금 운영 동작 그대로다(대화에서 클로버를 빼지 않고, 한도에 닿으면 막음).
 // 켜면: 한도 소진 순간 확인 창, 설정의 「묻지 않고 이어 쓰기」, 충전 묶음 옆 답변 횟수, 바뀐 안내 문구가 같이 켜진다.
 
-/** 클로버 이어 쓰기 스위치. 대표 확인 뒤 true */
-export const CLOVER_OVERAGE_ENABLED = false
+/** 클로버 이어 쓰기 스위치. 대표 승인 0928 23:53. false 로 돌리면 옛 동작(한도에서 막기만) */
+export const CLOVER_OVERAGE_ENABLED: boolean = true
 
 /** 행동별 클로버 소모량 (rev5 권장표) */
 export const CLOVER_COST = {
@@ -50,9 +50,23 @@ export function chatCloverCost(opts: { photo?: boolean } = {}, legacy = 100): nu
     return opts.photo ? CLOVER_COST.photoAnswer : CLOVER_COST.text
 }
 
+/**
+ * 대화 한 번을 어떻게 할지 (순서 = 월 한도 먼저, 다 쓴 뒤에만 클로버).
+ *   free   = 한도 안. 클로버를 빼지 않는다
+ *   charge = 한도를 다 썼고 사용자가 이어 쓰기를 골랐다. 답 만들기 전에 클로버를 뺀다
+ *   ask    = 한도를 다 썼고 아직 안 물었다. 확인 창을 띄운다
+ *   block  = 스위치가 꺼져 있다. 옛 동작대로 막는다
+ */
+export type OverageStep = 'free' | 'charge' | 'ask' | 'block'
+export function overageStep(a: { blocked: boolean; cloverOk?: unknown }, enabled: boolean = CLOVER_OVERAGE_ENABLED): OverageStep {
+    if (!a.blocked) return 'free'
+    if (!enabled) return 'block'
+    return a.cloverOk === true ? 'charge' : 'ask'
+}
+
 export const OVERAGE_COPY = {
     /** 한도 소진 순간 한 번 묻는 창. {n} = 답변 1회 클로버 */
-    confirm: '이번 달 답변을 모두 쓰셨어요. 이어서 쓰시면 답변 1회에 클로버 {n}개가 쓰여요.',
+    confirm: `이번 달 답변을 모두 쓰셨어요. 이어서 쓰시면 답변 1회에 클로버 {n}개가 쓰여요(사진을 붙이면 ${CLOVER_COST.photoAnswer}개).`,
     continueBtn: '클로버로 이어 쓰기',
     waitBtn: '다음 달까지 기다리기',
     /** 설정 한 줄 (기본 꺼짐) */

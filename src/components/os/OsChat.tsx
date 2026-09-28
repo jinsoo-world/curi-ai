@@ -23,6 +23,7 @@ import { FIRST_HELP_CHIPS, SAMPLE_EXCHANGE } from '@/domains/os/onboarding'
 import './first-sample.css'
 import UsageLimitCard from './UsageLimitCard'
 import { isUsageLike, USAGE_EVENT } from '@/domains/os/usage'
+import { 클로버알림 } from '@/lib/clover-bus'
 import { CLOVER_OVERAGE_ENABLED, OVERAGE_COPY, chatCloverCost, fillCopy, readCloverAuto } from '@/domains/os/usage-config'
 import { isLoginGateReply } from '@/domains/os/audience'
 import SocialStartLinks from './SocialStartLinks'
@@ -608,6 +609,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                             // 요금제 월간 한도에 닿음 (봇 주인이 정한 방문자 캡은 결제로 풀리지 않으니 카드 없음)
                             if (d.done && d.usageLimit && !d.visitorBotLimit) planLimited = true
                             if (d.done && d.overageAsk) askOverage = true
+                            if (d.done && typeof d.cloverBalance === 'number') 클로버알림(d.cloverBalance)
                         } catch { /* 조각 하나 깨진 건 넘어간다 */ }
                     }
                 }

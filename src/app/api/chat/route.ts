@@ -11,8 +11,7 @@ import { getOwnedTeamBotMentor } from '@/domains/os'
 import { readUsage } from '@/domains/os/usage-db'
 import { checkChatAudience, checkVisitorBotWeeklyLimit } from '@/domains/os/audience-db'
 import { limitReachedMessage } from '@/domains/os/usage'
-import { CLOVER_OVERAGE_ENABLED, chatCloverCost, OVERAGE_COPY } from '@/domains/os/usage-config'
-import { deductCredit } from '@/domains/credit/actions'
+import { CLOVER_OVERAGE_ENABLED, chatCloverCost, OVERAGE_COPY, overageStep } from '@/domains/os/usage-config'
 import { findSourcesOfChunks } from '@/domains/os/knowledge'
 import { readUrlsInText, buildLinkPrompt, linkTextForTurn } from '@/domains/os/readers'
 // 🛡 인젝션 방어 (대표 지시 0923). 셈만 하는 함수들 = domains/chat/injection.ts, 설명 = docs/security/인젭션_방어_0923.md
@@ -80,7 +79,24 @@ function isOurChatImage(url: unknown): boolean {
     }
 }
 
+/** 한도 넘긴 대화로 뺀 클로버를 답을 못 만들었을 때 되돌린다 (기술 오류 보전. 결제 환불과 무관) */
+async function returnOverageClovers(o: { userId: string; amount: number } | null): Promise<void> {
+    if (!o || o.amount <= 0) return
+    try {
+        const db = createAdminClient()
+        const { data: left } = await db.rpc('클로버_더하기', { 그사람: o.userId, 더할값: o.amount })
+        if (typeof left === 'number' && left >= 0) {
+            await db.from('credit_transactions').insert({ user_id: o.userId, amount: o.amount, balance_after: left, type: 'chat_usage', description: '답을 못 만들어 되돌림' })
+        }
+    } catch (e) {
+        console.error('[chat] 클로버 되돌리기 실패:', e instanceof Error ? e.message : e)
+    }
+}
+
 export async function POST(req: Request) {
+    // 한도 넘긴 대화로 이번 요청에서 뺀 클로버 (오류 나면 되돌린다)
+    let overageCharge: { userId: string; amount: number } | null = null
+    let overageLeft: number | null = null
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -301,10 +317,17 @@ export async function POST(req: Request) {
             // 클로버 이어 쓰기(요금 정책 rev5): 스위치 CLOVER_OVERAGE_ENABLED 가 꺼져 있으면 이 블록은 옛 동작 그대로(막기만 함).
             // 켜져 있으면 한도를 다 쓴 뒤에만, 사용자가 이어 쓰기를 고른 요청(cloverOk)에서 답을 만들기 전에 클로버를 뺀다.
             let overagePaid = false
-            if (usage.blocked && CLOVER_OVERAGE_ENABLED && cloverOk === true) {
+            if (overageStep({ blocked: usage.blocked, cloverOk }) === 'charge') {
                 const hasPhoto = !!imageUrl || (Array.isArray(imageUrls) && imageUrls.length > 0)
-                const paid = await deductCredit({ user_id: user.id, amount: chatCloverCost({ photo: hasPhoto }), mentor_id: String(mentorId ?? ''), description: '한도 넘긴 대화' })
-                overagePaid = paid.success
+                const mentorUuid = typeof mentorId === 'string' && /^[0-9a-f-]{36}$/i.test(mentorId) ? mentorId : null
+                // 잔액 확인, 차감, 거래 기록을 DB 함수 하나로 (모자라면 -1, 아무것도 안 바뀜)
+                const cost = chatCloverCost({ photo: hasPhoto })
+                const { data: left, error: spendErr } = await createAdminClient().rpc('spend_clovers_for_chat', {
+                    p_user: user.id, p_amount: cost, p_mentor: mentorUuid, p_desc: hasPhoto ? '한도 넘긴 대화 (사진)' : '한도 넘긴 대화',
+                })
+                if (spendErr) console.error('[chat] 클로버 이어 쓰기 차감 실패:', spendErr.message)
+                overagePaid = !spendErr && typeof left === 'number' && left >= 0
+                if (overagePaid) { overageLeft = left as number; overageCharge = { userId: user.id, amount: cost } }
             }
             if (usage.blocked && !overagePaid) {
                 const ask = CLOVER_OVERAGE_ENABLED && cloverOk !== true
@@ -868,9 +891,10 @@ export async function POST(req: Request) {
                     }
 
                     controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ text: '', done: true, fullResponse, sources: responseSettings.citationsOn ? usedSources : [], readUrls })}\n\n`)
+                        encoder.encode(`data: ${JSON.stringify({ text: '', done: true, fullResponse, sources: responseSettings.citationsOn ? usedSources : [], readUrls, ...(overageLeft !== null ? { cloverBalance: overageLeft } : {}) })}\n\n`)
                     )
                 } catch (error) {
+                    await returnOverageClovers(overageCharge)
                     controller.enqueue(
                         encoder.encode(`data: ${JSON.stringify({ error: ERROR_MESSAGES.streamError, done: true })}\n\n`)
                     )
@@ -890,6 +914,7 @@ export async function POST(req: Request) {
         })
     } catch (error) {
         console.error('Chat API error:', error)
+        await returnOverageClovers(overageCharge)
         return new Response(
             JSON.stringify({ error: ERROR_MESSAGES.serverError }),
             { status: 500, headers: { 'Content-Type': 'application/json' } }
