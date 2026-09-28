@@ -7,7 +7,7 @@
 //
 // 🛡 밖으로 나가는 요청은 전부 fetchPageSafely(주소 안전 검사 + 크기, 시간 한도)를 지난다. 맨 fetch() 금지.
 
-import { fetchPageSafely, htmlToText } from '@/domains/agent/fetch-url'
+import { fetchPageSafely } from '@/domains/agent/fetch-url'
 import { readUrl, KNOWLEDGE_READ_OPTIONS } from '@/domains/os/readers'
 import type { FeedItem, FetchOptions } from './types'
 
@@ -20,147 +20,14 @@ export const FEED_ITEM_MAX_CHARS = 30_000
 /** 글 하나 읽기를 시작하려면 최소 이만큼 시간이 남아 있어야 한다 */
 const MIN_READ_MS = 4_000
 
-/* ────────────────────────── 글자 다듬기 ────────────────────────── */
+import {
+    decodeXml, toIso, looksLikeFeed, parseFeed, discoverFeedLinks, parseSitemap,
+} from './parse'
+import type { ParsedFeedEntry, ParsedSitemap } from './parse'
 
-const XML_ENTITIES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'", '&#39;': "'" }
-
-/** CDATA 벗기기 + XML 글자 되살리기 (&amp; → &) */
-export function decodeXml(s: string): string {
-    return String(s ?? '')
-        .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-        .replace(/&#x([0-9a-f]{1,6});/gi, (_, h) => { try { return String.fromCodePoint(parseInt(h, 16)) } catch { return ' ' } })
-        .replace(/&#(\d{1,7});/g, (_, n) => { try { return String.fromCodePoint(Number(n)) } catch { return ' ' } })
-        .replace(/&(amp|lt|gt|quot|apos|#39);/g, m => XML_ENTITIES[m] ?? m)
-        .trim()
-}
-
-function escapeRe(s: string): string { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
-
-/** <tag ...>안쪽</tag> 의 안쪽 (첫 번째 것). 이름에 콜론(content:encoded) 도 된다 */
-function tagText(block: string, name: string): string {
-    const re = new RegExp(`<${escapeRe(name)}(?:\\s[^>]*)?>([\\s\\S]*?)</${escapeRe(name)}>`, 'i')
-    const m = block.match(re)
-    return m ? decodeXml(m[1]) : ''
-}
-
-/** 여는 태그 하나에서 속성 값 하나 */
-function attr(tag: string, name: string): string {
-    const m = tag.match(new RegExp(`\\s${escapeRe(name)}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, 'i'))
-    return m ? decodeXml(m[1] ?? m[2] ?? '') : ''
-}
-
-/** 날짜 글자 → ISO. 못 읽으면 undefined */
-export function toIso(s: string): string | undefined {
-    const t = String(s ?? '').trim()
-    if (!t) return undefined
-    const d = new Date(t)
-    return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
-}
-
-/* ────────────────────────── RSS, Atom ────────────────────────── */
-
-export interface ParsedFeedEntry {
-    title: string
-    url: string
-    /** 짧은 설명(RSS description, Atom summary, 유튜브 media:description) */
-    description: string
-    /** 본문 전체(RSS content:encoded, Atom content). Substack 은 여기에 글 전체가 있다 */
-    content: string
-    publishedAt?: string
-}
-
-/** 이 글이 RSS 나 Atom 피드인가 */
-export function looksLikeFeed(body: string): boolean {
-    const head = String(body ?? '').slice(0, 2_000).toLowerCase()
-    return head.includes('<rss') || head.includes('<feed') || head.includes('<rdf:rdf')
-}
-
-/** RSS 2.0 과 Atom 을 같이 읽는다. 모양을 모르면 빈 목록 */
-export function parseFeed(xml: string): ParsedFeedEntry[] {
-    const src = String(xml ?? '')
-    const out: ParsedFeedEntry[] = []
-
-    // RSS 2.0 (<item>)
-    for (const m of src.matchAll(/<item(?:\s[^>]*)?>([\s\S]*?)<\/item>/gi)) {
-        const b = m[1]
-        let url = tagText(b, 'link')
-        if (!url) {
-            // <link> 가 비어 있으면 guid 가 주소인 경우가 있다
-            const guid = tagText(b, 'guid')
-            if (/^https?:\/\//i.test(guid)) url = guid
-        }
-        if (!url) {
-            // 팟캐스트는 회차 주소 없이 소리 파일(enclosure)만 있는 경우가 있다. 겹침 확인용 이름표로만 쓴다
-            const enc = b.match(/<enclosure\b[^>]*>/i)?.[0]
-            if (enc) url = attr(enc, 'url')
-        }
-        out.push({
-            title: htmlToText(tagText(b, 'title')),
-            url: url.trim(),
-            description: tagText(b, 'description') || tagText(b, 'itunes:summary'),
-            content: tagText(b, 'content:encoded'),
-            publishedAt: toIso(tagText(b, 'pubDate') || tagText(b, 'dc:date')),
-        })
-    }
-    if (out.length > 0) return out.filter(e => e.url)
-
-    // Atom (<entry>)
-    for (const m of src.matchAll(/<entry(?:\s[^>]*)?>([\s\S]*?)<\/entry>/gi)) {
-        const b = m[1]
-        let url = ''
-        for (const lm of b.matchAll(/<link\b[^>]*>/gi)) {
-            const rel = attr(lm[0], 'rel')
-            if (!rel || rel === 'alternate') { url = attr(lm[0], 'href'); break }
-        }
-        out.push({
-            title: htmlToText(tagText(b, 'title')),
-            url: url.trim(),
-            description: tagText(b, 'summary') || tagText(b, 'media:description'),
-            content: tagText(b, 'content'),
-            publishedAt: toIso(tagText(b, 'published') || tagText(b, 'updated')),
-        })
-    }
-    return out.filter(e => e.url)
-}
-
-/** HTML 안의 <link rel="alternate" type="application/rss+xml" href="…"> 에서 피드 주소를 찾는다 */
-export function discoverFeedLinks(html: string, baseUrl: string): string[] {
-    const out: string[] = []
-    for (const m of String(html ?? '').matchAll(/<link\b[^>]*>/gi)) {
-        const tag = m[0]
-        if (!/alternate/i.test(attr(tag, 'rel'))) continue
-        if (!/application\/(rss|atom)\+xml/i.test(attr(tag, 'type'))) continue
-        const href = attr(tag, 'href')
-        if (!href) continue
-        try {
-            const abs = new URL(href, baseUrl).toString()
-            if (!out.includes(abs)) out.push(abs)
-        } catch { /* 모양이 이상한 주소는 넘긴다 */ }
-    }
-    return out
-}
-
-/* ────────────────────────── 사이트맵 ────────────────────────── */
-
-export interface ParsedSitemap {
-    /** index = 다른 사이트맵을 가리키는 목차, urlset = 글 주소 목록 */
-    kind: 'index' | 'urlset' | 'unknown'
-    entries: { loc: string; lastmod?: string }[]
-}
-
-export function parseSitemap(xml: string): ParsedSitemap {
-    const src = String(xml ?? '')
-    const isIndex = /<sitemapindex[\s>]/i.test(src)
-    const block = isIndex ? 'sitemap' : 'url'
-    const entries: ParsedSitemap['entries'] = []
-    for (const m of src.matchAll(new RegExp(`<${block}(?:\\s[^>]*)?>([\\s\\S]*?)</${block}>`, 'gi'))) {
-        const loc = tagText(m[1], 'loc')
-        if (!/^https?:\/\//i.test(loc)) continue
-        entries.push({ loc, lastmod: toIso(tagText(m[1], 'lastmod')) })
-    }
-    const kind = isIndex ? 'index' : /<urlset[\s>]/i.test(src) ? 'urlset' : 'unknown'
-    return { kind, entries }
-}
+// 해석기는 parse.ts 로 옮겼다. 예전처럼 여기서도 꺼내 쓸 수 있게 그대로 내보낸다.
+export { decodeXml, toIso, looksLikeFeed, parseFeed, discoverFeedLinks, parseSitemap }
+export type { ParsedFeedEntry, ParsedSitemap }
 
 /* ────────────────────────── 같이 쓰는 도우미 ────────────────────────── */
 

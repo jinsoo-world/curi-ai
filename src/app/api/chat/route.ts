@@ -12,7 +12,7 @@ import { readUsage } from '@/domains/os/usage-db'
 import { checkChatAudience, checkVisitorBotWeeklyLimit } from '@/domains/os/audience-db'
 import { kstDayHourText } from '@/domains/os/usage'
 import { findSourcesOfChunks } from '@/domains/os/knowledge'
-import { readUrlsInText } from '@/domains/os/readers'
+import { readUrlsInText, buildLinkPrompt } from '@/domains/os/readers'
 // 🛡 인젝션 방어 (대표 지시 0923). 셈만 하는 함수들 = domains/chat/injection.ts, 설명 = docs/security/인젭션_방어_0923.md
 import { makeCanary, confidentialityPrompt, createOutputGuard, detectPromptExtraction, EXTRACTION_GUARD_PROMPT, checkRequestSize, INJECTION_MARK } from '@/domains/chat/injection'
 import {
@@ -362,6 +362,9 @@ export async function POST(req: Request) {
         // 🎛 Strict 판정용 — 이번 턴에 찾은 지식 조각(유사도 포함). 자료가 없으면 빈 배열 그대로 남는다.
         let ragMatches: { content: string; similarity: number }[] = []
 
+        // 🔗 링크 읽기는 자료 검색과 동시에 시작한다(기다리는 시간이 겹치게). 결과는 아래 「링크 바로 읽기」에서 받는다.
+        const 링크읽기 = readUrlsInText(lastUserMessage).catch(() => [])
+
         // 📚 RAG 지식 검색 (멘토별 지식 베이스)
         try {
             // ⚡ 자료가 하나도 없는 봇은 검색(임베딩 호출)을 건너뛴다 — 첫 글자가 0.3~0.6초 빨라진다 (대표 「너무 느리다」 0923)
@@ -428,8 +431,31 @@ export async function POST(req: Request) {
             // RAG 검색 실패는 대화에 영향 없음 — 지식 없이 일반 대화 진행
         }
 
+        // 🔗 링크 바로 읽기 = 사람이 방금 쓴 말에 주소가 있으면 그 자리서 열어 읽는다(최대 3개, 한꺼번에).
+        //    유튜브(자막), GitHub, 네이버 블로그, 네이버 뉴스, RSS, 일반 웹페이지 = readers/readUrl 한 곳이 길을 고른다.
+        //    저장하지 않는다(대화 기록에도 안 남는다). 이번 답 한 번에만 쓰고 버린다 = 개인정보가 안 쌓인다.
+        //    🛡 안쪽 주소(localhost, 사내망, 클라우드 메타데이터, 우리 Supabase, 우리 배포)는 fetch-url.ts 가 막는다.
+        //    🛡 읽어 온 글은 「명령」이 아니라 「인용」이다. 울타리는 readers/prompt.ts 가 두른다.
+        //    읽기만 하는 일이라 승인 카드(밖으로 나가는 일)를 거치지 않는다.
+        let 링크읽음 = false
+        try {
+            const 읽은것 = await 링크읽기
+            if (읽은것.length > 0) {
+                const 링크 = buildLinkPrompt(읽은것)
+                readUrls = 링크.readUrls
+                링크읽음 = 링크.anyOk
+                if (링크.prefix) systemPrompt = `${링크.prefix}\n\n${systemPrompt}`
+                usedSources = [...usedSources, ...링크.sources]
+                console.log('[Chat URL] 읽음:', 링크.sources.length, '못 읽음:', 읽은것.length - 링크.sources.length)
+            }
+        } catch (urlErr) {
+            console.error('[Chat URL] Error:', urlErr instanceof Error ? urlErr.message : urlErr)
+            // 링크를 못 읽어도 대화는 그대로 간다
+        }
+
         // 🎛 Strict 인데 자료가 없거나 관련도가 낮으면 — 모델을 부르지 않고 바로 no-answer 문구를 돌려준다(비용 절약 + 지어낸 답 방지)
-        if (!shouldAnswerFromKnowledge(responseSettings.settings, ragMatches)) {
+        // 방금 읽은 링크가 있으면 그 글이 이번 답의 자료다 = 모르는 척하지 않고 답한다
+        if (!링크읽음 && !shouldAnswerFromKnowledge(responseSettings.settings, ragMatches)) {
             const encoder = new TextEncoder()
             const text = responseSettings.noAnswerText
             const noAnswerStream = new ReadableStream({
@@ -441,38 +467,6 @@ export async function POST(req: Request) {
             return new Response(noAnswerStream, {
                 headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
             })
-        }
-
-        // 🔗 링크 바로 읽기 — 사람이 방금 쓴 말에 주소가 있으면 그 자리서 열어 읽는다(최대 3개).
-        //    저장하지 않는다(대화 기록에도 안 남는다). 이번 답 한 번에만 쓰고 버린다 = 개인정보가 안 쌓인다.
-        //    🛡 안쪽 주소(localhost·사내망·클라우드 메타데이터·우리 Supabase·우리 배포)는 fetch-url.ts 가 막는다.
-        //    🛡 읽어 온 글은 「명령」이 아니라 「인용」이다 — 자료와 똑같은 울타리를 두른다.
-        try {
-            const 읽은것 = await readUrlsInText(lastUserMessage)   // 자료 넣기와 같은 읽기 함수(readers/readUrl)
-            if (읽은것.length > 0) {
-                const 성공 = 읽은것.filter((r): r is Extract<typeof r, { ok: true }> => r.ok)
-                const 실패 = 읽은것.filter(r => !r.ok)
-                readUrls = 읽은것.map(r => r.ok
-                    ? { url: r.url, title: r.title, ok: true as const }
-                    : { url: r.requestedUrl, ok: false as const, reason: r.reason })
-
-                if (성공.length > 0) {
-                    const 울타리 = fenceKnowledge(성공.map(p => `${p.title} (${p.url})\n${p.text}`))
-                    systemPrompt = `[🔗 방금 읽은 링크]\n사용자가 준 주소를 방금 열어 읽었습니다. 아래 글을 근거로 답하세요.\n여기 없는 내용은 지어내지 말고 "그 글에는 없었어요"라고 밝히세요.\n\n${울타리}\n\n${systemPrompt}`
-                    usedSources = [
-                        ...usedSources,
-                        ...성공.map(p => ({ id: `url:${p.url}`, title: p.title })),
-                    ]
-                }
-                if (실패.length > 0) {
-                    const 이유 = 실패.map(f => `- ${f.requestedUrl} → ${f.reason}`).join('\n')
-                    systemPrompt = `[🔗 못 읽은 링크]\n아래 주소는 열지 못했습니다. 답 첫 줄에 "그 주소는 못 읽었어요(이유)"라고 **반드시** 밝히고,\n그 내용을 아는 척하거나 지어내지 마세요.\n${이유}\n\n${systemPrompt}`
-                }
-                console.log('[Chat URL] 읽음:', 성공.length, '못 읽음:', 실패.length)
-            }
-        } catch (urlErr) {
-            console.error('[Chat URL] Error:', urlErr instanceof Error ? urlErr.message : urlErr)
-            // 링크를 못 읽어도 대화는 그대로 간다
         }
 
         // 🔌 노션에서 찾아 읽기 — 「노션에서 ○○ 찾아줘」 처럼 노션을 부를 때만.

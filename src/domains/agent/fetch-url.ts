@@ -23,12 +23,12 @@ export const FETCH_TIMEOUT_MS = 8_000
 /** 딴 데로 튕기는 것을 따라가는 횟수 */
 export const MAX_REDIRECTS = 3
 /** 프롬프트에 넣을 본문 최대 글자 수 */
-export const MAX_PAGE_CHARS = 10_000
+export const MAX_PAGE_CHARS = 12_000
 /** 한 번의 말에서 읽어 볼 주소 개수 */
 export const MAX_URLS_PER_MESSAGE = 3
 
 /** 우리가 밖에 나갈 때 쓰는 이름표 */
-const UA = 'CuriAI-Bot/1.0 (+https://curi.ai)'
+export const FETCH_USER_AGENT = 'Mozilla/5.0 (compatible; CuriAI-Bot/1.0; +https://www.curi-ai.com)'
 
 /* ────────────────────────── 주소 고르기 ────────────────────────── */
 
@@ -150,6 +150,14 @@ export function normalizeUrl(raw: string): string {
             return `https://blog.naver.com/PostView.naver?blogId=${blogId}&logNo=${logNo}`
         }
     }
+    // 네이버 뉴스 옛 주소(news.naver.com/main/read.naver?oid=&aid=)는 요즘 기사 주소로 맞춘다
+    if (host === 'news.naver.com' || host === 'm.news.naver.com' || host === 'n.news.naver.com') {
+        const oid = u.searchParams.get('oid')
+        const aid = u.searchParams.get('aid')
+        if (oid && aid && /^\d{3}$/.test(oid) && /^\d{5,}$/.test(aid)) return `https://n.news.naver.com/mnews/article/${oid}/${aid}`
+        const m = u.pathname.match(/^\/(?:mnews\/)?article\/(\d{3})\/(\d{5,})/)
+        if (m) return `https://n.news.naver.com/mnews/article/${m[1]}/${m[2]}`
+    }
     return u.toString()
 }
 
@@ -216,8 +224,13 @@ export interface ReadPage {
     kind: 'web' | 'youtube'
     /** 유튜브면 채널 이름 (자료 제목에 같이 붙인다) */
     channel?: string
-    /** 어떻게 읽었나 = readability(본문 추출기) / plain(태그만 걷어냄) / captions(자막) / meta(제목과 설명만) */
-    method?: 'readability' | 'plain' | 'captions' | 'meta'
+    /**
+     * 어떻게 읽었나 = readability(본문 추출기) / plain(태그만 걷어냄) / captions(자막) / meta(제목과 설명만)
+     * / feed(RSS, Atom 글 목록) / github(GitHub 공개 API) / naver(네이버 뉴스, 블로그 본문 칸)
+     */
+    method?: 'readability' | 'plain' | 'captions' | 'meta' | 'feed' | 'github' | 'naver'
+    /** 어느 길로 읽었나 (readers/router.ts 의 classifyUrl) */
+    source?: 'youtube' | 'github' | 'naver-blog' | 'naver-news' | 'feed' | 'web'
 }
 export interface ReadFail {
     ok: false
@@ -241,10 +254,14 @@ export interface FetchOptions {
     maxBytes?: number
     /** 이 시간 안에 끝내야 한다 (기본 8초) */
     timeoutMs?: number
+    /** 더 얹을 머리말 (예: GitHub API 의 Accept). 이름표(User-Agent)는 못 바꾼다 */
+    headers?: Record<string, string>
+    /** false = 주소를 고치지 않고 그대로 연다 (네이버 블로그 모바일 글을 일부러 열 때). 기본 true */
+    normalize?: boolean
 }
 
 /** 몸통을 크기 한도까지만 읽는다 (끝없이 흘려보내는 서버에 물리지 않게) */
-async function readLimitedText(res: Response, charset: string, maxBytes: number): Promise<string> {
+async function readLimitedText(res: Response, contentType: string, maxBytes: number): Promise<string> {
     const body = res.body
     if (!body) return ''
     const reader = body.getReader()
@@ -262,6 +279,9 @@ async function readLimitedText(res: Response, charset: string, maxBytes: number)
     const buf = new Uint8Array(total)
     let at = 0
     for (const c of chunks) { buf.set(c.subarray(0, Math.min(c.length, total - at)), at); at += c.length }
+    // 머리말에 글자 인코딩이 없으면 앞부분의 <meta charset> 을 본다 (한국 옛 신문사는 euc-kr 이 많다)
+    const head = /charset=/i.test(contentType) ? '' : new TextDecoder('latin1').decode(buf.subarray(0, 4_096))
+    const charset = pickCharset(contentType, head)
     try {
         return new TextDecoder(charset).decode(buf)
     } catch {
@@ -273,6 +293,7 @@ async function readLimitedText(res: Response, charset: string, maxBytes: number)
 export function pickCharset(contentType: string, head = ''): string {
     const fromHeader = /charset=["']?([a-z0-9_-]+)/i.exec(contentType || '')?.[1]
     const fromMeta = /<meta[^>]+charset=["']?([a-z0-9_-]+)/i.exec(head || '')?.[1]
+        || /<\?xml[^>]+encoding=["']([a-z0-9_-]+)/i.exec(head || '')?.[1]
     const cs = (fromHeader || fromMeta || 'utf-8').toLowerCase()
     return cs === 'ms949' || cs === 'ks_c_5601-1987' ? 'euc-kr' : cs
 }
@@ -290,7 +311,8 @@ export async function fetchPageSafely(rawUrl: string, opts: FetchOptions = {}): 
 
     if (!isSafeFetchUrl(requestedUrl)) return fail('열 수 없는 주소예요(공개된 http, https 주소만 읽을 수 있어요)')
 
-    let current = normalizeUrl(requestedUrl)
+    const fix = opts.normalize === false ? (u: string) => u : normalizeUrl
+    let current = fix(requestedUrl)
     const started = Date.now()
     let res: Response | null = null
 
@@ -308,7 +330,12 @@ export async function fetchPageSafely(rawUrl: string, opts: FetchOptions = {}): 
             res = await fetch(current, {
                 redirect: 'manual',
                 signal: AbortSignal.timeout(left),
-                headers: { 'User-Agent': UA, 'Accept': 'text/html,text/plain;q=0.9,*/*;q=0.5', 'Accept-Language': 'ko,en;q=0.8' },
+                headers: {
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.5',
+                    'Accept-Language': 'ko,en;q=0.8',
+                    ...(opts.headers ?? {}),
+                    'User-Agent': FETCH_USER_AGENT,
+                },
             })
         } catch {
             return fail('그 주소를 열지 못했어요(응답이 없거나 너무 느려요)')
@@ -318,7 +345,8 @@ export async function fetchPageSafely(rawUrl: string, opts: FetchOptions = {}): 
             const next = res.headers.get('location')
             if (!next) return fail('그 주소가 다른 곳으로 보냈는데 어디인지 알려주지 않았어요')
             if (hop === MAX_REDIRECTS) return fail('다른 곳으로 너무 여러 번 넘어가서 멈췄어요')
-            try { current = new URL(next, current).toString() } catch { return fail('넘어갈 주소 모양이 이상해요') }
+            // 짧은 주소(naver.me 등)가 네이버 블로그, 뉴스로 보내면 거기서도 진짜 글 주소로 맞춘다
+            try { current = fix(new URL(next, current).toString()) } catch { return fail('넘어갈 주소 모양이 이상해요') }
             continue
         }
         break
@@ -335,7 +363,7 @@ export async function fetchPageSafely(rawUrl: string, opts: FetchOptions = {}): 
     const declared = Number(res.headers.get('content-length') || '0')
     if (declared > maxBytes) return fail('그 주소의 내용이 너무 커서 읽지 않았어요')
 
-    const body = await readLimitedText(res, pickCharset(type), maxBytes).catch(() => '')
+    const body = await readLimitedText(res, type, maxBytes).catch(() => '')
     if (!body) return fail('그 주소에서 읽을 내용이 없었어요')
     return { ok: true, url: current, requestedUrl, contentType: type, body }
 }

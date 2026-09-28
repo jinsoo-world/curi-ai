@@ -10,6 +10,7 @@
 //   - 비공개, 삭제, 연령 제한 → 「이 영상은 열 수 없어요」
 // ⚠ 유튜브가 데이터센터 IP(Vercel)를 막을 때가 있다. 그때도 oEmbed 제목은 대개 살아 있어 제목만 저장된다.
 
+import { fetchPageSafely } from '@/domains/agent/fetch-url'
 import type { ReadPage, ReadFail } from '@/domains/agent/fetch-url'
 
 /** 자막 한 조각 (도구가 주는 모양) */
@@ -37,9 +38,26 @@ export function joinCaptions(caps: Caption[]): string {
         .trim()
 }
 
-/** 시간 한도가 있는 fetch (도구가 자기 시간제한이 없어서 우리가 감싼다) */
-function fetchWithTimeout(timeoutMs: number): typeof fetch {
-    return (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(timeoutMs) })
+/**
+ * 시간 한도가 있는 fetch (도구가 자기 시간제한이 없어서 우리가 감싼다).
+ * 도구는 안에서 여러 번 부른다(앱 종류 3가지 + 자막). 한 번마다 새로 재면 8초가 24초가 되므로
+ * **전체 마감 하나**를 같이 쓴다.
+ */
+function fetchWithDeadline(deadline: AbortSignal): typeof fetch {
+    return (input, init) => fetch(input, { ...init, signal: init?.signal ? AbortSignal.any([init.signal, deadline]) : deadline })
+}
+
+/**
+ * 도구가 통째로 실패했을 때(유튜브가 앱 창구를 막을 때) 영상 웹페이지에서 설명만이라도 건진다.
+ * ytInitialPlayerResponse 안의 shortDescription. 못 찾으면 og:description.
+ */
+export function descriptionFromWatchPage(html: string): { title: string; description: string } {
+    const src = String(html ?? '')
+    const unescape = (v: string) => { try { return JSON.parse(`"${v}"`) as string } catch { return v } }
+    const desc = src.match(/"shortDescription":"((?:[^"\\]|\\.)*)"/)?.[1]
+    const title = src.match(/"videoDetails":\{[^}]*?"title":"((?:[^"\\]|\\.)*)"/)?.[1]
+    const og = src.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']*)["']/i)?.[1]
+    return { title: title ? unescape(title) : '', description: desc ? unescape(desc) : (og ?? '') }
 }
 
 interface OEmbed { title?: string; author_name?: string }
@@ -85,10 +103,22 @@ export async function readYoutube(rawUrl: string, opts: YoutubeOptions = {}): Pr
 
     let details: { title: string; description: string; subtitles: Caption[] } | null = null
     let detailsError = ''
+    const started = Date.now()
     try {
-        details = await getVideoDetails({ videoID: id, lang: 'ko', fetch: fetchWithTimeout(timeoutMs) })
+        // 한국어 자막 우선. 없으면 도구가 자동 자막, 그다음 아무 언어나 첫 자막을 고른다
+        details = await getVideoDetails({ videoID: id, lang: 'ko', fetch: fetchWithDeadline(AbortSignal.timeout(timeoutMs)) })
     } catch (e) {
         detailsError = e instanceof Error ? e.message : String(e)
+    }
+
+    // 도구가 통째로 실패했으면 영상 웹페이지에서 설명이라도 (남은 시간이 있을 때만)
+    const left = timeoutMs - (Date.now() - started)
+    if (!details && left > 1_500) {
+        const w = await fetchPageSafely(`${url}&hl=ko`, { timeoutMs: left, maxBytes: 3 * 1024 * 1024 })
+        if (w.ok) {
+            const d = descriptionFromWatchPage(w.body)
+            if (d.title || d.description) details = { title: d.title || 'No title found', description: d.description || 'No description found', subtitles: [] }
+        }
     }
 
     const videoTitle = (oembed.title || (details?.title && details.title !== 'No title found' ? details.title : '') || '').trim()
@@ -107,10 +137,10 @@ export async function readYoutube(rawUrl: string, opts: YoutubeOptions = {}): Pr
 
     if (captions.length >= 20) {
         const text = `${head}\n\n[자막]\n${captions}`.slice(0, maxChars)
-        return { ok: true, url, requestedUrl, title, text, kind: 'youtube', channel, method: 'captions' }
+        return { ok: true, url, requestedUrl, title, text, kind: 'youtube', channel, method: 'captions', source: 'youtube' }
     }
 
     // 자막이 없다 → 제목과 설명만. 그 사실을 글에 적어 봇이 아는 척하지 않게 한다.
     const text = `${head}\n\n[설명]\n${description || '(설명 없음)'}\n\n(이 영상은 자막이 없어요. 제목과 설명만 기억합니다)`.slice(0, maxChars)
-    return { ok: true, url, requestedUrl, title, text, kind: 'youtube', channel, method: 'meta' }
+    return { ok: true, url, requestedUrl, title, text, kind: 'youtube', channel, method: 'meta', source: 'youtube' }
 }

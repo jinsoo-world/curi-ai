@@ -5,6 +5,7 @@
 // ③ 없으면 눈치 라우터가 말에 맞는 봇만 고른다(대개 1명, 상한 MAX_GROUP_REPLIES). 방장 없음.
 //    뒤 차례 봇은 앞 답을 보고 덧붙일 게 없으면 [PASS] 로 빠진다.
 // ④ 답은 askChat(솔라→Gemini 폴백). 둘 다 죽으면 UNAVAILABLE_TEXT.
+// ⑤ 사람 말에 링크가 있으면(최대 3개) 1:1 대화와 같은 readers 로 읽어 답하는 봇들에게 넣는다(저장 안 함).
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -20,6 +21,8 @@ import { routeGroupReply, buildGroupSystemPrompt, isPassReply } from '@/domains/
 import type { GroupReplyMode } from '@/domains/os/group-router'
 import { UNAVAILABLE_TEXT } from '@/domains/chat/constants'
 import { GROUP_SERVER_GAP_MS, sleep } from '@/domains/os/group-stagger'
+import { readUrlsInText, buildLinkPrompt } from '@/domains/os/readers'
+import type { ReadUrlView } from '@/domains/os/readers'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -43,10 +46,12 @@ async function 봇한줄(
     bots: ChannelBot[],
     기록: string,
     mode: GroupReplyMode,
+    링크글 = '',
 ): Promise<string | null> {
     const 나머지 = bots.filter(b => b.mentorId !== 말할봇.mentorId)
+    const 시스템 = buildGroupSystemPrompt(말할봇, 나머지, mode)
     const 답 = await askChat(
-        buildGroupSystemPrompt(말할봇, 나머지, mode),
+        링크글 ? `${링크글}\n\n${시스템}` : 시스템,
         `[방에서 오간 말]\n${기록}\n\n위 흐름에 이어 「${말할봇.name}」으로서 답한다.`,
         { maxTokens: 900 },
     )
@@ -80,7 +85,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         const bots = await getChannelBots(db, user.id, channel.memberMentorIds)
         if (bots.length === 0) return NextResponse.json({ error: '이 방에 말할 봇이 없어요' }, { status: 400 })
 
-        const 지난말 = await listChannelMessages(db, user.id, id)
+        // 🔗 링크 읽기는 기록 불러오기와 동시에 (읽기만 하는 일이라 승인 카드 없음, 절대 던지지 않음)
+        const [지난말, 읽은것] = await Promise.all([
+            listChannelMessages(db, user.id, id),
+            readUrlsInText(text).catch(() => []),
+        ])
+        const 링크 = 읽은것.length > 0 ? buildLinkPrompt(읽은것) : null
+        const 링크글 = 링크?.prefix ?? ''
+        const readUrls: ReadUrlView[] = 링크?.readUrls ?? []
         const 사람말 = await saveChannelMessage(db, id, { authorKind: 'user', content: text })
 
         const 새말: ChannelMessage[] = [사람말]
@@ -94,7 +106,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
             let 앞선봇: string | null = null
             while (말할봇 && canBotSpeakAgain(봇이말한횟수)) {
                 const 기록 = 대화기록([...지난말, ...새말], bots)
-                const 내용: string = (await 봇한줄(말할봇, bots, 기록, 'mention')) ?? UNAVAILABLE_TEXT
+                const 내용: string = (await 봇한줄(말할봇, bots, 기록, 'mention', 링크글)) ?? UNAVAILABLE_TEXT
                 const 저장 = await saveChannelMessage(db, id, { authorKind: 'bot', mentorId: 말할봇.mentorId, content: 내용 })
                 새말.push(저장)
                 말한봇.push(말할봇.mentorId)
@@ -122,7 +134,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
                 const 말할봇 = 고른봇[i]!
                 const 첫답 = 말한봇.length === 0
                 const 기록 = 대화기록([...지난말, ...새말], bots)
-                const 답 = await 봇한줄(말할봇, bots, 기록, 첫답 ? 'routed-first' : 'routed-next')
+                const 답 = await 봇한줄(말할봇, bots, 기록, 첫답 ? 'routed-first' : 'routed-next', 링크글)
                 const 빈답 = 답 === null || isPassReply(답)
                 // 덧붙일 게 없거나 모델이 죽었으면 조용히 빠진다. 아무도 말 못 했으면 마지막에 한 줄은 남긴다.
                 if (빈답 && (!첫답 || i < 고른봇.length - 1)) continue
@@ -137,6 +149,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
             messages: 새말,
             members: bots,
             responderIds: 말한봇,
+            // 읽은 링크(성공, 실패). 화면이 첫 봇 답 아래에 작은 카드로 보여 준다
+            readUrls,
         })
     } catch (e) {
         if (e instanceof ChannelTableMissing) return NextResponse.json({ tableMissing: true }, { status: 503 })

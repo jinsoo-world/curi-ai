@@ -21,6 +21,8 @@ import TypingIndicator from './TypingIndicator'
 import MentionRichText from './MentionRichText'
 import { GROUP_THINK_MS, GROUP_GAP_MS, sleep } from '@/domains/os/group-stagger'
 import OgLinkPreview, { isUrlOnlyText } from './OgLinkPreview'
+import LinkCards from './LinkCards'
+import type { ReadUrlItem } from './LinkCards'
 
 interface Member { mentorId: string; name: string; shape: string; color: string; avatarUrl: string | null }
 interface Msg { id: string; authorKind: 'user' | 'bot'; mentorId: string | null; content: string; createdAt?: string }
@@ -42,6 +44,8 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
     const [detailOpen, setDetailOpen] = useState(false)
     const [err, setErr] = useState<string | null>(null)
     const [notReady, setNotReady] = useState(false)
+    /** 봇 말 id → 그 답을 쓸 때 읽은 링크 (이번 화면에서만. 저장하지 않는다) */
+    const [readByMsg, setReadByMsg] = useState<Record<string, ReadUrlItem[]>>({})
     const endRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLTextAreaElement>(null)
     const inputWrapRef = useRef<HTMLDivElement>(null)
@@ -132,6 +136,12 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
             const botMsgs = (Array.isArray(data.messages) ? data.messages : []).filter(
                 (m: { authorKind?: string }) => m.authorKind === 'bot',
             ) as Msg[]
+            // 읽은 링크는 첫 봇 답 아래에 한 번만 보여 준다
+            const readUrls = Array.isArray(data.readUrls) ? data.readUrls as ReadUrlItem[] : []
+            if (readUrls.length > 0 && botMsgs[0]) {
+                const firstId = botMsgs[0].id
+                setReadByMsg(prev => ({ ...prev, [firstId]: readUrls }))
+            }
             // 답을 한 봇씩: 입력 중 점 → 말풍선 (여러 명이면 짧은 간격). @한 명이면 한 번만
             setWaitingAny(false)
             if (botMsgs.length === 0) {
@@ -277,6 +287,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                                 <div className="os-sender">{아바타(m.mentorId)}<span>{보낸사람(m)}</span></div>
                                 {!isUrlOnlyText(m.content) && <div className="os-bubble bot md"><MentionRichText text={m.content} bots={chipBots} markdown /></div>}
                                 <OgLinkPreview text={m.content} />
+                                {readByMsg[m.id] && <LinkCards readUrls={readByMsg[m.id]} />}
                             </MsgRow>
                         ))}
                     {workingIds.map(id => {
