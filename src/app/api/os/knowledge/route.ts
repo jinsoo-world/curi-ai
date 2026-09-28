@@ -13,6 +13,7 @@ import {
     updateBotSourceMeta, removeBotSource, retryBotSource, BotNotMine,
 } from '@/domains/os/knowledge'
 import { addSnsCaptureSource } from '@/domains/os/sns-capture'
+import { understandSource, saveUnderstanding, dropUnderstanding } from '@/domains/os/understand'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -55,6 +56,13 @@ export async function POST(req: NextRequest) {
         // 「다시 시도」: 못 읽은 자료는 자리 셈에 안 들어가니 자리 확인 없이 다시 읽는다
         if (kind === 'retry') {
             return NextResponse.json(await retryBotSource(db, mentorId, String(body.sourceId ?? ''), { userId: user.id }))
+        }
+        // 「봇이 이렇게 이해했어요」 카드 만들기와 저장 (자리 확인 없음)
+        if (kind === 'understand') {
+            return NextResponse.json({ understanding: await understandSource(db, mentorId, String(body.sourceId ?? ''), { userId: user.id }) })
+        }
+        if (kind === 'understand-save') {
+            return NextResponse.json(await saveUnderstanding(db, user.id, mentorId, String(body.sourceId ?? ''), body.understanding))
         }
         await assertRoomForMore(db, mentorId)
 
@@ -117,6 +125,8 @@ export async function DELETE(req: NextRequest) {
         const db = createAdminClient()
         await assertBotOwned(db, user.id, mentorId)
         await removeBotSource(db, mentorId, sourceId)
+        // 봇 설명 속 이 자료의 「이해한 내용」 묶음도 뺀다
+        await dropUnderstanding(db, mentorId, sourceId).catch(e => console.warn('[os/knowledge] 이해 묶음 빼기 실패', e instanceof Error ? e.message : e))
         return NextResponse.json({ ok: true })
     } catch (e) {
         return 오류응답(e)

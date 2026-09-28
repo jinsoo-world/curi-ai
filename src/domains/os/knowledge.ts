@@ -6,7 +6,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { addKnowledgeSource } from '@/domains/knowledge'
-import { failReasonLine, FAIL_REASON_COL } from '@/domains/knowledge/actions'
+import { failReasonLine, FAIL_REASON_COL, LEGACY_FAIL_REASON_COL } from '@/domains/knowledge/actions'
+import { failureMessage, FAILURE_REASONS } from '@/domains/knowledge/failure-reasons'
 import { readUrl, KNOWLEDGE_READ_OPTIONS } from '@/domains/os/readers'
 import { markInjectionPatterns } from '@/domains/chat/injection'
 
@@ -26,10 +27,10 @@ export class BotNotMine extends Error {
 }
 
 /**
- * 이 봇이 내 팀의 봇인지 확인한다. 아니면 던진다.
- * 표가 아직 없으면(마이그레이션 전) 역시 「내 봇 아님」으로 본다 = 기본 거절.
+ * 이 봇이 내 팀에 있는지만 확인한다 (마켓에서 데려온 봇 포함). 대화, 봇끼리 전달처럼 「쓰기만」 하는 창구용.
+ * 자료, 설정을 바꾸는 창구는 assertBotOwned(만든 사람 확인)를 쓴다.
  */
-export async function assertBotOwned(db: SupabaseClient, userId: string, mentorId: string): Promise<void> {
+export async function assertBotInTeam(db: SupabaseClient, userId: string, mentorId: string): Promise<void> {
     if (!userId || !mentorId) throw new BotNotMine()
     const { data, error } = await db
         .from('team_bots')
@@ -42,6 +43,37 @@ export async function assertBotOwned(db: SupabaseClient, userId: string, mentorI
         throw new Error(error.message)
     }
     if (!data) throw new BotNotMine()
+}
+
+/**
+ * 이 봇을 내가 만들었는지 확인한다(봇 주인 = mentors.creator_id 의 creator_profiles.user_id). 아니면 던진다.
+ * 예전에는 team_bots.user_id 만 봐서, 마켓에서 데려온 봇(linked_from_market)의 자료도 넣고 고칠 수 있었다(0929 보안 수정).
+ * DB 보호 규칙(RLS)과 같은 기준이다. 표가 아직 없으면 역시 「내 봇 아님」 = 기본 거절.
+ */
+export async function assertBotOwned(db: SupabaseClient, userId: string, mentorId: string): Promise<void> {
+    if (!userId || !mentorId) throw new BotNotMine()
+    const { data: m, error } = await db
+        .from('mentors')
+        .select('creator_id')
+        .eq('id', mentorId)
+        .maybeSingle()
+    if (error) {
+        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) throw new BotNotMine()
+        throw new Error(error.message)
+    }
+    const creatorId = (m as { creator_id: string | null } | null)?.creator_id
+    if (!creatorId) throw new BotNotMine()
+    const { data: c, error: cErr } = await db
+        .from('creator_profiles')
+        .select('id')
+        .eq('id', creatorId)
+        .eq('user_id', userId)
+        .maybeSingle()
+    if (cErr) {
+        if ((cErr.code === TABLE_MISSING || cErr.code === TABLE_MISSING_REST)) throw new BotNotMine()
+        throw new Error(cErr.message)
+    }
+    if (!c) throw new BotNotMine()
 }
 
 export type BotSourceType = 'pdf' | 'url' | 'youtube' | 'text'
@@ -66,13 +98,14 @@ export interface BotSource {
 }
 
 const BASE_COLS = 'id, title, source_type, processing_status, chunk_count, created_at'
-const META_COLS = `${BASE_COLS}, context, author_is_me, source_kind, citation_url, ${FAIL_REASON_COL}`
+const META_COLS = `${BASE_COLS}, context, author_is_me, source_kind, citation_url, ${FAIL_REASON_COL}, ${LEGACY_FAIL_REASON_COL}`
 
 type SourceRow = {
     id: string; title: string; source_type: BotSourceType
     processing_status: BotSource['status']; chunk_count: number | null; created_at: string
     context?: string | null; author_is_me?: boolean | null; source_kind?: string | null; citation_url?: string | null
-    [FAIL_REASON_COL]?: string | null
+    failure_reason?: string | null
+    summary?: string | null
 }
 
 /** 못 읽은 자료 = 처리 실패, 또는 다 끝났는데 조각이 0개 (봇이 한 글자도 못 읽는다) */
@@ -80,7 +113,12 @@ export function isUnusableSource(status: string, chunkCount: number | null | und
     return status === 'failed' || (status === 'completed' && (chunkCount ?? 0) === 0)
 }
 
-export const EMPTY_SOURCE_REASON = '읽을 글을 못 찾았어요'
+export const EMPTY_SOURCE_REASON = FAILURE_REASONS.empty_content
+
+/** 실패 이유 한 줄: 코드 칸(failure_reason) 먼저, 없으면 예전에 summary 칸에 적은 글 */
+export function failReasonOf(r: { failure_reason?: string | null; summary?: string | null }): string | undefined {
+    return failureMessage(r.failure_reason) ?? ((r.summary ?? '').trim() || undefined)
+}
 
 function toBotSource(r: SourceRow): BotSource {
     const bad = isUnusableSource(r.processing_status, r.chunk_count)
@@ -90,7 +128,7 @@ function toBotSource(r: SourceRow): BotSource {
         context: r.context ?? undefined, authorIsMe: r.author_is_me ?? undefined,
         sourceKind: r.source_kind ?? undefined, citationUrl: r.citation_url ?? undefined,
         // summary 칸은 실패한 자료에서만 이유로 읽는다 (다 읽은 자료의 summary 는 요약이다)
-        failReason: bad ? (r.processing_status === 'failed' ? (String(r[FAIL_REASON_COL] ?? '')).trim() || undefined : EMPTY_SOURCE_REASON) : undefined,
+        failReason: bad ? (r.processing_status === 'failed' ? failReasonOf(r) : EMPTY_SOURCE_REASON) : undefined,
     }
 }
 
@@ -293,7 +331,7 @@ export async function retryBotSource(db: SupabaseClient, mentorId: string, sourc
         // 파일: 남은 조각을 비우고 처음부터 다시 읽게 한다
         await db.from('knowledge_chunks').delete().eq('source_id', row.id)
         const { error: upErr } = await db.from('knowledge_sources')
-            .update({ processing_status: 'pending', chunk_count: 0, [FAIL_REASON_COL]: null })
+            .update({ processing_status: 'pending', chunk_count: 0, [FAIL_REASON_COL]: null, [LEGACY_FAIL_REASON_COL]: null })
             .eq('id', row.id).eq('mentor_id', mentorId)
         if (upErr) throw new Error(upErr.message)
         return { mode: 'process', sourceId: row.id }

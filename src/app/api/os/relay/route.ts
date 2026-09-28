@@ -16,7 +16,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { readRelayIntent, withRelayPrefix, withRelayAnswerHeader, countRelayTurns, RELAY_MAX_TURNS, RELAY_TURN_LIMIT_TEXT } from '@/domains/agent/relay'
 import { classifyByRules } from '@/domains/agent/intent'
 import { askChat } from '@/domains/agent/ask'
-import { assertBotOwned } from '@/domains/os/knowledge'
+import { assertBotInTeam as assertBotOwned } from '@/domains/os/knowledge'   // 대화, 전달은 팀에 있는 봇이면 된다 (마켓 봇 포함)
 import { UNAVAILABLE_TEXT } from '@/domains/chat/constants'
 
 export const dynamic = 'force-dynamic'

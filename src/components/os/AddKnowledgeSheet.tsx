@@ -11,6 +11,7 @@ import FolderSync from './FolderSync'
 import ConnectFeedSheet from './ConnectFeedSheet'
 import CloudSync from './CloudSync'
 import { shrinkImage } from '@/lib/image-shrink'
+import UnderstandCard from './UnderstandCard'
 
 /** SNS 캡처는 한 번에 5장까지 (서버 SCREENSHOT_MAX_IMAGES 와 같다) */
 const CAPTURE_MAX = 5
@@ -43,6 +44,8 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
     const [shots, setShots] = useState<string[]>([])
     const [snsText, setSnsText] = useState('')
     const shotRef = useRef<HTMLInputElement>(null)
+    // 넣은 뒤 「봇이 이렇게 이해했어요」 카드를 띄울 자료
+    const [understandId, setUnderstandId] = useState<string | null>(null)
     const fileRef = useRef<HTMLInputElement>(null)
     const csvRef = useRef<HTMLInputElement>(null)
 
@@ -79,7 +82,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
             if (!r2.ok) throw new Error(d2.error || '봇이 파일을 못 읽었어요')
             osTrack('os_knowledge_added', { mentor_id: mentorId, kind: 'file' })
             setMsg('다 읽었어요')
-            setTimeout(onClose, 700)
+            setUnderstandId(d1.sourceId)
         } catch (e) {
             setMsg(null)
             setErr(e instanceof Error ? e.message : '넣지 못했어요')
@@ -106,6 +109,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
         setBusy(true); setErr(null)
         const 실패: { url: string; why: string }[] = []
         let 성공 = 0
+        let 마지막: string | null = null
         for (const [i, u] of 목록.entries()) {
             setMsg(목록.length > 1 ? `${목록.length}개 중 ${i + 1}번째를 봇이 읽는 중이에요…` : '봇이 읽는 중이에요…')
             try {
@@ -116,6 +120,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                 const data = await res.json().catch(() => ({}))
                 if (!res.ok) throw new Error(data.error || '넣지 못했어요')
                 성공 += 1
+                마지막 = data.source?.id ?? 마지막
                 osTrack('os_knowledge_added', { mentor_id: mentorId, kind: 'url' })
             } catch (e) {
                 실패.push({ url: u, why: e instanceof Error ? e.message : '넣지 못했어요' })
@@ -124,8 +129,9 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
         if (성공 > 0) await onAdded()
         setBusy(false)
         if (실패.length === 0) {
-            setMsg(목록.length > 1 ? `${목록.length}개 다 읽었어요` : '다 읽었어요')
-            setTimeout(onClose, 700)
+            setMsg('다 읽었어요')
+            if (마지막) setUnderstandId(마지막)
+            else setTimeout(onClose, 700)
             return
         }
         setUrls(실패.map(f => f.url))
@@ -245,7 +251,8 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
             osTrack('os_knowledge_added', { mentor_id: mentorId, kind: 'sns' })
             await onAdded()
             setMsg('다 읽었어요')
-            setTimeout(onClose, 700)
+            if (data.source?.id) setUnderstandId(data.source.id)
+            else setTimeout(onClose, 700)
         } catch (e) {
             setMsg(null)
             setErr(`못 읽었어요. ${e instanceof Error ? e.message : ''}`.trim())
@@ -270,7 +277,8 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
             osTrack('os_knowledge_added', { mentor_id: mentorId, kind: 'text' })
             await onAdded()
             setMsg('다 읽었어요')
-            setTimeout(onClose, 700)
+            if (data.source?.id) setUnderstandId(data.source.id)
+            else setTimeout(onClose, 700)
         } catch (e) {
             setMsg(null)
             setErr(e instanceof Error ? e.message : '넣지 못했어요')
@@ -431,10 +439,11 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
 
                 {msg && <div className="os-notice" style={{ margin: '14px 0 0', background: 'color-mix(in srgb, var(--os-클로버) 18%, transparent)', color: 'var(--os-클로버)' }}>{msg}</div>}
                 {err && <div className="os-notice" style={{ margin: '14px 0 0' }}>{err}</div>}
+                {understandId && <UnderstandCard mentorId={mentorId} sourceId={understandId} onDone={onClose} />}
 
                 <div className="os-sheet-foot">
                     <button className="os-btn" onClick={onClose} disabled={busy}>닫기</button>
-                    {tab !== 'file' && tab !== 'csv' && tab !== 'folder' && tab !== 'cloud' && tab !== 'feed' && (
+                    {!understandId && tab !== 'file' && tab !== 'csv' && tab !== 'folder' && tab !== 'cloud' && tab !== 'feed' && (
                         <button className="os-btn primary" onClick={넣기} disabled={busy || !넣을수있나}>
                             {busy ? '넣는 중…' : err && tab === 'link' ? '다시 시도' : tab === 'link' && 주소개수 > 1 ? `${주소개수}개 넣기` : '넣기'}
                         </button>

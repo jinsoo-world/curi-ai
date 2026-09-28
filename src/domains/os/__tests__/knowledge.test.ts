@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { isSafeExternalUrl, isYoutubeUrl, htmlToText, pickTitle, assertBotOwned, BotNotMine, assertRoomForMore, USABLE_SOURCE_FILTER, MAX_SOURCES_PER_BOT, isUnusableSource, retryBotSource } from '../knowledge'
+import { isSafeExternalUrl, isYoutubeUrl, htmlToText, pickTitle, assertBotOwned, assertBotInTeam, BotNotMine, assertRoomForMore, USABLE_SOURCE_FILTER, MAX_SOURCES_PER_BOT, isUnusableSource, retryBotSource } from '../knowledge'
 
 describe('isSafeExternalUrl — 우리 서버가 대신 열어도 되는 주소인가', () => {
     it('평범한 공개 주소는 통과', () => {
@@ -60,39 +60,48 @@ describe('htmlToText / pickTitle', () => {
     })
 })
 
-/** 가짜 Supabase — 어떤 조건이 걸렸는지 본다 */
-function makeDb(result: { data?: unknown; error?: { code?: string; message: string } | null }) {
-    const eqs: [string, unknown][] = []
-    const chain: Record<string, unknown> = {}
-    const self = () => chain
-    Object.assign(chain, {
-        from: self, select: self,
-        eq: (c: string, v: unknown) => { eqs.push([c, v]); return chain },
-        maybeSingle: async () => result,
-    })
-    return { db: chain as unknown as SupabaseClient, eqs }
-}
+describe('assertBotOwned — 내가 만든 봇만 자료를 넣고 고친다', () => {
+    // 표마다 돌려줄 값을 정하는 가짜 DB. 건 조건을 표별로 적어 둔다
+    function ownerDb(tables: Record<string, { data: unknown; error: unknown }>) {
+        const eqs: Record<string, [string, unknown][]> = {}
+        const from = (t: string) => {
+            eqs[t] = []
+            const q: any = {
+                select: () => q,
+                eq: (k: string, v: unknown) => { eqs[t].push([k, v]); return q },
+                maybeSingle: async () => tables[t] ?? { data: null, error: null },
+            }
+            return q
+        }
+        return { db: { from } as unknown as SupabaseClient, eqs }
+    }
 
-describe('assertBotOwned — 남의 봇 자료는 서버에서 막힌다', () => {
-    it('내 팀 봇이면 통과하고, user_id 와 mentor_id 를 둘 다 건다', async () => {
-        const { db, eqs } = makeDb({ data: { id: 'tb1' }, error: null })
+    it('봇의 만든 사람이 나면 통과 (mentors.creator_id → creator_profiles.user_id)', async () => {
+        const { db, eqs } = ownerDb({ mentors: { data: { creator_id: 'c1' }, error: null }, creator_profiles: { data: { id: 'c1' }, error: null } })
         await assertBotOwned(db, 'u1', 'm1')
-        expect(eqs).toContainEqual(['user_id', 'u1'])
-        expect(eqs).toContainEqual(['mentor_id', 'm1'])
+        expect(eqs.mentors).toContainEqual(['id', 'm1'])
+        expect(eqs.creator_profiles).toEqual([['id', 'c1'], ['user_id', 'u1']])
     })
-
-    it('내 팀에 없으면 막는다', async () => {
-        const { db } = makeDb({ data: null, error: null })
-        await expect(assertBotOwned(db, 'u1', 'm9')).rejects.toBeInstanceOf(BotNotMine)
+    it('마켓에서 데려온 봇(내 팀에는 있지만 만든 사람이 남)은 막는다', async () => {
+        const { db } = ownerDb({ mentors: { data: { creator_id: 'c-other' }, error: null }, creator_profiles: { data: null, error: null }, team_bots: { data: { id: 'tb1' }, error: null } })
+        await expect(assertBotOwned(db, 'u1', 'm-market')).rejects.toBeInstanceOf(BotNotMine)
     })
-
+    it('만든 사람이 없는 봇, 없는 봇은 막는다', async () => {
+        await expect(assertBotOwned(ownerDb({ mentors: { data: { creator_id: null }, error: null } }).db, 'u1', 'm1')).rejects.toBeInstanceOf(BotNotMine)
+        await expect(assertBotOwned(ownerDb({}).db, 'u1', 'm9')).rejects.toBeInstanceOf(BotNotMine)
+    })
     it('표가 아직 없어도 열어 주지 않는다 (기본 거절)', async () => {
-        const { db } = makeDb({ data: null, error: { code: '42P01', message: 'no table' } })
+        const { db } = ownerDb({ mentors: { data: null, error: { code: '42P01', message: 'no table' } } })
         await expect(assertBotOwned(db, 'u1', 'm1')).rejects.toBeInstanceOf(BotNotMine)
     })
-
+    it('대화, 전달용 팀 확인은 마켓 봇도 통과 (자료 바꾸기와 따로)', async () => {
+        const { db, eqs } = ownerDb({ team_bots: { data: { id: 'tb1' }, error: null } })
+        await assertBotInTeam(db, 'u1', 'm-market')
+        expect(eqs.team_bots).toEqual([['user_id', 'u1'], ['mentor_id', 'm-market']])
+        await expect(assertBotInTeam(ownerDb({}).db, 'u1', 'm9')).rejects.toBeInstanceOf(BotNotMine)
+    })
     it('빈 값이면 막는다', async () => {
-        const { db } = makeDb({ data: { id: 'tb1' }, error: null })
+        const { db } = ownerDb({ mentors: { data: { creator_id: 'c1' }, error: null }, creator_profiles: { data: { id: 'c1' }, error: null } })
         await expect(assertBotOwned(db, '', 'm1')).rejects.toBeInstanceOf(BotNotMine)
         await expect(assertBotOwned(db, 'u1', '')).rejects.toBeInstanceOf(BotNotMine)
     })

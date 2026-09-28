@@ -13,7 +13,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { withRelayPrefix } from '@/domains/agent/relay'
 import { handoffAckLine } from '@/domains/os/mentions'
-import { assertBotOwned } from '@/domains/os/knowledge'
+import { assertBotInTeam as assertBotOwned } from '@/domains/os/knowledge'   // 대화, 전달은 팀에 있는 봇이면 된다 (마켓 봇 포함)
 
 export const dynamic = 'force-dynamic'
 

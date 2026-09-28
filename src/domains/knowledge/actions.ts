@@ -2,6 +2,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateEmbedding, splitIntoChunksWithHeadings, contextualEmbeddingText } from './embedding'
+import { FAILURE_REASONS, type FailureReason } from './failure-reasons'
 
 /** 표에 아직 없는 칸을 적어 넣었을 때 나는 Postgres 오류 번호 (컬럼 없음) */
 const COLUMN_MISSING = '42703'
@@ -39,17 +40,24 @@ function metaRow(meta?: KnowledgeSourceMeta): Record<string, unknown> {
 }
 
 /**
- * 못 읽은 이유를 적는 칸. 지금은 있는 summary 칸을 실패일 때만 이유 칸으로 쓴다(표를 바꾸지 않음).
- * 이유 전용 칸(마이그레이션)이 생기면 이 이름 하나만 바꾼다.
+ * 못 읽은 이유 코드를 적는 칸 (20261008f_ontology_phase1 의 failure_reason, 코드는 failure-reasons.ts).
+ * 그 전(0929 01시 무렵) 잠깐 summary 칸에 적은 이유 글은 LEGACY_FAIL_REASON_COL 로 읽기만 한다.
  */
-export const FAIL_REASON_COL = 'summary'
+export const FAIL_REASON_COL = 'failure_reason'
+export const LEGACY_FAIL_REASON_COL = 'summary'
 
-/** 못 읽은 이유를 화면에 보일 한 줄로 (길면 자르고, 기술 말은 사람 말로) */
+/** 오류 → 실패 이유 코드 */
+export function failReasonCode(e: unknown): FailureReason {
+    const raw = (e instanceof Error ? e.message : String(e ?? '')).trim()
+    if (/fetch failed|ECONN|ETIMEDOUT|timeout|timed out|aborted/i.test(raw)) return 'timeout'
+    if (/조각 저장 실패|embedding|임베딩/i.test(raw)) return 'chunk_save_failed'
+    if (/읽을 글을 못 찾|너무 짧/i.test(raw)) return 'empty_content'
+    return 'unknown'
+}
+
+/** 오류 → 화면에 보일 한 줄 (코드의 문구) */
 export function failReasonLine(e: unknown): string {
-    const raw = (e instanceof Error ? e.message : String(e ?? '')).replace(/\s+/g, ' ').trim()
-    if (!raw || /fetch failed|ECONN|ETIMEDOUT|timeout|aborted/i.test(raw)) return '잠시 연결이 끊겼어요'
-    if (/조각 저장 실패|embedding|임베딩/i.test(raw)) return '글을 저장하다 멈췄어요'
-    return raw.slice(0, 100)
+    return FAILURE_REASONS[failReasonCode(e)]
 }
 
 /**
@@ -133,9 +141,9 @@ export async function addKnowledgeSource(
         return source
     } catch (error) {
         // 처리 실패
-        // 못 읽은 이유 한 줄은 summary 칸에 둔다(실패일 때만. 표는 바꾸지 않는다). 화면이 「다시 시도」와 함께 보여 준다
+        // 못 읽은 이유 코드를 남긴다. 화면이 문구로 바꿔 「다시 시도」와 함께 보여 준다
         await db.from('knowledge_sources')
-            .update({ processing_status: 'failed', [FAIL_REASON_COL]: failReasonLine(error) })
+            .update({ processing_status: 'failed', [FAIL_REASON_COL]: failReasonCode(error) })
             .eq('id', source.id)
 
         console.error('[Knowledge] Processing failed:', error)

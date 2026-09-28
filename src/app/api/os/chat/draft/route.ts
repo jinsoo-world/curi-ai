@@ -12,7 +12,7 @@ import type { IrreversibleAction } from '@/domains/agent/tool-gate'
 import { gateTool, IRREVERSIBLE_TOOLS } from '@/domains/agent/tool-gate'
 import { askSolar } from '@/domains/agent/ask'
 import { createPermissionRequest, PermissionTableMissing } from '@/domains/agent/permissions'
-import { assertBotOwned } from '@/domains/os/knowledge'
+import { assertBotInTeam as assertBotOwned } from '@/domains/os/knowledge'   // 대화, 전달은 팀에 있는 봇이면 된다 (마켓 봇 포함)
 import { SOLAR_CHAT_MODEL } from '@/domains/llm/constants'
 
 export const dynamic = 'force-dynamic'
