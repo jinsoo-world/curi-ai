@@ -326,7 +326,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                         )}
                         <div className="os-input-chip-host">
                         <div className="os-input-chip-mirror" aria-hidden>
-                            {input ? <MentionRichText text={input} bots={chipBots} /> : null}
+                            {input ? <MentionRichText text={input} bots={chipBots} mirror /> : null}
                         </div>
                         <textarea
                             ref={inputRef}
@@ -366,6 +366,12 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                                         ta.focus()
                                         ta.setSelectionRange(next.cursor, next.cursor)
                                     })
+                                    return
+                                }
+                                const cut = mention.backspaceChip(e, input)
+                                if (cut) {
+                                    setInput(cut.text)
+                                    mention.close()
                                     return
                                 }
                                 if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {

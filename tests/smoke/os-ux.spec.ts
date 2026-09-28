@@ -161,3 +161,47 @@ test('큐리 초록: 로그인 화면 캐릭터와 글자가 검정이 아니다
     expect(word).toBe('rgb(34, 197, 94)')
     await expect(page.getByRole('button', { name: /카카오로 시작하기/ }).locator('svg')).toHaveCount(1)
 })
+
+test('@멘션 칩: 얼굴이 다 보이고(상태 점 없음), 캐럿이 칩 뒤에 오고, 지우기 한 번에 칩이 빠진다', async ({ page }) => {
+    await page.goto('/os?demo=1', { waitUntil: 'domcontentloaded' })
+    await settle(page)
+    const drawer = page.getByRole('button', { name: '봇 명단 열기' })
+    if (await drawer.isVisible()) await drawer.click()
+    await page.locator('.os-shell .os-roster .os-bot-tile').nth(1).click()
+    await expect(page).toHaveURL(/\/os\/chat\//)
+    const ta = page.locator('textarea.os-input')
+    const row = page.locator('.os-mention-row', { hasText: '기획팀장' }).first()
+    // 화면이 막 뜬 직후엔 @ 가 먹기 전일 수 있어 목록이 뜰 때까지 다시 친다
+    await expect(async () => {
+        await ta.fill('')
+        await ta.click()
+        await page.keyboard.type('@')
+        await expect(row).toBeVisible({ timeout: 2000 })
+    }).toPass({ timeout: 20000 })
+    await row.click()
+    await expect(ta).toHaveValue('@기획팀장 ')
+    const chip = page.locator('.os-input-chip-mirror [data-mention-name="기획팀장"]')
+    await expect(chip).toBeVisible()
+    // 칩 속 얼굴: 명단과 같은 클로버, 상태 점은 안 보인다
+    await expect(chip.locator('.bot-avatar')).toHaveAttribute('data-shape', 'clover')
+    await expect(chip.locator('.bot-avatar .presence')).toBeHidden()
+    // 캐럿이 칩 뒤: 거울 칩 폭 = 글상자 속 「@기획팀장」 글자 폭 (차이 1.5px 이하)
+    const gap = await page.evaluate(() => {
+        const t = document.querySelector('textarea.os-input') as HTMLTextAreaElement
+        const c = document.querySelector('.os-input-chip-mirror [data-mention-name]') as HTMLElement
+        const cs = getComputedStyle(t)
+        const probe = document.createElement('span')
+        probe.textContent = '@기획팀장'
+        probe.style.whiteSpace = 'pre'
+        for (const k of ['fontFamily', 'fontSize', 'fontWeight', 'letterSpacing', 'fontKerning'] as const) probe.style[k] = cs[k]
+        document.body.appendChild(probe)
+        const w = probe.getBoundingClientRect().width
+        probe.remove()
+        return Math.abs(c.getBoundingClientRect().width - w)
+    })
+    expect(gap, `칩 폭과 글자 폭 차이 ${gap.toFixed(2)}px`).toBeLessThanOrEqual(1.5)
+    // 지우기 한 번 = 칩 통째로
+    await page.keyboard.press('Backspace')
+    await expect(ta).toHaveValue('')
+    await expect(chip).toHaveCount(0)
+})

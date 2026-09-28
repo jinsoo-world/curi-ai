@@ -275,3 +275,23 @@ export function snapCursorAroundMentions(
     return c
 }
 
+
+/**
+ * 지우기(Backspace) 한 번에 칩 통째로: 캐럿이 「@이름」 바로 뒤, 또는 「@이름 」(뒤 칸 하나) 바로 뒤면
+ * 토큰과 그 한 칸을 함께 지운다. 해당 없으면 null (평소처럼 한 글자 지우기).
+ */
+export function removeMentionBeforeCaret(
+    text: string,
+    cursor: number,
+    botNames: readonly string[],
+): { text: string; cursor: number } | null {
+    const t = text ?? ''
+    const c = Math.max(0, Math.min(cursor, t.length))
+    for (const { start, end } of mentionTokenRanges(t, botNames)) {
+        const withSpace = end < t.length && t[end] === ' ' ? end + 1 : end
+        if (c === end || c === withSpace) {
+            return { text: t.slice(0, start) + t.slice(withSpace), cursor: start }
+        }
+    }
+    return null
+}

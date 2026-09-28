@@ -6,6 +6,7 @@ import {
     applyMentionInsertion,
     detectMentionQuery,
     filterMentionBots,
+    removeMentionBeforeCaret,
     resolveMentionCursor,
     snapCursorAroundMentions,
 } from '@/domains/os/mentions'
@@ -108,8 +109,31 @@ export function useMentionComposer(bots: MentionPickerItem[]) {
         return 'pass'
     }, [open, close, items])
 
+    /**
+     * 지우기(Backspace): 캐럿이 칩 바로 뒤(또는 뒤 한 칸 뒤)면 칩을 통째로 지운 새 글을 돌려준다.
+     * 해당 없으면 null (기본 동작 그대로). 부르는 쪽이 setInput 만 하면 된다.
+     */
+    const backspaceChip = useCallback((
+        e: KeyboardEvent<HTMLTextAreaElement>,
+        text: string,
+    ): { text: string; cursor: number } | null => {
+        if (e.key !== 'Backspace' || e.shiftKey || e.altKey || e.metaKey || e.ctrlKey) return null
+        if (e.nativeEvent.isComposing) return null
+        const ta = e.currentTarget
+        if (ta.selectionStart !== ta.selectionEnd) return null
+        const next = removeMentionBeforeCaret(text, ta.selectionStart ?? text.length, bots.map(b => b.name))
+        if (!next) return null
+        e.preventDefault()
+        requestAnimationFrame(() => {
+            ta.focus()
+            ta.setSelectionRange(next.cursor, next.cursor)
+        })
+        return next
+    }, [bots])
+
     return {
         open,
+        backspaceChip,
         items,
         activeIndex,
         setActiveIndex,

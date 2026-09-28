@@ -13,12 +13,15 @@ export default function MentionRichText({
     bots,
     className,
     markdown = false,
+    mirror = false,
 }: {
     text: string
     bots: readonly MentionChipBot[]
     className?: string
     /** 봇 답처럼 마크다운이 필요할 때. 칩이 있으면 조각마다 마크다운을 돌린다 */
     markdown?: boolean
+    /** 입력창 거울: 칩을 글상자 글자와 같은 폭으로 그린다 (캐럿이 칩에 겹치지 않게) */
+    mirror?: boolean
 }) {
     const parts = splitMentionSegments(text, bots)
     const hasChip = parts.some(p => p.kind !== 'text')
@@ -35,9 +38,9 @@ export default function MentionRichText({
                         : <span key={i}>{p.text}</span>
                 }
                 if (p.kind === 'mention') {
-                    return <MentionChip key={i} bot={p.bot} />
+                    return <MentionChip key={i} bot={p.bot} raw={p.raw} mirror={mirror} />
                 }
-                return <MentionChip key={i} label={p.label} />
+                return <MentionChip key={i} label={p.label} raw={p.raw} mirror={mirror} />
             })}
         </span>
     )

@@ -622,6 +622,13 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
             applyMention(mention.activeItem)
             return
         }
+        const cut = mention.backspaceChip(e, input)
+        if (cut) {
+            setInput(cut.text)
+            setState(cut.text ? 'listening' : 'idle')
+            mention.close()
+            return
+        }
         if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send() }
     }
 
@@ -785,7 +792,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                             )}
                             <div className="os-input-chip-host">
                             <div className="os-input-chip-mirror" aria-hidden>
-                                {input ? <MentionRichText text={input} bots={chipBots} /> : null}
+                                {input ? <MentionRichText text={input} bots={chipBots} mirror /> : null}
                             </div>
                             <textarea
                                 ref={inputRef}
