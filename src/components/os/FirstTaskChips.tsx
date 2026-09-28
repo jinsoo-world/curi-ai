@@ -15,6 +15,8 @@ interface Props {
     /** 칩을 누르면 이 글을 그대로 봇에게 보낸다 */
     onPick: (text: string) => void
     disabled?: boolean
+    /** 가입 온보딩에서 고른 일에 맞춘 칩 3개. 있으면 맡은 일 칩 대신 쓴다 */
+    override?: [string, string, string]
 }
 
 // 맡은 일별 첫 일 3개. 첫 칩은 presets.firstTask 의 「」 안 문장과 같은 뜻으로 맞춘다
@@ -81,8 +83,8 @@ export function tasksFor(bot: TeamBot | null): [string, string, string] {
     return (job && TASKS[job.id]) ?? COMMON
 }
 
-export default function FirstTaskChips({ bot, onPick, disabled }: Props) {
-    const tasks = tasksFor(bot)
+export default function FirstTaskChips({ bot, onPick, disabled, override }: Props) {
+    const tasks = override ?? tasksFor(bot)
     return (
         <div className="os-first-tasks" aria-label="추천 질문">
             <div className="os-first-tasks-title">눌러서 바로 물어보세요</div>

@@ -18,6 +18,9 @@ import BotMarkdown from './BotMarkdown'
 import { CloseIcon, swipeToClose } from './MenuIcon'
 import { PeopleIcon, InfoIcon } from './Icons'
 import FirstTaskChips from './FirstTaskChips'
+import { useSurveyHelp, markFirstSent } from './useSurveyHelp'
+import { FIRST_HELP_CHIPS, SAMPLE_EXCHANGE } from '@/domains/os/onboarding'
+import './first-sample.css'
 import { isLoginGateReply } from '@/domains/os/audience'
 import SocialStartLinks from './SocialStartLinks'
 import { markFirstChatDone } from '@/components/pwa/install-rules'
@@ -352,6 +355,9 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
 
     const name = bot?.name ?? publicBot?.name ?? '봇'
     const greeting = bot?.greeting ?? publicBot?.greeting_message ?? ''
+    // 가입 온보딩 답 = 온보딩이 고른 내 팀 첫 봇의 첫 화면에만 (시연 봇, 공개 봇은 제외)
+    const surveyHelp = useSurveyHelp(bot?.mentorId)
+    const firstHelp = bot && !bot.id.startsWith('demo-') ? surveyHelp : null
 
     useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
@@ -383,6 +389,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
         // === 사진 첨부 === 사진만 보내도 된다. 올리는 중이거나 실패한 장이 남아 있으면 기다린다.
         const photoUrls = photos.urls
         if ((!text && photoUrls.length === 0) || streaming || photos.uploading || photos.failed) return
+        markFirstSent()   // 온보딩 칩과 예시는 첫 메시지 전까지만
 
         // === @ 멘션 === 다른 팀 봇을 부르면 **지금 방에 남긴 채** 넘긴다. 왼쪽 명단이 상대 봇을 부른다.
         if (!overrideText && text && photoUrls.length === 0) {
@@ -708,7 +715,15 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                             <div className="os-sender">{avatar}<span>{name}</span></div>
                             <div className="os-bubble bot">{greeting}</div>
                             {/* 첫 메시지 전 = 눌러서 바로 물어보는 질문 3개 (대표 승인 0928 사용성 5번) */}
-                            {bot && <FirstTaskChips bot={bot} disabled={streaming} onPick={t => void send(t)} />}
+                            {/* 온보딩에서 고른 일의 예시 한 쌍. 보여 주기만 하고 저장하지 않는다 */}
+                            {firstHelp && (
+                                <div className="os-sample" aria-label="예시 대화">
+                                    <span className="os-sample-tag">예시</span>
+                                    <div className="os-sample-me"><div className="os-bubble me">{SAMPLE_EXCHANGE[firstHelp].user}</div></div>
+                                    <div className="os-bubble bot">{SAMPLE_EXCHANGE[firstHelp].bot}</div>
+                                </div>
+                            )}
+                            {bot && <FirstTaskChips bot={bot} disabled={streaming} onPick={t => void send(t)} override={firstHelp ? FIRST_HELP_CHIPS[firstHelp] : undefined} />}
                         </MsgRow>
                     )}
                     {messages.map((m, i) => m.role === 'user'

@@ -27,7 +27,7 @@ import CloverCount from '@/components/studio/CloverCount'
 const 메뉴 = [
     { label: '발견', href: '/mentors' },
     { label: 'AI 만들기', href: '/creator/create' },
-    { label: '프로필 사진', href: '/tools' },
+    // 사진 도구(강사 프로필, 증명사진 등)는 「더보기」 서랍의 「부가 기능」으로 옮겼다 (대표 승인 0928). 주소는 그대로
     // 대표 지시 0923 「채팅 탭은 프로그램(내 봇 팀, /os)으로 연동되게 통일」. /chats 는 /os 로 넘긴다(next.config)
     { label: '내 봇 팀', href: '/os' },
 ]
@@ -224,6 +224,12 @@ export default function AppSidebar() {
                                 </span>
                             </button>
                         )}
+
+                        {/* 부가 기능 = 사진 도구 (대표 승인 0928, 주 메뉴에서 뺐다) */}
+                        <div className="app-top-sheet-line" />
+                        <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--먹연, #5C6660)', padding: '6px 4px 2px' }}>부가 기능</div>
+                        <Link href="/tools" className="app-top-sheet-item">사진 만들기 (강사 프로필, 증명사진)</Link>
+                        <div className="app-top-sheet-line" />
 
                         {/* 로그인한 분에게만 보이는 칸 — 대표 지적 2026-09-15 「로그인도 안했는데 뭔 로그아웃이야」 */}
                         {로그인함 && (

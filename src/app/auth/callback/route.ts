@@ -2,12 +2,18 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { SIGNUP_CLOVERS, REFERRER_REWARD } from '@/domains/trial'
 import { safeNextPath } from '@/lib/safe-next'
+import { cookies } from 'next/headers'
+import { TERMS_COOKIE, parseTermsCookie } from '@/domains/os/onboarding'
+import { ensureOnboardingRow } from '@/domains/os/onboarding-server'
+
+/** 새 가입자가 먼저 가는 온보딩 화면 (대표 승인 0928) */
+const ONBOARDING_PATH = '/os/start'
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
-    // 로그인 뒤 돌아갈 주소. 우리 사이트 경로만 허용(//·http 로 시작하면 무시), 없으면 /mentors
-    const next = safeNextPath(searchParams.get('next')) ?? '/mentors'
+    // 로그인 뒤 돌아갈 주소. 우리 사이트 경로만 허용(//, http 로 시작하면 무시), 없으면 /os (대표 승인 0928)
+    const next = safeNextPath(searchParams.get('next')) ?? '/os'
     // 새 회원 표시(new_user=true)를 next 주소에 붙인다. next 에 ? 가 이미 있어도 안전하게
     const withNewUser = (path: string) => {
         const u = new URL(path, origin)
@@ -73,6 +79,23 @@ export async function GET(request: Request) {
                     // 선물에 실패해도 로그인은 막지 않는다
                     console.error('[Auth Callback] 가입 선물 실패:', 선물오류)
                 }
+
+                // 새 가입자 온보딩 (대표 승인 0928). 가입 트리거가 users 행을 먼저 만들어 아래 「첫 로그인」 분기는
+                // 거의 돌지 않는다. 그래서 새 회원 여부, 약관 동의 시각, 초대 링크 귀속은 여기서 따로 처리한다.
+                let goOnboarding = false
+                try {
+                    const cookieStore = await cookies()
+                    goOnboarding = await ensureOnboardingRow(db, {
+                        userId: user.id,
+                        authCreatedAt: user.created_at,
+                        refCookie: cookieStore.get('curi_ref')?.value ?? null,
+                        termsAt: parseTermsCookie(cookieStore.get(TERMS_COOKIE)?.value),
+                        provider: user.app_metadata?.provider ?? null,
+                    })
+                } catch (온보딩오류) {
+                    console.error('[Auth Callback] 온보딩 준비 실패:', 온보딩오류)
+                }
+                const landing = goOnboarding ? ONBOARDING_PATH : next
 
                 // 기존 프로필 확인
                 const { data: profile, error: profileError } = await db
@@ -152,13 +175,14 @@ export async function GET(request: Request) {
                         }
 
                         // 쿠키 소비 (삭제)
-                        const response = NextResponse.redirect(withNewUser(next))
+                        const response = NextResponse.redirect(withNewUser(landing))
                         response.cookies.delete('curi_ref')
+                        response.cookies.delete(TERMS_COOKIE)
                         return response
                     }
 
-                    // 신규 유저 → next(기본 멘토 페이지). new_user 플래그로 모달 자동 팝업
-                    return NextResponse.redirect(withNewUser(next))
+                    // 신규 유저 → 온보딩 또는 next
+                    return NextResponse.redirect(withNewUser(landing))
                 }
 
                 // 기존 유저: 카카오 정보 업데이트 (전화번호, 성별, 출생연도, 아바타)
@@ -194,8 +218,10 @@ export async function GET(request: Request) {
                     console.log(`[Auth Callback] Updated existing user ${user.id}:`, Object.keys(updates))
                 }
 
-                // 기존 유저 재로그인 → next(기본 멘토 페이지)
-                return NextResponse.redirect(`${origin}${next}`)
+                // 새 가입자 = 온보딩, 기존 회원 = next (기본 /os)
+                const done = NextResponse.redirect(`${origin}${landing}`)
+                done.cookies.delete(TERMS_COOKIE)
+                return done
             }
 
             return NextResponse.redirect(`${origin}${next}`)

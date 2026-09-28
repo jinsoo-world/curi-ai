@@ -36,11 +36,7 @@ const 칸들: 칸[] = [
         match: (p) => p.startsWith('/creator') || p.startsWith('/studio'),
         icon: (<svg width="22" height="22" viewBox="0 0 24 24" {...선}><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="6" r="1.5" /><circle cx="12" cy="18" r="1.5" /><circle cx="6" cy="9" r="1.5" /><circle cx="18" cy="9" r="1.5" /><circle cx="6" cy="15" r="1.5" /><circle cx="18" cy="15" r="1.5" /></svg>),
     },
-    {
-        label: '사진', href: '/tools',
-        match: (p) => p.startsWith('/tools'),
-        icon: (<svg width="22" height="22" viewBox="0 0 24 24" {...선}><rect x="3" y="5" width="18" height="15" rx="3" /><circle cx="12" cy="12.5" r="3.5" /><path d="M8 5l1.2-2h5.6L16 5" /></svg>),
-    },
+    // 「사진」 칸은 「더보기」 서랍의 「부가 기능」으로 옮겼다 (대표 승인 0928). /tools 주소는 그대로
     {
         // 대표 지시 0923 「채팅 탭은 프로그램(내 봇 팀, /os)으로 연동되게 통일」
         label: '내 봇 팀', href: '/os',

@@ -251,6 +251,21 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     // 방을 바꾸면 좁은 화면 명단 서랍을 닫는다
     useEffect(() => { setNavOpen(false) }, [pathname])
 
+    // 새 가입자 온보딩 (대표 승인 0928) = 로그인했는데 온보딩을 마치지 않은 새 가입자면 /os/start 로.
+    // 앱 웹뷰처럼 콜백을 거치지 않고 /os 로 바로 들어온 경우를 잡는다. 기존 회원은 서버가 show:false 를 준다.
+    // 한 세션에 한 번만 묻는다 (중간에 나가도 갇히지 않게)
+    useEffect(() => {
+        if (loading || guest || demo || pathname.startsWith('/os/start') || pathname.startsWith('/os/welcome')) return
+        try {
+            if (sessionStorage.getItem('curi:onb-checked') === '1') return
+            sessionStorage.setItem('curi:onb-checked', '1')
+        } catch { return }
+        fetch('/api/os/onboarding', { cache: 'no-store' })
+            .then(r => r.json())
+            .then((d: { show?: boolean }) => { if (d.show) router.replace('/os/start') })
+            .catch(() => {})
+    }, [loading, guest, demo, pathname, router])
+
     useEffect(() => {
         if (!navOpen) return
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setNavOpen(false) }
@@ -405,7 +420,8 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     }
 
     // 손님 소개 화면(/os/welcome)은 한 장짜리라 뼈대(왼쪽 명단) 없이 그린다
-    if (pathname.startsWith('/os/welcome')) return <>{children}</>
+    // 새 가입자 온보딩(/os/start)도 한 장짜리라 뼈대 없이 그린다 (대표 승인 0928)
+    if (pathname.startsWith('/os/welcome') || pathname.startsWith('/os/start')) return <>{children}</>
 
     // 한 장짜리 화면 = 위에 「대화로 돌아가기」(폰은 「명단」 단추도 옆에). 연결 화면도 여기 든다 (대표 승인 0928 사용성 2번)
     const 한장화면 = pathname.startsWith('/os/settings') || pathname.startsWith('/os/market') || pathname.startsWith('/os/connect')

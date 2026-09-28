@@ -9,12 +9,13 @@ import { createClient } from '@/lib/supabase/client'
 import { safeNextPath } from '@/lib/safe-next'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { TERMS_COOKIE, TERMS_VERSION } from '@/domains/os/onboarding'
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState<string | null>(null)
     const [error, setError] = useState('')
     const router = useRouter()
-    // 로그인 뒤 돌아갈 주소 (/login?next=/os). 우리 사이트 경로만 받고, 없으면 /mentors
+    // 로그인 뒤 돌아갈 주소 (/login?next=/os). 우리 사이트 경로만 받고, 없으면 /os
     const [nextPath, setNextPath] = useState<string | null>(null)
 
     // 이미 약관 동의한 적 있는지 체크 (localStorage)
@@ -69,7 +70,7 @@ export default function LoginPage() {
         const supabase = createClient()
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session?.user) {
-                router.replace(next ?? '/mentors')
+                router.replace(next ?? '/os')
                 return
             }
             const inApp = /KAKAOTALK|NAVER|Line|Instagram|FB_IAB|FBAN/i.test(navigator.userAgent || '')
@@ -135,6 +136,8 @@ export default function LoginPage() {
         const goNext = nextOverride ?? nextPath
         // 약관 동의 기록 저장 (다음 로그인 때 건너뛰기)
         localStorage.setItem('curi_terms_agreed', 'true')
+        // 필수 약관 동의 시각을 콜백까지 들고 간다 → 서버가 users.terms_agreed_at 과 온보딩 표에 남긴다 (대표 승인 0928)
+        document.cookie = `${TERMS_COOKIE}=${TERMS_VERSION}:${Date.now()}; path=/; max-age=3600; samesite=lax${location.protocol === 'https:' ? '; secure' : ''}`
         localStorage.setItem('curi_last_provider', provider)
         setIsLoading(provider)
         setError('')
@@ -165,7 +168,7 @@ export default function LoginPage() {
     // 예전에 동의했고 「카카오로 시작」처럼 단추를 골라 왔으면 한 번 더 누르지 않아도 그 로그인을 연다
     useEffect(() => {
         if (!startNow) return
-        void Promise.resolve().then(() => handleSocialLogin(startNow.provider, startNow.next ?? '/mentors'))
+        void Promise.resolve().then(() => handleSocialLogin(startNow.provider, startNow.next ?? '/os'))
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [startNow])
 
