@@ -31,6 +31,8 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: '/chats', destination: '/os', permanent: false },
+      // 첫 주소는 새 첫 화면으로 곧바로 (페이지를 거치면 1초 새로고침 안내가 끼어 느리다). 대표 지시 0928 23:53
+      { source: '/', destination: '/home', permanent: false },
     ]
   },
   // 클라이언트 캐시 헤더
