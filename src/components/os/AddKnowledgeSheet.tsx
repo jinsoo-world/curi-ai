@@ -277,7 +277,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
     }
 
     const sns넣기 = async () => {
-        setBusy(true); setErr(null); setMsg(shots.length > 0 ? '캡처에서 글을 읽는 중이에요…' : '봇이 읽는 중이에요…')
+        setBusy(true); setErr(null); setMsg(shots.length > 0 ? '캡처에서 글을 읽는 중이에요…' : snsText.trim() ? '봇이 읽는 중이에요…' : '공개 글을 읽어 오는 중이에요…')
         try {
             const res = await fetch('/api/os/knowledge', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -326,7 +326,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
 
     const 주소개수 = splitUrls(urls.join('\n')).length
     const 넣을수있나 = tab === 'link' ? 주소개수 > 0
-        : tab === 'sns' ? shots.length > 0 || snsText.trim().length >= 10
+        : tab === 'sns' ? shots.length > 0 || snsText.trim().length >= 10 || /(instagram\.com|threads\.(net|com))/i.test(snsUrl)
         : tab === 'qa' ? qaQuestion.trim().length >= 2 && qaAnswer.trim().length >= 1
         : tab === 'note' ? noteText.trim().length >= 5
         : text.trim().length >= 10
@@ -392,7 +392,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                 {tab === 'sns' && (
                     <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
                         <input type="text" value={snsUrl} onChange={e => setSnsUrl(e.target.value)} disabled={busy} maxLength={300}
-                            placeholder="내 인스타그램, 페이스북, 스레드 주소 (선택)" aria-label="SNS 주소" />
+                            placeholder="내 인스타그램, 스레드 주소 (공개 계정은 주소만 넣으면 돼요)" aria-label="SNS 주소" />
                         <input ref={shotRef} type="file" accept="image/png,image/jpeg,image/webp" multiple style={{ display: 'none' }}
                             onChange={e => void 캡처고르기(e.target.files)} />
                         <button type="button" className="os-btn" style={{ minHeight: 44 }} disabled={busy || shots.length >= CAPTURE_MAX}
@@ -412,7 +412,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                         <textarea className="os-textarea" value={snsText} onChange={e => setSnsText(e.target.value)} disabled={busy}
                             rows={5} placeholder="또는 내 글을 복사해 붙여넣기" aria-label="SNS 글" />
                         <div style={{ color: 'var(--os-글-흐림)', fontSize: 13, lineHeight: 1.5 }}>
-                            캡처에서 글만 옮겨 적어요. 다른 사람 댓글은 빼요.
+                            공개 계정은 주소만 넣으면 자동으로 읽어요. 비공개 계정이나 페이스북은 캡처를 올리거나 글을 붙여넣어 주세요. 캡처에서는 글만 옮겨 적고 다른 사람 댓글은 빼요.
                         </div>
                     </div>
                 )}

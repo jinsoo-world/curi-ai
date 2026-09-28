@@ -7,12 +7,14 @@
 //   naver-news = 네이버 뉴스 (기사 본문 칸)
 //   feed       = RSS, Atom 주소처럼 보이는 것 (실제로는 내용을 보고 한 번 더 판정한다)
 //   web        = 그 밖의 웹페이지, 신문 기사 (readability 본문 추출)
-// X, 인스타그램, 레딧, 링크드인, 페이스북처럼 로그인해야 보이는 곳은 web 으로 떨어지고,
+//   instagram  = 인스타그램 공개 계정, 게시물 (퍼가기 화면, 0929)
+//   threads    = 스레드 공개 프로필 (0929)
+// X, 레딧, 링크드인, 페이스북처럼 로그인해야 보이는 곳은 web 으로 떨어지고,
 // 거기서 글을 못 찾으면 「못 읽었어요」로 끝난다(몰래 로그인하지 않는다).
 
 import { youtubeVideoId } from './youtube'
 
-export type LinkKind = 'youtube' | 'github' | 'naver-blog' | 'naver-news' | 'feed' | 'web'
+export type LinkKind = 'youtube' | 'github' | 'naver-blog' | 'naver-news' | 'instagram' | 'threads' | 'feed' | 'web'
 
 /** GitHub 주소 첫 칸이 사람, 단체 이름이 아닌 것 (github.com/settings 같은 화면) */
 const GITHUB_RESERVED = new Set([
@@ -35,6 +37,8 @@ export function classifyUrl(raw: string): LinkKind {
     if (host === 'github.com' && parseGithubUrl(u.toString())) return 'github'
     if (host === 'blog.naver.com' || host === 'm.blog.naver.com') return 'naver-blog'
     if (host === 'n.news.naver.com' || host === 'news.naver.com' || host === 'm.news.naver.com') return 'naver-news'
+    if (host === 'instagram.com' || host.endsWith('.instagram.com')) return 'instagram'
+    if (host === 'threads.net' || host === 'threads.com' || host.endsWith('.threads.net') || host.endsWith('.threads.com')) return 'threads'
     if (looksLikeFeedUrl(u)) return 'feed'
     return 'web'
 }

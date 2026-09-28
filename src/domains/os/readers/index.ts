@@ -10,6 +10,8 @@
 //   github     → github.ts  (공개 API, 막히면 웹페이지 읽기로)
 //   naver-blog → naver.ts   (액자 안 PostView 본문, 막히면 모바일 글)
 //   naver-news → naver.ts   (기사 본문 칸)
+//   instagram  → instagram.ts (공개 계정, 게시물 퍼가기 화면. 비공개면 못 읽는다)
+//   threads    → threads.ts (공개 프로필)
 //   feed       → feed.ts    (RSS, Atom 최근 글 목록. 주소 모양이 아니어도 내용이 피드면 여기로)
 //   web        → article.ts (readability 본문 추출. 글이 얇거나 첫 화면이면 RSS 링크를 찾아 목록을 더한다)
 // 한도: 크기 maxBytes(대화 2MB, 자료 20MB), 시간 timeoutMs(대화 8초, 자료 45초), 글자 maxChars.
@@ -27,6 +29,8 @@ import { readGithub } from './github'
 import { extractNaverBlog, extractNaverNews, naverBlogMobileUrl } from './naver'
 import { feedToText, looksLikeFeed, discoverFeedLinks, kstStamp } from './feed'
 import { cacheGet, cacheSet } from './cache'
+import { readInstagram } from './instagram'
+import { readThreads } from './threads'
 
 export type { ReadResult, ReadPage, ReadFail } from '@/domains/agent/fetch-url'
 export { extractArticle } from './article'
@@ -117,6 +121,18 @@ async function routeRead(requestedUrl: string, o: Opts): Promise<ReadResult> {
         // API 가 막혔으면(시간당 60번) github.com 웹페이지를 그냥 읽는다
         if (left() < 1_500) return { ok: false, requestedUrl, reason: 'GitHub 에서 답이 늦어 멈췄어요' }
         return readWeb(requestedUrl, { ...o, timeoutMs: left() }, 'web')
+    }
+
+    if (kind === 'instagram') {
+        const r = await readInstagram(requestedUrl, { timeoutMs: Math.min(o.timeoutMs, 10_000), max: 5 })
+        if (!r.ok) return { ok: false, requestedUrl, reason: `${r.reason}. 비공개 계정이면 글을 붙여넣거나 화면 캡처를 올려 주세요` }
+        return ok(requestedUrl, requestedUrl, '인스타그램', r.posts.map(p => p.text).join('\n\n---\n\n'), o.maxChars, 'sns', 'instagram')
+    }
+    if (kind === 'threads') {
+        const r = await readThreads(requestedUrl, { timeoutMs: Math.min(o.timeoutMs, 10_000), max: 5 })
+        if (!r.ok) return { ok: false, requestedUrl, reason: `${r.reason}. 비공개 계정이면 글을 붙여넣거나 화면 캡처를 올려 주세요` }
+        const head = r.bio ? `소개: ${r.bio}\n\n` : ''
+        return ok(requestedUrl, requestedUrl, '스레드', head + r.posts.map(p => p.text).join('\n\n---\n\n'), o.maxChars, 'sns', 'threads')
     }
 
     return readWeb(requestedUrl, o, kind)

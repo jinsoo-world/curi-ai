@@ -1,7 +1,8 @@
-// domains/os: 인스타그램, 페이스북, 스레드 = 캡처 올리기 또는 글 붙여넣기로 자료 넣기 (대표 결정 0929 00:54). 서버 전용.
+// domains/os: 인스타그램, 스레드 = 공개 계정은 주소만으로 자동 읽기, 못 읽으면(비공개) 캡처나 붙여넣기. 페이스북 = 캡처나 붙여넣기. 서버 전용.
 // 봇 하나를 골라 넣는 「자료 넣기」 창에서 쓴다. 설정의 「내 SNS」 창은 sns-link.ts pasteSnsPosts 가 같은 읽기를 쓴다.
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { addTextSource } from './knowledge'
+import { addTextSource, addLinkSource } from './knowledge'
+import { classifyUrl } from './readers/router'
 import { parseScreenshotImages, readScreenshots } from './screenshot-read'
 
 export const SNS_CAPTURE_MIN_CHARS = 30
@@ -39,7 +40,13 @@ export async function addSnsCaptureSource(db: SupabaseClient, mentorId: string, 
     const url = String(a.url ?? '').trim().slice(0, 300)
     const images = parseScreenshotImages(a.images)
     const pasted = String(a.text ?? '').slice(0, SNS_CAPTURE_MAX_TEXT)
-    if (images.length === 0 && pasted.trim().length === 0) throw new Error('캡처를 올리거나 글을 붙여넣어 주세요')
+    if (images.length === 0 && pasted.trim().length === 0) {
+        // 인스타그램, 스레드 주소만 있으면 먼저 자동으로 읽는다 (못 읽으면 이유 + 캡처, 붙여넣기 안내)
+        const withProto = /^https?:\/\//i.test(url) ? url : `https://${url}`
+        const k = url ? classifyUrl(withProto) : 'web'
+        if (k === 'instagram' || k === 'threads') return addLinkSource(db, mentorId, withProto, { userId: a.userId })
+        throw new Error(url ? '이 주소는 자동으로 못 읽어요. 화면 캡처를 올리거나 글을 붙여넣어 주세요' : '주소를 넣거나, 캡처를 올리거나, 글을 붙여넣어 주세요')
+    }
     const fromImages = await readScreenshots(images, { route: '/api/os/knowledge', userId: a.userId ?? null, mentorId })
     const body = captureBody(url, fromImages, pasted)
     const real = fromImages.join('') + pasted

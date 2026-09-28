@@ -1,6 +1,6 @@
 // domains/home: /home 첫 화면 입력칸 즉시 판별 (브라우저에서 돈다. 서버 코드 없음). 대표 지시 0928 23:53, 설계안 3.1.
 // 서버의 classifySnsLink(sns-link.ts)와 같은 갈래에 티스토리, 브런치, 아이디만, 상품 주소 규칙을 더했다.
-// 읽는 방법: 유튜브는 자막과 설명, 네이버 블로그와 티스토리는 RSS, 브런치와 공개 웹은 웹으로 읽는다. SNS 는 붙여넣기.
+// 읽는 방법: 유튜브는 자막과 설명, 네이버 블로그와 티스토리는 RSS, 브런치와 공개 웹은 웹으로 읽는다. 인스타그램, 스레드는 공개 계정이면 자동으로 읽고, 비공개면 붙여넣기나 캡처.
 
 export type HomeLinkKind = 'youtube' | 'tistory' | 'feed' | 'web' | 'shop' | 'paste' | 'capture' | 'market' | 'bareId' | 'bad'
 

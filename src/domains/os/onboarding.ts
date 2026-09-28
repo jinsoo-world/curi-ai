@@ -300,12 +300,12 @@ export const SNS_PENDING_LINE = '이 곳은 아직 읽을 수 없어 링크만 �
 export const SNS_PASTE_MIN_CHARS = 300
 export const SNS_PASTE_MAX_POSTS = 3
 export const SNS_PASTE_LINE = '자동으로 못 읽었어요. 대표 글을 붙여넣어 주세요'
-/** 인스타그램, 페이스북, 스레드 = 캡처 올리기나 글 붙여넣기 */
-export const SNS_CAPTURE_LINE = '이 곳은 화면 캡처를 올리거나 글을 붙여넣어 주세요'
+/** 자동으로 못 읽은 인스타그램, 스레드(비공개 계정)와 페이스북 = 캡처 올리기나 글 붙여넣기 */
+export const SNS_CAPTURE_LINE = '자동으로 못 읽었어요(비공개 계정일 수 있어요). 화면 캡처를 올리거나 글을 붙여넣어 주세요'
 /** 온보딩에서 자동으로 못 읽었을 때 (붙여넣기는 설정에서) */
 export const SNS_PASTE_LATER_LINE = '자동으로 못 읽었어요. 설정에서 글을 붙여넣을 수 있어요'
 export const SNS_KEY_TAKEN_LINE = '내 글로 봇이 배웠어요. 이 주소는 다른 계정이 이미 보너스를 받았어요'
-export const SNS_HINT = `유튜브, 블로그 주소를 넣으면 봇이 내 글을 배우고 처음 한 번 클로버 ${SNS_BONUS_CLOVERS}개를 드려요`
+export const SNS_HINT = `유튜브, 블로그, 인스타그램, 스레드(공개 계정) 주소를 넣으면 봇이 내 글을 배우고 처음 한 번 클로버 ${SNS_BONUS_CLOVERS}개를 드려요`
 
 // 화면 쪽 저장 (첫 대화 칩과 예시 대화가 읽는다)
 export const SURVEY_LOCAL_KEY = 'curi:survey-help'

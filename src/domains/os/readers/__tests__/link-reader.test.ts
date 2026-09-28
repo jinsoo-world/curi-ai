@@ -491,3 +491,22 @@ describe('linkTextForTurn = 이어 묻기면 앞 말의 주소를 다시 읽는�
         expect(p.prefix).not.toMatch(/[\u00b7\u2014]/)
     })
 })
+
+describe('readUrl 인스타그램, 스레드 (0929)', () => {
+    it('인스타 게시물 = 퍼가기 화면 글을 읽는다', async () => {
+        routes['https://www.instagram.com/p/ABC/embed/captioned/'] = { body: '<div class="Caption">오늘 수업에서 나눈 이야기<br>정말 좋았어요</div>' }
+        const r = await readUrl('https://www.instagram.com/p/ABC/')
+        expect(r.ok).toBe(true)
+        if (r.ok) { expect(r.source).toBe('instagram'); expect(r.text).toContain('오늘 수업') }
+    })
+    it('못 읽으면 비공개 안내를 준다', async () => {
+        const r = await readUrl('https://www.instagram.com/secret/')
+        expect(r.ok).toBe(false)
+        if (!r.ok) expect(r.reason).toMatch(/비공개/)
+    })
+    it('스레드 공개 프로필을 읽는다', async () => {
+        routes['https://www.threads.net/@me'] = { body: '<meta property="og:description" content="소개글">"text":"스레드에 올린 글 하나를 여기 적어 둡니다"' }
+        const r = await readUrl('https://www.threads.net/@me')
+        expect(r.ok && r.source).toBe('threads')
+    })
+})

@@ -2,7 +2,8 @@
 // 받은 링크를 이미 있는 「계정 연결」(feeds: 유튜브 채널, 네이버 블로그 RSS, 티스토리 RSS, RSS, 일반 웹)로 읽어 그 사람 봇의 자료에 넣는다.
 // 대표 결정 0929 00:54 「SNS 주소만 넣으면 나처럼 말하는 AI」: 네이버 블로그와 브런치도 다시 자동으로 읽는다.
 //   못 읽었을 때만 「대표 글 3편 붙여넣기」(pasteSnsPosts)를 보탬으로 연다.
-//   인스타그램, 페이스북, 스레드는 화면 캡처 올리기나 글 붙여넣기로 받는다(대표 결정 0929). X, 틱톡은 링크만 저장한다(준비 중).
+//   인스타그램, 스레드는 공개 계정이면 자동으로 읽는다(0929 readers/instagram, threads). 못 읽으면(비공개) 캡처나 붙여넣기.
+//   페이스북은 캡처 올리기나 글 붙여넣기로 받는다(대표 결정 0929). X, 틱톡은 링크만 저장한다(준비 중).
 // 자료가 실제로 들어갔을 때만 클로버 50개를 계정당 한 번, 같은 주소로는 한 계정만 준다
 //   (DB 함수 grant_sns_link_bonus_keyed 가 계정 중복과 주소 중복을 막는다).
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -10,6 +11,8 @@ import { resolveChannelInput } from './feeds/youtube'
 import { isMarketHost } from '@/domains/home/link-guide'
 import { createFeed, listFeeds, syncFeed, loadExistingSources, type FeedKind } from './feeds'
 import { isSafeFetchUrl } from '@/domains/agent/fetch-url'
+import { readUrl, KNOWLEDGE_READ_OPTIONS } from './readers'
+import { addKnowledgeSource } from '@/domains/knowledge'
 import { MAX_SOURCES_PER_BOT, addTextSource, assertRoomForMore } from './knowledge'
 import { parseScreenshotImages, readScreenshots } from './screenshot-read'
 import { snsLabelOf } from './sns-capture'
@@ -46,7 +49,7 @@ export function classifySnsLink(raw: unknown): SnsTarget {
     const host = u.hostname.replace(/^(www|m)\./, '').toLowerCase()
     const is = (h: string) => host === h || host.endsWith(`.${h}`)
 
-    // 인스타그램, 스레드, 페이스북 = 자동으로 못 읽는다(로그인 벽). 캡처나 글 붙여넣기로 받는다
+    // 인스타그램, 스레드 = 공개 계정은 자동으로 읽고(connectSnsLink), 못 읽으면 캡처나 붙여넣기. 페이스북 = 캡처나 붙여넣기
     if (is('instagram.com')) return { url, platform: 'instagram', feed: null, paste: true }
     if (is('threads.net') || is('threads.com')) return { url, platform: 'threads', feed: null, paste: true }
     if (is('x.com') || is('twitter.com')) return { url, platform: 'x', feed: null }
@@ -126,6 +129,11 @@ export async function connectSnsLink(db: Db, a: { userId: string; displayName: s
     if (linkErr || !link) throw new Error('링크를 저장하지 못했어요')
     const base = { platform: target.platform, added: 0, bonus: 0, alreadyGranted: false }
 
+    // 인스타그램, 스레드: 공개 계정이면 먼저 자동으로 읽는다. 실제로 글이 저장됐을 때만 보너스
+    if (target.platform === 'instagram' || target.platform === 'threads') {
+        const auto = await readSnsAuto(db, a, target, link)
+        if (auto) return auto
+    }
     if (target.paste && !target.feed) {
         await db.from('user_sns_links').update({ status: 'pending', note: '캡처나 글 붙여넣기', updated_at: now() }).eq('id', link.id)
         return { ...base, status: 'paste', message: SNS_CAPTURE_LINE }
@@ -168,6 +176,30 @@ export async function connectSnsLink(db: Db, a: { userId: string; displayName: s
     if (status !== 'read') return { ...base, status, message: note || '읽지 못했어요' }
 
     return grantBonus(db, a.userId, link.id, target, { ...base, status, added, message: SNS_READ_LINE })
+}
+
+/**
+ * 인스타그램, 스레드 공개 계정 자동 읽기. 글이 저장되면 결과(보너스 포함), 못 읽으면 null(= 캡처, 붙여넣기로).
+ */
+async function readSnsAuto(db: Db, a: { userId: string; displayName: string; deadline?: number }, target: SnsTarget, link: { id: string; added_count: number | null }): Promise<SnsConnectResult | null> {
+    const now = () => new Date().toISOString()
+    const left = (a.deadline ?? Date.now() + 20_000) - Date.now()
+    if (left < 3_000) return null
+    const read = await readUrl(target.url, { ...KNOWLEDGE_READ_OPTIONS, timeoutMs: Math.min(15_000, left - 1_000) })
+    if (!read.ok || read.text.trim().length < 20) return null
+    const mentorId = await pickBot(db, a.userId, a.displayName)
+    if (!mentorId) return null
+    try {
+        await assertRoomForMore(db, mentorId)
+        const label = snsLabelOf(target.url)
+        await addKnowledgeSource(db, mentorId, `내 ${label} 글`, `출처: ${target.url}\n\n${read.text}`, 'url', target.url)
+    } catch (e) {
+        await db.from('user_sns_links').update({ status: 'failed', mentor_id: mentorId, note: e instanceof Error ? e.message : '저장하지 못했어요', updated_at: now() }).eq('id', link.id)
+        return null
+    }
+    const total = (link.added_count ?? 0) + 1
+    await db.from('user_sns_links').update({ status: 'read', mentor_id: mentorId, added_count: total, note: null, updated_at: now() }).eq('id', link.id)
+    return grantBonus(db, a.userId, link.id, target, { platform: target.platform, added: 1, bonus: 0, alreadyGranted: false, status: 'read', message: SNS_READ_LINE })
 }
 
 /** 자료가 저장된 링크만 보너스. 계정당 한 번, 같은 주소로는 한 계정만 */
