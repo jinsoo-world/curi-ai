@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { splitIntoChunks, splitIntoChunksWithHeadings, headingOf, contextualEmbeddingText, sourceKindLabel } from '../embedding'
+import { splitIntoChunks, splitIntoChunksWithHeadings, splitParagraphs, headingOf, contextualEmbeddingText, sourceKindLabel } from '../embedding'
 
 const doc = [
     '[슬라이드 2] 01 제안 배경', '글로벌 프리미엄 쿡웨어 시장 이야기 '.repeat(8),
@@ -40,5 +40,33 @@ describe('contextualEmbeddingText', () => {
         expect(sourceKindLabel('pdf', 'x')).toBe('PDF')
         expect(sourceKindLabel('url', '어떤 글')).toBe('웹페이지')
         expect(sourceKindLabel('text', '안내문.hwp')).toBe('한글 문서')
+    })
+})
+
+describe('긴 문단도 한도 안으로 자른다 (빈 줄 없는 PDF 글)', () => {
+    const 한줄씩 = Array.from({ length: 120 }, (_, i) => `${i + 1}번째 줄 내용입니다 조금 길게 적어요`).join('\n')   // 빈 줄이 하나도 없다
+    const 문장만 = '이것은 문장입니다. '.repeat(300)                                                    // 줄바꿈도 없다
+    const 통글 = '가'.repeat(1234)                                                                        // 문장 끝도 없다
+    const 공백없이 = (s: string) => s.replace(/\s+/g, '')
+
+    it('줄바꿈으로 나눠 500자 안쪽 조각 여러 개가 된다', () => {
+        const cs = splitIntoChunks(한줄씩)
+        expect(cs.length).toBeGreaterThan(3)
+        for (const c of cs) expect(c.length).toBeLessThanOrEqual(500)
+        expect(공백없이(cs.join(''))).toBe(공백없이(한줄씩))
+    })
+    it('줄바꿈이 없으면 문장 끝에서 자른다', () => {
+        const cs = splitIntoChunks(문장만)
+        for (const c of cs) { expect(c.length).toBeLessThanOrEqual(500); expect(c.endsWith('다.')).toBe(true) }
+        expect(공백없이(cs.join(''))).toBe(공백없이(문장만))
+    })
+    it('문장 끝도 없으면 글자 수로 자른다', () => {
+        expect(splitIntoChunks(통글).map(c => c.length)).toEqual([500, 500, 234])
+    })
+    it('짧은 문단은 예전과 똑같이 나눈다', () => {
+        expect(splitParagraphs(doc, 300)).toEqual(doc.split(/\n\n+/))
+    })
+    it('소제목 붙은 판도 똑같이 자른다', () => {
+        expect(splitIntoChunksWithHeadings(한줄씩).map(c => c.text)).toEqual(splitIntoChunks(한줄씩))
     })
 })

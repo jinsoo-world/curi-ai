@@ -41,10 +41,46 @@ export async function generateEmbedding(text: string, usage?: UsageCtx): Promise
 }
 
 /**
+ * 빈 줄로 문단을 나누고, 한도보다 긴 문단은 줄바꿈, 문장 끝, 글자 수 순서로 더 자른다.
+ * 예전에는 빈 줄로만 나눠서, 빈 줄 없이 이어진 PDF 글이나 붙여넣은 글은 한 조각(1만 자 넘게)이 됐다.
+ */
+export function splitParagraphs(text: string, maxChunkSize = 500): string[] {
+    const out: string[] = []
+    for (const para of String(text ?? '').split(/\n\n+/)) {
+        if (para.length <= maxChunkSize) { out.push(para); continue }
+        out.push(...packPieces(para.split('\n'), '\n', maxChunkSize, piece =>
+            packPieces(piece.split(/(?<=[.!?。…])\s+/), ' ', maxChunkSize, hardCut(maxChunkSize))))
+    }
+    return out
+}
+
+function hardCut(max: number) {
+    return (s: string): string[] => {
+        const r: string[] = []
+        for (let i = 0; i < s.length; i += max) r.push(s.slice(i, i + max))
+        return r
+    }
+}
+
+/** 조각들을 한도 안에서 이어 붙인다. 혼자서 한도를 넘는 조각은 tooLong 으로 더 자른다 */
+function packPieces(pieces: string[], joiner: string, max: number, tooLong: (s: string) => string[]): string[] {
+    const out: string[] = []
+    let cur = ''
+    const flush = () => { if (cur.trim()) out.push(cur); cur = '' }
+    for (const p of pieces) {
+        if (p.length > max) { flush(); out.push(...tooLong(p)); continue }
+        if (cur && (cur + joiner + p).length > max) flush()
+        cur = cur ? cur + joiner + p : p
+    }
+    flush()
+    return out
+}
+
+/**
  * 텍스트를 청크로 분할
  */
 export function splitIntoChunks(text: string, maxChunkSize = 500): string[] {
-    const paragraphs = text.split(/\n\n+/)
+    const paragraphs = splitParagraphs(text, maxChunkSize)
     const chunks: string[] = []
     let current = ''
 
@@ -103,7 +139,7 @@ export function headingOf(paragraph: string): string | null {
 
 /** splitIntoChunks 와 똑같이 자르고, 조각마다 가장 가까운 소제목을 함께 돌려준다 */
 export function splitIntoChunksWithHeadings(text: string, maxChunkSize = 500): { text: string; heading: string | null }[] {
-    const paragraphs = text.split(/\n\n+/)
+    const paragraphs = splitParagraphs(text, maxChunkSize)
     const out: { text: string; heading: string | null }[] = []
     let current = ''
     let currentHeading: string | null = null

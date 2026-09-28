@@ -152,12 +152,20 @@ export function pickTitle(html: string, fallback: string): string {
     return (t || fallback).slice(0, 120)
 }
 
-/** 자료 하나를 넣을 자리가 남았는지 */
+/**
+ * 자리 셈에 넣는 자료 = 쓸 수 있는 자료만.
+ * 처리 실패(failed)나 다 끝났는데 조각이 0개인 자료는 봇이 못 읽으니 자리를 차지하지 않는다.
+ * 처리 중(pending, processing)인 자료는 곧 쓸 자료라 센다 = 한꺼번에 올려서 10개를 넘기는 걸 막는다.
+ */
+export const USABLE_SOURCE_FILTER = 'processing_status.in.(pending,processing),and(processing_status.eq.completed,chunk_count.gt.0)'
+
+/** 자료 하나를 넣을 자리가 남았는지 (실패했거나 빈 자료는 세지 않는다) */
 export async function assertRoomForMore(db: SupabaseClient, mentorId: string): Promise<void> {
     const { count, error } = await db
         .from('knowledge_sources')
         .select('id', { count: 'exact', head: true })
         .eq('mentor_id', mentorId)
+        .or(USABLE_SOURCE_FILTER)
     if (error) throw new Error(error.message)
     if ((count ?? 0) >= MAX_SOURCES_PER_BOT) {
         throw new Error(`자료는 봇 하나당 ${MAX_SOURCES_PER_BOT}개까지 넣을 수 있어요`)

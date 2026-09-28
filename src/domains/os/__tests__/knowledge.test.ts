@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { isSafeExternalUrl, isYoutubeUrl, htmlToText, pickTitle, assertBotOwned, BotNotMine } from '../knowledge'
+import { isSafeExternalUrl, isYoutubeUrl, htmlToText, pickTitle, assertBotOwned, BotNotMine, assertRoomForMore, USABLE_SOURCE_FILTER, MAX_SOURCES_PER_BOT } from '../knowledge'
 
 describe('isSafeExternalUrl — 우리 서버가 대신 열어도 되는 주소인가', () => {
     it('평범한 공개 주소는 통과', () => {
@@ -95,5 +95,40 @@ describe('assertBotOwned — 남의 봇 자료는 서버에서 막힌다', () =>
         const { db } = makeDb({ data: { id: 'tb1' }, error: null })
         await expect(assertBotOwned(db, '', 'm1')).rejects.toBeInstanceOf(BotNotMine)
         await expect(assertBotOwned(db, 'u1', '')).rejects.toBeInstanceOf(BotNotMine)
+    })
+})
+
+describe('assertRoomForMore — 쓸 수 있는 자료만 자리를 차지한다', () => {
+    type Row = { processing_status: string; chunk_count: number }
+    // .or(USABLE_SOURCE_FILTER) 가 걸렸을 때만 실패, 빈 자료를 빼고 센다 (진짜 PostgREST 를 흉내)
+    function fakeDb(rows: Row[]) {
+        const calls: string[] = []
+        const q: any = {
+            select: () => q,
+            eq: () => q,
+            or: (f: string) => { calls.push(f); return q },
+            then: (res: (v: unknown) => void) => {
+                const usable = calls.includes(USABLE_SOURCE_FILTER)
+                    ? rows.filter(r => ['pending', 'processing'].includes(r.processing_status) || (r.processing_status === 'completed' && r.chunk_count > 0))
+                    : rows
+                res({ count: usable.length, error: null })
+            },
+        }
+        return { db: { from: () => q } as unknown as SupabaseClient, calls }
+    }
+    const ok = (n: number): Row[] => Array.from({ length: n }, () => ({ processing_status: 'completed', chunk_count: 3 }))
+
+    it('실패한 자료, 조각 0개 자료는 세지 않는다', async () => {
+        const { db, calls } = fakeDb([...ok(8), { processing_status: 'failed', chunk_count: 0 }, { processing_status: 'completed', chunk_count: 0 }])
+        await expect(assertRoomForMore(db, 'm1')).resolves.toBeUndefined()
+        expect(calls).toEqual([USABLE_SOURCE_FILTER])
+    })
+    it('처리 중인 자료는 센다 (한꺼번에 올려서 한도를 넘지 못하게)', async () => {
+        const { db } = fakeDb([...ok(MAX_SOURCES_PER_BOT - 1), { processing_status: 'processing', chunk_count: 0 }])
+        await expect(assertRoomForMore(db, 'm1')).rejects.toThrow(`${MAX_SOURCES_PER_BOT}개`)
+    })
+    it('쓸 수 있는 자료가 10개면 막는다', async () => {
+        const { db } = fakeDb(ok(MAX_SOURCES_PER_BOT))
+        await expect(assertRoomForMore(db, 'm1')).rejects.toThrow()
     })
 })
