@@ -4,6 +4,8 @@
 // 승인 모드(어디까지 알아서) UI 는 없앴다. 서버는 항상 always_ask.
 // 그림 생성 없이 도형+색이라 즉시, 비용 0.
 //
+// 「내 링크로 만들기」 탭 (대표 승인 0928 23:53, 리서치 S1, S4): 필수 동의 2개, 링크 판별, 저장 없는 초안, 편집 칸과 같은 칸으로 고친 뒤 만들기.
+//
 // edit 를 주면 「봇 편집」 시트. 프로필 사진, 한 줄 소개, 프롬프트, 이름, 역할, 도형, 색, 인사말을 한 장에서 고친다.
 // 저장은 PATCH /api/os/team/[id]. 대화 헤더(얼굴/이름) 또는 우클릭 「편집」으로 연다.
 
@@ -14,6 +16,10 @@ import type { BotColor, BotRole, BotShape, TeamBot } from '@/domains/os/types'
 import { osTrack } from '@/domains/os/events'
 import BotAvatar from './BotAvatar'
 import type { MarketBot } from '@/app/api/os/market/route'
+import {
+    DRAFT_LINK_LABEL, TWIN_DRAFT_CONSENTS, TWIN_DRAFT_COPY, TWIN_DRAFT_MAX_LINKS, TWIN_DRAFT_MAX_PASTES, draftLinkKind,
+    type DraftField, type TwinDraft,
+} from '@/domains/os/twin-draft-shared'
 
 interface Props {
     guest: boolean
@@ -189,7 +195,7 @@ function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => 
 
 function CreateBotSheet({ guest, onClose, onCreated, onWantGroup }: Omit<Props, 'edit' | 'onSaved'>) {
     // 새로 만들기(3걸음) / 봇 마켓에서 가져오기(다른 리더가 만든 공개 봇을 내 팀에 넣기) — 대표 지시 0923
-    const [tab, setTab] = useState<'new' | 'market'>('new')
+    const [tab, setTab] = useState<'new' | 'link' | 'market'>('new')
     const [step, setStep] = useState<1 | 2>(1)
     const [job, setJob] = useState<string>('')
     const [customJob, setCustomJob] = useState('')
@@ -234,10 +240,13 @@ function CreateBotSheet({ guest, onClose, onCreated, onWantGroup }: Omit<Props, 
             <div className="os-sheet" onClick={e => e.stopPropagation()}>
                 <div className="os-tabs" role="tablist" aria-label="봇 추가 방법">
                     <button type="button" className="os-tab" role="tab" aria-selected={tab === 'new'} onClick={() => setTab('new')}>새로 만들기</button>
+                    <button type="button" className="os-tab" role="tab" aria-selected={tab === 'link'} onClick={() => setTab('link')}>{TWIN_DRAFT_COPY.tab}</button>
                     <button type="button" className="os-tab" role="tab" aria-selected={tab === 'market'} onClick={() => setTab('market')}>봇 마켓에서 가져오기</button>
                 </div>
                 {tab === 'market' ? (
                     <MarketTab guest={guest} onClose={onClose} onLinked={onCreated} />
+                ) : tab === 'link' && !guest ? (
+                    <LinkDraftTab onClose={onClose} onCreated={onCreated} />
                 ) : guest ? (
                     <>
                         <h3>내 봇 팀을 만들려면 로그인이 필요해요</h3>
@@ -388,6 +397,192 @@ function MarketTab({ guest, onClose, onLinked }: { guest: boolean; onClose: () =
             {note && <div className="os-notice" style={{ margin: '10px 0 0' }}>{note}</div>}
             <div className="os-sheet-foot">
                 <button type="button" className="os-btn" onClick={onClose}>닫기</button>
+            </div>
+        </div>
+    )
+}
+
+/** 「내 링크로 만들기」 = 동의 2개, 링크 3개, 붙여넣기 → 저장 없는 초안 → 편집 칸과 같은 칸으로 고치고 만들기 */
+function LinkDraftTab({ onClose, onCreated }: { onClose: () => void; onCreated: (bot: TeamBot) => void | Promise<void> }) {
+    const [agree, setAgree] = useState<boolean[]>(() => TWIN_DRAFT_CONSENTS.map(() => false))
+    const [links, setLinks] = useState<string[]>(() => Array(TWIN_DRAFT_MAX_LINKS).fill(''))
+    const [pastes, setPastes] = useState<string[]>(() => Array(TWIN_DRAFT_MAX_PASTES).fill(''))
+    const [busy, setBusy] = useState(false)
+    const [err, setErr] = useState<string | null>(null)
+    const [unreadOnly, setUnreadOnly] = useState<{ url: string; reason: string }[]>([])
+    const [draft, setDraft] = useState<TwinDraft | null>(null)
+    // 편집 칸 (봇 편집 화면과 같은 칸)
+    const [name, setName] = useState('')
+    const [oneLiner, setOneLiner] = useState('')
+    const [prompt, setPrompt] = useState('')
+    const [greeting, setGreeting] = useState('')
+    const [shape, setShape] = useState<BotShape>('circle')
+    const [color, setColor] = useState<BotColor>('orange')
+
+    const filled = links.map(l => l.trim()).filter(Boolean)
+    const needPaste = filled.some(l => draftLinkKind(l) === 'paste')
+    const canDraft = agree.every(Boolean) && (filled.length > 0 || pastes.some(p => p.trim())) && !busy
+    const guess = (f: DraftField) => draft?.guessed.includes(f) ? <span className="os-draft-guess" style={{ marginLeft: 6, fontSize: 12, padding: '1px 6px', borderRadius: 8, background: 'var(--os-말풍선)', color: 'var(--os-글-흐림)' }}>{TWIN_DRAFT_COPY.guess}</span> : null
+
+    const makeDraft = async () => {
+        setBusy(true); setErr(null); setUnreadOnly([])
+        try {
+            const res = await fetch('/api/os/twin-draft', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ links: filled, pastes: pastes.filter(p => p.trim()), consents: agree }),
+            })
+            const data = await res.json().catch(() => ({}))
+            if (!res.ok) {
+                setErr(data.error || '초안을 만들지 못했어요')
+                if (Array.isArray(data.unread)) setUnreadOnly(data.unread)
+                return
+            }
+            const d = data.draft as TwinDraft
+            setDraft(d)
+            setName(d.name); setOneLiner(d.oneLiner); setPrompt(d.prompt); setGreeting(d.greeting)
+        } catch {
+            setErr('연결이 잠깐 끊겼어요. 다시 눌러 주세요')
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    const create = async () => {
+        if (!draft) return
+        setBusy(true); setErr(null)
+        try {
+            const res = await fetch('/api/os/twin-draft/create', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name.trim(), oneLiner, greeting, prompt, chips: draft.chips, shape, color }),
+            })
+            const data = await res.json().catch(() => ({}))
+            if (!res.ok) throw new Error(data.error || '만들지 못했어요')
+            osTrack('os_bot_created', { job: 'twin_draft', autonomy: 'always_ask', shape, color })
+            await onCreated(data.bot as TeamBot)
+        } catch (e) {
+            setErr(e instanceof Error ? e.message : '만들지 못했어요')
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    if (!draft) return (
+        <>
+            <div className="os-step">{TWIN_DRAFT_COPY.intro}</div>
+            {links.map((l, i) => {
+                const kind = l.trim() ? draftLinkKind(l) : null
+                return (
+                    <div key={i} className="os-field" style={{ marginTop: 8 }}>
+                        <input type="url" inputMode="url" value={l} maxLength={300} placeholder={i === 0 ? TWIN_DRAFT_COPY.linkPlaceholder : '링크 하나 더 (선택)'} aria-label={`링크 ${i + 1}`} disabled={busy}
+                            onChange={e => setLinks(prev => prev.map((x, j) => j === i ? e.target.value : x))} />
+                        {kind && <div className="os-draft-kind" style={{ fontSize: 13, marginTop: 4, color: kind === 'read' ? 'var(--os-글-연)' : 'var(--os-글-흐림)' }}>{DRAFT_LINK_LABEL[kind]}</div>}
+                    </div>
+                )
+            })}
+            {needPaste && (
+                <div className="os-field">
+                    <div className="os-field-label">{TWIN_DRAFT_COPY.pasteLabel}</div>
+                    {pastes.map((p, i) => (
+                        <textarea key={i} className="os-textarea" rows={3} value={p} maxLength={8000} placeholder={`글 ${i + 1}`} disabled={busy}
+                            onChange={e => setPastes(prev => prev.map((x, j) => j === i ? e.target.value : x))} style={{ marginTop: i ? 6 : 0 }} />
+                    ))}
+                </div>
+            )}
+            <div className="os-field" style={{ display: 'grid', gap: 8 }}>
+                {TWIN_DRAFT_CONSENTS.map((c, i) => (
+                    <label key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 14, lineHeight: 1.5 }}>
+                        <input type="checkbox" checked={agree[i]} disabled={busy} onChange={e => setAgree(prev => prev.map((x, j) => j === i ? e.target.checked : x))} style={{ width: 20, height: 20, marginTop: 1 }} />
+                        <span>{c}</span>
+                    </label>
+                ))}
+            </div>
+            {busy && <div className="os-step" role="status">{TWIN_DRAFT_COPY.making}</div>}
+            {err && <div className="os-notice" style={{ margin: '14px 0 0' }}>{err}</div>}
+            {unreadOnly.length > 0 && <UnreadList items={unreadOnly} />}
+            <div className="os-sheet-foot">
+                <button type="button" className="os-btn" onClick={onClose} disabled={busy}>닫기</button>
+                <button type="button" className="os-btn primary" onClick={() => void makeDraft()} disabled={!canDraft}>{busy ? '만드는 중' : TWIN_DRAFT_COPY.make}</button>
+            </div>
+        </>
+    )
+
+    return (
+        <>
+            <div style={{ display: 'flex', gap: 18, alignItems: 'center', margin: '4px 0 6px' }}>
+                <BotAvatar shape={shape} color={color} state="idle" size={72} />
+                <div style={{ flex: 1 }}>
+                    <div className="os-field-label">이름{guess('names')}</div>
+                    <input type="text" value={name} onChange={e => setName(e.target.value)} maxLength={20} placeholder="봇 이름" aria-label="봇 이름" disabled={busy} />
+                    {draft.names.length > 1 && (
+                        <div className="os-chips" style={{ marginTop: 6 }}>
+                            {draft.names.map(n => <button key={n} type="button" className="os-chipbtn" aria-pressed={name === n} onClick={() => setName(n.slice(0, 20))} disabled={busy}>{n}</button>)}
+                        </div>
+                    )}
+                </div>
+            </div>
+            <div className="os-field">
+                <div className="os-field-label">한 줄 소개{guess('oneLiner')}</div>
+                <input type="text" value={oneLiner} onChange={e => setOneLiner(e.target.value)} maxLength={40} aria-label="한 줄 소개" disabled={busy} />
+            </div>
+            <div className="os-field">
+                <div className="os-field-label">인사말 (200자까지){guess('greeting')}</div>
+                <textarea className="os-textarea" rows={3} value={greeting} onChange={e => setGreeting(e.target.value.slice(0, 200))} maxLength={200} aria-label="인사말" disabled={busy} />
+            </div>
+            <div className="os-field">
+                <div className="os-field-label">대상, 주제, 말투, 금지선</div>
+                <div style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--os-글-연)' }}>
+                    <div>대상: {draft.audience || '없음'}{guess('audience')}</div>
+                    <div>주제: {draft.topics.join(', ') || '없음'}{guess('topics')}</div>
+                    <div>말투: {draft.voiceRules.join(' / ') || '없음'}{guess('voiceRules')}</div>
+                    <div>금지선: 기본 금지선{draft.limits.length > 0 ? ` + ${draft.limits.join(', ')}` : ''}{guess('limits')}</div>
+                    <div>첫 질문: {draft.chips.join(' / ') || '없음'}{guess('chips')}</div>
+                    {draft.example.q && <div>예시: 「{draft.example.q}」 → 「{draft.example.a}」{guess('example')}</div>}
+                </div>
+            </div>
+            <div className="os-field">
+                <div className="os-field-label">프롬프트 (이 봇이 따르는 설명, 12000자까지)</div>
+                <textarea className="os-textarea" rows={6} value={prompt} onChange={e => setPrompt(e.target.value.slice(0, 12000))} maxLength={12000} aria-label="프롬프트" disabled={busy} />
+            </div>
+            <div className="os-field">
+                <div className="os-field-label">모양</div>
+                <div className="os-chips">
+                    {SHAPES.map(s => (
+                        <button key={s} type="button" className="os-shape-pick" aria-pressed={shape === s} onClick={() => setShape(s)} aria-label={s} disabled={busy}>
+                            <BotAvatar shape={s} color={color} state="sleeping" size={40} />
+                        </button>
+                    ))}
+                </div>
+            </div>
+            <div className="os-field">
+                <div className="os-field-label">색</div>
+                <div className="os-swatches">
+                    {COLORS.map(c => (
+                        <button key={c} type="button" className="os-swatch" aria-pressed={color === c} onClick={() => setColor(c)} aria-label={c} disabled={busy} style={{ background: `var(--봇-${c})` }} />
+                    ))}
+                </div>
+            </div>
+            <div className="os-field">
+                <div className="os-field-label">{TWIN_DRAFT_COPY.read}</div>
+                <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--os-글-연)' }}>
+                    {draft.sources.map((s, i) => <div key={i} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</div>)}
+                </div>
+            </div>
+            {draft.unread.length > 0 && <UnreadList items={draft.unread} />}
+            {err && <div className="os-notice" style={{ margin: '14px 0 0' }}>{err}</div>}
+            <div className="os-sheet-foot">
+                <button type="button" className="os-btn" onClick={() => setDraft(null)} disabled={busy}>이전</button>
+                <button type="button" className="os-btn primary" onClick={() => void create()} disabled={busy || !name.trim() || name.trim().length > 20 || prompt.trim().length < 20}>{busy ? '만드는 중' : TWIN_DRAFT_COPY.create}</button>
+            </div>
+        </>
+    )
+}
+
+function UnreadList({ items }: { items: { url: string; reason: string }[] }) {
+    return (
+        <div className="os-field">
+            <div className="os-field-label">{TWIN_DRAFT_COPY.unread}</div>
+            <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--os-글-흐림)' }}>
+                {items.map((u, i) => <div key={i} style={{ wordBreak: 'break-all' }}>{u.url}: {u.reason}</div>)}
             </div>
         </div>
     )
