@@ -27,22 +27,24 @@ export default function WelcomeBody() {
     const { t } = useLocale()
     return (
         <main className="wel" data-theme="os">
-            {/* ① 이름 있는 봇 팀 */}
+            {/* ① 첫 화면(폰 한 장) 안에 제목, 한 줄 설명, 「카카오로 시작」, 「먼저 둘러보기」 (대표 승인 0928 사용성 3번).
+                봇 얼굴은 그 아래 작게 한 줄. 긴 설명은 얼굴 아래로 내렸다 */}
             <section className="wel-sec wel-hero">
+                <p className="wel-kicker">{t('wel.kicker')}</p>
+                <h1 className="wel-h1"><Lines text={t('wel.h1short')} /></h1>
+                <p className="wel-lead">{t('wel.lead')}</p>
+                <Link href="/login?next=%2Fos&provider=kakao" className="wel-cta wel-cta-kakao">{t('wel.ctaKakao')}</Link>
+                <Link href="/os?demo=1" className="wel-sub">{t('wel.tour')}</Link>
+                <Link href="/login?next=%2Fos&provider=google" className="wel-alt">{t('wel.ctaGoogle')}</Link>
                 <div className="wel-bots" aria-hidden>
                     {SHOWCASE.map(s => (
                         <div key={s.job} className="wel-bot">
-                            <BotAvatar shape={s.preset.shape} color={s.preset.color} state={s.state} size={96} />
+                            <BotAvatar shape={s.preset.shape} color={s.preset.color} state={s.state} size={56} />
                             <span className="wel-bot-name">{t(`wel.bot.${s.job}` as TKey)}</span>
-                            <span className="wel-bot-line">{t(`wel.bot.${s.job}.line` as TKey)}</span>
                         </div>
                     ))}
                 </div>
-                <p className="wel-kicker">{t('wel.kicker')}</p>
-                <h1 className="wel-h1"><Lines text={t('wel.h1')} /></h1>
                 <p className="wel-p">{t('wel.p1')}</p>
-                <Link href="/login?next=/os" className="wel-cta">{t('wel.cta')}</Link>
-                <Link href="/os?demo=1" className="wel-sub">{t('wel.tour')}</Link>
             </section>
 
             {/* ② 승인 카드 */}

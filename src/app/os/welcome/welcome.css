@@ -21,13 +21,14 @@
 .wel-kicker { font-size: 17px; font-weight: 700; color: var(--os-클로버); letter-spacing: .04em; margin-bottom: 10px; }
 .wel-h1 { font-size: 34px; line-height: 1.3; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 20px; }
 .wel-h2 { font-size: 28px; line-height: 1.35; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 16px; }
+.wel-lead { font-size: 18px; color: var(--os-글-연); margin: 0 auto 4px; max-width: 520px; line-height: 1.6; }
 .wel-p { font-size: 17px; color: var(--os-글-연); margin: 0 auto 16px; max-width: 560px; }
 .wel-note { font-size: 17px; color: var(--os-글-흐림); margin-top: 18px; }
 
 /* ① 캐릭터 3개 */
-.wel-bots { display: flex; justify-content: center; gap: 28px; margin-bottom: 36px; flex-wrap: wrap; }
-.wel-bot { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.wel-bot-name { font-size: 17px; font-weight: 700; }
+.wel-bots { display: flex; justify-content: center; gap: 20px; margin: 36px 0 20px; flex-wrap: nowrap; }
+.wel-bot { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.wel-bot-name { font-size: 15px; font-weight: 700; white-space: nowrap; }
 .wel-bot-line { font-size: 15px; color: var(--os-글-연); background: var(--os-말풍선); padding: 4px 10px; border-radius: 10px; }
 
 /* 단추 */
@@ -46,6 +47,9 @@
     color: var(--os-글); font-size: 17px; font-weight: 600; text-decoration: none;
 }
 .wel-sub:hover { background: var(--os-말풍선); }
+/* 카카오 단추는 카카오 노랑, 구글은 그 아래 글자 단추(44px) */
+.wel-cta.wel-cta-kakao { background: #FEE500; color: #191919; margin-top: 22px; }
+.wel-alt { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 6px; padding: 0 12px; color: var(--os-글-연); font-size: 16px; text-decoration: underline; text-underline-offset: 3px; }
 
 /* ② 승인 카드 그림 */
 .wel-card {
@@ -77,7 +81,9 @@
 
 @media (max-width: 480px) {
     .wel-sec { padding: 48px 20px; }
-    .wel-h1 { font-size: 28px; }
+    .wel-h1 { font-size: 28px; margin-bottom: 12px; }
+    .wel-hero { padding-top: 32px; }
+    .wel-lead { font-size: 17px; }
+    .wel-bots { gap: 10px; }
     .wel-h2 { font-size: 24px; }
-    .wel-bots { gap: 14px; }
 }

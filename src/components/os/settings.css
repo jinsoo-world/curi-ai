@@ -6,14 +6,15 @@
 .os-settings h1 { font-size: calc(24px * var(--os-font-scale, 1)); }
 .os-settings .os-card { font-size: calc(15px * var(--os-font-scale, 1)); }
 .os-settings .os-set-sub,
-.os-settings .os-set-hint { font-size: calc(13px * var(--os-font-scale, 1)); }
+.os-settings .os-set-hint { font-size: calc(15px * var(--os-font-scale, 1)); color: var(--os-글-연); }
+.os-settings .os-set-hint.warn { color: var(--os-경고); }
 .os-settings .os-chipbtn { font-size: calc(15px * var(--os-font-scale, 1)); }
 
 /* 설정 줄: 위아래 여백을 모든 줄이 똑같이 갖는다 (조용한 시간 줄도 이 규칙을 탄다) */
 .os-set-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 6px 0; }
 .os-set-line + .os-set-line { border-top: 1px solid var(--os-선); }
 .os-set-line > .os-set-text { min-width: 0; flex: 1; }
-.os-set-hint { color: var(--os-글-흐림); margin-top: 2px; line-height: 1.5; }
+.os-set-hint { color: var(--os-글-연); margin-top: 2px; line-height: 1.5; }
 .os-set-hint.warn { color: var(--os-경고); }
 
 /* iOS 식 토글: 트랙 52x30, 손잡이 26 원, 켜짐 = 클로버 초록 */
@@ -73,7 +74,7 @@
 .os-set-panel > h2:first-child { margin-top: 4px; }
 .os-set-value { color: var(--os-글); text-align: right; word-break: break-all; }
 .os-set-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.os-set-link { color: var(--os-포인트); text-decoration: none; }
+.os-set-link { color: var(--os-포인트); text-decoration: underline; text-underline-offset: 3px; display: inline-flex; align-items: center; min-height: 44px; }
 .os-set-link:hover { text-decoration: underline; }
 .os-set-badge { display: inline-block; vertical-align: middle; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--os-말풍선-내); color: var(--os-글-연); }
 .os-set-amount { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; }

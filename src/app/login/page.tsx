@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import BotAvatar from '@/components/os/BotAvatar'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { safeNextPath } from '@/lib/safe-next'
 import Link from 'next/link'
@@ -28,8 +28,13 @@ export default function LoginPage() {
     const [agreeAge, setAgreeAge] = useState(false)
     const [agreeTerms, setAgreeTerms] = useState(false)
     const [agreePrivacy, setAgreePrivacy] = useState(false)
-
-
+    // 동의 없이 시작 단추를 누르면 약관 칸으로 스크롤하고 빨간 테두리로 짚어 준다 (대표 승인 0928 사용성 4번. 법적 동의는 그대로 필수)
+    const consentRef = useRef<HTMLDivElement>(null)
+    const [consentFlash, setConsentFlash] = useState(false)
+    // 다른 화면의 「카카오로 시작」「구글로 시작」에서 왔나 (?provider=)
+    const [wantProvider, setWantProvider] = useState<'kakao' | 'google' | null>(null)
+    const autoStarted = useRef(false)
+    const [startNow, setStartNow] = useState<{ provider: 'kakao' | 'google'; next: string | null } | null>(null)
 
     useEffect(() => {
         // 이미 약관 동의한 적 있으면 약관 UI 숨김
@@ -47,14 +52,29 @@ export default function LoginPage() {
         if (saved) setLastProvider(saved)
 
         // 돌아갈 주소 읽기 (next 파라미터)
-        const next = safeNextPath(new URLSearchParams(window.location.search).get('next'))
+        const params = new URLSearchParams(window.location.search)
+        const next = safeNextPath(params.get('next'))
         setNextPath(next)
+        const p = params.get('provider')
+        const want = p === 'kakao' || p === 'google' ? p : null
+        setWantProvider(want)
+        if (want) {
+            // 새로고침, 뒤로 가기로 다시 자동 시작하지 않게 주소에서 뗀다
+            params.delete('provider')
+            window.history.replaceState(null, '', window.location.pathname + (params.toString() ? `?${params}` : ''))
+        }
 
-        // 이미 로그인 상태면 리다이렉트
+        // 이미 로그인 상태면 리다이렉트. 아니고, 예전에 동의했고, 단추를 골라 왔으면 그 로그인을 바로 연다
         const supabase = createClient()
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session?.user) {
                 router.replace(next ?? '/mentors')
+                return
+            }
+            const inApp = /KAKAOTALK|NAVER|Line|Instagram|FB_IAB|FBAN/i.test(navigator.userAgent || '')
+            if (want && agreed === 'true' && !autoStarted.current && !(want === 'google' && inApp)) {
+                autoStarted.current = true
+                setStartNow({ provider: want, next })
             }
         })
 
@@ -67,12 +87,18 @@ export default function LoginPage() {
 
     const allChecked = agreeAge && agreeTerms && agreePrivacy
 
+    /** 셋 다 동의되면 빨간 안내를 걷는다 */
+    const clearConsentWarn = (all: boolean) => {
+        if (all) { setConsentFlash(false); setError('') }
+    }
+
     const handleAgreeAll = () => {
         const next = !agreeAll
         setAgreeAll(next)
         setAgreeAge(next)
         setAgreeTerms(next)
         setAgreePrivacy(next)
+        clearConsentWarn(next)
     }
 
     const handleIndividual = (
@@ -92,15 +118,20 @@ export default function LoginPage() {
         } else {
             setAgreeAll(false)
         }
+        clearConsentWarn(newVal && newTerms && newPrivacy)
     }
 
     const supabase = createClient()
 
-    const handleSocialLogin = async (provider: 'google' | 'kakao') => {
-        if (!allChecked) {
-            setError('필수 약관에 모두 동의해주세요.')
+    const handleSocialLogin = async (provider: 'google' | 'kakao', nextOverride?: string | null) => {
+        if (!allChecked && !nextOverride) {
+            // 회색 죽은 단추 대신: 눌렀을 때 약관 칸으로 데려가 무엇을 하면 되는지 말해 준다
+            setError('필수 약관 3개에 동의해 주세요. 「모두 동의」를 누르면 한 번에 돼요.')
+            setConsentFlash(true)
+            consentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
             return
         }
+        const goNext = nextOverride ?? nextPath
         // 약관 동의 기록 저장 (다음 로그인 때 건너뛰기)
         localStorage.setItem('curi_terms_agreed', 'true')
         localStorage.setItem('curi_last_provider', provider)
@@ -111,7 +142,7 @@ export default function LoginPage() {
                 provider,
                 options: {
                     // next 가 있으면 콜백까지 들고 간다 → 콜백이 로그인 뒤 그 주소로 보낸다
-                    redirectTo: `${window.location.origin}/auth/callback${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''}`,
+                    redirectTo: `${window.location.origin}/auth/callback${goNext ? `?next=${encodeURIComponent(goNext)}` : ''}`,
                     scopes:
                         provider === 'kakao'
                             ? 'account_email profile_nickname profile_image name gender birthday birthyear phone_number'
@@ -129,6 +160,13 @@ export default function LoginPage() {
             setIsLoading(null)
         }
     }
+
+    // 예전에 동의했고 「카카오로 시작」처럼 단추를 골라 왔으면 한 번 더 누르지 않아도 그 로그인을 연다
+    useEffect(() => {
+        if (!startNow) return
+        void Promise.resolve().then(() => handleSocialLogin(startNow.provider, startNow.next ?? '/mentors'))
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [startNow])
 
 
     return (
@@ -172,7 +210,7 @@ export default function LoginPage() {
                 }}>
                     로그인하면 대화 한도 2배로 드려요
                 </div>
-                <div style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
+                <div style={{ fontSize: 15, color: '#4b5563', marginTop: 4 }}>
                     기획, 홍보, 개발, 조사를 맡는 봇 4명이 기다려요
                 </div>
             </div>
@@ -196,17 +234,17 @@ export default function LoginPage() {
                     }}>
                         큐리 AI
                     </h1>
-                    <p style={{ fontSize: 15, color: '#9ca3af', lineHeight: 1.6 }}>
-                        내 일을 나눠 맡는 AI 봇 팀
+                    <p style={{ fontSize: 16, color: '#4b5563', lineHeight: 1.6 }}>
+                        로그인하고 내 봇 만들기를 시작해요
                     </p>
                 </div>
 
                 {/* Error */}
                 {error && (
-                    <div style={{
+                    <div role="alert" data-testid="login-error" style={{
                         padding: '12px 16px', marginBottom: 16,
                         background: '#fef2f2', color: '#991b1b',
-                        borderRadius: 12, fontSize: 14, textAlign: 'center',
+                        borderRadius: 12, fontSize: 15, lineHeight: 1.5, textAlign: 'center',
                     }}>
                         {error}
                     </div>
@@ -214,73 +252,75 @@ export default function LoginPage() {
 
                 {/* 약관 동의 — 처음 동의한 적 없을 때만 표시 */}
                 {!hasAgreedBefore && (
-                <div style={{
-                    background: '#f9fafb',
+                <div ref={consentRef} data-testid="login-consent" data-flash={consentFlash ? '1' : '0'} style={{
+                    background: consentFlash ? '#fff7f7' : '#f9fafb',
                     borderRadius: 16,
-                    padding: '16px 18px',
+                    padding: '14px 16px',
                     marginBottom: 20,
-                    border: '1px solid #f3f4f6',
+                    border: consentFlash ? '2px solid #dc2626' : '1px solid #e5e7eb',
+                    transition: 'border-color 200ms, background 200ms',
+                    scrollMarginTop: 24,
                 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#374151', marginBottom: 14 }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#374151', marginBottom: 8 }}>
                         약관 및 개인정보 처리방침
                     </div>
 
                     {/* 모두 동의 */}
                     <label style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '10px 0',
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        minHeight: 52, padding: '6px 0',
                         borderBottom: '1px solid #e5e7eb',
                         cursor: 'pointer', userSelect: 'none',
-                        marginBottom: 8,
+                        marginBottom: 4,
                     }}>
                         <input
                             type="checkbox"
                             checked={agreeAll}
                             onChange={handleAgreeAll}
                             style={{
-                                width: 20, height: 20, borderRadius: 4,
+                                width: 24, height: 24, borderRadius: 4, flex: '0 0 auto',
                                 accentColor: '#16a34a', cursor: 'pointer',
                             }}
                         />
-                        <span style={{ fontSize: 15, fontWeight: 600, color: '#18181b' }}>
+                        <span style={{ fontSize: 17, fontWeight: 700, color: '#18181b' }}>
                             모두 동의
                         </span>
                     </label>
 
                     {/* 만 14세 */}
                     <label style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '8px 0', cursor: 'pointer', userSelect: 'none',
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        minHeight: 48, padding: '4px 0', cursor: 'pointer', userSelect: 'none',
                     }}>
                         <input
                             type="checkbox"
                             checked={agreeAge}
                             onChange={() => handleIndividual(setAgreeAge, agreeAge, agreeTerms, agreePrivacy, 'age')}
                             style={{
-                                width: 18, height: 18, borderRadius: 4,
+                                width: 24, height: 24, borderRadius: 4, flex: '0 0 auto',
                                 accentColor: '#16a34a', cursor: 'pointer',
                             }}
                         />
-                        <span style={{ fontSize: 14, color: '#374151' }}>
+                        <span style={{ fontSize: 16, color: '#374151', lineHeight: 1.45 }}>
                             <span style={{ color: '#dc2626', fontWeight: 600 }}>*</span> 만 14세 이상임을 확인합니다.
                         </span>
                     </label>
 
                     {/* 이용약관 */}
                     <label style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '8px 0', cursor: 'pointer', userSelect: 'none',
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        minHeight: 48, padding: '4px 0', cursor: 'pointer', userSelect: 'none',
                     }}>
                         <input
                             type="checkbox"
                             checked={agreeTerms}
                             onChange={() => handleIndividual(setAgreeTerms, agreeAge, agreeTerms, agreePrivacy, 'terms')}
                             style={{
-                                width: 18, height: 18, borderRadius: 4,
+                                width: 24, height: 24, borderRadius: 4, flex: '0 0 auto',
                                 accentColor: '#16a34a', cursor: 'pointer',
                             }}
                         />
-                        <span style={{ fontSize: 14, color: '#374151' }}>
+                        <span style={{ fontSize: 16, color: '#374151', lineHeight: 1.45 }}>
                             <span style={{ color: '#dc2626', fontWeight: 600 }}>*</span>{' '}
                             큐리 AI의{' '}
                             <Link
@@ -296,19 +336,19 @@ export default function LoginPage() {
 
                     {/* 개인정보 */}
                     <label style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '8px 0', cursor: 'pointer', userSelect: 'none',
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        minHeight: 48, padding: '4px 0', cursor: 'pointer', userSelect: 'none',
                     }}>
                         <input
                             type="checkbox"
                             checked={agreePrivacy}
                             onChange={() => handleIndividual(setAgreePrivacy, agreeAge, agreeTerms, agreePrivacy, 'privacy')}
                             style={{
-                                width: 18, height: 18, borderRadius: 4,
+                                width: 24, height: 24, borderRadius: 4, flex: '0 0 auto',
                                 accentColor: '#16a34a', cursor: 'pointer',
                             }}
                         />
-                        <span style={{ fontSize: 14, color: '#374151' }}>
+                        <span style={{ fontSize: 16, color: '#374151', lineHeight: 1.45 }}>
                             <span style={{ color: '#dc2626', fontWeight: 600 }}>*</span>{' '}
                             큐리 AI의{' '}
                             <Link
@@ -324,23 +364,29 @@ export default function LoginPage() {
                 </div>
                 )}
 
-                {/* Social Login — 2026-09-19: 카카오 우선 배치 (4060 중년 사용자 주 인증 수단) */}
+                {/* Social Login  -  2026-09-19: 카카오 우선 배치 (4060 중년 사용자 주 인증 수단) */}
+                {!allChecked && !hasAgreedBefore && !error && (
+                    <p style={{ fontSize: 15, color: '#4b5563', textAlign: 'center', margin: '0 0 10px', lineHeight: 1.5 }}>
+                        {wantProvider ? `위 약관에 동의한 뒤 ${wantProvider === 'kakao' ? '카카오' : 'Google'} 단추를 눌러 주세요` : '위 약관에 동의한 뒤 눌러 주세요'}
+                    </p>
+                )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {/* Kakao — 1순위 (인앱 브라우저 제약 없음, 중년 친화) */}
                     <button
                         type="button"
                         onClick={() => handleSocialLogin('kakao')}
-                        disabled={isLoading !== null || !allChecked}
+                        disabled={isLoading !== null}
                         style={{
                             width: '100%',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
                             padding: '16px 24px', fontSize: 17, fontWeight: 700,
                             borderRadius: 16,
-                            background: allChecked ? '#FEE500' : '#f3f4f6',
-                            color: allChecked ? '#191919' : '#9ca3af',
-                            border: 'none',
-                            boxShadow: allChecked ? '0 2px 8px rgba(254,229,0,0.25)' : 'none',
-                            cursor: allChecked ? 'pointer' : 'not-allowed',
+                            minHeight: 56,
+                            background: '#FEE500',
+                            color: '#191919',
+                            border: wantProvider === 'kakao' ? '2px solid #191919' : 'none',
+                            boxShadow: '0 2px 8px rgba(254,229,0,0.25)',
+                            cursor: 'pointer',
                             transition: 'all 200ms',
                             opacity: isLoading !== null ? 0.5 : 1,
                         }}
@@ -385,17 +431,18 @@ export default function LoginPage() {
                                 }
                                 handleSocialLogin('google')
                             }}
-                            disabled={isLoading !== null || !allChecked}
+                            disabled={isLoading !== null}
                             style={{
                                 width: '100%',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
                                 padding: '16px 24px', fontSize: 17, fontWeight: 600,
                                 borderRadius: 16,
-                                background: allChecked ? '#fff' : '#f3f4f6',
-                                color: allChecked ? '#1a1a2e' : '#9ca3af',
-                                border: `1.5px solid ${allChecked ? '#e5e7eb' : '#e5e7eb'}`,
-                                boxShadow: allChecked ? '0 1px 3px rgba(0,0,0,0.04)' : 'none',
-                                cursor: allChecked ? 'pointer' : 'not-allowed',
+                                minHeight: 56,
+                                background: '#fff',
+                                color: '#1a1a2e',
+                                border: wantProvider === 'google' ? '2px solid #1a1a2e' : '1.5px solid #d1d5db',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                                cursor: 'pointer',
                                 transition: 'all 200ms',
                                 opacity: isLoading !== null || isInAppBrowser ? 0.5 : 1,
                             }}
@@ -428,7 +475,7 @@ export default function LoginPage() {
                         </button>
                         {isInAppBrowser && (
                             <div style={{
-                                fontSize: 12, color: '#ef4444', textAlign: 'center',
+                                fontSize: 14, color: '#b91c1c', textAlign: 'center',
                                 marginTop: 4, fontWeight: 500,
                             }}>
                                 ⚠️ 카카오톡에서는 Google 로그인이 제한됩니다
@@ -441,16 +488,17 @@ export default function LoginPage() {
 
 
                 {/* Skip */}
+                {/* 먼저 둘러보기 = 진짜 단추 모양(테두리, 52px). 대화에서 왔으면 봇 둘러보기(/os?demo=1)로 */}
                 <Link
-                    href="/mentors"
+                    href={nextPath?.startsWith('/os') ? '/os?demo=1' : '/mentors'}
                     style={{
-                        display: 'block', width: '100%',
-                        padding: 12, fontSize: 15, marginTop: 0,
-                        color: '#9ca3af', textAlign: 'center',
-                        textDecoration: 'none', transition: 'color 200ms',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%',
+                        minHeight: 52, padding: '12px 16px', fontSize: 16, fontWeight: 600, marginTop: 12,
+                        color: '#374151', textAlign: 'center', borderRadius: 16, border: '1.5px solid #d1d5db',
+                        background: '#fff', textDecoration: 'none', transition: 'background 200ms',
                     }}
                 >
-                    먼저 둘러볼게요 →
+                    먼저 둘러보기
                 </Link>
             </div>
 
