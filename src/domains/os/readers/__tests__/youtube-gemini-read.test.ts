@@ -1,8 +1,6 @@
 // readYoutube 가 Gemini 정리를 글로 쓰는지 (정리 함수는 가짜). 자막 도구는 더는 부르지 않는다
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-const getVideoDetails = vi.fn()
-vi.mock('youtube-caption-extractor', () => ({ getVideoDetails: (...a: unknown[]) => getVideoDetails(...a) }))
 const getYoutubeDigest = vi.fn()
 const keepAlive = vi.fn(async () => {})
 vi.mock('../youtube-gemini', async (orig) => ({ ...(await orig<typeof import('../youtube-gemini')>()), getYoutubeDigest: (...a: unknown[]) => getYoutubeDigest(...a), keepAlive: (...a: unknown[]) => keepAlive(...(a as [])) }))
@@ -15,7 +13,6 @@ const DIGEST = '[요약]\n창업 팀 이야기.\n\n[핵심]\n- 역할 나누기 
 
 beforeEach(() => {
     cacheClear()
-    getVideoDetails.mockReset().mockRejectedValue(new Error('LOGIN_REQUIRED'))
     getYoutubeDigest.mockReset()
     keepAlive.mockClear()
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
@@ -47,7 +44,6 @@ describe('readYoutube + Gemini 정리', () => {
     it('자막 도구와 youtubei 는 부르지 않는다 (약관 위험 제거 0928)', async () => {
         getYoutubeDigest.mockResolvedValue({ ok: true, text: DIGEST, model: 'm', from: 'gemini' })
         await readYoutube('https://youtu.be/abcdefghijk', { gemini: { userId: 'u1', waitMs: 1000 } })
-        expect(getVideoDetails).not.toHaveBeenCalled()
         const urls = (fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls.map(c => String(c[0]))
         expect(urls.some(u => u.includes('youtubei') || u.startsWith('https://www.youtube.com/watch'))).toBe(false)
     })

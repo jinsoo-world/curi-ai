@@ -24,6 +24,7 @@ import {
     decodeXml, toIso, looksLikeFeed, parseFeed, discoverFeedLinks, parseSitemap,
 } from './parse'
 import type { ParsedFeedEntry, ParsedSitemap } from './parse'
+import { isPasteOnlyHost, PASTE_ONLY_NOTE } from '../paste-only'
 
 // 해석기는 parse.ts 로 옮겼다. 예전처럼 여기서도 꺼내 쓸 수 있게 그대로 내보낸다.
 export { decodeXml, toIso, looksLikeFeed, parseFeed, discoverFeedLinks, parseSitemap }
@@ -38,14 +39,8 @@ export function withScheme(raw: string): string {
     return /^https?:\/\//i.test(t) ? t : `https://${t.replace(/^\/+/, '')}`
 }
 
-/** 자동 읽기를 하지 않는 곳 (대표 결정 0928 23:53, 약관 위험 제거). 네이버 블로그, 브런치는 글 붙여넣기로만 받는다 */
-export const PASTE_ONLY_NOTE = '네이버 블로그와 브런치는 설정에서 글을 붙여넣어 주세요'
-export function isPasteOnlyHost(url: string): boolean {
-    try {
-        const h = new URL(withScheme(url)).hostname.toLowerCase().replace(/^(www|m)\./, '')
-        return h === 'blog.naver.com' || h === 'rss.blog.naver.com' || h === 'brunch.co.kr'
-    } catch { return false }
-}
+// 자동 읽기를 하지 않는 곳 (네이버 블로그, 브런치). 규칙은 paste-only.ts 한 곳
+export { isPasteOnlyHost, PASTE_ONLY_NOTE }
 
 /** 피드 주소 하나를 안전하게 가져와 해석한다. 피드가 아니면 null (던지지 않는다) */
 export async function fetchFeed(url: string): Promise<{ url: string; entries: ParsedFeedEntry[] } | { error: string } | null> {

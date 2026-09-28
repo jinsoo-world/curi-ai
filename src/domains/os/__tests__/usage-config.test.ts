@@ -55,3 +55,23 @@ describe('usage-config: 문구', () => {
         expect(Object.values(PLAN_REASON).every(v => v === '')).toBe(true)
     })
 })
+
+describe('고객 화면 횟수 표기 없음 (대표 지시 0929): /os/charge', () => {
+    const COUNT = /\d[\d,]*\s*(번|회)/
+    it('요금제 카드 혜택에 답변 횟수가 없다 (한도 숫자는 코드 설정값에만)', async () => {
+        const { PLANS } = await import('../plan')
+        for (const p of PLANS) {
+            for (const perk of p.perks) expect(perk).not.toMatch(COUNT)
+            expect(p.perks.some(x => x.includes('답변'))).toBe(false)
+        }
+        expect(PLANS.map(p => p.perks[1])).toEqual(['가볍게 써 보기', '넉넉하게 쓰기', '가장 넉넉하게 쓰기'])
+        expect(PLANS.map(p => p.limitMonth)).toEqual([30, 370, 1250])
+    })
+    it('결제 화면 코드에 횟수 문구와 묶음 횟수 표기가 없다', async () => {
+        const { readFileSync } = await import('node:fs')
+        const src = readFileSync('src/app/os/charge/page.tsx', 'utf8')
+        expect(src).not.toMatch(COUNT)
+        expect(src).not.toContain('packAnswerHint')
+        expect(src).not.toContain('remaining')
+    })
+})

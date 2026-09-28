@@ -1,10 +1,9 @@
 // 「링크 읽기」 6갈래 = 길 고르기(router) + 해석기(피드, 네이버, GitHub, 유튜브) + readUrl 전체 흐름.
 // 인터넷에 나가지 않는다: fetch 와 DNS 를 가짜로 바꿔 끼운다.
+import { PASTE_ONLY_CHAT_NOTE } from '../../paste-only'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('dns/promises', () => ({ lookup: vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]) }))
-const getVideoDetails = vi.fn()
-vi.mock('youtube-caption-extractor', () => ({ getVideoDetails: (...a: unknown[]) => getVideoDetails(...a) }))
 
 import {
     readUrl, readUrlsInText, classifyUrl, parseGithubUrl, looksLikeFeedUrl, linkBudget, feedToText, kstStamp,
@@ -36,7 +35,6 @@ beforeEach(() => {
     routes = {}
     calls.length = 0
     cacheClear()
-    getVideoDetails.mockReset()
     vi.stubGlobal('fetch', vi.fn(fakeFetch))
 })
 afterEach(() => { vi.unstubAllGlobals() })
@@ -288,26 +286,20 @@ describe('readUrl = 길마다 제대로 읽는다', () => {
         expect(r.ok && r.method).toBe('naver')
     })
 
-    it('네이버 블로그 = 액자 안 PostView 로 바꿔 읽는다', async () => {
-        routes['https://blog.naver.com/PostView.naver?blogId=ahfei_few&logNo=224412832410'] = { body: NAVER_BLOG }
-        const r = await readUrl('https://blog.naver.com/ahfei_few/224412832410')
-        expect(r.ok && r.source).toBe('naver-blog')
-        expect(calls[0]).toBe('https://blog.naver.com/PostView.naver?blogId=ahfei_few&logNo=224412832410')
+    it('네이버 블로그, 브런치 글은 열지 않고 붙여넣기 안내 한 줄 (약관 위험 제거)', async () => {
+        for (const url of ['https://blog.naver.com/ahfei_few/224412832410', 'https://m.blog.naver.com/abc/12345', 'https://brunch.co.kr/@curi/12']) {
+            const r = await readUrl(url)
+            expect(r.ok).toBe(false)
+            expect(!r.ok && r.reason).toBe(PASTE_ONLY_CHAT_NOTE)
+        }
+        expect(calls).toEqual([])
     })
 
-    it('짧은 주소(naver.me)가 블로그로 튕기면 거기서도 PostView 로 맞춘다', async () => {
+    it('짧은 주소(naver.me)가 네이버 블로그로 튕기면 읽은 것을 버리고 안내한다', async () => {
         routes['https://naver.me/xYz'] = { status: 302, headers: { location: 'https://blog.naver.com/ahfei_few/224412832410' } }
         routes['https://blog.naver.com/PostView.naver?blogId=ahfei_few&logNo=224412832410'] = { body: NAVER_BLOG }
         const r = await readUrl('https://naver.me/xYz')
-        expect(r.ok && r.source).toBe('naver-blog')
-    })
-
-    it('PostView 가 막히면 모바일 글로 한 번 더', async () => {
-        routes['https://blog.naver.com/PostView.naver?blogId=abc&logNo=12345'] = { status: 403 }
-        routes['https://m.blog.naver.com/abc/12345'] = { body: NAVER_BLOG }
-        const r = await readUrl('https://blog.naver.com/abc/12345')
-        expect(r.ok && r.source).toBe('naver-blog')
-        expect(r.ok && r.url).toBe('https://m.blog.naver.com/abc/12345')
+        expect(!r.ok && r.reason).toBe(PASTE_ONLY_CHAT_NOTE)
     })
 
     it('GitHub 저장소 = 공개 API 설명, 별 + README', async () => {
@@ -362,7 +354,6 @@ describe('readUrl = 길마다 제대로 읽는다', () => {
         routes['https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=A0LQFQphEBg&format=json'] = { type: 'application/json', body: JSON.stringify({ title: '워런 버핏 은퇴', author_name: '슈카월드' }) }
         const r = await readUrl('https://www.youtube.com/watch?v=A0LQFQphEBg')
         expect(r.ok && r.method).toBe('meta')
-        expect(getVideoDetails).not.toHaveBeenCalled()
         expect(calls.some(c => c.includes('youtubei') || c.includes('watch?v=A0LQFQphEBg&hl') || c.includes('googleapis'))).toBe(false)
     })
 

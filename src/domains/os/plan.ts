@@ -22,7 +22,7 @@ export interface Plan {
     limitMonth: number
     /** 만들 수 있는 봇 수. null = 무제한 */
     maxBots: number | null
-    /** 화면에 한 줄씩 보이는 혜택 */
+    /** 화면에 한 줄씩 보이는 혜택. 답변 횟수는 쓰지 않는다(대표 지시 0929, 한도 숫자는 limitMonth 에만) */
     perks: string[]
     /** 「가장 많이 골라요」 배지 */
     recommended?: boolean
@@ -37,7 +37,7 @@ export const PLANS: Plan[] = [
         maxBots: 4,
         perks: [
             '봇 4개까지',
-            `한 달 답변 ${MONTHLY_LIMITS.free.toLocaleString()}번`,
+            '가볍게 써 보기',
             '봇 마켓 둘러보기',
         ],
     },
@@ -50,7 +50,7 @@ export const PLANS: Plan[] = [
         recommended: true,
         perks: [
             '봇 10개까지',
-            `한 달 답변 ${MONTHLY_LIMITS.basic.toLocaleString()}번`,
+            '넉넉하게 쓰기',
             '외부 연결 (노션, 슬랙, 카카오톡, 인스타그램, 큐리어스)',
             '아침 루틴',
             '그룹 대화',
@@ -64,7 +64,7 @@ export const PLANS: Plan[] = [
         maxBots: null,
         perks: [
             '봇 무제한',
-            `한 달 답변 ${MONTHLY_LIMITS.pro.toLocaleString()}번`,
+            '가장 넉넉하게 쓰기',
             '사진 첨부 10장',
             '봇끼리 전달',
             '우선 처리',
