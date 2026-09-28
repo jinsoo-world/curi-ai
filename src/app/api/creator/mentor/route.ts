@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
                     avatarUrl: avatarUrl || '',
                     category: category || null,
                     organization: organization || null,
-                })
+                }, user.id)
 
                 return NextResponse.json({ success: true, mentor })
             }

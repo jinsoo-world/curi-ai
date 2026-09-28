@@ -3,6 +3,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { CreateMentorInput, SetPersonaInput, SetKnowledgeInput } from './types'
 import { PERSONA_TEMPLATES } from './types'
+import { recordBotCreated } from '@/domains/os/bot-events'
 
 /**
  * 크리에이터 프로필 생성 (없으면 생성, 있으면 반환)
@@ -45,6 +46,7 @@ export async function createMentorDraft(
     db: SupabaseClient,
     creatorId: string,
     input: CreateMentorInput,
+    userId?: string,
 ) {
     const slug = `creator-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 
@@ -73,6 +75,7 @@ export async function createMentorDraft(
         console.error('[Creator] createMentorDraft error:', error.message)
         throw new Error(error.message)
     }
+    if (userId && data?.id) await recordBotCreated(db, { path: 'creator_create', mentorId: data.id, userId })
     return data
 }
 

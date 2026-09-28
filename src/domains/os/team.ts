@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { ensureCreatorProfile } from '@/domains/creator'
 import { buildBotPrompt, findJob, DEFAULT_TEAM } from './presets'
 import type { NewBotInput, TeamBot } from './types'
+import { recordBotCreated, type BotCreatedPath } from './bot-events'
 
 /** 표가 아직 DB 에 없을 때(마이그레이션 미적용) 나는 Postgres 오류 번호 */
 const TABLE_MISSING = '42P01'
@@ -72,6 +73,7 @@ export async function createTeamBot(
     db: SupabaseClient,
     user: { id: string; displayName: string },
     input: NewBotInput,
+    path: BotCreatedPath = 'os_new_bot',
 ): Promise<TeamBot> {
     const job = findJob(input.job)
     const creator = await ensureCreatorProfile(db, user.id, user.displayName)
@@ -119,6 +121,8 @@ export async function createTeamBot(
         if ((tErr?.code === TABLE_MISSING || tErr?.code === TABLE_MISSING_REST)) throw new TeamTableMissing()
         throw new Error(tErr?.message ?? '팀에 넣지 못했다')
     }
+
+    await recordBotCreated(db, { path, mentorId: mentor.id, userId: user.id })
 
     return {
         id: tb.id, mentorId: mentor.id, name: mentor.name, role: tb.role, shape: tb.shape, color: tb.color,
@@ -199,7 +203,7 @@ export async function bootstrapDefaultTeam(
     let created = 0
     for (const d of DEFAULT_TEAM) {
         const job = findJob(d.job)
-        await createTeamBot(db, user, { job: d.job, autonomy: 'always_ask', name: d.name, shape: job.shape, color: job.color, role: d.role })
+        await createTeamBot(db, user, { job: d.job, autonomy: 'always_ask', name: d.name, shape: job.shape, color: job.color, role: d.role }, 'onboarding')
         created++
     }
     return { team: await listTeam(db, user.id), created }

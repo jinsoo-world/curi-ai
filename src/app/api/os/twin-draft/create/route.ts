@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     try {
         const bot = await createTeamBot(db, { id: user.id, displayName }, {
             job: 'custom', customJob: oneLiner || `${displayName}님의 말투로 답장 초안 쓰기`, autonomy: 'always_ask', name, shape, color, role: 'twin',
-        })
+        }, 'twin_draft')
         const { error } = await db.from('mentors').update({
             system_prompt: ensureHardLimits(prompt),
             ...(greeting ? { greeting_message: greeting } : {}),
