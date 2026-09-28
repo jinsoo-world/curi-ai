@@ -23,9 +23,12 @@
 
 /* 왼쪽 명단 */
 .os-search { margin: 16px 16px 8px; padding: 12px 14px; border-radius: 14px; background: var(--os-말풍선); color: var(--os-글-연); font-size: 15px; display: flex; gap: 8px; align-items: center; }
+/* 줄 높이 = 타일 내용 그대로(max-content). auto 로 두면 명단 칸이 화면보다 작을 때(폰 서랍, 손님 안내 줄이 붙을 때)
+   줄이 칸에 맞춰 눌리고, overflow:hidden 타일은 최소 높이가 0 이라 다음 줄 타일 위로 삐져나와 봇끼리 겹쳤다(대표 실측 0928).
+   max-content 면 줄이 안 눌리고, 넘치는 만큼은 스크롤된다 */
 .os-roster {
     display: grid; grid-template-columns: 1fr 1fr; gap: 10px 8px; padding: 8px 12px;
-    overflow-y: auto; flex: 1; align-content: start; align-items: start; grid-auto-rows: auto;
+    overflow-y: auto; flex: 1; align-content: start; align-items: start; grid-auto-rows: max-content;
 }
 .os-bot-tile {
     display: flex; flex-direction: column; align-items: center; gap: 8px;
@@ -128,79 +131,36 @@
 .os-bubble.me { align-self: flex-end; background: var(--os-말풍선-내); }
 .os-bubble.bot { align-self: flex-start; }
 .os-sender { font-size: 12.5px; color: var(--os-글-흐림); margin: 4px 0 -6px 6px; display: flex; align-items: center; gap: 6px; }
-/* 그룹방 작업 중 표지 */
-.os-working { color: var(--os-글-연); opacity: .85; }
-
-/* 그록식 작업 상태 줄 (오로라 글로우 + 문구, 얼굴은 돌리지 않음) */
-.os-working-row {
-    display: flex; align-items: center; gap: 8px;
-    margin: 4px 0 6px 6px; min-height: 28px;
+/* 입력 중 표지: 얼굴 옆 말풍선 속 점 세 개 (상태 문구 없음) */
+.os-typing-row {
+    display: flex; align-items: flex-end; gap: 8px;
+    margin: 4px 0 6px 6px;
     align-self: flex-start;
 }
-.os-working-row--aurora {
-    position: relative;
-}
-.os-working-row--aurora::before {
-    content: '';
-    position: absolute; left: -4px; top: 50%; transform: translateY(-50%);
-    width: 3px; height: 18px; border-radius: 2px;
-    background: linear-gradient(180deg, #34d399, #fbbf24, #fb923c);
-    opacity: .85;
-}
-.os-working-text {
-    font-size: 14px; line-height: 1.4;
-    color: var(--os-글-연); opacity: .92;
-}
-.os-aurora-text {
-    font-size: 14px; line-height: 1.4; font-weight: 500;
-    background: linear-gradient(90deg, #34d399, #fbbf24, #fb923c, #facc15, #34d399);
-    background-size: 300% 100%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation: os-aurora-shift 2.8s ease-in-out infinite;
-}
-@keyframes os-aurora-shift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
-/* 아바타: 뒤 오로라 글로우만 (얼굴 rotateY 360 제거 - 사진이 이상해 보임) */
-.os-working-avatar {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+.os-typing-avatar {
+    display: inline-flex; align-items: center; justify-content: center;
     flex-shrink: 0;
-    width: 28px; height: 28px;
 }
-.os-working-avatar::before {
-    content: '';
-    position: absolute;
-    inset: -4px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 40% 35%,
-        rgba(52, 211, 153, 0.55),
-        rgba(251, 191, 36, 0.4) 45%,
-        rgba(251, 146, 60, 0.25) 70%,
-        transparent 78%);
-    filter: blur(3px);
-    animation: os-working-glow 2.4s ease-in-out infinite;
-    pointer-events: none;
-    z-index: 0;
+.os-typing-bubble {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    background: var(--os-말풍선);
 }
-.os-working-avatar > * {
-    position: relative;
-    z-index: 1;
+.os-typing-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--os-글-흐림);
+    opacity: .5;
+    animation: os-typing-bounce 1.2s ease-in-out infinite;
 }
-@keyframes os-working-glow {
-    0%, 100% { opacity: 0.55; transform: scale(0.92); }
-    50%      { opacity: 1; transform: scale(1.08); }
+.os-typing-dot:nth-child(2) { animation-delay: .15s; }
+.os-typing-dot:nth-child(3) { animation-delay: .3s; }
+@keyframes os-typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: .45; }
+    30%           { transform: translateY(-4px); opacity: .9; }
 }
 @media (prefers-reduced-motion: reduce) {
-    .os-aurora-text { animation: none; background-position: 40% 50%; }
-    .os-working-avatar::before { animation: none; opacity: 0.7; }
+    .os-typing-dot { animation: none; opacity: .6; }
 }
 
 /* 그록식 OG 링크 미리보기 가로 카드 */
@@ -421,11 +381,12 @@
         background: var(--os-덮개, rgba(0, 0, 0, .55));
     }
     /* 서랍 안에서는 데스크톱과 같은 격자 명단(가로 띠 아님) */
+    /* 서랍은 통째로 스크롤한다(.os-left overflow-y:auto). 명단 칸이 남은 높이로 줄어들지 않게 내용 높이 그대로 둔다(flex: none) */
     .os-roster {
         display: grid; grid-template-columns: 1fr 1fr; grid-auto-flow: row;
-        grid-auto-columns: unset; gap: 10px 8px;
+        grid-auto-columns: unset; grid-auto-rows: max-content; gap: 10px 8px;
         overflow-x: hidden; overflow-y: auto; padding: 8px 12px;
-        scroll-snap-type: none;
+        scroll-snap-type: none; flex: none;
     }
     .os-bot-tile { scroll-snap-align: unset; }
     .os-bot-tile .os-chip { display: -webkit-box; }

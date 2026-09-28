@@ -16,7 +16,7 @@ import MentionPicker from './MentionPicker'
 import { useMentionComposer } from './useMentionComposer'
 import { useComposerAutoHeight } from './useComposerAutoHeight'
 import { MsgRow, MsgMetaProvider } from './MsgRow'
-import WorkingStatusLine from './WorkingStatusLine'
+import TypingIndicator from './TypingIndicator'
 import MentionRichText from './MentionRichText'
 import { GROUP_THINK_MS, GROUP_GAP_MS, sleep } from '@/domains/os/group-stagger'
 import OgLinkPreview, { isUrlOnlyText } from './OgLinkPreview'
@@ -36,6 +36,8 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
     const [busy, setBusy] = useState(false)
     /** 지금 답 준비 중인 봇 mentorId (작업 중 표지) */
     const [workingIds, setWorkingIds] = useState<string[]>([])
+    /** @ 없이 말해 아직 누가 답할지 모를 때: 얼굴 없는 입력 중 점 */
+    const [waitingAny, setWaitingAny] = useState(false)
     const [detailOpen, setDetailOpen] = useState(false)
     const [err, setErr] = useState<string | null>(null)
     const [notReady, setNotReady] = useState(false)
@@ -71,7 +73,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
     }, [channelId])
 
     useEffect(() => { void load() }, [load])
-    useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, workingIds])
+    useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, workingIds, waitingAny])
 
     const saveName = useCallback(async () => {
         const next = nameDraft.trim().slice(0, 40) || '내 팀'
@@ -114,10 +116,11 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
         osTrack('os_group_message', { channel_id: channelId, members: members.length })
         const userMsg = { id: `tmp-${Date.now()}`, authorKind: 'user' as const, mentorId: null, content: text, createdAt: new Date().toISOString() }
         setMessages(prev => [...prev, userMsg])
-        // 서버와 같은 규칙으로 누가 답할지. @한 명이면 그 봇만 (간격 없음)
+        // @한 명이면 그 봇 얼굴 옆에 입력 중 점을 띄운다.
+        // @가 없으면 누가 답할지 서버 눈치 라우터가 고르므로, 얼굴 없이 점만 띄운다.
         const upcoming = pickResponders(text, members.map(m => ({ mentorId: m.mentorId, name: m.name })))
-        // 기다리는 동안에는 첫 봇만 「생각 중」으로 보여 동시 폭주를 피한다
         setWorkingIds(upcoming[0] ? [upcoming[0].mentorId] : [])
+        setWaitingAny(true)
         try {
             const res = await fetch(`/api/os/channels/${channelId}/chat`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -128,7 +131,8 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
             const botMsgs = (Array.isArray(data.messages) ? data.messages : []).filter(
                 (m: { authorKind?: string }) => m.authorKind === 'bot',
             ) as Msg[]
-            // 답을 한 봇씩: 생각 중 → 말풍선 (여러 명이면 짧은 간격). @한 명이면 한 번만
+            // 답을 한 봇씩: 입력 중 점 → 말풍선 (여러 명이면 짧은 간격). @한 명이면 한 번만
+            setWaitingAny(false)
             if (botMsgs.length === 0) {
                 await load()
             } else {
@@ -152,6 +156,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
             setWorkingIds([])
         } finally {
             setWorkingIds([])
+            setWaitingAny(false)
             setBusy(false)
         }
     }, [input, busy, channelId, load, members])
@@ -167,10 +172,10 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
         await refreshChannels()
     }
 
-    const 아바타 = (mentorId: string | null, size = 28) => {
+    const 아바타 = (mentorId: string | null, size = 28, state?: 'idle' | 'thinking') => {
         const m = members.find(x => x.mentorId === mentorId)
         return <BotAvatar shape={(m?.shape ?? 'circle') as BotShape} color={(m?.color ?? 'white') as BotColor}
-            state={busy ? 'thinking' : 'idle'} size={size} faceUrl={m?.avatarUrl ?? null} />
+            state={state ?? (busy ? 'thinking' : 'idle')} size={size} faceUrl={m?.avatarUrl ?? null} />
     }
     const 이름 = (mentorId: string | null) => members.find(x => x.mentorId === mentorId)?.name ?? '봇'
 
@@ -255,7 +260,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                     <MsgMetaProvider>
                     {messages.length === 0 && (
                         <MsgRow side="bot">
-                            <div className="os-bubble bot">여기서는 봇 여러 명이 같이 들어요. 방 전체에 말하면 진행 봇이 짧게 받은 뒤 멤버들이 차례로 답해요. 한 명만 부르려면 「@이름」으로 시작하세요.</div>
+                            <div className="os-bubble bot">여기서는 봇 여러 명이 같이 들어요. 방 전체에 말하면 그 이야기에 맞는 봇이 눈치껏 답해요. 한 명만 부르려면 「@이름」으로 시작하세요.</div>
                         </MsgRow>
                     )}
                     {messages.map(m => m.authorKind === 'user'
@@ -277,10 +282,15 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                         if (!m) return null
                         return (
                             <MsgRow key={`work-${id}`} side="bot">
-                                <WorkingStatusLine botName={m.name} avatar={아바타(id, 22)} />
+                                <TypingIndicator name={m.name} avatar={아바타(id, 22, 'idle')} />
                             </MsgRow>
                         )
                     })}
+                    {busy && workingIds.length === 0 && waitingAny && (
+                        <MsgRow key="work-any" side="bot">
+                            <TypingIndicator />
+                        </MsgRow>
+                    )}
                     <div ref={endRef} />
                 </MsgMetaProvider>
                 </div>

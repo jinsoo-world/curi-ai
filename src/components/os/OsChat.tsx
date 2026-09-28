@@ -32,7 +32,7 @@ import PhotoGrid from './PhotoGrid'
 import { photoPayload } from '@/domains/os/photos'
 // === /사진 첨부 ===
 import { MsgRow, MsgMetaProvider } from './MsgRow'
-import WorkingStatusLine from './WorkingStatusLine'
+import TypingIndicator from './TypingIndicator'
 import OgLinkPreview, { isUrlOnlyText } from './OgLinkPreview'
 // === @ 멘션 ===
 import MentionPicker from './MentionPicker'
@@ -598,6 +598,10 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
     const avatar = bot
         ? <BotAvatar shape={bot.shape} color={bot.color} state={state} size={36} faceUrl={bot.avatarUrl} name={bot.name} />
         : <BotAvatar shape="circle" color="white" state={state} size={36} faceUrl={publicBot?.avatar_url ?? null} name={publicBot?.name ?? name} />
+    // 입력 중 말풍선 옆 얼굴: 점은 말풍선에만 보이게 얼굴은 가만히 둔다
+    const typingAvatar = bot
+        ? <BotAvatar shape={bot.shape} color={bot.color} state="idle" size={28} faceUrl={bot.avatarUrl} name={bot.name} />
+        : <BotAvatar shape="circle" color="white" state="idle" size={28} faceUrl={publicBot?.avatar_url ?? null} name={publicBot?.name ?? name} />
 
     return (
         <div className={`os-chat-wrap${dragging ? ' dragging' : ''}`}
@@ -684,7 +688,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                         : (
                             <MsgRow key={m.id} rowId={m.id} side="bot" createdAt={m.createdAt} copyText={m.content}>
                                 {(!m.content && !m.card && (streaming || state === 'thinking')) ? (
-                                    <WorkingStatusLine botName={name} avatar={avatar} />
+                                    <TypingIndicator name={name} avatar={typingAvatar} />
                                 ) : (
                                     <>
                                         <div className="os-sender">{avatar}<span>{name}</span></div>

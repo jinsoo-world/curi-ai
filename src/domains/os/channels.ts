@@ -71,14 +71,11 @@ export function canBotSpeakAgain(botTurnsSoFar: number): boolean {
     return botTurnsSoFar < MAX_BOT_TURNS
 }
 
-/** 방 전체에 말했을 때(@ 없음) 한 번에 답할 봇 수 상한 = 진행 봇 1 + 멤버들. 무한 루프 방지 */
-export const MAX_FANOUT_BOTS = 4
-
 /**
- * 사람 말 한 번에 누가 어떤 순서로 답할지 고른다 (순수 함수 = 시험 대상).
+ * 사람 말에서 콕 집힌 봇을 고른다 (순수 함수 = 시험 대상).
  * - 사람이 @이름으로 한 명을 집으면 그 봇만.
- * - 아니면 진행 봇(방에 먼저 넣은 첫 멤버)이 짧게 받은 뒤, 나머지 멤버가 차례로 답한다(상한 MAX_FANOUT_BOTS).
- * 봇끼리 @로 이어 부르는 연쇄는 이 목록 밖에서 기존 2턴 규칙이 막는다.
+ * - @가 없으면 빈 배열: 누가 답할지는 서버의 눈치 라우터(group-router)가 봇 역할을 보고 고른다.
+ *   방장(진행 봇)은 없고, 전원이 차례로 답하지도 않는다.
  */
 export function pickResponders(
     text: string,
@@ -86,12 +83,8 @@ export function pickResponders(
 ): { mentorId: string; name: string }[] {
     if (!members.length) return []
     const mentioned = findMentionedBot(text, members)
-    if (mentioned) return [mentioned]
-    return members.slice(0, MAX_FANOUT_BOTS)
+    return mentioned ? [mentioned] : []
 }
-
-/** 작업 중 표지 (호환). 새 UI 는 working-status / WorkingStatusLine 을 쓴다. */
-export { botWorkingLabel } from './working-status'
 
 /** 내 그룹방 목록 */
 export async function listChannels(db: SupabaseClient, userId: string): Promise<Channel[]> {
