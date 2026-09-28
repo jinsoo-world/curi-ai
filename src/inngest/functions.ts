@@ -4,6 +4,7 @@
  */
 
 import { inngest } from './client'
+import { logUpstageOcr } from '@/domains/llm/ocr-usage'
 
 /** 이벤트 타입 정의 */
 type DocumentParseEvent = {
@@ -54,10 +55,12 @@ export const parseAndEmbedDocument = inngest.createFunction(
 
             if (!upstageResponse.ok) {
                 const errorText = await upstageResponse.text()
+                logUpstageOcr({ route: 'inngest/document-parse', model: 'document-parse', ok: false, status: upstageResponse.status, error: errorText.slice(0, 200), mentorId: mentor_id, userId: user_id })
                 throw new Error(`Upstage API error: ${upstageResponse.status} - ${errorText}`)
             }
 
             const result = await upstageResponse.json()
+            logUpstageOcr({ route: 'inngest/document-parse', model: 'document-parse', ok: true, body: result, mentorId: mentor_id, userId: user_id })
             return result.content?.markdown || result.text || ''
         })
 

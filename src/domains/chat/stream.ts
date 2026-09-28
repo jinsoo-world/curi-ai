@@ -12,11 +12,15 @@ import { geminiToOpenAi, pickDriverFromEnv, solarChatStream, SOLAR_CHAT_MODEL } 
 import type { LlmChunk, LlmUsage } from '@/domains/llm'
 import { logLlmUsage, geminiTokens } from '@/domains/llm/usage-log'
 import type { UsageCtx } from '@/domains/llm/usage-log'
+import { classifyFallbackReason } from '@/domains/llm/fallback-reason'
+import type { FallbackReason } from '@/domains/llm/fallback-reason'
 import type { GeminiMessage } from './types'
 import { GEMINI_MODEL, UNAVAILABLE_TEXT } from './constants'
 export { UNAVAILABLE_TEXT }
 
-type TextChunk = { text?: string; usage?: LlmUsage | null }
+/** 누가 답했나 (마지막에 한 번). searched = Gemini 가 구글 검색을 썼나 */
+export interface AnsweredBy { provider: 'solar' | 'gemini'; searched: boolean }
+type TextChunk = { text?: string; usage?: LlmUsage | null; answer?: AnsweredBy }
 
 /** 답변 설정(domains/os/response-settings) 이 계산해 넘기는 길이·최신성 조정. 안 주면 기존 동작 그대로 */
 export interface ChatStreamOptions {
@@ -34,7 +38,7 @@ function usageMeter(opts: ChatStreamOptions) {
     let ttft: number | null = null
     return {
         firstToken() { if (ttft === null) ttft = Date.now() - started },
-        log(e: { provider: 'solar' | 'gemini'; model: string; input?: number | null; output?: number | null; fallback?: boolean; ok?: boolean; error?: string }) {
+        log(e: { provider: 'solar' | 'gemini'; model: string; input?: number | null; output?: number | null; fallback?: boolean; ok?: boolean; error?: string; fallbackReason?: FallbackReason | null; searchQueries?: number | null; solarError?: string | null }) {
             logLlmUsage({
                 route: opts.usage?.route ?? 'unknown',
                 userId: opts.usage?.userId, mentorId: opts.usage?.mentorId, channelId: opts.usage?.channelId,
@@ -43,6 +47,8 @@ function usageMeter(opts: ChatStreamOptions) {
                 inputTokens: e.input ?? null, outputTokens: e.output ?? null,
                 ttftMs: ttft, latencyMs: Date.now() - started,
                 fallback: e.fallback, ok: e.ok, error: e.error,
+                fallbackReason: e.fallbackReason ?? null, searchQueries: e.searchQueries ?? null,
+                meta: e.solarError ? { solarError: e.solarError.slice(0, 200) } : null,
             })
         },
     }
@@ -64,6 +70,8 @@ async function* solarWithFallback(
     let firstChunkSeen = false
     let usage: LlmChunk['usage'] = null
     let solarLogged = false
+    let reason: FallbackReason = 'other'
+    let solarError: string | null = null
 
     try {
         for await (const chunk of solarChatStream('', messages, { maxTokens: opts.maxOutputTokens })) {
@@ -78,6 +86,7 @@ async function* solarWithFallback(
         meter.log({ provider: 'solar', model: SOLAR_CHAT_MODEL, input: usage?.prompt, output: usage?.completion })
         solarLogged = true
         // 실제 토큰만 넘긴다. 없으면 usage 조각을 안 보낸다(가짜 숫자 금지).
+        yield { answer: { provider: 'solar', searched: false } }
         if (usage) yield { usage }
         return
     } catch (err) {
@@ -89,7 +98,9 @@ async function* solarWithFallback(
             solarLogged = true
             return
         }
-        console.error(`[LLM] solar failed before first token, falling back to gemini: ${msg}`)
+        reason = classifyFallbackReason(err)
+        solarError = msg
+        console.error(`[LLM] solar failed before first token (${reason}), falling back to gemini: ${msg}`)
     } finally {
         // 받는 쪽이 중간에 멈춰도(응답 필터가 끊음) 한 줄은 남긴다
         if (firstChunkSeen && !solarLogged) meter.log({ provider: 'solar', model: SOLAR_CHAT_MODEL, input: usage?.prompt, output: usage?.completion })
@@ -100,31 +111,37 @@ async function* solarWithFallback(
         yield { text: UNAVAILABLE_TEXT }
         return
     }
-    yield* geminiStream(systemPrompt, history, opts, meter, true)
+    yield* geminiStream(systemPrompt, history, opts, meter, true, reason, solarError)
 }
 
 /** Gemini 로 흘려받기 (마지막 조각의 usageMetadata 로 토큰을 남긴다) */
 async function* geminiStream(
     systemPrompt: string, history: GeminiMessage[], opts: ChatStreamOptions,
     meter: ReturnType<typeof usageMeter>, fallback: boolean,
+    fallbackReason: FallbackReason | null = null, solarError: string | null = null,
 ): AsyncGenerator<TextChunk> {
     let meta: unknown = null
     let logged = false
+    /** 구글 검색 도구가 실제로 돌린 검색어 수 (검색 도구 비용 확인용) */
+    let searchQueries = 0
     const log = (ok: boolean, error?: string) => {
         if (logged) return
         logged = true
         const t = geminiTokens(meta)
-        meter.log({ provider: 'gemini', model: GEMINI_MODEL, input: t.input, output: t.output, fallback, ok, error })
+        meter.log({ provider: 'gemini', model: GEMINI_MODEL, input: t.input, output: t.output, fallback, ok, error, fallbackReason, searchQueries, solarError })
     }
     try {
         const gemini = await generateGeminiStream(systemPrompt, history, opts)
         for await (const chunk of gemini) {
             if (chunk.usageMetadata) meta = chunk.usageMetadata
+            const q = chunk.candidates?.[0]?.groundingMetadata?.webSearchQueries
+            if (Array.isArray(q) && q.length > searchQueries) searchQueries = q.length
             if (chunk.text) meter.firstToken()
             yield { text: chunk.text || '' }
         }
         if (fallback) console.log('[LLM] driver=gemini(fallback)')
         log(true)
+        yield { answer: { provider: 'gemini', searched: searchQueries > 0 } }
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         console.error(`[LLM] gemini ${fallback ? 'fallback failed too' : 'failed'}: ${msg}`)
@@ -135,8 +152,8 @@ async function* geminiStream(
     }
 }
 
-async function* geminiOnly(systemPrompt: string, history: GeminiMessage[], opts: ChatStreamOptions = {}): AsyncGenerator<TextChunk> {
-    yield* geminiStream(systemPrompt, history, opts, usageMeter(opts), false)
+async function* geminiOnly(systemPrompt: string, history: GeminiMessage[], opts: ChatStreamOptions = {}, reason: FallbackReason | null = null): AsyncGenerator<TextChunk> {
+    yield* geminiStream(systemPrompt, history, opts, usageMeter(opts), false, reason)
 }
 
 async function* unavailable(): AsyncGenerator<TextChunk> {
@@ -155,7 +172,11 @@ export async function generateChatStream(
     const { hasImage } = geminiToOpenAi('', history)
     const driver = pickDriverFromEnv(hasImage)
     if (driver === 'solar') return solarWithFallback(systemPrompt, history, opts)
-    if (driver === 'gemini') return geminiOnly(systemPrompt, history, opts)
+    if (driver === 'gemini') {
+        // 왜 솔라가 아닌지 남긴다: 사진, 열쇠 없음, 아니면 LLM_DRIVER 로 골랐음
+        const reason: FallbackReason = hasImage ? 'image' : (!process.env.UPSTAGE_API_KEY ? 'missing_key' : 'forced')
+        return geminiOnly(systemPrompt, history, opts, reason)
+    }
     console.error('[LLM] no driver available (no UPSTAGE_API_KEY, no GEMINI_API_KEY)')
     return unavailable()
 }

@@ -1,13 +1,8 @@
 // domains/chat — 대화 메모리 추출 및 저장
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { GoogleGenAI } from '@google/genai'
 import { GEMINI_MODEL } from './constants'
-import { logLlmUsage, geminiTokens } from '@/domains/llm/usage-log'
-
-function getAI() {
-    return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
-}
+import { askSideText } from '@/domains/llm/side-text'
 
 interface ExtractedMemory {
     memory_type: 'fact' | 'preference' | 'context'
@@ -26,22 +21,15 @@ export async function extractAndSaveMemories(
     userMessage: string,
     assistantResponse: string,
 ): Promise<void> {
-    const started = Date.now()
-    let logged = false
     try {
         // 너무 짧은 대화는 스킵 (메모리 추출 가치 없음)
         if (userMessage.length < 10) return
 
-        const result = await getAI().models.generateContent({
-            model: GEMINI_MODEL,
-            config: {
-                temperature: 0.1,
-                maxOutputTokens: 512,
-            },
-            contents: [{
-                role: 'user',
-                parts: [{
-                    text: `아래 대화에서 사용자에 대해 기억할 만한 정보를 추출하세요.
+        // 곁일 입구(SIDE_TEXT_PROVIDER). 비용 기록도 거기서 남긴다
+        const answer = await askSideText({
+            kind: 'memory', route: '/api/chat', userId, mentorId,
+            geminiModel: GEMINI_MODEL, temperature: 0.1, maxTokens: 512,
+            prompt: `아래 대화에서 사용자에 대해 기억할 만한 정보를 추출하세요.
 없으면 빈 배열 []을 반환하세요. 있으면 JSON 배열로 반환하세요.
 
 규칙:
@@ -58,19 +46,10 @@ memory_type 분류:
 멘토: ${assistantResponse}
 
 응답 형식 (JSON 배열만, 설명 없이):
-[{"memory_type": "fact", "content": "서울에서 프리랜서 작가로 활동 중", "confidence": 0.9}]`
-                }]
-            }],
-        })
-        const t = geminiTokens(result.usageMetadata)
-        logged = true
-        logLlmUsage({
-            route: '/api/chat', kind: 'memory', provider: 'gemini', model: GEMINI_MODEL,
-            userId, mentorId, inputTokens: t.input, outputTokens: t.output,
-            latencyMs: Date.now() - started,
+[{"memory_type": "fact", "content": "서울에서 프리랜서 작가로 활동 중", "confidence": 0.9}]`,
         })
 
-        const text = result.text || '[]'
+        const text = answer || '[]'
         const match = text.match(/\[[\s\S]*\]/)
         if (!match) return
 
@@ -118,11 +97,6 @@ memory_type 분류:
         console.log(`[Memory] Extracted ${memories.length} memories for user ${userId}`)
     } catch (error) {
         // 메모리 추출 실패는 대화에 영향 없음 — 조용히 로깅
-        if (!logged) logLlmUsage({
-            route: '/api/chat', kind: 'memory', provider: 'gemini', model: GEMINI_MODEL,
-            userId, mentorId, latencyMs: Date.now() - started, ok: false,
-            error: error instanceof Error ? error.message : String(error),
-        })
         console.error('[Memory] extractAndSaveMemories error:', error)
     }
 }

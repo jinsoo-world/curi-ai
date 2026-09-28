@@ -59,30 +59,24 @@ export async function POST(request: NextRequest) {
         let matchType = 'keyword'
 
         try {
-            const { GoogleGenAI } = await import('@google/genai')
-            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
-
             const mentorInfo = mentors.map((m, i) => 
                 `${i + 1}. "${m.name}" — ${m.title}${m.expertise?.length ? ` (전문: ${m.expertise.join(', ')})` : ''}`
             ).join('\n')
 
-            const result = await ai.models.generateContent({
-                model: 'gemini-3.5-flash-lite',
-                config: { temperature: 0.7, maxOutputTokens: 256 },
-                contents: [{
-                    role: 'user',
-                    parts: [{
-                        text: `사용자 고민: "${concern.trim()}"
+            // 곁일 입구(SIDE_TEXT_PROVIDER). 비용 기록도 거기서 남긴다
+            const { askSideText } = await import('@/domains/llm/side-text')
+            const answer = await askSideText({
+                kind: 'mentor-match', route: '/api/mentor-match',
+                geminiModel: 'gemini-3.5-flash-lite', temperature: 0.7, maxTokens: 256,
+                prompt: `사용자 고민: "${concern.trim()}"
 멘토 목록:
 ${mentorInfo}
 
 가장 적합한 멘토 1명 선택. JSON만 출력:
-{"mentor_name":"이름","reason":"20자 이내 이유","first_message":"멘토 말투로 2문장 이내 첫 메시지"}`
-                    }]
-                }],
+{"mentor_name":"이름","reason":"20자 이내 이유","first_message":"멘토 말투로 2문장 이내 첫 메시지"}`,
             })
 
-            const responseText = result.text || ''
+            const responseText = answer || ''
             console.log('[Mentor Match] Gemini response:', responseText.slice(0, 200))
 
             const jsonMatch = responseText.match(/\{[\s\S]*\}/)

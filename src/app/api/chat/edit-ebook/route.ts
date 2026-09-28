@@ -2,6 +2,7 @@
 // 현재 ebook JSON + 수정 요청을 받아 수정된 ebook JSON을 반환
 import { createClient } from '@/lib/supabase/server'
 import { GoogleGenAI, ThinkingLevel } from '@google/genai'
+import { logLlmUsage, geminiTokens } from '@/domains/llm/usage-log'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -43,6 +44,7 @@ export async function POST(req: Request) {
         }
 
         const ai = getAI()
+        const 시작 = Date.now()
         const result = await ai.models.generateContent({
             model: 'gemini-3.8-flash',
             config: {
@@ -56,6 +58,10 @@ export async function POST(req: Request) {
                 parts: [{ text: `현재 전자책 JSON:\n${JSON.stringify(currentEbook, null, 2)}\n\n저자(멘토) 이름: ${mentorName}\n\n수정 요청: ${editRequest}\n\n위 수정 요청을 반영한 전체 전자책 JSON을 출력하세요.` }],
             }],
         })
+        {
+            const t = geminiTokens(result.usageMetadata)
+            logLlmUsage({ route: '/api/chat/edit-ebook', kind: 'ebook', provider: 'gemini', model: 'gemini-3.8-flash', userId: user.id, inputTokens: t.input, outputTokens: t.output, latencyMs: Date.now() - 시작 })
+        }
 
         const responseText = result.text || ''
 

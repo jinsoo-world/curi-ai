@@ -89,10 +89,28 @@ export function botVersion(parts: { systemPrompt: string; settings: unknown; kno
         .slice(0, 32)
 }
 
-/** 저장해도 되는 답인가 (끝까지 나왔고, 필터가 안 끊었고, 솔라가 답했고, 쉬는 중 문구가 아님) */
-export function isStorableAnswer(a: { text: string; guardTripped: boolean; solarAnswered: boolean; unavailableText: string }): boolean {
+/**
+ * 저장해도 되는 답인가 (끝까지 나왔고, 필터가 안 끊었고, 쉬는 중 문구가 아님, 답한 곳이 괜찮음).
+ *
+ * 답한 곳: 솔라 답은 저장한다. Gemini 답은 구글 검색을 안 쓴 경우만 저장한다 (0928 결정).
+ *   처음 솔라만 받은 까닭은 Gemini 쪽에 검색 도구가 붙어 있어서다. 검색으로 가져온 바깥 소식은
+ *   며칠 지나면 틀릴 수 있어 7일 동안 다시 내주면 안 된다. 검색을 안 쓴 Gemini 답은 솔라 답과 같은
+ *   지침, 같은 자료로 만든 답이라 막을 까닭이 없다. 끄기: SEMANTIC_CACHE_ALLOW_GEMINI=false
+ */
+export function isStorableAnswer(a: {
+    text: string; guardTripped: boolean; unavailableText: string
+    answeredBy: { provider: 'solar' | 'gemini'; searched: boolean } | null
+    allowGemini?: boolean
+}): boolean {
     const t = a.text.trim()
-    return !a.guardTripped && a.solarAnswered && t.length >= 20 && t.length <= 8000 && t !== a.unavailableText
+    if (a.guardTripped || t.length < 20 || t.length > 8000 || t === a.unavailableText) return false
+    if (!a.answeredBy) return false
+    if (a.answeredBy.provider === 'solar') return true
+    return a.allowGemini !== false && !a.answeredBy.searched
+}
+
+export function cacheAllowsGemini(env: Record<string, string | undefined> = process.env): boolean {
+    return String(env.SEMANTIC_CACHE_ALLOW_GEMINI ?? 'true').toLowerCase() !== 'false'
 }
 
 export async function knowledgeVersion(db: SupabaseClient, mentorId: string): Promise<string | null> {

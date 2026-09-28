@@ -5,6 +5,8 @@
 // pfpmaker 도 자기 이름(PFPMaker v1)과 남의 모델(GPT Image 2.5, 나노바나나)을 같이 판다.
 // 우리도 같다. 큐리 v1 은 우리가 지시문을 손본 것이고, 나머지는 원본 그대로다.
 
+import { IMAGE_MODEL_FAST, IMAGE_MODEL_PRO } from './image-models'
+
 export interface CuriModel {
     id: string
     label: string
@@ -27,7 +29,7 @@ export const CURI_MODELS: CuriModel[] = [
         label: '큐리 v1',
         badge: '우리 모델',
         desc: '중장년 얼굴이 딴사람이 되지 않게 우리가 손봤어요',
-        engine: 'gemini-3-pro-image-preview',
+        engine: IMAGE_MODEL_PRO,
         cost: 20,
         tint: '#22c55e',
         logo: '/logo.png',
@@ -37,7 +39,7 @@ export const CURI_MODELS: CuriModel[] = [
         label: '나노바나나 2',
         badge: '빠름',
         desc: '구글 모델 그대로. 값이 싸고 빨라요',
-        engine: 'gemini-2.5-flash-image',
+        engine: IMAGE_MODEL_FAST,
         cost: 12,
         tint: '#eab308',
     },

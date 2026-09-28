@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { GoogleGenAI } from '@google/genai'
+import { askSideText } from '@/domains/llm/side-text'
 import { createProactiveNotification } from '@/domains/notification'
 
 export const dynamic = 'force-dynamic'
@@ -36,7 +36,6 @@ export async function POST(req: Request) {
             return Response.json({ sent: 0 })
         }
 
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
         let sent = 0
 
         for (const user of inactiveUsers) {
@@ -62,21 +61,15 @@ export async function POST(req: Request) {
             if (!mentor) continue
 
             // Gemini로 프로액티브 메시지 생성
-            const result = await ai.models.generateContent({
-                model: GEMINI_MODEL,
-                config: { temperature: 0.8, maxOutputTokens: 100 },
-                contents: [{
-                    role: 'user',
-                    parts: [{
-                        text: `당신은 ${mentor.name}입니다. 성격: ${mentor.personality}
+            // 곁일 입구(SIDE_TEXT_PROVIDER). 비용 기록도 거기서 남긴다
+            const message = await askSideText({
+                kind: 'proactive', route: '/api/proactive', userId: user.id, mentorId,
+                geminiModel: GEMINI_MODEL, temperature: 0.8, maxTokens: 100,
+                prompt: `당신은 ${mentor.name}입니다. 성격: ${mentor.personality}
 사용자 ${user.display_name || ''}님이 하루 넘게 돌아오지 않았습니다.
 따뜻하고 자연스럽게 안부를 묻는 짧은 메시지를 작성하세요 (50자 이내).
-"돌아와" 같은 부담스러운 표현은 피하세요.`
-                    }]
-                }],
-            })
-
-            const message = result.text?.trim()
+"돌아와" 같은 부담스러운 표현은 피하세요.`,
+            }).catch(() => null)
             if (message) {
                 await createProactiveNotification(supabase, user.id, mentorId, message)
                 sent++

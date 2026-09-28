@@ -3,12 +3,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createProactiveNotification } from '@/domains/notification'
-import { GoogleGenAI } from '@google/genai'
 import { GEMINI_MODEL } from '@/domains/chat/constants'
-
-function getAI() {
-    return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
-}
+import { askSideText } from '@/domains/llm/side-text'
 
 /**
  * POST: 48시간 미접속 사용자 검색 → 멘토 톤 Proactive 메시지 생성
@@ -70,6 +66,7 @@ export async function POST(req: Request) {
             const message = await generateProactiveMessage(
                 mentor.name,
                 user.display_name || '회원',
+                { userId: user.id, mentorId: mentor.id },
             )
 
             await createProactiveNotification(supabase, user.id, mentor.id, message)
@@ -92,27 +89,21 @@ export async function POST(req: Request) {
 async function generateProactiveMessage(
     mentorName: string,
     userName: string,
+    usage: { userId?: string | null; mentorId?: string | null } = {},
 ): Promise<string> {
     try {
-        const result = await getAI().models.generateContent({
-            model: GEMINI_MODEL,
-            config: {
-                temperature: 0.9,
-                maxOutputTokens: 128,
-            },
-            contents: [{
-                role: 'user',
-                parts: [{
-                    text: `당신은 "${mentorName}" 멘토입니다.
+        // 곁일 입구(SIDE_TEXT_PROVIDER). 비용 기록도 거기서 남긴다
+        const answer = await askSideText({
+            kind: 'proactive', route: '/api/notifications/proactive', userId: usage.userId, mentorId: usage.mentorId,
+            geminiModel: GEMINI_MODEL, temperature: 0.9, maxTokens: 128,
+            prompt: `당신은 "${mentorName}" 멘토입니다.
 "${userName}"님이 2일째 대화하지 않았어요.
 다시 돌아오고 싶게 만드는 짧은 인앱 메시지(1~2문장)를 작성하세요.
 판매 냄새가 나면 안 됩니다. 자연스럽고 따뜻하게.
-이모지 1개 포함. 메시지만 출력하세요.`
-                }]
-            }],
+이모지 1개 포함. 메시지만 출력하세요.`,
         })
 
-        return result.text?.trim() || `${userName}님, 요즘 어떻게 지내세요? 궁금한 거 있으면 편하게 물어봐 주세요 😊`
+        return answer || `${userName}님, 요즘 어떻게 지내세요? 궁금한 거 있으면 편하게 물어봐 주세요 😊`
     } catch {
         return `${userName}님, 요즘 어떻게 지내세요? 궁금한 거 있으면 편하게 물어봐 주세요 😊`
     }

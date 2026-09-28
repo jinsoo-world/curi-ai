@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { GoogleGenAI, ThinkingLevel } from '@google/genai'
+import { logLlmUsage, geminiTokens } from '@/domains/llm/usage-log'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60  // 원고 생성은 시간이 더 걸릴 수 있음
@@ -148,6 +149,7 @@ export async function POST(req: Request) {
 
         // Gemini로 구조화된 원고 JSON 생성
         const ai = getAI()
+        const 시작 = Date.now()
         const result = await ai.models.generateContent({
             model: 'gemini-3.8-flash',
             config: {
@@ -161,6 +163,10 @@ export async function POST(req: Request) {
                 parts: [{ text: `다음 대화를 분석하여 전자책 원고를 JSON으로 조립해 주세요. 저자명은 "${authorName}"으로 설정하세요:\n\n${conversationText}` }],
             }],
         })
+        {
+            const t = geminiTokens(result.usageMetadata)
+            logLlmUsage({ route: '/api/chat/export-ebook', kind: 'ebook', provider: 'gemini', model: 'gemini-3.8-flash', userId: user.id, meta: { sessionId }, inputTokens: t.input, outputTokens: t.output, latencyMs: Date.now() - 시작 })
+        }
 
         // JSON 파싱
         let ebookData

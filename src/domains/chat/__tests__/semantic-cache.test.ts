@@ -56,13 +56,19 @@ describe('botVersion', () => {
 })
 
 describe('isStorableAnswer', () => {
-    const ok = { text: '팁스 해외마케팅은 창업 7년 이내 기업이 대상이에요. 자세한 조건은 공고를 봐 주세요.', guardTripped: false, solarAnswered: true, unavailableText: '쉬는 중' }
+    const ok = { text: '팁스 해외마케팅은 창업 7년 이내 기업이 대상이에요. 자세한 조건은 공고를 봐 주세요.', guardTripped: false, answeredBy: { provider: 'solar' as const, searched: false }, unavailableText: '쉬는 중' }
     it('끝까지 나온 솔라 답만', () => {
         expect(isStorableAnswer(ok)).toBe(true)
         expect(isStorableAnswer({ ...ok, guardTripped: true })).toBe(false)
-        expect(isStorableAnswer({ ...ok, solarAnswered: false })).toBe(false)
+        expect(isStorableAnswer({ ...ok, answeredBy: null })).toBe(false)
         expect(isStorableAnswer({ ...ok, text: '쉬는 중' })).toBe(false)
         expect(isStorableAnswer({ ...ok, text: '짧음' })).toBe(false)
+    })
+    it('Gemini 답은 검색을 안 썼을 때만 저장한다', () => {
+        expect(isStorableAnswer({ ...ok, answeredBy: { provider: 'gemini', searched: false } })).toBe(true)
+        expect(isStorableAnswer({ ...ok, answeredBy: { provider: 'gemini', searched: true } })).toBe(false)
+        expect(isStorableAnswer({ ...ok, answeredBy: { provider: 'gemini', searched: false }, allowGemini: false })).toBe(false)
+        expect(isStorableAnswer({ ...ok, answeredBy: { provider: 'solar', searched: false }, allowGemini: false })).toBe(true)
     })
 })
 

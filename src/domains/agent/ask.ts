@@ -10,6 +10,8 @@ import type { GeminiMessage } from '@/domains/chat/types'
 import { logLlmUsage, geminiTokens } from '@/domains/llm/usage-log'
 import { GEMINI_MODEL, GEMINI_CONFIG } from '@/domains/chat/constants'
 import type { UsageCtx } from '@/domains/llm/usage-log'
+import { classifyFallbackReason } from '@/domains/llm/fallback-reason'
+import type { FallbackReason } from '@/domains/llm/fallback-reason'
 
 export interface AskOptions {
     model?: string
@@ -19,6 +21,8 @@ export interface AskOptions {
     signal?: AbortSignal
     /** 비용 기록(llm_usage) 자리. kind 는 router, rewrite 처럼 무슨 일인지 */
     usage?: UsageCtx & { kind?: string }
+    /** 솔라가 실패했을 때 까닭을 받아 볼 자리 (되돌아가기 기록용) */
+    onError?: (err: unknown) => void
 }
 
 /** 솔라에게 한 번 묻고 답 전체를 문자열로 받는다. 안 되면 null */
@@ -59,6 +63,7 @@ export async function askSolar(
         return out.trim() || null
     } catch (e) {
         console.error('[agent/ask] 솔라 실패:', e instanceof Error ? e.message : e)
+        opts.onError?.(e)
         log(false, e instanceof Error ? e.message : String(e))
         return null
     }
@@ -103,7 +108,7 @@ export async function askChat(
  * 솔라가 막혔을 때 짧은 보조 일(검색어 다시 쓰기)을 이어 가려고 쓴다.
  */
 export async function askGeminiQuick(
-    systemPrompt: string, userText: string, opts: { maxTokens?: number; signal?: AbortSignal; usage?: UsageCtx & { kind?: string } } = {},
+    systemPrompt: string, userText: string, opts: { maxTokens?: number; signal?: AbortSignal; usage?: UsageCtx & { kind?: string }; fallbackReason?: FallbackReason | null } = {},
 ): Promise<string | null> {
     if (!process.env.GEMINI_API_KEY) return null
     const started = Date.now()
@@ -112,7 +117,7 @@ export async function askGeminiQuick(
         logLlmUsage({
             route: opts.usage?.route ?? 'unknown',
             userId: opts.usage?.userId, mentorId: opts.usage?.mentorId, channelId: opts.usage?.channelId,
-            kind: opts.usage?.kind ?? 'ask', provider: 'gemini', model: GEMINI_MODEL, fallback: true,
+            kind: opts.usage?.kind ?? 'ask', provider: 'gemini', model: GEMINI_MODEL, fallback: true, fallbackReason: opts.fallbackReason ?? null,
             inputTokens: t.input, outputTokens: t.output, latencyMs: Date.now() - started, ok, error,
         })
     }
@@ -143,8 +148,9 @@ export async function askQuickWithFallback(
     systemPrompt: string, userText: string, opts: { timeoutMs: number; maxTokens?: number; usage?: UsageCtx & { kind?: string } },
 ): Promise<string | null> {
     const signal = AbortSignal.timeout(opts.timeoutMs)
-    const solar = await askSolar(systemPrompt, userText, { model: SOLAR_MINI_MODEL, temperature: 0, maxTokens: opts.maxTokens ?? 60, signal, usage: opts.usage })
+    let reason: FallbackReason = process.env.UPSTAGE_API_KEY ? 'empty' : 'missing_key'
+    const solar = await askSolar(systemPrompt, userText, { model: SOLAR_MINI_MODEL, temperature: 0, maxTokens: opts.maxTokens ?? 60, signal, usage: opts.usage, onError: (e) => { reason = classifyFallbackReason(e) } })
     if (solar) return solar
     if (signal.aborted || String(process.env.QUICK_ASK_GEMINI_FALLBACK ?? 'true').toLowerCase() === 'false') return null
-    return askGeminiQuick(systemPrompt, userText, { signal, usage: opts.usage })
+    return askGeminiQuick(systemPrompt, userText, { signal, usage: opts.usage, fallbackReason: reason })
 }

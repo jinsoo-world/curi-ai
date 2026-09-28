@@ -2,14 +2,9 @@
 // 대화 2~3턴마다 사용자의 핵심 니즈를 파악하여 한 줄 제목을 생성/갱신
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { GoogleGenAI } from '@google/genai'
 import { GEMINI_MODEL } from './constants'
-import { logLlmUsage, geminiTokens } from '@/domains/llm/usage-log'
+import { askSideText } from '@/domains/llm/side-text'
 import { createAdminClient } from '@/lib/supabase/admin'
-
-function getAI() {
-    return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
-}
 
 /**
  * 세션의 대화 내용을 분석하여 주제(title)를 추출하고 업데이트
@@ -57,17 +52,11 @@ export async function extractAndUpdateTopic(
             .map(m => `${m.role === 'user' ? '사용자' : '멘토'}: ${m.content.slice(0, 200)}`)
             .join('\n')
 
-        const 시작 = Date.now()
-        const result = await getAI().models.generateContent({
-            model: GEMINI_MODEL,
-            config: {
-                temperature: 0.1,
-                maxOutputTokens: 100,
-            },
-            contents: [{
-                role: 'user',
-                parts: [{
-                    text: `아래 대화의 핵심 주제를 한국어 한 줄(15~30자)로 요약하세요.
+        // 곁일 입구(SIDE_TEXT_PROVIDER). 비용 기록도 거기서 남긴다
+        const answer = await askSideText({
+            kind: 'topic', route: '/api/chat', meta: { sessionId },
+            geminiModel: GEMINI_MODEL, temperature: 0.1, maxTokens: 100,
+            prompt: `아래 대화의 핵심 주제를 한국어 한 줄(15~30자)로 요약하세요.
 사용자가 멘토에게 무엇을 물어보고 있는지, 핵심 니즈를 반영하세요.
 
 규칙:
@@ -80,19 +69,10 @@ ${currentTitle ? `- 기존 주제: "${currentTitle}" — 대화 흐름이 바뀌
 대화:
 ${conversationText}
 
-주제:`
-                }]
-            }],
+주제:`,
         })
 
-        const t = geminiTokens(result.usageMetadata)
-        logLlmUsage({
-            route: '/api/chat', kind: 'topic', provider: 'gemini', model: GEMINI_MODEL,
-            inputTokens: t.input, outputTokens: t.output, latencyMs: Date.now() - 시작,
-            meta: { sessionId },
-        })
-
-        const topic = (result.text || '')
+        const topic = (answer || '')
             .trim()
             .replace(/^["']|["']$/g, '')  // 따옴표 제거
             .replace(/\n/g, '')            // 줄바꿈 제거

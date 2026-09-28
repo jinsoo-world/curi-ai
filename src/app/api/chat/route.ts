@@ -23,7 +23,7 @@ import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit
 import { applySkills, skillsForMentor } from '@/domains/os/skills'
 // 🎛 답변 설정(목적·지침·말투·길이·창의성·출처·안내문·최신성). 트윈·리더 봇(마켓 공개봇)=Strict, 내 팀 봇=Adaptive 기본값 (domains/os/response-settings)
 import { loadResponseSettingsForChat, applyResponseSettingsToPrompt, shouldAnswerFromKnowledge, STRICT_MIN_SIMILARITY } from '@/domains/os/response-settings'
-import { semanticCacheEnabled, cacheEligibility, cacheScopeKey, botVersion, knowledgeVersion, lookupCachedAnswer, storeCachedAnswer, isStorableAnswer, cachedAnswerStream } from '@/domains/chat/semantic-cache'
+import { semanticCacheEnabled, cacheEligibility, cacheScopeKey, botVersion, knowledgeVersion, lookupCachedAnswer, storeCachedAnswer, isStorableAnswer, cachedAnswerStream, cacheAllowsGemini } from '@/domains/chat/semantic-cache'
 import { logLlmUsage, keepAliveAfterResponse } from '@/domains/llm/usage-log'
 import { SOLAR_CHAT_MODEL } from '@/domains/llm/constants'
 import { correctiveRetrieve } from '@/domains/knowledge/corrective'
@@ -687,6 +687,8 @@ export async function POST(req: Request) {
                 let fullResponse = ''
                 /** 솔라가 돌려준 실제 토큰만. 없으면 null — 가짜 숫자 금지 */
                 let llmUsage: { prompt: number; completion: number; total: number } | null = null
+                /** 누가 답했나 (솔라, 또는 검색을 썼는지까지 포함한 Gemini). 저장 답 판단에 쓴다 */
+                let answeredBy: { provider: 'solar' | 'gemini'; searched: boolean } | null = null
                 // 🧹 내부 사고 패턴 필터링 정규식
                 // (생각), (분석), (판단) 등 괄호 안 사고 과정 + 관련 분석 라벨 제거
                 const thinkingPatterns = [
@@ -714,6 +716,7 @@ export async function POST(req: Request) {
                     let rawResponse = ''
                     for await (const chunk of response) {
                         if (chunk.usage) llmUsage = chunk.usage
+                        if ('answer' in chunk && chunk.answer) answeredBy = chunk.answer
                         const text = chunk.text || ''
                         if (text) {
                             rawResponse += text
@@ -737,7 +740,7 @@ export async function POST(req: Request) {
                     if (outputGuard.tripped) console.warn('[Chat Guard] 카나리 유출 차단', JSON.stringify({ mentorId, userId: user?.id ?? null, pattern: extractionPattern }))
 
                     // 💾 새로 만든 답을 저장해 둔다 (좁은 조건을 다 통과했을 때만, 기다리지 않는다)
-                    if (답저장자리 && isStorableAnswer({ text: fullResponse, guardTripped: outputGuard.tripped, solarAnswered: llmUsage !== null, unavailableText: UNAVAILABLE_TEXT })) {
+                    if (답저장자리 && isStorableAnswer({ text: fullResponse, guardTripped: outputGuard.tripped, answeredBy, allowGemini: cacheAllowsGemini(), unavailableText: UNAVAILABLE_TEXT })) {
                         const 자리 = 답저장자리
                         keepAliveAfterResponse(storeCachedAnswer(createAdminClient(), {
                             embedding: 자리.embedding, mentorId, scopeKey: 자리.scopeKey, version: 자리.version,

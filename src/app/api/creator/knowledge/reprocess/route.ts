@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { generateEmbedding, splitIntoChunksWithHeadings, contextualEmbeddingText } from '@/domains/knowledge/embedding'
+import { logUpstageOcr } from '@/domains/llm/ocr-usage'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -110,6 +111,7 @@ export async function POST() {
 
                     if (parseRes.ok) {
                         const pd = await parseRes.json()
+                        logUpstageOcr({ route: '/api/creator/knowledge/reprocess', model: 'document-parse', ok: true, body: pd, mentorId: source.mentor_id })
                         console.log('[Reprocess] Upstage keys:', Object.keys(pd))
                         textContent = extractTextFromUpstage(pd)
                         console.log('[Reprocess] Extracted text length:', textContent.length)
@@ -132,6 +134,7 @@ export async function POST() {
                         }
                     } else {
                         const errText = await parseRes.text()
+                        logUpstageOcr({ route: '/api/creator/knowledge/reprocess', model: 'document-parse', ok: false, status: parseRes.status, error: errText.slice(0, 200), mentorId: source.mentor_id })
                         console.error('[Reprocess] Upstage error:', parseRes.status, errText.slice(0, 300))
                         results.push({ id: source.id, title: source.title, status: 'upstage_error', error: errText.slice(0, 100) })
                         await admin.from('knowledge_sources')

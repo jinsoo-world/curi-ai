@@ -36,7 +36,7 @@ export async function POST(req: Request) {
         }
 
         // 로그인 사용자: AI 기반 추천질문 생성
-        const suggestions = await generateSuggestions(messages, mentorName)
+        const suggestions = await generateSuggestions(messages, mentorName, { userId: user.id, mentorId: typeof mentorId === 'string' ? mentorId : null })
         return Response.json({ suggestions })
     } catch (error) {
         console.error('Suggestions error:', error)

@@ -2,7 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireMentorOwner } from '@/lib/mentor-owner'
 import { generateEmbedding, splitIntoChunksWithHeadings, contextualEmbeddingText } from '@/domains/knowledge/embedding'
-import { GoogleGenAI } from '@google/genai'
+import { askSideText } from '@/domains/llm/side-text'
+import { logUpstageOcr } from '@/domains/llm/ocr-usage'
 import { 개인정보가리기 } from '@/domains/knowledge/개인정보가리기'
 
 /**
@@ -69,23 +70,25 @@ function parseVttContent(raw: string): { fullText: string; speakers: Record<stri
 }
 
 /**
- * Gemini를 사용하여 VTT 텍스트 오탈자/고유명사 보정
+ * VTT 텍스트 오탈자/고유명사 보정 (곁일 입구 SIDE_TEXT_PROVIDER: 기본 Gemini, solar 로 바꾸면 솔라 미니 먼저)
  */
-async function correctVttWithGemini(text: string): Promise<string> {
-    if (!process.env.GEMINI_API_KEY) {
-        console.log('[VTT] No GEMINI_API_KEY, skipping correction')
+async function correctVttWithGemini(text: string, ctx: { mentorId?: string | null } = {}): Promise<string> {
+    if (!process.env.GEMINI_API_KEY && !process.env.UPSTAGE_API_KEY) {
+        console.log('[VTT] No LLM key, skipping correction')
         return text
     }
 
-    try {
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
+    const ask = (prompt: string) => askSideText({
+        kind: 'vtt', route: '/api/creator/knowledge/process', mentorId: ctx.mentorId ?? null,
+        geminiModel: 'gemini-3.5-flash-lite', solarMaxTokens: 8192, solarTimeoutMs: 25_000,
+        prompt,
+    })
 
-        // 텍스트가 너무 길면 청크로 나눠서 보정 (Gemini 토큰 한도 고려)
+    try {
+        // 텍스트가 너무 길면 청크로 나눠서 보정 (토큰 한도 고려)
         const MAX_CHUNK = 8000
         if (text.length <= MAX_CHUNK) {
-            const result = await ai.models.generateContent({
-                model: 'gemini-3.5-flash-lite',
-                contents: `다음은 줌(Zoom) 녹화 자막에서 추출한 대화 텍스트입니다.
+            const corrected = (await ask(`다음은 줌(Zoom) 녹화 자막에서 추출한 대화 텍스트입니다.
 음성 인식 오류로 인한 오탈자와 고유명사 오류를 교정해주세요.
 
 규칙:
@@ -96,12 +99,9 @@ async function correctVttWithGemini(text: string): Promise<string> {
 5. 교정된 텍스트만 출력하세요, 설명은 하지 마세요
 
 텍스트:
-${text}`,
-            })
-
-            const corrected = result.text?.trim()
+${text}`))?.trim()
             if (corrected && corrected.length > text.length * 0.5) {
-                console.log(`[VTT] Gemini correction: ${text.length} → ${corrected.length} chars`)
+                console.log(`[VTT] correction: ${text.length} → ${corrected.length} chars`)
                 return corrected
             }
         } else {
@@ -114,19 +114,16 @@ ${text}`,
 
             const correctedChunks = []
             for (const chunk of chunks) {
-                const result = await ai.models.generateContent({
-                    model: 'gemini-3.5-flash-lite',
-                    contents: `다음은 줌 녹화 자막 텍스트의 일부입니다. 음성 인식 오탈자만 교정하세요.
+                const out = await ask(`다음은 줌 녹화 자막 텍스트의 일부입니다. 음성 인식 오탈자만 교정하세요.
 규칙: 오탈자만 수정, 구조 유지, 설명 없이 교정 텍스트만 출력.
 
-${chunk}`,
-                })
-                correctedChunks.push(result.text?.trim() || chunk)
+${chunk}`)
+                correctedChunks.push(out?.trim() || chunk)
             }
             return correctedChunks.join('\n')
         }
     } catch (err) {
-        console.error('[VTT] Gemini correction error:', err instanceof Error ? err.message : err)
+        console.error('[VTT] correction error:', err instanceof Error ? err.message : err)
     }
 
     return text // 보정 실패 시 원본 반환
@@ -283,7 +280,7 @@ export async function POST(req: NextRequest) {
             console.log(`[Process] VTT parsed: ${Object.keys(speakers).length} speakers, ${fullText.length} chars (raw: ${rawVtt.length})`)
 
             // Gemini로 오탈자 보정
-            textContent = await correctVttWithGemini(fullText)
+            textContent = await correctVttWithGemini(fullText, { mentorId })
             console.log(`[Process] VTT after correction: ${textContent.length} chars`)
 
 
@@ -314,6 +311,7 @@ export async function POST(req: NextRequest) {
                     })
                     if (parseRes.ok) {
                         const pd = await parseRes.json()
+                        logUpstageOcr({ route: '/api/creator/knowledge/process', model: 'ocr', ok: true, body: pd, mentorId: mentorId })
                         const ocrText = extractTextFromUpstage(pd)
                         if (ocrText && ocrText.length > textContent.length) {
                             textContent = ocrText
@@ -321,6 +319,7 @@ export async function POST(req: NextRequest) {
                         }
                     } else {
                         const errText = await parseRes.text()
+                        logUpstageOcr({ route: '/api/creator/knowledge/process', model: 'ocr', ok: false, status: parseRes.status, error: errText.slice(0, 200), mentorId: mentorId })
                         console.error('[Process] HWP Upstage fallback error:', parseRes.status, errText.slice(0, 500))
                     }
                 } catch (ocrErr) {
@@ -420,6 +419,7 @@ export async function POST(req: NextRequest) {
                         })
                         if (parseRes.ok) {
                             const pd = await parseRes.json()
+                            logUpstageOcr({ route: '/api/creator/knowledge/process', model: 'ocr', ok: true, body: pd, mentorId: mentorId })
                             textContent = extractTextFromUpstage(pd)
                         }
                     } catch (fallbackErr) {
@@ -441,9 +441,11 @@ export async function POST(req: NextRequest) {
                     })
                     if (parseRes.ok) {
                         const pd = await parseRes.json()
+                        logUpstageOcr({ route: '/api/creator/knowledge/process', model: 'ocr', ok: true, body: pd, mentorId: mentorId })
                         textContent = extractTextFromUpstage(pd)
                     } else {
                         const errText = await parseRes.text()
+                        logUpstageOcr({ route: '/api/creator/knowledge/process', model: 'ocr', ok: false, status: parseRes.status, error: errText.slice(0, 200), mentorId: mentorId })
                         console.error('[Process] Upstage PPT error:', parseRes.status, errText.slice(0, 500))
                     }
                 } catch (pptErr) {
@@ -488,6 +490,7 @@ export async function POST(req: NextRequest) {
                     })
                     if (parseRes.ok) {
                         const pd = await parseRes.json()
+                        logUpstageOcr({ route: '/api/creator/knowledge/process', model: 'ocr', ok: true, body: pd, mentorId: mentorId })
                         const ocrText = extractTextFromUpstage(pd)
                         if (ocrText && ocrText.length > textContent.length) {
                             textContent = ocrText
@@ -495,6 +498,7 @@ export async function POST(req: NextRequest) {
                         }
                     } else {
                         const errText = await parseRes.text()
+                        logUpstageOcr({ route: '/api/creator/knowledge/process', model: 'ocr', ok: false, status: parseRes.status, error: errText.slice(0, 200), mentorId: mentorId })
                         console.error('[Process] Upstage PDF fallback error:', parseRes.status, errText.slice(0, 500))
                     }
                 } catch (ocrErr) {

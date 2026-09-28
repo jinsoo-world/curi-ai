@@ -9,6 +9,8 @@ import { GoogleGenAI } from '@google/genai'
 import sharp from 'sharp'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkImageCap, logImageGeneration } from '@/domains/studio/image-usage'
+import { IMAGE_MODEL_FAST } from '@/domains/studio/image-models'
 import {
     getThumbPlace, getThumbLook, isValidThumbPlace, isValidThumbLook,
     buildThumbnailPrompt, cleanLine, THUMBNAIL_COST, MAX_TITLE, MAX_SUB,
@@ -43,6 +45,9 @@ export async function POST(req: NextRequest) {
         const look = getThumbLook(lookId)!
 
         const admin = createAdminClient()
+        // 하루 사진 한도 (IMAGE_GLOBAL_DAILY). 클로버를 빼기 전에 본다
+        const 한도 = await checkImageCap(admin, { route: '/api/tools/thumbnail' })
+        if (한도) return NextResponse.json({ error: 한도 }, { status: 429 })
         const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
             // 같은 와이파이의 다른 사람이 막히지 않게, 브라우저 표식도 같이 본다 (전수조사 26번)
             const 표식 = typeof 받은표식 === 'string' && 받은표식.length > 8 ? 받은표식.slice(0, 64) : null
@@ -81,10 +86,12 @@ export async function POST(req: NextRequest) {
             })
         }
 
+        let 사진기록됨 = false
+        const 사진시작 = Date.now()
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
             const r = await ai.models.generateContent({
-                model: 'gemini-2.5-flash-image',
+                model: IMAGE_MODEL_FAST,
                 config: { imageConfig: { aspectRatio: place.ratio } },
                 contents: [{ role: 'user', parts: [{ text: buildThumbnailPrompt(look, place) }] }],
             })
@@ -92,6 +99,8 @@ export async function POST(req: NextRequest) {
             const parts = r.candidates?.[0]?.content?.parts ?? []
             const imgPart = parts.find((p: { inlineData?: { data?: string } }) => p.inlineData?.data)
             if (!imgPart) throw new Error('썸네일을 만들지 못했어요.')
+            사진기록됨 = true
+            logImageGeneration({ route: '/api/tools/thumbnail', model: IMAGE_MODEL_FAST, userId: 손님 ? null : user!.id, images: 1, ok: true, usageMetadata: r.usageMetadata, latencyMs: Date.now() - 사진시작 })
 
             const 배경 = Buffer.from((imgPart as { inlineData: { data: string } }).inlineData.data, 'base64')
 
@@ -133,6 +142,7 @@ export async function POST(req: NextRequest) {
 
             return NextResponse.json({ success: true, imageBase64: 보관?.url ? undefined : 결과64, url: 보관?.url ?? null, preview: false, balance: 차감후, text: 글자값 })
         } catch (genErr) {
+            if (!사진기록됨) logImageGeneration({ route: '/api/tools/thumbnail', model: IMAGE_MODEL_FAST, userId: 손님 ? null : user!.id, images: 0, ok: false, error: genErr instanceof Error ? genErr.message : String(genErr), latencyMs: Date.now() - 사진시작 })
             if (!손님) {
                 await admin.rpc('클로버_더하기', { 그사람: user!.id, 더할값: THUMBNAIL_COST })
                 await admin.from('credit_transactions').insert({

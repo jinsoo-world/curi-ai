@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenAI } from '@google/genai'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkImageCap, logImageGeneration } from '@/domains/studio/image-usage'
 import { getStyle, getBackdrop, isValidStyle, isValidBackdrop, buildPhotoPrompt, getAge, isValidAgeId, DEFAULT_AGE_ID, getPurpose, isValidPurpose } from '@/domains/studio/photo'
 import { isValidSkinId, DEFAULT_SKIN } from '@/domains/studio/skin'
 import { getMood, getTone, isValidMood, isValidTone, buildInstaPrompt } from '@/domains/studio/insta'
@@ -83,6 +84,9 @@ export async function POST(req: NextRequest) {
         const PHOTO_COST = model.cost
 
         const admin = createAdminClient()
+        // 하루 사진 한도 (IMAGE_GLOBAL_DAILY). 클로버를 빼기 전에 본다
+        const 한도 = await checkImageCap(admin, { route: '/api/tools/profile-photo' })
+        if (한도) return NextResponse.json({ error: 한도 }, { status: 429 })
         const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
             // 같은 와이파이의 다른 사람이 막히지 않게, 브라우저 표식도 같이 본다 (전수조사 26번)
             const 표식 = typeof 받은표식 === 'string' && 받은표식.length > 8 ? 받은표식.slice(0, 64) : null
@@ -123,6 +127,8 @@ export async function POST(req: NextRequest) {
             })
         }
 
+        let 사진기록됨 = false
+        const 사진시작 = Date.now()
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
             const 나이 = getAge(isValidAgeId(ageId) ? ageId : DEFAULT_AGE_ID)!.minus
@@ -163,6 +169,8 @@ export async function POST(req: NextRequest) {
             if (!imgPart) {
                 throw new Error('사진이 만들어지지 않았어요.')
             }
+            사진기록됨 = true
+            logImageGeneration({ route: '/api/tools/profile-photo', model: model.engine, userId: 손님 ? null : user!.id, images: 1, ok: true, usageMetadata: r.usageMetadata, latencyMs: Date.now() - 사진시작 })
 
             const 원본64 = (imgPart as { inlineData: { data: string } }).inlineData.data
 
@@ -188,6 +196,7 @@ export async function POST(req: NextRequest) {
                 balance: 차감후,
             })
         } catch (genErr) {
+            if (!사진기록됨) logImageGeneration({ route: '/api/tools/profile-photo', model: model.engine, userId: 손님 ? null : user!.id, images: 0, ok: false, error: genErr instanceof Error ? genErr.message : String(genErr), latencyMs: Date.now() - 사진시작 })
             // 만들기에 실패하면 클로버를 되돌려준다 (손님은 쓴 게 없다)
             if (!손님) {
                 await admin.rpc('클로버_더하기', { 그사람: user!.id, 더할값: PHOTO_COST })

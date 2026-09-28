@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
-import { GoogleGenAI } from '@google/genai'
+import { askSideText } from '@/domains/llm/side-text'
 
 const GEMINI_MODEL = 'gemini-3.8-flash'
 
@@ -34,15 +34,13 @@ export async function POST(request: Request) {
         }
 
         // Gemini로 요약 생성
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
-
         const truncatedContent = content.slice(0, 8000) // 토큰 절약
 
-        const response = await ai.models.generateContent({
-            model: GEMINI_MODEL,
-            contents: [{
-                role: 'user',
-                parts: [{ text: `당신은 문서 분석 전문가입니다. 다음 문서를 꼼꼼히 분석해서 아래 형식으로 상세하게 요약해주세요.
+        // 곁일 입구(SIDE_TEXT_PROVIDER). 비용 기록도 거기서 남긴다
+        const answer = await askSideText({
+            kind: 'summary', route: '/api/creator/knowledge/summarize', userId: user.id, meta: { sourceId },
+            geminiModel: GEMINI_MODEL, solarMaxTokens: 2048, solarTimeoutMs: 30_000,
+            prompt: `당신은 문서 분석 전문가입니다. 다음 문서를 꼼꼼히 분석해서 아래 형식으로 상세하게 요약해주세요.
 반드시 한국어로 작성하고, 각 항목을 빠짐없이 채워주세요. 마크다운 볼드(**) 등의 서식은 사용하지 마세요.
 
 형식:
@@ -72,11 +70,10 @@ export async function POST(request: Request) {
 🎯 활용 가이드: (이 문서를 바탕으로 AI가 어떤 질문에 답할 수 있는지 1-2줄)
 
 문서 내용:
-${truncatedContent}` }],
-            }],
+${truncatedContent}`,
         })
 
-        const summary = response?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+        const summary = answer || ''
 
         if (!summary) {
             return NextResponse.json({ error: '요약 생성에 실패했습니다.' }, { status: 500 })

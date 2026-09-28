@@ -17,10 +17,17 @@ export interface UsageCtx {
 }
 
 export interface UsageEvent extends UsageCtx {
-    /** chat, router, memory, embedding, relay, youtube, rewrite, cache */
+    /** chat, router, memory, embedding, relay, youtube, rewrite, cache, image, tts, ocr, suggestions 등 */
     kind: string
     model: string
-    provider?: 'solar' | 'gemini' | 'cache' | null
+    /** 실제로 답한 곳: solar, gemini, cache, elevenlabs, upstage */
+    provider?: string | null
+    /** 솔라 대신 Gemini 가 답한 까닭 (fallback-reason.ts) */
+    fallbackReason?: string | null
+    /** 만든 사진 장수 (kind image) */
+    imageCount?: number | null
+    /** Gemini 구글 검색 횟수 */
+    searchQueries?: number | null
     inputTokens?: number | null
     outputTokens?: number | null
     /** 토큰 수가 모델이 준 값이 아니라 글자 수로 어림한 값인가 */
@@ -51,7 +58,7 @@ export function usageRow(e: UsageEvent) {
     return {
         route: String(e.route || 'unknown').slice(0, 120),
         kind: String(e.kind || 'other').slice(0, 40),
-        provider: e.provider ?? null,
+        provider: e.provider ? String(e.provider).slice(0, 40) : null,
         model: String(e.model || 'unknown').slice(0, 80),
         user_id: uuidOrNull(e.userId),
         mentor_id: uuidOrNull(e.mentorId),
@@ -67,6 +74,9 @@ export function usageRow(e: UsageEvent) {
         ok: e.ok !== false,
         error: e.error ? String(e.error).slice(0, 300) : null,
         meta: e.meta ?? null,
+        fallback_reason: e.fallbackReason ? String(e.fallbackReason).slice(0, 40) : null,
+        image_count: intOrNull(e.imageCount),
+        search_queries: intOrNull(e.searchQueries),
     }
 }
 

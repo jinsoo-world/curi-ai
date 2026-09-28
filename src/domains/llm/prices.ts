@@ -42,3 +42,28 @@ export function estimateCostKrw(model: string, inputTokens: number | null | unde
 export function estimateTokensFromText(text: string): number {
     return Math.max(1, Math.ceil(String(text ?? '').length))
 }
+
+/**
+ * 사진 모델 가격 (장당 달러 + 입력 100만 토큰당 달러). 1K(1024px) 한 장 기준 표준 가격.
+ * 출처: ai.google.dev/gemini-api/docs/pricing (2026-09-24 갱신본).
+ *   gemini-2.5-flash-image 는 2026-10-02 에 종료된다 (구글 가격표 경고). 기록 비교용으로 남긴다.
+ *   gemini-3-pro-image-preview 는 2026-06-25 종료 예정이었다. 값은 정식판과 같다.
+ */
+export interface ImagePrice { perImageUsd: number; inputUsdPerM: number }
+
+export const IMAGE_PRICES_USD: Record<string, ImagePrice> = {
+    'gemini-3.1-flash-lite-image': { perImageUsd: 0.0336, inputUsdPerM: 0.25 },
+    'gemini-2.5-flash-image': { perImageUsd: 0.039, inputUsdPerM: 0.30 },
+    'gemini-3.1-flash-image': { perImageUsd: 0.067, inputUsdPerM: 0.50 },
+    'gemini-3-pro-image': { perImageUsd: 0.134, inputUsdPerM: 2.00 },
+    'gemini-3-pro-image-preview': { perImageUsd: 0.134, inputUsdPerM: 2.00 },
+}
+
+/** 사진 장수와 입력 토큰으로 원화 추정. 표에 없는 모델은 null */
+export function estimateImageCostKrw(model: string, images: number, inputTokens?: number | null): number | null {
+    const m = String(model ?? '').trim().toLowerCase().replace(/^models\//, '')
+    const p = IMAGE_PRICES_USD[m]
+    if (!p) return null
+    const usd = Math.max(0, images) * p.perImageUsd + (inputTokens ?? 0) * p.inputUsdPerM / 1e6
+    return Math.round(usd * USD_TO_KRW_ESTIMATE * 10_000) / 10_000
+}

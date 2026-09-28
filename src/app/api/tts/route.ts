@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
+import { logLlmUsage } from '@/domains/llm/usage-log'
 
 export const maxDuration = 60
 
@@ -43,6 +44,13 @@ export async function POST(request: NextRequest) {
             : { stability: 0.75, similarity_boost: 0.85, style: 0.25, use_speaker_boost: true }
 
         // ElevenLabs TTS Streaming API
+        const 시작 = Date.now()
+        // 비용 기록: 글자 수를 남긴다 (일레븐랩스는 글자 수로 청구. 원화는 요금제마다 달라 비운다)
+        const logTts = (ok: boolean, error?: string) => logLlmUsage({
+            route: '/api/tts', kind: 'tts', provider: 'elevenlabs', model: modelId, userId: user.id,
+            latencyMs: Date.now() - 시작, ok, error: error ?? null,
+            meta: { chars: trimmedText.length, clonedVoice: isClonedVoice },
+        })
         const ttsRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`, {
             method: 'POST',
             headers: {
@@ -61,6 +69,7 @@ export async function POST(request: NextRequest) {
         if (!ttsRes.ok) {
             const errBody = await ttsRes.text()
             console.error('[TTS] ElevenLabs 실패:', ttsRes.status, errBody)
+            logTts(false, `${ttsRes.status} ${errBody.slice(0, 200)}`)
 
             if (ttsRes.status === 429) {
                 return NextResponse.json({ error: '요청이 너무 많습니다.' }, { status: 429 })
@@ -73,6 +82,7 @@ export async function POST(request: NextRequest) {
 
         // 오디오 스트림을 ArrayBuffer로 변환 → Base64 data URL 반환
         const audioBuffer = await ttsRes.arrayBuffer()
+        logTts(true)
         const base64 = Buffer.from(audioBuffer).toString('base64')
         const audioUrl = `data:audio/mpeg;base64,${base64}`
 
