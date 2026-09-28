@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     template: '%s | 큐리AI',
   },
   description:
-    '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다. 밖으로 나가는 일은 내가 허용한 뒤에만.',
+    '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다.',
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.ico',
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: '인생 후반전 에이전트 OS, 큐리AI',
-    description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다. 밖으로 나가는 일은 내가 허용한 뒤에만.',
+    description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다.',
     type: 'website',
     url: SITE_URL,
     siteName: '큐리AI',
@@ -61,7 +61,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: '인생 후반전 에이전트 OS, 큐리AI',
-    description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다. 밖으로 나가는 일은 내가 허용한 뒤에만.',
+    description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다.',
     images: ['/og/curi-os.png'],
   },
   robots: {
@@ -118,11 +118,10 @@ const jsonLd = {
       operatingSystem: 'Web',
       inLanguage: 'ko-KR',
       description:
-        '인생 후반전 에이전트 OS. 이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다. 밖으로 나가는 일은 내가 허용한 뒤에만.',
+        '인생 후반전 에이전트 OS. 이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다.',
       featureList: [
         '내 봇 팀으로 일 나눠 맡기기',
         '내 자료로 답하고 초안 만들기',
-        '승인 카드 뒤에서만 밖으로 보내기',
         '봇 마켓에서 팀원 찾기',
       ],
       offers: {

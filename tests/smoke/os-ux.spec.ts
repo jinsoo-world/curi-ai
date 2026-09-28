@@ -116,6 +116,9 @@ test('3: 소개 화면 첫 화면 안에 제목, 카카오로 시작, 먼저 둘
     // 첫 화면 설명은 한 줄만: 긴 설명 문단과 부제는 없다
     await expect(page.locator('.wel-hero').getByText('나만의 AI 팀을 만들어보세요.', { exact: true })).toBeVisible()
     await expect(page.locator('.wel-hero .wel-p, .wel-hero .wel-lead')).toHaveCount(0)
+    // 「밖으로 나가는 건 허용한 뒤에만」 같은 안심 문구는 뺐다 (대표 0928)
+    await expect(page.locator('main')).not.toContainText('밖으로')
+    await expect(page.locator('.wel-card')).toHaveCount(0)
 })
 
 test('4: 로그인 = 동의 없이 누르면 약관 칸을 짚고 안내, 줄은 44px 이상', async ({ page }) => {

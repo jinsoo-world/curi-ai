@@ -86,8 +86,6 @@ export default function PermissionCard({ card, onDecided }: { card: CardView; on
                     <button className="os-btn primary" disabled={busy || editing} onClick={() => void 답하기('allowed')}>허용</button>
                 </div>
             )}
-
-            <div className="os-permit-note">허용해도 이 화면에서 바로 나가지 않아요. 기록이 남고, 보내는 일은 따로 처리돼요.</div>
         </div>
     )
 }

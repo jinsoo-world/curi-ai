@@ -6,10 +6,10 @@ import WelcomeBody from './WelcomeBody'
 
 export const metadata: Metadata = {
     title: { absolute: '큐리AI | 인생 후반전 에이전트 OS' },
-    description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다. 밖으로 나가는 일은 내가 허용한 뒤에만.',
+    description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다.',
     openGraph: {
         title: '인생 후반전 에이전트 OS, 큐리AI',
-        description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다. 밖으로 나가는 일은 내가 허용한 뒤에만.',
+        description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다.',
         url: 'https://www.curi-ai.com/os/welcome',
         siteName: '큐리AI',
         locale: 'ko_KR',
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     twitter: {
         card: 'summary_large_image',
         title: '인생 후반전 에이전트 OS, 큐리AI',
-        description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다. 밖으로 나가는 일은 내가 허용한 뒤에만.',
+        description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다.',
         images: ['/og/curi-os.png'],
     },
     robots: { index: true },   // 손님이 처음 밟는 소개 화면이라 검색에 올린다

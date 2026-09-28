@@ -25,8 +25,8 @@ export default function OsConnectPage() {
             <h1>연결</h1>
             <p className="os-connect-lead">
                 {tab === 'services'
-                    ? '내 계정으로 로그인해서 붙여요. 읽기는 봇이 알아서, 밖으로 보내기는 꼭 물어보고 해요.'
-                    : '깃허브에 올라온 스킬 글을 가져와 봇에게 붙여요. 스킬은 참고 자료라서 승인 카드를 건너뛸 수 없어요.'}
+                    ? '내 계정으로 로그인해서 붙여요.'
+                    : '깃허브에 올라온 스킬 글을 가져와 봇에게 붙여요.'}
             </p>
 
             <div className="os-connect-tabs" role="tablist" aria-label="연결 종류">

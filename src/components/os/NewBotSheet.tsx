@@ -278,7 +278,7 @@ function CreateBotSheet({ guest, onClose, onCreated, onWantGroup }: Omit<Props, 
                 ) : (
                     <>
                         <h3>모양과 색, 그리고 이름</h3>
-                        <div className="os-step">2 / 2 / 명단에 이렇게 보여요. 보내기·게시·결제·삭제는 늘 물어본 뒤에만 나가요.</div>
+                        <div className="os-step">2 / 2 / 명단에 이렇게 보여요.</div>
                         <div style={{ display: 'flex', gap: 18, alignItems: 'center', marginBottom: 16 }}>
                             <BotAvatar shape={shape} color={color} state="idle" size={96} />
                             <div style={{ flex: 1 }}>

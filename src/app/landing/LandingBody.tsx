@@ -2,7 +2,7 @@
 // /landing 몸통 — 대표 지시 2026-09-23 「delphi.ai 흐름 + 21st.dev uilayout 컴포넌트로 새 랜딩」.
 //
 // 흐름(델파이에서 구조만 가져옴, 문장·이미지는 안 베낌):
-//   히어로(한 줄 약속+데모) → 작동 방식 3단계 → 사례 → 안전 → 가격 요약 → 앱 설치 → 마지막 CTA → 푸터
+//   히어로(한 줄 약속+데모) → 작동 방식 3단계 → 사례 → 가격 요약 → 앱 설치 → 마지막 CTA → 푸터
 // 모양(21st.dev uilayout): 배지 pill + 그라데이션 강조 헤드라인의 히어로, 번호 큰 스텝 카드, bento 카드 그리드,
 // 가격 카드 3장, 심플 푸터. 실제 소스는 로그인(계정 생성) 없인 못 긁어(레지스트리 403) — 로그인 없이 열리는
 // cdn.21st.dev 미리보기 렌더링으로 구조만 확인하고 우리 손으로 다시 짰다(자세한 내막은 커밋/보고에).
@@ -32,19 +32,12 @@ const TEAM = [
 const STEPS = [
     { num: '01', title: '자료 넣기', desc: 'PDF, 링크, 유튜브, 내 폴더를 그대로 넣어요.' },
     { num: '02', title: '봇에게 맡기기', desc: '기획, 홍보, 개발, 조사 중 필요한 봇에게 일을 시켜요.' },
-    { num: '03', title: '승인 카드로 확인', desc: '밖으로 나가는 일은 승인 카드로 먼저 보고 허락해요.' },
 ]
 
 const CASES = [
     { shape: 홍보.shape, color: 홍보.color, role: '홍보팀장', text: '「다음 주 화요일 저녁 8시 특강 공지 써 줘. 신청 링크는 프로필에 있다고 해 줘」 → 공지 초안 완성' },
     { shape: 조사.shape, color: 조사.color, role: '조사팀장', text: '「이 블로그 글, 핵심만 5줄로 정리해 줘」 → 요약 초안 완성' },
     { shape: 홍보.shape, color: 홍보.color, role: '홍보팀장', text: '「팬이 보낸 질문에 내 말투로 답장 초안 써 줘」 → 답장 초안 완성' },
-]
-
-const SAFETY = [
-    { title: '허용해야 나가요', desc: '보내기, 게시, 결제, 삭제는 제가 먼저 확인하고 허락한 뒤에만 움직여요.' },
-    { title: '내 자료는 내 것', desc: '제가 올린 자료는 다른 사람 AI 학습에 쓰지 않아요.' },
-    { title: '내 계정으로 연결', desc: '노션, 슬랙 같은 연결은 제 계정 권한 안에서만 움직여요.' },
 ]
 
 function formatWon(v: number) {
@@ -67,8 +60,7 @@ export default function LandingBody() {
                     <span className="ld-badge">AI 봇 팀</span>
                     <h1 className="ld-h1">내 일을 나눠 맡는 <em>AI 봇 팀</em></h1>
                     <p className="ld-sub">
-                        기획, 홍보, 개발, 조사를 맡은 봇 4명이 내 자료로 초안을 만들고,
-                        밖으로 나가는 일은 내가 허용한 뒤에만 해요.
+                        기획, 홍보, 개발, 조사를 맡은 봇 4명이 내 자료로 초안을 만들어요.
                     </p>
                     <div className="ld-cta-row">
                         <Link href="/os" className="ld-btn ld-btn-primary">내 봇 팀 무료로 시작하기</Link>
@@ -89,7 +81,7 @@ export default function LandingBody() {
                 {/* 작동 방식 3단계 */}
                 <section className="ld-section">
                     <p className="ld-section-kicker">작동 방식</p>
-                    <h2 className="ld-h2">세 걸음이면 끝나요</h2>
+                    <h2 className="ld-h2">두 걸음이면 끝나요</h2>
                     <div className="ld-steps">
                         {STEPS.map(s => (
                             <div key={s.num} className="ld-step">
@@ -113,21 +105,6 @@ export default function LandingBody() {
                                     <span className="ld-case-role">{c.role}</span>
                                 </div>
                                 <div className="ld-case-bubble">{c.text}</div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-
-                {/* 안전 */}
-                <section className="ld-section">
-                    <p className="ld-section-kicker">안전</p>
-                    <h2 className="ld-h2">밖으로 나가는 건 제가 정해요</h2>
-                    <div className="ld-safety">
-                        {SAFETY.map(s => (
-                            <div key={s.title} className="ld-safe-item">
-                                <div className="ld-safe-icon" aria-hidden>✓</div>
-                                <div className="ld-safe-title">{s.title}</div>
-                                <div className="ld-safe-desc">{s.desc}</div>
                             </div>
                         ))}
                     </div>

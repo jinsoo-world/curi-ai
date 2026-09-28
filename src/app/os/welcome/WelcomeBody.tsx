@@ -48,39 +48,13 @@ export default function WelcomeBody() {
                 <p className="wel-team">{t('wel.team')}</p>
             </section>
 
-            {/* ② 승인 카드 */}
-            <section className="wel-sec">
-                <h2 className="wel-h2"><Lines text={t('wel.h2')} /></h2>
-                <p className="wel-p">{t('wel.p2')}</p>
-                <div className="wel-card" role="img" aria-label={t('wel.cardAria')}>
-                    <div className="wel-card-head">
-                        <BotAvatar shape="circle" color="orange" state="waiting_approval" size={40} />
-                        <div>
-                            <div className="wel-card-title">{t('wel.cardTitle')}</div>
-                            <div className="wel-card-sub">{t('wel.cardSub')}</div>
-                        </div>
-                    </div>
-                    <div className="wel-card-preview">
-                        {t('wel.cardPreview')}
-                        <span className="wel-card-more">{t('wel.cardMore')}</span>
-                    </div>
-                    <div className="wel-card-btns" aria-hidden>
-                        <span className="wel-card-btn ok">{t('wel.allow')}</span>
-                        <span className="wel-card-btn">{t('wel.deny')}</span>
-                        <span className="wel-card-btn">{t('wel.editAllow')}</span>
-                    </div>
-                </div>
-                <p className="wel-note">{t('wel.note')}</p>
-            </section>
-
             {/* ③ 시작은 봇 하나, 일 하나 */}
             <section className="wel-sec wel-last">
                 <h2 className="wel-h2">{t('wel.h3')}</h2>
                 <p className="wel-p">{t('wel.p3')}</p>
                 <ol className="wel-steps">
                     <li><b>1</b><span>{t('wel.step1')}</span></li>
-                    <li><b>2</b><span>{t('wel.step2')}</span></li>
-                    <li><b>3</b><span>{t('wel.step3')}</span></li>
+                    <li><b>2</b><span>{t('wel.step3')}</span></li>
                 </ol>
                 <p className="wel-p">{t('wel.p4')}</p>
                 <Link href="/login?next=%2Fos&provider=kakao" className="wel-cta wel-cta-kakao"><KakaoMark size={22} /><span>{t('wel.ctaKakao')}</span></Link>

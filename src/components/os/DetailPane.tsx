@@ -52,9 +52,6 @@ export default function DetailPane({ bot, publicName, demo = false }: { bot: Tea
                 {bot.oneLiner && <span>{bot.oneLiner}</span>}
             </div>
 
-            <h4>승인</h4>
-            <div className="os-card">보내기 전 항상 물어봐요<br /><span style={{ fontSize: 13 }}>보내기, 게시, 결제, 삭제는 카드로 물어보고, 허용해야만 나가요.</span></div>
-
             {/* 답변 설정(델파이급) — 목적·지침·말투·길이·창의성·출처·안내문·최신성. 접어 두고 필요할 때만 편다 */}
             {시연 ? null : (
                 <>

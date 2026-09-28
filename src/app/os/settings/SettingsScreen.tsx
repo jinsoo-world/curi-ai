@@ -236,11 +236,12 @@ function GeneralTab({ localeChoice, setLocaleChoice }: { localeChoice: LocaleCho
                 <div className="os-set-line">
                     <div className="os-set-text">
                         <b>{t('review.label')}</b>
-                        <div className="os-set-hint">
-                            {t('review.sub')}
-                            {team && team.length > 1 && ` ${t('review.count', { n: team.length })}`}
-                            {현재승인모드 === null && team && team.length > 1 && ` ${t('review.mixed')}`}
-                        </div>
+                        {team && team.length > 1 && (
+                            <div className="os-set-hint">
+                                {t('review.count', { n: team.length })}
+                                {현재승인모드 === null && ` ${t('review.mixed')}`}
+                            </div>
+                        )}
                     </div>
                     <Toggle label={t('review.label')} on={자동검토켬} disabled={!!승인못고르는이유 || team === null}
                         onChange={v => void 승인모드바꾸기(v ? 'always_ask' : 'auto_safe')} />
@@ -256,7 +257,7 @@ function GeneralTab({ localeChoice, setLocaleChoice }: { localeChoice: LocaleCho
                                     disabled={!!승인못고르는이유 || team === null} onChange={() => void 승인모드바꾸기(m)} />
                                 <span>
                                     <b>{t(`approval.${m}` as TKey)}</b>
-                                    <div className="os-set-sub">{t(`approval.${m}.sub` as TKey)}</div>
+                                    {m === 'auto_safe' && <div className="os-set-sub">{t('approval.auto_safe.sub')}</div>}
                                 </span>
                             </label>
                         ))}
