@@ -121,21 +121,12 @@ test('3: 소개 화면 첫 화면 안에 제목, 카카오로 시작, 먼저 둘
     await expect(page.locator('.wel-card')).toHaveCount(0)
 })
 
-test('4: 로그인 = 동의 없이 누르면 약관 칸을 짚고 안내, 줄은 44px 이상', async ({ page }) => {
+test('4: 로그인 = 체크 칸 없이 단추가 바로 되고, 아래 한 줄 안내', async ({ page }) => {
     await page.goto('/login?next=%2Fos', { waitUntil: 'domcontentloaded' })
     await settle(page)
-    const kakao = page.getByRole('button', { name: /카카오로 시작하기/ })
-    await expect(kakao).toBeEnabled()
-    await kakao.click()
-    await expect(page.getByTestId('login-error')).toContainText('필수 약관 3개')
-    await expect(page.getByTestId('login-consent')).toHaveAttribute('data-flash', '1')
-    await expect(page).toHaveURL(/\/login/)
-    const heights = await page.getByTestId('login-consent').locator('label').evaluateAll(els => els.map(e => e.getBoundingClientRect().height))
-    expect(heights.length).toBe(4)
-    for (const h of heights) expect(h).toBeGreaterThanOrEqual(44)
-    // 모두 동의 → 안내가 걷힌다
-    await page.getByTestId('login-consent').getByText('모두 동의', { exact: true }).click()
-    await expect(page.getByTestId('login-error')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /카카오로 시작하기/ })).toBeEnabled()
+    await expect(page.getByTestId('login-consent')).toHaveCount(0)
+    await expect(page.getByTestId('login-notice')).toContainText('동의한 것으로 봐요')
 })
 
 test('10: 설치 안내는 첫 방문엔 안 뜨고 두 번째 방문(새 탭)에 아래 띠로 뜬다', async ({ page, context }) => {

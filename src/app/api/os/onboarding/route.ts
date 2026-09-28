@@ -69,8 +69,8 @@ export async function POST(req: NextRequest) {
 
     const { data: existing } = await db.from('user_onboarding').select('status, use_cases, age_agreed_at, age_band').eq('user_id', user.id).maybeSingle()
     if (!existing) return NextResponse.json({ error: '온보딩 대상이 아니에요.' }, { status: 409 })
-    // 마치기 = 필수 답(약관, 맡길 일, 나이대)이 다 있어야 한다
-    if (step === 'done' && (!existing.age_agreed_at || !(existing.use_cases as string[] | null)?.length || !existing.age_band)) {
+    // 마치기 = 필수 답(맡길 일)이 있어야 한다. 약관은 로그인 안내문으로, 나이대는 선택
+    if (step === 'done' && !(existing.use_cases as string[] | null)?.length) {
         return NextResponse.json({ error: '앞 화면의 필수 답을 먼저 골라 주세요.' }, { status: 400 })
     }
 
@@ -100,6 +100,11 @@ export async function POST(req: NextRequest) {
         } : {}),
     }
     let refOk: boolean | null = null
+    // 로그인 쿠키가 없어 동의 시각이 비어 있으면: 안내문을 보고 시작한 것(고지 동의)으로 지금 시각을 남긴다
+    if (!existing.age_agreed_at) {
+        Object.assign(update, { terms_version: TERMS_VERSION, age_agreed_at: now, terms_agreed_at: now, privacy_agreed_at: now })
+        await db.from('users').update({ terms_agreed_at: now }).eq('id', user.id).is('terms_agreed_at', null)
+    }
 
     if (step === 'terms') {
         const marketing = fields.marketing === true
@@ -114,7 +119,12 @@ export async function POST(req: NextRequest) {
             await db.from('users').update({ marketing_agreed: true, marketing_consent: true, marketing_agreed_at: now }).eq('id', user.id)
         }
     } else if (step === 'profile') {
-        Object.assign(update, fields)
+        const { marketing, ...rest } = fields
+        Object.assign(update, rest)
+        if (marketing === true) {
+            Object.assign(update, { marketing_agreed: true, marketing_agreed_at: now })
+            await db.from('users').update({ marketing_agreed: true, marketing_consent: true, marketing_agreed_at: now }).eq('id', user.id)
+        }
         // users.gender 는 'male' | 'female' | 'other' 만 받는다 (DB 검사 규칙)
         const g = fields.gender === 'female' || fields.gender === 'male' ? fields.gender : null
         if (g) await db.from('users').update({ gender: g }).eq('id', user.id).is('gender', null)

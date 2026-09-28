@@ -242,7 +242,7 @@ export default function MissionsPage() {
             progress: missionStatus.aiCreated,
             goal: 2,
             completed: missionStatus.aiCreated >= 2,
-            action: () => window.location.href = '/creator/create',
+            action: () => window.location.href = '/home#make',
             actionLabel: 'AI 만들기',
         },
         {

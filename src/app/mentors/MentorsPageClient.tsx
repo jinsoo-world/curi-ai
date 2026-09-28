@@ -101,7 +101,7 @@ export default function MentorsPageClient({ mentors, linkCounts = {} }: { mentor
                         발견하기
                     </h1>
                     <Link
-                        href="/creator/create"
+                        href="/home#make"
                         style={{
                             display: 'inline-flex',
                             alignItems: 'center',

@@ -35,6 +35,11 @@ const nextConfig: NextConfig = {
       { source: '/', destination: '/home', permanent: false },
       // 가격 화면은 하나만: 원래 가격 화면 /os/charge (대표 지시 0929 00:52). 주소 뒤 값은 그대로 따라간다
       { source: '/pricing', destination: '/os/charge', permanent: false },
+      // 옛 찾기 화면은 「크리에이터를 찾을 수 없습니다」만 떴다 → 새 마켓으로 (대표 0929)
+      { source: '/discover', destination: '/os/market', permanent: false },
+      { source: '/discover/:path*', destination: '/os/market', permanent: false },
+      // 옛 AI 만들기(긴 글 입력 화면) → 첫 화면 만들기 칸. ?advanced=1 이면 옛 화면(고급 편집) 그대로
+      { source: '/creator/create', missing: [{ type: 'query', key: 'advanced' }], destination: '/home#make', permanent: false },
     ]
   },
   // 클라이언트 캐시 헤더

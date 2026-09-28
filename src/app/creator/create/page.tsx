@@ -719,7 +719,7 @@ export default function CreatorCreatePage() {
                         }}>
                             {[
                                 { key: 'basic' as const, label: '📝 기본정보' },
-                                { key: 'files' as const, label: '📚 파일학습 💎' },
+                                { key: 'files' as const, label: '📚 파일학습' },
                                 { key: 'advanced' as const, label: '⚙️ 고급설정' },
                             ].map(tab => (
                                 <button
@@ -848,21 +848,14 @@ export default function CreatorCreatePage() {
                         </div>
                         </>)}
 
-                        {/* Step 2: 파일학습 (유료 기능) */}
+                        {/* Step 2: 파일학습 — 무료로도 매달 정해진 만큼 올릴 수 있다 (knowledge/page-limits.ts) */}
                         {creatorTab === 'files' && (<>
-                        {/* 유료 기능 안내 */}
                         <div style={{
-                            background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 14,
+                            background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 14,
                             padding: '14px 16px', marginBottom: 16,
                         }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                                <span style={{ fontSize: 20 }}>💎</span>
-                                <span style={{ fontSize: 15, fontWeight: 800, color: '#92400e' }}>유료 기능</span>
-                            </div>
-                            <p style={{ fontSize: 15, color: '#78350f', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                                지식 파일 학습은 클로버 100개가 필요합니다. 무료로 기본정보만으로도 AI를 만들 수 있어요. {cloverBalance !== null && cloverBalance < 100 && (
-                                    <>현재 클로버: {cloverBalance}개. <Link href="/charge" style={{ color: '#b45309', fontWeight: 700, textDecoration: 'underline' }}>충전하기</Link></>
-                                )}
+                            <p style={{ fontSize: 15, color: '#166534', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                                무료로도 매달 정해진 만큼 올릴 수 있어요.
                             </p>
                         </div>
 

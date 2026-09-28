@@ -32,7 +32,7 @@ const 칸들: 칸[] = [
         icon: (<svg width="22" height="22" viewBox="0 0 24 24" {...선}><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V20h14V9.5" /></svg>),
     },
     {
-        label: 'AI', href: '/creator/create',
+        label: 'AI', href: '/home#make',
         match: (p) => p.startsWith('/creator') || p.startsWith('/studio'),
         icon: (<svg width="22" height="22" viewBox="0 0 24 24" {...선}><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="6" r="1.5" /><circle cx="12" cy="18" r="1.5" /><circle cx="6" cy="9" r="1.5" /><circle cx="18" cy="9" r="1.5" /><circle cx="6" cy="15" r="1.5" /><circle cx="18" cy="15" r="1.5" /></svg>),
     },

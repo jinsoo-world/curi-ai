@@ -786,7 +786,7 @@ export default function ProfilePage() {
                                     overflow: 'hidden',
                                 }}>
                                     <Link
-                                        href="/creator/create"
+                                        href="/home#make"
                                         style={{
                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                             padding: '18px 24px',

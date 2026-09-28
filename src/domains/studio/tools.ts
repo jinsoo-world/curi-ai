@@ -51,7 +51,7 @@ export const TOOLS: ToolItem[] = [
         id: 'my-ai',
         title: '나를 닮은 AI 만들기',
         desc: '내 경험으로 말하는 AI 를 만들고 팔아요',
-        href: '/creator/create',
+        href: '/home#make',
         img: '/samples/act-w1.webp',
         cost: 'free',
     },

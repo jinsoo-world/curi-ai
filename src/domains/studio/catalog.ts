@@ -56,7 +56,7 @@ export const STUDIO_ITEMS: StudioItem[] = [
         desc: '내 경험으로 말하는 AI 를 만들고 팔 수 있어요',
         emoji: '✨',
         img: '/samples/act-w1.webp',
-        href: '/creator/create',
+        href: '/home#make',
         cost: 'free',
         group: '만들기',
     },

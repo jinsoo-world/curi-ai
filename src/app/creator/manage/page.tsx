@@ -205,7 +205,7 @@ export default function CreatorManagePage() {
                             </p>
                         </div>
                         <button
-                            onClick={() => router.push('/creator/create')}
+                            onClick={() => router.push('/home#make')}
                             style={{
                                 padding: '10px 20px',
                                 borderRadius: 10,
@@ -351,7 +351,7 @@ export default function CreatorManagePage() {
                             <div>{search ? '검색 결과가 없습니다' : '아직 만든 AI가 없습니다'}</div>
                             {!search && (
                                 <button
-                                    onClick={() => router.push('/creator/create')}
+                                    onClick={() => router.push('/home#make')}
                                     style={{
                                         marginTop: 12,
                                         padding: '10px 20px',

@@ -1,13 +1,13 @@
 'use client'
-// 새 가입자 온보딩 6화면 (대표 승인 0928 23:15 「온보딩 고쳐, 데이터 저장되도록」).
-// 약관 → 알게 된 경로(초대 코드) → 먼저 맡길 일(최대 3개) → 나이대(필수), 성별과 업종(선택)
+// 새 가입자 온보딩 5화면 (대표 승인 0928 23:15 「온보딩 고쳐, 데이터 저장되도록」).
+// 약관 화면은 뺐다 (대표 0929 「동의는 받지마」, 로그인 안내문으로 동의).
+// 알게 된 경로(초대 코드) → 먼저 맡길 일(최대 3개) → 나이대, 성별, 업종(모두 선택, 건너뛰기 가능)
 // → 강의나 모임 운영 → 큐리 축하와 「첫 봇에게 말 걸기」. 화면마다 서버에 바로 저장한다.
 // OsShell 은 이 주소에서 뼈대를 그리지 않는다 → data-theme 을 직접 씌운다. 글자 17px 이상, 단추 52px 이상.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { readHomeDraft } from '@/domains/home/draft-store'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import BotAvatar from '@/components/os/BotAvatar'
 import { JOBS } from '@/domains/os/presets'
 import {
@@ -37,7 +37,7 @@ const EMPTY: Answers = {
     age_band: null, gender: null, occupation: null, runs_class_or_group: null, audience_size_band: null,
     org_name: '', leader_contact_ok: false, sns_url: '',
 }
-const TOTAL = 6
+const TOTAL = 5
 
 function nativePlatform(): string | null {
     try {
@@ -76,9 +76,6 @@ export default function StartBody() {
     const [ready, setReady] = useState(false)
     const [step, setStep] = useState(0)
     const [a, setA] = useState<Answers>(EMPTY)
-    const [age, setAge] = useState(false)
-    const [terms, setTerms] = useState(false)
-    const [privacy, setPrivacy] = useState(false)
     const [marketing, setMarketing] = useState(false)
     const [name, setName] = useState<string | null>(null)
     const [busy, setBusy] = useState(false)
@@ -112,7 +109,6 @@ export default function StartBody() {
                     org_name: s.org_name ?? '',
                     leader_contact_ok: !!s.leader_contact_ok,
                 })
-                if (d.termsAgreed) { setAge(true); setTerms(true); setPrivacy(true) }
                 setMarketing(!!s.marketing_agreed)
                 setName(d.displayName ?? null)
                 // 이어서 하기 = 저장된 마지막 화면 다음부터 (축하 화면 전까지)
@@ -151,10 +147,9 @@ export default function StartBody() {
     const next = useCallback(async () => {
         const key = STEP_ORDER[step]
         let body: Record<string, unknown> = {}
-        if (key === 'terms') body = { age, terms, privacy, marketing }
         if (key === 'source') body = { acquisition_source: a.acquisition_source, acquisition_detail: a.acquisition_detail, leader_code_entered: a.leader_code_entered }
         if (key === 'uses') body = { use_cases: a.use_cases }
-        if (key === 'profile') body = { age_band: a.age_band, gender: a.gender, occupation: a.occupation }
+        if (key === 'profile') body = { age_band: a.age_band, gender: a.gender, occupation: a.occupation, marketing }
         if (key === 'leader') body = { runs_class_or_group: a.runs_class_or_group, audience_size_band: a.audience_size_band, org_name: a.org_name, leader_contact_ok: a.leader_contact_ok }
         const res = await save(key, body)
         if (!res.ok) return
@@ -173,7 +168,7 @@ export default function StartBody() {
         }
         setStep(s => Math.min(s + 1, TOTAL - 1))
         window.scrollTo({ top: 0 })
-    }, [step, age, terms, privacy, marketing, a, save])
+    }, [step, marketing, a, save])
 
     const startChat = useCallback(async () => {
         setBusy(true)
@@ -208,15 +203,13 @@ export default function StartBody() {
     })
 
     const canNext = [
-        age && terms && privacy,
         !!a.acquisition_source,
         a.use_cases.length > 0,
-        !!a.age_band,
+        true,
         !!a.runs_class_or_group,
         true,
     ][step]
     const runsYes = !!a.runs_class_or_group && a.runs_class_or_group !== RUNS_NONE
-    const allRequired = age && terms && privacy
 
     if (!ready) {
         return <main className="onb" data-theme="os"><div className="onb-wrap onb-loading" aria-busy="true">잠시만요</div></main>
@@ -236,20 +229,6 @@ export default function StartBody() {
 
                 {step === 0 && (
                     <section>
-                        <h1 className="onb-h1">약관에 동의해 주세요</h1>
-                        <label className="onb-check onb-check-all">
-                            <input type="checkbox" checked={allRequired} onChange={() => { const v = !allRequired; setAge(v); setTerms(v); setPrivacy(v) }} />
-                            <span>필수 약관 모두 동의</span>
-                        </label>
-                        <label className="onb-check"><input type="checkbox" checked={age} onChange={() => setAge(v => !v)} /><span>만 14세 이상이에요 <em>(필수)</em></span></label>
-                        <label className="onb-check"><input type="checkbox" checked={terms} onChange={() => setTerms(v => !v)} /><span>서비스 이용약관 <em>(필수)</em></span><Link href="/terms" target="_blank" className="onb-see">보기</Link></label>
-                        <label className="onb-check"><input type="checkbox" checked={privacy} onChange={() => setPrivacy(v => !v)} /><span>개인정보 수집, 이용 <em>(필수)</em></span><Link href="/privacy" target="_blank" className="onb-see">보기</Link></label>
-                        <label className="onb-check onb-check-opt"><input type="checkbox" checked={marketing} onChange={() => setMarketing(v => !v)} /><span>소식과 혜택 받기 (알림톡, 문자, 이메일) <em>(선택)</em></span></label>
-                    </section>
-                )}
-
-                {step === 1 && (
-                    <section>
                         <h1 className="onb-h1">큐리AI를 어떻게 알게 되셨어요?</h1>
                         <BigChoices list={ACQUISITION} value={a.acquisition_source} onPick={id => set('acquisition_source', id)} />
                         {(a.acquisition_source === 'ai_chatbot' || a.acquisition_source === 'other') && (
@@ -264,7 +243,7 @@ export default function StartBody() {
                     </section>
                 )}
 
-                {step === 2 && (
+                {step === 1 && (
                     <section>
                         <h1 className="onb-h1">큐리에게 먼저 맡기고 싶은 일을 골라 주세요</h1>
                         <p className="onb-sub">최대 3개까지 고를 수 있어요</p>
@@ -279,18 +258,20 @@ export default function StartBody() {
                     </section>
                 )}
 
-                {step === 3 && (
+                {step === 2 && (
                     <section>
-                        <h1 className="onb-h1">나이대를 알려 주세요</h1>
+                        <h1 className="onb-h1">나이대를 알려 주세요 <em>(선택)</em></h1>
+                        <p className="onb-sub">건너뛰어도 괜찮아요</p>
                         <BigChoices list={AGE_BANDS} value={a.age_band} onPick={id => set('age_band', id)} />
                         <div className="onb-label">성별 <em>(선택)</em></div>
                         <Chips list={GENDERS} value={a.gender} onPick={id => set('gender', id)} />
                         <div className="onb-label">하시는 일 <em>(선택)</em></div>
                         <Chips list={OCCUPATIONS} value={a.occupation} onPick={id => set('occupation', id)} />
+                        <label className="onb-check onb-check-opt"><input type="checkbox" checked={marketing} onChange={() => setMarketing(v => !v)} /><span>소식과 혜택 받기 (알림톡, 문자, 이메일) <em>(선택)</em></span></label>
                     </section>
                 )}
 
-                {step === 4 && (
+                {step === 3 && (
                     <section>
                         <h1 className="onb-h1">{AUDIENCE_QUESTION}</h1>
                         <BigChoices list={RUNS} value={a.runs_class_or_group} onPick={id => set('runs_class_or_group', id)} />
@@ -316,7 +297,7 @@ export default function StartBody() {
                     </section>
                 )}
 
-                {step === 5 && (
+                {step === 4 && (
                     <section className="onb-done">
                         <div className="onb-mascot"><BotAvatar shape="clover" color="green" state="talking" size={112} name="큐리" /></div>
                         <h1 className="onb-h1">{name ? `${name}님, ` : ''}내 AI 팀이 준비됐어요</h1>
@@ -329,7 +310,7 @@ export default function StartBody() {
 
                 <div className="onb-foot">
                     {step < TOTAL - 1
-                        ? <button type="button" className="onb-cta" disabled={!canNext || busy} onClick={() => void next()}>{busy ? '저장하는 중' : '다음'}</button>
+                        ? <button type="button" className="onb-cta" disabled={!canNext || busy} onClick={() => void next()}>{busy ? '저장하는 중' : STEP_ORDER[step] === 'profile' && !a.age_band && !a.gender && !a.occupation ? '건너뛰기' : '다음'}</button>
                         : <button type="button" className="onb-cta" disabled={busy} onClick={() => void startChat()}>{busy ? '준비하는 중' : '첫 봇에게 말 걸기'}</button>}
                 </div>
             </div>

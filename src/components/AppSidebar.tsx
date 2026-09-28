@@ -26,7 +26,7 @@ import CloverCount from '@/components/studio/CloverCount'
 // 메인 제품은 AI 멘토 발견/생성, 프로필 사진 생성 도구는 독립적인 섹션으로 명확히 분리
 const 메뉴 = [
     { label: '발견', href: '/mentors' },
-    { label: 'AI 만들기', href: '/creator/create' },
+    { label: 'AI 만들기', href: '/home#make' },
     // 사진 도구(강사 프로필, 증명사진 등)는 「더보기」 서랍의 「부가 기능」으로 옮겼다 (대표 승인 0928). 주소는 그대로
     // 대표 지시 0923 「채팅 탭은 프로그램(내 봇 팀, /os)으로 연동되게 통일」. /chats 는 /os 로 넘긴다(next.config)
     { label: '내 봇 팀', href: '/os' },
@@ -256,7 +256,7 @@ export default function AppSidebar() {
                         {/* Delphi-style bottom CTA — CEO requirement 2026-09-22 */}
                         <div style={{ marginTop: 'auto', paddingTop: 20 }}>
                             <Link
-                                href="/creator/create"
+                                href="/home#make"
                                 className="app-top-sheet-item"
                                 style={{
                                     display: 'flex',

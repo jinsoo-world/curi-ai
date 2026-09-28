@@ -191,7 +191,8 @@ export function cleanRefCode(v: unknown): string | null {
 }
 
 export type OnboardingStep = 'terms' | 'source' | 'uses' | 'profile' | 'leader' | 'done'
-export const STEP_ORDER: OnboardingStep[] = ['terms', 'source', 'uses', 'profile', 'leader', 'done']
+// 약관 화면은 뺐다 (대표 0929 「동의는 받지마」): 로그인 단추 아래 안내문으로 동의를 남긴다. 'terms' 는 예전 화면 호환으로만 받는다
+export const STEP_ORDER: OnboardingStep[] = ['source', 'uses', 'profile', 'leader', 'done']
 
 /** 화면별로 받은 답을 정해진 값으로만 거른다. 필수 답이 없으면 error */
 export function sanitizeStep(step: unknown, body: unknown): { step: OnboardingStep; fields: Record<string, unknown>; error?: string } | { error: string } {
@@ -220,9 +221,8 @@ export function sanitizeStep(step: unknown, body: unknown): { step: OnboardingSt
             return { step, fields: { use_cases: uniq } }
         }
         case 'profile': {
-            const age = pick(AGE_BANDS, b.age_band)
-            if (!age) return { error: '나이대를 골라 주세요.' }
-            return { step, fields: { age_band: age, gender: pick(GENDERS, b.gender), occupation: pick(OCCUPATIONS, b.occupation) } }
+            // 나이대도 선택 (건너뛸 수 있다). 소식 받기(마케팅)는 여기서 선택으로만 받는다
+            return { step, fields: { age_band: pick(AGE_BANDS, b.age_band), gender: pick(GENDERS, b.gender), occupation: pick(OCCUPATIONS, b.occupation), marketing: b.marketing === true } }
         }
         case 'leader': {
             const runs = pick(RUNS, b.runs_class_or_group)

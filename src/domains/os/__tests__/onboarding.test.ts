@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-    sanitizeStep, needsOnboarding, detectClientContext, cleanRefCode, parseTermsCookie, firstJobFor,
+    sanitizeStep, STEP_ORDER, needsOnboarding, detectClientContext, cleanRefCode, parseTermsCookie, firstJobFor,
     FIRST_HELP_CHIPS, SAMPLE_EXCHANGE, USE_CASES, LEADER_CARD, ONBOARDING_SINCE,
 } from '../onboarding'
 
@@ -39,10 +39,14 @@ describe('sanitizeStep', () => {
         expect('step' in r && r.fields.use_cases).toEqual(['promo', 'customer', 'docs'])
         expect('error' in sanitizeStep('uses', { use_cases: [] })).toBe(true)
     })
-    it('나이대는 필수, 성별과 업종은 선택', () => {
-        expect('error' in sanitizeStep('profile', { gender: 'female' })).toBe(true)
+    it('나이대, 성별, 업종 모두 선택 (건너뛰기 가능)', () => {
+        const skip = sanitizeStep('profile', {})
+        expect('step' in skip && skip.fields).toEqual({ age_band: null, gender: null, occupation: null, marketing: false })
         const r = sanitizeStep('profile', { age_band: '50s', gender: 'x' })
-        expect('step' in r && r.fields).toEqual({ age_band: '50s', gender: null, occupation: null })
+        expect('step' in r && r.fields).toEqual({ age_band: '50s', gender: null, occupation: null, marketing: false })
+    })
+    it('약관 화면은 온보딩 순서에서 빠졌다', () => {
+        expect(STEP_ORDER).toEqual(['source', 'uses', 'profile', 'leader', 'done'])
     })
     it('아니요면 리더 칸을 비운다', () => {
         const r = sanitizeStep('leader', { runs_class_or_group: 'none', org_name: 'a', leader_contact_ok: true })
