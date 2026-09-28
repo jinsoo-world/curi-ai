@@ -1,13 +1,39 @@
 import { describe, it, expect } from 'vitest'
-import { classifySnsLink } from '../sns-link'
+import { classifySnsLink, cleanPastedPosts, snsCanonicalKey, PASTE_MIN_CHARS } from '../sns-link'
 import { SNS_SUCCESS_LINE, SNS_BONUS_CLOVERS } from '../onboarding'
 
 describe('classifySnsLink', () => {
-    it('네이버 블로그는 공개 RSS 로 읽는다', () => {
-        expect(classifySnsLink('blog.naver.com/passionjin').feed).toEqual({ kind: 'podcast', handleOrUrl: 'https://rss.blog.naver.com/passionjin.xml' })
-        expect(classifySnsLink('https://m.blog.naver.com/passionjin/223000').feed?.handleOrUrl).toBe('https://rss.blog.naver.com/passionjin.xml')
-        expect(classifySnsLink('https://blog.naver.com/PostView.naver?blogId=abc_1&logNo=1').feed?.handleOrUrl).toBe('https://rss.blog.naver.com/abc_1.xml')
+    it('네이버 블로그는 자동으로 읽지 않고 붙여넣기로 받는다 (약관 위험 제거 0928)', () => {
+        const c = classifySnsLink('blog.naver.com/passionjin')
+        expect(c.feed).toBe(null)
+        expect(c.paste).toBe(true)
+        expect(c.url).toBe('https://blog.naver.com/passionjin')
+        expect(classifySnsLink('https://m.blog.naver.com/passionjin/223000').url).toBe('https://blog.naver.com/passionjin')
+        expect(classifySnsLink('https://blog.naver.com/PostView.naver?blogId=abc_1&logNo=1').url).toBe('https://blog.naver.com/abc_1')
+        expect(classifySnsLink('https://rss.blog.naver.com/abc_1.xml').feed).toBe(null)
         expect(() => classifySnsLink('https://blog.naver.com/PostView.naver')).toThrow()
+    })
+    it('브런치도 붙여넣기, 티스토리는 공식 RSS', () => {
+        expect(classifySnsLink('https://brunch.co.kr/@me').paste).toBe(true)
+        expect(classifySnsLink('https://brunch.co.kr/@me').feed).toBe(null)
+        expect(classifySnsLink('https://myblog.tistory.com/12').feed).toEqual({ kind: 'podcast', handleOrUrl: 'https://myblog.tistory.com/rss' })
+    })
+    it('같은 블로그는 같은 열쇠 (보너스 한 주소 한 계정)', () => {
+        const k = (u: string) => snsCanonicalKey(classifySnsLink(u))
+        expect(k('blog.naver.com/PassionJin')).toBe(k('https://m.blog.naver.com/passionjin/223000'))
+        expect(k('https://blog.naver.com/PostView.naver?blogId=passionjin&logNo=1')).toBe('naver:passionjin')
+        expect(k('https://myblog.tistory.com/12')).toBe(k('https://myblog.tistory.com/'))
+        expect(k('https://www.youtube.com/@Curi')).toBe(k('https://m.youtube.com/@curi/videos'))
+        expect(k('https://example.com/about/')).toBe(k('https://example.com/about?x=1'))
+    })
+    it('붙여넣은 글: 짧은 글은 빼고, 같은 글은 한 번, 최대 3편', () => {
+        const long = (n: number) => `${n} `.repeat(200)
+        expect(cleanPastedPosts(['짧아요', long(1)]).posts.length).toBe(1)
+        expect(cleanPastedPosts(['짧아요']).tooShort).toBe(1)
+        expect(cleanPastedPosts([long(1), long(1)]).posts.length).toBe(1)
+        expect(cleanPastedPosts([long(1), long(2), long(3), long(4)]).posts.length).toBe(3)
+        expect(cleanPastedPosts('x').posts.length).toBe(0)
+        expect(PASTE_MIN_CHARS).toBe(300)
     })
     it('유튜브는 채널 주소만', () => {
         expect(classifySnsLink('https://www.youtube.com/@curi').feed?.kind).toBe('youtube')

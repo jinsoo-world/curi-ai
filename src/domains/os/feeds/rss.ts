@@ -38,8 +38,18 @@ export function withScheme(raw: string): string {
     return /^https?:\/\//i.test(t) ? t : `https://${t.replace(/^\/+/, '')}`
 }
 
+/** 자동 읽기를 하지 않는 곳 (대표 결정 0928 23:53, 약관 위험 제거). 네이버 블로그, 브런치는 글 붙여넣기로만 받는다 */
+export const PASTE_ONLY_NOTE = '네이버 블로그와 브런치는 설정에서 글을 붙여넣어 주세요'
+export function isPasteOnlyHost(url: string): boolean {
+    try {
+        const h = new URL(withScheme(url)).hostname.toLowerCase().replace(/^(www|m)\./, '')
+        return h === 'blog.naver.com' || h === 'rss.blog.naver.com' || h === 'brunch.co.kr'
+    } catch { return false }
+}
+
 /** 피드 주소 하나를 안전하게 가져와 해석한다. 피드가 아니면 null (던지지 않는다) */
 export async function fetchFeed(url: string): Promise<{ url: string; entries: ParsedFeedEntry[] } | { error: string } | null> {
+    if (isPasteOnlyHost(url)) return { error: PASTE_ONLY_NOTE }
     const page = await fetchPageSafely(url, { maxBytes: FEED_MAX_BYTES, timeoutMs: FEED_TIMEOUT_MS })
     if (!page.ok) return { error: page.reason }
     if (!looksLikeFeed(page.body)) return null
@@ -51,6 +61,7 @@ export async function fetchFeed(url: string): Promise<{ url: string; entries: Pa
  * 주소 자체가 피드면 그대로, 웹페이지면 그 안의 「RSS 링크」를 따라간다. 못 찾으면 던진다.
  */
 export async function loadFeedFrom(url: string): Promise<{ url: string; entries: ParsedFeedEntry[] }> {
+    if (isPasteOnlyHost(url)) throw new Error(PASTE_ONLY_NOTE)
     const page = await fetchPageSafely(url, { maxBytes: FEED_MAX_BYTES, timeoutMs: FEED_TIMEOUT_MS })
     if (!page.ok) throw new Error(page.reason)
     if (looksLikeFeed(page.body)) return { url: page.url, entries: parseFeed(page.body) }

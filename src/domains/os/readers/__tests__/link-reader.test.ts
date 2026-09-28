@@ -345,42 +345,25 @@ describe('readUrl = 길마다 제대로 읽는다', () => {
         expect(r.ok && r.source).toBe('web')
     })
 
-    it('유튜브 = 한국어 자막 우선 + 제목, 채널', async () => {
+    it('유튜브 = 공식 oEmbed 제목, 채널 + 공식 Data API 설명, 길이 (열쇠 있을 때)', async () => {
+        vi.stubEnv('YOUTUBE_API_KEY', 'k1')
         routes['https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=A0LQFQphEBg&format=json'] = { type: 'application/json', body: JSON.stringify({ title: '워런 버핏 은퇴', author_name: '슈카월드' }) }
-        getVideoDetails.mockResolvedValue({ title: '워런 버핏 은퇴', description: '0:00 시작\n5:11 관세', subtitles: [
-            { text: '세 번째 주제는 그냥 잔잔하게 한번 들읍시다', start: '0.5', dur: '3' },
-            { text: '관세 이야기를 해 보겠습니다', start: '312', dur: '4' },
-        ] })
+        routes['https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=A0LQFQphEBg&key=k1'] = { type: 'application/json', body: JSON.stringify({ items: [{ snippet: { title: '워런 버핏 은퇴', channelTitle: '슈카월드', description: '0:00 시작\n5:11 관세', publishedAt: '2025-05-13T09:00:00Z' }, contentDetails: { duration: 'PT5M16S' } }] }) }
         const r = await readUrl('https://youtu.be/A0LQFQphEBg')
-        expect(getVideoDetails.mock.calls[0][0]).toMatchObject({ videoID: 'A0LQFQphEBg', lang: 'ko' })
-        expect(r.ok && r.method).toBe('captions')
+        vi.unstubAllEnvs()
+        expect(r.ok && r.method).toBe('meta')
         expect(r.ok && r.title).toBe('워런 버핏 은퇴 | 슈카월드')
-        expect(r.ok && r.text).toContain('길이: 5:16')
+        expect(r.ok && r.text).toContain('길이: 5:16 | 올린 날 2025-05-13')
         expect(r.ok && r.text).toContain('[설명]\n0:00 시작\n5:11 관세')
-        expect(r.ok && r.text).toContain('[0:00] 세 번째 주제는')
-        expect(r.ok && r.text).toContain('[5:00] 관세 이야기를')
-    })
-
-    it('유튜브 자막 도구가 통째로 막히면 영상 웹페이지에서 설명이라도 건진다', async () => {
-        getVideoDetails.mockRejectedValue(new Error('Video not playable on any client'))
-        routes['https://www.youtube.com/watch?v=A0LQFQphEBg&hl=ko'] = { body: '<script>var ytInitialPlayerResponse = {"videoDetails":{"title":"워런 버핏 은퇴","shortDescription":"버핏 이야기"}};</script>' }
-        const r = await readUrl('https://www.youtube.com/watch?v=A0LQFQphEBg')
-        expect(r.ok && r.method).toBe('meta')
-        expect(r.ok && r.text).toContain('버핏 이야기')
-        expect(r.ok && r.text).toContain('자막을 가져오지 못했어요')
-    })
-
-    it('자막 창구가 막히면(Vercel IP) next 창구에서 설명, 챕터, 조회수를 받는다', async () => {
-        getVideoDetails.mockRejectedValue(new Error('Video not playable on any client. LOGIN_REQUIRED'))
-        routes['https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=A0LQFQphEBg&format=json'] = { type: 'application/json', body: JSON.stringify({ title: '워런 버핏 은퇴', author_name: '슈카월드' }) }
-        routes['https://www.youtube.com/youtubei/v1/next?prettyPrint=false'] = { type: 'application/json', body: NEXT_JSON }
-        const r = await readUrl('https://www.youtube.com/watch?v=A0LQFQphEBg')
-        expect(r.ok && r.method).toBe('meta')
-        expect(r.ok && r.text).toContain('조회수 1,716,462회 | 올린 날 2025. 5. 13.')
-        expect(r.ok && r.text).toContain('[챕터]\n0:00 잘 놀다 갑니다.\n5:11 관세에 대해 어떻게 생각하십니까?')
         expect(r.ok && r.text).toContain('영상 속에서 한 말은 모릅니다')
-        // 영상 웹페이지(서버 IP 에서 막힘)까지 가지 않는다
-        expect(calls.some(c => c.includes('watch?v=A0LQFQphEBg&hl=ko'))).toBe(false)
+    })
+
+    it('유튜브 robots.txt 금지 길(자막 도구, youtubei, 영상 웹페이지)은 부르지 않는다', async () => {
+        routes['https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=A0LQFQphEBg&format=json'] = { type: 'application/json', body: JSON.stringify({ title: '워런 버핏 은퇴', author_name: '슈카월드' }) }
+        const r = await readUrl('https://www.youtube.com/watch?v=A0LQFQphEBg')
+        expect(r.ok && r.method).toBe('meta')
+        expect(getVideoDetails).not.toHaveBeenCalled()
+        expect(calls.some(c => c.includes('youtubei') || c.includes('watch?v=A0LQFQphEBg&hl') || c.includes('googleapis'))).toBe(false)
     })
 
     it('못 열면 이유를 사람 말로 (던지지 않는다)', async () => {

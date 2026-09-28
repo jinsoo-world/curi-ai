@@ -11,7 +11,7 @@ import BotAvatar from '@/components/os/BotAvatar'
 import { JOBS } from '@/domains/os/presets'
 import {
     ONBOARDING_TITLE, LEADER_CARD, ACQUISITION, REFERRAL_SOURCES, USE_CASES, MAX_USE_CASES,
-    AGE_BANDS, GENDERS, OCCUPATIONS, RUNS, RUNS_NONE, AUDIENCE, AUDIENCE_QUESTION, STEP_ORDER, firstJobFor, SNS_HINT,
+    AGE_BANDS, GENDERS, OCCUPATIONS, RUNS, RUNS_NONE, AUDIENCE, AUDIENCE_QUESTION, STEP_ORDER, firstJobFor, SNS_HINT, SNS_PASTE_LATER_LINE,
     SURVEY_LOCAL_KEY, SURVEY_BOT_LOCAL_KEY, FIRST_SENT_LOCAL_KEY, SURVEY_EVENT, type Choice,
 } from '@/domains/os/onboarding'
 import { 클로버알림 } from '@/lib/clover-bus'
@@ -164,8 +164,8 @@ export default function StartBody() {
             setSnsNote('내 글을 읽는 중이에요')
             fetch('/api/os/sns-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: a.sns_url, source: 'onboarding' }) })
                 .then(r => r.json())
-                .then((d: { message?: string; error?: string; balance?: number }) => {
-                    setSnsNote(d.error || d.message || '')
+                .then((d: { message?: string; error?: string; balance?: number; status?: string }) => {
+                    setSnsNote(d.status === 'paste' ? SNS_PASTE_LATER_LINE : (d.error || d.message || ''))
                     if (typeof d.balance === 'number') 클로버알림(d.balance)
                 })
                 .catch(() => setSnsNote('링크는 설정에서 다시 넣을 수 있어요'))
@@ -299,7 +299,7 @@ export default function StartBody() {
                                 </div>
                                 <div className="onb-label">내 SNS나 블로그 주소 <em>(선택)</em></div>
                                 <p className="onb-hint">{SNS_HINT}</p>
-                                <input className="onb-input" value={a.sns_url} maxLength={300} inputMode="url" placeholder="https://blog.naver.com/아이디" onChange={e => set('sns_url', e.target.value)} />
+                                <input className="onb-input" value={a.sns_url} maxLength={300} inputMode="url" placeholder="https://youtube.com/@내채널" onChange={e => set('sns_url', e.target.value)} />
                                 <div className="onb-label">만나는 분은 몇 명쯤인가요? <em>(선택)</em></div>
                                 <Chips list={AUDIENCE} value={a.audience_size_band} onPick={id => set('audience_size_band', id)} />
                                 <input className="onb-input" value={a.org_name} maxLength={80} placeholder="채널, 강의, 모임 이름 (선택)" onChange={e => set('org_name', e.target.value)} />

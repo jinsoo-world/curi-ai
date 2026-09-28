@@ -1,23 +1,33 @@
 // SNS, 블로그 링크 연동 (대표 승인 0928 23:29). 서버 전용.
-// 받은 링크를 이미 있는 「계정 연결」(feeds: 유튜브 채널, RSS, 일반 웹)로 읽어 그 사람 봇의 자료에 넣는다.
-// 네이버 블로그는 공개 RSS(rss.blog.naver.com)로 읽는다. 인스타그램, 스레드, X, 틱톡은 공식 열쇠가 없어 링크만 저장한다(준비 중).
-// 자료가 1건 이상 실제로 들어갔을 때만 클로버 50개를 계정당 한 번 준다 (DB 함수 grant_sns_link_bonus 가 중복을 막는다).
+// 받은 링크를 이미 있는 「계정 연결」(feeds: 유튜브 채널(공식 API), 티스토리 RSS, RSS, 일반 웹)로 읽어 그 사람 봇의 자료에 넣는다.
+// 대표 결정 0928 23:53 「약관 위험 제거」: 네이버 블로그(rss.blog.naver.com robots.txt 전면 금지, 약관 자동 수집 금지)와
+//   브런치(AI 크롤러 금지)는 자동으로 읽지 않고 「대표 글 3편 붙여넣기」로 받는다(pasteSnsPosts).
+//   인스타그램, 페이스북, 스레드, X, 틱톡은 링크만 저장한다(준비 중).
+// 자료가 실제로 들어갔을 때만 클로버 50개를 계정당 한 번, 같은 주소로는 한 계정만 준다
+//   (DB 함수 grant_sns_link_bonus_keyed 가 계정 중복과 주소 중복을 막는다).
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { resolveChannelInput } from './feeds/youtube'
 import { createFeed, listFeeds, syncFeed, loadExistingSources, type FeedKind } from './feeds'
 import { isSafeFetchUrl } from '@/domains/agent/fetch-url'
-import { MAX_SOURCES_PER_BOT } from './knowledge'
+import { MAX_SOURCES_PER_BOT, addTextSource, assertRoomForMore } from './knowledge'
 import { bootstrapDefaultTeam } from './team'
 import { JOBS } from './presets'
-import { firstJobFor, SNS_BONUS_CLOVERS, SNS_PENDING_LINE, SNS_READ_LINE, SNS_SUCCESS_LINE } from './onboarding'
+import { firstJobFor, SNS_BONUS_CLOVERS, SNS_KEY_TAKEN_LINE, SNS_PASTE_LINE, SNS_PASTE_MAX_POSTS, SNS_PASTE_MIN_CHARS, SNS_PENDING_LINE, SNS_READ_LINE, SNS_SUCCESS_LINE } from './onboarding'
 
-export type SnsPlatform = 'youtube' | 'naver_blog' | 'substack' | 'rss' | 'website' | 'instagram' | 'threads' | 'x' | 'tiktok' | 'facebook'
+export type SnsPlatform = 'youtube' | 'naver_blog' | 'brunch' | 'tistory' | 'substack' | 'rss' | 'website' | 'instagram' | 'threads' | 'x' | 'tiktok' | 'facebook'
+
+/** 붙여넣기 한 편 최소 글자, 최대 편수 (화면과 같이 쓰도록 onboarding.ts에 둔다) */
+export const PASTE_MIN_CHARS = SNS_PASTE_MIN_CHARS
+export const PASTE_MAX_POSTS = SNS_PASTE_MAX_POSTS
+export const PASTE_MAX_CHARS = 20_000
 
 export interface SnsTarget {
     url: string
     platform: SnsPlatform
     /** 읽을 수 있으면 계정 연결 종류와 넣을 값, 못 읽으면 null (준비 중) */
     feed: { kind: FeedKind; handleOrUrl: string } | null
+    /** 자동으로 읽지 않고 대표 글 붙여넣기로 받는 곳 (네이버 블로그, 브런치) */
+    paste?: boolean
 }
 
 /** 링크 모양으로 어디인지, 읽을 수 있는지 가린다. 모양이 틀리면 사람 말로 던진다 */
@@ -47,20 +57,44 @@ export function classifySnsLink(raw: unknown): SnsTarget {
     if (host === 'blog.naver.com' || host === 'rss.blog.naver.com') {
         const id = (u.searchParams.get('blogId') || u.pathname.split('/').filter(Boolean)[0] || '').replace(/\.xml$/, '')
         if (!/^[A-Za-z0-9_-]{2,40}$/.test(id) || /\.naver$/i.test(id)) throw new Error('네이버 블로그 주소를 확인해 주세요. 예: blog.naver.com/아이디')
-        return { url, platform: 'naver_blog', feed: { kind: 'podcast', handleOrUrl: `https://rss.blog.naver.com/${id}.xml` } }
+        // 자동 읽기(rss.blog.naver.com) 끔. 대표 글 붙여넣기로 받는다
+        return { url: `https://blog.naver.com/${id}`, platform: 'naver_blog', feed: null, paste: true }
     }
+    if (is('brunch.co.kr')) return { url, platform: 'brunch', feed: null, paste: true }
+    // 티스토리는 주인이 켠 공식 RSS(/rss). robots.txt 도 막지 않는다
+    if (is('tistory.com') && host !== 'tistory.com') return { url, platform: 'tistory', feed: { kind: 'podcast', handleOrUrl: `https://${u.hostname.toLowerCase()}/rss` } }
     if (is('substack.com')) return { url, platform: 'substack', feed: { kind: 'substack', handleOrUrl: url } }
     if (!isSafeFetchUrl(url)) throw new Error('열 수 없는 주소예요. 공개된 주소만 넣어 주세요')
     if (/(\/(rss|feed|atom)(\.xml)?\/?$)|(\.xml$)/i.test(u.pathname)) return { url, platform: 'rss', feed: { kind: 'podcast', handleOrUrl: url } }
     return { url, platform: 'website', feed: { kind: 'website', handleOrUrl: url } }
 }
 
+/**
+ * 같은 블로그, 채널인지 가리는 열쇠 (보너스는 한 주소에 한 계정만).
+ * 네이버는 아이디, 티스토리와 Substack 은 주소 이름, 유튜브는 채널 경로, 나머지는 주소(쿼리 뺌)
+ */
+export function snsCanonicalKey(t: SnsTarget): string {
+    const u = new URL(t.url)
+    const host = u.hostname.replace(/^(www|m)\./, '').toLowerCase()
+    const path = decodeURIComponent(u.pathname).replace(/\/+$/, '').toLowerCase()
+    if (t.platform === 'naver_blog') return `naver:${(path.split('/')[1] || '').toLowerCase()}`
+    if (t.platform === 'brunch') return `brunch:${path.split('/')[1] || ''}`
+    if (t.platform === 'tistory' || t.platform === 'substack') return `${t.platform}:${host}`
+    if (t.platform === 'youtube') {
+        const r = resolveChannelInput(t.url)
+        if (r) return `youtube:${'channelId' in r ? r.channelId : decodeURIComponent(new URL(r.pageUrl).pathname).toLowerCase()}`
+    }
+    return `${t.platform}:${host}${path}`.slice(0, 300)
+}
+
 export interface SnsConnectResult {
-    status: 'read' | 'pending' | 'failed'
+    status: 'read' | 'pending' | 'failed' | 'paste'
     platform: SnsPlatform
     added: number
     bonus: number
     alreadyGranted: boolean
+    /** 같은 주소로 다른 계정이 이미 보너스를 받음 */
+    keyTaken?: boolean
     message: string
     balance?: number
 }
@@ -86,6 +120,10 @@ export async function connectSnsLink(db: Db, a: { userId: string; displayName: s
     if (linkErr || !link) throw new Error('링크를 저장하지 못했어요')
     const base = { platform: target.platform, added: 0, bonus: 0, alreadyGranted: false }
 
+    if (target.paste) {
+        await db.from('user_sns_links').update({ status: 'pending', note: '글 붙여넣기', updated_at: now() }).eq('id', link.id)
+        return { ...base, status: 'paste', message: SNS_PASTE_LINE }
+    }
     if (!target.feed) {
         await db.from('user_sns_links').update({ status: 'pending', note: '준비 중', updated_at: now() }).eq('id', link.id)
         return { ...base, status: 'pending', message: SNS_PENDING_LINE }
@@ -121,12 +159,61 @@ export async function connectSnsLink(db: Db, a: { userId: string; displayName: s
     }).eq('id', link.id)
     if (status !== 'read') return { ...base, status, message: note || '읽지 못했어요' }
 
-    // 자료가 1건 이상 저장된 링크만 보너스. 계정당 한 번 (이미 받았으면 null)
-    const { data: balance, error: grantErr } = await db.rpc('grant_sns_link_bonus', { p_user: a.userId, p_link: link.id, p_amount: SNS_BONUS_CLOVERS })
+    return grantBonus(db, a.userId, link.id, target, { ...base, status, added, message: SNS_READ_LINE })
+}
+
+/** 자료가 저장된 링크만 보너스. 계정당 한 번, 같은 주소로는 한 계정만 */
+async function grantBonus(db: Db, userId: string, linkId: string, target: SnsTarget, r: SnsConnectResult): Promise<SnsConnectResult> {
+    const { data: balance, error: grantErr } = await db.rpc('grant_sns_link_bonus_keyed', { p_user: userId, p_link: linkId, p_amount: SNS_BONUS_CLOVERS, p_key: snsCanonicalKey(target) })
     if (grantErr) {
         console.error('[sns-link] 보너스 지급 실패:', grantErr.message)
-        return { ...base, status, added, message: SNS_READ_LINE }
+        return { ...r, message: SNS_READ_LINE }
     }
-    if (typeof balance === 'number') return { ...base, status, added, bonus: SNS_BONUS_CLOVERS, balance, message: SNS_SUCCESS_LINE }
-    return { ...base, status, added, alreadyGranted: true, message: SNS_READ_LINE }
+    if (balance === -1) return { ...r, keyTaken: true, message: SNS_KEY_TAKEN_LINE }
+    if (typeof balance === 'number') return { ...r, bonus: SNS_BONUS_CLOVERS, balance, message: SNS_SUCCESS_LINE }
+    return { ...r, alreadyGranted: true, message: SNS_READ_LINE }
+}
+
+/** 붙여넣은 글 정리: 앞뒤 공백, 같은 글 한 번, 한 편 최대 글자. 짧은 글은 뺀다 */
+export function cleanPastedPosts(raw: unknown): { posts: string[]; tooShort: number } {
+    const list = Array.isArray(raw) ? raw : []
+    const seen = new Set<string>()
+    const posts: string[] = []
+    let tooShort = 0
+    for (const v of list.slice(0, PASTE_MAX_POSTS * 2)) {
+        const t = String(v ?? '').replace(/\r\n/g, '\n').trim().slice(0, PASTE_MAX_CHARS)
+        if (!t) continue
+        const key = t.replace(/\s+/g, ' ')
+        if (seen.has(key)) continue
+        seen.add(key)
+        if (key.length < PASTE_MIN_CHARS) { tooShort++; continue }
+        posts.push(t)
+        if (posts.length >= PASTE_MAX_POSTS) break
+    }
+    return { posts, tooShort }
+}
+
+/**
+ * 네이버 블로그, 브런치: 대표 글(최대 3편)을 붙여넣으면 한 자료로 묶어 내 봇에 넣는다(자료 칸 하나만 씀).
+ * 저장되면 보너스 조건 충족 (계정당 한 번, 같은 주소 한 계정).
+ */
+export async function pasteSnsPosts(db: Db, a: { userId: string; displayName: string; url: unknown; posts: unknown }): Promise<SnsConnectResult> {
+    const target = classifySnsLink(a.url)
+    if (!target.paste) throw new Error('이 주소는 붙여넣기 없이 주소만 넣으면 돼요')
+    const { posts, tooShort } = cleanPastedPosts(a.posts)
+    if (posts.length === 0) throw new Error(tooShort > 0 ? `글이 너무 짧아요. 한 편에 ${PASTE_MIN_CHARS}자 이상 붙여넣어 주세요` : '글을 붙여넣어 주세요')
+    const now = () => new Date().toISOString()
+    const { data: link, error: linkErr } = await db.from('user_sns_links')
+        .upsert({ user_id: a.userId, url: target.url, platform: target.platform, source: 'settings', updated_at: now() }, { onConflict: 'user_id,url' })
+        .select('id, added_count').single()
+    if (linkErr || !link) throw new Error('링크를 저장하지 못했어요')
+    const mentorId = await pickBot(db, a.userId, a.displayName)
+    if (!mentorId) throw new Error('봇을 먼저 만들어 주세요')
+    await assertRoomForMore(db, mentorId)
+    const label = target.platform === 'naver_blog' ? '네이버 블로그' : '브런치'
+    const body = posts.map((p, i) => `[글 ${i + 1}]\n${p}`).join('\n\n')
+    await addTextSource(db, mentorId, `내 ${label} 대표 글 ${posts.length}편`, `출처: ${target.url}\n\n${body}`, 'sns_paste')
+    const total = (link.added_count ?? 0) + posts.length
+    await db.from('user_sns_links').update({ status: 'read', mentor_id: mentorId, added_count: total, note: null, updated_at: now() }).eq('id', link.id)
+    return grantBonus(db, a.userId, link.id, target, { platform: target.platform, added: posts.length, bonus: 0, alreadyGranted: false, status: 'read', message: SNS_READ_LINE })
 }

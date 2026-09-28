@@ -1,11 +1,12 @@
 // /api/os/sns-link = 내 SNS, 블로그 링크 연동 (대표 승인 0928 23:29)
 // GET  = 저장한 링크 목록과 보너스 받았는지
 // POST = { url, source } 링크 저장 + 읽을 수 있으면 공개 글을 읽어 내 봇 자료에 넣기.
-//        자료가 1건 이상 들어가면 클로버 50개를 계정당 한 번 (DB 함수가 중복을 막는다)
+//        자료가 1건 이상 들어가면 클로버 50개를 계정당 한 번, 같은 주소 한 계정 (DB 함수가 중복을 막는다)
+//        { action: 'paste', url, posts: string[] } = 네이버 블로그, 브런치 대표 글 붙여넣기 (자동 읽기 대신)
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { connectSnsLink } from '@/domains/os/sns-link'
+import { connectSnsLink, pasteSnsPosts } from '@/domains/os/sns-link'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -36,10 +37,15 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: '로그인이 필요해요' }, { status: 401 })
     const body = await req.json().catch(() => ({})) as Record<string, unknown>
     const source = body.source === 'onboarding' ? 'onboarding' : 'settings'
+    const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || '주인'
     try {
+        if (body.action === 'paste') {
+            const r = await pasteSnsPosts(createAdminClient(), { userId: user.id, displayName, url: body.url, posts: body.posts })
+            return NextResponse.json(r)
+        }
         const r = await connectSnsLink(createAdminClient(), {
             userId: user.id,
-            displayName: user.user_metadata?.full_name || user.email?.split('@')[0] || '주인',
+            displayName,
             url: body.url,
             source,
             deadline: started + READ_BUDGET_MS,

@@ -296,6 +296,13 @@ export const SNS_BONUS_CLOVERS = 50
 export const SNS_SUCCESS_LINE = `내 글로 봇이 배웠어요. 클로버 ${SNS_BONUS_CLOVERS}개를 드렸어요`
 export const SNS_READ_LINE = '내 글로 봇이 배웠어요'
 export const SNS_PENDING_LINE = '이 곳은 아직 읽을 수 없어 링크만 저장했어요 (준비 중)'
+/** 붙여넣기 한 편 최소 글자 (너무 짧은 글로 보너스를 받는 남용 방지)와 최대 편수 */
+export const SNS_PASTE_MIN_CHARS = 300
+export const SNS_PASTE_MAX_POSTS = 3
+export const SNS_PASTE_LINE = '네이버 블로그와 브런치는 대표 글 3편을 붙여넣어 주세요'
+/** 온보딩에서 네이버, 브런치 주소를 넣었을 때 (붙여넣기는 설정에서) */
+export const SNS_PASTE_LATER_LINE = '네이버 블로그와 브런치 글은 설정에서 붙여넣을 수 있어요'
+export const SNS_KEY_TAKEN_LINE = '내 글로 봇이 배웠어요. 이 주소는 다른 계정이 이미 보너스를 받았어요'
 export const SNS_HINT = `유튜브, 블로그 주소를 넣으면 봇이 내 글을 배우고 처음 한 번 클로버 ${SNS_BONUS_CLOVERS}개를 드려요`
 
 // 화면 쪽 저장 (첫 대화 칩과 예시 대화가 읽는다)

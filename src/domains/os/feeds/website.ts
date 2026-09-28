@@ -10,7 +10,7 @@ import { fetchPageSafely } from '@/domains/agent/fetch-url'
 import type { FetchNewItems, FeedItem, FetchOptions } from './types'
 import {
     FEED_MAX_BYTES, FEED_TIMEOUT_MS, parseSitemap, withScheme, looksLikeFeed, parseFeed, discoverFeedLinks, fetchFeed,
-    newerThan, newestFirst, pickCandidates, fillTextByReading, noteFor, type ParsedFeedEntry,
+    newerThan, newestFirst, pickCandidates, fillTextByReading, noteFor, isPasteOnlyHost, PASTE_ONLY_NOTE, type ParsedFeedEntry,
 } from './rss'
 
 /** 한 번에 새로 가져오는 주소 수 */
@@ -140,6 +140,7 @@ async function itemsFromFeedEntries(entries: ParsedFeedEntry[], since: Date | nu
 }
 
 export const fetchWebsiteItems: FetchNewItems = async (feed, since, opts = {}) => {
+    if (isPasteOnlyHost(feed.handleOrUrl)) throw new Error(PASTE_ONLY_NOTE)
     const site = siteOf(feed.handleOrUrl)
     const origin = site.origin
     const host = site.hostname.toLowerCase()

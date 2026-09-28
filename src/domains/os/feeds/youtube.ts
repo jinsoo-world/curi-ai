@@ -1,23 +1,21 @@
-// domains/os/feeds/youtube — 유튜브 채널을 붙이면 새 영상을 자료로 가져온다.
+// domains/os/feeds/youtube: 유튜브 채널을 붙이면 새 영상을 자료로 가져온다.
 //
-// 공식 공개 피드만 쓴다(열쇠 필요 없음):
-//   1. @핸들이나 채널 주소 → 채널 페이지를 안전하게 열어 채널 번호(UC…)를 찾는다
-//   2. https://www.youtube.com/feeds/videos.xml?channel_id=UC… (최근 영상 15개, Atom 모양)
-//   3. 새 영상마다 기존 읽기 함수(readUrl)로 자막을 읽는다(자막 읽기를 새로 만들지 않는다)
+// 대표 결정 0928 23:53 「약관 위험 제거」: 유튜브 robots.txt 가 막은 공개 피드(/feeds/videos.xml)와 채널 페이지 긁기는 쓰지 않는다.
+// 공식 YouTube Data API 만 쓴다(열쇠 YOUTUBE_API_KEY 가 있을 때만):
+//   1. @핸들, /user/이름, /c/이름 → channels.list(forHandle, forUsername, 1단위)로 채널 번호(UC…)
+//   2. 올린 영상 재생목록(UC → UU) playlistItems.list(1단위)로 최근 영상 15개
+//   3. 새 영상마다 기존 읽기 함수(readUrl)로 제목, 설명(videos.list), 되면 Gemini 정리
+// 열쇠가 없으면 목록 읽기는 조용히 건너뛴다(오류로 남기지 않음). 단일 영상 주소는 readers/youtube.ts 가 따로 읽는다.
 // 첫 연결에서는 최근 5개만 가져온다(봇 하나에 자료 10개 한도라 100개를 쏟아부으면 안 된다).
-//
-// ⚠️ 2026-09-23 실측: 공개 피드(videos.xml)가 채널을 가리지 않고 404, 500 을 냈다(유튜브 쪽 문제).
-//    그래서 한 번 더 시도하고, 그래도 안 되면 공식 YouTube Data API(열쇠 YOUTUBE_API_KEY 가 있을 때만)로 넘어간다.
-//    둘 다 안 되면 사람 말로 던진다(연결 줄에 오류로 남고, 다음 날 크론이 다시 해 본다).
 
 import { fetchPageSafely } from '@/domains/agent/fetch-url'
 import type { FetchNewItems, FeedItem } from './types'
-import { fetchFeed, newerThan, newestFirst, pickCandidates, fillTextByReading, noteFor } from './rss'
+import { newerThan, newestFirst, pickCandidates, fillTextByReading, noteFor } from './rss'
 
 /** 첫 연결 때 가져오는 최근 영상 수 */
 export const YOUTUBE_FIRST_SYNC_MAX = 5
-/** 채널 페이지는 1MB 를 넘는다 */
-const CHANNEL_PAGE_MAX_BYTES = 3 * 1024 * 1024
+/** 열쇠가 없을 때 연결 줄에 남기는 말 (오류 아님) */
+export const YOUTUBE_NO_KEY_NOTE = '유튜브 영상 목록 읽기는 준비 중이에요. 영상 주소를 하나씩 넣으면 읽을 수 있어요'
 
 const CHANNEL_ID = /UC[A-Za-z0-9_-]{22}/
 
@@ -68,20 +66,34 @@ export function extractChannelId(html: string): string | null {
     return null
 }
 
-export function channelFeedUrl(channelId: string): string {
-    return `https://www.youtube.com/feeds/videos.xml?channel_id=${encodeURIComponent(channelId)}`
+/** 공식 channels.list 응답 → 채널 번호. 없으면 null */
+export function parseChannelsList(json: string): string | null {
+    try {
+        const id = (JSON.parse(json) as { items?: { id?: string }[] }).items?.[0]?.id
+        return id && /^UC[A-Za-z0-9_-]{22}$/.test(id) ? id : null
+    } catch { return null }
 }
 
-/** 적은 것 → 채널 번호. 못 찾으면 사람 말로 던진다 */
-export async function findChannelId(handleOrUrl: string): Promise<string> {
+async function channelIdByApi(query: string, key: string): Promise<string | null> {
+    const page = await fetchPageSafely(`https://www.googleapis.com/youtube/v3/channels?part=id&${query}&key=${encodeURIComponent(key)}`, { maxBytes: 256 * 1024, timeoutMs: 10_000 })
+    return page.ok ? parseChannelsList(page.body) : null
+}
+
+/** 적은 것 → 채널 번호 (공식 API). 못 찾으면 사람 말로 던진다 */
+export async function findChannelId(handleOrUrl: string, key: string): Promise<string> {
     const r = resolveChannelInput(handleOrUrl)
     if (!r) throw new Error('유튜브 채널을 못 알아봤어요. @핸들이나 채널 주소를 넣어 주세요')
     if ('channelId' in r) return r.channelId
-    const page = await fetchPageSafely(r.pageUrl, { maxBytes: CHANNEL_PAGE_MAX_BYTES, timeoutMs: 10_000 })
-    if (!page.ok) throw new Error(`유튜브 채널 페이지를 못 열었어요(${page.reason})`)
-    const id = extractChannelId(page.body)
-    if (!id) throw new Error('유튜브 채널 번호를 못 찾았어요. 채널 주소를 다시 확인해 주세요')
-    return id
+    const path = decodeURI(new URL(r.pageUrl).pathname).replace(/^\//, '')
+    const name = path.replace(/^(@|c\/|user\/)/, '')
+    const tries = path.startsWith('user/')
+        ? [`forUsername=${encodeURIComponent(name)}`]
+        : [`forHandle=${encodeURIComponent('@' + name)}`, `forUsername=${encodeURIComponent(name)}`]
+    for (const q of tries) {
+        const id = await channelIdByApi(q, key)
+        if (id) return id
+    }
+    throw new Error('유튜브 채널 번호를 못 찾았어요. 채널 주소를 다시 확인해 주세요')
 }
 
 /** 공식 YouTube Data API 의 playlistItems 응답 → 영상 목록 (올린 영상 목록 = 채널 번호 UC 를 UU 로 바꾼 재생목록) */
@@ -103,26 +115,18 @@ async function listByDataApi(channelId: string, key: string): Promise<FeedItem[]
     return parsePlaylistItems(page.body)
 }
 
-/** 채널의 최근 영상 목록. 공개 피드 → (한 번 더) → 공식 API 순서 */
-async function listRecentVideos(channelId: string): Promise<FeedItem[]> {
-    let why = ''
-    for (let attempt = 0; attempt < 2; attempt++) {
-        const f = await fetchFeed(channelFeedUrl(channelId))
-        if (f && 'entries' in f) return f.entries.map(e => ({ title: e.title, url: e.url, publishedAt: e.publishedAt }))
-        why = f && 'error' in f ? f.error : '모양이 이상해요'
-    }
-    const key = process.env.YOUTUBE_API_KEY
-    if (key) {
-        const r = await listByDataApi(channelId, key)
-        if (typeof r !== 'string') return r
-        why = r
-    }
-    throw new Error(`유튜브 새 영상 목록을 지금 못 열었어요(${why}). 유튜브 쪽 문제일 수 있어요. 내일 다시 해 볼게요`)
+/** 채널의 최근 영상 목록 (공식 API 만) */
+async function listRecentVideos(channelId: string, key: string): Promise<FeedItem[]> {
+    const r = await listByDataApi(channelId, key)
+    if (typeof r !== 'string') return r
+    throw new Error(`유튜브 새 영상 목록을 지금 못 열었어요(${r}). 내일 다시 해 볼게요`)
 }
 
 export const fetchYoutubeItems: FetchNewItems = async (feed, since, opts = {}) => {
-    const channelId = await findChannelId(feed.handleOrUrl)
-    const all: FeedItem[] = newestFirst(await listRecentVideos(channelId))
+    const key = process.env.YOUTUBE_API_KEY
+    if (!key) return { items: [], note: YOUTUBE_NO_KEY_NOTE }
+    const channelId = await findChannelId(feed.handleOrUrl, key)
+    const all: FeedItem[] = newestFirst(await listRecentVideos(channelId, key))
     const fresh = newerThan(all, since)
     const cands = pickCandidates(fresh, opts, since ? Infinity : YOUTUBE_FIRST_SYNC_MAX)
     if (cands.length === 0) return { items: [] }
