@@ -10,8 +10,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateEmbedding, matchKnowledge } from '@/domains/knowledge'
 import { correctiveRetrieve } from '@/domains/knowledge/corrective'
-import { askSolar } from '@/domains/agent/ask'
-import { SOLAR_MINI_MODEL } from '@/domains/llm/constants'
+import { askQuickWithFallback } from '@/domains/agent/ask'
 import { STRICT_MIN_SIMILARITY } from '@/domains/os/response-settings'
 
 export const dynamic = 'force-dynamic'
@@ -70,7 +69,7 @@ export async function POST() {
             const original = await matchKnowledge(db, emb, c.mentorId, 0.7, 5, c.question)
             const started = Date.now()
             const out = await correctiveRetrieve({
-                rewrite: (sys, u) => askSolar(sys, u, { model: SOLAR_MINI_MODEL, temperature: 0, maxTokens: 60, signal: AbortSignal.timeout(3_000), usage: { route, kind: 'rewrite', mentorId: c.mentorId } }),
+                rewrite: (sys, u) => askQuickWithFallback(sys, u, { timeoutMs: 3_000, maxTokens: 60, usage: { route, kind: 'rewrite', mentorId: c.mentorId } }),
                 embed: t => generateEmbedding(t, { route, mentorId: c.mentorId }),
                 search: (e, t) => matchKnowledge(db, e, c.mentorId, 0.7, 5, t),
             }, { question: c.question, history: c.history ?? [], original, minSim: STRICT_MIN_SIMILARITY, enabled: true })

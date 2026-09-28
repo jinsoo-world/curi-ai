@@ -25,9 +25,9 @@ import { applySkills, skillsForMentor } from '@/domains/os/skills'
 import { loadResponseSettingsForChat, applyResponseSettingsToPrompt, shouldAnswerFromKnowledge, STRICT_MIN_SIMILARITY } from '@/domains/os/response-settings'
 import { semanticCacheEnabled, cacheEligibility, cacheScopeKey, botVersion, knowledgeVersion, lookupCachedAnswer, storeCachedAnswer, isStorableAnswer, cachedAnswerStream } from '@/domains/chat/semantic-cache'
 import { logLlmUsage, keepAliveAfterResponse } from '@/domains/llm/usage-log'
-import { SOLAR_CHAT_MODEL, SOLAR_MINI_MODEL } from '@/domains/llm/constants'
+import { SOLAR_CHAT_MODEL } from '@/domains/llm/constants'
 import { correctiveRetrieve } from '@/domains/knowledge/corrective'
-import { askSolar } from '@/domains/agent/ask'
+import { askQuickWithFallback } from '@/domains/agent/ask'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -404,8 +404,8 @@ export async function POST(req: Request) {
                 //    평소처럼 잘 찾은 질문은 아무 일도 안 한다. 3초 안에 못 쓰면 포기하고 원래 결과 그대로.
                 const 교정문턱 = (() => { const v = Number(process.env.CORRECTIVE_RAG_MIN_SIM); return Number.isFinite(v) && v > 0 && v < 1 ? v : STRICT_MIN_SIMILARITY })()
                 const 교정 = await correctiveRetrieve({
-                    rewrite: (sys, u) => askSolar(sys, u, {
-                        model: SOLAR_MINI_MODEL, temperature: 0, maxTokens: 60, signal: AbortSignal.timeout(3_000),
+                    rewrite: (sys, u) => askQuickWithFallback(sys, u, {
+                        timeoutMs: 3_000, maxTokens: 60,
                         usage: { route: '/api/chat', kind: 'rewrite', userId: user?.id ?? null, mentorId },
                     }),
                     embed: t => generateEmbedding(t, { route: '/api/chat', userId: user?.id ?? null, mentorId }),
