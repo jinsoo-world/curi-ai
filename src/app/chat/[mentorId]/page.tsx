@@ -7,6 +7,8 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import nextDynamic from 'next/dynamic'
 import { MentorHeader, ChatMessages, ChatInput, SuggestionCards } from './components'
 import FirstBotShareCard from '@/components/chat/FirstBotShareCard'
+import GuestSignupCard from '@/components/chat/GuestSignupCard'
+import { shouldShowGuestSignupCard } from '@/domains/share/guestSignup'
 import { MAX_DAILY_FREE_GUEST } from '@/domains/chat/constants'
 import type { ChatMessage } from './components'
 
@@ -159,6 +161,8 @@ export default function ChatPage() {
     const [voiceCallOpen, setVoiceCallOpen] = useState(false)
     const [isLoggedIn, setIsLoggedIn] = useState(false)
     const [showLoginGate, setShowLoginGate] = useState(false)
+    /** 이 화면에서 손님이 보낸 수 — 3번째부터 가입 카드 */
+    const [guestSentHere, setGuestSentHere] = useState(0)
     /** 로그인 안내를 띄운 이유 — 'limit'=체험 소진, 'photo'=사진 첨부 */
     const [loginGateReason, setLoginGateReason] = useState<'limit' | 'photo'>('limit')
     const [showVoiceSample, setShowVoiceSample] = useState(false)
@@ -583,6 +587,7 @@ export default function ChatPage() {
             // 비로그인 사용자: localStorage 카운트 증가 + 대화 저장
             if (isGuest) {
                 incrementGuestMessageCount()
+                setGuestSentHere(n => n + 1)
                 // 게스트 메시지를 localStorage에 저장 (로그인 시 이관용)
                 const allMsgs = fullContent
                     ? [...baseMessages, { id: assistantId, role: 'assistant' as const, content: fullContent, createdAt: new Date().toISOString() }]
@@ -1030,6 +1035,9 @@ export default function ChatPage() {
                             exportLabel="전자책 원고 보기"
                             themeColor={themeColor}
                         />
+                        {!isStreaming && shouldShowGuestSignupCard({ isGuest: !isLoggedIn, sentCount: guestSentHere, limit: MAX_DAILY_FREE_GUEST }) && (
+                            <GuestSignupCard botName={mentor?.name} />
+                        )}
 
 
 
@@ -1372,6 +1380,9 @@ export default function ChatPage() {
                             animation: 'shareModalIn 0.25s ease',
                             boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
                         }}>
+                            {loginGateReason === 'limit' ? (
+                                <GuestSignupCard botName={mentor?.name} variant="modal" />
+                            ) : (<>
                             {/* 아이콘 */}
                             <div style={{ fontSize: 48, marginBottom: 16 }}>{loginGateReason === 'photo' ? '📷' : '🔒'}</div>
                             <h3 style={{
@@ -1397,7 +1408,7 @@ export default function ChatPage() {
                             {/* 구글 로그인 버튼 */}
                             <button
                                 onClick={() => {
-                                    window.location.href = '/login'
+                                    window.location.href = `/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`
                                 }}
                                 style={{
                                     width: '100%',
@@ -1424,6 +1435,7 @@ export default function ChatPage() {
                             >
                                 🚀 무료 회원가입하기
                             </button>
+                            </>)}
                         </div>
                     </>
                 )}

@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { readHomeDraft } from '@/domains/home/draft-store'
 import { useRouter } from 'next/navigation'
+import { safeNextPath } from '@/lib/safe-next'
 import BotAvatar from '@/components/os/BotAvatar'
 import { JOBS } from '@/domains/os/presets'
 import {
@@ -191,7 +192,9 @@ export default function StartBody() {
         // /home 에서 주소를 넣고 온 사람은 그 주소로 만드는 초안이 먼저 (OsShell 이 /os 에서 초안 창을 연다)
         let homeDraft = false
         try { homeDraft = !!readHomeDraft(window.localStorage) } catch { /* 저장이 막힌 브라우저 */ }
-        router.replace(homeDraft ? '/os' : mentorId ? `/os/chat/${mentorId}` : '/os')
+        // 공유 링크로 가입한 분은 원래 보던 봇 대화로 (?next=, ref 포함)
+        const back = safeNextPath(new URLSearchParams(window.location.search).get('next'))
+        router.replace(homeDraft ? '/os' : back ?? (mentorId ? `/os/chat/${mentorId}` : '/os'))
     }, [a.use_cases, save, router])
 
     const set = <K extends keyof Answers>(k: K, v: Answers[K]) => setA(p => ({ ...p, [k]: v }))

@@ -19,6 +19,7 @@ import BotMarkdown from './BotMarkdown'
 import { CloseIcon, swipeToClose } from './MenuIcon'
 import { PeopleIcon, InfoIcon } from './Icons'
 import FirstTaskChips from './FirstTaskChips'
+import TwinStartCard from './TwinStartCard'
 import { useSurveyHelp, markFirstSent } from './useSurveyHelp'
 import { FIRST_HELP_CHIPS, SAMPLE_EXCHANGE } from '@/domains/os/onboarding'
 import './first-sample.css'
@@ -173,7 +174,7 @@ function initialChatState(mentorId: string, freshStart: boolean): {
 }
 
 export default function OsChat({ mentorId, freshStart = false }: { mentorId: string; freshStart?: boolean }) {
-    const { team, loading, guest, openNewGroup, openEditBot, setBotPresence, toggleNav, navOpen } = useOsTeam()
+    const { team, loading, guest, openNewBot, openNewGroup, openEditBot, setBotPresence, toggleNav, navOpen } = useOsTeam()
     const router = useRouter()
     const bot = useMemo(() => team.find(b => b.mentorId === mentorId) ?? null, [team, mentorId])
     const [publicBot, setPublicBot] = useState<PublicBot | null>(null)
@@ -829,6 +830,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                     <MsgMetaProvider>
                     {/* 첫 봇 만든 분께 한 번만: 내 봇 링크 공유 안내 */}
                     {!guest && bot && !bot.id.startsWith('demo-') && <FirstBotShareCard botId={mentorId} botName={name} />}
+                    {!guest && bot && <TwinStartCard guest={guest} demo={bot.id.startsWith('demo-')} onOpen={() => openNewBot('link')} />}
                     {!historyReady && messages.length === 0 && (
                         <div className="os-chat-pending" aria-busy="true" aria-label="대화 불러오는 중">
                             <div className="os-chat-pending-bar" />

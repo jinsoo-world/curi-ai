@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { SIGNUP_CLOVERS } from '@/domains/trial'
 import { safeNextPath } from '@/lib/safe-next'
+import { onboardingPathWithNext } from '@/domains/share/guestSignup'
 import { cookies } from 'next/headers'
 import { TERMS_COOKIE, parseTermsCookie } from '@/domains/os/onboarding'
 import { ensureOnboardingRow, attributeReferral } from '@/domains/os/onboarding-server'
@@ -95,7 +96,7 @@ export async function GET(request: Request) {
                 } catch (온보딩오류) {
                     console.error('[Auth Callback] 온보딩 준비 실패:', 온보딩오류)
                 }
-                const landing = goOnboarding ? ONBOARDING_PATH : next
+                const landing = goOnboarding ? onboardingPathWithNext(ONBOARDING_PATH, next) : next
 
                 // 기존 프로필 확인
                 const { data: profile, error: profileError } = await db

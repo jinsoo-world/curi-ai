@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getPublicMentorById, MENTOR_IMAGES } from '@/domains/mentor'
 import { getLinkCounts, isInMyTeam } from '@/domains/os/team-link'
+import { botPageMetadata } from '@/domains/share/botMetadata'
 import MarketTeamActions from './MarketTeamActions'
 
 export const dynamic = 'force-dynamic'
@@ -27,9 +28,9 @@ type Mentor = {
 
 export async function generateMetadata({ params }: { params: Promise<{ mentorId: string }> }): Promise<Metadata> {
     const { mentorId } = await params
-    const m = (await getPublicMentorById(mentorId)) as Mentor | null
+    const m = await getPublicMentorById(mentorId)
     if (!m) return { title: '봇을 찾을 수 없어요' }
-    return { title: `${m.name} | 큐리AI`, description: m.title || m.description || `${m.name} 봇과 대화해 보세요` }
+    return botPageMetadata(mentorId, `/os/market/${mentorId}`)
 }
 
 export default async function OsMarketIntroPage({

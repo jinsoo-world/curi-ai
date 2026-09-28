@@ -21,6 +21,7 @@ import { collapseRoster, readRosterExpanded, toggleLabel, writeRosterExpanded } 
 import { applyFontSize, readFontSize } from '@/domains/os/settings'
 import BotAvatar from './BotAvatar'
 import NewBotSheet from './NewBotSheet'
+import { TWIN_DRAFT_COPY } from '@/domains/os/twin-draft-shared'
 import GuestRoster from './GuestRoster'
 import NewGroupSheet from './NewGroupSheet'
 import UsageBar from './UsageBar'
@@ -42,7 +43,8 @@ interface TeamState {
     guest: boolean
     tableMissing: boolean
     refresh: () => Promise<void>
-    openNewBot: () => void
+    /** 'link' = 「내 링크로 만들기」 칸으로 연다 */
+    openNewBot: (tab?: 'link') => void
     /** 그룹 채팅 (표가 아직 없으면 빈 목록) */
     channels: ChannelView[]
     refreshChannels: () => Promise<void>
@@ -91,6 +93,17 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     const [guest, setGuest] = useState(false)
     const [tableMissing, setTableMissing] = useState(false)
     const [sheet, setSheet] = useState(false)
+    const [sheetTab, setSheetTab] = useState<'link' | null>(null)
+    // 만들기 창은 따로 손대지 않고, 열린 뒤 「내 링크로 만들기」 칸 단추를 대신 눌러 준다
+    useEffect(() => {
+        if (!sheet || sheetTab !== 'link') return
+        const id = requestAnimationFrame(() => {
+            const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('button[role="tab"]'))
+            tabs.find(b => b.textContent?.trim() === TWIN_DRAFT_COPY.tab)?.click()
+            setSheetTab(null)
+        })
+        return () => cancelAnimationFrame(id)
+    }, [sheet, sheetTab])
     const [editBot, setEditBot] = useState<TeamBot | null>(null)
     const [unreadIds, setUnreadIds] = useState<string[]>([])
     const [callingIds, setCallingIds] = useState<string[]>([])
@@ -341,7 +354,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     const toggleNav = useCallback(() => setNavOpen(v => !v), [])
 
     const value = useMemo<TeamState>(() => ({
-        team, loading, guest, tableMissing, refresh, openNewBot: () => setSheet(true),
+        team, loading, guest, tableMissing, refresh, openNewBot: (tab?: 'link') => { setSheetTab(tab ?? null); setSheet(true) },
         channels, refreshChannels, openNewGroup: () => setGroupSheet(true),
         openEditBot, setBotPresence,
         navOpen, openNav, closeNav, toggleNav,
