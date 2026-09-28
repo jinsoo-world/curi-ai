@@ -2,6 +2,7 @@
 // 봇과 대화 (가운데 열) + 오른쪽 세부칸. 기존 /api/chat 을 그대로 쓴다 (스트림 모양 동일).
 // 캐릭터 상태: 입력 중 listening → 보내면 thinking → 첫 글자 오면 talking → 끝나면 idle. 둘 다 죽으면 error.
 
+import FirstBotShareCard from '@/components/chat/FirstBotShareCard'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
@@ -826,6 +827,8 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
 
                 <div className="os-messages">
                     <MsgMetaProvider>
+                    {/* 첫 봇 만든 분께 한 번만: 내 봇 링크 공유 안내 */}
+                    {!guest && bot && !bot.id.startsWith('demo-') && <FirstBotShareCard botId={mentorId} botName={name} />}
                     {!historyReady && messages.length === 0 && (
                         <div className="os-chat-pending" aria-busy="true" aria-label="대화 불러오는 중">
                             <div className="os-chat-pending-bar" />
