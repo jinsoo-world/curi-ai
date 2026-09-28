@@ -1,6 +1,7 @@
 'use client'
 // /home 위 메뉴: 로고(/home), 가격 안내, 내 봇 팀, 더보기 (봇 마켓, 사진 도구, 도움말, 로그인 또는 내 정보)
 // 친구 초대는 추천 보상이 정해질 때까지(D2) 메뉴에서 뺐다. /invite 화면 자체는 남아 있다
+// 모양은 큐리어스 본체 헤더(모바일 52px, 넓은 화면 64px). 큐리AI 글자는 좁은 화면에서도 보이고 브랜드 초록 (home.css)
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -31,7 +32,7 @@ export default function HomeTopBar() {
         <header className="hm-top">
             <div className="hm-top-in">
                 <Link href="/home" className="hm-logo" aria-label="큐리AI 홈">
-                    <Image src="/icons/curi-192.png" alt="" width={30} height={30} style={{ borderRadius: 9 }} />
+                    <Image src="/icons/curi-192.png" alt="" width={30} height={30} style={{ borderRadius: 8 }} />
                     <span>큐리AI</span>
                 </Link>
                 <nav className="hm-nav" aria-label="메뉴">

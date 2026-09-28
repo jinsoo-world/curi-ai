@@ -1,6 +1,7 @@
 // /home 첫 화면 (대표 지시 0928 23:53). 첫 주소(/)가 여기로 온다. 로그인 뒤 첫 화면은 그대로 /os.
 // 광고 칸 없음. 활동 줄과 누적 숫자는 실제 기록만, 기준보다 적으면 숨긴다.
 // 예시 데이터는 NEXT_PUBLIC_HOME_FEED_DUMMY 를 켰을 때만. 그때는 「예시 데이터」 표시가 항상 붙는다.
+// 모양은 큐리어스 본체(curious-500.com) 디자인 토대를 따른다 (home.css). 넓은 화면에서 활동 칸은 오른쪽.
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
@@ -55,26 +56,32 @@ export default async function HomePage() {
         <div className="hm">
             <HomeTopBar />
             <main className="hm-main">
-                <HomeMake />
+                <div className={`hm-hero ${feed.length > 0 || statsLine ? '' : 'solo'}`}>
+                    <HomeMake />
 
-                {feed.length > 0 && (
-                    <section className="hm-feed" aria-label={c.feedTitle}>
-                        <div className="hm-feed-head">
-                            <span className="hm-feed-title">{c.feedTitle}</span>
-                            {dummy ? <span className="hm-dummy">{HOME_DUMMY_LABEL}</span> : <span className="hm-feed-note">{c.feedNote}</span>}
-                        </div>
-                        <ul className="hm-feed-list">
-                            {feed.map(f => <li key={f.key}>{f.text} ({f.ago})</li>)}
-                        </ul>
-                    </section>
-                )}
+                    {(feed.length > 0 || statsLine) && (
+                        <aside className="hm-side">
+                            {feed.length > 0 && (
+                                <section className="hm-feed" aria-label={c.feedTitle}>
+                                    <div className="hm-feed-head">
+                                        <span className="hm-feed-title">{c.feedTitle}</span>
+                                        {dummy ? <span className="hm-dummy">{HOME_DUMMY_LABEL}</span> : <span className="hm-feed-note">{c.feedNote}</span>}
+                                    </div>
+                                    <ul className="hm-feed-list">
+                                        {feed.map(f => <li key={f.key}>{f.text} <span className="hm-ago">({f.ago})</span></li>)}
+                                    </ul>
+                                </section>
+                            )}
 
-                {statsLine && (
-                    <p className="hm-stats">
-                        {statsLine}
-                        {dummy && <span className="hm-dummy">{HOME_DUMMY_LABEL}</span>}
-                    </p>
-                )}
+                            {statsLine && (
+                                <p className="hm-stats">
+                                    {statsLine}
+                                    {dummy && <span className="hm-dummy">{HOME_DUMMY_LABEL}</span>}
+                                </p>
+                            )}
+                        </aside>
+                    )}
+                </div>
 
                 <section className="hm-sec">
                     <h2>{c.stepsTitle}</h2>
