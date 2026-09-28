@@ -85,10 +85,10 @@ describe('os/usage: 원형 게이지와 사용량 모달 글자', () => {
         expect(ringLabel(12)).toBe('사용 한도 12%, 누르면 자세히')
     })
 
-    it('모달 첫 줄은 남은 횟수', () => {
+    it('모달 첫 줄은 퍼센트 (횟수는 안 보임)', () => {
         const d = usageDetail(v, now)
-        expect(d.remainingText).toBe('이번 달 남은 18번')
-        expect(remainingText({ remaining: 1250 })).toBe('이번 달 남은 1,250번')
+        expect(d.remainingText).toBe('이번 달 사용량 40%')
+        expect(remainingText({ pct: 0 })).toBe('이번 달 사용량 0%')
         expect(d.pctText).toBe('40%')
         expect(d.resetText).toBe('10월 1일 0시에 초기화')
         expect(d.blockedText).toBeNull()

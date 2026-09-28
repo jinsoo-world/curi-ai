@@ -5,7 +5,7 @@
 // 이번에 옮긴 범위 = 설정 화면, /os/welcome, 사용량 모달, 알림 설정. 다른 화면은 여기 키만 더하면 된다.
 // 브라우저(localStorage, navigator)는 여기서 직접 만지지 않는다. 화면이 넘겨 준다.
 
-import { kstDayHourText, untilText, usageDetail, withComma, type UsageDetail, type UsageLike } from '@/domains/os/usage'
+import { kstDayHourText, untilText, usageDetail, type UsageDetail, type UsageLike } from '@/domains/os/usage'
 import type { PlanId } from '@/domains/os/plan'
 
 export const LOCALES = ['ko', 'en', 'ja'] as const
@@ -83,7 +83,8 @@ const ko = {
     'usage.week': '이번 달',
     'usage.weekLine': '월간 사용량 {pct}%',
     'usage.weekReset': '매달 1일 0시에 다시 채워져요',
-    'usage.remaining': '이번 달 남은 {n}번',
+    'usage.remaining': '이번 달 사용량 {n}%',
+    'usage.caption': '이번 달 {n}% 사용',
     'usage.guest': '로그인하면 사용량이 보여요.',
     'usage.fail': '사용량을 못 읽었어요. 잠시 뒤 다시 열어 주세요.',
     'usage.loading': '사용량을 읽는 중…',
@@ -109,7 +110,7 @@ const ko = {
     'clover.label': '클로버',
     'clover.balance': '지금 가진 클로버 {n}개',
     'clover.counting': '지금 가진 클로버를 세고 있어요',
-    'clover.sub': '대화는 월간 사용 한도로 세요. 클로버는 사진, 도구 같은 곳에 써요.',
+    'clover.sub': '이번 달 사용량을 다 쓰면 클로버로 이어 써요.',
     'clover.charge': '클로버 충전하기',
 
     // ── 설정: 앱 ──
@@ -243,7 +244,8 @@ const en: Record<TKey, string> = {
     'usage.week': 'This month',
     'usage.weekLine': 'Monthly usage {pct}%',
     'usage.weekReset': 'Refills on the 1st of each month at 0:00 (Korea time)',
-    'usage.remaining': '{n} left this month',
+    'usage.remaining': 'Used this month: {n}%',
+    'usage.caption': '{n}% used this month',
     'usage.guest': 'Sign in to see your usage.',
     'usage.fail': "Couldn't load usage. Please try again soon.",
     'usage.loading': 'Loading usage…',
@@ -269,7 +271,7 @@ const en: Record<TKey, string> = {
     'clover.label': 'Clovers',
     'clover.balance': 'You have {n} clovers',
     'clover.counting': 'Counting your clovers…',
-    'clover.sub': 'Chat uses your monthly usage limit. Clovers are for things like photos and tools.',
+    'clover.sub': 'When this month\'s usage runs out, you can keep going with clovers.',
     'clover.charge': 'Get clovers',
 
     'app.install': 'Install as app',
@@ -397,7 +399,8 @@ const ja: Record<TKey, string> = {
     'usage.week': '今月',
     'usage.weekLine': '月間利用量 {pct}%',
     'usage.weekReset': '毎月1日0時にリセットされます(韓国時間)',
-    'usage.remaining': '今月の残り{n}回',
+    'usage.remaining': '今月の使用量 {n}%',
+    'usage.caption': '今月{n}%使用',
     'usage.guest': 'ログインすると利用量が表示されます。',
     'usage.fail': '利用量を読み込めませんでした。しばらくしてからもう一度お開きください。',
     'usage.loading': '利用量を読み込み中…',
@@ -423,7 +426,7 @@ const ja: Record<TKey, string> = {
     'clover.label': 'クローバー',
     'clover.balance': '現在のクローバー {n}個',
     'clover.counting': 'クローバーを数えています…',
-    'clover.sub': '会話は月間利用上限で数えます。クローバーは写真やツールなどに使います。',
+    'clover.sub': '今月の使用量を使い切ったら、クローバーで続けられます。',
     'clover.charge': 'クローバーをチャージ',
 
     'app.install': 'アプリとして使う',
@@ -575,7 +578,7 @@ export function usageDetailL(locale: Locale, v: UsageLike, now: Date): UsageDeta
     const resetAt = v.resetAt instanceof Date ? v.resetAt : new Date(v.resetAt)
     const kst = new Date(resetAt.getTime() + KST_OFFSET_MS)
     const mo = kst.getUTCMonth() + 1, day = kst.getUTCDate(), hour = kst.getUTCHours()
-    const remainingText = t(locale, 'usage.remaining', { n: withComma(v.remaining) })
+    const remainingText = t(locale, 'usage.remaining', { n: v.pct })
     if (locale === 'ja') {
         return {
             remainingText,

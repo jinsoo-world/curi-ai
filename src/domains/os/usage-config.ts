@@ -65,8 +65,8 @@ export function overageStep(a: { blocked: boolean; cloverOk?: unknown }, enabled
 }
 
 export const OVERAGE_COPY = {
-    /** 한도 소진 순간 한 번 묻는 창. {n} = 답변 1회 클로버 */
-    confirm: `이번 달 답변을 모두 쓰셨어요. 이어서 쓰시면 답변 1회에 클로버 {n}개가 쓰여요(사진을 붙이면 ${CLOVER_COST.photoAnswer}개).`,
+    /** 한도 소진 순간 한 번 묻는 창 (횟수, 개수 안 보임) */
+    confirm: '이번 달 사용량을 모두 쓰셨어요. 이어서 쓰시면 클로버가 쓰여요.',
     continueBtn: '클로버로 이어 쓰기',
     waitBtn: '다음 달까지 기다리기',
     /** 설정 한 줄 (기본 꺼짐) */
@@ -80,10 +80,10 @@ export function cloverBalanceNote(): string {
     return CLOVER_OVERAGE_ENABLED ? '이번 달 한도 안에서는 클로버를 쓰지 않아요' : '대화는 클로버를 쓰지 않아요'
 }
 
-/** 충전 묶음 옆 답변 횟수 「(텍스트 답변 약 400회)」. 스위치가 꺼져 있으면 빈 값. 클로버 1개당 원화는 쓰지 않는다 */
+/** 충전 묶음 옆 답변 횟수는 보이지 않는다 (대표 지시 0929 00:13, 횟수 표기 금지). 늘 빈 값 */
 export function packAnswerHint(clovers: number): string {
-    if (!CLOVER_OVERAGE_ENABLED) return ''
-    return `(텍스트 답변 약 ${Math.floor(clovers / CLOVER_COST.text).toLocaleString('ko-KR')}회)`
+    void clovers
+    return ''
 }
 
 /** 「묻지 않고 이어 쓰기」 저장 열쇠 (브라우저) */
@@ -94,14 +94,17 @@ export function readCloverAuto(store: Pick<Storage, 'getItem'> | null | undefine
     try { return store.getItem(CLOVER_AUTO_KEY) === '1' } catch { return false }
 }
 
-/** 화면 문구. {n} 은 숫자로 바뀐다. 빈 문자열이면 그 줄은 안 보인다 */
+/** 화면 문구. {n} 은 퍼센트로 바뀐다. 빈 문자열이면 그 줄은 안 보인다.
+ *  대표 지시 0929 00:13: 고객 화면에 남은 횟수를 보여 주지 않는다. 퍼센트와 원형만. */
 export const USAGE_COPY = {
-    /** 원형 옆, 모달 첫 줄 */
-    remaining: '이번 달 남은 {n}번',
+    /** 사용량 창 첫 줄, 설정 */
+    remaining: '이번 달 사용량 {n}%',
+    /** 왼쪽 아래 원형 옆 */
+    caption: '이번 달 {n}% 사용',
     /** 80% 알림 카드 */
-    warnCard: '이번 달 한도가 {n}번 남았어요',
+    warnCard: '이번 달 사용량이 {n}%예요',
     /** 한도 도달 카드 */
-    limitCard: '이번 달 한도를 다 썼어요',
+    limitCard: '이번 달 사용량을 모두 쓰셨어요',
     /** 두 카드 공통 단추 */
     cardButton: '요금제 보기',
 }

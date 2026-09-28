@@ -10,11 +10,11 @@ describe('usage-config: 클로버 이어 쓰기 스위치 (대표 승인 0928 23
         expect(CLOVER_OVERAGE_ENABLED).toBe(true)
         expect(chatCloverCost()).toBe(5)
         expect(chatCloverCost({ photo: true })).toBe(15)
-        expect(packAnswerHint(2000)).toBe('(텍스트 답변 약 400회)')
+        expect(packAnswerHint(2000)).toBe('')           // 횟수 표기 금지 (대표 지시 0929)
         expect(cloverBalanceNote()).toBe('이번 달 한도 안에서는 클로버를 쓰지 않아요')
         expect(readCloverAuto({ getItem: () => '1' })).toBe(true)
         expect(readCloverAuto({ getItem: () => null })).toBe(false)
-        expect(fillCopy(OVERAGE_COPY.confirm, chatCloverCost())).toBe('이번 달 답변을 모두 쓰셨어요. 이어서 쓰시면 답변 1회에 클로버 5개가 쓰여요(사진을 붙이면 15개).')
+        expect(OVERAGE_COPY.confirm).toBe('이번 달 사용량을 모두 쓰셨어요. 이어서 쓰시면 클로버가 쓰여요.')
     })
 
     it('순서: 월 한도를 먼저 쓰고, 다 쓴 뒤에만 클로버', () => {
@@ -39,8 +39,11 @@ describe('usage-config: 클로버 이어 쓰기 스위치 (대표 승인 0928 23
 
 describe('usage-config: 문구', () => {
     it('구멍 채우기', () => {
-        expect(fillCopy(USAGE_COPY.remaining, 1250)).toBe('이번 달 남은 1,250번')
-        expect(fillCopy(USAGE_COPY.warnCard, 6)).toBe('이번 달 한도가 6번 남았어요')
+        expect(fillCopy(USAGE_COPY.remaining, 0)).toBe('이번 달 사용량 0%')
+        expect(fillCopy(USAGE_COPY.caption, 0)).toBe('이번 달 0% 사용')
+        // 고객 화면 문구에 횟수 표기가 없다
+        for (const v of [...Object.values(USAGE_COPY), OVERAGE_COPY.confirm]) expect(v).not.toMatch(/\{n\}번|\d+번|회\)|남은/)
+        expect(fillCopy(USAGE_COPY.warnCard, 82)).toBe('이번 달 사용량이 82%예요')
     })
     it('청약철회 안내와 필수 확인이 들어 있다. 가운데점, 긴 대시 없음', () => {
         for (const v of [REFUND_NOTICE.plan, REFUND_NOTICE.clover, REFUND_NOTICE.agree, ...Object.values(USAGE_COPY)]) {

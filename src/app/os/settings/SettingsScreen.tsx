@@ -342,7 +342,7 @@ function UsageTab() {
                         <section className="os-usage-sec os-usage-5h" aria-label={t('usage.week')}>
                             <RingSvg pct={usage.data.pct} size={96} stroke={9} />
                             <div className="os-usage-5h-text">
-                                <div className="os-usage-label">{d.remainingText}</div>
+                                <div className="os-usage-label">{t('usage.week')}</div>
                                 <b>{t('usage.weekLine', { pct: usage.data.pct })}</b>
                                 <div className="os-usage-sub">{t('usage.weekReset')}</div>
                             </div>

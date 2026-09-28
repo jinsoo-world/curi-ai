@@ -7,9 +7,9 @@ import { usePathname } from 'next/navigation'
 import { USAGE_COPY, fillCopy } from '@/domains/os/usage-config'
 import './usage.css'
 
-export default function UsageLimitCard({ kind, remaining }: { kind: 'warn' | 'limit'; remaining: number }) {
+export default function UsageLimitCard({ kind, pct }: { kind: 'warn' | 'limit'; pct: number }) {
     const pathname = usePathname() || '/os'
-    const text = kind === 'limit' ? USAGE_COPY.limitCard : fillCopy(USAGE_COPY.warnCard, remaining)
+    const text = kind === 'limit' ? USAGE_COPY.limitCard : fillCopy(USAGE_COPY.warnCard, pct)
     if (!text) return null
     return (
         <div className={`os-usage-card ${kind}`} role={kind === 'limit' ? 'alert' : 'status'}>

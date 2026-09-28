@@ -104,10 +104,10 @@ describe('사용량 글자 (언어별)', () => {
         expect(dayHourTextL('ja', mon)).toBe('(月) 0時')
     })
 
-    it('남은 횟수, 퍼센트, 초기화 날', () => {
-        expect(usageDetailL('ko', view, now).remainingText).toBe('이번 달 남은 333번')
-        expect(usageDetailL('en', view, now).remainingText).toBe('333 left this month')
-        expect(usageDetailL('ja', view, now).remainingText).toBe('今月の残り333回')
+    it('퍼센트, 초기화 날 (횟수 안 보임)', () => {
+        expect(usageDetailL('ko', view, now).remainingText).toBe('이번 달 사용량 10%')
+        expect(usageDetailL('en', view, now).remainingText).toBe('Used this month: 10%')
+        expect(usageDetailL('ja', view, now).remainingText).toBe('今月の使用量 10%')
         expect(usageDetailL('en', view, now).pctText).toBe('10%')
         expect(usageDetailL('en', view, now).resetText).toBe('Resets 10/1 0:00 (Korea time)')
         expect(usageDetailL('ja', view, now).resetText).toBe('10月1日0時にリセット')

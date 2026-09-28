@@ -16,7 +16,7 @@ import { resolveReturnPath, chargeReturnUrls, OS_RETURN_KEY } from '@/domains/cr
 import { CLOVER_PACKS } from '@/domains/credit/packs'
 import { startCloverCharge } from '@/domains/credit/charge-client'
 import { PLANS, isPaidPlanId, type PlanId } from '@/domains/os/plan'
-import { PLAN_REASON, REFUND_NOTICE, cloverBalanceNote, packAnswerHint } from '@/domains/os/usage-config'
+import { PLAN_REASON, REFUND_NOTICE, cloverBalanceNote } from '@/domains/os/usage-config'
 import { startPlanPayment, planReturnUrls, fetchMyPlan } from './plan-client'
 import { useOsTeam } from '@/components/os/OsShell'
 import CloverIcon from '@/components/ui/CloverIcon'
@@ -185,7 +185,7 @@ export default function OsChargePage() {
                                         aria-pressed={selectedPack === p.id}
                                         onClick={() => setSelectedPack(p.id)}
                                     >
-                                        <span className="osc-pack-left"><CloverIcon size={30} /><span className="osc-pack-clovers">클로버 {p.clovers.toLocaleString()}개{packAnswerHint(p.clovers) && <> {packAnswerHint(p.clovers)}</>}</span></span>
+                                        <span className="osc-pack-left"><CloverIcon size={30} /><span className="osc-pack-clovers">클로버 {p.clovers.toLocaleString()}개</span></span>
                                         <span className="osc-pack-won">{p.won.toLocaleString()}원</span>
                                     </button>
                                 ))}

@@ -24,7 +24,7 @@ import './first-sample.css'
 import UsageLimitCard from './UsageLimitCard'
 import { isUsageLike, USAGE_EVENT } from '@/domains/os/usage'
 import { 클로버알림 } from '@/lib/clover-bus'
-import { CLOVER_OVERAGE_ENABLED, OVERAGE_COPY, chatCloverCost, fillCopy, readCloverAuto } from '@/domains/os/usage-config'
+import { CLOVER_OVERAGE_ENABLED, OVERAGE_COPY, readCloverAuto } from '@/domains/os/usage-config'
 import { isLoginGateReply } from '@/domains/os/audience'
 import SocialStartLinks from './SocialStartLinks'
 import { markFirstChatDone } from '@/components/pwa/install-rules'
@@ -83,7 +83,7 @@ interface Msg {
     loginGate?: boolean
     /** 한도 카드 (U9). warn = 알림 퍼센트 넘음, limit = 이번 달 한도 다 씀. 답 아래에 붙기만 한다 */
     usageCard?: 'warn' | 'limit'
-    usageRemaining?: number
+    usagePct?: number
 }
 
 /** 80% 알림은 달마다 한 번만 (브라우저에 적어 둔다) */
@@ -635,7 +635,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                         if (window.localStorage.getItem(USAGE_WARN_SEEN_KEY) === period) return
                         window.localStorage.setItem(USAGE_WARN_SEEN_KEY, period)
                     } catch { /* 저장 막힘이면 이번엔 보여 준다 */ }
-                    setMessages(prev => prev.map(x => x.id === botId ? { ...x, usageCard: 'warn', usageRemaining: u.remaining } : x))
+                    setMessages(prev => prev.map(x => x.id === botId ? { ...x, usageCard: 'warn', usagePct: u.pct } : x))
                 }).catch(() => { /* 못 읽어도 대화는 산다 */ })
             }
             // 봇 답을 끝까지 받았다 = 「앱으로 설치」 안내를 이제 보여도 된다(첫 방문엔 안 띄움)
@@ -829,7 +829,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                                         {!m.card && (
                                             <LinkCards {...linkCardsFor(m, messages[i - 1]?.role === 'user' ? messages[i - 1].content : undefined)} />
                                         )}
-                                        {m.usageCard && <UsageLimitCard kind={m.usageCard} remaining={m.usageRemaining ?? 0} />}
+                                        {m.usageCard && <UsageLimitCard kind={m.usageCard} pct={m.usagePct ?? 0} />}
                                     </>
                                 )}
                             </MsgRow>
@@ -843,7 +843,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                 {overageAsk !== null && (
                     <div className="os-sheet-back" data-theme="os" role="dialog" aria-modal="true" aria-label="클로버로 이어 쓰기" onClick={() => setOverageAsk(null)}>
                         <div className="os-sheet" onClick={e => e.stopPropagation()}>
-                            <p style={{ fontSize: 17, lineHeight: 1.6, margin: '4px 0 16px' }}>{fillCopy(OVERAGE_COPY.confirm, chatCloverCost())}</p>
+                            <p style={{ fontSize: 17, lineHeight: 1.6, margin: '4px 0 16px' }}>{OVERAGE_COPY.confirm}</p>
                             <div className="os-sheet-foot" style={{ justifyContent: 'flex-end', gap: 8 }}>
                                 <button type="button" className="os-btn" onClick={() => setOverageAsk(null)}>{OVERAGE_COPY.waitBtn}</button>
                                 <button type="button" className="os-btn primary" onClick={continueWithClovers}>{OVERAGE_COPY.continueBtn}</button>

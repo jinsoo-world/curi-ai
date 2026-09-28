@@ -27,7 +27,7 @@ export default function UsageBar({ guest, refreshKey }: { guest: boolean; refres
     if (guest || !u) return null
     return (
         <>
-            <UsageRing pct={u.pct} onClick={() => setOpen(true)} caption={t('usage.remaining', { n: u.remaining.toLocaleString() })} />
+            <UsageRing pct={u.pct} onClick={() => setOpen(true)} caption={t('usage.caption', { n: u.pct })} />
             {open && <UsageModal data={u} onClose={close} />}
         </>
     )

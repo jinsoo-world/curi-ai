@@ -151,7 +151,7 @@ export function isUsageLike(u: unknown): u is UsageLike {
 }
 
 export interface UsageDetail {
-    remainingText: string    // 「이번 달 남은 12번」
+    remainingText: string    // 「이번 달 사용량 40%」 (횟수는 안 보임)
     pctText: string          // 「40%」
     resetText: string        // 「10월 1일 0시에 초기화」
     blockedText: string | null
@@ -161,9 +161,9 @@ function toDate(d: Date | string): Date {
     return d instanceof Date ? d : new Date(d)
 }
 
-/** 남은 횟수 한 줄 (원형 옆, 모달 첫 줄) */
-export function remainingText(v: Pick<UsageLike, 'remaining'>): string {
-    return fillCopy(USAGE_COPY.remaining, v.remaining)
+/** 사용량 한 줄 (모달 첫 줄, 설정). 횟수 대신 퍼센트 */
+export function remainingText(v: Pick<UsageLike, 'pct'>): string {
+    return fillCopy(USAGE_COPY.remaining, v.pct)
 }
 
 /** 모달 안 글자 */

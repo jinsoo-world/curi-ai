@@ -338,7 +338,8 @@ export default function CloverHunt() {
                             <CloverIcon size={26} color={isGolden ? '#F2B705' : '#22c55e'} />
                         </div>
 
-                        {(phase === 'appear' || phase === 'urgent') && (
+                        {/* 「빨리 누르세요」 빨간 딱지는 없앴다 (대표 지시 0929 00:13). 처음 나타날 때 안내만 */}
+                        {phase === 'appear' && (
                             <div style={{
                                 position: 'absolute',
                                 top: '100%', left: '50%',
@@ -346,15 +347,15 @@ export default function CloverHunt() {
                                 marginTop: 6,
                                 whiteSpace: 'nowrap',
                                 fontSize: 12, fontWeight: 600,
-                                color: isGolden ? '#b45309' : phase === 'urgent' ? '#dc2626' : '#16a34a',
+                                color: isGolden ? '#b45309' : '#16a34a',
                                 background: isGolden ? 'rgba(254,249,195,0.95)' : 'rgba(255,255,255,0.95)',
                                 padding: '4px 10px',
                                 borderRadius: 8,
                                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                animation: phase === 'urgent' ? 'urgentBlink 0.4s ease-in-out infinite' : 'cloverHintPulse 1.5s ease-in-out infinite',
+                                animation: 'cloverHintPulse 1.5s ease-in-out infinite',
                                 border: isGolden ? '1px solid #fbbf24' : 'none',
                             }}>
-                                {isGolden ? '황금 클로버' : phase === 'urgent' ? '빨리 누르세요' : '눌러서 클로버 받기'}
+                                {isGolden ? '황금 클로버' : '눌러서 클로버 받기'}
                             </div>
                         )}
 
