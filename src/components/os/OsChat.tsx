@@ -21,6 +21,9 @@ import FirstTaskChips from './FirstTaskChips'
 import { useSurveyHelp, markFirstSent } from './useSurveyHelp'
 import { FIRST_HELP_CHIPS, SAMPLE_EXCHANGE } from '@/domains/os/onboarding'
 import './first-sample.css'
+import UsageLimitCard from './UsageLimitCard'
+import { isUsageLike, USAGE_EVENT } from '@/domains/os/usage'
+import { CLOVER_OVERAGE_ENABLED, OVERAGE_COPY, chatCloverCost, fillCopy, readCloverAuto } from '@/domains/os/usage-config'
 import { isLoginGateReply } from '@/domains/os/audience'
 import SocialStartLinks from './SocialStartLinks'
 import { markFirstChatDone } from '@/components/pwa/install-rules'
@@ -77,7 +80,13 @@ interface Msg {
     imageUrls?: string[]
     /** 로그인 전이라 막힌 답이면 말풍선 아래 카카오, 구글 로그인 단추를 단다 (대표 승인 0928 사용성 1번) */
     loginGate?: boolean
+    /** 한도 카드 (U9). warn = 알림 퍼센트 넘음, limit = 이번 달 한도 다 씀. 답 아래에 붙기만 한다 */
+    usageCard?: 'warn' | 'limit'
+    usageRemaining?: number
 }
+
+/** 80% 알림은 달마다 한 번만 (브라우저에 적어 둔다) */
+const USAGE_WARN_SEEN_KEY = 'os-usage-warn-seen'
 
 /** 로그인 뒤 돌아올 주소 = 지금 대화방. 시연 표시(?demo=1)는 떼어 로그인한 내 화면으로 돌아오게 한다 */
 function hereForLogin(): string {
@@ -384,6 +393,11 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
     }, [guest, sessionId, mentorId, freshStart])
 
     // overrideText 가 있으면 입력창 내용 대신 그 질문을 그대로 다시 보낸다(입력창은 지우지 않는다).
+    // 클로버 이어 쓰기 (스위치 꺼져 있으면 안 쓰임). 확인 창에서 「이어 쓰기」를 누르면 같은 말을 한 번 더 보낸다
+    const [overageAsk, setOverageAsk] = useState<string | null>(null)
+    const [retryText, setRetryText] = useState<string | null>(null)
+    const cloverOkOnce = useRef(false)
+
     const send = useCallback(async (overrideText?: string) => {
         const text = (overrideText ?? input).trim()
         // === 사진 첨부 === 사진만 보내도 된다. 올리는 중이거나 실패한 장이 남아 있으면 기다린다.
@@ -554,8 +568,10 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                     inputMethod: 'text',
                     visitorId: guest ? getVisitorId() : undefined,
                     ...(guest ? { guestMessageCount: 0 } : {}),
+                    ...(CLOVER_OVERAGE_ENABLED && !guest ? { cloverOk: cloverOkOnce.current || readCloverAuto(window.localStorage) } : {}),
                 }),
             })
+            cloverOkOnce.current = false
             if (!res.ok || !res.body) throw new Error(`chat ${res.status}`)
             const reader = res.body.getReader()
             const dec = new TextDecoder()
@@ -565,6 +581,8 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
             let sources: { id: string; title: string }[] = []
             let readUrls: ReadUrlItem[] = []
             let loginGate = false
+            let planLimited = false
+            let askOverage = false
             while (true) {
                 const { done, value } = await reader.read()
                 if (done) break
@@ -587,6 +605,9 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                             // 곧 온다: 실제로 열어 읽은 링크(성공, 실패). 없으면 위 sources 로 LinkCards 가 대신 그린다
                             if (d.done && Array.isArray(d.readUrls)) readUrls = d.readUrls
                             if (d.done && d.guestLimit) window.dispatchEvent(new CustomEvent('curi:login-nudge', { detail: { reason: 'limit' } }))
+                            // 요금제 월간 한도에 닿음 (봇 주인이 정한 방문자 캡은 결제로 풀리지 않으니 카드 없음)
+                            if (d.done && d.usageLimit && !d.visitorBotLimit) planLimited = true
+                            if (d.done && d.overageAsk) askOverage = true
                         } catch { /* 조각 하나 깨진 건 넘어간다 */ }
                     }
                 }
@@ -597,6 +618,24 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                 setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: full, loginGate: true }])
             }
             else if (sources.length > 0 || readUrls.length > 0) setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: full, sources, readUrls }])
+            // 한도 카드 (U9): 막혔으면 그 말 아래 도달 카드. 클로버 이어 쓰기가 켜져 있으면 확인 창을 한 번 띄운다
+            if (planLimited) {
+                setMessages(prev => prev.map(x => x.id === botId ? { ...x, usageCard: 'limit' } : x))
+                if (askOverage) setOverageAsk(text)
+            } else if (!guest && full && !loginGate && !full.includes(UNAVAILABLE_TEXT)) {
+                // 답을 다 받은 뒤 사용량을 한 번 읽어 원형 게이지를 고치고, 80% 를 넘었으면 이번 달 한 번만 알림 카드
+                void fetch('/api/os/usage', { cache: 'no-store' }).then(r => r.json()).then(u => {
+                    if (!isUsageLike(u)) return
+                    window.dispatchEvent(new CustomEvent(USAGE_EVENT, { detail: u }))
+                    if (!u.warn) return
+                    const period = String(u.resetAt)
+                    try {
+                        if (window.localStorage.getItem(USAGE_WARN_SEEN_KEY) === period) return
+                        window.localStorage.setItem(USAGE_WARN_SEEN_KEY, period)
+                    } catch { /* 저장 막힘이면 이번엔 보여 준다 */ }
+                    setMessages(prev => prev.map(x => x.id === botId ? { ...x, usageCard: 'warn', usageRemaining: u.remaining } : x))
+                }).catch(() => { /* 못 읽어도 대화는 산다 */ })
+            }
             // 봇 답을 끝까지 받았다 = 「앱으로 설치」 안내를 이제 보여도 된다(첫 방문엔 안 띄움)
             if (full && !loginGate && !full.includes(UNAVAILABLE_TEXT)) { try { markFirstChatDone(window.localStorage) } catch { /* 저장 막힘 */ } }
         } catch {
@@ -607,6 +646,21 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
         }
         // === 전달(relay), 사진 첨부 === team, openNewGroup, name, photos 가 더 들어간다
     }, [input, streaming, messages, mentorId, guest, bot, ensureSession, team, openNewGroup, name, photos, mention])
+
+    // 확인 창에서 「클로버로 이어 쓰기」: 막힌 말과 안내를 지우고 같은 말을 다시 보낸다 (effect 본문에서 바로 setState 하지 않는다 = 린트 규칙)
+    useEffect(() => {
+        if (retryText === null || streaming) return
+        const t = retryText
+        void Promise.resolve().then(() => { setRetryText(null); void send(t) })
+    }, [retryText, streaming, send])
+    const continueWithClovers = () => {
+        const t = overageAsk
+        setOverageAsk(null)
+        if (!t) return
+        cloverOkOnce.current = true
+        setMessages(prev => prev.slice(0, -2))
+        setRetryText(t)
+    }
 
     const applyMention = (item: { mentorId: string; name: string }) => {
         const el = inputRef.current
@@ -773,6 +827,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                                         {!m.card && (
                                             <LinkCards {...linkCardsFor(m, messages[i - 1]?.role === 'user' ? messages[i - 1].content : undefined)} />
                                         )}
+                                        {m.usageCard && <UsageLimitCard kind={m.usageCard} remaining={m.usageRemaining ?? 0} />}
                                     </>
                                 )}
                             </MsgRow>
@@ -783,6 +838,18 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
 
                 {/* 입력 막대 dock  -  폰에선 화면 맨 아래 붙는다(os.css). 미리보기 띠 + 막대를 한 칸으로 묶어야
                     그 아래 빈 배경이 흰 띠로 안 남는다(대표 폰 실측 0923) */}
+                {overageAsk !== null && (
+                    <div className="os-sheet-back" data-theme="os" role="dialog" aria-modal="true" aria-label="클로버로 이어 쓰기" onClick={() => setOverageAsk(null)}>
+                        <div className="os-sheet" onClick={e => e.stopPropagation()}>
+                            <p style={{ fontSize: 17, lineHeight: 1.6, margin: '4px 0 16px' }}>{fillCopy(OVERAGE_COPY.confirm, chatCloverCost())}</p>
+                            <div className="os-sheet-foot" style={{ justifyContent: 'flex-end', gap: 8 }}>
+                                <button type="button" className="os-btn" onClick={() => setOverageAsk(null)}>{OVERAGE_COPY.waitBtn}</button>
+                                <button type="button" className="os-btn primary" onClick={continueWithClovers}>{OVERAGE_COPY.continueBtn}</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="os-input-dock">
                     {/* === 사진 첨부 === 붙인 사진 미리보기 띠 (입력창 위) */}
                     <PhotoStrip items={photos.items} notice={photos.notice} onRemove={photos.remove} onRetry={photos.retry} />

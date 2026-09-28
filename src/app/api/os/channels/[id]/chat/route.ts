@@ -10,7 +10,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { readUsage } from '@/domains/os/usage-db'
-import { kstDayHourText } from '@/domains/os/usage'
+import { limitReachedMessage } from '@/domains/os/usage'
 import {
     getChannel, getChannelBots, listChannelMessages, saveChannelMessage,
     findMentionedBot, canBotSpeakAgain, ChannelTableMissing,
@@ -71,11 +71,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: '로그인이 필요해요' }, { status: 401 })
 
-    // 로그인 회원 그룹 대화도 주간 사용 한도 (계정 단위, 클로버 게이트 없음)
+    // 로그인 회원 그룹 대화도 월간 사용 한도 (계정 단위, 클로버 게이트 없음)
     {
         const usage = await readUsage(createAdminClient(), user.id, new Date(), user.email)
         if (usage.blocked) {
-            const msg = `이번 주 사용 한도에 닿았어요. ${kstDayHourText(usage.weekResetAt)}에 다시 채워져요. 더 쓰려면 요금제를 올려 보세요.`
+            const msg = limitReachedMessage(usage.resetAt)
             return NextResponse.json({ error: msg, usageLimit: true }, { status: 429 })
         }
     }

@@ -3,7 +3,7 @@
 // 봇 팀 요금제 (/os/charge) = 무료 / 베이직 월 29,000원 / 프로 월 99,000원.
 // 대표 확정 0923 「클로버를 충전하는 개념이고, 산 날동안 1년 쓸 수 있다 이런 문구는 빼.
 //                 구독은 무료(기본) / 29,000원 / 99,000원 이렇게 2개 요금제로 해.」
-// 내 팀 봇과의 대화는 클로버 0. 클로버 충전은 아래 부가 섹션으로 남긴다(봇 마켓의 다른 리더 봇, 한도 넘겨 더 쓰기).
+// 대화는 월간 한도로 세고 클로버를 쓰지 않는다(서버 /api/chat 기준). 클로버는 사진 같은 부가 기능에 쓴다. 클로버 충전은 아래 부가 섹션.
 // 대표 지시 0923 「클로버 충전은 워딩 바꿔. 사진이 주력이 아니다 이제」 → 사진 N장·1년·할인 배지 표기는 뺐다.
 // ⚠️ 카드 안 혜택 구성은 부대표 추천(미확정), 대표 검수 필요 — 값은 src/domains/os/plan.ts PLANS.
 // 손님 = 4060 강사, 작가, 크리에이터. 글자 17px 이상, 단추 52px 이상, 색은 [data-theme="os"] 토큰만.
@@ -16,6 +16,7 @@ import { resolveReturnPath, chargeReturnUrls, OS_RETURN_KEY } from '@/domains/cr
 import { CLOVER_PACKS } from '@/domains/credit/packs'
 import { startCloverCharge } from '@/domains/credit/charge-client'
 import { PLANS, isPaidPlanId, type PlanId } from '@/domains/os/plan'
+import { PLAN_REASON, REFUND_NOTICE, cloverBalanceNote, packAnswerHint } from '@/domains/os/usage-config'
 import { startPlanPayment, planReturnUrls, fetchMyPlan } from './plan-client'
 import { useOsTeam } from '@/components/os/OsShell'
 import CloverIcon from '@/components/ui/CloverIcon'
@@ -33,6 +34,9 @@ export default function OsChargePage() {
     const [selectedPack, setSelectedPack] = useState(CLOVER_PACKS[CLOVER_PACKS.length - 1].id)
     const [packPaying, setPackPaying] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
+    // 결제 단추 앞 필수 확인 (청약철회 안내). 요금제와 클로버를 따로 받는다. 체크 전에는 결제 단추가 안 눌린다
+    const [planAgreed, setPlanAgreed] = useState(!REFUND_NOTICE.agree)
+    const [packAgreed, setPackAgreed] = useState(!REFUND_NOTICE.agree)
     const [returnTo, setReturnTo] = useState('/os')
     // 시연 모드 (/os/charge?demo=1) = 로그인 없이 요금제 카드를 볼 수 있게 (OsShell 의 ?demo=1 과 같은 규칙). 결제 단추는 로그인으로 보낸다
     const [demo, setDemo] = useState(false)
@@ -101,10 +105,7 @@ export default function OsChargePage() {
     return (
         <div className="osc">
             <div className="osc-inner">
-                <button type="button" className="osc-back" onClick={() => router.push(returnTo)}>
-                    <span aria-hidden style={{ fontSize: 20, lineHeight: 1 }}>←</span> 돌아가기
-                </button>
-
+                {/* 「대화로 돌아가기」는 OsShell 한 장 화면 줄이 그린다 (U14). returnTo 는 로그인, 결제 뒤 도착지로 계속 쓴다 */}
                 <h1 className="osc-h1">요금제</h1>
                 <p className="osc-p">봇을 더 많이, 더 자주 쓰고 싶을 때 요금제를 올리면 돼요. 무료로도 시작할 수 있어요.</p>
 
@@ -121,7 +122,20 @@ export default function OsChargePage() {
                                     <span className="osc-balance-label">지금 가진 클로버</span>
                                     <span className="osc-balance-num"><CloverIcon size={24} />{balance.toLocaleString()}개</span>
                                 </div>
-                                <p className="osc-balance-sub">내 팀 봇과의 대화는 클로버를 쓰지 않아요</p>
+                                <p className="osc-balance-sub">{cloverBalanceNote()}</p>
+                            </div>
+                        )}
+
+                        {/* 청약철회 안내와 필수 확인 (요금 정책 rev5 B-2). 요금제 결제 단추보다 먼저 읽히게 카드 위에 둔다 */}
+                        {(REFUND_NOTICE.plan || REFUND_NOTICE.agree) && (
+                            <div className="osc-refund">
+                                {REFUND_NOTICE.plan && <p className="osc-precheck">{REFUND_NOTICE.plan} <Link href="/refund">자세히 보기</Link></p>}
+                                {REFUND_NOTICE.agree && (
+                                    <label className="osc-agree">
+                                        <input type="checkbox" checked={planAgreed} onChange={e => setPlanAgreed(e.target.checked)} />
+                                        <span>{REFUND_NOTICE.agree}</span>
+                                    </label>
+                                )}
                             </div>
                         )}
 
@@ -140,11 +154,12 @@ export default function OsChargePage() {
                                             {current && <span className="osc-badge now">지금 쓰는 중</span>}
                                             {!current && p.recommended && <span className="osc-badge rec">가장 많이 골라요</span>}
                                         </div>
+                                        {PLAN_REASON[p.id] && <p className="osc-plan-reason">{PLAN_REASON[p.id]}</p>}
                                         <ul className="osc-perks">
                                             {p.perks.map(perk => <li key={perk}>{perk}</li>)}
                                         </ul>
                                         {isPaidPlanId(p.id) && !current && (
-                                            <button type="button" className={`osc-pay${p.recommended ? '' : ' ghost'}`} onClick={() => handlePay(p.id)} disabled={paying !== null || packPaying}>
+                                            <button type="button" className={`osc-pay${p.recommended ? '' : ' ghost'}`} onClick={() => handlePay(p.id)} disabled={paying !== null || packPaying || !planAgreed}>
                                                 {paying === p.id ? '결제창을 여는 중…' : `월 ${p.price.toLocaleString()}원으로 시작하기`}
                                             </button>
                                         )}
@@ -160,7 +175,7 @@ export default function OsChargePage() {
                         {/* 클로버 충전 (부가). 사진 N장·산 날부터 1년·할인 배지는 화면에서 뺐다(대표 지시 0923). 값은 0915 확정 그대로 */}
                         <section className="osc-clover" aria-label="클로버 충전">
                             <h2 className="osc-h2">클로버 충전</h2>
-                            <p className="osc-p">봇 마켓의 다른 리더 봇과 대화하거나 한도를 넘겨 더 쓸 때 클로버를 써요. 내 팀 봇과의 대화는 클로버를 쓰지 않아요.</p>
+                            <p className="osc-p">클로버는 사진 만들기 같은 부가 기능에 써요. 대화는 클로버를 쓰지 않아요.</p>
                             <div className="osc-packs" role="radiogroup" aria-label="충전 상품">
                                 {CLOVER_PACKS.map(p => (
                                     <button
@@ -170,21 +185,23 @@ export default function OsChargePage() {
                                         aria-pressed={selectedPack === p.id}
                                         onClick={() => setSelectedPack(p.id)}
                                     >
-                                        <span className="osc-pack-left"><CloverIcon size={30} /><span className="osc-pack-clovers">클로버 {p.clovers.toLocaleString()}개</span></span>
+                                        <span className="osc-pack-left"><CloverIcon size={30} /><span className="osc-pack-clovers">클로버 {p.clovers.toLocaleString()}개{packAnswerHint(p.clovers) && <> {packAnswerHint(p.clovers)}</>}</span></span>
                                         <span className="osc-pack-won">{p.won.toLocaleString()}원</span>
                                     </button>
                                 ))}
                             </div>
-                            <button type="button" className="osc-pay ghost" onClick={handlePackPay} disabled={packPaying || paying !== null}>
+                            {REFUND_NOTICE.clover && <p className="osc-precheck">{REFUND_NOTICE.clover} <Link href="/refund">자세히 보기</Link></p>}
+                            {REFUND_NOTICE.agree && (
+                                <label className="osc-agree">
+                                    <input type="checkbox" checked={packAgreed} onChange={e => setPackAgreed(e.target.checked)} />
+                                    <span>{REFUND_NOTICE.agree}</span>
+                                </label>
+                            )}
+                            <button type="button" className="osc-pay ghost" onClick={handlePackPay} disabled={packPaying || paying !== null || !packAgreed}>
                                 {packPaying ? '결제창을 여는 중…' : `클로버 ${pack.clovers.toLocaleString()}개 ${pack.won.toLocaleString()}원 충전하기`}
                             </button>
-                            <p className="osc-note">한 번 사면 끝. 정기 결제가 아니에요.</p>
                         </section>
 
-                        <p className="osc-note">
-                            7일 안에 한 번도 안 쓰셨으면 전액 돌려드려요.{' '}
-                            <Link href="/refund">자세히 보기</Link>
-                        </p>
                     </>
                 )}
             </div>

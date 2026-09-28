@@ -1,10 +1,10 @@
 // domains/os — 사용 한도 DB 읽기 (서버 전용. service_role 이라 user_id 를 여기서 건다)
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { usageView, weekStartKST, type UsageView } from './usage'
+import { usageCountFrom, usageView, type UsageView } from './usage'
 import { planLimits, resolvePlan, type PlanId } from './plan'
 
 /** 이 사람의 지금 요금제(없거나 기한 지나면 무료). 표가 없어도 무료로.
- *  관리자 이메일을 pro 한도로 올리지 않는다 — 링 % 가 실제 사용(무료 주 100)으로 움직이게 (대표 지시). */
+ *  관리자 이메일을 pro 한도로 올리지 않는다. 링 % 가 실제 사용으로 움직이게 (대표 지시). */
 export async function readPlanId(db: SupabaseClient, userId: string, email?: string | null): Promise<PlanId> {
     void email
     try {
@@ -51,7 +51,7 @@ async function countChannelUserTurns(db: SupabaseClient, userId: string, since: 
     }
 }
 
-/** 1:1 + 그룹방 사람 말을 합쳐 주간 사용량으로 센다 */
+/** 1:1 + 그룹방 사람 말을 합쳐 사용량으로 센다 */
 async function countUserTurns(db: SupabaseClient, userId: string, since: Date): Promise<{ count: number; oldest: Date | null }> {
     const [session, channelCount] = await Promise.all([
         countSessionUserTurns(db, userId, since),
@@ -84,10 +84,10 @@ export async function countUserTurnsForMentor(
 }
 
 export async function readUsage(db: SupabaseClient, userId: string, now = new Date(), email?: string | null): Promise<UsageView> {
-    const [wk, plan] = await Promise.all([
-        countUserTurns(db, userId, weekStartKST(now)),
+    // 대표 결정 0928: 월간 한도 하나. 이번 달 1일 0시(서울)부터, 단 월간으로 바꾼 시점 전 대화는 빼고 센다
+    const [turns, plan] = await Promise.all([
+        countUserTurns(db, userId, usageCountFrom(now)),
         readPlanId(db, userId, email),
     ])
-    const lim = planLimits(plan)
-    return usageView({ now, used5h: 0, oldest5h: null, usedWeek: wk.count, limit5h: lim.limit5h, limitWeek: lim.limitWeek })
+    return usageView({ now, used: turns.count, limit: planLimits(plan).limitMonth, plan })
 }

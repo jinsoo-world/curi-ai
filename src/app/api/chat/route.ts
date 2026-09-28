@@ -10,7 +10,9 @@ import { pickDriverFromEnv } from '@/domains/llm'
 import { getOwnedTeamBotMentor } from '@/domains/os'
 import { readUsage } from '@/domains/os/usage-db'
 import { checkChatAudience, checkVisitorBotWeeklyLimit } from '@/domains/os/audience-db'
-import { kstDayHourText } from '@/domains/os/usage'
+import { limitReachedMessage } from '@/domains/os/usage'
+import { CLOVER_OVERAGE_ENABLED, chatCloverCost, OVERAGE_COPY } from '@/domains/os/usage-config'
+import { deductCredit } from '@/domains/credit/actions'
 import { findSourcesOfChunks } from '@/domains/os/knowledge'
 import { readUrlsInText, buildLinkPrompt, linkTextForTurn } from '@/domains/os/readers'
 // 🛡 인젝션 방어 (대표 지시 0923). 셈만 하는 함수들 = domains/chat/injection.ts, 설명 = docs/security/인젭션_방어_0923.md
@@ -83,7 +85,7 @@ export async function POST(req: Request) {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
 
-        const { messages, mentorId, sessionId, guestMessageCount, inputMethod, visitorId, imageUrl, imageUrls } = await req.json()
+        const { messages, mentorId, sessionId, guestMessageCount, inputMethod, visitorId, imageUrl, imageUrls, cloverOk } = await req.json()
         // 요청 횟수 제한(보안 C-1 9번): 사용자/방문자 분당 20
         const rl = await checkRateLimit(createAdminClient(), rateLimitKey('chat', user?.id, visitorId, req), 20, 60)
         if (!rl.allowed) return Response.json({ error: rateLimitMessage('대화') }, { status: 429 })
@@ -293,21 +295,31 @@ export async function POST(req: Request) {
 
         const dailyUsed = (userProfile as any)?.daily_free_used || 0
         const isPremium = (userProfile as any)?.subscription_tier === 'premium'
-        // 로그인 회원 대화 = 주간 사용 한도로만 막는다 (대표 지시: 클로버 게이트 제거). 손님 한도는 위에서 그대로.
+        // 로그인 회원 대화 = 월간 사용 한도로 막는다 (대표 결정 0928, 주간과 5시간 창 없음). 손님 한도는 위에서 그대로.
         if (user) {
             const usage = await readUsage(createAdminClient(), user.id, new Date(), user.email)
-            if (usage.blocked) {
-                const msg = `이번 주 사용 한도에 닿았어요. ${kstDayHourText(usage.weekResetAt)}에 다시 채워져요. 더 쓰려면 요금제를 올려 보세요.`
+            // 클로버 이어 쓰기(요금 정책 rev5): 스위치 CLOVER_OVERAGE_ENABLED 가 꺼져 있으면 이 블록은 옛 동작 그대로(막기만 함).
+            // 켜져 있으면 한도를 다 쓴 뒤에만, 사용자가 이어 쓰기를 고른 요청(cloverOk)에서 답을 만들기 전에 클로버를 뺀다.
+            let overagePaid = false
+            if (usage.blocked && CLOVER_OVERAGE_ENABLED && cloverOk === true) {
+                const hasPhoto = !!imageUrl || (Array.isArray(imageUrls) && imageUrls.length > 0)
+                const paid = await deductCredit({ user_id: user.id, amount: chatCloverCost({ photo: hasPhoto }), mentor_id: String(mentorId ?? ''), description: '한도 넘긴 대화' })
+                overagePaid = paid.success
+            }
+            if (usage.blocked && !overagePaid) {
+                const ask = CLOVER_OVERAGE_ENABLED && cloverOk !== true
+                const msg = CLOVER_OVERAGE_ENABLED && cloverOk === true ? OVERAGE_COPY.short : limitReachedMessage(usage.resetAt)
                 const enc = new TextEncoder()
                 const limitStream = new ReadableStream({
                     start(controller) {
-                        controller.enqueue(enc.encode(`data: ${JSON.stringify({ text: msg, done: true, fullResponse: msg, usageLimit: true })}\n\n`))
+                        const extra = CLOVER_OVERAGE_ENABLED ? { overageAsk: ask, cloverShort: cloverOk === true, cloverCost: chatCloverCost() } : {}
+                        controller.enqueue(enc.encode(`data: ${JSON.stringify({ text: msg, done: true, fullResponse: msg, usageLimit: true, ...extra })}\n\n`))
                         controller.close()
                     },
                 })
                 return new Response(limitStream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' } })
             }
-            // 대화는 주간 한도로만 센다. 클로버 잔액 체크·차감·일일 무료 횟수는 쓰지 않는다.
+            // 대화는 월간 한도로 센다. 일일 무료 횟수는 쓰지 않는다.
             isFreeTrial = true
         }
 

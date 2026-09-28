@@ -84,3 +84,12 @@
     .osc { padding: 20px 16px 48px; }
     .osc-plan { padding: 16px; }
 }
+
+/* 요금제 카드 한 줄 이유 (U13, 문구는 usage-config.ts PLAN_REASON. 비면 안 보임) */
+.osc-plan-reason { font-size: 17px; font-weight: 600; color: var(--os-글); margin: 10px 0 0; line-height: 1.5; }
+/* 결제 단추 앞 청약철회 안내와 필수 확인 (U14, 문구는 usage-config.ts REFUND_NOTICE) */
+.osc-precheck { font-size: 15px; color: var(--os-글-흐림); margin: 12px 0 0; line-height: 1.6; }
+.osc-precheck a { color: var(--os-클로버); font-weight: 600; text-decoration: none; }
+.osc-refund { margin: 16px 0 4px; }
+.osc-agree { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0 0; font-size: 15px; line-height: 1.6; color: var(--os-글); cursor: pointer; }
+.osc-agree input { width: 22px; height: 22px; flex: none; margin-top: 2px; accent-color: var(--os-포인트); }

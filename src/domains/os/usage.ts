@@ -1,14 +1,15 @@
-// domains/os — 사용 한도 (내 봇은 클로버 0. 대신 주간 한도 하나로 예산을 지킨다. 대표 확정 0923: 5시간 창 없음, 사용량은 주 단위, 구독은 월)
+// domains/os: 사용 한도 (내 봇은 클로버 0. 대신 월간 한도 하나로 예산을 지킨다)
 //
-// 대표 확정 0923: 「내 봇은 무료. 사용 한도는 한 줄로 = 퍼센트, 재설정 시기, 주간 한도 초기화」
-// 순수 계산만 여기. DB 읽기는 usage-db.ts.
+// 대표 결정 0928 23:42: 한도는 월간 사용량 하나로 통일. 주 단위 한도와 5시간 창은 없앤다.
+// 숫자와 문구는 usage-config.ts. 순수 계산만 여기. DB 읽기는 usage-db.ts.
+import { MONTHLY_LIMITS, MONTHLY_COUNT_SINCE, USAGE_WARN_PCT, USAGE_COPY, fillCopy } from './usage-config'
+import type { PlanId } from './plan'
 
-export const USAGE_LIMIT_5H = 20       // 무료 요금제 5시간 창 (대표 확정 0923: 무료 주 100번, 5시간 창은 주간의 1/5)
-export const USAGE_LIMIT_WEEK = 100    // 무료 요금제 한 주(월요일 0시 서울 기준 초기화). 대표 확정 0923
-export const WINDOW_5H_MS = 5 * 60 * 60 * 1000
+/** 무료 요금제 한 달 답변 수 */
+export const USAGE_LIMIT_MONTH = MONTHLY_LIMITS.free
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000
 
-/** 이번 주 시작 = 서울 기준 월요일 0시 (UTC Date 로 돌려준다) */
+/** 이번 주 시작 = 서울 기준 월요일 0시 (UTC Date). 봇 주인이 정하는 방문자 주간 캡, 주간 보고에서 쓴다 */
 export function weekStartKST(now: Date): Date {
     const kst = new Date(now.getTime() + KST_OFFSET_MS)
     const day = kst.getUTCDay()                 // 0 일 … 6 토 (KST 기준 요일)
@@ -17,42 +18,61 @@ export function weekStartKST(now: Date): Date {
     return new Date(mondayKst - KST_OFFSET_MS)
 }
 
-/** 다음 주간 초기화 시각 */
+/** 다음 주 월요일 0시 (서울) */
 export function weekResetKST(now: Date): Date {
     return new Date(weekStartKST(now).getTime() + 7 * 24 * 60 * 60 * 1000)
 }
 
+/** 이번 달 시작 = 서울 기준 1일 0시 (UTC Date) */
+export function monthStartKST(now: Date): Date {
+    const kst = new Date(now.getTime() + KST_OFFSET_MS)
+    return new Date(Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), 1) - KST_OFFSET_MS)
+}
+
+/** 다음 달 1일 0시 (서울) = 월간 한도가 다시 채워지는 때 */
+export function monthResetKST(now: Date): Date {
+    const kst = new Date(now.getTime() + KST_OFFSET_MS)
+    return new Date(Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth() + 1, 1) - KST_OFFSET_MS)
+}
+
+/** 이번 달 사용량을 세기 시작하는 때. 월간 한도로 바꾼 시점 전은 넣지 않는다 */
+export function usageCountFrom(now: Date, since: string = MONTHLY_COUNT_SINCE): Date {
+    const start = monthStartKST(now)
+    const s = new Date(since)
+    return Number.isNaN(s.getTime()) || s.getTime() <= start.getTime() ? start : s
+}
+
 export interface UsageInput {
     now: Date
-    used5h: number
-    /** 5시간 창 안에서 가장 오래된 대화 시각. 없으면 null (창이 비어 있음) */
-    oldest5h: Date | null
-    usedWeek: number
-    limit5h?: number
-    limitWeek?: number
+    used: number
+    limit?: number
+    plan?: PlanId
 }
 
 export interface UsageView {
-    used5h: number; limit5h: number; pct5h: number
-    resetAt5h: Date | null           // 창이 비어 있으면 null
-    usedWeek: number; limitWeek: number; pctWeek: number
-    weekResetAt: Date
-    blocked: boolean                 // 둘 중 하나라도 꽉 찼나
+    plan: PlanId
+    used: number
+    limit: number
+    pct: number
+    remaining: number
+    resetAt: Date
+    blocked: boolean                 // 이번 달 한도를 다 썼나
+    warn: boolean                    // 알림 퍼센트(80) 이상, 아직 안 막힘
     line: string                     // 화면 한 줄
 }
 
 export function usageView(i: UsageInput): UsageView {
-    const limit5h = i.limit5h ?? USAGE_LIMIT_5H
-    const limitWeek = i.limitWeek ?? USAGE_LIMIT_WEEK
-    const pct5h = Math.min(100, Math.round((i.used5h / limit5h) * 100))
-    const pctWeek = Math.min(100, Math.round((i.usedWeek / limitWeek) * 100))
-    const resetAt5h = i.oldest5h ? new Date(i.oldest5h.getTime() + WINDOW_5H_MS) : null
-    const weekResetAt = weekResetKST(i.now)
-    const blocked = i.usedWeek >= limitWeek   // 대표 확정 0923: 5시간 창 없음. 주간 한도만 막는다
+    const limit = Math.max(1, i.limit ?? USAGE_LIMIT_MONTH)
+    const used = Math.max(0, i.used)
+    const pct = Math.min(100, Math.round((used / limit) * 100))
+    const remaining = Math.max(0, limit - used)
+    const resetAt = monthResetKST(i.now)
+    const blocked = used >= limit
     return {
-        used5h: i.used5h, limit5h, pct5h, resetAt5h,
-        usedWeek: i.usedWeek, limitWeek, pctWeek, weekResetAt, blocked,
-        line: usageLine({ pctWeek, limitWeek, usedWeek: i.usedWeek, weekResetAt }),
+        plan: i.plan ?? 'free',
+        used, limit, pct, remaining, resetAt, blocked,
+        warn: !blocked && pct >= USAGE_WARN_PCT,
+        line: usageLine({ pct, resetAt }),
     }
 }
 
@@ -75,19 +95,30 @@ export function kstDayHourText(d: Date): string {
     return `(${KO_DAY[kst.getUTCDay()]}) ${kst.getUTCHours()}시`
 }
 
-/** 한 줄: 「사용 한도 12% / 4시간 12분 후 재설정 / 주간 3% / (월) 0시 초기화」 */
-export function usageLine(v: { pctWeek: number; limitWeek: number; usedWeek: number; weekResetAt: Date }): string {
-    return `이번 주 사용 한도 ${v.pctWeek}% / ${kstDayHourText(v.weekResetAt)} 초기화`
+/** 서울 기준 「10월 1일 0시」 꼴 */
+export function kstDateHourText(d: Date): string {
+    const kst = new Date(d.getTime() + KST_OFFSET_MS)
+    return `${kst.getUTCMonth() + 1}월 ${kst.getUTCDate()}일 ${kst.getUTCHours()}시`
 }
 
-// ── 원형 게이지 + 사용량 모달 (대표 지시 0923: 「클로드코드처럼 원형으로, 누르면 모달로 사용량(클로버)」) ──
+/** 한 줄: 「이번 달 사용 한도 12% / 10월 1일 0시 초기화」 */
+export function usageLine(v: { pct: number; resetAt: Date }): string {
+    return `이번 달 사용 한도 ${v.pct}% / ${kstDateHourText(v.resetAt)} 초기화`
+}
+
+/** 한도에 닿았을 때 대화 자리에 보내는 말 */
+export function limitReachedMessage(resetAt: Date): string {
+    return `이번 달 사용 한도에 닿았어요. ${kstDateHourText(resetAt)}에 다시 채워져요. 더 쓰려면 요금제를 올려 보세요.`
+}
+
+// ── 원형 게이지 + 사용량 모달 ──
 
 export type UsageTone = 'ok' | 'warn' | 'full'
 
-/** 색 단계: 80% 미만 초록, 80% 이상 노랑, 100% 빨강 */
+/** 색 단계: 알림 퍼센트 미만 초록, 이상 노랑, 100% 빨강 */
 export function usageTone(pct: number): UsageTone {
     if (pct >= 100) return 'full'
-    if (pct >= 80) return 'warn'
+    if (pct >= USAGE_WARN_PCT) return 'warn'
     return 'ok'
 }
 
@@ -103,39 +134,46 @@ export function withComma(n: number): string {
 
 /** JSON 으로 건너오면 Date 가 문자열이 된다. 둘 다 받는다 */
 export interface UsageLike {
-    used5h: number; limit5h: number; pct5h: number
-    resetAt5h: Date | string | null
-    usedWeek: number; limitWeek: number; pctWeek: number
-    weekResetAt: Date | string
+    plan?: string
+    used: number; limit: number; pct: number; remaining: number
+    resetAt: Date | string
     blocked: boolean
+    warn?: boolean
+}
+
+/** 대화가 끝난 뒤 새 사용량을 화면끼리 알리는 이벤트 이름 (OsChat 이 보내고 UsageBar 가 받는다) */
+export const USAGE_EVENT = 'curi:usage'
+
+/** 서버 응답이 새 모양(월간)인가. 옛 모양이면 화면에 안 그린다 */
+export function isUsageLike(u: unknown): u is UsageLike {
+    const v = u as Partial<UsageLike> | null
+    return !!v && typeof v.pct === 'number' && typeof v.limit === 'number' && typeof v.used === 'number' && v.resetAt != null
 }
 
 export interface UsageDetail {
-    fiveHourText: string     // 「12%」
-    fiveHourReset: string    // 「4시간 12분 후 다시 채워져요」 / 「아직 안 썼어요」
-    weekText: string         // 「3%」 퍼센트만
-    weekReset: string        // 「(월) 0시에 초기화」
-    blockedText: string | null // 막혔을 때만. 「지금은 한도에 닿았어요. N 후 다시 쓸 수 있어요」
+    remainingText: string    // 「이번 달 남은 12번」
+    pctText: string          // 「40%」
+    resetText: string        // 「10월 1일 0시에 초기화」
+    blockedText: string | null
 }
 
-function toDate(d: Date | string | null): Date | null {
-    if (d === null) return null
+function toDate(d: Date | string): Date {
     return d instanceof Date ? d : new Date(d)
 }
 
-/** 모달 안 글자. 분모(한도)를 반드시 같이 쓴다 */
+/** 남은 횟수 한 줄 (원형 옆, 모달 첫 줄) */
+export function remainingText(v: Pick<UsageLike, 'remaining'>): string {
+    return fillCopy(USAGE_COPY.remaining, v.remaining)
+}
+
+/** 모달 안 글자 */
 export function usageDetail(v: UsageLike, now: Date): UsageDetail {
-    const resetAt5h = toDate(v.resetAt5h)
-    const weekResetAt = toDate(v.weekResetAt) as Date
-    let blockedText: string | null = null
-    if (v.blocked) {
-        blockedText = `이번 주 한도에 닿았어요. ${kstDayHourText(weekResetAt)}에 다시 쓸 수 있어요`
-    }
+    void now
+    const resetAt = toDate(v.resetAt)
     return {
-        fiveHourText: `${v.pct5h}%`,
-        fiveHourReset: resetAt5h ? `${untilText(resetAt5h, now)} 다시 채워져요` : '아직 안 썼어요',
-        weekText: `${v.pctWeek}%`,
-        weekReset: `${kstDayHourText(weekResetAt)}에 초기화`,
-        blockedText,
+        remainingText: remainingText(v),
+        pctText: `${v.pct}%`,
+        resetText: `${kstDateHourText(resetAt)}에 초기화`,
+        blockedText: v.blocked ? `이번 달 한도에 닿았어요. ${kstDateHourText(resetAt)}에 다시 쓸 수 있어요` : null,
     }
 }

@@ -1,13 +1,13 @@
 'use client'
 // 사용량 모달. 원형 게이지를 누르면 뜬다. ESC, 배경 클릭, 닫기 단추로 닫힌다. 글자는 사전(i18n)에서, 숫자 글은 usageDetailL.
-// 대표 확정 0923: 내 봇은 무료(클로버 0). 요금은 구독 2단계 = 무료(기본) / 월 29,000원 / 월 99,000원.
+// 대표 결정 0928: 한도는 월간 하나. 첫 줄은 남은 횟수(U8). 요금제 이름은 서버가 준 실제 요금제(P5).
 // 클로버 잔액은 CloverBar 가 이미 쓰는 창구(credit 도메인 getCreditBalance)를 그대로 쓴다.
 import { useEffect, useRef, useState } from 'react'
 import CloverIcon from '@/components/ui/CloverIcon'
 import Link from 'next/link'
 import { getCreditBalance } from '@/domains/credit'
 import { usageTone, withComma, type UsageLike } from '@/domains/os/usage'
-import { usageDetailL } from '@/domains/os/i18n'
+import { planNameL, usageDetailL } from '@/domains/os/i18n'
 import { useLocale } from './LocaleProvider'
 import { RingSvg } from './UsageRing'
 
@@ -52,14 +52,15 @@ export default function UsageModal({ data, onClose }: { data: UsageLike; onClose
                     <button type="button" className="os-usage-x" onClick={onClose} aria-label={t('usage.close')}>✕</button>
                 </div>
 
+                <p className="os-usage-remaining">{d.remainingText}</p>
                 {d.blockedText && <p className="os-usage-blocked" role="alert">{d.blockedText}</p>}
 
                 <section className="os-usage-sec os-usage-5h" aria-label={t('usage.week')}>
-                    <RingSvg pct={data.pctWeek} size={112} stroke={9} />
+                    <RingSvg pct={data.pct} size={112} stroke={9} />
                     <div className="os-usage-5h-text">
                         <div className="os-usage-label">{t('usage.week')}</div>
-                        <b>{d.weekText}</b>
-                        <div className="os-usage-sub">{d.weekReset}</div>
+                        <b>{d.pctText}</b>
+                        <div className="os-usage-sub">{d.resetText}</div>
                     </div>
                 </section>
 
@@ -70,7 +71,7 @@ export default function UsageModal({ data, onClose }: { data: UsageLike; onClose
                 </section>
 
                 <section className="os-usage-sec os-usage-plan" aria-label={t('plan.label')}>
-                    <span>{t('plan.current')}: <b>{t('plan.free')}</b></span>
+                    <span>{t('plan.current')}: <b>{planNameL(locale, data.plan)}</b></span>
                     <Link href="/os/charge" className="os-usage-plan-link">{t('usage.planView')}</Link>
                 </section>
 

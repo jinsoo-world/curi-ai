@@ -9,18 +9,22 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getCreditBalance } from '@/domains/credit'
 import { FONT_SIZES, OS_TIMEZONE, applyFontSize, readFontSize, saveFontSize, type FontSize } from '@/domains/os/settings'
-import { LOCALE_CHOICES, usageDetailL, type LocaleChoice, type TKey } from '@/domains/os/i18n'
+import { LOCALE_CHOICES, planNameL, usageDetailL, type LocaleChoice, type TKey } from '@/domains/os/i18n'
 import {
     EXTRA_MODES, THEME_CHOICES, readExtraUsage, readThemeChoice, saveExtraUsage, saveThemeChoice,
     type ExtraMode, type ExtraUsage, type ThemeChoice,
 } from '@/domains/os/local-prefs'
-import { usageTone, withComma, type UsageLike } from '@/domains/os/usage'
+import { isUsageLike, usageTone, withComma, type UsageLike } from '@/domains/os/usage'
 import { isLowClover } from '@/domains/credit/charge-flow'
 import { useLocale, paintTheme } from '@/components/os/LocaleProvider'
 import NotificationSettings, { Toggle } from '@/components/os/NotificationSettings'
 import { RingSvg } from '@/components/os/UsageRing'
 import InstallPrompt from '@/components/pwa/InstallPrompt'
 import SnsLinkCard from '@/components/os/SnsLinkCard'
+import { CLOVER_AUTO_KEY, CLOVER_OVERAGE_ENABLED, OVERAGE_COPY, readCloverAuto } from '@/domains/os/usage-config'
+
+/** 1:1 문의 창구 (환불 안내, 사업자 정보와 같은 메일) */
+const CONTACT_EMAIL = 'curious@mission-driven.kr'
 import type { ApprovalMode, TeamBot } from '@/domains/os/types'
 import '@/components/os/settings.css'
 import '@/components/os/usage.css'
@@ -273,6 +277,15 @@ function GeneralTab({ localeChoice, setLocaleChoice }: { localeChoice: LocaleCho
             <div className="os-set-sub" style={{ marginTop: 18 }}>
                 {t('connect.line')} <Link href="/os/connect" className="os-set-link">{t('connect.link')}</Link>
             </div>
+
+            {/* 1:1 문의 (U17). 창구는 환불 안내, 사업자 정보와 같은 메일 */}
+            <h2>{t('contact.label')}</h2>
+            <div className="os-card">
+                <div className="os-set-line">
+                    <div className="os-set-text"><b>{t('contact.label')}</b><div className="os-set-hint">{t('contact.sub')}</div></div>
+                    <a href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('[큐리AI 1:1 문의]')}`} className="os-btn" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>{t('contact.send')}</a>
+                </div>
+            </div>
         </>
     )
 }
@@ -287,16 +300,22 @@ function UsageTab() {
     const [extra, setExtra] = useState<ExtraUsage>({ mode: 'none', amount: 0 })
     const [clover, setClover] = useState<number | null>(null)
     const [now] = useState(() => new Date())
+    const [cloverAuto, setCloverAuto] = useState(false)
+    const 이어쓰기바꾸기 = (on: boolean) => {
+        setCloverAuto(on)
+        try { window.localStorage.setItem(CLOVER_AUTO_KEY, on ? '1' : '0') } catch { /* 저장 막힘 */ }
+    }
 
     useEffect(() => {
         let alive = true
-        void Promise.resolve().then(() => { if (alive) setExtra(readExtraUsage(window.localStorage)) })
+        void Promise.resolve().then(() => { if (alive) { setExtra(readExtraUsage(window.localStorage)); setCloverAuto(readCloverAuto(window.localStorage)) } })
         fetch('/api/os/usage', { cache: 'no-store' }).then(async r => {
             if (!alive) return
             if (!r.ok) { setUsage({ kind: 'fail' }); return }
             const d = await r.json()
             if (d?.guest) { setUsage({ kind: 'guest' }); return }
-            setUsage({ kind: 'ok', data: d as UsageLike })
+            if (!isUsageLike(d)) { setUsage({ kind: 'fail' }); return }
+            setUsage({ kind: 'ok', data: d })
             getCreditBalance().then(n => { if (alive) setClover(n) }).catch(() => { /* 못 읽어도 화면은 산다 */ })
         }).catch(() => { if (alive) setUsage({ kind: 'fail' }) })
         return () => { alive = false }
@@ -321,10 +340,10 @@ function UsageTab() {
                     <>
                         {d.blockedText && <p className="os-usage-blocked" role="alert">{d.blockedText}</p>}
                         <section className="os-usage-sec os-usage-5h" aria-label={t('usage.week')}>
-                            <RingSvg pct={usage.data.pctWeek} size={96} stroke={9} />
+                            <RingSvg pct={usage.data.pct} size={96} stroke={9} />
                             <div className="os-usage-5h-text">
-                                <div className="os-usage-label">{t('usage.week')}</div>
-                                <b>{t('usage.weekLine', { pct: usage.data.pctWeek, limit: withComma(usage.data.limitWeek), used: withComma(usage.data.usedWeek) })}</b>
+                                <div className="os-usage-label">{d.remainingText}</div>
+                                <b>{t('usage.weekLine', { pct: usage.data.pct })}</b>
                                 <div className="os-usage-sub">{t('usage.weekReset')}</div>
                             </div>
                         </section>
@@ -355,7 +374,7 @@ function UsageTab() {
             <div className="os-card">
                 <div className="os-set-line">
                     <div className="os-set-text"><b>{t('plan.current')}</b></div>
-                    <span className="os-set-value">{t('plan.free')}</span>
+                    <span className="os-set-value">{usage.kind === 'ok' ? planNameL(locale, usage.data.plan) : t('plan.free')}</span>
                 </div>
                 {usage.kind === 'ok' && (
                     <div className="os-set-line">
@@ -364,6 +383,12 @@ function UsageTab() {
                             {clover === null ? t('clover.counting') : t('clover.balance', { n: withComma(clover) })}
                         </span>
                     </div>
+                )}
+                {CLOVER_OVERAGE_ENABLED && usage.kind === 'ok' && (
+                    <label className="os-set-line" style={{ cursor: 'pointer' }}>
+                        <div className="os-set-text"><b>{OVERAGE_COPY.autoSetting}</b></div>
+                        <input type="checkbox" checked={cloverAuto} onChange={e => 이어쓰기바꾸기(e.target.checked)} style={{ width: 22, height: 22 }} />
+                    </label>
                 )}
                 <div className="os-set-actions">
                     <Link href="/os/charge?from=/os/settings" className="os-btn primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>{t('plan.manage')}</Link>

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
     DICT, LOCALES, LOCALE_KEY,
-    cleanLocaleChoice, dayHourTextL, localeFromSystem, readLocaleChoice, resolveLocale, saveLocaleChoice, t, untilTextL, usageDetailL,
+    cleanLocaleChoice, dayHourTextL, localeFromSystem, planNameL, readLocaleChoice, resolveLocale, saveLocaleChoice, t, untilTextL, usageDetailL,
 } from '../i18n'
 
 function 창고(초기: Record<string, string> = {}) {
@@ -38,7 +38,7 @@ describe('사전', () => {
 
     it('구멍({n})을 채운다. 안 준 구멍은 그대로 남긴다', () => {
         expect(t('ko', 'review.count', { n: 3 })).toBe('내 봇 3개에 같이 적용돼요.')
-        expect(t('en', 'usage.weekLine', { pct: 3 })).toBe('Weekly usage 3%')
+        expect(t('en', 'usage.weekLine', { pct: 3 })).toBe('Monthly usage 3%')
         expect(t('ja', 'noti.sms.to')).toBe('{phone} に送ります')
     })
 })
@@ -84,31 +84,42 @@ describe('언어 고르기', () => {
 describe('사용량 글자 (언어별)', () => {
     const now = new Date('2026-09-23T03:00:00Z')   // 서울 12시 (수)
     const view = {
-        used5h: 12, limit5h: 100, pct5h: 12,
-        resetAt5h: new Date(now.getTime() + 95 * 60_000),
-        usedWeek: 30, limitWeek: 1000, pctWeek: 3,
-        weekResetAt: new Date('2026-09-27T15:00:00Z'),   // 서울 (월) 0시
+        plan: 'basic', used: 37, limit: 370, pct: 10, remaining: 333,
+        resetAt: new Date('2026-09-30T15:00:00Z'),   // 서울 10월 1일 0시
         blocked: false,
     }
 
     it('남은 시간', () => {
-        expect(untilTextL('en', view.resetAt5h, now)).toBe('in 1 h 35 min')
-        expect(untilTextL('ja', view.resetAt5h, now)).toBe('1時間35分後')
-        expect(untilTextL('ko', view.resetAt5h, now)).toBe('1시간 35분 후')
+        const at = new Date(now.getTime() + 95 * 60_000)
+        expect(untilTextL('en', at, now)).toBe('in 1 h 35 min')
+        expect(untilTextL('ja', at, now)).toBe('1時間35分後')
+        expect(untilTextL('ko', at, now)).toBe('1시간 35분 후')
         expect(untilTextL('en', new Date(now.getTime() + 1000), now)).toBe('soon')
     })
 
     it('요일과 시각', () => {
-        expect(dayHourTextL('ko', view.weekResetAt)).toBe('(월) 0시')
-        expect(dayHourTextL('en', view.weekResetAt)).toBe('Mon 0:00')
-        expect(dayHourTextL('ja', view.weekResetAt)).toBe('(月) 0時')
+        const mon = new Date('2026-09-27T15:00:00Z')
+        expect(dayHourTextL('ko', mon)).toBe('(월) 0시')
+        expect(dayHourTextL('en', mon)).toBe('Mon 0:00')
+        expect(dayHourTextL('ja', mon)).toBe('(月) 0時')
     })
 
-    it('퍼센트만 쓴다', () => {
-        expect(usageDetailL('en', view, now).weekText).toBe('3%')
-        expect(usageDetailL('ja', view, now).fiveHourText).toBe('12%')
-        expect(usageDetailL('ko', view, now).weekText).toBe('3%')
+    it('남은 횟수, 퍼센트, 초기화 날', () => {
+        expect(usageDetailL('ko', view, now).remainingText).toBe('이번 달 남은 333번')
+        expect(usageDetailL('en', view, now).remainingText).toBe('333 left this month')
+        expect(usageDetailL('ja', view, now).remainingText).toBe('今月の残り333回')
+        expect(usageDetailL('en', view, now).pctText).toBe('10%')
+        expect(usageDetailL('en', view, now).resetText).toBe('Resets 10/1 0:00 (Korea time)')
+        expect(usageDetailL('ja', view, now).resetText).toBe('10月1日0時にリセット')
         expect(usageDetailL('en', view, now).blockedText).toBeNull()
-        expect(usageDetailL('en', { ...view, blocked: true, used5h: 100, pct5h: 100 }, now).blockedText).toContain('in 1 h 35 min')
+        expect(usageDetailL('en', { ...view, blocked: true }, now).blockedText).toContain('10/1')
+    })
+
+    it('요금제 이름은 실제 요금제를 따른다 (무료 고정 버그)', () => {
+        expect(planNameL('ko', 'basic')).toBe('베이직')
+        expect(planNameL('ko', 'pro')).toBe('프로')
+        expect(planNameL('ko', 'free')).toBe('무료(기본)')
+        expect(planNameL('ko', undefined)).toBe('무료(기본)')
+        expect(planNameL('en', 'pro')).toBe('Pro')
     })
 })

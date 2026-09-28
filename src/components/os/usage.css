@@ -41,3 +41,12 @@
 .os-usage-plan b { display: inline; }
 .os-usage-plan-link { color: var(--os-포인트); text-decoration: none; font-size: 14px; padding: 6px 10px; border-radius: 10px; }
 .os-usage-plan-link:hover { background: var(--os-말풍선); }
+
+/* ── 대화 안 한도 카드 (U9). 봇 말풍선 아래, 단추 하나 ── */
+.os-usage-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 8px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--os-선); background: var(--os-말풍선); color: var(--os-글); font-size: 15px; line-height: 1.5; max-width: 520px; }
+.os-usage-card.warn { border-color: var(--os-승인); }
+.os-usage-card.limit { border-color: var(--os-오류); }
+.os-usage-card-btn { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 10px; background: var(--os-포인트); color: #fff; font-weight: 600; font-size: 15px; text-decoration: none; white-space: nowrap; }
+.os-usage-card-btn:focus-visible { outline: 2px solid var(--os-포인트); outline-offset: 2px; }
+/* 모달 첫 줄 남은 횟수 (U8) */
+.os-usage-remaining { margin: 6px 0 2px; font-size: 17px; font-weight: 700; color: var(--os-글); }

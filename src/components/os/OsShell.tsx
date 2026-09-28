@@ -424,7 +424,8 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     if (pathname.startsWith('/os/welcome') || pathname.startsWith('/os/start')) return <>{children}</>
 
     // 한 장짜리 화면 = 위에 「대화로 돌아가기」(폰은 「명단」 단추도 옆에). 연결 화면도 여기 든다 (대표 승인 0928 사용성 2번)
-    const 한장화면 = pathname.startsWith('/os/settings') || pathname.startsWith('/os/market') || pathname.startsWith('/os/connect')
+    // 결제 화면(/os/charge)도 한 장 화면으로 든다 (U14). 결제 뒤 도착 화면(/os/charge/done)은 제외
+    const 한장화면 = pathname.startsWith('/os/settings') || pathname.startsWith('/os/market') || pathname.startsWith('/os/connect') || pathname === '/os/charge'
     const q = demo ? '?demo=1' : ''
 
     const addButtons = (

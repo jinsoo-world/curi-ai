@@ -6,6 +6,7 @@
 // 브라우저(localStorage, navigator)는 여기서 직접 만지지 않는다. 화면이 넘겨 준다.
 
 import { kstDayHourText, untilText, usageDetail, withComma, type UsageDetail, type UsageLike } from '@/domains/os/usage'
+import type { PlanId } from '@/domains/os/plan'
 
 export const LOCALES = ['ko', 'en', 'ja'] as const
 export type Locale = typeof LOCALES[number]
@@ -78,10 +79,11 @@ const ko = {
 
     // ── 설정: 사용량과 요금제 ──
     'usage.title': '사용량',
-    'usage.5h': '이번 주',
-    'usage.week': '이번 주',
-    'usage.weekLine': '주간 사용량 {pct}%',
-    'usage.weekReset': '월요일 0시에 다시 채워져요',
+    'usage.5h': '이번 달',
+    'usage.week': '이번 달',
+    'usage.weekLine': '월간 사용량 {pct}%',
+    'usage.weekReset': '매달 1일 0시에 다시 채워져요',
+    'usage.remaining': '이번 달 남은 {n}번',
     'usage.guest': '로그인하면 사용량이 보여요.',
     'usage.fail': '사용량을 못 읽었어요. 잠시 뒤 다시 열어 주세요.',
     'usage.loading': '사용량을 읽는 중…',
@@ -98,11 +100,16 @@ const ko = {
     'plan.label': '요금제',
     'plan.current': '지금 요금제',
     'plan.free': '무료(기본)',
+    'plan.basic': '베이직',
+    'contact.label': '1:1 문의',
+    'contact.sub': '메일로 보내 주시면 답해 드려요',
+    'contact.send': '문의하기',
+    'plan.pro': '프로',
     'plan.manage': '요금제 관리',
     'clover.label': '클로버',
     'clover.balance': '지금 가진 클로버 {n}개',
     'clover.counting': '지금 가진 클로버를 세고 있어요',
-    'clover.sub': '대화는 주간 사용 한도로 세요. 클로버는 사진, 도구 같은 곳에 써요.',
+    'clover.sub': '대화는 월간 사용 한도로 세요. 클로버는 사진, 도구 같은 곳에 써요.',
     'clover.charge': '클로버 충전하기',
 
     // ── 설정: 앱 ──
@@ -232,10 +239,11 @@ const en: Record<TKey, string> = {
     'connect.link': 'Manage connections',
 
     'usage.title': 'Usage',
-    'usage.5h': '5-hour window',
-    'usage.week': 'This week',
-    'usage.weekLine': 'Weekly usage {pct}%',
-    'usage.weekReset': 'Refills Monday at 0:00 (Korea time)',
+    'usage.5h': 'This month',
+    'usage.week': 'This month',
+    'usage.weekLine': 'Monthly usage {pct}%',
+    'usage.weekReset': 'Refills on the 1st of each month at 0:00 (Korea time)',
+    'usage.remaining': '{n} left this month',
     'usage.guest': 'Sign in to see your usage.',
     'usage.fail': "Couldn't load usage. Please try again soon.",
     'usage.loading': 'Loading usage…',
@@ -252,11 +260,16 @@ const en: Record<TKey, string> = {
     'plan.label': 'Plan',
     'plan.current': 'Current plan',
     'plan.free': 'Free (default)',
+    'plan.basic': 'Basic',
+    'contact.label': 'Contact us',
+    'contact.sub': 'Send us an email and we will reply',
+    'contact.send': 'Email us',
+    'plan.pro': 'Pro',
     'plan.manage': 'Manage plan',
     'clover.label': 'Clovers',
     'clover.balance': 'You have {n} clovers',
     'clover.counting': 'Counting your clovers…',
-    'clover.sub': 'Chat uses your weekly usage limit. Clovers are for things like photos and tools.',
+    'clover.sub': 'Chat uses your monthly usage limit. Clovers are for things like photos and tools.',
     'clover.charge': 'Get clovers',
 
     'app.install': 'Install as app',
@@ -380,10 +393,11 @@ const ja: Record<TKey, string> = {
     'connect.link': '接続を管理',
 
     'usage.title': '利用量',
-    'usage.5h': '5時間の枠',
-    'usage.week': '今週',
-    'usage.weekLine': '週間利用量 {pct}%',
-    'usage.weekReset': '月曜0時にリセットされます(韓国時間)',
+    'usage.5h': '今月',
+    'usage.week': '今月',
+    'usage.weekLine': '月間利用量 {pct}%',
+    'usage.weekReset': '毎月1日0時にリセットされます(韓国時間)',
+    'usage.remaining': '今月の残り{n}回',
     'usage.guest': 'ログインすると利用量が表示されます。',
     'usage.fail': '利用量を読み込めませんでした。しばらくしてからもう一度お開きください。',
     'usage.loading': '利用量を読み込み中…',
@@ -400,11 +414,16 @@ const ja: Record<TKey, string> = {
     'plan.label': 'プラン',
     'plan.current': '現在のプラン',
     'plan.free': '無料(基本)',
+    'plan.basic': 'ベーシック',
+    'contact.label': 'お問い合わせ',
+    'contact.sub': 'メールでお送りいただければお返事します',
+    'contact.send': '問い合わせる',
+    'plan.pro': 'プロ',
     'plan.manage': 'プランを管理',
     'clover.label': 'クローバー',
     'clover.balance': '現在のクローバー {n}個',
     'clover.counting': 'クローバーを数えています…',
-    'clover.sub': '会話は週間利用上限で数えます。クローバーは写真やツールなどに使います。',
+    'clover.sub': '会話は月間利用上限で数えます。クローバーは写真やツールなどに使います。',
     'clover.charge': 'クローバーをチャージ',
 
     'app.install': 'アプリとして使う',
@@ -550,35 +569,31 @@ export function dayHourTextL(locale: Locale, d: Date): string {
     return locale === 'ja' ? `(${day}) ${hour}時` : `${day} ${hour}:00`
 }
 
-/** 사용량 모달 글자. 한국어는 usage.ts 의 usageDetail 그대로, 다른 언어는 같은 숫자로 다시 쓴다. 분모는 항상 같이 */
+/** 사용량 모달 글자. 한국어는 usage.ts 의 usageDetail 그대로(문구는 usage-config.ts), 다른 언어는 같은 숫자로 다시 쓴다 */
 export function usageDetailL(locale: Locale, v: UsageLike, now: Date): UsageDetail {
     if (locale === 'ko') return usageDetail(v, now)
-    const toDate = (d: Date | string | null) => d === null ? null : d instanceof Date ? d : new Date(d)
-    const resetAt5h = toDate(v.resetAt5h)
-    const weekResetAt = toDate(v.weekResetAt) as Date
-    const limit5h = withComma(v.limit5h), used5h = withComma(v.used5h)
-    const limitW = withComma(v.limitWeek), usedW = withComma(v.usedWeek)
-    let blockedText: string | null = null
-    if (v.blocked) {
-        const at = v.used5h >= v.limit5h && resetAt5h ? resetAt5h : weekResetAt
-        blockedText = locale === 'ja'
-            ? `上限に達しました。${untilTextL(locale, at, now)}にまた使えます`
-            : `You've reached the limit. You can use it again ${untilTextL(locale, at, now)}`
-    }
+    const resetAt = v.resetAt instanceof Date ? v.resetAt : new Date(v.resetAt)
+    const kst = new Date(resetAt.getTime() + KST_OFFSET_MS)
+    const mo = kst.getUTCMonth() + 1, day = kst.getUTCDate(), hour = kst.getUTCHours()
+    const remainingText = t(locale, 'usage.remaining', { n: withComma(v.remaining) })
     if (locale === 'ja') {
         return {
-            fiveHourText: `${v.pct5h}%`,
-            fiveHourReset: resetAt5h ? `${untilTextL(locale, resetAt5h, now)}に回復します` : 'まだ使っていません',
-            weekText: `${v.pctWeek}%`,
-            weekReset: `${dayHourTextL(locale, weekResetAt)}にリセット`,
-            blockedText,
+            remainingText,
+            pctText: `${v.pct}%`,
+            resetText: `${mo}月${day}日${hour}時にリセット`,
+            blockedText: v.blocked ? `今月の上限に達しました。${mo}月${day}日${hour}時にまた使えます` : null,
         }
     }
     return {
-        fiveHourText: `${v.pct5h}%`,
-        fiveHourReset: resetAt5h ? `Refills ${untilTextL(locale, resetAt5h, now)}` : 'Not used yet',
-        weekText: `${v.pctWeek}%`,
-        weekReset: `Resets ${dayHourTextL(locale, weekResetAt)} (Korea time)`,
-        blockedText,
+        remainingText,
+        pctText: `${v.pct}%`,
+        resetText: `Resets ${mo}/${day} ${hour}:00 (Korea time)`,
+        blockedText: v.blocked ? `You've reached this month's limit. You can use it again on ${mo}/${day} at ${hour}:00 (Korea time)` : null,
     }
+}
+
+/** 요금제 이름 (사용량 모달, 설정). 모르는 값은 무료 */
+export function planNameL(locale: Locale, plan: unknown): string {
+    const id: PlanId = plan === 'basic' || plan === 'pro' ? plan : 'free'
+    return t(locale, id === 'free' ? 'plan.free' : id === 'basic' ? 'plan.basic' : 'plan.pro')
 }

@@ -50,6 +50,6 @@ export interface CreditDeductRequest {
 /** 크레딧 상수 */
 export const CREDIT_CONSTANTS = {
     SIGNUP_BONUS: 10000,            // 가입 보너스 크레딧
-    CHAT_COST_PER_MESSAGE: 100,     // 메시지당 차감 크레딧
+    CHAT_COST_PER_MESSAGE: 100,     // 메시지당 차감 크레딧 (옛 값, 지금 아무 데서도 빼지 않음). 새 값은 os/usage-config.ts chatCloverCost 가 스위치와 함께 대신한다
     MIN_CHARGE_AMOUNT: 1000,        // 최소 충전 금액
 } as const
