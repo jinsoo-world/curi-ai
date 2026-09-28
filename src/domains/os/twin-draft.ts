@@ -9,6 +9,7 @@ import { classifySnsLink } from './sns-link'
 import { FETCHERS } from './feeds'
 import type { KnowledgeFeed } from './feeds'
 import { readUrl, youtubeVideoId } from './readers'
+import { readThreads } from './readers/threads'
 import { analyzeVoice, buildVoiceGuide } from './voice'
 import { buildTwinPrompt, TWIN_HARD_LIMITS } from './twin'
 import { askSideText } from '@/domains/llm/side-text'
@@ -68,7 +69,7 @@ function fakeFeed(kind: KnowledgeFeed['kind'], handleOrUrl: string): KnowledgeFe
 }
 
 /** 링크 하나 읽기 (저장 안 함) */
-async function readOneLink(link: string, hasPaste: boolean, deadline: number): Promise<{ texts: DraftText[]; unread?: { url: string; reason: string } }> {
+async function readOneLink(link: string, hasPaste: boolean, deadline: number, userId: string | null): Promise<{ texts: DraftText[]; unread?: { url: string; reason: string } }> {
     let t
     try {
         t = classifySnsLink(link)
@@ -77,10 +78,21 @@ async function readOneLink(link: string, hasPaste: boolean, deadline: number): P
         if (youtubeVideoId(link)) {
             const left = deadline - Date.now()
             if (left < 3_000) return { texts: [], unread: { url: link, reason: UNREAD_REASON.time } }
-            const r = await readUrl(link, { timeoutMs: Math.min(10_000, left - 1_000), maxChars: PER_SOURCE_CHARS * 2 })
+            // 영상 속 말까지: 무료 자막 먼저, 막히면 Gemini 저가 모델로 한 번 요약해 저장(영상당 한 번, 하루 한도 그대로)
+            const r = await readUrl(link, { timeoutMs: Math.min(45_000, left - 1_000), maxChars: PER_SOURCE_CHARS * 2, gemini: { userId, waitMs: Math.max(0, Math.min(40_000, left - 3_000)) } })
             return r.ok ? { texts: [{ title: r.title || '유튜브 영상', url: link, text: r.text }] } : { texts: [], unread: { url: link, reason: r.reason } }
         }
         return { texts: [], unread: { url: link, reason: e instanceof Error ? e.message : '주소를 확인해 주세요' } }
+    }
+    if (t.platform === 'threads') {
+        const left = deadline - Date.now()
+        if (left < 3_000) return { texts: [], unread: { url: t.url, reason: UNREAD_REASON.time } }
+        const r = await readThreads(t.url, { timeoutMs: Math.min(10_000, left - 1_000), max: 5 })
+        if (r.ok) {
+            const head = r.bio ? `소개: ${r.bio}\n\n` : ''
+            return { texts: [{ title: '스레드', url: t.url, text: (head + r.posts.map(p => p.text).join('\n\n---\n\n')).slice(0, PER_SOURCE_CHARS * 2) }] }
+        }
+        return hasPaste ? { texts: [] } : { texts: [], unread: { url: t.url, reason: UNREAD_REASON.paste } }
     }
     if (t.paste && !t.feed) return hasPaste ? { texts: [] } : { texts: [], unread: { url: t.url, reason: UNREAD_REASON.paste } }
     if (!t.feed) return { texts: [], unread: { url: t.url, reason: t.platform === 'market' ? UNREAD_REASON.market : UNREAD_REASON.linkOnly } }
@@ -101,8 +113,8 @@ async function readOneLink(link: string, hasPaste: boolean, deadline: number): P
 }
 
 /** 링크들과 붙여넣은 글을 모은다 (저장 안 함) */
-export async function collectDraftSources(links: string[], pastes: string[], deadline: number): Promise<DraftSources> {
-    const results = await Promise.all(links.map(l => readOneLink(l, pastes.length > 0, deadline)))
+export async function collectDraftSources(links: string[], pastes: string[], deadline: number, userId: string | null = null): Promise<DraftSources> {
+    const results = await Promise.all(links.map(l => readOneLink(l, pastes.length > 0, deadline, userId)))
     const texts: DraftText[] = pastes.map((p, i) => ({ title: `붙여넣은 글 ${i + 1}`, url: '', text: p }))
     const unread: DraftSources['unread'] = []
     for (const r of results) {

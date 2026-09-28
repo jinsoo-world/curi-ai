@@ -9,7 +9,7 @@ import { cleanDraftLinks, cleanDraftPastes, collectDraftSources, makeTwinDraft }
 import { TWIN_DRAFT_COPY, TWIN_DRAFT_GLOBAL_DAILY, TWIN_DRAFT_USER_DAILY } from '@/domains/os/twin-draft-shared'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 120   // 유튜브 영상 요약(최대 약 40초) + 초안 쓰기
 
 const DAY = 24 * 60 * 60
 
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     if (links.length === 0 && pastes.length === 0) return NextResponse.json({ error: '링크를 하나 이상 넣어 주세요' }, { status: 400 })
 
     const started = Date.now()
-    const sources = await collectDraftSources(links, pastes, started + 30_000)
+    const sources = await collectDraftSources(links, pastes, started + 50_000, user.id)
     if (sources.texts.length === 0) {
         return NextResponse.json({ error: '읽은 글이 없어요. 글을 붙여넣거나 다른 링크를 넣어 주세요', unread: sources.unread }, { status: 422 })
     }

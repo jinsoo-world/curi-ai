@@ -99,13 +99,22 @@ export default function HomeMake() {
         if (e.key === 'Backspace' && !text && links.length) setLinks(ls => ls.slice(0, -1))
     }
 
+    // 「내 AI 만들기」 하나로: 칸에 친 주소는 붙이고, 주소가 하나라도 있으면 바로 초안 만들기로 간다 (대표 지시 0929 버튼 하나)
     const submit = () => {
         const t = text.trim()
-        if (!t) { if (links.length) setPanel(true); else input.current?.focus(); return }
-        const { links: found } = splitLinks(t)
-        if (found.length && addUrls(found)) { setText(''); return }
-        if (looksLikeLink(t) && addUrls([t])) { setText(''); return }
-        setTried(true)
+        let extra: string[] = []
+        if (t) {
+            const { links: found } = splitLinks(t)
+            const cand = found.length ? found : looksLikeLink(t) ? [t] : []
+            if (!cand.length) { setTried(true); return }
+            addUrls(cand); setText(''); extra = cand
+        }
+        const all = [...new Set([...links, ...extra])].slice(0, TWIN_DRAFT_MAX_LINKS)
+        if (all.length === 0 && pastes.length === 0) { input.current?.focus(); return }
+        if (going) return
+        setGoing(true)
+        saveHomeDraft(window.localStorage, { links: all, pastes, consents: agree })
+        window.location.assign(signedIn ? HOME_DRAFT_NEXT : `/login?next=${encodeURIComponent(HOME_DRAFT_NEXT)}`)
     }
 
     const guide = text.trim() ? homeLinkGuide(text) : null
@@ -211,7 +220,7 @@ export default function HomeMake() {
                             <span className="hm-hint">{c.fileNote}</span>
                         </div>
                     )}
-                    <button type="button" className="hm-btn wide" disabled={!canDraft} onClick={makeDraft}>{c.draft}</button>
+                    {direct && <button type="button" className="hm-btn wide" disabled={!canDraft} onClick={makeDraft}>{c.draft}</button>}
                     {!signedIn && <p className="hm-hint center">{c.draftNote}</p>}
                 </div>
             )}
