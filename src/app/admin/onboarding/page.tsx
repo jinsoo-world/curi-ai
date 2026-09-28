@@ -37,7 +37,7 @@ export default async function OnboardingAdminPage({ searchParams }: { searchPara
     const sp = await searchParams
     const range = kstRange(sp.from, sp.to)
     let error = ''
-    let d: Awaited<ReturnType<typeof loadOnboarding>> = { users: [], rows: [], botOwners: new Set(), chatUsers: new Set() }
+    let d: Awaited<ReturnType<typeof loadOnboarding>> = { users: [], rows: [], botOwners: new Set(), chatUsers: new Set(), sns: new Map() }
     try {
         d = await loadOnboarding(createAdminClient(), range.startIso, range.endIso)
     } catch (e) {
@@ -90,7 +90,7 @@ export default async function OnboardingAdminPage({ searchParams }: { searchPara
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, whiteSpace: 'nowrap' }}>
                         <thead>
                             <tr style={{ textAlign: 'left', color: '#666' }}>
-                                {['가입(KST)', '이름', '온보딩', '경로', '초대', '맡길 일', '나이대', '업종', '강의모임', '기기', '앱', 'utm', '첫 봇', '첫 메시지'].map(h => <th key={h} style={{ padding: '6px 8px' }}>{h}</th>)}
+                                {['가입(KST)', '이름', '온보딩', '경로', '초대', '맡길 일', '나이대', '업종', '강의모임', '기기', '앱', 'utm', 'SNS 링크', '첫 봇', '첫 메시지'].map(h => <th key={h} style={{ padding: '6px 8px' }}>{h}</th>)}
                             </tr>
                         </thead>
                         <tbody>
@@ -110,6 +110,7 @@ export default async function OnboardingAdminPage({ searchParams }: { searchPara
                                         <td style={{ padding: '6px 8px' }}>{r?.device ?? ''}{r?.os ? ` ${r.os}` : ''}</td>
                                         <td style={{ padding: '6px 8px' }}>{r?.app_shell ?? ''}</td>
                                         <td style={{ padding: '6px 8px' }}>{r?.utm_source ?? ''}</td>
+                                        <td style={{ padding: '6px 8px' }}>{(() => { const x = d.sns.get(u.id); return x ? `${x.status}${x.bonus ? ' +50' : ''}` : '' })()}</td>
                                         <td style={{ padding: '6px 8px' }}>{d.botOwners.has(u.id) ? 'Y' : ''}</td>
                                         <td style={{ padding: '6px 8px' }}>{d.chatUsers.has(u.id) ? 'Y' : ''}</td>
                                     </tr>

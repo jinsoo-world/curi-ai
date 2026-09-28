@@ -20,6 +20,7 @@ import { useLocale, paintTheme } from '@/components/os/LocaleProvider'
 import NotificationSettings, { Toggle } from '@/components/os/NotificationSettings'
 import { RingSvg } from '@/components/os/UsageRing'
 import InstallPrompt from '@/components/pwa/InstallPrompt'
+import SnsLinkCard from '@/components/os/SnsLinkCard'
 import type { ApprovalMode, TeamBot } from '@/domains/os/types'
 import '@/components/os/settings.css'
 import '@/components/os/usage.css'
@@ -197,6 +198,8 @@ function GeneralTab({ localeChoice, setLocaleChoice }: { localeChoice: LocaleCho
                     </div>
                 )}
             </div>
+            {/* 내 SNS, 블로그 링크 연동 (대표 승인 0928) */}
+            {checked && user && <SnsLinkCard />}
 
             <h2>{t('sec.appearance')}</h2>
             <div className="os-card">

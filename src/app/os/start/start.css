@@ -22,6 +22,7 @@
 .onb-kicker { font-size: 16px; font-weight: 700; color: var(--os-클로버); margin-bottom: 6px; }
 .onb-h1 { font-size: 26px; line-height: 1.35; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 18px; }
 .onb-sub { color: var(--os-글-연); margin: -8px 0 16px; }
+.onb-hint { font-size: 15px; color: var(--os-글-흐림); margin: -4px 0 0; }
 .onb-ok { color: var(--os-클로버); font-weight: 700; margin: 0 0 12px; }
 .onb-err { color: var(--os-오류); font-weight: 700; margin: 14px 0 0; }
 .onb-label { font-size: 17px; font-weight: 700; margin: 24px 0 10px; }

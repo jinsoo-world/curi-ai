@@ -11,9 +11,10 @@ import BotAvatar from '@/components/os/BotAvatar'
 import { JOBS } from '@/domains/os/presets'
 import {
     ONBOARDING_TITLE, LEADER_CARD, ACQUISITION, REFERRAL_SOURCES, USE_CASES, MAX_USE_CASES,
-    AGE_BANDS, GENDERS, OCCUPATIONS, RUNS, AUDIENCE, STEP_ORDER, firstJobFor,
+    AGE_BANDS, GENDERS, OCCUPATIONS, RUNS, RUNS_NONE, AUDIENCE, AUDIENCE_QUESTION, STEP_ORDER, firstJobFor, SNS_HINT,
     SURVEY_LOCAL_KEY, SURVEY_BOT_LOCAL_KEY, FIRST_SENT_LOCAL_KEY, SURVEY_EVENT, type Choice,
 } from '@/domains/os/onboarding'
+import { 클로버알림 } from '@/lib/clover-bus'
 import './start.css'
 
 type Answers = {
@@ -28,11 +29,12 @@ type Answers = {
     audience_size_band: string | null
     org_name: string
     leader_contact_ok: boolean
+    sns_url: string
 }
 const EMPTY: Answers = {
     acquisition_source: null, acquisition_detail: '', leader_code_entered: '', use_cases: [],
     age_band: null, gender: null, occupation: null, runs_class_or_group: null, audience_size_band: null,
-    org_name: '', leader_contact_ok: false,
+    org_name: '', leader_contact_ok: false, sns_url: '',
 }
 const TOTAL = 6
 
@@ -81,6 +83,8 @@ export default function StartBody() {
     const [busy, setBusy] = useState(false)
     const [err, setErr] = useState('')
     const [refNote, setRefNote] = useState('')
+    // SNS 링크 읽기는 오래 걸려(최대 40초) 기다리지 않고 뒤에서 돌린다. 끝나면 축하 화면에 한 줄
+    const [snsNote, setSnsNote] = useState('')
     const loaded = useRef(false)
 
     useEffect(() => {
@@ -156,6 +160,16 @@ export default function StartBody() {
         if (key === 'source' && a.leader_code_entered.trim() && REFERRAL_SOURCES.has(a.acquisition_source || '')) {
             setRefNote(res.refOk ? '초대 코드를 확인했어요.' : '')
         }
+        if (key === 'leader' && a.runs_class_or_group !== RUNS_NONE && a.sns_url.trim()) {
+            setSnsNote('내 글을 읽는 중이에요')
+            fetch('/api/os/sns-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: a.sns_url, source: 'onboarding' }) })
+                .then(r => r.json())
+                .then((d: { message?: string; error?: string; balance?: number }) => {
+                    setSnsNote(d.error || d.message || '')
+                    if (typeof d.balance === 'number') 클로버알림(d.balance)
+                })
+                .catch(() => setSnsNote('링크는 설정에서 다시 넣을 수 있어요'))
+        }
         setStep(s => Math.min(s + 1, TOTAL - 1))
         window.scrollTo({ top: 0 })
     }, [step, age, terms, privacy, marketing, a, save])
@@ -197,7 +211,7 @@ export default function StartBody() {
         !!a.runs_class_or_group,
         true,
     ][step]
-    const runsYes = !!a.runs_class_or_group && a.runs_class_or_group !== 'no'
+    const runsYes = !!a.runs_class_or_group && a.runs_class_or_group !== RUNS_NONE
     const allRequired = age && terms && privacy
 
     if (!ready) {
@@ -274,7 +288,7 @@ export default function StartBody() {
 
                 {step === 4 && (
                     <section>
-                        <h1 className="onb-h1">강의나 모임을 운영하시나요?</h1>
+                        <h1 className="onb-h1">{AUDIENCE_QUESTION}</h1>
                         <BigChoices list={RUNS} value={a.runs_class_or_group} onPick={id => set('runs_class_or_group', id)} />
                         {runsYes && (
                             <>
@@ -283,9 +297,12 @@ export default function StartBody() {
                                     <div className="onb-card-line">{LEADER_CARD.line}</div>
                                     <div className="onb-card-note">{LEADER_CARD.note}</div>
                                 </div>
-                                <div className="onb-label">함께하는 분은 몇 명쯤인가요? <em>(선택)</em></div>
+                                <div className="onb-label">내 SNS나 블로그 주소 <em>(선택)</em></div>
+                                <p className="onb-hint">{SNS_HINT}</p>
+                                <input className="onb-input" value={a.sns_url} maxLength={300} inputMode="url" placeholder="https://blog.naver.com/아이디" onChange={e => set('sns_url', e.target.value)} />
+                                <div className="onb-label">만나는 분은 몇 명쯤인가요? <em>(선택)</em></div>
                                 <Chips list={AUDIENCE} value={a.audience_size_band} onPick={id => set('audience_size_band', id)} />
-                                <input className="onb-input" value={a.org_name} maxLength={80} placeholder="강의나 모임 이름 (선택)" onChange={e => set('org_name', e.target.value)} />
+                                <input className="onb-input" value={a.org_name} maxLength={80} placeholder="채널, 강의, 모임 이름 (선택)" onChange={e => set('org_name', e.target.value)} />
                                 <label className="onb-check onb-check-opt">
                                     <input type="checkbox" checked={a.leader_contact_ok} onChange={() => set('leader_contact_ok', !a.leader_contact_ok)} />
                                     <span>리더 프로그램 안내를 받아 볼게요 <em>(선택)</em></span>
@@ -300,6 +317,7 @@ export default function StartBody() {
                         <div className="onb-mascot"><BotAvatar shape="clover" color="green" state="talking" size={112} name="큐리" /></div>
                         <h1 className="onb-h1">{name ? `${name}님, ` : ''}내 AI 팀이 준비됐어요</h1>
                         <p className="onb-sub">고르신 일에 맞는 봇이 먼저 인사할게요</p>
+                        {snsNote && <p className="onb-ok" role="status">{snsNote}</p>}
                     </section>
                 )}
 

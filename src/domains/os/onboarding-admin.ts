@@ -151,21 +151,30 @@ export async function loadOnboarding(db: SupabaseClient, startIso: string, endIs
     if (error) throw new Error(error.message)
     const list = (users ?? []) as SignupUser[]
     const ids = list.map(u => u.id)
-    if (ids.length === 0) return { users: list, rows: [] as OnbRow[], botOwners: new Set<string>(), chatUsers: new Set<string>() }
+    if (ids.length === 0) return { users: list, rows: [] as OnbRow[], botOwners: new Set<string>(), chatUsers: new Set<string>(), sns: new Map<string, { status: string; bonus: boolean }>() }
     // 주소 길이 제한 때문에 100명씩 나눠 읽는다
     const rows: OnbRow[] = []
     const botOwners = new Set<string>()
     const chatUsers = new Set<string>()
+    /** 사람별 SNS 링크 상태 (read 가 하나라도 있으면 read) + 보너스 받음 */
+    const sns = new Map<string, { status: string; bonus: boolean }>()
     for (let i = 0; i < ids.length; i += 100) {
         const part = ids.slice(i, i + 100)
-        const [r, b, c] = await Promise.all([
+        const [r, b, c, l, g] = await Promise.all([
             db.from('user_onboarding').select('*').in('user_id', part),
             db.from('team_bots').select('user_id').in('user_id', part),
             db.from('chat_sessions').select('user_id').in('user_id', part).gt('message_count', 0),
+            db.from('user_sns_links').select('user_id, status').in('user_id', part),
+            db.from('sns_link_bonuses').select('user_id').in('user_id', part),
         ])
         rows.push(...((r.data ?? []) as OnbRow[]))
         for (const x of (b.data ?? []) as { user_id: string }[]) botOwners.add(x.user_id)
         for (const x of (c.data ?? []) as { user_id: string }[]) chatUsers.add(x.user_id)
+        for (const x of (l.data ?? []) as { user_id: string; status: string }[]) {
+            const prev = sns.get(x.user_id)
+            if (!prev || x.status === 'read') sns.set(x.user_id, { status: x.status, bonus: prev?.bonus ?? false })
+        }
+        for (const x of (g.data ?? []) as { user_id: string }[]) sns.set(x.user_id, { status: sns.get(x.user_id)?.status ?? 'read', bonus: true })
     }
-    return { users: list, rows, botOwners, chatUsers }
+    return { users: list, rows, botOwners, chatUsers, sns }
 }

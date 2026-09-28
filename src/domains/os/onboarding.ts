@@ -79,11 +79,17 @@ export const OCCUPATIONS: Choice[] = [
     { id: 'retired', label: '은퇴 준비나 은퇴' },
     { id: 'other', label: '기타' },
 ]
+/** 화면 5 (대표 승인 0928 23:29 문구 변경) */
+export const AUDIENCE_QUESTION = 'SNS나 강의로 만나는 분들이 있나요?'
 export const RUNS: Choice[] = [
-    { id: 'lecture', label: '강의를 해요' },
-    { id: 'group', label: '모임이나 동호회를 운영해요' },
-    { id: 'no', label: '아니요' },
+    { id: 'sns', label: 'SNS 운영' },
+    { id: 'class', label: '강의나 모임' },
+    { id: 'both', label: '둘 다' },
+    { id: 'none', label: '아직 없어요' },
 ]
+/** 이 답이면 리더 카드와 추가 칸을 연다 */
+export const RUNS_NONE = 'none'
+
 export const AUDIENCE: Choice[] = [
     { id: 'lt10', label: '10명 미만' },
     { id: '10_30', label: '10명에서 30명' },
@@ -221,7 +227,7 @@ export function sanitizeStep(step: unknown, body: unknown): { step: OnboardingSt
         case 'leader': {
             const runs = pick(RUNS, b.runs_class_or_group)
             if (!runs) return { error: '하나만 골라 주세요.' }
-            const yes = runs !== 'no'
+            const yes = runs !== RUNS_NONE
             return {
                 step,
                 fields: {
@@ -284,6 +290,13 @@ export function parseTermsCookie(v: string | null | undefined, now = Date.now())
     if (t > now + 60_000 || now - t > 24 * 3600_000) return null
     return new Date(t).toISOString()
 }
+
+/** SNS, 블로그 링크 연동 보너스 (대표 승인 0928 23:29). 클로버로 준다 (대화 횟수 아님). 계정당 한 번 */
+export const SNS_BONUS_CLOVERS = 50
+export const SNS_SUCCESS_LINE = `내 글로 봇이 배웠어요. 클로버 ${SNS_BONUS_CLOVERS}개를 드렸어요`
+export const SNS_READ_LINE = '내 글로 봇이 배웠어요'
+export const SNS_PENDING_LINE = '이 곳은 아직 읽을 수 없어 링크만 저장했어요 (준비 중)'
+export const SNS_HINT = `유튜브, 블로그 주소를 넣으면 봇이 내 글을 배우고 처음 한 번 클로버 ${SNS_BONUS_CLOVERS}개를 드려요`
 
 // 화면 쪽 저장 (첫 대화 칩과 예시 대화가 읽는다)
 export const SURVEY_LOCAL_KEY = 'curi:survey-help'

@@ -45,9 +45,9 @@ describe('sanitizeStep', () => {
         expect('step' in r && r.fields).toEqual({ age_band: '50s', gender: null, occupation: null })
     })
     it('아니요면 리더 칸을 비운다', () => {
-        const r = sanitizeStep('leader', { runs_class_or_group: 'no', org_name: 'a', leader_contact_ok: true })
-        expect('step' in r && r.fields).toEqual({ runs_class_or_group: 'no', audience_size_band: null, org_name: null, leader_contact_ok: false })
-        const y = sanitizeStep('leader', { runs_class_or_group: 'lecture', audience_size_band: '10_30', org_name: ' 글쓰기 모임 ', leader_contact_ok: true })
+        const r = sanitizeStep('leader', { runs_class_or_group: 'none', org_name: 'a', leader_contact_ok: true })
+        expect('step' in r && r.fields).toEqual({ runs_class_or_group: 'none', audience_size_band: null, org_name: null, leader_contact_ok: false })
+        const y = sanitizeStep('leader', { runs_class_or_group: 'class', audience_size_band: '10_30', org_name: ' 글쓰기 모임 ', leader_contact_ok: true })
         expect('step' in y && y.fields.org_name).toBe('글쓰기 모임')
     })
     it('모르는 단계는 막는다', () => {
@@ -95,7 +95,7 @@ import { summarizeOnboarding, kstRange, toCsv, type OnbRow } from '../onboarding
 describe('관리자 온보딩 집계', () => {
     const base: OnbRow = {
         user_id: 'a', status: 'done', acquisition_source: 'ai_chatbot', acquisition_detail: null, referral_code: null, referral_via: null,
-        use_cases: ['promo', 'customer'], age_band: '50s', gender: null, occupation: 'shop', runs_class_or_group: 'no',
+        use_cases: ['promo', 'customer'], age_band: '50s', gender: null, occupation: 'shop', runs_class_or_group: 'none',
         audience_size_band: null, org_name: '=cmd', leader_contact_ok: false, marketing_agreed: true, terms_agreed_at: null,
         device: 'mobile', os: 'ios', app_shell: 'ios_app', utm_source: null, utm_medium: null, utm_campaign: null, referrer: null,
         started_at: '2026-09-28T15:00:00Z', completed_at: '2026-09-28T15:03:00Z',
