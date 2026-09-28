@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { cleanDraftLinks, cleanDraftPastes, collectDraftSources, makeTwinDraft } from '@/domains/os/twin-draft'
-import { TWIN_DRAFT_CONSENTS, TWIN_DRAFT_COPY, TWIN_DRAFT_GLOBAL_DAILY, TWIN_DRAFT_USER_DAILY } from '@/domains/os/twin-draft-shared'
+import { TWIN_DRAFT_COPY, TWIN_DRAFT_GLOBAL_DAILY, TWIN_DRAFT_USER_DAILY } from '@/domains/os/twin-draft-shared'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -19,10 +19,7 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: '로그인이 필요해요' }, { status: 401 })
 
     const body = await req.json().catch(() => ({})) as { links?: unknown; pastes?: unknown; consents?: unknown }
-    const consents = Array.isArray(body.consents) ? body.consents : []
-    if (consents.length < TWIN_DRAFT_CONSENTS.length || !consents.every(c => c === true)) {
-        return NextResponse.json({ error: '필수 확인 2개를 눌러 주세요' }, { status: 400 })
-    }
+    // 동의 체크 없앰 (대표 지시 0929): consents 는 받아도 확인하지 않는다
     const links = cleanDraftLinks(body.links)
     const pastes = cleanDraftPastes(body.pastes)
     if (links.length === 0 && pastes.length === 0) return NextResponse.json({ error: '링크를 하나 이상 넣어 주세요' }, { status: 400 })

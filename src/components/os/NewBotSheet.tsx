@@ -407,7 +407,7 @@ function MarketTab({ guest, onClose, onLinked }: { guest: boolean; onClose: () =
 
 /** 「내 링크로 만들기」 = 동의 2개, 링크 3개, 붙여넣기 → 저장 없는 초안 → 편집 칸과 같은 칸으로 고치고 만들기 */
 function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => void; onCreated: (bot: TeamBot) => void | Promise<void>; initial?: HomeDraft | null }) {
-    const [agree, setAgree] = useState<boolean[]>(() => TWIN_DRAFT_CONSENTS.map((_, i) => initial?.consents[i] === true))
+    const [agree] = useState<boolean[]>(() => TWIN_DRAFT_CONSENTS.map(() => true))  // 동의 체크 없앰 (대표 지시 0929)
     const [links, setLinks] = useState<string[]>(() => Array.from({ length: TWIN_DRAFT_MAX_LINKS }, (_, i) => initial?.links[i] ?? ''))
     const [pastes, setPastes] = useState<string[]>(() => Array.from({ length: TWIN_DRAFT_MAX_PASTES }, (_, i) => initial?.pastes[i] ?? ''))
     const [busy, setBusy] = useState(false)
@@ -501,14 +501,6 @@ function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => v
                     ))}
                 </div>
             )}
-            <div className="os-field" style={{ display: 'grid', gap: 8 }}>
-                {TWIN_DRAFT_CONSENTS.map((c, i) => (
-                    <label key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 14, lineHeight: 1.5 }}>
-                        <input type="checkbox" checked={agree[i]} disabled={busy} onChange={e => setAgree(prev => prev.map((x, j) => j === i ? e.target.checked : x))} style={{ width: 20, height: 20, marginTop: 1 }} />
-                        <span>{c}</span>
-                    </label>
-                ))}
-            </div>
             {busy && <div className="os-step" role="status">{TWIN_DRAFT_COPY.making}</div>}
             {err && <div className="os-notice" style={{ margin: '14px 0 0' }}>{err}</div>}
             {unreadOnly.length > 0 && <UnreadList items={unreadOnly} />}

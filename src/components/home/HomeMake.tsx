@@ -27,7 +27,7 @@ export default function HomeMake() {
     const [direct, setDirect] = useState(false)
     const [desc, setDesc] = useState('')
     const [descUrl, setDescUrl] = useState('')
-    const [agree, setAgree] = useState<boolean[]>(() => TWIN_DRAFT_CONSENTS.map(() => false))
+    const [agree] = useState<boolean[]>(() => TWIN_DRAFT_CONSENTS.map(() => true))  // 동의 체크 없앰 (대표 지시 0929)
     const [placeholder, setPlaceholder] = useState<string>(c.multi)
     const [fileNote, setFileNote] = useState(false)
     const [panel, setPanel] = useState(false)
@@ -205,14 +205,6 @@ export default function HomeMake() {
                             <span className="hm-hint">{c.fileNote}</span>
                         </div>
                     )}
-                    <div className="hm-block">
-                        {TWIN_DRAFT_CONSENTS.map((t, i) => (
-                            <label key={i} className="hm-consent">
-                                <input type="checkbox" checked={agree[i]} onChange={e => setAgree(a => a.map((v, j) => j === i ? e.target.checked : v))} />
-                                <span>{t}</span>
-                            </label>
-                        ))}
-                    </div>
                     <button type="button" className="hm-btn wide" disabled={!canDraft} onClick={makeDraft}>{c.draft}</button>
                     {!signedIn && <p className="hm-hint center">{c.draftNote}</p>}
                 </div>
