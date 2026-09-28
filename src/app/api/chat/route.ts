@@ -25,7 +25,9 @@ import { applySkills, skillsForMentor } from '@/domains/os/skills'
 import { loadResponseSettingsForChat, applyResponseSettingsToPrompt, shouldAnswerFromKnowledge, STRICT_MIN_SIMILARITY } from '@/domains/os/response-settings'
 import { semanticCacheEnabled, cacheEligibility, cacheScopeKey, botVersion, knowledgeVersion, lookupCachedAnswer, storeCachedAnswer, isStorableAnswer, cachedAnswerStream } from '@/domains/chat/semantic-cache'
 import { logLlmUsage, keepAliveAfterResponse } from '@/domains/llm/usage-log'
-import { SOLAR_CHAT_MODEL } from '@/domains/llm/constants'
+import { SOLAR_CHAT_MODEL, SOLAR_MINI_MODEL } from '@/domains/llm/constants'
+import { correctiveRetrieve } from '@/domains/knowledge/corrective'
+import { askSolar } from '@/domains/agent/ask'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -375,6 +377,8 @@ export async function POST(req: Request) {
         let ragMatches: { content: string; similarity: number }[] = []
         // 검색에 쓴 질문 임베딩 (의미 답 저장소가 다시 쓴다. 새로 만들지 않는다)
         let ragEmbedding: number[] = []
+        // 고쳐 찾기(검색어 다시 쓰기)로 자료를 바꿨나. 바꿨으면 의미 답 저장소는 쓰지 않는다
+        let 교정검색씀 = false
 
         // 🔗 링크 읽기는 자료 검색과 동시에 시작한다(기다리는 시간이 겹치게). 결과는 아래 「링크 바로 읽기」에서 받는다.
         //    이번 말에 주소가 없으면 바로 앞 사용자 말의 주소를 다시 읽는다(이어 묻기, 같은 서버면 10분 기억에서 바로 나온다)
@@ -395,7 +399,34 @@ export async function POST(req: Request) {
             if (embedding.length > 0) {
                 // 지식 검색은 admin client로 (knowledge_chunks 는 anon/authenticated 에
                 // 테이블 권한이 없어 일반 클라이언트로는 42501 permission denied 가 난다)
-                const knowledge = await matchKnowledge(createAdminClient(), embedding, mentorId, undefined, undefined, lastUserMessage)
+                let knowledge = await matchKnowledge(createAdminClient(), embedding, mentorId, undefined, undefined, lastUserMessage)
+                // 🔁 고쳐 찾기 = 가장 가까운 조각도 멀면(문턱 아래) 솔라 미니로 검색어를 한 번 다시 써서 다시 찾는다 (domains/knowledge/corrective)
+                //    평소처럼 잘 찾은 질문은 아무 일도 안 한다. 3초 안에 못 쓰면 포기하고 원래 결과 그대로.
+                const 교정문턱 = (() => { const v = Number(process.env.CORRECTIVE_RAG_MIN_SIM); return Number.isFinite(v) && v > 0 && v < 1 ? v : STRICT_MIN_SIMILARITY })()
+                const 교정 = await correctiveRetrieve({
+                    rewrite: (sys, u) => askSolar(sys, u, {
+                        model: SOLAR_MINI_MODEL, temperature: 0, maxTokens: 60, signal: AbortSignal.timeout(3_000),
+                        usage: { route: '/api/chat', kind: 'rewrite', userId: user?.id ?? null, mentorId },
+                    }),
+                    embed: t => generateEmbedding(t, { route: '/api/chat', userId: user?.id ?? null, mentorId }),
+                    search: (emb, t) => matchKnowledge(createAdminClient(), emb, mentorId, undefined, undefined, t),
+                }, {
+                    question: lastUserMessage,
+                    history: (Array.isArray(messages) ? messages : []).slice(0, -1),
+                    original: knowledge,
+                    minSim: 교정문턱,
+                })
+                if (교정.tried) {
+                    logLlmUsage({
+                        route: '/api/chat', kind: 'corrective', model: 'corrective', userId: user?.id ?? null, mentorId,
+                        meta: { used: 교정.used, rewritten: 교정.rewritten, bestBefore: Number(교정.bestBefore.toFixed(3)), bestAfter: 교정.bestAfter === null ? null : Number(교정.bestAfter.toFixed(3)) },
+                    })
+                    console.log('[Chat RAG] 고쳐 찾기', JSON.stringify({ used: 교정.used, before: 교정.bestBefore, after: 교정.bestAfter }))
+                }
+                if (교정.used) {
+                    knowledge = 교정.matches
+                    교정검색씀 = true
+                }
                 console.log('[Chat RAG] Matched knowledge:', knowledge.length, 'items for mentor:', mentorId)
                 ragMatches = knowledge
                 if (knowledge.length > 0) {
@@ -617,7 +648,7 @@ export async function POST(req: Request) {
                 extractionAttempt: !!extractionPattern,
                 topSimilarity: ragMatches.length > 0 ? Math.max(...ragMatches.map(k => k.similarity ?? 0)) : null,
                 minKnowledgeSimilarity: STRICT_MIN_SIMILARITY,
-                hasEmbedding: ragEmbedding.length > 0,
+                hasEmbedding: ragEmbedding.length > 0 && !교정검색씀,
             })
             const scopeKey = 판정.ok ? cacheScopeKey(responseSettings.kind, user?.id ?? null) : null
             if (판정.ok && scopeKey) {
