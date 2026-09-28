@@ -11,7 +11,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { addKnowledgeSource } from '@/domains/knowledge'
 import { markInjectionPatterns } from '@/domains/chat/injection'
-import { MAX_SOURCES_PER_BOT } from '@/domains/os/knowledge'
+import { MAX_SOURCES_PER_BOT, isUnusableSource } from '@/domains/os/knowledge'
 import type { FeedKind, FeedStatus, FetchNewItems, FetchNewItemsResult, KnowledgeFeed } from './types'
 import { isSocialStubKind } from './types'
 import { fetchYoutubeItems } from './youtube'
@@ -69,11 +69,17 @@ function msg(e: unknown, fallback: string): string {
 }
 
 /** 이 봇의 자료 수 + 이미 있는 원래 주소들 */
+/**
+ * 자료 칸 수(count)와 이미 있는 주소(urls).
+ * count = 쓸 수 있는 자료만 (못 읽음, 조각 0개는 칸을 안 차지. assertRoomForMore 와 같은 기준).
+ * urls = 못 읽은 것까지 전부 (같은 주소를 또 넣지 않는다. 못 읽은 건 「다시 시도」로)
+ */
 export async function loadExistingSources(db: SupabaseClient, mentorId: string): Promise<{ count: number; urls: Set<string> }> {
-    const { data, error } = await db.from('knowledge_sources').select('id, original_url').eq('mentor_id', mentorId)
+    const { data, error } = await db.from('knowledge_sources').select('id, original_url, processing_status, chunk_count').eq('mentor_id', mentorId)
     if (error) throw new Error(error.message)
-    const rows = (data ?? []) as { id: string; original_url: string | null }[]
-    return { count: rows.length, urls: new Set(rows.map(r => r.original_url).filter((u): u is string => !!u)) }
+    const rows = (data ?? []) as { id: string; original_url: string | null; processing_status?: string | null; chunk_count?: number | null }[]
+    const count = rows.filter(r => !isUnusableSource(String(r.processing_status ?? ''), r.chunk_count)).length
+    return { count, urls: new Set(rows.map(r => r.original_url).filter((u): u is string => !!u)) }
 }
 
 async function updateFeed(db: SupabaseClient, feedId: string, patch: Record<string, unknown>): Promise<void> {

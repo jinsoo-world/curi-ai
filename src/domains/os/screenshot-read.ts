@@ -4,12 +4,74 @@
 
 import { GoogleGenAI } from '@google/genai'
 import { GEMINI_MODEL } from '@/domains/chat/constants'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { logLlmUsage, geminiTokens } from '@/domains/llm/usage-log'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 /** 한 번에 받는 캡처 수와 한 장 크기 (화면이 1280px JPEG 로 줄여 보낸다) */
 export const SCREENSHOT_MAX_IMAGES = 5
 export const SCREENSHOT_MAX_BYTES = 1_500_000
 const ALLOWED = ['image/png', 'image/jpeg', 'image/webp']
+
+/**
+ * 원가 지키기: 하루(서울 0시부터) 캡처 읽기 장수 상한. 환경값으로 바꾼다.
+ *   SCREENSHOT_DAILY_PER_USER (기본 20장, 한 사람)
+ *   SCREENSHOT_DAILY_GLOBAL   (기본 1000장, 회사 전체)
+ * 세는 곳 = llm_usage 의 kind 'ocr', meta.what 'sns_screenshot' 줄 (실패한 부름도 셈).
+ */
+export const SCREENSHOT_DAILY_PER_USER_DEFAULT = 20
+export const SCREENSHOT_DAILY_GLOBAL_DEFAULT = 1000
+export const SCREENSHOT_USER_CAP_LINE = '오늘 캡처 읽기를 다 썼어요. 글을 붙여넣어 주세요'
+export const SCREENSHOT_GLOBAL_CAP_LINE = '지금은 캡처를 읽을 수 없어요. 글을 붙여넣어 주세요'
+
+function capFromEnv(v: string | undefined, fallback: number): number {
+    const n = Number(v)
+    return Number.isFinite(n) && n >= 0 ? Math.floor(n) : fallback
+}
+
+export function screenshotCaps(env: Record<string, string | undefined> = process.env) {
+    return {
+        perUser: capFromEnv(env.SCREENSHOT_DAILY_PER_USER, SCREENSHOT_DAILY_PER_USER_DEFAULT),
+        global: capFromEnv(env.SCREENSHOT_DAILY_GLOBAL, SCREENSHOT_DAILY_GLOBAL_DEFAULT),
+    }
+}
+
+/** 오늘 서울 0시 (UTC 시각) */
+export function kstDayStart(now = new Date()): Date {
+    const KST = 9 * 60 * 60 * 1000
+    const k = new Date(now.getTime() + KST)
+    return new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), k.getUTCDate()) - KST)
+}
+
+async function countScreenshotsToday(db: SupabaseClient, now: Date, userId?: string | null): Promise<number> {
+    let q = db.from('llm_usage').select('id', { count: 'exact', head: true })
+        .eq('kind', 'ocr').eq('meta->>what', 'sns_screenshot')
+        .gte('created_at', kstDayStart(now).toISOString())
+    if (userId) q = q.eq('user_id', userId)
+    const { count, error } = await q
+    if (error) throw new Error(error.message)
+    return count ?? 0
+}
+
+/**
+ * 이번에 adding 장을 더 읽어도 되나. 넘으면 사람 말로 던진다.
+ * 사용량을 못 읽으면 안전하게 막는다 (원가 보호가 먼저. 글 붙여넣기는 늘 된다).
+ */
+export async function assertScreenshotQuota(db: SupabaseClient, userId: string | null | undefined, adding: number, opts: { now?: Date; env?: Record<string, string | undefined> } = {}): Promise<void> {
+    if (adding <= 0) return
+    const caps = screenshotCaps(opts.env)
+    const now = opts.now ?? new Date()
+    let usedAll: number, usedMine: number
+    try {
+        usedAll = await countScreenshotsToday(db, now)
+        usedMine = userId ? await countScreenshotsToday(db, now, userId) : 0
+    } catch (e) {
+        console.warn('[screenshot-read] 오늘 사용량 읽기 실패, 막음:', e instanceof Error ? e.message : e)
+        throw new Error(SCREENSHOT_GLOBAL_CAP_LINE)
+    }
+    if (usedAll + adding > caps.global) throw new Error(SCREENSHOT_GLOBAL_CAP_LINE)
+    if (userId && usedMine + adding > caps.perUser) throw new Error(SCREENSHOT_USER_CAP_LINE)
+}
 
 export interface ScreenshotImage { mimeType: string; data: string }
 
@@ -43,9 +105,10 @@ export function cleanScreenshotText(t: string | null | undefined): string {
 }
 
 /** 캡처마다 글을 옮겨 적는다 (한 장씩 불러 한 장이 실패해도 나머지는 살린다). 빈 캡처는 뺀다 */
-export async function readScreenshots(images: ScreenshotImage[], ctx: { route: string; userId?: string | null; mentorId?: string | null }): Promise<string[]> {
+export async function readScreenshots(images: ScreenshotImage[], ctx: { route: string; userId?: string | null; mentorId?: string | null }, deps: { db?: SupabaseClient } = {}): Promise<string[]> {
     if (images.length === 0) return []
     if (!process.env.GEMINI_API_KEY) throw new Error('지금은 캡처를 읽을 수 없어요. 글을 붙여넣어 주세요')
+    await assertScreenshotQuota(deps.db ?? createAdminClient(), ctx.userId, images.length)
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
     const texts = await Promise.all(images.map(async img => {
         const started = Date.now()

@@ -106,6 +106,24 @@ describe('syncFeed = 자료 10개 한도', () => {
         expect(r.added).toBe(2)
         expect(r.lastError).toBe(FEED_CAP_FULL_NOTE)
     })
+
+    it('못 읽은 자료와 조각 0개 자료는 칸을 안 차지한다 (못 읽은 주소는 다시 넣지 않음)', async () => {
+        const sources = Array.from({ length: 10 }, (_, i) => ({
+            id: `s${i}`, mentor_id: M, original_url: `https://x.com/${i}`,
+            processing_status: i < 2 ? 'failed' : 'completed', chunk_count: i === 2 ? 0 : 3,
+        }))
+        const fake = makeFakeDb({ knowledge_feeds: [feedRow()], knowledge_sources: sources })
+        wireAdd(fake.tables)
+        let maxItems: number | undefined
+        const fetcher: FetchNewItems = async (_f, _s, opts) => {
+            maxItems = opts?.maxItems
+            return { items: [{ url: 'https://x.com/0', title: '못 읽었던 글', text: '가'.repeat(400) }, 글(1)] }
+        }
+        const r = await syncFeed(fake.db, feedOf(feedRow()), { fetchers: { website: fetcher } })
+        expect(maxItems).toBe(3)
+        expect(r.added).toBe(1)
+        expect(r.skipped).toBe(1)
+    })
 })
 
 describe('syncFeed = 고장, 준비 중', () => {

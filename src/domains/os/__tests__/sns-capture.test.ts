@@ -57,3 +57,66 @@ describe('봇이 이렇게 이해했어요', () => {
         expect(removeUnderstandBlock('원래 설명', id)).toBe('원래 설명')
     })
 })
+
+import { assertScreenshotQuota, screenshotCaps, kstDayStart, SCREENSHOT_USER_CAP_LINE, SCREENSHOT_GLOBAL_CAP_LINE } from '../screenshot-read'
+
+describe('캡처 읽기 하루 상한', () => {
+    // 오늘 쓴 장수를 돌려주는 가짜 llm_usage (user_id 조건이 있으면 mine, 없으면 all)
+    function usageDb(all: number, mine: number, fail = false) {
+        const calls: { filters: [string, unknown][] }[] = []
+        const db = {
+            from(table: string) {
+                expect(table).toBe('llm_usage')
+                const filters: [string, unknown][] = []
+                calls.push({ filters })
+                const q: Record<string, unknown> = {
+                    select: () => q,
+                    eq: (k: string, v: unknown) => { filters.push([k, v]); return q },
+                    gte: (k: string, v: unknown) => { filters.push([k, v]); return q },
+                    then: (res: (v: unknown) => unknown) => res(fail
+                        ? { count: null, error: { message: 'down' } }
+                        : { count: filters.some(f => f[0] === 'user_id') ? mine : all, error: null }),
+                }
+                return q
+            },
+        }
+        return { db: db as never, calls }
+    }
+
+    it('기본 상한은 한 사람 20장, 전체 1000장이고 환경값으로 바꾼다', () => {
+        expect(screenshotCaps({})).toEqual({ perUser: 20, global: 1000 })
+        expect(screenshotCaps({ SCREENSHOT_DAILY_PER_USER: '5', SCREENSHOT_DAILY_GLOBAL: '50' })).toEqual({ perUser: 5, global: 50 })
+        expect(screenshotCaps({ SCREENSHOT_DAILY_PER_USER: 'abc' }).perUser).toBe(20)
+    })
+
+    it('서울 0시부터 센다', () => {
+        expect(kstDayStart(new Date('2026-09-28T16:10:00Z')).toISOString()).toBe('2026-09-28T15:00:00.000Z')
+        expect(kstDayStart(new Date('2026-09-28T14:59:00Z')).toISOString()).toBe('2026-09-27T15:00:00.000Z')
+    })
+
+    it('남은 장수 안이면 통과, 캡처 줄만 센다', async () => {
+        const { db, calls } = usageDb(10, 15)
+        await assertScreenshotQuota(db, 'u1', 5, { env: {} })
+        expect(calls[0].filters).toContainEqual(['kind', 'ocr'])
+        expect(calls[0].filters).toContainEqual(['meta->>what', 'sns_screenshot'])
+        expect(calls[1].filters).toContainEqual(['user_id', 'u1'])
+    })
+
+    it('한 사람 상한을 넘으면 막는다', async () => {
+        await expect(assertScreenshotQuota(usageDb(10, 18).db, 'u1', 3, { env: {} })).rejects.toThrow(SCREENSHOT_USER_CAP_LINE)
+    })
+
+    it('전체 상한을 넘으면 막는다', async () => {
+        await expect(assertScreenshotQuota(usageDb(999, 0).db, 'u1', 2, { env: {} })).rejects.toThrow(SCREENSHOT_GLOBAL_CAP_LINE)
+    })
+
+    it('사용량을 못 읽으면 막는다 (원가 보호)', async () => {
+        await expect(assertScreenshotQuota(usageDb(0, 0, true).db, 'u1', 1, { env: {} })).rejects.toThrow(SCREENSHOT_GLOBAL_CAP_LINE)
+    })
+
+    it('0장이면 세지 않는다', async () => {
+        const { db, calls } = usageDb(5000, 5000)
+        await assertScreenshotQuota(db, 'u1', 0)
+        expect(calls).toHaveLength(0)
+    })
+})
