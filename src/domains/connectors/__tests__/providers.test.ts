@@ -47,26 +47,33 @@ describe('공급자 등록표', () => {
         }
     })
 
-    it('열쇠 환경변수가 없으면 준비 중, 둘 다 있으면 준비됨. 큐리어스는 열쇠가 있어도 준비 중', () => {
-        const google = findProvider('gmail')!
-        expect(providerReady(google, 환경)).toBe(false)
-        expect(providerView(google, 환경).missing).toBe('준비 중')
-        const 열쇠있음 = { ...환경, GOOGLE_OAUTH_CLIENT_ID: 'id', GOOGLE_OAUTH_CLIENT_SECRET: 'sec' }
-        expect(providerReady(google, 열쇠있음)).toBe(true)
-        expect(providerReady(findProvider('google_calendar')!, 열쇠있음)).toBe(true)   // 구글 4종은 같은 열쇠
-        expect(providerReady(findProvider('youtube')!, 열쇠있음)).toBe(true)
-        expect(providerReady(findProvider('google_drive')!, 열쇠있음)).toBe(true)
+    it('열쇠가 없으면 준비 중, 있으면 봇이 읽는 것(드라이브, 큐리어스)만 열린다', () => {
+        const drive = findProvider('google_drive')!
+        expect(providerReady(drive, 환경)).toBe(false)
+        expect(providerView(drive, 환경).missing).toBe('준비 중')
+        const 구글열쇠 = { ...환경, GOOGLE_OAUTH_CLIENT_ID: 'id', GOOGLE_OAUTH_CLIENT_SECRET: 'sec' }
+        expect(providerReady(drive, 구글열쇠)).toBe(true)
+        expect(providerView(drive, 구글열쇠).comingSoon).toBe(false)
         // 자물쇠가 없으면 열쇠가 있어도 꺼진다
-        expect(providerReady(google, { GOOGLE_OAUTH_CLIENT_ID: 'id', GOOGLE_OAUTH_CLIENT_SECRET: 'sec' })).toBe(false)
+        expect(providerReady(drive, { GOOGLE_OAUTH_CLIENT_ID: 'id', GOOGLE_OAUTH_CLIENT_SECRET: 'sec' })).toBe(false)
         // 큐리어스 = 본체 OAuth 열쇠 두 개가 들어가야만 열린다(그 전에는 「곧 열려요」)
         const curious = findProvider('curious')!
         expect(providerReady(curious, 환경)).toBe(false)
         expect(providerReady(curious, { ...환경, CURIOUS_OAUTH_CLIENT_ID: 'a', CURIOUS_OAUTH_CLIENT_SECRET: 'b' })).toBe(true)
         expect(providerView(curious, 환경).comingSoon).toBe(false)
-        // 슬랙 = 봇이 아직 안 쓴다. 열쇠가 있어도 닫혀 있다
-        const slack = findProvider('slack')!
-        expect(providerReady(slack, { ...환경, SLACK_CLIENT_ID: 'a', SLACK_CLIENT_SECRET: 'b' })).toBe(false)
-        expect(providerView(slack, 환경).comingSoon).toBe(true)
+    })
+
+    it('봇이 토큰을 아직 안 읽는 11개는 열쇠를 다 넣어도 「곧 열려요」에 남는다', () => {
+        const 모든열쇠: Record<string, string> = { ...환경 }
+        for (const p of PROVIDERS) { 모든열쇠[p.envClientId] = 'id'; 모든열쇠[p.envClientSecret] = 'sec' }
+        const 닫힘 = ['instagram', 'kakao', 'threads', 'naver_blog', 'naver_calendar', 'gmail', 'google_calendar', 'github', 'zoom', 'slack', 'youtube']
+        for (const id of 닫힘) {
+            const p = findProvider(id)!
+            expect(providerReady(p, 모든열쇠), id).toBe(false)
+            expect(providerView(p, 모든열쇠).comingSoon, id).toBe(true)
+        }
+        // 열리는 것은 정확히 셋: 노션(OAuth 열쇠가 있을 때), 구글 드라이브, 큐리어스
+        expect(PROVIDERS.filter(p => providerReady(p, 모든열쇠)).map(p => p.id).sort()).toEqual(['curious', 'google_drive', 'notion'])
     })
 
     it('화면 모양(providerView)에 열쇠 이름, 값이 안 들어간다', () => {

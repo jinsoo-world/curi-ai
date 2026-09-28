@@ -62,7 +62,10 @@ export interface Provider {
         url?: string
         pick?: (json: Record<string, unknown>) => string | null
     }
-    /** 열쇠가 있어도 열지 않는 것(봇이 아직 쓰지 않는 서비스) */
+    /**
+     * 열쇠가 있어도 열지 않는 것 = 봇이 이 토큰을 아직 읽지 않는 서비스(대표 0928: 반쯤 되는 카드를 열지 않는다).
+     * 봇이 읽는 도구를 붙이는 날 그 줄의 comingSoon 을 지운다. 지금 열 수 있는 것: 노션(붙여 넣기), 구글 드라이브, 큐리어스(열쇠 있을 때)
+     */
     comingSoon?: boolean
 }
 
@@ -120,6 +123,7 @@ export const PROVIDERS: readonly Provider[] = [
         envClientId: 'INSTAGRAM_APP_ID', envClientSecret: 'INSTAGRAM_APP_SECRET',
         pkce: false, tokenAuth: 'body',
         account: { url: 'https://graph.instagram.com/me?fields=username', pick: j => str(j.username) },
+        comingSoon: true,      // 봇이 이 토큰을 아직 안 읽는다(대표 0928). 열쇠를 넣어도 「곧 열려요」
     },
     {
         id: 'kakao', name: '카카오톡', logo: '/logos/kakao.svg',
@@ -129,6 +133,7 @@ export const PROVIDERS: readonly Provider[] = [
         envClientId: 'KAKAO_REST_API_KEY', envClientSecret: 'KAKAO_CLIENT_SECRET',
         pkce: true, tokenAuth: 'body',
         account: { url: 'https://kapi.kakao.com/v2/user/me', pick: j => str(obj(obj(j.kakao_account).profile).nickname) },
+        comingSoon: true,      // 봇이 이 토큰을 아직 안 읽는다(대표 0928). 열쇠를 넣어도 「곧 열려요」
     },
     {
         id: 'threads', name: '스레드', logo: '/logos/threads.svg',
@@ -138,26 +143,31 @@ export const PROVIDERS: readonly Provider[] = [
         envClientId: 'THREADS_APP_ID', envClientSecret: 'THREADS_APP_SECRET',
         pkce: false, tokenAuth: 'body',
         account: { url: 'https://graph.threads.net/v1.0/me?fields=username', pick: j => str(j.username) },
+        comingSoon: true,      // 봇이 이 토큰을 아직 안 읽는다(대표 0928). 열쇠를 넣어도 「곧 열려요」
     },
     {
         id: 'naver_blog', name: '네이버 블로그', logo: '/logos/naver_blog.svg',
         hint: '내 블로그 글을 봇이 읽어요. 올리기 전엔 꼭 물어봐요.', can: '읽기, 올리기(승인 카드 뒤에서만)',
         ...NAVER,
+        comingSoon: true,      // 봇이 이 토큰을 아직 안 읽는다(대표 0928). 열쇠를 넣어도 「곧 열려요」
     },
     {
         id: 'naver_calendar', name: '네이버 캘린더', logo: '/logos/naver_calendar.svg',
         hint: '내 네이버 일정을 봇이 읽어요.', can: '읽기만',
         ...NAVER,
+        comingSoon: true,      // 봇이 이 토큰을 아직 안 읽는다(대표 0928). 열쇠를 넣어도 「곧 열려요」
     },
     {
         id: 'gmail', name: '지메일', logo: '/logos/gmail.svg',
         hint: '내 메일을 봇이 읽고 요약해요. 보내지는 않아요.', can: '읽기만',
         ...GOOGLE, scopes: ['openid', 'email', 'https://www.googleapis.com/auth/gmail.readonly'],
+        comingSoon: true,      // 봇이 이 토큰을 아직 안 읽는다(대표 0928). 열쇠를 넣어도 「곧 열려요」
     },
     {
         id: 'google_calendar', name: '구글 캘린더', logo: '/logos/google_calendar.svg',
         hint: '내 일정을 봇이 읽어요. 바꾸지는 않아요.', can: '읽기만',
         ...GOOGLE, scopes: ['openid', 'email', 'https://www.googleapis.com/auth/calendar.readonly'],
+        comingSoon: true,      // 봇이 이 토큰을 아직 안 읽는다(대표 0928). 열쇠를 넣어도 「곧 열려요」
     },
     {
         id: 'google_drive', name: '구글 드라이브', logo: '/logos/google_drive.svg',
@@ -173,6 +183,7 @@ export const PROVIDERS: readonly Provider[] = [
         envClientId: 'GITHUB_CLIENT_ID', envClientSecret: 'GITHUB_CLIENT_SECRET',
         pkce: false, tokenAuth: 'body',
         account: { url: 'https://api.github.com/user', pick: j => str(j.login) },
+        comingSoon: true,      // 봇이 이 토큰을 아직 안 읽는다(대표 0928). 열쇠를 넣어도 「곧 열려요」
     },
     {
         id: 'zoom', name: 'Zoom', logo: '/logos/zoom.svg',
@@ -182,6 +193,7 @@ export const PROVIDERS: readonly Provider[] = [
         envClientId: 'ZOOM_CLIENT_ID', envClientSecret: 'ZOOM_CLIENT_SECRET',
         pkce: true, tokenAuth: 'basic',
         account: { url: 'https://api.zoom.us/v2/users/me', pick: j => str(j.email) },
+        comingSoon: true,      // 봇이 이 토큰을 아직 안 읽는다(대표 0928). 열쇠를 넣어도 「곧 열려요」
     },
     {
         id: 'slack', name: '슬랙', logo: '/logos/slack.svg',
@@ -199,6 +211,7 @@ export const PROVIDERS: readonly Provider[] = [
         id: 'youtube', name: '유튜브', logo: '/logos/youtube.svg',
         hint: '내 채널 영상과 댓글을 봇이 읽어요.', can: '읽기만',
         ...GOOGLE, scopes: ['openid', 'email', 'https://www.googleapis.com/auth/youtube.readonly'],
+        comingSoon: true,      // 봇이 이 토큰을 아직 안 읽는다(대표 0928). 열쇠를 넣어도 「곧 열려요」
     },
     {
         // 큐리어스 본체(curious-500.com) 계정. 본체에 OAuth 창구가 열려야 붙는다(명세 docs/connect/큐리어스_연결_명세.md).
