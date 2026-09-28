@@ -67,13 +67,14 @@ describe('isStorableAnswer', () => {
 })
 
 describe('스위치와 문턱', () => {
-    it('기본은 켬, 0.95', () => {
+    it('기본은 켬, 0.96', () => {
         expect(semanticCacheEnabled({})).toBe(true)
         expect(semanticCacheEnabled({ SEMANTIC_CACHE_ENABLED: 'false' })).toBe(false)
-        expect(cacheMinSimilarity({})).toBe(0.95)
+        expect(cacheMinSimilarity({})).toBe(0.96)
     })
-    it('문턱은 0.93 아래로 못 내린다', () => {
-        expect(cacheMinSimilarity({ SEMANTIC_CACHE_MIN_SIM: '0.8' })).toBe(0.95)
+    it('문턱은 0.95 아래로 못 내린다', () => {
+        expect(cacheMinSimilarity({ SEMANTIC_CACHE_MIN_SIM: '0.8' })).toBe(0.96)
+        expect(cacheMinSimilarity({ SEMANTIC_CACHE_MIN_SIM: '0.94' })).toBe(0.96)
         expect(cacheMinSimilarity({ SEMANTIC_CACHE_MIN_SIM: '0.97' })).toBe(0.97)
     })
 })

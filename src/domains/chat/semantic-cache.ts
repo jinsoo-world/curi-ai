@@ -9,7 +9,7 @@
 //   - 봇 자료에서 충분히 가까운 조각을 찾은 질문만 (자료에 기댄 답)
 //   - 솔라가 끝까지 답했고(웹 검색 없음) 응답 필터가 안 끊은 답만 저장
 //   - 칸막이: 봇(mentor_id) + 공개/주인별 칸 + 봇 지침과 자료의 지문. 지침이나 자료가 바뀌면 예전 답은 안 쓰인다
-//   - 유사도 0.95 이상, 7일 지나면 버린다
+//   - 유사도 0.96 이상, 7일 지나면 버린다
 // 끄기: SEMANTIC_CACHE_ENABLED=false
 
 import { createHash } from 'node:crypto'
@@ -19,10 +19,14 @@ export function semanticCacheEnabled(env: Record<string, string | undefined> = p
     return String(env.SEMANTIC_CACHE_ENABLED ?? 'true').toLowerCase() !== 'false'
 }
 
-/** 이 이상 가까워야 같은 질문으로 본다. 환경변수로 올릴 수는 있어도 0.93 아래로는 못 내린다 */
+/**
+ * 이 이상 가까워야 같은 질문으로 본다. 환경변수로 올릴 수는 있어도 0.95 아래로는 못 내린다.
+ * 실측 0928 (gemini-embedding-001, 실제 자료 질문): 같은 뜻 바꿔 말하기 0.955~0.995,
+ * 다른 뜻인데 비슷한 말 0.74~0.93 (「수강 대상이 누구예요」 대 「수강 대상이 아닌 사람은」 0.929). 그래서 여유를 두고 0.96.
+ */
 export function cacheMinSimilarity(env: Record<string, string | undefined> = process.env): number {
     const v = Number(env.SEMANTIC_CACHE_MIN_SIM)
-    return Number.isFinite(v) && v >= 0.93 && v < 1 ? v : 0.95
+    return Number.isFinite(v) && v >= 0.95 && v < 1 ? v : 0.96
 }
 
 export function cacheTtlDays(env: Record<string, string | undefined> = process.env): number {
