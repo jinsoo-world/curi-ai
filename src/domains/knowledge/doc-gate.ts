@@ -8,7 +8,7 @@ import type { FailureReason } from './failure-reasons'
 import { countFilePages } from './doc-pages'
 import {
     decidePageGate, docSpaceView, readMonthlyFilePages, spendDocClovers, refundDocClovers,
-    DOC_SPACE_COPY, type DocSpaceView, type GateCode,
+    DOC_SPACE_COPY, isMissingTable, type DocSpaceView, type GateCode,
 } from './doc-parse'
 import { readPlanId } from '@/domains/os/usage-db'
 import type { PagePlan } from './page-limits'
@@ -65,6 +65,7 @@ export async function reserveFilePages(i: {
     }
 
     await i.db.from('knowledge_sources').update({ page_count: count.pages }).eq('id', i.sourceId).eq('mentor_id', i.mentorId)
+    await writeLedger(i.db, { source_id: i.sourceId, user_id: i.userId, mentor_id: i.mentorId, pages: count.pages })
     console.log('[doc-gate] 쪽 잡음:', count.pages, count.method, 'plan', plan, 'clovers', d.clovers)
 
     let pages = count.pages
@@ -78,12 +79,20 @@ export async function reserveFilePages(i: {
                 if (Number.isFinite(actual) && actual > 0 && actual < pages) {
                     pages = Math.round(actual)
                     await i.db.from('knowledge_sources').update({ page_count: pages }).eq('id', i.sourceId).eq('mentor_id', i.mentorId)
+                    await i.db.from('doc_page_usage').update({ pages }).eq('source_id', i.sourceId)
                 }
             },
             release: async () => {
+                await i.db.from('doc_page_usage').delete().eq('source_id', i.sourceId)   // 못 읽으면 안 셈
                 if (clovers > 0) { await refundDocClovers(i.db, i.userId, clovers); clovers = 0 }
             },
             view: async () => docSpaceView(plan, await readMonthlyFilePages(i.db, i.userId)),
         },
     }
+}
+
+/** 기록장에 적기. 표가 아직 없으면(마이그레이션 전) 조용히 넘어갑니다. 다른 오류는 로그만 */
+export async function writeLedger(db: SupabaseClient, row: { source_id: string; user_id: string; mentor_id: string; pages: number }): Promise<void> {
+    const { error } = await db.from('doc_page_usage').upsert(row, { onConflict: 'source_id' })
+    if (error && !isMissingTable(error)) console.warn('[doc-gate] 기록장 적기 실패:', error.message)
 }

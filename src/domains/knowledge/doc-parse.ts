@@ -111,7 +111,27 @@ export async function ownedMentorIds(db: SupabaseClient, userId: string): Promis
 }
 
 /** 이번 달(서울) 쓴 파일 쪽 수 = 못 읽음이 아닌 자료의 page_count 합. exceptSourceId 는 빼고 셉니다 (다시 읽기 두 번 안 셈) */
+/** 기록장 표가 아직 없을 때(마이그레이션 전) 나는 오류인가 */
+export function isMissingTable(err: { code?: string; message?: string } | null | undefined): boolean {
+    if (!err) return false
+    return err.code === '42P01' || err.code === 'PGRST205' || /doc_page_usage/.test(err.message ?? '') && /(does not exist|not find|schema cache)/i.test(err.message ?? '')
+}
+
+/**
+ * 이번 달(서울) 쓴 파일 쪽 수. 지워지지 않는 기록장(doc_page_usage)에서 셉니다.
+ * 자료나 봇을 지워도 줄지 않습니다(대표 승인 0929 「한도 구멍 막아」). 기록장이 아직 없으면 예전 방식.
+ */
 export async function readMonthlyFilePages(db: SupabaseClient, userId: string, opts: { now?: Date; exceptSourceId?: string } = {}): Promise<number> {
+    let lq = db.from('doc_page_usage').select('pages').eq('user_id', userId).gte('created_at', kstMonthStart(opts.now).toISOString())
+    if (opts.exceptSourceId) lq = lq.neq('source_id', opts.exceptSourceId)
+    const { data: ld, error: le } = await lq
+    if (!le) return ((ld ?? []) as { pages: number | null }[]).reduce((s, r) => s + (r.pages ?? 0), 0)
+    if (!isMissingTable(le)) throw new Error(le.message)
+    return readMonthlyFilePagesFromSources(db, userId, opts)
+}
+
+/** 예전 방식: 남아 있는 자료의 page_count 합 (지우면 줄어드는 구멍이 있음. 기록장 없을 때만) */
+export async function readMonthlyFilePagesFromSources(db: SupabaseClient, userId: string, opts: { now?: Date; exceptSourceId?: string } = {}): Promise<number> {
     const ids = await ownedMentorIds(db, userId)
     if (ids.length === 0) return 0
     let q = db.from('knowledge_sources')
