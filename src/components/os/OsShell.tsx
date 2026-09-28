@@ -16,6 +16,7 @@ import {
     BOT_CALL_EVENT, addBotCallUnread, clearBotCallUnread, readBotCallUnread,
 } from '@/domains/os/mentions'
 import { osTrack } from '@/domains/os/events'
+import { collapseRoster, readRosterExpanded, toggleLabel, writeRosterExpanded } from '@/domains/os/roster-collapse'
 import { applyFontSize, readFontSize } from '@/domains/os/settings'
 import BotAvatar from './BotAvatar'
 import NewBotSheet from './NewBotSheet'
@@ -119,6 +120,7 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     const [demo, setDemo] = useState(false)   // 시연(?demo=1). 서버와 첫 그림이 같아야 해서 효과에서 한 박자 뒤에 읽는다
     const [phone, setPhone] = useState(false) // 좁은 화면(≤1024px). 왼쪽 명단은 햄버거 서랍
     const [navOpen, setNavOpen] = useState(false)
+    const [rosterExpanded, setRosterExpanded] = useState(false) // 봇 7명 이상일 때 「더 보기」로 편 상태 (세션 기억)
     const [menu, setMenu] = useState<CtxMenu | null>(null)
     const bootstrapped = useRef(false)   // 기본 봇 만들기는 한 세션에 한 번만
     const pressTimer = useRef<number | null>(null)
@@ -291,6 +293,17 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
             .filter(b => !q || b.name.includes(q) || (b.oneLiner ?? '').includes(q))
     }, [team, query])
 
+    // 편 상태는 세션 동안 기억한다. 서버 첫 그림과 같게 효과에서 한 박자 뒤에 읽는다
+    useEffect(() => {
+        void Promise.resolve().then(() => setRosterExpanded(readRosterExpanded(window.sessionStorage)))
+    }, [])
+    const toggleRoster = useCallback(() => {
+        setRosterExpanded(v => {
+            writeRosterExpanded(window.sessionStorage, !v)
+            return !v
+        })
+    }, [])
+
     const openEditBot = useCallback((bot: TeamBot) => {
         if (!bot || bot.id.startsWith('demo-')) return
         setEditBot(bot)
@@ -350,6 +363,12 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
 
     const chatPath = useCallback((b: TeamBot) => `/os/chat/${b.mentorId}`, [])
     const isCurrent = useCallback((b: TeamBot) => pathname === chatPath(b), [pathname, chatPath])
+
+    // 봇이 7명 이상이면 앞 6명 + 「더 보기 (+N)」. 고른 봇은 늘 보이고, 검색 중엔 다 보인다
+    const roster = useMemo(
+        () => collapseRoster(visible, { expanded: rosterExpanded, searching: query.trim().length > 0, isCurrent }),
+        [visible, rosterExpanded, query, isCurrent],
+    )
 
     const 대화새로시작 = (b: TeamBot) => {
         setMenu(null)
@@ -419,8 +438,8 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                         <div className="os-notice">봇 팀 표가 아직 준비 중이에요. 관리자가 표를 적용하면 바로 쓸 수 있어요.</div>
                     )}
 
-                    <div className="os-roster" role="list" data-dense={visible.length >= 6 ? "1" : "0"}>
-                        {visible.map(b => {
+                    <div className="os-roster" role="list" data-dense={roster.shown.length >= 6 ? "1" : "0"}>
+                        {roster.shown.map(b => {
                             // Link + prefetch = 화면에 보이는 순간 그 봇 화면을 미리 받아 둔다 → 누르면 서버를 안 기다린다 (대표 지시 0923 「전환이 느려」)
                             // 주소를 쌓는(push) 보통 링크라 봇 A → 봇 B → 뒤로 = A 가 된다
                             const current = isCurrent(b)
@@ -448,9 +467,9 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                                     onPointerLeave={clearPress}
                                     onClick={e => { if (suppressClick.current) { e.preventDefault(); suppressClick.current = false } }}
                                 >
-                                    {/* 폰 띠는 96px 안에 캐릭터+이름이 들어가야 해서 52px (넓은 화면 격자는 72px 그대로) */}
+                                    {/* 폰 서랍은 3열 좁은 칸이라 48px (넓은 화면 격자는 72px, 6명 이상이면 56px) */}
                                     <span className="os-bot-face-wrap">
-                                        <BotAvatar shape={b.shape} color={b.color} state={presence} size={phone ? 52 : (visible.length >= 6 ? 56 : 72)} faceUrl={b.avatarUrl} faceRim="shadow" name={b.name} />
+                                        <BotAvatar shape={b.shape} color={b.color} state={presence} size={phone ? 48 : (roster.shown.length >= 6 ? 56 : 72)} faceUrl={b.avatarUrl} faceRim="shadow" name={b.name} />
                                         {unread && <span className="os-bot-unread" aria-label="새 메시지" />}
                                     </span>
                                     <span className="os-bot-name">{b.name}</span>
@@ -458,6 +477,15 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                                 </Link>
                             )
                         })}
+                        {roster.showToggle && (
+                            <button
+                                type="button"
+                                className="os-roster-more"
+                                aria-expanded={rosterExpanded}
+                                aria-controls="os-nav"
+                                onClick={toggleRoster}
+                            >{toggleLabel(rosterExpanded, roster.hiddenCount)}</button>
+                        )}
                         {!loading && visible.length === 0 && !guest && (
                             <div style={{ gridColumn: '1 / -1', color: 'var(--os-글-흐림)', fontSize: 14, padding: '20px 8px', textAlign: 'center', lineHeight: 1.6 }}>
                                 아직 팀이 없어요.<br />아래 「＋ 개인봇」으로 첫 봇을 만들어요.
