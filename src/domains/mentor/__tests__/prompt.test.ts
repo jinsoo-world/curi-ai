@@ -114,3 +114,20 @@ describe('buildSystemPrompt — 봇 자기소개 (멘토 금지)', () => {
         expect(prompt).not.toMatch(/멘토:/)
     })
 })
+
+describe('buildSystemPrompt — 공통 규칙 (0929 답변 품질 점검)', () => {
+    const 봇 = { name: '테스트봇', system_prompt: '당신은 테스트봇입니다.', greeting_message: '안녕하세요' }
+    it('가격과 일정을 지어내지 않고 상세페이지로 안내, 못 하는 일 약속 금지, 영어 섞지 않기, 5문장', () => {
+        const p = buildSystemPrompt(봇)
+        expect(p).toContain('상세페이지에서 확인해 주세요')
+        expect(p).toContain('확인해볼게요')
+        expect(p).toContain('영어 단어를 섞지 마세요')
+        expect(p).toContain('5문장을 넘기지 마세요')
+    })
+    it('서식 규칙은 하나다: 굵게 안 씀, 목록은 달라고 할 때만 (예전 「볼드로 강조 가능」이 남아 있으면 안 된다)', () => {
+        const p = buildSystemPrompt(봇)
+        expect(p).not.toContain('**볼드**로 강조 가능')
+        expect(p).toContain('[✍️ 서식]')
+        expect(p.match(/\[✍️ 서식\]/g)).toHaveLength(1)
+    })
+})

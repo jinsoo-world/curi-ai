@@ -8,11 +8,12 @@
 // 화면 쪽 약속 = chunk.text 만 본다. usage 는 서버 저장용(선택)이라 화면은 무시해도 된다.
 
 import { generateChatStream as generateGeminiStream } from './gemini'
-import { geminiToOpenAi, pickDriverFromEnv, solarChatStream, SOLAR_CHAT_MODEL } from '@/domains/llm'
+import { geminiToOpenAi, pickDriverFromEnv, solarChatStream, SOLAR_CHAT_MODEL, SOLAR_TIMEOUT_MS, solarFirstTokenTimeoutMs } from '@/domains/llm'
 import type { LlmChunk, LlmUsage } from '@/domains/llm'
 import { logLlmUsage, geminiTokens } from '@/domains/llm/usage-log'
 import type { UsageCtx } from '@/domains/llm/usage-log'
-import { classifyFallbackReason } from '@/domains/llm/fallback-reason'
+import { classifyFallbackReason, SolarSlowError } from '@/domains/llm/fallback-reason'
+import { solarMaxOutputTokens } from '@/domains/os/response-settings'
 import type { FallbackReason } from '@/domains/llm/fallback-reason'
 import type { GeminiMessage } from './types'
 import { GEMINI_MODEL, UNAVAILABLE_TEXT } from './constants'
@@ -55,9 +56,10 @@ function usageMeter(opts: ChatStreamOptions) {
 }
 
 /**
- * 솔라 → (실패 시) Gemini → (또 실패 시) 쉬는 중.
+ * 솔라 → (실패하거나 첫 글자가 늦으면) Gemini → (또 실패 시) 쉬는 중.
  * 되돌아가기는 「첫 조각이 오기 전」에만 한다. 답을 하다 끊긴 건 그대로 끝낸다
  * (반쪽 답 뒤에 다른 모델의 답을 이어 붙이면 사람이 더 헷갈린다).
+ * 첫 글자가 solarFirstTokenTimeoutMs()(기본 4초) 안에 안 오면 솔라 요청을 끊고 Gemini 로 넘긴다 (fallback_reason 'slow').
  */
 async function* solarWithFallback(
     systemPrompt: string,
@@ -73,8 +75,35 @@ async function* solarWithFallback(
     let reason: FallbackReason = 'other'
     let solarError: string | null = null
 
+    // 솔라 요청을 우리가 끊을 수 있게 한다: 첫 글자가 늦을 때, 그리고 전체 시간 상한(50초)
+    const ctrl = new AbortController()
+    const totalTimer = setTimeout(() => ctrl.abort(), SOLAR_TIMEOUT_MS)
+    const firstTokenMs = solarFirstTokenTimeoutMs()
+    let solarDone = false
+    const iter = solarChatStream('', messages, { maxTokens: solarMaxOutputTokens(opts.maxOutputTokens), signal: ctrl.signal })[Symbol.asyncIterator]()
+    /** 다음 조각을 받는다. 첫 글자 전이면 남은 시간과 겨뤄서, 늦으면 요청을 끊고 SolarSlowError 를 던진다 */
+    const nextChunk = async (): Promise<IteratorResult<LlmChunk>> => {
+        const pending = iter.next()
+        if (firstChunkSeen || firstTokenMs <= 0) return pending
+        const left = Math.max(0, firstTokenMs - (Date.now() - started))
+        let timer: ReturnType<typeof setTimeout> | undefined
+        const slow = new Promise<'slow'>(resolve => { timer = setTimeout(() => resolve('slow'), left) })
+        try {
+            const won = await Promise.race([pending, slow])
+            if (won !== 'slow') return won
+        } finally {
+            clearTimeout(timer)
+        }
+        pending.catch(() => { /* 끊은 요청의 오류는 버린다 */ })
+        ctrl.abort()
+        throw new SolarSlowError(firstTokenMs)
+    }
+
     try {
-        for await (const chunk of solarChatStream('', messages, { maxTokens: opts.maxOutputTokens })) {
+        while (true) {
+            const step = await nextChunk()
+            if (step.done) { solarDone = true; break }
+            const chunk = step.value
             if (chunk.text) {
                 firstChunkSeen = true
                 meter.firstToken()
@@ -104,6 +133,11 @@ async function* solarWithFallback(
     } finally {
         // 받는 쪽이 중간에 멈춰도(응답 필터가 끊음) 한 줄은 남긴다
         if (firstChunkSeen && !solarLogged) meter.log({ provider: 'solar', model: SOLAR_CHAT_MODEL, input: usage?.prompt, output: usage?.completion })
+        clearTimeout(totalTimer)
+        // 다 못 읽고 나왔으면(받는 쪽이 멈춤, 늦어서 끊음) 요청을 끊어 토큰이 더 나가지 않게 한다
+        if (!solarDone) ctrl.abort()
+        // 솔라 스트림을 닫는다(다 읽었으면 아무 일도 없다. 중간에 멈췄거나 늦어서 끊었으면 연결을 정리한다)
+        Promise.resolve(iter.return?.(undefined)).catch(() => { /* 닫다가 난 오류는 무시 */ })
     }
 
     // 되돌아가기

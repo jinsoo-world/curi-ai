@@ -195,15 +195,34 @@ export function sanitizeResponseSettingsInput(input: ResponseSettingsInput, kind
 /** 한국어 기준 대략 글자당 토큰 비율(러프 추정치). 정확한 토크나이저를 안 쓰는 대신 넉넉히 잡는다 */
 const CHARS_PER_TOKEN_KO = 1.7
 
+/** Length 설정별 답 길이 상한(토큰). Gemini 는 이 값을 그대로 쓴다 */
+export const LENGTH_MAX_TOKENS = { concise: 220, intelligent: 900, explanatory: 1800 } as const
+
+/**
+ * 솔라만 쓰는 상한. 같은 설정에서 솔라가 Gemini 보다 1.5배쯤 길게 써서(실측 0929: 평균 378자 대 253자) 줄였다.
+ * 짧게(220)는 그대로, 기본 900 → 500, 자세히는 같은 비율로 1800 → 1000. 글자 수를 직접 정한 봇(custom)은 손대지 않는다.
+ */
+export const SOLAR_LENGTH_MAX_TOKENS = { concise: 220, intelligent: 500, explanatory: 1000 } as const
+
 /** Length 설정 → 실제 모델 호출의 max_tokens. 화면 문구(길이)와 숫자(토큰)를 여기 한 곳에서만 잇는다 */
 export function resolveMaxOutputTokens(settings: Pick<ResponseSettings, 'length' | 'customLength'>): number {
     switch (settings.length) {
-        case 'concise': return 220
-        case 'explanatory': return 1800
+        case 'concise': return LENGTH_MAX_TOKENS.concise
+        case 'explanatory': return LENGTH_MAX_TOKENS.explanatory
         case 'custom': return Math.max(64, Math.min(4096, Math.round((settings.customLength ?? 800) / CHARS_PER_TOKEN_KO)))
         case 'intelligent':
-        default: return 900
+        default: return LENGTH_MAX_TOKENS.intelligent
     }
+}
+
+/**
+ * 대화 API 가 넘긴 상한(Gemini 기준 숫자)을 솔라용으로 바꾼다.
+ * 기본(900)과 자세히(1800)만 줄이고, 짧게와 글자 수 지정(custom), 상한을 안 준 호출은 그대로 둔다.
+ */
+export function solarMaxOutputTokens(requested: number | undefined): number | undefined {
+    if (requested === LENGTH_MAX_TOKENS.intelligent) return SOLAR_LENGTH_MAX_TOKENS.intelligent
+    if (requested === LENGTH_MAX_TOKENS.explanatory) return SOLAR_LENGTH_MAX_TOKENS.explanatory
+    return requested
 }
 
 function lengthInstruction(settings: ResponseSettings): string {
@@ -212,7 +231,7 @@ function lengthInstruction(settings: ResponseSettings): string {
         case 'explanatory': return '필요하면 충분히 자세하게, 예시를 곁들여 설명해도 좋다.'
         case 'custom': return `답은 대략 ${settings.customLength ?? 800}자 안팎으로 맞춰라.`
         case 'intelligent':
-        default: return '질문의 성격에 맞게, 짧게 답해도 될 땐 짧게, 설명이 필요할 땐 충분히 답하라.'
+        default: return '기본은 짧게, 5문장 안으로 답하라. 사용자가 자세히 알려 달라고 할 때만 길게 답하라.'
     }
 }
 
@@ -243,7 +262,7 @@ export function applyResponseSettingsToPrompt(systemPrompt: string, resolved: Pi
     if (settings.style) lines.push(`말투: ${settings.style}`)
     lines.push(lengthInstruction(settings))
     lines.push(creativityInstruction(settings))
-    lines.push('서식: 마크다운 굵게(**글자**)나 제목(#)을 쓰지 마라. 평범한 문장과 필요할 때만 짧은 목록(-)으로 답하라. 코드가 필요할 때만 코드 울타리를 쓴다.')
+    // 서식(굵게, 목록)은 공통 규칙(domains/mentor/answer-rules ANSWER_FORMAT_RULE) 한 곳에서만 말한다. 두 곳이 서로 달라 부딪쳤었다(0929)
     if (settings.disclaimer) lines.push(`답을 마칠 때 다음 안내문을 자연스럽게 덧붙여라: "${settings.disclaimer}"`)
     if (lines.length === 0) return systemPrompt
     return `${systemPrompt}\n\n[⚙️ 답변 설정]\n${lines.join('\n')}`
@@ -286,14 +305,20 @@ export async function classifyBotKind(
     return 'public'
 }
 
-/** 이 봇에 자료가 하나라도 있나. 못 세면 true(Strict 유지 쪽이 아니라 원래 설정을 따른다) */
+/**
+ * 이 봇에 「쓸 수 있는」 자료가 하나라도 있나 = 검색에 걸릴 조각(knowledge_chunks)이 한 개라도 있나.
+ * 파일을 올렸어도 처리에 실패했거나 조각이 0개면 자료 없음이다.
+ * (실측 0929: 열정진 봇은 처리 실패한 PDF 한 개 때문에 「자료 있음」으로 세져 Strict 가 켜졌고,
+ *  모델을 부르지도 않고 모든 질문에 「자료에 없어요」만 돌려줄 상태였다)
+ * 못 세면 false = 모델이 답하게 둔다(아무 질문에나 「자료에 없어요」가 나가는 쪽보다 낫다).
+ */
 export async function botHasKnowledge(db: SupabaseClient, mentorId: string): Promise<boolean> {
     try {
-        const { count, error } = await db.from('knowledge_sources').select('id', { count: 'exact', head: true }).eq('mentor_id', mentorId)
-        if (error) return true
-        return (count ?? 0) > 0
+        const { data, error } = await db.from('knowledge_chunks').select('id').eq('mentor_id', mentorId).limit(1)
+        if (error) return false
+        return Array.isArray(data) && data.length > 0
     } catch {
-        return true
+        return false
     }
 }
 

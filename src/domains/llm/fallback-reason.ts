@@ -5,6 +5,7 @@ export type FallbackReason =
     | 'missing_key'  // UPSTAGE_API_KEY 가 없다
     | 'auth'         // 401, 403 (열쇠가 틀렸거나 막힘, 크레딧 부족 포함)
     | 'timeout'      // 시간 초과
+    | 'slow'         // 첫 글자가 정한 시간(SOLAR_FIRST_TOKEN_TIMEOUT_MS, 기본 4초) 안에 안 와서 넘김
     | 'rate_limit'   // 429
     | 'server'       // 5xx
     | 'empty'        // 답이 비어 옴
@@ -12,8 +13,17 @@ export type FallbackReason =
     | 'forced'       // LLM_DRIVER 나 SIDE_TEXT_PROVIDER 로 Gemini 를 골랐다
     | 'other'
 
+/** 솔라 첫 글자가 늦어서 우리가 끊었다는 표시 (stream.ts 가 던지고 여기서 'slow' 로 센다) */
+export class SolarSlowError extends Error {
+    constructor(ms: number) {
+        super(`솔라 첫 글자가 ${ms}ms 안에 안 옴`)
+        this.name = 'SolarSlowError'
+    }
+}
+
 export function classifyFallbackReason(err: unknown): FallbackReason {
     if (err === null || err === undefined) return 'empty'
+    if (err instanceof SolarSlowError || (err as { name?: string })?.name === 'SolarSlowError') return 'slow'
     const e = err as { name?: string; status?: number; message?: string }
     const msg = String(e?.message ?? err)
     const status = typeof e?.status === 'number' ? e.status : 0

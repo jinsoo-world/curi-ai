@@ -7,6 +7,7 @@ import {
     MIN_CUSTOM_LENGTH_CHARS,
     STRICT_MIN_SIMILARITY,
     applyResponseSettingsToPrompt,
+    botHasKnowledge,
     classifyBotKind,
     clampCustomInstructions,
     defaultResponseSettings,
@@ -15,6 +16,7 @@ import {
     resolveMaxOutputTokens,
     sanitizeResponseSettingsInput,
     shouldAnswerFromKnowledge,
+    solarMaxOutputTokens,
 } from '../response-settings'
 
 describe('defaultResponseSettings — kind 에 따른 기본값', () => {
@@ -109,7 +111,9 @@ describe('applyResponseSettingsToPrompt — 프롬프트에 얹기', () => {
         const out = applyResponseSettingsToPrompt('원본', { settings: defaultResponseSettings('personal') })
         expect(out).toContain('원본')
         expect(out).toContain('[⚙️ 답변 설정]')
-        expect(out).toContain('마크다운 굵게')
+        // 서식(굵게, 목록)은 공통 규칙 한 곳에서만 말한다. 여기서 「목록(-)으로 답하라」가 다시 나오면 부딪친다(0929)
+        expect(out).not.toContain('목록(-)')
+        expect(out).toContain('5문장')
     })
     it('목적·추가 지침·말투·안내문을 다 채우면 전부 들어간다', () => {
         const settings = {
@@ -181,5 +185,50 @@ describe('fetchResponseSettingsRow — 표가 없으면(42P01) null, 그 외 오
         const row = { mentor_id: 'm1', purpose: '테스트' }
         const db = { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: row, error: null }) }) }) }) }
         expect(await fetchResponseSettingsRow(db as never, 'm1')).toEqual(row)
+    })
+})
+
+describe('solarMaxOutputTokens — 솔라만 짧게 (0929)', () => {
+    it('기본 900 → 500, 자세히 1800 → 1000, 짧게와 나머지는 그대로', () => {
+        expect(solarMaxOutputTokens(resolveMaxOutputTokens({ length: 'intelligent', customLength: null }))).toBe(500)
+        expect(solarMaxOutputTokens(resolveMaxOutputTokens({ length: 'explanatory', customLength: null }))).toBe(1000)
+        expect(solarMaxOutputTokens(resolveMaxOutputTokens({ length: 'concise', customLength: null }))).toBe(220)
+        expect(solarMaxOutputTokens(undefined)).toBeUndefined()
+        expect(solarMaxOutputTokens(300)).toBe(300)
+    })
+})
+
+describe('botHasKnowledge — 쓸 수 있는 조각이 있어야 자료 있음 (0929)', () => {
+    /** knowledge_chunks 조회만 흉내 내는 얇은 가짜 DB */
+    function fakeDb(result: { data?: unknown[] | null; error?: { message: string } | null; throws?: boolean }) {
+        const calls: string[] = []
+        const db = {
+            from(table: string) {
+                calls.push(table)
+                const q = {
+                    select() { return q },
+                    eq() { return q },
+                    limit() {
+                        if (result.throws) throw new Error('boom')
+                        return Promise.resolve({ data: result.data ?? null, error: result.error ?? null })
+                    },
+                }
+                return q
+            },
+        }
+        return { db: db as unknown as Parameters<typeof botHasKnowledge>[0], calls }
+    }
+    it('조각이 한 개라도 있으면 true, 그리고 파일 목록이 아니라 조각을 본다', async () => {
+        const { db, calls } = fakeDb({ data: [{ id: 'c1' }] })
+        expect(await botHasKnowledge(db, 'm')).toBe(true)
+        expect(calls).toEqual(['knowledge_chunks'])
+    })
+    it('파일은 있어도 처리 실패로 조각이 0개면 false (Strict 로 안 간다)', async () => {
+        const { db } = fakeDb({ data: [] })
+        expect(await botHasKnowledge(db, 'm')).toBe(false)
+    })
+    it('못 세면 false = 모델이 답하게 둔다', async () => {
+        expect(await botHasKnowledge(fakeDb({ error: { message: 'x' } }).db, 'm')).toBe(false)
+        expect(await botHasKnowledge(fakeDb({ throws: true }).db, 'm')).toBe(false)
     })
 })

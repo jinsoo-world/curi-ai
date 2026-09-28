@@ -16,8 +16,27 @@ export const SOLAR_MINI_MODEL = process.env.LLM_MODEL_MINI || 'solar-mini4'
 /** 대화 답 길이 상한. Gemini 설정(4096)과 같게 */
 export const SOLAR_MAX_OUTPUT_TOKENS = 4096
 
-/** 대화 온도. Gemini 설정(0.8)과 같게 */
-export const SOLAR_TEMPERATURE = 0.8
+/**
+ * 대화 온도. 처음엔 Gemini(0.8)와 같게 뒀다가 0.6 으로 낮췄다.
+ * 실측 0929: 0.8 에서 「즉,_money_ 없이」처럼 영어와 기호가 섞이고, 지침에 없는 가격을 지어냈다.
+ */
+export const SOLAR_TEMPERATURE = 0.6
 
 /** 한 요청이 이보다 오래 걸리면 끊는다. Vercel 함수 상한(60초) 안에서 */
 export const SOLAR_TIMEOUT_MS = 50_000
+
+/** 첫 글자 기다리는 기본값. 이 안에 첫 글자가 안 오면 Gemini 로 넘긴다 (실측 0929: 12번 중 3번이 4.9~6.9초) */
+export const SOLAR_FIRST_TOKEN_TIMEOUT_DEFAULT_MS = 4_000
+
+/**
+ * 대화 답에서 솔라 첫 글자를 기다리는 시간(밀리초). 환경변수 SOLAR_FIRST_TOKEN_TIMEOUT_MS 로 바꾼다.
+ * 0 이면 끈다(예전처럼 실패할 때만 넘어간다). 이상한 값이면 기본값.
+ * 부를 때마다 읽는다(시험에서 바꿔 끼울 수 있게).
+ */
+export function solarFirstTokenTimeoutMs(): number {
+    const raw = process.env.SOLAR_FIRST_TOKEN_TIMEOUT_MS
+    if (raw === undefined || raw.trim() === '') return SOLAR_FIRST_TOKEN_TIMEOUT_DEFAULT_MS
+    const v = Number(raw)
+    if (!Number.isFinite(v) || v < 0) return SOLAR_FIRST_TOKEN_TIMEOUT_DEFAULT_MS
+    return Math.min(v, SOLAR_TIMEOUT_MS)
+}

@@ -12,6 +12,7 @@ vi.mock('../gemini', () => ({
 }))
 
 import { generateChatStream, UNAVAILABLE_TEXT } from '../stream'
+import { setUsageInserterForTest } from '@/domains/llm/usage-log'
 import type { GeminiMessage } from '../types'
 
 async function* gen(texts: string[]) {
@@ -92,5 +93,80 @@ describe('chat/stream — 드라이버 고르기와 되돌아가기', () => {
         for await (const c of await generateChatStream('시스템', history)) chunks.push(c)
         expect(chunks.filter(c => c.text).map(c => c.text)).toEqual(['안녕'])
         expect(chunks.at(-1)?.usage).toEqual({ prompt: 11, completion: 3, total: 14 })
+    })
+})
+
+describe('chat/stream — 솔라 첫 글자가 늦으면 Gemini 로 (0929)', () => {
+    const rows: { provider: string | null; fallback: boolean; fallback_reason: string | null }[] = []
+    beforeEach(() => {
+        solarMock.mockReset()
+        geminiMock.mockReset()
+        rows.length = 0
+        setUsageInserterForTest(async r => { rows.push(r) })
+        vi.stubEnv('UPSTAGE_API_KEY', 'up')
+        vi.stubEnv('GEMINI_API_KEY', 'gm')
+        vi.stubEnv('LLM_DRIVER', '')
+        vi.stubEnv('LLM_USAGE_LOG_ENABLED', 'true')
+    })
+
+    /** 신호(signal)를 무시하고 ms 뒤에야 첫 글자를 내는 느린 솔라 */
+    async function* slowSolar(ms: number) {
+        await new Promise(r => setTimeout(r, ms))
+        yield { text: '늦은 솔라' }
+    }
+
+    it('정한 시간 안에 첫 글자가 없으면 솔라를 끊고 Gemini 가 답한다 (fallback_reason slow)', async () => {
+        vi.stubEnv('SOLAR_FIRST_TOKEN_TIMEOUT_MS', '30')
+        solarMock.mockReturnValue(slowSolar(300))
+        geminiMock.mockResolvedValue(gen(['빠른 제미']))
+        const out = await collect(await generateChatStream('시스템', history))
+        expect(out).toEqual(['빠른 제미'])
+        expect(geminiMock).toHaveBeenCalledTimes(1)
+        // 솔라 요청은 끊겼다
+        const signal = (solarMock.mock.calls[0][2] as { signal?: AbortSignal }).signal
+        expect(signal?.aborted).toBe(true)
+        await new Promise(r => setTimeout(r, 0))
+        expect(rows.at(-1)).toMatchObject({ provider: 'gemini', fallback: true, fallback_reason: 'slow' })
+    })
+
+    it('정한 시간 안에 첫 글자가 오면 그대로 솔라가 답한다(첫 글자 뒤로는 오래 걸려도 안 끊는다)', async () => {
+        vi.stubEnv('SOLAR_FIRST_TOKEN_TIMEOUT_MS', '200')
+        async function* okThenSlow() {
+            yield { text: '솔' }
+            await new Promise(r => setTimeout(r, 300))
+            yield { text: '라' }
+        }
+        solarMock.mockReturnValue(okThenSlow())
+        const out = await collect(await generateChatStream('시스템', history))
+        expect(out).toEqual(['솔', '라'])
+        expect(geminiMock).not.toHaveBeenCalled()
+    })
+
+    it('0 이면 끈다(느려도 기다린다)', async () => {
+        vi.stubEnv('SOLAR_FIRST_TOKEN_TIMEOUT_MS', '0')
+        solarMock.mockReturnValue(slowSolar(60))
+        const out = await collect(await generateChatStream('시스템', history))
+        expect(out).toEqual(['늦은 솔라'])
+        expect(geminiMock).not.toHaveBeenCalled()
+    })
+})
+
+describe('chat/stream — 솔라 답 길이 상한 (0929)', () => {
+    beforeEach(() => {
+        solarMock.mockReset()
+        geminiMock.mockReset()
+        vi.stubEnv('UPSTAGE_API_KEY', 'up')
+        vi.stubEnv('GEMINI_API_KEY', 'gm')
+        vi.stubEnv('LLM_DRIVER', '')
+    })
+    it.each([
+        [900, 500],    // 기본
+        [1800, 1000],  // 자세히 (같은 비율)
+        [220, 220],    // 짧게는 그대로
+        [300, 300],    // 다른 숫자(글자 수 지정 등)는 그대로
+    ])('답변 설정 상한 %i → 솔라에는 %i', async (given, expected) => {
+        solarMock.mockReturnValue(gen(['x']))
+        await collect(await generateChatStream('시스템', history, { maxOutputTokens: given }))
+        expect((solarMock.mock.calls[0][2] as { maxTokens?: number }).maxTokens).toBe(expected)
     })
 })

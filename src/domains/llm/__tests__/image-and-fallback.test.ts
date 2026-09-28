@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { classifyFallbackReason } from '../fallback-reason'
+import { classifyFallbackReason, SolarSlowError } from '../fallback-reason'
 import { estimateImageCostKrw, IMAGE_PRICES_USD, USD_TO_KRW_ESTIMATE } from '../prices'
 import { sideTextProvider } from '../side-text'
 import { usageRow } from '../usage-log'
@@ -47,5 +47,11 @@ describe('usageRow 새 칸', () => {
         expect(r.fallback_reason).toBe('auth')
         expect(r.search_queries).toBe(2)
         expect(r.cost_krw).toBe(46)
+    })
+})
+
+describe('classifyFallbackReason — 첫 글자가 늦어서 넘김 (0929)', () => {
+    it('SolarSlowError 는 slow 로 센다 (timeout 과 구분)', () => {
+        expect(classifyFallbackReason(new SolarSlowError(4000))).toBe('slow')
     })
 })
