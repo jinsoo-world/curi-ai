@@ -3,9 +3,11 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 // 진짜 임베딩(Gemini)은 부르지 않는다. splitIntoChunks 는 진짜처럼 문단 단위로 쪼개서
 // singleChunk 규칙(쪼개지 않는다)을 진짜로 시험할 수 있게 한다.
-vi.mock('../embedding', () => ({
+vi.mock('../embedding', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('../embedding')>()),
     generateEmbedding: vi.fn(async () => [0.1, 0.2, 0.3]),
     splitIntoChunks: (text: string) => text.split(/\n\n+/).map(s => s.trim()).filter(Boolean),
+    splitIntoChunksWithHeadings: (text: string) => text.split(/\n\n+/).map(s => s.trim()).filter(Boolean).map(t => ({ text: t, heading: null })),
 }))
 
 import { addKnowledgeSource } from '../actions'
@@ -51,6 +53,25 @@ describe('addKnowledgeSource — Q&A 청크 하나 규칙', () => {
         const content = '첫 문단\n\n둘째 문단\n\n셋째 문단'
         await addKnowledgeSource(db, 'm1', '제목', content, 'text')
         expect(chunkInserts).toHaveLength(3)
+    })
+
+    it('저장 글은 원문, 임베딩 글에만 자료 머리말이 붙는다', async () => {
+        const { generateEmbedding } = await import('../embedding')
+        const spy = vi.mocked(generateEmbedding)
+        spy.mockClear()
+        const { db, chunkInserts } = makeFakeDb({ id: 's5' })
+        await addKnowledgeSource(db, 'm1', '안내문.pdf', '첫 문단', 'pdf')
+        expect((chunkInserts[0] as { content: string }).content).toBe('첫 문단')
+        expect(spy.mock.calls[0][0]).toBe('[자료: 안내문.pdf / 종류: PDF]\n\n첫 문단')
+    })
+
+    it('Q&A 한 조각은 머리말 없이 원문 그대로 임베딩한다', async () => {
+        const { generateEmbedding } = await import('../embedding')
+        const spy = vi.mocked(generateEmbedding)
+        spy.mockClear()
+        const { db } = makeFakeDb({ id: 's6' })
+        await addKnowledgeSource(db, 'm1', '질문', '질문: 뭐\n답: 답', 'text', undefined, { singleChunk: true })
+        expect(spy.mock.calls[0][0]).toBe('질문: 뭐\n답: 답')
     })
 
     it('메타를 같이 저장한다', async () => {

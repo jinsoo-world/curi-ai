@@ -1,7 +1,7 @@
 // /api/creator/knowledge/process — 업로드된 파일 텍스트 추출 + 임베딩
 import { NextRequest, NextResponse } from 'next/server'
 import { requireMentorOwner } from '@/lib/mentor-owner'
-import { generateEmbedding, splitIntoChunks } from '@/domains/knowledge/embedding'
+import { generateEmbedding, splitIntoChunksWithHeadings, contextualEmbeddingText } from '@/domains/knowledge/embedding'
 import { GoogleGenAI } from '@google/genai'
 import { 개인정보가리기 } from '@/domains/knowledge/개인정보가리기'
 
@@ -527,13 +527,16 @@ export async function POST(req: NextRequest) {
         }
 
         // 텍스트 → 청크 → 임베딩
-        const chunks = splitIntoChunks(textContent)
+        const pieces = splitIntoChunksWithHeadings(textContent)
+        const chunks = pieces.map(p => p.text)
         console.log(`[Process] Text: ${textContent.length}chars → ${chunks.length} chunks`)
         let successCount = 0
 
         for (let i = 0; i < chunks.length; i++) {
             try {
-                const embedding = await generateEmbedding(chunks[i], { route: '/api/creator/knowledge/process', mentorId })
+                // 임베딩 글에만 자료 제목, 종류, 소제목을 붙인다 (저장 글은 원문 그대로)
+                const 임베딩글 = contextualEmbeddingText({ title: source.title, sourceType: source.source_type, heading: pieces[i].heading }, chunks[i])
+                const embedding = await generateEmbedding(임베딩글, { route: '/api/creator/knowledge/process', mentorId })
                 if (!embedding || embedding.length === 0) {
                     console.error(`[Process] Chunk ${i}: empty embedding returned`)
                     continue

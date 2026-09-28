@@ -1,7 +1,7 @@
 // domains/knowledge — 지식 데이터 변경 액션
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { generateEmbedding, splitIntoChunks } from './embedding'
+import { generateEmbedding, splitIntoChunksWithHeadings, contextualEmbeddingText } from './embedding'
 
 /** 표에 아직 없는 칸을 적어 넣었을 때 나는 Postgres 오류 번호 (컬럼 없음) */
 const COLUMN_MISSING = '42703'
@@ -83,11 +83,16 @@ export async function addKnowledgeSource(
 
     try {
         // 2. 텍스트 → 청크 분할 (singleChunk 면 쪼개지 않는다)
-        const chunks = opts?.singleChunk ? [content.trim()].filter(Boolean) : splitIntoChunks(content)
+        // Q&A(singleChunk)는 질문 그대로 검색이 되도록 머리말 없이 원문만 임베딩한다
+        const pieces = opts?.singleChunk
+            ? [content.trim()].filter(Boolean).map(text => ({ text, heading: null as string | null }))
+            : splitIntoChunksWithHeadings(content)
+        const chunks = pieces.map(p => p.text)
 
-        // 3. 각 청크에 임베딩 생성 + 저장
+        // 3. 각 청크에 임베딩 생성 + 저장 (임베딩 글에만 자료 제목, 종류, 소제목을 붙인다. 저장 글은 원문)
         for (let i = 0; i < chunks.length; i++) {
-            const embedding = await generateEmbedding(chunks[i], { route: 'knowledge/actions', mentorId })
+            const 임베딩글 = opts?.singleChunk ? chunks[i] : contextualEmbeddingText({ title, sourceType, heading: pieces[i].heading }, chunks[i])
+            const embedding = await generateEmbedding(임베딩글, { route: 'knowledge/actions', mentorId })
 
             const { error: insertError } = await db.from('knowledge_chunks').insert({
                 source_id: source.id,

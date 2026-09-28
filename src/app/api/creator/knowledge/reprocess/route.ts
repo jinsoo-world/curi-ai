@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
-import { generateEmbedding, splitIntoChunks } from '@/domains/knowledge/embedding'
+import { generateEmbedding, splitIntoChunksWithHeadings, contextualEmbeddingText } from '@/domains/knowledge/embedding'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -154,11 +154,13 @@ export async function POST() {
                     .delete()
                     .eq('source_id', source.id)
 
-                const chunks = splitIntoChunks(textContent)
+                const pieces = splitIntoChunksWithHeadings(textContent)
+                const chunks = pieces.map(p => p.text)
                 let ok = 0
                 for (let i = 0; i < chunks.length; i++) {
                     try {
-                        const emb = await generateEmbedding(chunks[i], { route: '/api/creator/knowledge/reprocess', mentorId: source.mentor_id })
+                        const 임베딩글 = contextualEmbeddingText({ title: source.title, sourceType: source.source_type, heading: pieces[i].heading }, chunks[i])
+                        const emb = await generateEmbedding(임베딩글, { route: '/api/creator/knowledge/reprocess', mentorId: source.mentor_id })
                         const { error: insErr } = await admin.from('knowledge_chunks').insert({
                             source_id: source.id,
                             mentor_id: source.mentor_id,
