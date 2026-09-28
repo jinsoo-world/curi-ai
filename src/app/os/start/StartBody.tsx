@@ -5,6 +5,7 @@
 // OsShell 은 이 주소에서 뼈대를 그리지 않는다 → data-theme 을 직접 씌운다. 글자 17px 이상, 단추 52px 이상.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { readHomeDraft } from '@/domains/home/draft-store'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import BotAvatar from '@/components/os/BotAvatar'
@@ -192,7 +193,10 @@ export default function StartBody() {
             localStorage.removeItem(FIRST_SENT_LOCAL_KEY)
             window.dispatchEvent(new Event(SURVEY_EVENT))
         } catch { /* 저장이 막힌 브라우저 */ }
-        router.replace(mentorId ? `/os/chat/${mentorId}` : '/os')
+        // /home 에서 주소를 넣고 온 사람은 그 주소로 만드는 초안이 먼저 (OsShell 이 /os 에서 초안 창을 연다)
+        let homeDraft = false
+        try { homeDraft = !!readHomeDraft(window.localStorage) } catch { /* 저장이 막힌 브라우저 */ }
+        router.replace(homeDraft ? '/os' : mentorId ? `/os/chat/${mentorId}` : '/os')
     }, [a.use_cases, save, router])
 
     const set = <K extends keyof Answers>(k: K, v: Answers[K]) => setA(p => ({ ...p, [k]: v }))
