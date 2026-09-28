@@ -516,7 +516,7 @@ button[role="switch"] {
   align-items: center;
   gap: 9px;
   text-decoration: none;
-  color: var(--먹);
+  color: var(--연두, #22c55e);   /* 큐리 글자 = 브랜드 초록 (대표 0928 「큐리 검정색 아니야」) */
   font-size: 18px;
   font-weight: 900;
   letter-spacing: -0.03em;

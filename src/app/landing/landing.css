@@ -45,7 +45,7 @@
     align-items: center;
     justify-content: space-between;
 }
-.ld-logo { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+.ld-logo { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: var(--os-클로버, #22C55E); }
 .ld-nav-cta {
     display: inline-flex;
     align-items: center;

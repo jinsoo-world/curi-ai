@@ -59,6 +59,21 @@ export function facePx(size: number): number {
 export const SHAPE_KO: Record<BotShape, string> = {
     circle: '원', hex: '육각', square: '둥근네모', egg: '달걀', drop: '물방울', clover: '네잎클로버',
 }
+/**
+ * 캐릭터 색 8종의 실제 값 = globals.css [data-theme="os"] 의 --봇-* 와 같다(시험이 맞춰 본다).
+ * 로그인, 랜딩처럼 data-theme="os" 밖에서 그리면 변수가 없어 검정으로 칠해졌다(대표 0928 「큐리 검정색 아니야」).
+ * 그래서 몸 색은 var(--봇-색, 이 값) 으로 칠해 어디서든 같은 색이 나온다.
+ */
+export const BOT_HEX: Record<BotColor, string> = {
+    orange: '#FF6A1A', teal: '#1FA38A', magenta: '#E0197B', blue: '#1E6FE8',
+    brown: '#7A5230', green: '#22C55E', yellow: '#F5C518', white: '#F2F2F7',
+}
+
+/** 몸 색 CSS 값. 테마 변수가 있으면 그것, 없으면 BOT_HEX */
+export function botFill(color: BotColor): string {
+    return `var(--봇-${color}, ${BOT_HEX[color] ?? BOT_HEX.green})`
+}
+
 export const COLOR_KO: Record<BotColor, string> = {
     orange: '주황', teal: '청록', magenta: '자홍', blue: '파랑', brown: '갈색', green: '연두', yellow: '노랑', white: '흰',
 }

@@ -48,6 +48,9 @@ test('1, 5, 6, 9: 시연 대화 = 추천 질문 3개, 머리 단추 2개 구분,
     const kakao = gate.getByRole('link', { name: '카카오로 시작' })
     await expect(kakao).toHaveAttribute('href', new RegExp(`^/login\\?next=%2Fos%2Fchat%2F${PLANNING}&provider=kakao$`))
     await expect(gate.getByRole('link', { name: '구글로 시작' })).toHaveAttribute('href', /provider=google/)
+    // 공식 로고가 단추 안에 있다
+    await expect(kakao.locator('svg')).toHaveCount(1)
+    await expect(gate.getByRole('link', { name: '구글로 시작' }).locator('svg path')).toHaveCount(4)
     await expect(page.locator('.os-first-tasks')).toHaveCount(0)
 })
 
@@ -71,7 +74,8 @@ test('7: 붙일 수 있는 게 있는데 로그인 전이면 「로그인하면 
     await settle(page)
     const card = page.locator('.os-connect-login')
     await expect(card).toContainText('로그인하면 연결할 수 있어요')
-    await expect(card.getByRole('link', { name: '로그인하기' })).toHaveAttribute('href', '/login?next=/os/connect')
+    await expect(card.getByRole('link', { name: '카카오로 시작' })).toHaveAttribute('href', '/login?next=%2Fos%2Fconnect&provider=kakao')
+    await expect(card.getByRole('link', { name: '구글로 시작' }).locator('svg')).toHaveCount(1)
     await expect(page.locator('.os-soon')).toContainText('카카오')
 })
 
@@ -97,6 +101,8 @@ test('3: 소개 화면 첫 화면 안에 제목, 카카오로 시작, 먼저 둘
         expect(b!.y + b!.height, `${name} 이 첫 화면 밖(${Math.round(b!.y)}px)`).toBeLessThanOrEqual(vh)
     }
     await expect(page.getByRole('link', { name: '카카오로 시작', exact: true }).first()).toHaveAttribute('href', /provider=kakao/)
+    await expect(page.getByRole('link', { name: '카카오로 시작', exact: true }).first().locator('svg')).toHaveCount(1)
+    await expect(page.getByRole('link', { name: '구글로 시작', exact: true }).first().locator('svg')).toHaveCount(1)
 })
 
 test('4: 로그인 = 동의 없이 누르면 약관 칸을 짚고 안내, 줄은 44px 이상', async ({ page }) => {
@@ -128,4 +134,14 @@ test('10: 설치 안내는 첫 방문엔 안 뜨고 두 번째 방문(새 탭)�
     // 창이 아니라 띠: 화면 아래쪽 절반에 있다
     const b = await bar.boundingBox()
     expect(b!.y).toBeGreaterThan(second.viewportSize()!.height / 2)
+})
+
+test('큐리 초록: 로그인 화면 캐릭터와 글자가 검정이 아니다', async ({ page }) => {
+    await page.goto('/login', { waitUntil: 'domcontentloaded' })
+    await settle(page)
+    const body = await page.locator('.bot-avatar circle[r="22"]').first().evaluate(e => getComputedStyle(e).fill)
+    expect(body).toBe('rgb(34, 197, 94)')
+    const word = await page.getByRole('heading', { name: '큐리 AI' }).evaluate(e => getComputedStyle(e).color)
+    expect(word).toBe('rgb(34, 197, 94)')
+    await expect(page.getByRole('button', { name: /카카오로 시작하기/ }).locator('svg')).toHaveCount(1)
 })

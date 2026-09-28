@@ -7,7 +7,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties } from 'react'
 import type { BotColor, BotShape, BotState } from '@/domains/os/types'
 import {
     ERROR_X_MS, IDLE_DROWSY_MS, ariaLabel, avatarClass, badgePx, blinkHoldMs, eyeKind, eyeLayout, eyeR, facePx,
-    presenceTone, presenceLabel,
+    presenceTone, presenceLabel, botFill,
     faceBorderPx, faceClipId, faceTiltPeriodMs, isDoubleBlink, nextBlinkDelay, nextWinkDelay, shouldBlink, showsBadge,
     showsFace, showsFaceThinkDots, showsThinkDots, showsWorkDots, showsZ, startDrowsyTimer, talkBeatMs,
 } from './avatar'
@@ -94,7 +94,7 @@ function useFaceBorderStroke(faceUrl: string | null | undefined, enabled: boolea
 }
 
 export default function BotAvatar({ shape, color, state = 'idle', size = 72, idleAfterMs = IDLE_DROWSY_MS, faceUrl, faceRim = 'color', name, title }: BotAvatarProps) {
-    const fill = `var(--봇-${color})`
+    const fill = botFill(color)   // 테마 밖(로그인, 랜딩)에서도 검정이 아니라 제 색
     const geo = eyeLayout(shape)
     const reduced = useReducedMotion()
     const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '')   // 눈꺼풀 clipPath id. 한 화면에 봇이 여럿이라 겹치면 안 된다
