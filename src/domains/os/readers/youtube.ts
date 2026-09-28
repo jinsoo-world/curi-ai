@@ -14,7 +14,7 @@
 
 import { fetchPageSafely } from '@/domains/agent/fetch-url'
 import type { ReadPage, ReadFail } from '@/domains/agent/fetch-url'
-import { getYoutubeDigest, digestWithin, keepAlive, geminiYoutubeConfig } from './youtube-gemini'
+import { getYoutubeDigest, digestWithin, keepAlive, geminiYoutubeConfig, cleanDigest } from './youtube-gemini'
 import type { DigestOutcome } from './youtube-gemini'
 
 /** 자막 한 조각 (도구가 주는 모양, start 와 dur 은 초를 글자로) */
@@ -293,7 +293,7 @@ export async function readYoutube(rawUrl: string, opts: YoutubeOptions = {}): Pr
         const lastChapter = Math.max(0, ...(next?.chapters ?? []).map(c => clockToSec(c.at)))
         const clipNote = lastChapter > maxMin * 60 ? `\n(영상이 ${maxMin}분보다 길어 앞 ${maxMin}분까지만 정리했어요)` : ''
         const note = `\n\n[영상 정리] (자막을 직접 받지 못해 AI가 영상을 보고 들은 내용을 정리했어요. 말 그대로의 자막이 아니라 정리본이고, [분:초]는 영상 속 시각입니다)${clipNote}`
-        const body = digest.text.trim()
+        const body = cleanDigest(digest.text)
         const room = maxChars - head.length - note.length - body.length - 20
         const desc = description && room > 200 ? `\n\n[설명]\n${description.slice(0, Math.min(800, room - 20))}${description.length > Math.min(800, room - 20) ? ' …' : ''}` : ''
         const text = `${head}${note}\n${body}${desc}`.slice(0, maxChars)

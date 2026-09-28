@@ -112,11 +112,17 @@ export function digestPrompt(maxMinutes: number): string {
         '',
         '[구간]',
         '[0:00] 이 구간에서 한 말을 구체적으로 2~4문장 (사람 이름, 숫자, 예시, 인용을 살려서)',
-        '[1:30] ...',
-        '영상 처음부터 끝까지 1~3분 간격으로 고르게 덮으세요. 시각은 [분:초], 한 시간이 넘으면 [시:분:초].',
+        '[0:30] ...',
+        '영상 처음부터 끝까지 고르게 덮으세요. 5분 안쪽 영상은 30초 간격, 긴 영상은 1~3분 간격. 시각은 [분:초], 한 시간이 넘으면 [시:분:초].',
+        '가운뎃점과 긴 줄표는 쓰지 말고 쉼표로 쓰세요.',
         '',
         '말이 없는 영상이면 화면에 보이는 것을 적으세요. 한국어가 아닌 영상도 한국어로 정리하세요.',
     ].join('\n')
+}
+
+/** 우리 글 규칙: 가운뎃점(U+00B7), 긴 줄표(U+2014)는 쉼표로 바꾼다 (모델이 가끔 쓴다) */
+export function cleanDigest(text: string): string {
+    return String(text ?? '').replace(/\s*[\u00B7\u2014]\s*/g, ', ').trim()
 }
 
 /** 쓸 만한 결과인가 (형식이 무너졌거나 너무 짧으면 저장하지 않는다 = 다음에 다시 시도) */
@@ -300,7 +306,7 @@ async function runDigest(req: DigestRequest): Promise<DigestOutcome> {
                 const usage = usageFrom(r.usageMetadata)
                 const cost = costUsd(model, usage)
                 const ms = Date.now() - started
-                const text = String(r.text ?? '').trim()
+                const text = cleanDigest(r.text ?? '')
                 console.log('[yt-gemini] 사용량', { videoId: req.videoId, model, ms, ...usage, costUsd: cost })
                 if (!isUsableDigest(text)) {
                     await store.finish(callId, { status: 'empty', model, usage, costUsd: cost, ms }).catch(() => {})

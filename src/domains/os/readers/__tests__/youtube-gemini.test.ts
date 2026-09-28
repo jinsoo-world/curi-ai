@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
     geminiYoutubeConfig, getYoutubeDigest, digestMemoryClear, costUsd, usageFrom, isUsableDigest, kstDayStart,
-    digestPrompt, digestWithin,
+    digestPrompt, digestWithin, cleanDigest,
 } from '../youtube-gemini'
 import type { DigestStore, GenerateFn, GeminiYoutubeConfig } from '../youtube-gemini'
 
@@ -68,6 +68,9 @@ describe('값 계산', () => {
     it('형식이 무너진 결과는 저장하지 않는다', () => {
         expect(isUsableDigest(GOOD)).toBe(true)
         expect(isUsableDigest('죄송합니다. 영상을 볼 수 없습니다.')).toBe(false)
+    })
+    it('가운뎃점, 긴 줄표는 쉼표로', () => {
+        expect(cleanDigest('수능 서술\u00B7논술형 도입 \u2014 찬반')).toBe('수능 서술, 논술형 도입, 찬반')
     })
     it('프롬프트에 한도 분과 형식', () => {
         const p = digestPrompt(60)
