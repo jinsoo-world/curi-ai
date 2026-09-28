@@ -214,7 +214,7 @@ export async function POST(req: Request) {
             const encoder = new TextEncoder()
             const gateStream = new ReadableStream({
                 start(controller) {
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: msg, done: true, fullResponse: msg, audienceBlocked: true })}\n\n`))
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: msg, done: true, fullResponse: msg, audienceBlocked: true, audienceReason: audienceGate.reason ?? null })}\n\n`))
                     controller.close()
                 },
             })

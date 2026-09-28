@@ -72,3 +72,20 @@ export function IconPlug(p: SVGProps<SVGSVGElement>) {
         </svg>
     )
 }
+/** 봇 명단 = 사람 둘 (대화 머리 왼쪽, 한 장 화면 폰 단추) */
+export function PeopleIcon(p: SVGProps<SVGSVGElement>) {
+    return (
+        <svg {...base(p)}>
+            <circle cx="9" cy="8" r="3.4" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+            <path d="M16 4.8a3.4 3.4 0 0 1 0 6.4" /><path d="M18 14a6.5 6.5 0 0 1 3.5 6" />
+        </svg>
+    )
+}
+/** 세부 정보 = 동그라미 안 i (대화 머리 오른쪽) */
+export function InfoIcon(p: SVGProps<SVGSVGElement>) {
+    return (
+        <svg {...base(p)}>
+            <circle cx="12" cy="12" r="9" /><path d="M12 11v6" /><path d="M12 7.5h.01" />
+        </svg>
+    )
+}

@@ -8,7 +8,8 @@ import { useRouter } from 'next/navigation'
 import { useOsTeam } from './OsShell'
 import BotAvatar from './BotAvatar'
 import BotMarkdown from './BotMarkdown'
-import MenuIcon, { CloseIcon, swipeToClose } from './MenuIcon'
+import { CloseIcon, swipeToClose } from './MenuIcon'
+import { PeopleIcon, InfoIcon } from './Icons'
 import { findMentionedBot, pickResponders } from '@/domains/os/channels'
 import { osTrack } from '@/domains/os/events'
 import type { BotColor, BotShape } from '@/domains/os/types'
@@ -206,9 +207,10 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
         <div className="os-chat-wrap">
             <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 <header className="os-chat-head">
-                    <button type="button" className="os-icon-btn os-nav-btn" aria-label="봇 명단 열기"
+                    {/* 단체방 머리는 칸이 좁아 아이콘만: 왼쪽 사람 둘 = 명단, 오른쪽 ⓘ = 멤버. 둘 다 44px */}
+                    <button type="button" className="os-head-btn os-nav-btn" aria-label="봇 명단 열기"
                         aria-expanded={navOpen} aria-controls="os-nav" title="봇 명단"
-                        onClick={toggleNav}><MenuIcon /></button>
+                        onClick={toggleNav}><PeopleIcon /></button>
                     <span className="os-stack" aria-hidden>
                         {members.slice(0, 3).map(m => (
                             <span key={m.mentorId} className="os-stack-item">
@@ -252,7 +254,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                         )}
                     </span>
                     <span style={{ marginLeft: 'auto' }}>
-                        <button className="os-icon-btn os-menu" aria-label="멤버 보기" aria-expanded={detailOpen} title="멤버" onClick={() => setDetailOpen(v => !v)}><MenuIcon /></button>
+                        <button type="button" className="os-head-btn os-menu" aria-label="멤버 보기" aria-expanded={detailOpen} title="멤버" onClick={() => setDetailOpen(v => !v)}><InfoIcon /></button>
                     </span>
                 </header>
 

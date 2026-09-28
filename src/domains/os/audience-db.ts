@@ -1,7 +1,7 @@
 // domains/os — Audience DB 읽기·쓰기 (서버 전용. service_role 이라 소유자 확인을 여기서 반드시 건다)
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
-    checkAudience, cleanVisitorLimit, defaultAudienceLevel, isAudienceLevel, type AudienceLevel,
+    checkAudience, cleanVisitorLimit, defaultAudienceLevel, isAudienceLevel, type AudienceLevel, type AudienceCheckResult,
 } from './audience'
 import { countUserTurnsForMentor } from './usage-db'
 import { weekStartKST } from './usage'
@@ -129,6 +129,8 @@ export interface AudienceGate {
     allowed: boolean
     message: string | null
     level: AudienceLevel
+    /** 막힌 까닭. 화면이 login_required 면 로그인 단추를 붙인다 */
+    reason?: AudienceCheckResult['reason']
 }
 
 /**
@@ -149,7 +151,7 @@ export async function checkChatAudience(
             inAllowedGroup = await isVisitorInAllowedGroups(db, mentor.id, viewer)
         }
         const result = checkAudience({ level: settings.level, isOwner, isLoggedIn: !!viewer.userId, inAllowedGroup })
-        return { allowed: result.allowed, message: result.message, level: settings.level }
+        return { allowed: result.allowed, message: result.message, level: settings.level, reason: result.reason }
     } catch (e) {
         console.error('[os/audience] checkChatAudience', e instanceof Error ? e.message : e)
         return { allowed: true, message: null, level: 'public' }

@@ -252,6 +252,17 @@
 .os-icon-btn::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; }
 .os-icon-btn svg { width: 20px; height: 20px; display: block; flex: 0 0 auto; }
 .os-icon-btn:hover { background: var(--os-말풍선-내); color: var(--os-글); }
+.os-head-btn { display: grid; grid-auto-flow: column; align-items: center; gap: 4px; flex: 0 0 auto; min-width: 44px; min-height: 44px; padding: 0 10px; border: 1px solid var(--os-선); border-radius: 22px; background: transparent; color: var(--os-글); font-size: 15px; font-weight: 600; line-height: 1; cursor: pointer; font-family: inherit; }
+.os-head-btn svg { width: 20px; height: 20px; display: block; }
+.os-head-btn:hover { background: var(--os-말풍선-내); }
+.os-head-btn[aria-expanded="true"] { background: var(--os-말풍선-내); border-color: var(--os-글-연); }
+
+/* 로그인 전이라 막힌 답 아래 로그인 단추 (대표 승인 0928 사용성 1번) */
+.os-login-gate { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; max-width: 86%; }
+.os-login-gate-note { flex-basis: 100%; font-size: 15px; color: var(--os-글-연); line-height: 1.5; }
+.os-login-gate-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 20px; border-radius: 14px; font-size: 16px; font-weight: 700; text-decoration: none; }
+.os-login-gate-btn.kakao { background: #FEE500; color: #191919; }
+.os-login-gate-btn.google { background: #fff; color: #1f1f1f; border: 1px solid #c7c7cc; }
 /* 입력창 안 단추(＋, ↑) = 정확히 44×44 원 (대표 폰 실측 0923 「보내기가 타원으로 깨진다」) */
 .os-input-bar .os-icon-btn { width: 44px; height: 44px; flex: 0 0 44px; }
 .os-send { background: var(--os-글); color: var(--os-바탕); }
@@ -429,7 +440,7 @@
 
 /* 첫 일 시키기 칩 (FirstTaskChips) = 인사말 아래, 첫 메시지 전에만 */
 .os-first-tasks { align-self: flex-start; max-width: 88%; margin-top: 4px; }
-.os-first-tasks-title { font-size: 14px; color: var(--os-글-흐림); margin: 0 0 8px 6px; }
+.os-first-tasks-title { font-size: 15px; color: var(--os-글-연); margin: 0 0 8px 6px; }
 .os-first-tasks .os-chipbtn { font-size: 16px; line-height: 1.4; }
 
 /* 손님 명단 (GuestRoster) = 로그인 전 왼쪽에 공개 봇 3개 */
@@ -541,11 +552,11 @@
 /* ── 설정 화면 (/os/settings) ── */
 .os-settings { max-width: 640px; width: 100%; margin: 0 auto; padding: 24px 20px 60px; overflow-y: auto; color: var(--os-글); }
 .os-settings h1 { font-size: 24px; margin: 0 0 4px; }
-.os-settings h2 { font-size: 14px; color: var(--os-글-흐림); font-weight: 600; margin: 26px 0 8px; }
+.os-settings h2 { font-size: 15px; color: var(--os-글-연); font-weight: 600; margin: 26px 0 8px; }
 .os-settings .os-card { background: var(--os-말풍선); border-radius: 16px; padding: 14px 16px; font-size: 15px; line-height: 1.55; color: var(--os-글-연); }
 .os-settings .os-card b { color: var(--os-글); }
 .os-set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
-.os-set-sub { font-size: 13px; color: var(--os-글-흐림); margin-top: 2px; line-height: 1.5; }
+.os-set-sub { font-size: 15px; color: var(--os-글-연); margin-top: 2px; line-height: 1.5; }
 
 /* ── 오른쪽 세부칸 = 대화 위에 겹치는 서랍 (대표 0923: 「햄버거 열고 닫을 때 정렬이 깨진다」) ──
    예전엔 세부칸이 대화 옆 열이라 열릴 때 대화 폭이 300px 줄어 말풍선이 다시 줄을 섰다.
@@ -644,6 +655,8 @@
     color: inherit; font: inherit; padding: 0; cursor: pointer; min-width: 0; text-align: left;
 }
 .os-chat-head-bot:disabled { cursor: default; }
+.os-chat-head-bot > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 600px) { .os-chat-head { gap: 8px; padding: 10px 12px; } }
 .os-chat-head-bot:not(:disabled):hover { opacity: .92; }
 
 /* 단체방 이름 바꾸기 */

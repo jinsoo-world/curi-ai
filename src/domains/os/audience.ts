@@ -56,6 +56,26 @@ export interface AudienceCheckResult {
     message: string | null
 }
 
+/** 로그인 전 손님이 공개 봇에 말을 걸었을 때 봇 자리에 뜨는 한 줄 (대화 화면이 이 글을 보고 로그인 단추를 붙인다) */
+export const LOGIN_REQUIRED_MESSAGE = '로그인하면 대화할 수 있어요'
+
+/**
+ * 서버 답 조각이 「로그인해야 대화할 수 있다」는 막힘인가.
+ * 새 서버는 audienceReason 을 같이 보낸다. 옛 서버(배포 사이)는 글자로만 알아본다.
+ */
+export function isLoginGateReply(d: { audienceBlocked?: unknown; audienceReason?: unknown; text?: unknown }): boolean {
+    if (!d || !d.audienceBlocked) return false
+    if (d.audienceReason === 'login_required') return true
+    return d.audienceReason == null && typeof d.text === 'string' && d.text.trim() === LOGIN_REQUIRED_MESSAGE
+}
+
+/** 로그인 화면 주소. provider 를 주면 로그인 화면이 그 단추를 먼저 잡는다 */
+export function loginHref(next: string, provider?: 'kakao' | 'google'): string {
+    const q = new URLSearchParams({ next: next || '/os' })
+    if (provider) q.set('provider', provider)
+    return `/login?${q.toString()}`
+}
+
 /** 이 사람이 이 봇과 대화해도 되나 (순수 판정. 재료는 audience-db.ts 가 만들어 넘긴다) */
 export function checkAudience(i: AudienceCheckInput): AudienceCheckResult {
     if (i.isOwner) return { allowed: true, reason: null, message: null }
@@ -67,7 +87,7 @@ export function checkAudience(i: AudienceCheckInput): AudienceCheckResult {
             return { allowed: false, reason: 'insiders_blocked', message: '초대받은 사람만 대화할 수 있어요' }
         case 'public':
             if (i.isLoggedIn) return { allowed: true, reason: null, message: null }
-            return { allowed: false, reason: 'login_required', message: '로그인하면 대화할 수 있어요' }
+            return { allowed: false, reason: 'login_required', message: LOGIN_REQUIRED_MESSAGE }
         case 'anonymous':
             return { allowed: true, reason: null, message: null }
         default:

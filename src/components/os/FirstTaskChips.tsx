@@ -1,10 +1,10 @@
 'use client'
-// 새 봇을 만들고 대화방에 들어오면 첫 메시지 위에 뜨는 「첫 일 시키기」 칩 3개.
+// 대화방에 처음 들어오면(첫 메시지 전) 인사말 아래 뜨는 「눌러서 물어보기」 칩 3개 (대표 승인 0928 사용성 5번).
 // 그 봇이 맡은 일(presets.ts 의 JOBS)에 맞춰 30초 안에 결과가 보이는 일을 고른다. 누르면 그대로 보낸다.
 //
-// 끼우는 자리(OsChat): 인사말 말풍선 아래, messages.length === 0 일 때만.
-//   <FirstTaskChips bot={bot} disabled={streaming} onPick={text => { setInput(text); void send() }} />
-//   (send 가 input 상태를 읽는 구조라면 onPick 안에서 text 를 바로 보내는 sendText(text) 를 쓰는 편이 안전하다)
+// 끼우는 자리(OsChat): 인사말 말풍선 아래, 내 팀 봇이고 messages.length === 0 일 때만.
+//   <FirstTaskChips bot={bot} disabled={streaming} onPick={t => void send(t)} />
+// 공개 봇(리더의 봇)은 대화 안 정보 카드가 그 봇의 예시 질문을 따로 보여 준다.
 
 import type { TeamBot } from '@/domains/os/types'
 import { JOBS } from '@/domains/os/presets'
@@ -19,6 +19,26 @@ interface Props {
 
 // 맡은 일별 첫 일 3개. 첫 칩은 presets.firstTask 의 「」 안 문장과 같은 뜻으로 맞춘다
 const TASKS: Record<string, [string, string, string]> = {
+    planning_lead: [
+        '이번 주 뭐부터 해야 할지 정리해 줘',
+        '오늘 내가 결정할 것 하나만 골라 줘',
+        '내 일을 세 줄로 정리해 줘',
+    ],
+    marketing_lead: [
+        '내 다음 강의 알리는 글 3개 써 줘',
+        '짧은 홍보 문구 한 줄 만들어 줘',
+        '팬 질문에 보낼 답장 초안 하나 써 줘',
+    ],
+    dev_lead: [
+        '매주 반복하는 일 중에 자동으로 할 수 있는 게 있을까?',
+        '내 자료를 어떻게 정리하면 좋을지 알려 줘',
+        '어려운 기술 말을 쉬운 말로 풀어 줘',
+    ],
+    research_lead: [
+        '이거 사실인지 자료 찾아서 출처랑 같이 알려 줘',
+        '요즘 사람들이 많이 찾는 배움 주제 알려 줘',
+        '찾은 자료를 한 줄로 요약해 줘',
+    ],
     fan_reply: [
         '「강의 영상 다시 볼 수 있나요?」라는 질문에 내 말투로 답장 초안 써 줘',
         '답장할 때 꼭 지킬 말투 규칙 3개 정리해 줘',
@@ -64,8 +84,8 @@ export function tasksFor(bot: TeamBot | null): [string, string, string] {
 export default function FirstTaskChips({ bot, onPick, disabled }: Props) {
     const tasks = tasksFor(bot)
     return (
-        <div className="os-first-tasks" aria-label="첫 일 시키기">
-            <div className="os-first-tasks-title">첫 일 하나 시켜 보세요. 30초면 결과가 보여요.</div>
+        <div className="os-first-tasks" aria-label="추천 질문">
+            <div className="os-first-tasks-title">눌러서 바로 물어보세요</div>
             <div className="os-chips">
                 {tasks.map(t => (
                     <button key={t} type="button" className="os-chipbtn" disabled={disabled} onClick={() => onPick(t)}>

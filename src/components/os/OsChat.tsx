@@ -15,7 +15,11 @@ import { readLocalIntent } from '@/domains/os/settings'
 import { readChatCache, writeChatCache, clearChatCache } from '@/domains/os/chat-cache'
 import BotAvatar from './BotAvatar'
 import BotMarkdown from './BotMarkdown'
-import MenuIcon, { CloseIcon, swipeToClose } from './MenuIcon'
+import { CloseIcon, swipeToClose } from './MenuIcon'
+import { PeopleIcon, InfoIcon } from './Icons'
+import FirstTaskChips from './FirstTaskChips'
+import { isLoginGateReply, loginHref } from '@/domains/os/audience'
+import { markFirstChatDone } from '@/components/pwa/install-rules'
 import PermissionCard from './PermissionCard'
 import type { CardView } from './PermissionCard'
 import LinkCards, { extractUrls } from './LinkCards'
@@ -67,6 +71,16 @@ interface Msg {
     // === /전달(relay) ===
     /** === 사진 첨부 === 내 말풍선에 붙인 사진들 (우리 저장소 주소, 최대 10) */
     imageUrls?: string[]
+    /** 로그인 전이라 막힌 답이면 말풍선 아래 카카오, 구글 로그인 단추를 단다 (대표 승인 0928 사용성 1번) */
+    loginGate?: boolean
+}
+
+/** 로그인 뒤 돌아올 주소 = 지금 대화방. 시연 표시(?demo=1)는 떼어 로그인한 내 화면으로 돌아오게 한다 */
+function hereForLogin(): string {
+    if (typeof window === 'undefined') return '/os'
+    const u = new URL(window.location.href)
+    u.searchParams.delete('demo'); u.searchParams.delete('new')
+    return u.pathname + (u.search || '')
 }
 
 interface PublicBot { id: string; name: string; avatar_url: string | null; greeting_message: string; title?: string; sample_questions?: string[] }
@@ -118,6 +132,15 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
     const [detailOpen, setDetailOpen] = useState(false)   // 항상 닫힌 채 시작. 열 때만 세부칸을 그린다(대표 0923 「닫힌 채로, 열 때 로딩」)
     const [addSheet, setAddSheet] = useState(false)
     const [demo, setDemo] = useState(false)
+    // 폰(좁은 화면)은 입력창 안내를 짧게 (대표 승인 0928 사용성 9번)
+    const [narrow, setNarrow] = useState(false)
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 600px)')
+        const on = () => setNarrow(mq.matches)
+        void Promise.resolve().then(on)
+        mq.addEventListener('change', on)
+        return () => mq.removeEventListener('change', on)
+    }, [])
     const endRef = useRef<HTMLDivElement>(null)
     const cacheLoadedFor = useRef<string | null>(null)   // 이 mentorId 캐시를 읽은 뒤에만 다시 쓴다
     // === 사진 첨부 ===
@@ -533,6 +556,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
             let first = true
             let sources: { id: string; title: string }[] = []
             let readUrls: ReadUrlItem[] = []
+            let loginGate = false
             while (true) {
                 const { done, value } = await reader.read()
                 if (done) break
@@ -543,6 +567,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                         if (!line.startsWith('data: ')) continue
                         try {
                             const d = JSON.parse(line.slice(6))
+                            if (isLoginGateReply(d)) loginGate = true
                             if (d.text) {
                                 if (first) { setState('talking'); first = false }
                                 full += d.text
@@ -560,7 +585,12 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
             }
             setState(full.includes(UNAVAILABLE_TEXT) ? 'error' : 'idle')
             if (!full) setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: UNAVAILABLE_TEXT }])
+            else if (loginGate) {
+                setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: full, loginGate: true }])
+            }
             else if (sources.length > 0 || readUrls.length > 0) setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: full, sources, readUrls }])
+            // 봇 답을 끝까지 받았다 = 「앱으로 설치」 안내를 이제 보여도 된다(첫 방문엔 안 띄움)
+            if (full && !loginGate && !full.includes(UNAVAILABLE_TEXT)) { try { markFirstChatDone(window.localStorage) } catch { /* 저장 막힘 */ } }
         } catch {
             setState('error')
             setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: UNAVAILABLE_TEXT }])
@@ -613,9 +643,10 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
         >
             <div className="os-chat-col">
                 <header className="os-chat-head">
-                    <button type="button" className="os-icon-btn os-nav-btn" aria-label="봇 명단 열기"
+                    {/* 왼쪽 = 봇 명단(사람 아이콘 + 「명단」), 오른쪽 = 세부 정보(ⓘ + 「정보」). 둘 다 44px 이상 (대표 승인 0928 사용성 6번) */}
+                    <button type="button" className="os-head-btn os-nav-btn" aria-label="봇 명단 열기"
                         aria-expanded={navOpen} aria-controls="os-nav" title="봇 명단"
-                        onClick={toggleNav}><MenuIcon /></button>
+                        onClick={toggleNav}><PeopleIcon /><span>명단</span></button>
                     <button type="button" className="os-chat-head-bot" onClick={() => bot && openEditBot(bot)}
                         disabled={!bot || guest || bot.id.startsWith('demo-')}
                         title={bot && !guest && !bot.id.startsWith('demo-') ? '봇 편집' : undefined}
@@ -624,8 +655,8 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                         <span>{name}</span>
                     </button>
                     <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-                        <button className="os-icon-btn os-menu" aria-label="세부 정보 열기" aria-expanded={detailOpen}
-                            title="세부 정보 열기" onClick={() => setDetailOpen(v => !v)}><MenuIcon /></button>
+                        <button type="button" className="os-head-btn os-menu" aria-label="세부 정보 열기" aria-expanded={detailOpen}
+                            title="세부 정보 열기" onClick={() => setDetailOpen(v => !v)}><InfoIcon /><span>정보</span></button>
                     </span>
                 </header>
 
@@ -668,6 +699,8 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                         <MsgRow side="bot">
                             <div className="os-sender">{avatar}<span>{name}</span></div>
                             <div className="os-bubble bot">{greeting}</div>
+                            {/* 첫 메시지 전 = 눌러서 바로 물어보는 질문 3개 (대표 승인 0928 사용성 5번) */}
+                            {bot && <FirstTaskChips bot={bot} disabled={streaming} onPick={t => void send(t)} />}
                         </MsgRow>
                     )}
                     {messages.map((m, i) => m.role === 'user'
@@ -704,7 +737,14 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                                             : (m.content && !isUrlOnlyText(m.content)
                                                 ? <div className="os-bubble bot md"><MentionRichText text={m.content} bots={chipBots} markdown /></div>
                                                 : null)}
-                                        {m.content && !m.card && <OgLinkPreview text={m.content} />}
+                                        {m.loginGate && (
+                                            <div className="os-login-gate" role="group" aria-label="로그인하고 이어서 대화하기">
+                                                <div className="os-login-gate-note">로그인하면 바로 이어서 대화할 수 있어요.</div>
+                                                <a className="os-login-gate-btn kakao" href={loginHref(hereForLogin(), 'kakao')}>카카오로 시작</a>
+                                                <a className="os-login-gate-btn google" href={loginHref(hereForLogin(), 'google')}>구글로 시작</a>
+                                            </div>
+                                        )}
+                                        {m.content && !m.card && !m.loginGate && <OgLinkPreview text={m.content} />}
                                         {m.sources && m.sources.length > 0 && (
                                             <div className="os-cite">📎 참고한 자료: {m.sources.map(s => s.title).join(', ')}</div>
                                         )}
@@ -773,7 +813,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                                 onScroll={onComposerScroll}
                                 onFocus={() => endRef.current?.scrollIntoView({ behavior: 'smooth' })}
                                 onPaste={e => { if (photos.addFromData(e.clipboardData)) e.preventDefault() }}
-                                placeholder={`${name}에게 메시지 보내기 (@로 다른 봇 부르기)`}
+                                placeholder={narrow ? `${name}에게 물어보세요` : `${name}에게 물어보세요 (다른 봇은 @이름)`}
                                 aria-label="메시지"
                                 aria-autocomplete="list"
                                 aria-expanded={mention.open}
