@@ -4,6 +4,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { GoogleGenAI } from '@google/genai'
 import { GEMINI_MODEL } from './constants'
+import { logLlmUsage, geminiTokens } from '@/domains/llm/usage-log'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 function getAI() {
@@ -56,6 +57,7 @@ export async function extractAndUpdateTopic(
             .map(m => `${m.role === 'user' ? '사용자' : '멘토'}: ${m.content.slice(0, 200)}`)
             .join('\n')
 
+        const 시작 = Date.now()
         const result = await getAI().models.generateContent({
             model: GEMINI_MODEL,
             config: {
@@ -81,6 +83,13 @@ ${conversationText}
 주제:`
                 }]
             }],
+        })
+
+        const t = geminiTokens(result.usageMetadata)
+        logLlmUsage({
+            route: '/api/chat', kind: 'topic', provider: 'gemini', model: GEMINI_MODEL,
+            inputTokens: t.input, outputTokens: t.output, latencyMs: Date.now() - 시작,
+            meta: { sessionId },
         })
 
         const topic = (result.text || '')

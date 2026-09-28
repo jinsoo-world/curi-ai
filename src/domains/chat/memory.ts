@@ -3,6 +3,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { GoogleGenAI } from '@google/genai'
 import { GEMINI_MODEL } from './constants'
+import { logLlmUsage, geminiTokens } from '@/domains/llm/usage-log'
 
 function getAI() {
     return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
@@ -25,6 +26,8 @@ export async function extractAndSaveMemories(
     userMessage: string,
     assistantResponse: string,
 ): Promise<void> {
+    const started = Date.now()
+    let logged = false
     try {
         // 너무 짧은 대화는 스킵 (메모리 추출 가치 없음)
         if (userMessage.length < 10) return
@@ -58,6 +61,13 @@ memory_type 분류:
 [{"memory_type": "fact", "content": "서울에서 프리랜서 작가로 활동 중", "confidence": 0.9}]`
                 }]
             }],
+        })
+        const t = geminiTokens(result.usageMetadata)
+        logged = true
+        logLlmUsage({
+            route: '/api/chat', kind: 'memory', provider: 'gemini', model: GEMINI_MODEL,
+            userId, mentorId, inputTokens: t.input, outputTokens: t.output,
+            latencyMs: Date.now() - started,
         })
 
         const text = result.text || '[]'
@@ -108,6 +118,11 @@ memory_type 분류:
         console.log(`[Memory] Extracted ${memories.length} memories for user ${userId}`)
     } catch (error) {
         // 메모리 추출 실패는 대화에 영향 없음 — 조용히 로깅
+        if (!logged) logLlmUsage({
+            route: '/api/chat', kind: 'memory', provider: 'gemini', model: GEMINI_MODEL,
+            userId, mentorId, latencyMs: Date.now() - started, ok: false,
+            error: error instanceof Error ? error.message : String(error),
+        })
         console.error('[Memory] extractAndSaveMemories error:', error)
     }
 }

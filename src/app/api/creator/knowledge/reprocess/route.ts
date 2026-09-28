@@ -158,7 +158,7 @@ export async function POST() {
                 let ok = 0
                 for (let i = 0; i < chunks.length; i++) {
                     try {
-                        const emb = await generateEmbedding(chunks[i])
+                        const emb = await generateEmbedding(chunks[i], { route: '/api/creator/knowledge/reprocess', mentorId: source.mentor_id })
                         const { error: insErr } = await admin.from('knowledge_chunks').insert({
                             source_id: source.id,
                             mentor_id: source.mentor_id,

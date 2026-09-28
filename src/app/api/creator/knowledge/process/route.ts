@@ -533,7 +533,7 @@ export async function POST(req: NextRequest) {
 
         for (let i = 0; i < chunks.length; i++) {
             try {
-                const embedding = await generateEmbedding(chunks[i])
+                const embedding = await generateEmbedding(chunks[i], { route: '/api/creator/knowledge/process', mentorId })
                 if (!embedding || embedding.length === 0) {
                     console.error(`[Process] Chunk ${i}: empty embedding returned`)
                     continue

@@ -17,6 +17,7 @@ import {
 } from '@/domains/os/channels'
 import type { ChannelBot, ChannelMessage } from '@/domains/os/channels'
 import { askChat, askSolar } from '@/domains/agent/ask'
+import type { UsageCtx } from '@/domains/llm/usage-log'
 import { routeGroupReply, buildGroupSystemPrompt, isPassReply } from '@/domains/os/group-router'
 import type { GroupReplyMode } from '@/domains/os/group-router'
 import { UNAVAILABLE_TEXT } from '@/domains/chat/constants'
@@ -37,8 +38,11 @@ function 대화기록(messages: ChannelMessage[], bots: ChannelBot[]): string {
 }
 
 /** 눈치 라우터 한 번 묻기: 솔라 미니, 짧은 타임아웃. 안 되면 null → 폴백 한 명 */
-async function 라우터묻기(system: string, user: string): Promise<string | null> {
-    return askSolar(system, user, { temperature: 0, maxTokens: 16, signal: AbortSignal.timeout(6_000) })
+async function 라우터묻기(system: string, user: string, 기록자리?: UsageCtx): Promise<string | null> {
+    return askSolar(system, user, {
+        temperature: 0, maxTokens: 16, signal: AbortSignal.timeout(6_000),
+        usage: 기록자리 ? { ...기록자리, route: '/api/os/channels/[id]/chat', kind: 'router' } : undefined,
+    })
 }
 
 async function 봇한줄(
@@ -47,13 +51,17 @@ async function 봇한줄(
     기록: string,
     mode: GroupReplyMode,
     링크글 = '',
+    기록자리?: UsageCtx,
 ): Promise<string | null> {
     const 나머지 = bots.filter(b => b.mentorId !== 말할봇.mentorId)
     const 시스템 = buildGroupSystemPrompt(말할봇, 나머지, mode)
     const 답 = await askChat(
         링크글 ? `${링크글}\n\n${시스템}` : 시스템,
         `[방에서 오간 말]\n${기록}\n\n위 흐름에 이어 「${말할봇.name}」으로서 답한다.`,
-        { maxTokens: 900 },
+        {
+            maxTokens: 900,
+            usage: 기록자리 ? { ...기록자리, route: '/api/os/channels/[id]/chat', mentorId: 말할봇.mentorId, kind: 'group' } : undefined,
+        },
     )
     return 답 ? 답.trim() : null
 }
@@ -96,6 +104,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         const 사람말 = await saveChannelMessage(db, id, { authorKind: 'user', content: text })
 
         const 새말: ChannelMessage[] = [사람말]
+        const 기록자리: UsageCtx = { route: '/api/os/channels/[id]/chat', userId: user.id, channelId: id }
         const 멤버목록 = bots.map(b => ({ mentorId: b.mentorId, name: b.name }))
         const 콕집음 = findMentionedBot(text, 멤버목록)
         const 말한봇: string[] = []
@@ -106,7 +115,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
             let 앞선봇: string | null = null
             while (말할봇 && canBotSpeakAgain(봇이말한횟수)) {
                 const 기록 = 대화기록([...지난말, ...새말], bots)
-                const 내용: string = (await 봇한줄(말할봇, bots, 기록, 'mention', 링크글)) ?? UNAVAILABLE_TEXT
+                const 내용: string = (await 봇한줄(말할봇, bots, 기록, 'mention', 링크글, 기록자리)) ?? UNAVAILABLE_TEXT
                 const 저장 = await saveChannelMessage(db, id, { authorKind: 'bot', mentorId: 말할봇.mentorId, content: 내용 })
                 새말.push(저장)
                 말한봇.push(말할봇.mentorId)
@@ -126,7 +135,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
                 who: m.authorKind === 'user' ? '주인' : (bots.find(b => b.mentorId === m.mentorId)?.name ?? '봇'),
                 text: m.content,
             }))
-            const 고른id = await routeGroupReply(text, bots, 최근, 라우터묻기)
+            const 고른id = await routeGroupReply(text, bots, 최근, (sys, u) => 라우터묻기(sys, u, 기록자리))
             const 고른봇 = 고른id
                 .map(mid => bots.find(b => b.mentorId === mid))
                 .filter((b): b is ChannelBot => !!b)
@@ -134,7 +143,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
                 const 말할봇 = 고른봇[i]!
                 const 첫답 = 말한봇.length === 0
                 const 기록 = 대화기록([...지난말, ...새말], bots)
-                const 답 = await 봇한줄(말할봇, bots, 기록, 첫답 ? 'routed-first' : 'routed-next', 링크글)
+                const 답 = await 봇한줄(말할봇, bots, 기록, 첫답 ? 'routed-first' : 'routed-next', 링크글, 기록자리)
                 const 빈답 = 답 === null || isPassReply(답)
                 // 덧붙일 게 없거나 모델이 죽었으면 조용히 빠진다. 아무도 말 못 했으면 마지막에 한 줄은 남긴다.
                 if (빈답 && (!첫답 || i < 고른봇.length - 1)) continue

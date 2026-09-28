@@ -87,7 +87,7 @@ export async function addKnowledgeSource(
 
         // 3. 각 청크에 임베딩 생성 + 저장
         for (let i = 0; i < chunks.length; i++) {
-            const embedding = await generateEmbedding(chunks[i])
+            const embedding = await generateEmbedding(chunks[i], { route: 'knowledge/actions', mentorId })
 
             const { error: insertError } = await db.from('knowledge_chunks').insert({
                 source_id: source.id,

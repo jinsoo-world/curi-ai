@@ -12,6 +12,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logLlmUsage } from '@/domains/llm/usage-log'
+import { USD_TO_KRW_ESTIMATE } from '@/domains/llm/prices'
 
 /* ────────────── 한도 (환경변수, 안전한 기본값) ────────────── */
 
@@ -308,6 +310,12 @@ async function runDigest(req: DigestRequest): Promise<DigestOutcome> {
                 const ms = Date.now() - started
                 const text = cleanDigest(r.text ?? '')
                 console.log('[yt-gemini] 사용량', { videoId: req.videoId, model, ms, ...usage, costUsd: cost })
+                logLlmUsage({
+                    route: 'youtube-gemini', kind: 'youtube', provider: 'gemini', model, userId: req.userId,
+                    inputTokens: usage.promptTokens, outputTokens: usage.outputTokens + usage.thoughtsTokens,
+                    latencyMs: ms, costKrw: Math.round(cost * USD_TO_KRW_ESTIMATE * 10_000) / 10_000,
+                    meta: { videoId: req.videoId, audioTokens: usage.audioTokens, videoTokens: usage.videoTokens },
+                })
                 if (!isUsableDigest(text)) {
                     await store.finish(callId, { status: 'empty', model, usage, costUsd: cost, ms }).catch(() => {})
                     return { ok: false, reason: 'empty' }
@@ -318,6 +326,10 @@ async function runDigest(req: DigestRequest): Promise<DigestOutcome> {
                 return { ok: true, text, model, from: 'gemini' }
             } catch (e) {
                 lastError = e instanceof Error ? e.message : String(e)
+                logLlmUsage({
+                    route: 'youtube-gemini', kind: 'youtube', provider: 'gemini', model, userId: req.userId,
+                    latencyMs: Date.now() - started, ok: false, error: lastError, meta: { videoId: req.videoId },
+                })
                 if (minimalThinking && /thinking/i.test(lastError)) { minimalThinking = false; continue }
                 break
             }

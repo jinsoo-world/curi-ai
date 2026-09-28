@@ -172,7 +172,7 @@ export async function POST(req: Request) {
         const 답 = await askChat(
             규칙,
             `${기록 ? `[이 방에서 오간 말]\n${기록}\n\n` : ''}[${fromName}이 옮겨 온 말]\n${intent.message}\n\n위 말에 「${toName}」으로서 답한다.`,
-            { maxTokens: 900 },
+            { maxTokens: 900, usage: { route: '/api/os/relay', kind: 'relay', userId: user.id, mentorId: intent.mentorId } },
         )
         const 답본문 = (답 ?? UNAVAILABLE_TEXT).trim()
         await saveLine(db, toSession, 'assistant', 답본문)

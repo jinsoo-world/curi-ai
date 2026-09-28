@@ -7,6 +7,8 @@ import { solarChatStream } from '@/domains/llm'
 import { SOLAR_MINI_MODEL } from '@/domains/llm/constants'
 import { generateChatStream, UNAVAILABLE_TEXT } from '@/domains/chat/stream'
 import type { GeminiMessage } from '@/domains/chat/types'
+import { logLlmUsage } from '@/domains/llm/usage-log'
+import type { UsageCtx } from '@/domains/llm/usage-log'
 
 export interface AskOptions {
     model?: string
@@ -14,6 +16,8 @@ export interface AskOptions {
     maxTokens?: number
     /** 짧게 끊고 싶을 때 (사이드 비트 등). 안 주면 솔라 기본 타임아웃 */
     signal?: AbortSignal
+    /** 비용 기록(llm_usage) 자리. kind 는 router, rewrite 처럼 무슨 일인지 */
+    usage?: UsageCtx & { kind?: string }
 }
 
 /** 솔라에게 한 번 묻고 답 전체를 문자열로 받는다. 안 되면 null */
@@ -21,23 +25,40 @@ export async function askSolar(
     systemPrompt: string, userText: string, opts: AskOptions = {},
 ): Promise<string | null> {
     if (!process.env.UPSTAGE_API_KEY) return null
+    const model = opts.model ?? SOLAR_MINI_MODEL
+    const started = Date.now()
+    let ttft: number | null = null
+    let usage: { prompt: number; completion: number } | null = null
+    const log = (ok: boolean, error?: string) => logLlmUsage({
+        route: opts.usage?.route ?? 'unknown',
+        userId: opts.usage?.userId, mentorId: opts.usage?.mentorId, channelId: opts.usage?.channelId,
+        kind: opts.usage?.kind ?? 'ask', provider: 'solar', model,
+        inputTokens: usage?.prompt ?? null, outputTokens: usage?.completion ?? null,
+        ttftMs: ttft, latencyMs: Date.now() - started, ok, error,
+    })
     try {
         let out = ''
         for await (const chunk of solarChatStream(
             systemPrompt,
             [{ role: 'user', content: userText }],
             {
-                model: opts.model ?? SOLAR_MINI_MODEL,
+                model,
                 temperature: opts.temperature ?? 0,
                 maxTokens: opts.maxTokens ?? 1024,
                 signal: opts.signal,
             },
         )) {
-            if (chunk.text) out += chunk.text
+            if (chunk.text) {
+                if (ttft === null) ttft = Date.now() - started
+                out += chunk.text
+            }
+            if (chunk.done && chunk.usage) usage = chunk.usage
         }
+        log(true)
         return out.trim() || null
     } catch (e) {
         console.error('[agent/ask] 솔라 실패:', e instanceof Error ? e.message : e)
+        log(false, e instanceof Error ? e.message : String(e))
         return null
     }
 }
@@ -45,6 +66,7 @@ export async function askSolar(
 export interface AskChatOptions {
     maxTokens?: number
     recencyOn?: boolean
+    usage?: UsageCtx & { kind?: string }
 }
 
 /**
@@ -62,6 +84,7 @@ export async function askChat(
         for await (const chunk of await generateChatStream(systemPrompt, history, {
             maxOutputTokens: opts.maxTokens,
             recencyOn: opts.recencyOn,
+            usage: opts.usage,
         })) {
             if (chunk.text) out += chunk.text
         }

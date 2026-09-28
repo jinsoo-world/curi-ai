@@ -375,7 +375,7 @@ export async function POST(req: Request) {
             const { count: sourceCount } = await createAdminClient().from('knowledge_sources').select('id', { count: 'exact', head: true }).eq('mentor_id', mentorId)
             const hasSources = (sourceCount ?? 0) > 0
             console.log('[Chat RAG] sources:', sourceCount ?? 0, 'msg length:', lastUserMessage.length)
-            const embedding = hasSources ? await generateEmbedding(lastUserMessage) : []
+            const embedding = hasSources ? await generateEmbedding(lastUserMessage, { route: '/api/chat', userId: user?.id ?? null, mentorId }) : []
             console.log('[Chat RAG] Embedding length:', embedding.length)
             if (embedding.length > 0) {
                 // 지식 검색은 admin client로 (knowledge_chunks 는 anon/authenticated 에
@@ -588,7 +588,7 @@ export async function POST(req: Request) {
         // 스트리밍 응답 (domains/chat) — 어느 모델이 답하는지는 stream.ts 가 고른다.
         // 밖에서 확인할 수 있게 고른 드라이버 이름만 응답 머리글(X-Llm-Driver)에 붙인다.
         const llmDriver = pickDriverFromEnv(!!attachedImage)
-        const response = await generateChatStream(systemPrompt, geminiMessages, { maxOutputTokens: responseSettings.maxOutputTokens, recencyOn: responseSettings.recencyOn })
+        const response = await generateChatStream(systemPrompt, geminiMessages, { maxOutputTokens: responseSettings.maxOutputTokens, recencyOn: responseSettings.recencyOn, usage: { route: '/api/chat', userId: user?.id ?? null, mentorId } })
 
         // SSE 스트림 생성
         const encoder = new TextEncoder()
