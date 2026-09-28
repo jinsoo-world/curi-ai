@@ -67,8 +67,12 @@ export async function POST(req: NextRequest) {
     const db = createAdminClient()
     const now = new Date().toISOString()
 
-    const { data: existing } = await db.from('user_onboarding').select('status, use_cases, age_agreed_at').eq('user_id', user.id).maybeSingle()
+    const { data: existing } = await db.from('user_onboarding').select('status, use_cases, age_agreed_at, age_band').eq('user_id', user.id).maybeSingle()
     if (!existing) return NextResponse.json({ error: '온보딩 대상이 아니에요.' }, { status: 409 })
+    // 마치기 = 필수 답(약관, 맡길 일, 나이대)이 다 있어야 한다
+    if (step === 'done' && (!existing.age_agreed_at || !(existing.use_cases as string[] | null)?.length || !existing.age_band)) {
+        return NextResponse.json({ error: '앞 화면의 필수 답을 먼저 골라 주세요.' }, { status: 400 })
+    }
 
     // 들어온 길 = 기기와 앱 여부는 지금 요청에서, utm 과 referrer 는 이미 쌓고 있는 visit_logs 의 첫 줄에서
     const ua = req.headers.get('user-agent') || ''
@@ -111,7 +115,8 @@ export async function POST(req: NextRequest) {
         }
     } else if (step === 'profile') {
         Object.assign(update, fields)
-        const g = fields.gender === 'female' ? '여성' : fields.gender === 'male' ? '남성' : null
+        // users.gender 는 'male' | 'female' | 'other' 만 받는다 (DB 검사 규칙)
+        const g = fields.gender === 'female' || fields.gender === 'male' ? fields.gender : null
         if (g) await db.from('users').update({ gender: g }).eq('id', user.id).is('gender', null)
     } else if (step === 'done') {
         Object.assign(update, { status: 'done', completed_at: now, first_bot_mentor_id: cut(body.firstBotMentorId, 40)?.match(/^[0-9a-f-]{36}$/i)?.[0] ?? null })

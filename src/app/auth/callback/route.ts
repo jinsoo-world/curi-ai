@@ -137,7 +137,7 @@ export async function GET(request: Request) {
                         onboarding_completed: true,
                         referred_by: refCode,
                         ...(kakaoPhone ? { phone: kakaoPhone } : {}),
-                        ...(kakaoGender ? { gender: kakaoGender === 'male' ? '남성' : kakaoGender === 'female' ? '여성' : null } : {}),
+                        ...(kakaoGender ? { gender: kakaoGender === 'male' || kakaoGender === 'female' ? kakaoGender : null } : {}),
                         ...(kakaoBirthYear ? { birth_year: kakaoBirthYear } : {}),
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString(),
@@ -205,7 +205,8 @@ export async function GET(request: Request) {
                         : null
 
                     if (kakaoPhone && !profile.phone) updates.phone = kakaoPhone
-                    if (kakaoGender && !profile.gender) updates.gender = kakaoGender === 'male' ? '남성' : kakaoGender === 'female' ? '여성' : null
+                    // users.gender 는 'male', 'female', 'other' 만 받는다. 예전 '남성', '여성' 은 검사 규칙에 걸려 이 줄 전체(전화, 출생연도 포함)가 저장되지 않았다
+                    if (kakaoGender && !profile.gender) updates.gender = kakaoGender === 'male' || kakaoGender === 'female' ? kakaoGender : null
                     if (kakaoBirthYear && !profile.birth_year) updates.birth_year = kakaoBirthYear
                     if (!profile.auth_provider) updates.auth_provider = 'kakao'
                 }

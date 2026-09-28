@@ -226,7 +226,7 @@ export default function UserDetailPage() {
                 }}>
                     {[
                         { label: '휴대폰', value: user.phone || '—', icon: '📱' },
-                        { label: '성별', value: user.gender === '남성' || user.gender === '남' ? '🙍‍♂️ 남성' : user.gender === '여성' || user.gender === '여' ? '🙍‍♀️ 여성' : '—', icon: '' },
+                        { label: '성별', value: user.gender === 'male' || user.gender === '남성' || user.gender === '남' ? '🙍‍♂️ 남성' : user.gender === 'female' || user.gender === '여성' || user.gender === '여' ? '🙍‍♀️ 여성' : '-', icon: '' },
                         { label: '출생연도', value: user.birth_year ? `${user.birth_year}년` : '—', icon: '🎂' },
                         { label: '가입경로', value: user.auth_provider === 'kakao' ? '🟡 카카오' : user.auth_provider === 'google' ? '🟢 구글' : user.auth_provider || '—', icon: '' },
                         { label: '마케팅', value: user.marketing_consent ? '✅ 동의' : '❌ 미동의', icon: '' },
