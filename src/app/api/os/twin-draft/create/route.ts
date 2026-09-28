@@ -7,7 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createTeamBot, TeamTableMissing, SHAPES, COLORS } from '@/domains/os'
 import type { BotColor, BotShape } from '@/domains/os'
 import { ensureHardLimits } from '@/domains/os/twin-draft'
-import { tidyLine } from '@/domains/os/twin-draft-shared'
+import { composeGreeting, learnedLine, tidyLine } from '@/domains/os/twin-draft-shared'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,10 +24,13 @@ export async function POST(req: Request) {
     const shape = (SHAPES as readonly string[]).includes(String(b.shape)) ? b.shape as BotShape : 'circle'
     const color = (COLORS as readonly string[]).includes(String(b.color)) ? b.color as BotColor : 'orange'
     const oneLiner = tidyLine(b.oneLiner, 40)
-    const greeting = String(b.greeting ?? '').trim().slice(0, 200)
+    const typed = String(b.greeting ?? '').trim()
+    const kinds = (Array.isArray(b.learned) ? b.learned : []).map(String).slice(0, 10)
     const chips = (Array.isArray(b.chips) ? b.chips : []).map(c => tidyLine(c, 30)).filter(Boolean).slice(0, 3)
 
     const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || '주인'
+    // 첫 인사: 무엇을 배웠는지 한 줄을 앞에 붙인다 (모델 안 부름)
+    const greeting = composeGreeting(learnedLine(String(displayName).slice(0, 20), kinds), typed)
     const db = createAdminClient()
     try {
         const bot = await createTeamBot(db, { id: user.id, displayName }, {
@@ -47,3 +50,4 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: '봇을 만들지 못했어요' }, { status: 500 })
     }
 }
+

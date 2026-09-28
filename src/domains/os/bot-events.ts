@@ -32,3 +32,18 @@ export async function recordBotCreated(
         console.error('[os_bot_created] 기록 실패', err instanceof Error ? err.message : err)
     }
 }
+
+/** 「내 링크로 만들기」 초안 기록 (시작, 성공, 실패). 실패해도 막지 않는다 */
+export async function recordDraftEvent(
+    db: SupabaseClient,
+    e: { name: 'draft_started' | 'draft_succeeded' | 'draft_failed'; userId: string; extra: Record<string, unknown> },
+): Promise<void> {
+    try {
+        const { error } = await db.from('app_events').insert({
+            name: e.name, tool: 'twin_draft', path: '/api/os/twin-draft', user_id: e.userId, anon_id: null, extra: e.extra,
+        })
+        if (error) console.error(`[${e.name}] 기록 실패`, error.message)
+    } catch (err) {
+        console.error(`[${e.name}] 기록 실패`, err instanceof Error ? err.message : err)
+    }
+}

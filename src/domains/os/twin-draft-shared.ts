@@ -72,7 +72,9 @@ export interface TwinDraft {
     prompt: string
     /** 근거 없이 추정한 칸 이름 */
     guessed: DraftField[]
-    sources: { title: string; url: string }[]
+    sources: { title: string; url: string; kind?: DraftSourceKind }[]
+    /** 종류별로 읽은 개수 (화면 표시, 첫 인사용) */
+    counts?: Partial<Record<DraftSourceKind, number>>
     unread: { url: string; reason: string }[]
 }
 export type DraftField = 'names' | 'oneLiner' | 'greeting' | 'audience' | 'topics' | 'voiceRules' | 'limits' | 'chips' | 'example'
@@ -86,4 +88,72 @@ export function tidyLine(v: unknown, max: number): string {
         .replace(/\s+/g, ' ')
         .trim()
         .slice(0, max)
+}
+
+/** 초안 만드는 동안 시간에 따라 바꿔 보여 주는 단계 (숫자, 남은 시간은 보여 주지 않는다) */
+export const DRAFT_STEPS = [
+    { at: 0, text: '링크를 여는 중이에요' },
+    { at: 4_000, text: '글과 영상을 읽는 중이에요' },
+    { at: 20_000, text: '말투를 배우는 중이에요' },
+    { at: 38_000, text: '소개를 쓰는 중이에요' },
+] as const
+export function draftStepAt(ms: number): string {
+    let t: string = DRAFT_STEPS[0].text
+    for (const s of DRAFT_STEPS) if (ms >= s.at) t = s.text
+    return t
+}
+
+/** 읽은 자료 종류 */
+export type DraftSourceKind = 'blog' | 'youtube' | 'instagram' | 'threads' | 'paste' | 'web'
+const KIND_ORDER: DraftSourceKind[] = ['blog', 'youtube', 'instagram', 'threads', 'web', 'paste']
+const KIND_LABEL: Record<DraftSourceKind, { noun: string; unit: string }> = {
+    blog: { noun: '블로그', unit: '글' },
+    youtube: { noun: '유튜브', unit: '영상' },
+    instagram: { noun: '인스타', unit: '글' },
+    threads: { noun: '스레드', unit: '글' },
+    web: { noun: '홈페이지', unit: '글' },
+    paste: { noun: '붙여넣은', unit: '글' },
+}
+const KIND_PLACE: Record<DraftSourceKind, string> = {
+    blog: '블로그', youtube: '영상', instagram: '인스타그램', threads: '스레드', web: '홈페이지', paste: '보내 주신 글',
+}
+
+export function draftSourceKind(url: string): DraftSourceKind {
+    if (!url) return 'paste'
+    let host = ''
+    try { host = new URL(url).hostname.replace(/^(www|m)\./, '').toLowerCase() } catch { return 'web' }
+    const is = (h: string) => host === h || host.endsWith(`.${h}`)
+    if (is('youtube.com') || is('youtu.be')) return 'youtube'
+    if (is('instagram.com')) return 'instagram'
+    if (is('threads.net') || is('threads.com')) return 'threads'
+    if (is('blog.naver.com') || is('tistory.com') || is('brunch.co.kr') || is('velog.io') || host.startsWith('blog.')) return 'blog'
+    return 'web'
+}
+
+/** 종류별 개수 → 「블로그 글 3개」 같은 작은 표시 */
+export function draftSourceChips(counts: Partial<Record<DraftSourceKind, number>>): string[] {
+    return KIND_ORDER.filter(k => (counts[k] ?? 0) > 0).map(k => `${KIND_LABEL[k].noun} ${KIND_LABEL[k].unit} ${counts[k]}개`)
+}
+
+/** 만들 때 첫 인사 앞에 붙이는 「무엇을 배웠나」 한 줄 (모델 안 부름) */
+export function learnedLine(ownerName: string, kinds: readonly string[]): string {
+    const ks = KIND_ORDER.filter(k => kinds.includes(k))
+    if (ks.length === 0) return ''
+    const places = ks.map(k => KIND_PLACE[k])
+    const joined = places.length === 1 ? places[0] : `${places.slice(0, -1).join(', ')}${withGwa(places[places.length - 2])} ${places[places.length - 1]}`
+    return `${ownerName}님 ${joined}에서 말투와 주로 다루는 주제를 배웠어요. 무엇이든 물어보세요.`
+}
+
+/** 배운 것 한 줄 + 주인이 쓴 인사말 (200자 안에서, 배운 줄을 먼저 지킨다) */
+export function composeGreeting(learned: string, typed: string): string {
+    const t = String(typed ?? '').trim()
+    if (!learned) return t.slice(0, 200)
+    if (!t) return learned.slice(0, 200)
+    return `${learned}\n${t}`.slice(0, 200)
+}
+
+/** 받침 있으면 「과」, 없으면 「와」 */
+function withGwa(word: string): string {
+    const c = word.charCodeAt(word.length - 1) - 0xac00
+    return c >= 0 && c <= 11171 && c % 28 !== 0 ? '과' : '와'
 }

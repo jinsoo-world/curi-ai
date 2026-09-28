@@ -19,6 +19,7 @@ import type { MarketBot } from '@/app/api/os/market/route'
 import {
     DRAFT_LINK_LABEL, TWIN_DRAFT_CONSENTS, TWIN_DRAFT_COPY, TWIN_DRAFT_MAX_LINKS, TWIN_DRAFT_MAX_PASTES, draftLinkKind,
     type DraftField, type TwinDraft,
+    draftStepAt, draftSourceChips, draftSourceKind,
 } from '@/domains/os/twin-draft-shared'
 import { clearHomeDraft, readHomeDraft, type HomeDraft } from '@/domains/home/draft-store'
 
@@ -414,6 +415,15 @@ function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => v
     const [err, setErr] = useState<string | null>(null)
     const [unreadOnly, setUnreadOnly] = useState<{ url: string; reason: string }[]>([])
     const [draft, setDraft] = useState<TwinDraft | null>(null)
+    const [stepText, setStepText] = useState(() => draftStepAt(0))
+    // 기다리는 동안 단계 문구를 시간에 따라 바꾼다 (숫자는 안 보여 줌)
+    useEffect(() => {
+        if (!busy || draft) return
+        const t0 = Date.now()
+        setStepText(draftStepAt(0))
+        const id = setInterval(() => setStepText(draftStepAt(Date.now() - t0)), 1_000)
+        return () => clearInterval(id)
+    }, [busy, draft])
     // 편집 칸 (봇 편집 화면과 같은 칸)
     const [name, setName] = useState('')
     const [oneLiner, setOneLiner] = useState('')
@@ -466,7 +476,7 @@ function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => v
         try {
             const res = await fetch('/api/os/twin-draft/create', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name.trim(), oneLiner, greeting, prompt, chips: draft.chips, shape, color }),
+                body: JSON.stringify({ name: name.trim(), oneLiner, greeting, prompt, chips: draft.chips, shape, color, learned: learnedKinds(draft) }),
             })
             const data = await res.json().catch(() => ({}))
             if (!res.ok) throw new Error(data.error || '만들지 못했어요')
@@ -501,7 +511,7 @@ function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => v
                     ))}
                 </div>
             )}
-            {busy && <div className="os-step" role="status">{TWIN_DRAFT_COPY.making}</div>}
+            {busy && <div className="os-step" role="status" aria-live="polite">{stepText}</div>}
             {err && <div className="os-notice" style={{ margin: '14px 0 0' }}>{err}</div>}
             {unreadOnly.length > 0 && <UnreadList items={unreadOnly} />}
             <div className="os-sheet-foot">
@@ -568,8 +578,8 @@ function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => v
             </div>
             <div className="os-field">
                 <div className="os-field-label">{TWIN_DRAFT_COPY.read}</div>
-                <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--os-글-연)' }}>
-                    {draft.sources.map((s, i) => <div key={i} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</div>)}
+                <div className="os-chips">
+                    {draftSourceChips(draft.counts ?? countKinds(draft)).map(c => <span key={c} className="os-chipbtn" style={{ cursor: 'default' }}>{c}</span>)}
                 </div>
             </div>
             {draft.unread.length > 0 && <UnreadList items={draft.unread} />}
@@ -580,6 +590,16 @@ function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => v
             </div>
         </>
     )
+}
+
+/** 예전 응답(counts 없음)도 받게 주소로 센다 */
+function countKinds(d: TwinDraft) {
+    const out: Record<string, number> = {}
+    for (const s of d.sources) { const k = s.kind ?? draftSourceKind(s.url); out[k] = (out[k] ?? 0) + 1 }
+    return out
+}
+function learnedKinds(d: TwinDraft): string[] {
+    return Object.entries(d.counts ?? countKinds(d)).filter(([, n]) => (n ?? 0) > 0).map(([k]) => k)
 }
 
 function UnreadList({ items }: { items: { url: string; reason: string }[] }) {

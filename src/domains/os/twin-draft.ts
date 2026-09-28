@@ -16,7 +16,7 @@ import { buildTwinPrompt, TWIN_HARD_LIMITS } from './twin'
 import { askSideText } from '@/domains/llm/side-text'
 import {
     DRAFT_FIELDS, TWIN_DRAFT_MAX_LINKS, TWIN_DRAFT_MAX_PASTES, tidyLine,
-    type DraftField, type TwinDraft,
+    draftSourceKind, type DraftField, type DraftSourceKind, type TwinDraft,
 } from './twin-draft-shared'
 
 /** 기존 저가 모델 (유튜브 정리와 같은 것). 설정으로만 바꾼다 */
@@ -26,7 +26,7 @@ const PASTE_MAX = 8_000
 const PER_SOURCE_CHARS = 1_500
 const TOTAL_CHARS = 9_000
 
-export interface DraftText { title: string; url: string; text: string }
+export interface DraftText { title: string; url: string; text: string; /** 글 여러 편을 묶은 경우 편 수 */ count?: number }
 export interface DraftSources { texts: DraftText[]; unread: { url: string; reason: string }[] }
 
 export const UNREAD_REASON = {
@@ -89,7 +89,7 @@ async function readOneLink(link: string, hasPaste: boolean, deadline: number, us
         const left = deadline - Date.now()
         if (left < 3_000) return { texts: [], unread: { url: t.url, reason: UNREAD_REASON.time } }
         const r = await readInstagram(t.url, { timeoutMs: Math.min(10_000, left - 1_000), max: 5 })
-        if (r.ok) return { texts: [{ title: '인스타그램', url: t.url, text: r.posts.map(p => p.text).join('\n\n---\n\n').slice(0, PER_SOURCE_CHARS * 2) }] }
+        if (r.ok) return { texts: [{ title: '인스타그램', url: t.url, count: r.posts.length, text: r.posts.map(p => p.text).join('\n\n---\n\n').slice(0, PER_SOURCE_CHARS * 2) }] }
         return hasPaste ? { texts: [] } : { texts: [], unread: { url: t.url, reason: UNREAD_REASON.paste } }
     }
     if (t.platform === 'threads') {
@@ -98,7 +98,7 @@ async function readOneLink(link: string, hasPaste: boolean, deadline: number, us
         const r = await readThreads(t.url, { timeoutMs: Math.min(10_000, left - 1_000), max: 5 })
         if (r.ok) {
             const head = r.bio ? `소개: ${r.bio}\n\n` : ''
-            return { texts: [{ title: '스레드', url: t.url, text: (head + r.posts.map(p => p.text).join('\n\n---\n\n')).slice(0, PER_SOURCE_CHARS * 2) }] }
+            return { texts: [{ title: '스레드', url: t.url, count: r.posts.length, text: (head + r.posts.map(p => p.text).join('\n\n---\n\n')).slice(0, PER_SOURCE_CHARS * 2) }] }
         }
         return hasPaste ? { texts: [] } : { texts: [], unread: { url: t.url, reason: UNREAD_REASON.paste } }
     }
@@ -160,7 +160,7 @@ function list(v: unknown, n: number, max: number): string[] {
 }
 
 /** 모델 답 → 초안 칸 (길이, 개수, 문구 규칙을 여기서 맞춘다). JSON 이 아니면 null */
-export function parseDraftAnswer(text: string | null): Omit<TwinDraft, 'prompt' | 'sources' | 'unread' | 'name'> | null {
+export function parseDraftAnswer(text: string | null): Omit<TwinDraft, 'prompt' | 'sources' | 'unread' | 'name' | 'counts'> | null {
     if (!text) return null
     const m = text.match(/\{[\s\S]*\}/)
     if (!m) return null
@@ -191,7 +191,7 @@ export function parseDraftAnswer(text: string | null): Omit<TwinDraft, 'prompt' 
 }
 
 /** 초안 칸 → 봇 설명 (twin.ts 금지선 그대로, 말투는 voice.ts 규칙 뒤에 덧붙임) */
-export function draftPrompt(ownerName: string, name: string, d: Omit<TwinDraft, 'prompt' | 'sources' | 'unread' | 'name'>, samples: string[]): string {
+export function draftPrompt(ownerName: string, name: string, d: Omit<TwinDraft, 'prompt' | 'sources' | 'unread' | 'name' | 'counts'>, samples: string[]): string {
     const voice = buildVoiceGuide(analyzeVoice(samples))
     const extra = d.voiceRules.length > 0 ? `\n\n[말투 초안, 주인 글에서 읽은 것]\n${d.voiceRules.map(r => `- ${r}`).join('\n')}` : ''
     const base = buildTwinPrompt(
@@ -211,6 +211,13 @@ export function ensureHardLimits(prompt: string): string {
     return `${p}\n\n[절대 하지 않는 것]\n${missing.map(l => `- ${l}`).join('\n')}`.slice(0, 14_000)
 }
 
+/** 종류별로 읽은 개수 */
+export function countDraftSources(texts: { url: string; count?: number }[]): Partial<Record<DraftSourceKind, number>> {
+    const out: Partial<Record<DraftSourceKind, number>> = {}
+    for (const t of texts) { const k = draftSourceKind(t.url); out[k] = (out[k] ?? 0) + Math.max(1, t.count ?? 1) }
+    return out
+}
+
 /** 초안 한 벌 만들기 (읽기 + 모델 한 번). 저장하지 않는다 */
 export async function makeTwinDraft(a: { userId: string; ownerName: string; sources: DraftSources }): Promise<TwinDraft> {
     const { texts, unread } = a.sources
@@ -227,7 +234,8 @@ export async function makeTwinDraft(a: { userId: string; ownerName: string; sour
         ...d,
         name,
         prompt: draftPrompt(a.ownerName, name, d, texts.map(t => t.text)),
-        sources: texts.map(t => ({ title: t.title.slice(0, 120), url: t.url })),
+        sources: texts.map(t => ({ title: t.title.slice(0, 120), url: t.url, kind: draftSourceKind(t.url) })),
+        counts: countDraftSources(texts),
         unread,
     }
 }
