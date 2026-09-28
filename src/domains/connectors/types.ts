@@ -1,6 +1,6 @@
 // domains/connectors — 「밖의 도구와 연결하기」 공통 타입.
 //
-// 14개 서비스는 사용자 본인 계정 로그인(OAuth)으로 붙는다(providers.ts). 노션·슬랙은 열쇠를 손으로 붙여 넣는 옛길도 남겨 둔다.
+// 14개 서비스는 사용자 본인 계정 로그인(OAuth)으로 붙는다(providers.ts). 노션은 열쇠를 손으로 붙여 넣는 옛길도 남겨 둔다.
 // 계획은 docs/connectors/외부연결_계획.md, 열쇠 발급은 docs/connect/공급자_열쇠_발급.md.
 
 import { PROVIDERS, PROVIDER_IDS, type ProviderId } from './providers'
@@ -9,8 +9,11 @@ import { PROVIDERS, PROVIDER_IDS, type ProviderId } from './providers'
 export const CONNECTOR_KINDS = PROVIDER_IDS
 export type ConnectorKind = ProviderId
 
-/** 열쇠를 손으로 붙여 넣어도 되는 것(OAuth 열쇠가 아직 없을 때의 뒷길). 나머지는 본인 계정 로그인(OAuth)으로만 붙는다 */
-export const READY_KINDS: readonly ConnectorKind[] = ['notion', 'slack']
+/**
+ * 열쇠를 손으로 붙여 넣어도 되는 것(OAuth 열쇠가 아직 없을 때의 뒷길). 나머지는 본인 계정 로그인(OAuth)으로만 붙는다.
+ * 슬랙 웹훅은 뺐다(대표 0928): 봇이 슬랙에 올리는 도구가 아직 없어서 붙여도 쓸 데가 없다.
+ */
+export const READY_KINDS: readonly ConnectorKind[] = ['notion']
 
 export interface ConnectorMeta {
     /** 화면에 보이는 이름 */
@@ -27,7 +30,6 @@ export interface ConnectorMeta {
 
 const PLACEHOLDER: Partial<Record<ConnectorKind, string>> = {
     notion: 'ntn_ 로 시작하는 내 통합 토큰',
-    slack: 'https://hooks.slack.com/services/... 웹훅 주소',
 }
 
 export const CONNECTOR_INFO: Record<ConnectorKind, ConnectorMeta> = Object.fromEntries(

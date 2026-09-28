@@ -4,7 +4,7 @@
 // 13개 서비스를 한 줄씩: 왼쪽 32px 로고, 이름, 상태 배지, 오른쪽 단추(연결하기 / 해제).
 // 붙이는 길 = 사용자 본인 계정 로그인(OAuth). 아직 못 붙이는 서비스는 회색 단추 대신 아래 「곧 열려요」 한 칸에 이름만 모은다.
 // 로그인 전이면 맨 위에 「로그인하면 연결할 수 있어요」 + 로그인 단추 (대표 승인 0928 사용성 7번).
-// 노션, 슬랙은 OAuth 열쇠가 아직 없을 때 열쇠를 손으로 붙여 넣는 옛길을 남겨 둔다.
+// 노션은 OAuth 열쇠가 아직 없을 때 토큰을 손으로 붙여 넣는 길을 남겨 둔다(슬랙 웹훅은 봇이 안 써서 뺐다, 대표 0928).
 // ⚠️ 이 파일은 브라우저에서 돌므로 domains 의 값(crypto 를 끌고 오는 것)을 가져오지 않는다. 타입만.
 
 import { useCallback, useEffect, useState } from 'react'
@@ -17,15 +17,15 @@ type Service = ProviderView & {
     connected: { id: string; account: string; status: 'connected' | 'error' } | null
 }
 
-/** 열쇠를 손으로 붙여 넣을 수 있는 두 개(서버 /api/os/connectors 의 READY_KINDS 와 같다) */
-const PASTE: Record<string, { placeholder: string; how: string }> = {
+/** 토큰을 손으로 붙여 넣을 수 있는 것(서버 /api/os/connectors 의 READY_KINDS 와 같다) */
+const PASTE: Record<string, { placeholder: string; how: string[] }> = {
     notion: {
-        placeholder: 'ntn_ 로 시작하는 내 통합 토큰',
-        how: '노션 → 설정 → 연결 → 내 통합 만들기 → 토큰 복사. 읽게 할 문서에서 「연결」로 그 통합을 더해 주세요.',
-    },
-    slack: {
-        placeholder: 'https://hooks.slack.com/services/... 웹훅 주소',
-        how: '슬랙 → 앱 → Incoming Webhooks → 방 고르고 주소 복사.',
+        placeholder: 'ntn_ 로 시작하는 토큰',
+        how: [
+            '1. notion.so/my-integrations 에서 「새 통합」을 만들어요.',
+            '2. 「내부 통합 시크릿」을 복사해 아래 칸에 붙여요.',
+            '3. 봇이 읽을 노션 문서에서 오른쪽 위 「...」 → 「연결」 → 방금 만든 통합을 더해요.',
+        ],
     },
 }
 
@@ -118,7 +118,7 @@ export default function ConnectorsPanel() {
         if (s.connected?.status === 'error') return <span className="os-svc-badge bad">다시 연결 필요</span>
         if (s.connected) return <span className="os-svc-badge on">연결됨 ({s.connected.account})</span>
         if (s.comingSoon) return <span className="os-svc-badge soon">준비 중</span>
-        if (!s.ready) return <span className="os-svc-badge soon">준비 중</span>
+        if (!s.ready && !(enabled && PASTE[s.id])) return <span className="os-svc-badge soon">준비 중</span>
         return <span className="os-svc-badge">연결 안 됨</span>
     }
 
@@ -154,9 +154,12 @@ export default function ConnectorsPanel() {
                                 {s.connected ? (
                                     <button type="button" className="os-btn" disabled={busy} onClick={() => void 해제(s)}>해제</button>
                                 ) : paste ? (
-                                    <button type="button" className="os-btn" disabled={busy}
-                                        onClick={() => { setPasteOpen(pasteOpen === s.id ? null : s.id); setSecret(''); setNote(null) }}>
-                                        {pasteOpen === s.id ? '닫기' : '열쇠 붙이기'}
+                                    <button type="button" className={`os-btn${pasteOpen === s.id ? '' : ' primary'}`} disabled={busy}
+                                        onClick={() => {
+                                            if (!loggedIn) { window.location.assign('/login?next=/os/connect'); return }
+                                            setPasteOpen(pasteOpen === s.id ? null : s.id); setSecret(''); setNote(null)
+                                        }}>
+                                        {pasteOpen === s.id ? '닫기' : '연결하기'}
                                     </button>
                                 ) : canConnect ? (
                                     <button type="button" className="os-btn primary" disabled={busy} onClick={() => 연결하기(s)}>연결하기</button>
@@ -166,9 +169,11 @@ export default function ConnectorsPanel() {
 
                         {paste && pasteOpen === s.id && (
                             <div className="os-svc-more">
-                                <input className="os-connect-input" value={secret} placeholder={PASTE[s.id].placeholder}
+                                <div className="os-svc-hint" style={{ marginBottom: 8 }}>
+                                    {PASTE[s.id].how.map(line => <div key={line}>{line}</div>)}
+                                </div>
+                                <input className="os-connect-input" value={secret} placeholder={PASTE[s.id].placeholder} aria-label={`${s.name} 토큰`}
                                     onChange={e => setSecret(e.target.value)} autoComplete="off" spellCheck={false} />
-                                <div className="os-svc-hint" style={{ marginTop: 6 }}>{PASTE[s.id].how}</div>
                                 <button type="button" className="os-btn primary" style={{ marginTop: 10, minHeight: 44 }}
                                     disabled={busy || !secret.trim()} onClick={() => void 붙이기(s)}>붙이기</button>
                             </div>

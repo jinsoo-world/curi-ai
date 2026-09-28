@@ -15,7 +15,10 @@ import { findSourcesOfChunks } from '@/domains/os/knowledge'
 import { readUrlsInText } from '@/domains/os/readers'
 // 🛡 인젝션 방어 (대표 지시 0923). 셈만 하는 함수들 = domains/chat/injection.ts, 설명 = docs/security/인젭션_방어_0923.md
 import { makeCanary, confidentialityPrompt, createOutputGuard, detectPromptExtraction, EXTRACTION_GUARD_PROMPT, checkRequestSize, INJECTION_MARK } from '@/domains/chat/injection'
-import { findConnector, markConnector, notionSearch, readConnectorSecret } from '@/domains/connectors'
+import {
+    findConnector, markConnector, notionSearch, readConnectorSecret,
+    CuriousAuthExpired, curiousMyPosts, curiousMyStudies, curiousPostsToText, curiousStudiesToText, findProvider, providerReady, withCuriousAuth,
+} from '@/domains/connectors'
 import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
 import { applySkills, skillsForMentor } from '@/domains/os/skills'
 // 🎛 답변 설정(목적·지침·말투·길이·창의성·출처·안내문·최신성). 트윈·리더 봇(마켓 공개봇)=Strict, 내 팀 봇=Adaptive 기본값 (domains/os/response-settings)
@@ -491,6 +494,33 @@ export async function POST(req: Request) {
             } catch (notionErr) {
                 console.error('[Chat Notion] Error:', notionErr instanceof Error ? notionErr.message : notionErr)
                 systemPrompt = `[🔌 노션]\n노션을 열지 못했습니다. 답 첫 줄에 "노션을 읽지 못했어요(설정 → 연결에서 다시 확인해 주세요)"라고 밝히고 내용을 지어내지 마세요.\n\n${systemPrompt}`
+            }
+        }
+
+        // 🔌 큐리어스에서 읽기  -  「큐리어스」「어울림」을 부를 때만. 연결(본인 계정 OAuth)이 있고 공급자가 열려 있을 때만.
+        //    읽기만 한다(허용 목록 4줄, 전부 GET). 읽은 글은 자료 울타리 안에 넣는다.
+        const 큐리어스 = findProvider('curious')
+        if (user && 큐리어스 && providerReady(큐리어스) && /큐리어스|어울림|curious/i.test(lastUserMessage)) {
+            try {
+                const 연결 = await findConnector(createAdminClient(), user.id, 'curious')
+                if (연결) {
+                    const 글도 = /글|게시|커뮤니티|댓글/.test(lastUserMessage)
+                    const { studies, posts } = await withCuriousAuth(createAdminClient(), user.id, 연결.id, async token => ({
+                        studies: await curiousMyStudies(token),
+                        posts: 글도 ? await curiousMyPosts(token) : [],
+                    }))
+                    await markConnector(createAdminClient(), user.id, 연결.id, 'connected')
+                    const 조각 = [curiousStudiesToText(studies)]
+                    if (posts.length > 0) 조각.push(curiousPostsToText(posts))
+                    const 울타리 = fenceKnowledge(조각)
+                    systemPrompt = `[🔌 내 큐리어스에서 읽은 것]\n사용자 본인의 큐리어스 계정에서 읽은 어울림과 글입니다. 아래 내용으로만 답하고, 없는 숫자는 지어내지 마세요.\n\n${울타리}\n\n${systemPrompt}`
+                    usedSources = [...usedSources, ...studies.map(st => ({ id: `curious:study:${st.id}`, title: `큐리어스: ${st.title}` }))]
+                    console.log('[Chat Curious] 어울림:', studies.length, '글:', posts.length)
+                }
+            } catch (curiousErr) {
+                console.error('[Chat Curious] Error:', curiousErr instanceof Error ? curiousErr.message : 'unknown')
+                const 끊김 = curiousErr instanceof CuriousAuthExpired
+                systemPrompt = `[🔌 큐리어스]\n큐리어스를 열지 못했습니다. 답 첫 줄에 "${끊김 ? '큐리어스 로그인이 끊겼어요(연결 화면에서 다시 연결해 주세요)' : '큐리어스를 읽지 못했어요(잠시 뒤 다시 물어봐 주세요)'}"라고 밝히고 내용을 지어내지 마세요.\n\n${systemPrompt}`
             }
         }
 

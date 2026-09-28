@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
     ConnectorNotMine, ConnectorTableMissing, cleanKind, connectorsEnabled, createConnector,
-    deleteConnector, isReadyKind, listConnectors, isSlackWebhookUrl, looksLikeNotionToken,
+    deleteConnector, isReadyKind, listConnectors, looksLikeNotionToken, notionPing,
 } from '@/domains/connectors'
 
 export const dynamic = 'force-dynamic'
@@ -57,12 +57,17 @@ export async function POST(req: NextRequest) {
     if (!isReadyKind(kind)) return NextResponse.json({ error: '아직 준비 중인 연결이에요' }, { status: 400 })
     if (!secret) return NextResponse.json({ error: '붙여 넣을 값이 비어 있어요' }, { status: 400 })
 
-    // 모양부터 본다 — 엉뚱한 값을 잠가서 넣어 두면 나중에 왜 안 되는지 알기 어렵다
-    if (kind === 'slack' && !isSlackWebhookUrl(secret)) {
-        return NextResponse.json({ error: '슬랙 웹훅 주소가 아니에요. https://hooks.slack.com/services/… 를 붙여 넣어 주세요' }, { status: 400 })
-    }
+    // 모양부터 본다. 엉뚱한 값을 잠가서 넣어 두면 나중에 왜 안 되는지 알기 어렵다
     if (kind === 'notion' && !looksLikeNotionToken(secret)) {
         return NextResponse.json({ error: '노션 토큰이 아니에요. ntn_ 으로 시작하는 내부 통합 토큰을 붙여 넣어 주세요' }, { status: 400 })
+    }
+    // 모양이 맞아도 노션에 한 번 물어본다(읽기만). 노션이 안 받는 토큰은 저장하지 않는다
+    if (kind === 'notion') {
+        try {
+            await notionPing(secret)
+        } catch {
+            return NextResponse.json({ error: '노션이 이 토큰을 받지 않았어요. 토큰을 다시 복사해 붙여 넣어 주세요' }, { status: 400 })
+        }
     }
 
     try {

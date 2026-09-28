@@ -62,12 +62,18 @@ export interface Provider {
         url?: string
         pick?: (json: Record<string, unknown>) => string | null
     }
-    /** 아직 열 수 없는 것(큐리어스 본체 창구는 개발 중) */
+    /** 열쇠가 있어도 열지 않는 것(봇이 아직 쓰지 않는 서비스) */
     comingSoon?: boolean
 }
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null)
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? v as Record<string, unknown> : {})
+
+/** 큐리어스 본체 창구 주소(명세 docs/connect/큐리어스_연결_명세.md 와 글자 하나까지 같다) */
+export const CURIOUS_ORIGIN = 'https://curious-500.com'
+export const CURIOUS_AUTHORIZE_URL = `${CURIOUS_ORIGIN}/oauth/authorize`
+export const CURIOUS_TOKEN_URL = `${CURIOUS_ORIGIN}/api/v2/oauth/token`
+export const CURIOUS_PARTNER_API = `${CURIOUS_ORIGIN}/api/v2/partner`
 
 const GOOGLE = {
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -185,6 +191,9 @@ export const PROVIDERS: readonly Provider[] = [
         envClientId: 'SLACK_CLIENT_ID', envClientSecret: 'SLACK_CLIENT_SECRET',
         pkce: false, tokenAuth: 'body',
         account: { fromToken: t => str(obj(t.team).name) },
+        // 봇이 슬랙을 실제로 쓰는 도구(읽기, 승인 뒤 올리기)가 아직 없다. 붙여도 아무 일이 안 생기므로
+        // 열쇠가 있어도 「곧 열려요」에 둔다(대표 0928: 반쯤 되는 기능을 보이지 않는다)
+        comingSoon: true,
     },
     {
         id: 'youtube', name: '유튜브', logo: '/logos/youtube.svg',
@@ -192,11 +201,15 @@ export const PROVIDERS: readonly Provider[] = [
         ...GOOGLE, scopes: ['openid', 'email', 'https://www.googleapis.com/auth/youtube.readonly'],
     },
     {
+        // 큐리어스 본체(curious-500.com) 계정. 본체에 OAuth 창구가 열려야 붙는다(명세 docs/connect/큐리어스_연결_명세.md).
+        // 열쇠 두 개(CURIOUS_OAUTH_CLIENT_ID, _SECRET)가 Vercel 에 들어가기 전까지는 다른 것처럼 「곧 열려요」에 있다.
         id: 'curious', name: '큐리어스', logo: '/logos/curious.png',
-        hint: '준비 중', can: '준비 중',
-        authUrl: '', tokenUrl: '', scopes: [], scopeSeparator: ' ',
+        hint: '내 큐리어스 어울림, 신청자 수, 커뮤니티 글을 봇이 읽어요. 쓰지는 않아요.', can: '읽기만',
+        authUrl: CURIOUS_AUTHORIZE_URL, tokenUrl: CURIOUS_TOKEN_URL,
+        scopes: ['profile:read', 'studies:read', 'members:read', 'posts:read'], scopeSeparator: ' ',
         envClientId: 'CURIOUS_OAUTH_CLIENT_ID', envClientSecret: 'CURIOUS_OAUTH_CLIENT_SECRET',
-        pkce: false, tokenAuth: 'body', comingSoon: true,
+        pkce: true, tokenAuth: 'body',
+        account: { url: `${CURIOUS_PARTNER_API}/me`, pick: j => str(j.nickname) ?? str(j.name) },
     },
 
 ]

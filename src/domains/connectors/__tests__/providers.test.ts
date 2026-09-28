@@ -58,9 +58,15 @@ describe('공급자 등록표', () => {
         expect(providerReady(findProvider('google_drive')!, 열쇠있음)).toBe(true)
         // 자물쇠가 없으면 열쇠가 있어도 꺼진다
         expect(providerReady(google, { GOOGLE_OAUTH_CLIENT_ID: 'id', GOOGLE_OAUTH_CLIENT_SECRET: 'sec' })).toBe(false)
+        // 큐리어스 = 본체 OAuth 열쇠 두 개가 들어가야만 열린다(그 전에는 「곧 열려요」)
         const curious = findProvider('curious')!
-        expect(providerReady(curious, { ...환경, CURIOUS_OAUTH_CLIENT_ID: 'a', CURIOUS_OAUTH_CLIENT_SECRET: 'b' })).toBe(false)
-        expect(providerView(curious, 환경).comingSoon).toBe(true)
+        expect(providerReady(curious, 환경)).toBe(false)
+        expect(providerReady(curious, { ...환경, CURIOUS_OAUTH_CLIENT_ID: 'a', CURIOUS_OAUTH_CLIENT_SECRET: 'b' })).toBe(true)
+        expect(providerView(curious, 환경).comingSoon).toBe(false)
+        // 슬랙 = 봇이 아직 안 쓴다. 열쇠가 있어도 닫혀 있다
+        const slack = findProvider('slack')!
+        expect(providerReady(slack, { ...환경, SLACK_CLIENT_ID: 'a', SLACK_CLIENT_SECRET: 'b' })).toBe(false)
+        expect(providerView(slack, 환경).comingSoon).toBe(true)
     })
 
     it('화면 모양(providerView)에 열쇠 이름, 값이 안 들어간다', () => {
@@ -70,12 +76,13 @@ describe('공급자 등록표', () => {
         expect(JSON.stringify(v)).not.toContain('GITHUB_CLIENT')
     })
 
-    it('connectors.kind 목록은 공급자와 같고, 손으로 붙이는 건 노션, 슬랙만', () => {
+    it('connectors.kind 목록은 공급자와 같고, 손으로 붙이는 건 노션만', () => {
         expect([...CONNECTOR_KINDS]).toEqual([...PROVIDER_IDS])
         expect(Object.keys(CONNECTOR_INFO)).toHaveLength(14)
         expect(cleanKind('gmail')).toBe('gmail')
         expect(cleanKind('twitter')).toBeNull()
         expect(isReadyKind('notion')).toBe(true)
+        expect(isReadyKind('slack')).toBe(false)
         expect(isReadyKind('gmail')).toBe(false)
     })
 })

@@ -15,3 +15,8 @@ export {
     DriveAuthExpired, DriveApiError, DRIVE_MAX_FILES, DRIVE_MAX_DEPTH, DRIVE_MAX_FILE_BYTES,
 } from './drive'
 export type { DriveFolder, DriveFile, DriveFileContent } from './drive'
+export {
+    curiousGet, curiousMyStudies, curiousStudyMembers, curiousMyPosts, curiousStudiesToText, curiousPostsToText,
+    withCuriousAuth, isCuriousPathAllowed, CuriousAuthExpired, CuriousApiError, CURIOUS_TOP_STUDIES, CURIOUS_TOP_POSTS,
+} from './curious'
+export type { CuriousStudy, CuriousMember, CuriousPost } from './curious'

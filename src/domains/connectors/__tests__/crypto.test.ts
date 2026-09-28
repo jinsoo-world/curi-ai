@@ -100,11 +100,11 @@ describe('노션 값 다루기', () => {
 })
 
 describe('연결 종류', () => {
-    it('지금 붙일 수 있는 것은 노션·슬랙뿐이다', () => {
+    it('지금 손으로 붙일 수 있는 것은 노션뿐이다', () => {
         expect(cleanKind('notion')).toBe('notion')
         expect(cleanKind('트위터')).toBeNull()
         expect(isReadyKind('notion')).toBe(true)
-        expect(isReadyKind('slack')).toBe(true)
+        expect(isReadyKind('slack')).toBe(false)   // 봇이 안 써서 붙이는 길을 닫았다(0928)
         expect(isReadyKind('kakao')).toBe(false)
         expect(isReadyKind('instagram')).toBe(false)
         expect(isReadyKind('curious')).toBe(false)
