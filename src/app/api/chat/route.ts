@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getMentorById, getPublicMentorById, buildSystemPrompt, buildGeminiHistory } from '@/domains/mentor'
 import { getUserChatContext } from '@/domains/user'
 import { generateChatStream, getUserMemories, saveUserMessage, saveAssistantMessage, updateSessionActivity, incrementDailyFreeUsage, detectCrisisKeywords, CRISIS_RESPONSE, ERROR_MESSAGES, extractAndSaveMemories, extractAndUpdateTopic } from '@/domains/chat'
-import { MAX_DAILY_FREE, MAX_DAILY_FREE_GUEST, FREE_TRIAL_OPEN } from '@/domains/chat/constants'
+import { MAX_DAILY_FREE, MAX_DAILY_FREE_GUEST, FREE_TRIAL_OPEN, UNAVAILABLE_TEXT } from '@/domains/chat/constants'
 import { isTrialActive } from '@/domains/trial'
 import { generateEmbedding, matchKnowledge } from '@/domains/knowledge'
 import { pickDriverFromEnv } from '@/domains/llm'
@@ -22,7 +22,10 @@ import {
 import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
 import { applySkills, skillsForMentor } from '@/domains/os/skills'
 // 🎛 답변 설정(목적·지침·말투·길이·창의성·출처·안내문·최신성). 트윈·리더 봇(마켓 공개봇)=Strict, 내 팀 봇=Adaptive 기본값 (domains/os/response-settings)
-import { loadResponseSettingsForChat, applyResponseSettingsToPrompt, shouldAnswerFromKnowledge } from '@/domains/os/response-settings'
+import { loadResponseSettingsForChat, applyResponseSettingsToPrompt, shouldAnswerFromKnowledge, STRICT_MIN_SIMILARITY } from '@/domains/os/response-settings'
+import { semanticCacheEnabled, cacheEligibility, cacheScopeKey, botVersion, knowledgeVersion, lookupCachedAnswer, storeCachedAnswer, isStorableAnswer, cachedAnswerStream } from '@/domains/chat/semantic-cache'
+import { logLlmUsage, keepAliveAfterResponse } from '@/domains/llm/usage-log'
+import { SOLAR_CHAT_MODEL } from '@/domains/llm/constants'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -274,6 +277,10 @@ export async function POST(req: Request) {
             userProfile = await getUserChatContext(supabase, user.id)
             memories = await getUserMemories(supabase, user.id, mentorId)
         }
+        // 💾 의미 답 저장소: 이 사람만의 정보(기억, 프로필, 고민, 스킬)가 답에 들어가면 저장 답을 쓰지도 저장하지도 않는다
+        let personalized = (memories?.length ?? 0) > 0 || !!(userProfile && (
+            userProfile.display_name || (Array.isArray(userProfile.interests) && userProfile.interests.length > 0) || userProfile.concern || userProfile.birth_year
+        ))
 
         // ── 🔒 무료 대화 제한 체크 (무료 체험 기간에는 스킵) ──
         // ── 🎁 내 체험권 — 대표 지시 0914 「받은날로부터 7일은 세고 똑바로」 ──
@@ -323,11 +330,15 @@ export async function POST(req: Request) {
                 return { settings, kind: 'personal' as const, maxOutputTokens: resolveMaxOutputTokens(settings), recencyOn: settings.recencyOn, citationsOn: settings.citationsOn, noAnswerText: settings.noAnswerText, initialMessage: settings.initialMessage }
             })
         systemPrompt = applyResponseSettingsToPrompt(systemPrompt, responseSettings)
+        // 봇 지침 지문(의미 답 저장소 칸막이)에 쓴다. 사람별 정보가 붙기 전의 지침
+        const 봇지침지문용 = systemPrompt
 
         // 🧩 사용자가 깃허브에서 내려받아 이 봇에 붙인 스킬(지침 글). 울타리 안에만 들어가고 도구 게이트는 못 넘는다(domains/os/skills)
         if (user) {
             try {
-                systemPrompt = applySkills(systemPrompt, await skillsForMentor(createAdminClient(), user.id, mentorId))
+                const 스킬 = await skillsForMentor(createAdminClient(), user.id, mentorId)
+                if (Array.isArray(스킬) && 스킬.length > 0) personalized = true
+                systemPrompt = applySkills(systemPrompt, 스킬)
             } catch (e) {
                 console.error('[chat] skills', e instanceof Error ? e.message : e)
             }
@@ -345,6 +356,7 @@ export async function POST(req: Request) {
                     .limit(3)
 
                 if (concerns && concerns.length > 0) {
+                    personalized = true
                     const concernLines = concerns.map(c => 
                         `- "${c.concern}"${c.matched_mentor_name ? ` (${c.matched_mentor_name}에게 상담 요청)` : ''}`
                     ).join('\n')
@@ -361,6 +373,8 @@ export async function POST(req: Request) {
         let readUrls: { url: string; title?: string; ok: boolean; reason?: string }[] = []
         // 🎛 Strict 판정용 — 이번 턴에 찾은 지식 조각(유사도 포함). 자료가 없으면 빈 배열 그대로 남는다.
         let ragMatches: { content: string; similarity: number }[] = []
+        // 검색에 쓴 질문 임베딩 (의미 답 저장소가 다시 쓴다. 새로 만들지 않는다)
+        let ragEmbedding: number[] = []
 
         // 🔗 링크 읽기는 자료 검색과 동시에 시작한다(기다리는 시간이 겹치게). 결과는 아래 「링크 바로 읽기」에서 받는다.
         //    이번 말에 주소가 없으면 바로 앞 사용자 말의 주소를 다시 읽는다(이어 묻기, 같은 서버면 10분 기억에서 바로 나온다)
@@ -377,6 +391,7 @@ export async function POST(req: Request) {
             console.log('[Chat RAG] sources:', sourceCount ?? 0, 'msg length:', lastUserMessage.length)
             const embedding = hasSources ? await generateEmbedding(lastUserMessage, { route: '/api/chat', userId: user?.id ?? null, mentorId }) : []
             console.log('[Chat RAG] Embedding length:', embedding.length)
+            ragEmbedding = embedding
             if (embedding.length > 0) {
                 // 지식 검색은 admin client로 (knowledge_chunks 는 anon/authenticated 에
                 // 테이블 권한이 없어 일반 클라이언트로는 42501 permission denied 가 난다)
@@ -587,8 +602,52 @@ export async function POST(req: Request) {
 
         // 스트리밍 응답 (domains/chat) — 어느 모델이 답하는지는 stream.ts 가 고른다.
         // 밖에서 확인할 수 있게 고른 드라이버 이름만 응답 머리글(X-Llm-Driver)에 붙인다.
-        const llmDriver = pickDriverFromEnv(!!attachedImage)
-        const response = await generateChatStream(systemPrompt, geminiMessages, { maxOutputTokens: responseSettings.maxOutputTokens, recencyOn: responseSettings.recencyOn, usage: { route: '/api/chat', userId: user?.id ?? null, mentorId } })
+        // 💾 의미 답 저장소 = 같은 봇에 거의 같은 첫 질문이면 저장해 둔 답을 쓴다 (domains/chat/semantic-cache, 아주 좁게만)
+        let 저장답: string | null = null
+        let 답저장자리: { embedding: number[]; scopeKey: string; version: string } | null = null
+        try {
+            const 사용자말수 = (Array.isArray(messages) ? messages : []).filter((m: { role?: string }) => m?.role === 'user').length
+            const 판정 = cacheEligibility({
+                enabled: semanticCacheEnabled(),
+                userTurns: 사용자말수,
+                text: lastUserMessage,
+                hasLink: !!링크차례.text,
+                hasImage: sourceImageUrls.length > 0 || !!attachedImage,
+                personalized,
+                extractionAttempt: !!extractionPattern,
+                topSimilarity: ragMatches.length > 0 ? Math.max(...ragMatches.map(k => k.similarity ?? 0)) : null,
+                minKnowledgeSimilarity: STRICT_MIN_SIMILARITY,
+                hasEmbedding: ragEmbedding.length > 0,
+            })
+            const scopeKey = 판정.ok ? cacheScopeKey(responseSettings.kind, user?.id ?? null) : null
+            if (판정.ok && scopeKey) {
+                const admin = createAdminClient()
+                const kv = await knowledgeVersion(admin, mentorId)
+                if (kv) {
+                    const version = botVersion({ systemPrompt: 봇지침지문용, settings: responseSettings.settings, knowledgeVersion: kv, model: SOLAR_CHAT_MODEL })
+                    const 찾기시작 = Date.now()
+                    const hit = await lookupCachedAnswer(admin, { embedding: ragEmbedding, mentorId, scopeKey, version })
+                    if (hit) {
+                        저장답 = hit.answer
+                        logLlmUsage({
+                            route: '/api/chat', kind: 'chat', provider: 'cache', model: 'cache', userId: user?.id ?? null, mentorId,
+                            inputTokens: 0, outputTokens: 0, ttftMs: Date.now() - 찾기시작, latencyMs: Date.now() - 찾기시작,
+                            cacheHit: true, meta: { similarity: Number(hit.similarity.toFixed(4)), cacheId: hit.id },
+                        })
+                        console.log('[Chat Cache] 저장 답 사용', JSON.stringify({ mentorId, similarity: hit.similarity }))
+                    } else {
+                        답저장자리 = { embedding: ragEmbedding, scopeKey, version }
+                    }
+                }
+            }
+        } catch (cacheErr) {
+            console.warn('[Chat Cache] 건너뜀:', cacheErr instanceof Error ? cacheErr.message : cacheErr)
+        }
+
+        const llmDriver = 저장답 !== null ? 'cache' : pickDriverFromEnv(!!attachedImage)
+        const response = 저장답 !== null
+            ? cachedAnswerStream(저장답)
+            : await generateChatStream(systemPrompt, geminiMessages, { maxOutputTokens: responseSettings.maxOutputTokens, recencyOn: responseSettings.recencyOn, usage: { route: '/api/chat', userId: user?.id ?? null, mentorId } })
 
         // SSE 스트림 생성
         const encoder = new TextEncoder()
@@ -645,6 +704,15 @@ export async function POST(req: Request) {
                     if (tail) controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: tail, done: false })}\n\n`))
                     fullResponse = outputGuard.text
                     if (outputGuard.tripped) console.warn('[Chat Guard] 카나리 유출 차단', JSON.stringify({ mentorId, userId: user?.id ?? null, pattern: extractionPattern }))
+
+                    // 💾 새로 만든 답을 저장해 둔다 (좁은 조건을 다 통과했을 때만, 기다리지 않는다)
+                    if (답저장자리 && isStorableAnswer({ text: fullResponse, guardTripped: outputGuard.tripped, solarAnswered: llmUsage !== null, unavailableText: UNAVAILABLE_TEXT })) {
+                        const 자리 = 답저장자리
+                        keepAliveAfterResponse(storeCachedAnswer(createAdminClient(), {
+                            embedding: 자리.embedding, mentorId, scopeKey: 자리.scopeKey, version: 자리.version,
+                            question: lastUserMessage, answer: fullResponse,
+                        }).catch(() => {}))
+                    }
 
                     // 완료 시 메시지 저장 (domains/chat)
                     // ⚠️ sessionOwned = 이 대화방이 지금 로그인한 사람 것인지 위에서 확인한 값.

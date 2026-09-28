@@ -96,8 +96,8 @@ export function logLlmUsage(e: UsageEvent): void {
     } catch { /* 기록 때문에 답이 깨지면 안 된다 */ }
 }
 
-/** 응답을 보낸 뒤에도 기록을 끝내게 한다 (Next after). 요청 밖이면 그냥 둔다 */
-function keepAliveAfterResponse(p: Promise<unknown>) {
+/** 응답을 보낸 뒤에도 일을 끝내게 한다 (Next after). 요청 밖이면 그냥 둔다 */
+export function keepAliveAfterResponse(p: Promise<unknown>) {
     import('next/server')
         .then(({ after }) => { try { after(() => p) } catch { /* 요청 밖 */ } })
         .catch(() => {})
