@@ -11,7 +11,7 @@ import { bootstrapDefaultTeam } from './team'
 import { JOBS } from './presets'
 import { firstJobFor, SNS_BONUS_CLOVERS, SNS_PENDING_LINE, SNS_READ_LINE, SNS_SUCCESS_LINE } from './onboarding'
 
-export type SnsPlatform = 'youtube' | 'naver_blog' | 'substack' | 'rss' | 'website' | 'instagram' | 'threads' | 'x' | 'tiktok'
+export type SnsPlatform = 'youtube' | 'naver_blog' | 'substack' | 'rss' | 'website' | 'instagram' | 'threads' | 'x' | 'tiktok' | 'facebook'
 
 export interface SnsTarget {
     url: string
@@ -37,6 +37,8 @@ export function classifySnsLink(raw: unknown): SnsTarget {
     if (is('threads.net') || is('threads.com')) return { url, platform: 'threads', feed: null }
     if (is('x.com') || is('twitter.com')) return { url, platform: 'x', feed: null }
     if (is('tiktok.com')) return { url, platform: 'tiktok', feed: null }
+    // 페이스북은 로그인 벽이라 일반 웹으로 읽으면 실패한다. 링크만 저장 (준비 중, 보너스 없음)
+    if (is('facebook.com') || is('fb.com')) return { url, platform: 'facebook', feed: null }
 
     if (host === 'youtube.com' || host === 'youtu.be') {
         if (!resolveChannelInput(url)) throw new Error('유튜브는 채널 주소(@핸들)를 넣어 주세요')

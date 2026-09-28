@@ -18,6 +18,11 @@ describe('classifySnsLink', () => {
             expect(classifySnsLink(u).feed).toBe(null)
         }
         expect(classifySnsLink('https://www.threads.com/@me').platform).toBe('threads')
+        for (const u of ['https://www.facebook.com/me', 'facebook.com/pages/abc', 'https://m.facebook.com/me', 'https://fb.com/me', 'https://web.facebook.com/me']) {
+            const c = classifySnsLink(u)
+            expect(c.platform).toBe('facebook')
+            expect(c.feed).toBe(null)
+        }
     })
     it('RSS 와 일반 웹', () => {
         expect(classifySnsLink('https://example.com/feed').feed?.kind).toBe('podcast')
