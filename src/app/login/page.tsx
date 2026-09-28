@@ -483,14 +483,14 @@ export default function LoginPage() {
 
 
                 {/* Skip */}
-                {/* 먼저 둘러보기 = 진짜 단추 모양(테두리, 52px). 대화에서 왔으면 봇 둘러보기(/os?demo=1)로 */}
+                {/* 먼저 둘러보기 = 카카오, 구글 아래 작은 글자 단추(누르는 칸 44px). 위계는 카카오 = 구글 > 둘러보기 (대표 0928).
+                    대화에서 왔으면 봇 둘러보기(/os?demo=1)로 */}
                 <Link
                     href={nextPath?.startsWith('/os') ? '/os?demo=1' : '/mentors'}
                     style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%',
-                        minHeight: 52, padding: '12px 16px', fontSize: 16, fontWeight: 600, marginTop: 12,
-                        color: '#374151', textAlign: 'center', borderRadius: 16, border: '1.5px solid #d1d5db',
-                        background: '#fff', textDecoration: 'none', transition: 'background 200ms',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', width: 'fit-content',
+                        minHeight: 44, padding: '0 14px', fontSize: 16, fontWeight: 600, margin: '10px auto 0',
+                        color: '#4b5563', textAlign: 'center', textDecoration: 'underline', textUnderlineOffset: 4,
                     }}
                 >
                     먼저 둘러보기

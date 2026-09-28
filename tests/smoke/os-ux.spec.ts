@@ -103,6 +103,15 @@ test('3: 소개 화면 첫 화면 안에 제목, 카카오로 시작, 먼저 둘
     await expect(page.getByRole('link', { name: '카카오로 시작', exact: true }).first()).toHaveAttribute('href', /provider=kakao/)
     await expect(page.getByRole('link', { name: '카카오로 시작', exact: true }).first().locator('svg')).toHaveCount(1)
     await expect(page.getByRole('link', { name: '구글로 시작', exact: true }).first().locator('svg')).toHaveCount(1)
+    // 위계: 구글 = 카카오와 같은 크기로 바로 아래, 먼저 둘러보기는 그 아래 작은 단추
+    const k = (await page.getByRole('link', { name: '카카오로 시작', exact: true }).first().boundingBox())!
+    const g = (await page.getByRole('link', { name: '구글로 시작', exact: true }).first().boundingBox())!
+    const tour = (await page.getByRole('link', { name: '먼저 둘러보기', exact: true }).first().boundingBox())!
+    expect(Math.abs(g.height - k.height)).toBeLessThanOrEqual(1)
+    expect(Math.abs(g.width - k.width)).toBeLessThanOrEqual(1)
+    expect(g.y).toBeGreaterThan(k.y)
+    expect(tour.y).toBeGreaterThan(g.y)
+    expect(tour.height).toBeLessThan(g.height)
 })
 
 test('4: 로그인 = 동의 없이 누르면 약관 칸을 짚고 안내, 줄은 44px 이상', async ({ page }) => {

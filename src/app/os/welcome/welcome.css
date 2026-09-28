@@ -57,7 +57,14 @@
     font-size: 16px; font-weight: 700; text-decoration: none;
 }
 .wel-google:hover { background: #f7f7f8; }
-.wel-google.wel-google-wide { display: flex; width: 100%; max-width: 420px; min-height: 56px; margin-top: 10px; border-radius: 18px; font-size: 18px; }
+.wel-google.wel-google-wide { display: flex; width: 100%; max-width: 420px; min-height: 56px; margin-top: 10px; padding: 0 24px; border-radius: 18px; font-size: 19px; font-weight: 800; }
+/* 먼저 둘러보기 = 두 로그인 단추 아래 작은 글자 단추 (누르는 칸은 44px) */
+.wel-tour {
+    display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
+    margin: 8px auto 0; padding: 0 14px; color: var(--os-글-연); font-size: 16px; font-weight: 600;
+    text-decoration: underline; text-underline-offset: 4px;
+}
+.wel-tour:hover { color: var(--os-글); }
 
 /* ② 승인 카드 그림 */
 .wel-card {
