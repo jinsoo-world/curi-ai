@@ -249,9 +249,9 @@ export default function MissionsPage() {
             id: 'invite-friend',
             icon: '',
             title: '친구 초대하기',
-            description: '친구 1명이 가입하면 100클로버',
+            description: '친구에게 큐리AI를 알려 주세요',
             reward: 100,
-            rewardLabel: '+100',
+            rewardLabel: '',
             progress: missionStatus.friendsInvited,
             goal: 1,
             completed: missionStatus.friendsInvited >= 1,
@@ -489,12 +489,12 @@ export default function MissionsPage() {
                                             display: 'flex', flexDirection: 'column',
                                             alignItems: 'center', gap: 6, flexShrink: 0,
                                         }}>
-                                            <div style={{
+                                            {mission.rewardLabel && <div style={{
                                                 fontSize: 12, fontWeight: 600, color: '#16a34a',
                                                 background: '#f0fdf4', borderRadius: 8, padding: '3px 10px',
                                             }}>
                                                 {mission.rewardLabel}
-                                            </div>
+                                            </div>}
                                             {mission.completed ? (
                                                 mission.id === 'share' ? (
                                                     <span style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af' }}>오늘 완료</span>
@@ -535,9 +535,6 @@ export default function MissionsPage() {
                                 }}>
                                     <div style={{ fontSize: 14, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>
                                         친구 {missionStatus.friendsInvited}명이 새로 가입했습니다
-                                    </div>
-                                    <div style={{ fontSize: 13, color: '#a16207' }}>
-                                        {missionStatus.friendClovers}클로버가 쌓였습니다
                                     </div>
                                 </div>
                             )}
@@ -661,7 +658,7 @@ export default function MissionsPage() {
                 </div>
             )}
 
-            {/* 공유 완료 안내 모달 (클로버 적립 없음 — 실제 가입 시 auth/callback에서 100클로버 지급) */}
+            {/* 공유 완료 안내 모달 (추천 보상 약속 문구는 뺐다, D2 미정 0929) */}
             {showShareConfirm && (
                 <div style={{
                     position: 'fixed', inset: 0, zIndex: 100,
@@ -679,7 +676,7 @@ export default function MissionsPage() {
                             공유 완료!
                         </h3>
                         <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, marginBottom: 24 }}>
-                            친구가 이 링크로 가입하면 <strong>100클로버</strong>가 쌓입니다
+                            친구에게 큐리AI를 알려 주셔서 고마워요
                         </p>
                         <button
                             onClick={() => setShowShareConfirm(false)}
@@ -728,8 +725,7 @@ export default function MissionsPage() {
                             친구 초대하기
                         </h3>
                         <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, marginBottom: 20 }}>
-                            아래 링크를 친구에게 공유하면<br />
-                            친구가 가입하면 <strong>100클로버</strong>를 받습니다
+                            아래 링크를 친구에게 보내 주세요
                         </p>
 
                         {/* 초대 링크 */}
@@ -865,9 +861,6 @@ export default function MissionsPage() {
                             }}>
                                 <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d' }}>
                                     친구 {missionStatus.friendsInvited}명이 가입했습니다
-                                </div>
-                                <div style={{ fontSize: 12, color: '#16a34a', marginTop: 2 }}>
-                                    모두 {missionStatus.friendClovers}클로버
                                 </div>
                             </div>
                         )}

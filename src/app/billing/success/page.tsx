@@ -155,7 +155,7 @@ function BillingSuccessContent() {
                             {error}
                         </p>
                         <button
-                            onClick={() => router.push('/pricing')}
+                            onClick={() => router.push('/os/charge')}
                             style={{
                                 width: '100%', padding: '14px 24px', borderRadius: 12,
                                 border: '1px solid #e4e4e7', fontSize: 16, fontWeight: 600,

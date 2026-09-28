@@ -12,7 +12,7 @@
  */
 import { useCallback, useState } from 'react'
 import CloverIcon from '@/components/ui/CloverIcon'
-import { REFERRER_REWARD, TRIAL_CLOVERS, TRIAL_DAYS } from '@/domains/trial'
+import { TRIAL_CLOVERS, TRIAL_DAYS } from '@/domains/trial'
 
 declare global {
     interface Window {
@@ -72,7 +72,7 @@ export default function ShareInvite({ code, compact = false }: { code: string; c
         <div style={{ background: compact ? 'var(--종이)' : '#fff', borderRadius: 16, padding: compact ? '16px' : '20px 20px 18px', border: compact ? 'none' : '1px solid var(--선)' }}>
             <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>친구에게 체험권 보내기</div>
             <p style={{ fontSize: 13.5, color: 'var(--먹연)', margin: '0 0 12px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                친구가 이 주소로 체험권을 받으면 나에게 클로버 {REFERRER_REWARD}개를 드려요. 친구도 {TRIAL_CLOVERS}개를 받습니다.
+                친구가 이 주소로 체험권을 받으면 친구에게 클로버 {TRIAL_CLOVERS}개를 드려요.
             </p>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>

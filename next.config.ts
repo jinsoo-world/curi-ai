@@ -33,6 +33,8 @@ const nextConfig: NextConfig = {
       { source: '/chats', destination: '/os', permanent: false },
       // 첫 주소는 새 첫 화면으로 곧바로 (페이지를 거치면 1초 새로고침 안내가 끼어 느리다). 대표 지시 0928 23:53
       { source: '/', destination: '/home', permanent: false },
+      // 가격 화면은 하나만: 원래 가격 화면 /os/charge (대표 지시 0929 00:52). 주소 뒤 값은 그대로 따라간다
+      { source: '/pricing', destination: '/os/charge', permanent: false },
     ]
   },
   // 클라이언트 캐시 헤더

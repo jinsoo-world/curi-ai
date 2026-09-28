@@ -132,7 +132,6 @@ export default function PricingPage() {
                             '가입 안 해도 흐린 미리보기로 만들어 볼 수 있어요',
                             `가입하면 클로버 ${SIGNUP_CLOVERS}개를 드려요`,
                             `무료 체험권을 받으면 ${TRIAL_DAYS}일 동안 쓸 수 있고 클로버 ${TRIAL_CLOVERS}개를 더 드려요`,
-                            '친구가 내 링크로 가입하면 클로버 100개를 받아요',
                         ].map((t) => (
                             <li key={t} style={{ fontSize: 15.5, color: '#3f3f46', lineHeight: 1.6, display: 'flex', gap: 8, wordBreak: 'keep-all' }}>
                                 <CloverIcon size={15} />

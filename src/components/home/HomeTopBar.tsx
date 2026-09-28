@@ -1,5 +1,6 @@
 'use client'
-// /home 위 메뉴: 로고(/home), 가격 안내, 내 봇 팀, 더보기 (봇 마켓, 사진 도구, 친구 초대, 도움말, 로그인 또는 내 정보)
+// /home 위 메뉴: 로고(/home), 가격 안내, 내 봇 팀, 더보기 (봇 마켓, 사진 도구, 도움말, 로그인 또는 내 정보)
+// 친구 초대는 추천 보상이 정해질 때까지(D2) 메뉴에서 뺐다. /invite 화면 자체는 남아 있다
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -34,7 +35,7 @@ export default function HomeTopBar() {
                     <span>큐리AI</span>
                 </Link>
                 <nav className="hm-nav" aria-label="메뉴">
-                    <Link href="/pricing">{n.pricing}</Link>
+                    <Link href="/os/charge">{n.pricing}</Link>
                     <Link href="/os">{n.team}</Link>
                     <div className="hm-more" ref={box}>
                         <button type="button" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(v => !v)}>{n.more}</button>
@@ -42,7 +43,6 @@ export default function HomeTopBar() {
                             <div className="hm-more-menu" role="menu">
                                 <Link role="menuitem" href="/mentors" onClick={() => setOpen(false)}>{n.market}</Link>
                                 <Link role="menuitem" href="/studio" onClick={() => setOpen(false)}>{n.photo}</Link>
-                                <Link role="menuitem" href="/invite" onClick={() => setOpen(false)}>{n.invite}</Link>
                                 <a role="menuitem" href="#faq" onClick={() => setOpen(false)}>{n.help}</a>
                                 {signedIn
                                     ? <Link role="menuitem" href="/profile" onClick={() => setOpen(false)}>{n.me}</Link>

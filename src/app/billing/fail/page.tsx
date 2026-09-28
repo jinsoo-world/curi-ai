@@ -49,7 +49,7 @@ function BillingFailContent() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <button
-                        onClick={() => router.push('/pricing')}
+                        onClick={() => router.push('/os/charge')}
                         style={{
                             width: '100%', padding: '14px 24px', borderRadius: 12,
                             border: 'none', fontSize: 16, fontWeight: 700,

@@ -16,12 +16,9 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import AppSidebar from '@/components/AppSidebar'
 import ShareInvite from '@/components/ui/ShareInvite'
-import CloverIcon from '@/components/ui/CloverIcon'
-import { REFERRER_REWARD } from '@/domains/trial'
 
 export default function InvitePage() {
     const [코드, set코드] = useState<string | null>(null)
-    const [부른수, set부른수] = useState<number | null>(null)
     const [이력, set이력] = useState<string[]>([])
     const [오류, set오류] = useState<string | null>(null)
     const [로그인함, set로그인함] = useState<boolean | null>(null)
@@ -55,14 +52,13 @@ export default function InvitePage() {
 
             // 내 코드로 체험권을 받은 사람 — 수와 들어온 날
             // 남의 이름·연락처는 가져오지 않는다. 언제 들어왔는지만 본다.
-            const { data: 온사람, count } = await supabase
+            const { data: 온사람 } = await supabase
                 .from('users')
-                .select('created_at', { count: 'exact' })
+                .select('created_at')
                 .eq('trial_referrer_id', user.id)
                 .order('created_at', { ascending: false })
                 .limit(20)
             if (!살아있음) return
-            set부른수(count ?? 0)
             set이력((온사람 ?? []).map((r: { created_at: string }) => r.created_at))
         })()
         return () => { 살아있음 = false }
@@ -76,28 +72,10 @@ export default function InvitePage() {
                     친구초대
                 </h1>
                 <p style={{ fontSize: 'var(--글자-본문)', color: 'var(--먹연)', margin: '0 0 20px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                    내 주소로 들어온 친구가 휴대폰 인증을 마치면 {REFERRER_REWARD}클로버를 드려요. 몇 명이든 괜찮습니다.
+                    내 주소를 친구에게 보내 큐리AI를 알려 주세요.
                 </p>
 
-                {/* ─── 성적 색면 (렌트리 참고) — 로그인한 분에게만.
-                     대표 지적 2026-09-16 모바일 점검 = 로그인 안 한 화면에서 「세는 중…」이 계속 남아 있었다 ─── */}
-                {로그인함 !== false && <div style={{
-                    background: 'var(--진초록)', color: '#fff', borderRadius: 20,
-                    padding: '26px 22px', marginBottom: 16, textAlign: 'center',
-                }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, opacity: 0.85, marginBottom: 6 }}>지금까지 받은 클로버</div>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                        <CloverIcon size={24} />
-                        <span style={{ fontSize: 38, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1 }}>
-                            {부른수 === null ? '—' : (부른수 * REFERRER_REWARD).toLocaleString()}
-                        </span>
-                        <span style={{ fontSize: 18, fontWeight: 800, opacity: 0.9 }}>개</span>
-                    </div>
-                    <div style={{ fontSize: 14, fontWeight: 700, opacity: 0.85 }}>
-                        {부른수 === null ? '세는 중…' : `친구 ${부른수}명`}
-                    </div>
-                </div>}
-
+                {/* 받은 클로버 합계 색면은 뺐다 (추천 보상 미확정 D2, 0929). 보상 약속으로 읽힌다 */}
                 {/* ─── 부른 사람 이력 (렌트리 참고) ─── */}
                 {로그인함 !== false && <div style={{
                     background: '#fff', border: '1px solid var(--선)', borderRadius: 18,
@@ -122,12 +100,6 @@ export default function InvitePage() {
                                     <span style={{ fontSize: 14.5, fontWeight: 700 }}>
                                         {new Date(날).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}에 들어왔어요
                                     </span>
-                                    <span style={{
-                                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                                        fontSize: 13.5, fontWeight: 800, color: 'var(--진초록)', flexShrink: 0,
-                                    }}>
-                                        <CloverIcon size={13} />+{REFERRER_REWARD}
-                                    </span>
                                 </li>
                             ))}
                         </ul>
@@ -144,7 +116,7 @@ export default function InvitePage() {
                     }}>
                         <p style={{ fontSize: 17, fontWeight: 800, margin: '0 0 7px' }}>로그인하면 내 주소가 생겨요</p>
                         <p style={{ fontSize: 14.5, color: 'var(--먹연)', margin: '0 0 20px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                            그 주소로 들어온 친구가 휴대폰 인증을 마치면 {REFERRER_REWARD}클로버를 드려요.
+                            그 주소를 친구에게 보내 큐리AI를 알려 줄 수 있어요.
                         </p>
                         <Link href="/login" style={{
                             display: 'inline-block', background: 'var(--먹)', color: '#fff',

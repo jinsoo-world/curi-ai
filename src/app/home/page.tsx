@@ -122,7 +122,7 @@ export default async function HomePage() {
                             </div>
                         ))}
                     </div>
-                    <Link href="/pricing" className="hm-btn ghost">{c.priceBtn}</Link>
+                    <Link href="/os/charge" className="hm-btn ghost">{c.priceBtn}</Link>
                 </section>
             </main>
             <HomeStickyCta />

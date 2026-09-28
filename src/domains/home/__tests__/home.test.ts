@@ -162,3 +162,24 @@ describe('copy rules', () => {
         expect(readFileSync('src/app/page.tsx', 'utf8')).toContain("redirect('/home')")
     })
 })
+
+describe('no referral reward promise (D2 undecided)', () => {
+    it('customer screens do not promise clovers for inviting friends', () => {
+        for (const f of ['src/app/pricing/page.tsx', 'src/app/invite/page.tsx', 'src/components/ui/ShareInvite.tsx', 'src/app/missions/page.tsx', 'src/components/home/HomeTopBar.tsx']) {
+            const src = readFileSync(f, 'utf8')
+            expect(src, f).not.toMatch(/REFERRER_REWARD|100클로버|클로버 100개를 받|friendClovers\}클로버|나에게 클로버/)
+        }
+        expect(readFileSync('src/components/home/HomeTopBar.tsx', 'utf8')).not.toContain('href="/invite"')
+    })
+})
+
+describe('one pricing page (/os/charge)', () => {
+    it('home links go to /os/charge and /pricing redirects there', () => {
+        for (const f of ['src/app/home/page.tsx', 'src/components/home/HomeTopBar.tsx']) {
+            const src = readFileSync(f, 'utf8')
+            expect(src, f).toContain('href="/os/charge"')
+            expect(src, f).not.toContain('href="/pricing"')
+        }
+        expect(readFileSync('next.config.ts', 'utf8')).toMatch(/source: '\/pricing', destination: '\/os\/charge', permanent: false/)
+    })
+})
