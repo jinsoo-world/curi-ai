@@ -163,11 +163,16 @@ describe('copy rules', () => {
     })
 })
 
-describe('no referral reward promise (D2 undecided)', () => {
-    it('customer screens do not promise clovers for inviting friends', () => {
-        for (const f of ['src/app/pricing/page.tsx', 'src/app/invite/page.tsx', 'src/components/ui/ShareInvite.tsx', 'src/app/missions/page.tsx', 'src/components/home/HomeTopBar.tsx']) {
+describe('referral reward promise (D2 decided: show it)', () => {
+    it('/invite shows the reward from the constant, no hardcoded number', () => {
+        const src = readFileSync('src/app/invite/page.tsx', 'utf8')
+        expect(src).toContain('친구가 가입하고 휴대폰 인증을 마치면 클로버 {REFERRER_REWARD}개를 드려요')
+        expect(src).not.toMatch(/클로버 \d+개를 드려요/)
+    })
+    it('other screens still carry no stale reward numbers', () => {
+        for (const f of ['src/app/pricing/page.tsx', 'src/components/ui/ShareInvite.tsx', 'src/app/missions/page.tsx', 'src/components/home/HomeTopBar.tsx']) {
             const src = readFileSync(f, 'utf8')
-            expect(src, f).not.toMatch(/REFERRER_REWARD|100클로버|클로버 100개를 받|friendClovers\}클로버|나에게 클로버/)
+            expect(src, f).not.toMatch(/100클로버|클로버 100개를 받|friendClovers\}클로버|나에게 클로버/)
         }
         expect(readFileSync('src/components/home/HomeTopBar.tsx', 'utf8')).not.toContain('href="/invite"')
     })

@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import nextDynamic from 'next/dynamic'
 import { MentorHeader, ChatMessages, ChatInput, SuggestionCards } from './components'
+import FirstBotShareCard from '@/components/chat/FirstBotShareCard'
 import { MAX_DAILY_FREE_GUEST } from '@/domains/chat/constants'
 import type { ChatMessage } from './components'
 
@@ -1012,6 +1013,9 @@ export default function ChatPage() {
                                 )}
                             </div>
                         )}
+
+                        {/* 첫 봇 만든 분께 한 번만 — 공유 안내 */}
+                        <FirstBotShareCard botId={mentorId} botName={mentor.name} />
 
                         {/* 대화 메시지 */}
                         <ChatMessages

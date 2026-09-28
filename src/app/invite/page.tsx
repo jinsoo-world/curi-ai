@@ -16,12 +16,14 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import AppSidebar from '@/components/AppSidebar'
 import ShareInvite from '@/components/ui/ShareInvite'
+import { REFERRER_REWARD } from '@/domains/trial'
 
 export default function InvitePage() {
     const [코드, set코드] = useState<string | null>(null)
     const [이력, set이력] = useState<string[]>([])
     const [오류, set오류] = useState<string | null>(null)
     const [로그인함, set로그인함] = useState<boolean | null>(null)
+    const [친구수, set친구수] = useState<number | null>(null)
 
     useEffect(() => {
         let 살아있음 = true
@@ -50,6 +52,15 @@ export default function InvitePage() {
             if (!c) { set오류('추천코드를 만들지 못했어요. 잠시 뒤 다시 열어주세요.'); return }
             set코드(c)
 
+            // 들어온 친구 수 — /api/referral 실제 값
+            try {
+                const r = await fetch('/api/referral')
+                if (r.ok) {
+                    const d = await r.json()
+                    if (살아있음) set친구수(typeof d.friends_invited === 'number' ? d.friends_invited : null)
+                }
+            } catch { /* 수를 못 가져오면 아래 목록만 보여준다 */ }
+
             // 내 코드로 체험권을 받은 사람 — 수와 들어온 날
             // 남의 이름·연락처는 가져오지 않는다. 언제 들어왔는지만 본다.
             const { data: 온사람 } = await supabase
@@ -75,13 +86,19 @@ export default function InvitePage() {
                     내 주소를 친구에게 보내 큐리AI를 알려 주세요.
                 </p>
 
-                {/* 받은 클로버 합계 색면은 뺐다 (추천 보상 미확정 D2, 0929). 보상 약속으로 읽힌다 */}
+                {/* 추천 보상 안내 — 대표 확정(D2): 친구가 휴대폰 인증까지 마치면 한 번 준다 */}
+                <div style={{
+                    background: 'var(--진초록, #166534)', color: '#fff', borderRadius: 18,
+                    padding: '18px 20px', marginBottom: 16, fontSize: 17, fontWeight: 800, lineHeight: 1.5, wordBreak: 'keep-all',
+                }}>
+                    친구가 가입하고 휴대폰 인증을 마치면 클로버 {REFERRER_REWARD}개를 드려요
+                </div>
                 {/* ─── 부른 사람 이력 (렌트리 참고) ─── */}
                 {로그인함 !== false && <div style={{
                     background: '#fff', border: '1px solid var(--선)', borderRadius: 18,
                     padding: '18px 20px', marginBottom: 20,
                 }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>들어온 친구</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>들어온 친구{친구수 !== null ? ` ${친구수}명` : ''}</div>
                     {이력.length === 0 ? (
                         <div style={{ padding: '26px 0 22px', textAlign: 'center' }}>
                             <p style={{ fontSize: 15, fontWeight: 800, margin: '0 0 6px' }}>아직 들어온 친구가 없어요</p>

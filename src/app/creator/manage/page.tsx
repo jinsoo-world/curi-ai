@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useEffect, useState, useRef } from 'react'
+import { buildBotShareUrl } from '@/domains/share/botLink'
+import { getMyReferralCode } from '@/lib/myReferralCode'
 import { useRouter } from 'next/navigation'
 import AppSidebar from '@/components/AppSidebar'
 import { MENTOR_IMAGES } from '@/domains/mentor'
@@ -55,6 +57,10 @@ export default function CreatorManagePage() {
     const [expandedMentor, setExpandedMentor] = useState<string | null>(null)
     const [shareModal, setShareModal] = useState<{ id: string; name: string; title: string } | null>(null)
     const [copied, setCopied] = useState(false)
+    const [myRefCode, setMyRefCode] = useState<string | null>(null)
+    useEffect(() => { void getMyReferralCode().then(r => setMyRefCode(r?.code ?? null)).catch(() => {}) }, [])
+    // 봇 공유 주소는 한 곳에서 만든다 (누가 퍼뜨렸는지 셀 수 있게)
+    const botShareUrl = (botId: string) => buildBotShareUrl({ origin: window.location.origin, botId, ownerCode: isAdmin ? null : myRefCode, sharerCode: myRefCode })
     const [transferModal, setTransferModal] = useState<{ id: string; name: string } | null>(null)
     const [transferEmail, setTransferEmail] = useState('')
     const [transferring, setTransferring] = useState(false)
@@ -438,11 +444,11 @@ export default function CreatorManagePage() {
                                                     {[
                                                         { icon: '👁️', label: '미리보기', action: () => router.push(`/chat/${m.id}`) },
                                                         { icon: '✏️', label: '편집', action: () => router.push(`/creator/edit/${m.id}`) },
-                                                        { icon: '📋', label: '복사', action: () => { navigator.clipboard.writeText(`${window.location.origin}/chat/${m.id}`); setOpenMenu(null) } },
+                                                        { icon: '📋', label: '복사', action: () => { navigator.clipboard.writeText(botShareUrl(m.id)); setOpenMenu(null) } },
                                                         { icon: '🌐', label: '배포', action: () => { window.open(`/chat/${m.id}`, '_blank'); setOpenMenu(null) } },
                                                         { icon: '🔗', label: '공유하기', action: () => { setShareModal({ id: m.id, name: m.name, title: m.title }); setOpenMenu(null) } },
                                                         ...(isAdmin ? [{ icon: '🔄', label: '소유권 이전', action: () => { setTransferModal({ id: m.id, name: m.name }); setTransferEmail(''); setOpenMenu(null) } }] : []),
-                                                        { icon: '👤', label: '사용자 초대', action: () => { navigator.clipboard.writeText(`${window.location.origin}/chat/${m.id}`); alert('링크가 복사되었습니다'); setOpenMenu(null) } },
+                                                        { icon: '👤', label: '사용자 초대', action: () => { navigator.clipboard.writeText(botShareUrl(m.id)); alert('링크가 복사되었습니다'); setOpenMenu(null) } },
                                                         { icon: '📊', label: '분석', action: () => { alert('준비 중인 기능입니다'); setOpenMenu(null) } },
                                                     ].map(item => (
                                                         <button
@@ -770,7 +776,7 @@ export default function CreatorManagePage() {
                                 </div>
                                 <button
                                     onClick={async () => {
-                                        const url = `${window.location.origin}/chat/${shareModal.id}`
+                                        const url = botShareUrl(shareModal.id)
                                         try { await navigator.clipboard.writeText(url) } catch {
                                             const input = document.createElement('input'); input.value = url;
                                             document.body.appendChild(input); input.select(); document.execCommand('copy'); document.body.removeChild(input)
@@ -795,7 +801,7 @@ export default function CreatorManagePage() {
                                 </button>
                                 <button
                                     onClick={() => {
-                                        const url = `${window.location.origin}/chat/${shareModal.id}`
+                                        const url = botShareUrl(shareModal.id)
                                         const w = window as any
                                         if (w.Kakao && !w.Kakao.isInitialized()) {
                                             w.Kakao.init('27c5c27a03c6f936db39d20090643b3c')
