@@ -8,6 +8,7 @@ import { osTrack } from '@/domains/os/events'
 import { splitUrls } from '@/domains/os/settings'
 import { parseQaCsv } from '@/domains/os/csv'
 import FolderSync from './FolderSync'
+import { DocSpaceLine, DocSpaceCard, readDocSpaceBlock, type DocSpaceBlock } from './DocSpace'
 import ConnectFeedSheet from './ConnectFeedSheet'
 import CloudSync from './CloudSync'
 import { shrinkImage } from '@/lib/image-shrink'
@@ -47,20 +48,27 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
     // 넣은 뒤 「봇이 이렇게 이해했어요」 카드를 띄울 자료
     const [understandId, setUnderstandId] = useState<string | null>(null)
     const fileRef = useRef<HTMLInputElement>(null)
+    // 월 자료 한도 카드와 퍼센트 새로고침
+    const [docBlock, setDocBlock] = useState<DocSpaceBlock | null>(null)
+    const [blockedFile, setBlockedFile] = useState<File | null>(null)
+    const [blockedSourceId, setBlockedSourceId] = useState<string | null>(null)
+    const [docTick, setDocTick] = useState(0)
     const csvRef = useRef<HTMLInputElement>(null)
 
-    const 파일넣기 = async (file: File) => {
+    const 파일넣기 = async (file: File, payClovers = false) => {
         const ext = file.name.split('.').pop()?.toLowerCase() || ''
         if (!(올릴수있는파일 as readonly string[]).includes(ext)) {
             setErr(`이 파일은 못 읽어요. ${안내문구} 만 넣을 수 있어요`); return
         }
-        setBusy(true); setErr(null); setMsg('올리는 중…')
+        setBusy(true); setErr(null); setDocBlock(null); setMsg('올리는 중…')
         try {
             const r1 = await fetch('/api/os/knowledge/upload-url', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mentorId, fileName: file.name, fileSize: file.size }),
+                body: JSON.stringify({ mentorId, fileName: file.name, fileSize: file.size, payClovers }),
             })
             const d1 = await r1.json()
+            const b1 = readDocSpaceBlock(r1.status, d1)
+            if (b1) { setMsg(null); setDocBlock(b1); setBlockedFile(file); setBlockedSourceId(null); return }
             if (!r1.ok) throw new Error(d1.error || '올릴 자리를 못 만들었어요')
 
             const up = await fetch(d1.signedUrl, {
@@ -75,14 +83,43 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
             // 글 뽑기 + 조각 저장 (기존 창구를 그대로 쓴다. 주인 확인은 서버가 한다)
             const r2 = await fetch('/api/creator/knowledge/process', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sourceId: d1.sourceId, mentorId }),
+                body: JSON.stringify({ sourceId: d1.sourceId, mentorId, payClovers }),
             })
             const d2 = await r2.json().catch(() => ({}))
             await onAdded()
+            setDocTick(t => t + 1)
+            const b2 = readDocSpaceBlock(r2.status, d2)
+            if (b2) { setMsg(null); setDocBlock(b2); setBlockedFile(null); setBlockedSourceId(d1.sourceId); return }
             if (!r2.ok) throw new Error(d2.error || '봇이 파일을 못 읽었어요')
             osTrack('os_knowledge_added', { mentor_id: mentorId, kind: 'file' })
             setMsg('다 읽었어요')
             setUnderstandId(d1.sourceId)
+        } catch (e) {
+            setMsg(null)
+            setErr(e instanceof Error ? e.message : '넣지 못했어요')
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    /** 한도 카드에서 「넣기」: 이미 올린 파일은 다시 읽기만, 못 올린 파일은 처음부터 (클로버로 이어 넣기) */
+    const 클로버로이어넣기 = async () => {
+        if (!blockedSourceId) { if (blockedFile) await 파일넣기(blockedFile, true); return }
+        setBusy(true); setErr(null); setMsg('봇이 읽는 중이에요…')
+        try {
+            const r = await fetch('/api/creator/knowledge/process', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sourceId: blockedSourceId, mentorId, payClovers: true }),
+            })
+            const d = await r.json().catch(() => ({}))
+            await onAdded()
+            setDocTick(t => t + 1)
+            const b = readDocSpaceBlock(r.status, d)
+            if (b) { setMsg(null); setDocBlock(b); return }
+            if (!r.ok) throw new Error(d.error || '봇이 파일을 못 읽었어요')
+            setDocBlock(null)
+            osTrack('os_knowledge_added', { mentor_id: mentorId, kind: 'file' })
+            setMsg('다 읽었어요')
         } catch (e) {
             setMsg(null)
             setErr(e instanceof Error ? e.message : '넣지 못했어요')
@@ -328,6 +365,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                         <div style={{ color: 'var(--os-글-흐림)', fontSize: 13, marginTop: 8, lineHeight: 1.5 }}>
                             {안내문구} / 파일 하나 10MB 까지
                         </div>
+                        <DocSpaceLine refreshKey={docTick} />
                     </div>
                 )}
 
@@ -439,6 +477,9 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
 
                 {msg && <div className="os-notice" style={{ margin: '14px 0 0', background: 'color-mix(in srgb, var(--os-클로버) 18%, transparent)', color: 'var(--os-클로버)' }}>{msg}</div>}
                 {err && <div className="os-notice" style={{ margin: '14px 0 0' }}>{err}</div>}
+                {docBlock && tab === 'file' && (
+                    <DocSpaceCard block={docBlock} busy={busy} onPayClovers={() => void 클로버로이어넣기()} />
+                )}
                 {understandId && <UnderstandCard mentorId={mentorId} sourceId={understandId} onDone={onClose} />}
 
                 <div className="os-sheet-foot">

@@ -7,6 +7,8 @@ import { generateEmbedding, splitIntoChunksWithHeadings, contextualEmbeddingText
 import { askSideText } from '@/domains/llm/side-text'
 import { logUpstageOcr } from '@/domains/llm/ocr-usage'
 import { 개인정보가리기 } from '@/domains/knowledge/개인정보가리기'
+import { docParseEnabled, underUpstageCap, callDocumentParse, DOC_SPACE_COPY } from '@/domains/knowledge/doc-parse'
+import { reserveFilePages, type PageReservation } from '@/domains/knowledge/doc-gate'
 
 /**
  * VTT 파일 전처리: 타임스탬프 제거, 추임새 제거, 화자별 대화 정리
@@ -132,7 +134,7 @@ ${chunk}`)
 }
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300   // 한글 Document Parse 는 3쪽에 11초 (실측 0929). 플루이드 켜짐, 무료 요금제 최대 300초
 
 /** 이 창구가 글을 뽑을 줄 아는 확장자 (그 밖이면 실패 이유 unsupported_format) */
 const KNOWN_EXTS = ['txt', 'md', 'pdf', 'xlsx', 'xls', 'csv', 'doc', 'docx', 'hwp', 'hwpx', 'ppt', 'pptx']
@@ -212,8 +214,10 @@ function extractTextFromUpstage(pd: Record<string, unknown>): string {
 export async function POST(req: NextRequest) {
     // 못 읽으면 「못 읽음」과 이유 한 줄을 남긴다 (화면이 「다시 시도」와 함께 보여 준다). 이유는 summary 칸(실패일 때만)
     let failSource: ((why: FailureReason) => Promise<void>) | null = null
+    // 월 자료 한도: 잡아 둔 쪽과 뺀 클로버 (실패하면 클로버를 되돌린다)
+    let reservation: PageReservation | null = null
     try {
-        const { sourceId, mentorId } = await req.json()
+        const { sourceId, mentorId, payClovers } = await req.json()
 
         // 🔒 이 AI 의 주인만 통과. 없으면 남의 AI 지식창고에 내 글을 심어
         // 그 AI 가 손님에게 그 내용을 말하게 만들 수 있다.
@@ -224,6 +228,7 @@ export async function POST(req: NextRequest) {
         const admin = owner.admin
         failSource = async (why: FailureReason) => {
             await admin.from('knowledge_sources').update({ processing_status: 'failed', [FAIL_REASON_COL]: why }).eq('id', sourceId).eq('mentor_id', mentorId)
+            if (reservation) { await reservation.release(); reservation = null }
         }
 
         const { data: source, error: srcErr } = await admin
@@ -253,6 +258,20 @@ export async function POST(req: NextRequest) {
 
         const ext = source.title?.split('.').pop()?.toLowerCase() || ''
         let textContent = ''
+
+        // 월 자료 한도 (DOC_PARSE_ENABLED 일 때만): 쪽 수를 로컬로 세고, 업스테이지를 부르기 전에 막는다
+        const docParseOn = docParseEnabled()
+        if (docParseOn) {
+            const gate = await reserveFilePages({
+                db: admin, userId: owner.userId, mentorId, sourceId, ext,
+                buf: Buffer.from(await fileData.arrayBuffer()), payClovers: payClovers === true,
+            })
+            if (!gate.ok) {
+                await failSource(gate.reason)
+                return NextResponse.json({ error: gate.message, code: gate.code, canPayClovers: gate.canPayClovers }, { status: gate.status })
+            }
+            reservation = gate.reservation
+        }
 
         if (['txt', 'md'].includes(ext)) {
             // 텍스트/마크다운: 직접 읽기
@@ -293,6 +312,37 @@ export async function POST(req: NextRequest) {
             console.log(`[Process] VTT after correction: ${textContent.length} chars`)
 
 
+        } else if (['hwp', 'hwpx'].includes(ext) && docParseOn) {
+            // 한글: 업스테이지 Document Parse Standard (대표 확정 0929). 회사 월 상한이면 hwpjs 로컬로
+            const pages = reservation?.pages ?? 1
+            let parsed = false
+            if (await underUpstageCap(admin, pages)) {
+                const r = await callDocumentParse(fileData, source.title)
+                logUpstageOcr({ route: '/api/creator/knowledge/process', model: 'document-parse', ok: r.ok, body: r.body, status: r.status, error: r.error ?? null, mentorId, userId: owner.userId, extra: { ext, mode: 'standard' } })
+                if (r.ok && r.text.trim()) {
+                    textContent = r.text
+                    parsed = true
+                    if (reservation && typeof r.pages === 'number') await reservation.settle(r.pages)
+                    console.log('[Process] HWP Document Parse OK, pages:', r.pages, 'text length:', textContent.length)
+                } else {
+                    console.error('[Process] HWP Document Parse error:', r.status, r.error)
+                }
+            }
+            if (!parsed && ext === 'hwp') {
+                try {
+                    const { toMarkdown } = await import('@ohah/hwpjs')
+                    const result = toMarkdown(Buffer.from(await fileData.arrayBuffer()), { image: 'base64', useHtml: false })
+                    textContent = typeof result === 'string' ? result : result.markdown || ''
+                    console.log('[Process] HWP hwpjs fallback, text length:', textContent.length)
+                } catch (hwpErr) {
+                    console.error('[Process] HWP hwpjs parse error:', hwpErr instanceof Error ? hwpErr.message : hwpErr)
+                }
+            }
+            if (!parsed && textContent.trim().length < 200 && !(await underUpstageCap(admin, pages))) {
+                await failSource('company_cap_wait')
+                return NextResponse.json({ error: DOC_SPACE_COPY.cap, code: 'cap' }, { status: 503 })
+            }
+
         } else if (['hwp', 'hwpx'].includes(ext)) {
             // HWP: @ohah/hwpjs로 마크다운 변환 시도 (무료, 로컬 처리)
             try {
@@ -306,7 +356,7 @@ export async function POST(req: NextRequest) {
             }
 
             // hwpjs가 본문을 못 읽은 경우 (200자 이하 = 메타데이터뿐) → Upstage OCR fallback
-            if (textContent.trim().length < 200) {
+            if (textContent.trim().length < 200 && await underUpstageCap(admin)) {
                 console.log('[Process] HWP hwpjs result too short, falling back to Upstage OCR')
                 try {
                     const formData = new FormData()
@@ -320,7 +370,7 @@ export async function POST(req: NextRequest) {
                     })
                     if (parseRes.ok) {
                         const pd = await parseRes.json()
-                        logUpstageOcr({ route: '/api/creator/knowledge/process', model: 'ocr', ok: true, body: pd, mentorId: mentorId })
+                        logUpstageOcr({ route: '/api/creator/knowledge/process', model: 'ocr', ok: true, body: pd, mentorId: mentorId, userId: owner.userId })
                         const ocrText = extractTextFromUpstage(pd)
                         if (ocrText && ocrText.length > textContent.length) {
                             textContent = ocrText
@@ -414,9 +464,9 @@ export async function POST(req: NextRequest) {
                     console.log(`[Process] PPTX parsed: ${result?.slides?.length || 0} slides, ${textContent.length} chars`)
                 } catch (pptxErr) {
                     console.error('[Process] PPTX local parse error:', pptxErr)
-                    // 로컬 파서 실패 시 Upstage OCR 폴백
+                    // 로컬 파서 실패 시 Upstage OCR 폴백 (회사 월 상한 안에서만)
                     console.log('[Process] Falling back to Upstage OCR for PPTX')
-                    try {
+                    if (await underUpstageCap(admin)) try {
                         const formData = new FormData()
                         formData.append('document', fileData, source.title)
                         formData.append('model', 'ocr')
@@ -428,7 +478,7 @@ export async function POST(req: NextRequest) {
                         })
                         if (parseRes.ok) {
                             const pd = await parseRes.json()
-                            logUpstageOcr({ route: '/api/creator/knowledge/process', model: 'ocr', ok: true, body: pd, mentorId: mentorId })
+                            logUpstageOcr({ route: '/api/creator/knowledge/process', model: 'ocr', ok: true, body: pd, mentorId: mentorId, userId: owner.userId })
                             textContent = extractTextFromUpstage(pd)
                         }
                     } catch (fallbackErr) {
@@ -436,8 +486,8 @@ export async function POST(req: NextRequest) {
                     }
                 }
             } else {
-                // .ppt (구형): Upstage OCR 사용
-                try {
+                // .ppt (구형): Upstage OCR 사용 (회사 월 상한 안에서만)
+                if (await underUpstageCap(admin)) try {
                     console.log('[Process] Sending PPT (legacy) to Upstage OCR:', source.title)
                     const formData = new FormData()
                     formData.append('document', fileData, source.title)
@@ -450,7 +500,7 @@ export async function POST(req: NextRequest) {
                     })
                     if (parseRes.ok) {
                         const pd = await parseRes.json()
-                        logUpstageOcr({ route: '/api/creator/knowledge/process', model: 'ocr', ok: true, body: pd, mentorId: mentorId })
+                        logUpstageOcr({ route: '/api/creator/knowledge/process', model: 'ocr', ok: true, body: pd, mentorId: mentorId, userId: owner.userId })
                         textContent = extractTextFromUpstage(pd)
                     } else {
                         const errText = await parseRes.text()
@@ -484,7 +534,7 @@ export async function POST(req: NextRequest) {
             }
 
             // pdf-parse로 텍스트 못 읽은 경우 (스캔 PDF) → Upstage OCR fallback
-            if (textContent.trim().length < 200 && process.env.UPSTAGE_API_KEY) {
+            if (textContent.trim().length < 200 && process.env.UPSTAGE_API_KEY && await underUpstageCap(admin)) {
                 console.log('[Process] PDF text too short, falling back to Upstage OCR')
                 try {
                     const formData = new FormData()
@@ -499,7 +549,7 @@ export async function POST(req: NextRequest) {
                     })
                     if (parseRes.ok) {
                         const pd = await parseRes.json()
-                        logUpstageOcr({ route: '/api/creator/knowledge/process', model: 'ocr', ok: true, body: pd, mentorId: mentorId })
+                        logUpstageOcr({ route: '/api/creator/knowledge/process', model: 'ocr', ok: true, body: pd, mentorId: mentorId, userId: owner.userId })
                         const ocrText = extractTextFromUpstage(pd)
                         if (ocrText && ocrText.length > textContent.length) {
                             textContent = ocrText
@@ -584,8 +634,11 @@ export async function POST(req: NextRequest) {
             })
             .eq('id', sourceId)
 
+        const docSpace = reservation ? await reservation.view().catch(() => null) : null
+        reservation = null
         return NextResponse.json({
             success: true,
+            ...(docSpace ? { docSpace } : {}),
             chunksProcessed: successCount,
             totalChunks: chunks.length,
             totalCharacters: textContent.length,

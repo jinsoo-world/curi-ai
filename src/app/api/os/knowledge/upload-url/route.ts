@@ -10,6 +10,11 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { assertBotOwned, assertRoomForMore, BotNotMine } from '@/domains/os/knowledge'
 import { 올릴수있는파일 } from '@/domains/knowledge/files'
+import { blockBeforeUpload, docParseEnabled, readMonthlyFilePages } from '@/domains/knowledge/doc-parse'
+import { isCountedFile } from '@/domains/knowledge/doc-pages'
+import { gateMessage } from '@/domains/knowledge/doc-gate'
+import { readPlanId } from '@/domains/os/usage-db'
+import type { PagePlan } from '@/domains/knowledge/page-limits'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,6 +42,15 @@ export async function POST(req: NextRequest) {
         const db = createAdminClient()
         await assertBotOwned(db, user.id, mentorId)
         await assertRoomForMore(db, mentorId)
+
+        // 월 자료 한도가 이미 100% 면 올리기 전에 막는다 (유료이고 클로버로 이어 넣기를 고르면 통과)
+        if (docParseEnabled() && isCountedFile(ext)) {
+            const plan = await readPlanId(db, user.id) as PagePlan
+            const block = blockBeforeUpload({ plan, usedPages: await readMonthlyFilePages(db, user.id), payClovers: body.payClovers === true })
+            if (block && !block.ok) {
+                return NextResponse.json({ error: gateMessage(block.code, plan), code: block.code, canPayClovers: block.canPayClovers }, { status: 402 })
+            }
+        }
 
         // ⚠️ 저장소 키에 한글을 넣으면 거부된다(InvalidKey, 실측 2026-09-04).
         //    보이는 이름은 title 에 원본 그대로 넣으니 사람 눈에는 한글 그대로 보인다.
