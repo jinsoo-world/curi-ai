@@ -30,7 +30,7 @@ import { cacheGet, cacheSet } from './cache'
 
 export type { ReadResult, ReadPage, ReadFail } from '@/domains/agent/fetch-url'
 export { extractArticle } from './article'
-export { readYoutube, youtubeVideoId, joinCaptions, descriptionFromWatchPage } from './youtube'
+export { readYoutube, youtubeVideoId, joinCaptions, descriptionFromWatchPage, parseNextInfo, captionsToTimedText, clock } from './youtube'
 export { classifyUrl, parseGithubUrl, looksLikeFeedUrl } from './router'
 export type { LinkKind, GithubTarget } from './router'
 export { extractNaverNews, extractNaverBlog, naverBlogMobileUrl } from './naver'
@@ -223,4 +223,20 @@ export async function readUrlsInText(text: string, max = MAX_URLS_PER_MESSAGE): 
     if (urls.length === 0) return []
     const maxChars = linkBudget(urls.length)
     return Promise.all(urls.map(u => readUrl(u, { ...CHAT_READ_OPTIONS, maxChars })))
+}
+
+/**
+ * 이번 말에서 읽을 주소가 든 글을 고른다.
+ * 이번 말에 주소가 있으면 그 말. 없으면 바로 앞 사용자 말(최대 2개)에서 찾는다 = 「그 영상에서 ○○은?」 같은 이어 묻기.
+ * 앞 말에서 찾은 것(fromHistory)은 카드를 다시 띄우지 않고, 못 읽어도 사과하지 않는다(buildLinkPrompt 가 가른다).
+ * @param userTexts 사용자 말만, 오래된 것부터 (마지막이 이번 말)
+ */
+export function linkTextForTurn(userTexts: string[]): { text: string; fromHistory: boolean } {
+    const list = (userTexts ?? []).map(t => String(t ?? ''))
+    const now = list[list.length - 1] ?? ''
+    if (extractUrls(now).length > 0) return { text: now, fromHistory: false }
+    for (const prev of list.slice(0, -1).slice(-2).reverse()) {
+        if (extractUrls(prev).length > 0) return { text: prev, fromHistory: true }
+    }
+    return { text: '', fromHistory: false }
 }

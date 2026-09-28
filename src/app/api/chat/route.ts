@@ -12,7 +12,7 @@ import { readUsage } from '@/domains/os/usage-db'
 import { checkChatAudience, checkVisitorBotWeeklyLimit } from '@/domains/os/audience-db'
 import { kstDayHourText } from '@/domains/os/usage'
 import { findSourcesOfChunks } from '@/domains/os/knowledge'
-import { readUrlsInText, buildLinkPrompt } from '@/domains/os/readers'
+import { readUrlsInText, buildLinkPrompt, linkTextForTurn } from '@/domains/os/readers'
 // 🛡 인젝션 방어 (대표 지시 0923). 셈만 하는 함수들 = domains/chat/injection.ts, 설명 = docs/security/인젭션_방어_0923.md
 import { makeCanary, confidentialityPrompt, createOutputGuard, detectPromptExtraction, EXTRACTION_GUARD_PROMPT, checkRequestSize, INJECTION_MARK } from '@/domains/chat/injection'
 import {
@@ -363,7 +363,10 @@ export async function POST(req: Request) {
         let ragMatches: { content: string; similarity: number }[] = []
 
         // 🔗 링크 읽기는 자료 검색과 동시에 시작한다(기다리는 시간이 겹치게). 결과는 아래 「링크 바로 읽기」에서 받는다.
-        const 링크읽기 = readUrlsInText(lastUserMessage).catch(() => [])
+        //    이번 말에 주소가 없으면 바로 앞 사용자 말의 주소를 다시 읽는다(이어 묻기, 같은 서버면 10분 기억에서 바로 나온다)
+        const 링크차례 = linkTextForTurn((Array.isArray(messages) ? messages : [])
+            .filter((m: { role?: string }) => m?.role === 'user').slice(-3).map((m: { content?: unknown }) => String(m?.content ?? '')))
+        const 링크읽기 = 링크차례.text ? readUrlsInText(링크차례.text).catch(() => []) : Promise.resolve([])
 
         // 📚 RAG 지식 검색 (멘토별 지식 베이스)
         try {
@@ -441,7 +444,7 @@ export async function POST(req: Request) {
         try {
             const 읽은것 = await 링크읽기
             if (읽은것.length > 0) {
-                const 링크 = buildLinkPrompt(읽은것)
+                const 링크 = buildLinkPrompt(읽은것, { fromHistory: 링크차례.fromHistory })
                 readUrls = 링크.readUrls
                 링크읽음 = 링크.anyOk
                 if (링크.prefix) systemPrompt = `${링크.prefix}\n\n${systemPrompt}`

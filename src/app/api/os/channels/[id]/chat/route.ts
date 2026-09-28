@@ -21,7 +21,7 @@ import { routeGroupReply, buildGroupSystemPrompt, isPassReply } from '@/domains/
 import type { GroupReplyMode } from '@/domains/os/group-router'
 import { UNAVAILABLE_TEXT } from '@/domains/chat/constants'
 import { GROUP_SERVER_GAP_MS, sleep } from '@/domains/os/group-stagger'
-import { readUrlsInText, buildLinkPrompt } from '@/domains/os/readers'
+import { readUrlsInText, buildLinkPrompt, linkTextForTurn } from '@/domains/os/readers'
 import type { ReadUrlView } from '@/domains/os/readers'
 
 export const dynamic = 'force-dynamic'
@@ -85,12 +85,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         const bots = await getChannelBots(db, user.id, channel.memberMentorIds)
         if (bots.length === 0) return NextResponse.json({ error: '이 방에 말할 봇이 없어요' }, { status: 400 })
 
-        // 🔗 링크 읽기는 기록 불러오기와 동시에 (읽기만 하는 일이라 승인 카드 없음, 절대 던지지 않음)
-        const [지난말, 읽은것] = await Promise.all([
-            listChannelMessages(db, user.id, id),
-            readUrlsInText(text).catch(() => []),
-        ])
-        const 링크 = 읽은것.length > 0 ? buildLinkPrompt(읽은것) : null
+        // 🔗 링크 읽기 (읽기만 하는 일이라 승인 카드 없음, 절대 던지지 않음)
+        //    이번 말에 주소가 없으면 바로 앞 사람 말(최대 2개)의 주소를 다시 읽는다(이어 묻기)
+        const 지난말 = await listChannelMessages(db, user.id, id)
+        const 링크차례 = linkTextForTurn([...지난말.filter(m => m.authorKind === 'user').slice(-2).map(m => m.content), text])
+        const 읽은것 = 링크차례.text ? await readUrlsInText(링크차례.text).catch(() => []) : []
+        const 링크 = 읽은것.length > 0 ? buildLinkPrompt(읽은것, { fromHistory: 링크차례.fromHistory }) : null
         const 링크글 = 링크?.prefix ?? ''
         const readUrls: ReadUrlView[] = 링크?.readUrls ?? []
         const 사람말 = await saveChannelMessage(db, id, { authorKind: 'user', content: text })

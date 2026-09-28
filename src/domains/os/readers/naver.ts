@@ -7,6 +7,7 @@
 
 import { parseHTML } from 'linkedom'
 import { htmlToText, pickMeta } from '@/domains/agent/fetch-url'
+import { stripNoise } from './article'
 
 export interface NaverArticle {
     title: string
@@ -39,7 +40,7 @@ function bodyOf(doc: Doc, selectors: string[], drop: string[]): string {
         const el = doc.querySelector(sel)
         if (!el) continue
         for (const d of drop) el.querySelectorAll(d).forEach((n: { remove: () => void }) => n.remove())
-        const text = tidy(htmlToText(String(el.innerHTML ?? '')))
+        const text = stripNoise(tidy(htmlToText(String(el.innerHTML ?? ''))))
         if (text.length >= MIN_BODY) return text
     }
     return ''

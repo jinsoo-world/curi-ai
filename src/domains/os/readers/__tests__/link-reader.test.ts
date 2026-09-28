@@ -9,7 +9,9 @@ vi.mock('youtube-caption-extractor', () => ({ getVideoDetails: (...a: unknown[])
 import {
     readUrl, readUrlsInText, classifyUrl, parseGithubUrl, looksLikeFeedUrl, linkBudget, feedToText, kstStamp,
     extractNaverNews, extractNaverBlog, naverBlogMobileUrl, descriptionFromWatchPage, buildLinkPrompt, cacheClear,
+    parseNextInfo, captionsToTimedText, clock, linkTextForTurn,
 } from '../index'
+import { stripNoise } from '../article'
 import { normalizeUrl, MAX_PAGE_CHARS } from '@/domains/agent/fetch-url'
 
 /* ────────────── 가짜 인터넷 ────────────── */
@@ -66,6 +68,17 @@ const NAVER_BLOG = `<html><head><meta property="og:title" content="엽기떡볶�
 const ARTICLE = (extraHead = '') => `<html><head><title>긴 기사 | 한국일보</title><meta property="og:site_name" content="한국일보">
 <meta property="article:published_time" content="2026-09-28T01:00:00Z">${extraHead}</head><body><nav>메뉴</nav>
 <article><h1>긴 기사</h1><p>${문단.repeat(6)}</p><p>${문단.repeat(6)}</p></article></body></html>`
+
+const NEXT_JSON = JSON.stringify({ contents: {
+    a: { attributedDescription: { content: '어렵고 딱딱한 경제 이야기를\n쉽고 유쾌하게' } },
+    b: { videoViewCountRenderer: { viewCount: { simpleText: '조회수 1,716,462회' } } },
+    c: { dateText: { simpleText: '2025. 5. 13.' } },
+    d: [
+        { macroMarkersListItemRenderer: { title: { simpleText: '잘 놀다 갑니다.' }, timeDescription: { simpleText: '0:00' } } },
+        { macroMarkersListItemRenderer: { title: { simpleText: '관세에 대해 어떻게 생각하십니까?' }, timeDescription: { simpleText: '5:11' } } },
+        { macroMarkersListItemRenderer: { title: { simpleText: '잘 놀다 갑니다.' }, timeDescription: { simpleText: '0:00' } } },
+    ],
+} })
 
 /* ────────────── 길 고르기 ────────────── */
 
@@ -334,12 +347,18 @@ describe('readUrl = 길마다 제대로 읽는다', () => {
 
     it('유튜브 = 한국어 자막 우선 + 제목, 채널', async () => {
         routes['https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=A0LQFQphEBg&format=json'] = { type: 'application/json', body: JSON.stringify({ title: '워런 버핏 은퇴', author_name: '슈카월드' }) }
-        getVideoDetails.mockResolvedValue({ title: '워런 버핏 은퇴', description: '설명', subtitles: [{ text: '세 번째 주제는 그냥 잔잔하게 한번 들읍시다' }] })
+        getVideoDetails.mockResolvedValue({ title: '워런 버핏 은퇴', description: '0:00 시작\n5:11 관세', subtitles: [
+            { text: '세 번째 주제는 그냥 잔잔하게 한번 들읍시다', start: '0.5', dur: '3' },
+            { text: '관세 이야기를 해 보겠습니다', start: '312', dur: '4' },
+        ] })
         const r = await readUrl('https://youtu.be/A0LQFQphEBg')
         expect(getVideoDetails.mock.calls[0][0]).toMatchObject({ videoID: 'A0LQFQphEBg', lang: 'ko' })
         expect(r.ok && r.method).toBe('captions')
         expect(r.ok && r.title).toBe('워런 버핏 은퇴 | 슈카월드')
-        expect(r.ok && r.text).toContain('[자막]\n세 번째 주제는')
+        expect(r.ok && r.text).toContain('길이: 5:16')
+        expect(r.ok && r.text).toContain('[설명]\n0:00 시작\n5:11 관세')
+        expect(r.ok && r.text).toContain('[0:00] 세 번째 주제는')
+        expect(r.ok && r.text).toContain('[5:00] 관세 이야기를')
     })
 
     it('유튜브 자막 도구가 통째로 막히면 영상 웹페이지에서 설명이라도 건진다', async () => {
@@ -348,7 +367,20 @@ describe('readUrl = 길마다 제대로 읽는다', () => {
         const r = await readUrl('https://www.youtube.com/watch?v=A0LQFQphEBg')
         expect(r.ok && r.method).toBe('meta')
         expect(r.ok && r.text).toContain('버핏 이야기')
-        expect(r.ok && r.text).toContain('자막이 없어요')
+        expect(r.ok && r.text).toContain('자막을 가져오지 못했어요')
+    })
+
+    it('자막 창구가 막히면(Vercel IP) next 창구에서 설명, 챕터, 조회수를 받는다', async () => {
+        getVideoDetails.mockRejectedValue(new Error('Video not playable on any client. LOGIN_REQUIRED'))
+        routes['https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=A0LQFQphEBg&format=json'] = { type: 'application/json', body: JSON.stringify({ title: '워런 버핏 은퇴', author_name: '슈카월드' }) }
+        routes['https://www.youtube.com/youtubei/v1/next?prettyPrint=false'] = { type: 'application/json', body: NEXT_JSON }
+        const r = await readUrl('https://www.youtube.com/watch?v=A0LQFQphEBg')
+        expect(r.ok && r.method).toBe('meta')
+        expect(r.ok && r.text).toContain('조회수 1,716,462회 | 올린 날 2025. 5. 13.')
+        expect(r.ok && r.text).toContain('[챕터]\n0:00 잘 놀다 갑니다.\n5:11 관세에 대해 어떻게 생각하십니까?')
+        expect(r.ok && r.text).toContain('영상 속에서 한 말은 모릅니다')
+        // 영상 웹페이지(서버 IP 에서 막힘)까지 가지 않는다
+        expect(calls.some(c => c.includes('watch?v=A0LQFQphEBg&hl=ko'))).toBe(false)
     })
 
     it('못 열면 이유를 사람 말로 (던지지 않는다)', async () => {
@@ -380,5 +412,82 @@ describe('readUrl = 길마다 제대로 읽는다', () => {
         const rs = await readUrlsInText('비교해줘 https://a.ex.com/1 https://b.ex.com/2, https://c.ex.com/3 그리고 https://d.ex.com/4')
         expect(rs).toHaveLength(3)
         for (const r of rs) expect(r.ok && r.text.length).toBe(6_000)
+    })
+})
+
+/* ────────────── 0928 고도화 ────────────── */
+
+describe('parseNextInfo = next 창구 응답에서 설명, 챕터, 조회수, 날짜', () => {
+    it('겹친 챕터는 한 번만', () => {
+        const n = parseNextInfo(NEXT_JSON)
+        expect(n.description).toBe('어렵고 딱딱한 경제 이야기를\n쉽고 유쾌하게')
+        expect(n.chapters).toEqual([{ at: '0:00', title: '잘 놀다 갑니다.' }, { at: '5:11', title: '관세에 대해 어떻게 생각하십니까?' }])
+        expect(n.views).toBe('조회수 1,716,462회')
+        expect(n.date).toBe('2025. 5. 13.')
+    })
+    it('모양을 모르면 빈 값', () => {
+        expect(parseNextInfo('{}')).toEqual({ description: '', chapters: [], views: '', date: '' })
+    })
+})
+
+describe('captionsToTimedText = 구간마다 시각을 붙이고, 길면 영상 전체를 고르게', () => {
+    const caps = Array.from({ length: 600 }, (_, i) => ({ text: `문장${i} 가나다라마바사아자차`, start: String(i * 6), dur: '6' }))
+    it('clock', () => {
+        expect(clock(65)).toBe('1:05')
+        expect(clock(3725)).toBe('1:02:05')
+    })
+    it('짧으면 전부, 구간 앞에 [분:초]', () => {
+        const t = captionsToTimedText(caps.slice(0, 20), 100_000)
+        expect(t.compressed).toBe(false)
+        expect(t.text.startsWith('[0:00] 문장0')).toBe(true)
+        expect(t.text).toContain('\n[1:00] 문장10')
+        expect(t.durationSec).toBe(120)
+    })
+    it('길면 앞에서 자르지 않고 마지막 구간까지 덮는다 (한 시간 영상)', () => {
+        const t = captionsToTimedText(caps, 3_000)
+        expect(t.compressed).toBe(true)
+        expect(t.text.length).toBeLessThanOrEqual(3_000)
+        expect(t.text).toContain('[0:00]')
+        expect(t.text).toMatch(/\[5[0-9]:\d\d\]/)
+        expect(t.text).toContain('…')
+    })
+    it('시각이 없으면 이어 붙이기만', () => {
+        expect(captionsToTimedText([{ text: '가' }, { text: '나' }], 100)).toEqual({ text: '가 나', durationSec: 0, compressed: false })
+    })
+})
+
+describe('stripNoise = 「이미지 확대」 같은 화면 글자 걷기', () => {
+    it('단추 글자, 사진 저작권 줄, 홍보 줄, 저작권 맺음 줄, 겹친 줄을 뺀다', () => {
+        const raw = [
+            '이미지 확대', '2026 아시안게임에 출전한 한국 남자하키대표팀', '[2026 조직위원회 제공. 재판매 및 DB 금지]',
+            '(나고야=연합뉴스) 장현구 기자 = 한국 남자 하키대표팀이 4강에 진출했다.', '공유하기', '▶ 제보는 카톡 okjebo',
+            '저작권자 ⓒ 연합뉴스, 무단 전재 및 재배포 금지', '같은 줄', '같은 줄',
+        ].join('\n')
+        expect(stripNoise(raw)).toBe('2026 아시안게임에 출전한 한국 남자하키대표팀\n(나고야=연합뉴스) 장현구 기자 = 한국 남자 하키대표팀이 4강에 진출했다.\n같은 줄')
+    })
+    it('문장 속 낱말은 건드리지 않는다', () => {
+        const t = '정부는 지원을 확대 공유하기로 했다. 이미지 확대 기능은 다음 달 나온다.'
+        expect(stripNoise(t)).toBe(t)
+    })
+})
+
+describe('linkTextForTurn = 이어 묻기면 앞 말의 주소를 다시 읽는다', () => {
+    it('이번 말에 주소가 있으면 이번 말', () => {
+        expect(linkTextForTurn(['https://a.com', '이거 봐 https://b.com'])).toEqual({ text: '이거 봐 https://b.com', fromHistory: false })
+    })
+    it('없으면 바로 앞 2개까지', () => {
+        expect(linkTextForTurn(['https://a.com 요약해줘', '그럼 3번째 챕터는?'])).toEqual({ text: 'https://a.com 요약해줘', fromHistory: true })
+        expect(linkTextForTurn(['https://a.com', '1', '2', '3'])).toEqual({ text: '', fromHistory: false })
+        expect(linkTextForTurn([])).toEqual({ text: '', fromHistory: false })
+    })
+    it('앞 말 링크는 카드 없이, 못 읽어도 사과하지 않는다', () => {
+        const p = buildLinkPrompt([
+            { ok: true, url: 'https://a.com/1', requestedUrl: 'https://a.com/1', title: '글 A', text: '본문', kind: 'web' },
+            { ok: false, requestedUrl: 'https://b.com/2', reason: '응답 403' },
+        ], { fromHistory: true })
+        expect(p.readUrls).toEqual([])
+        expect(p.prefix).toContain('앞서 준 링크')
+        expect(p.prefix).not.toContain('못 읽었어요')
+        expect(p.prefix).not.toMatch(/[\u00b7\u2014]/)
     })
 })

@@ -13,8 +13,8 @@
 import { fetchPageSafely } from '@/domains/agent/fetch-url'
 import type { ReadPage, ReadFail } from '@/domains/agent/fetch-url'
 
-/** 자막 한 조각 (도구가 주는 모양) */
-interface Caption { text: string }
+/** 자막 한 조각 (도구가 주는 모양, start 와 dur 은 초를 글자로) */
+interface Caption { text: string; start?: string | number; dur?: string | number }
 
 /** 유튜브 주소에서 영상 번호(11자)를 꺼낸다. 아니면 null */
 export function youtubeVideoId(raw: string): string | null {
@@ -36,6 +36,107 @@ export function joinCaptions(caps: Caption[]): string {
         .filter(Boolean)
         .join(' ')
         .trim()
+}
+
+export interface NextInfo {
+    description: string
+    chapters: { at: string; title: string }[]
+    views: string
+    date: string
+}
+
+/**
+ * 유튜브 「다음 영상」 창구(youtubei/v1/next) 응답에서 설명, 챕터, 조회수, 올린 날을 꺼낸다.
+ * 0928 진단: Vercel 서버 IP 에서 자막 창구(player)는 「봇이 아님을 확인」으로 전부 막히지만 이 창구는 열린다.
+ */
+export function parseNextInfo(raw: string): NextInfo {
+    const s = String(raw ?? '')
+    const un = (v?: string) => { if (!v) return ''; try { return JSON.parse(`"${v}"`) as string } catch { return v } }
+    const description = un(s.match(/"attributedDescription":\{"content":"((?:[^"\\]|\\.)*)"/)?.[1])
+    const seen = new Set<string>()
+    const chapters: NextInfo['chapters'] = []
+    for (const m of s.matchAll(/"macroMarkersListItemRenderer":\{"title":\{"simpleText":"((?:[^"\\]|\\.)*)"\},"timeDescription":\{"simpleText":"([^"]*)"/g)) {
+        const key = `${m[2]} ${m[1]}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        chapters.push({ at: m[2], title: un(m[1]) })
+    }
+    const views = un(s.match(/"videoViewCountRenderer":\{"viewCount":\{"simpleText":"((?:[^"\\]|\\.)*)"/)?.[1])
+    const date = un(s.match(/"dateText":\{"simpleText":"((?:[^"\\]|\\.)*)"/)?.[1])
+    return { description, chapters: chapters.slice(0, 60), views, date }
+}
+
+const WEB_CLIENT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+
+/** 자막 창구가 막혔을 때 설명과 챕터라도. 실패하면 null (던지지 않는다) */
+async function fetchNextInfo(videoId: string, timeoutMs: number): Promise<NextInfo | null> {
+    try {
+        const res = await fetch('https://www.youtube.com/youtubei/v1/next?prettyPrint=false', {
+            method: 'POST',
+            signal: AbortSignal.timeout(timeoutMs),
+            headers: { 'Content-Type': 'application/json', 'User-Agent': WEB_CLIENT_UA, Origin: 'https://www.youtube.com' },
+            body: JSON.stringify({ context: { client: { clientName: 'WEB', clientVersion: '2.20250925.01.00', hl: 'ko', gl: 'KR' } }, videoId }),
+        })
+        if (!res.ok) return null
+        const info = parseNextInfo(await res.text())
+        return info.description || info.chapters.length ? info : null
+    } catch {
+        return null
+    }
+}
+
+/** 초 → 「3:05」, 한 시간 넘으면 「1:02:05」 */
+export function clock(sec: number): string {
+    const s = Math.max(0, Math.floor(sec))
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return h > 0 ? `${h}:${pad(m)}:${pad(r)}` : `${m}:${pad(r)}`
+}
+
+export interface TimedCaptions {
+    text: string
+    /** 영상 길이(초). 모르면 0 */
+    durationSec: number
+    /** 글자 한도 때문에 구간마다 앞부분만 담았나 */
+    compressed: boolean
+}
+
+/**
+ * 자막 → 구간마다 시각을 붙인 글 (「[3:00] …」).
+ * 긴 영상은 앞에서 자르면 뒷부분 이야기를 통째로 잃는다. 그래서 구간(최대 40개)으로 나누고,
+ * 한도를 넘으면 **구간마다 같은 몫**만큼 앞부분을 담아 영상 전체를 고르게 덮는다.
+ * 시각 정보가 없으면 예전처럼 이어 붙이기만 한다.
+ */
+export function captionsToTimedText(caps: Caption[], maxChars: number): TimedCaptions {
+    const items = (caps ?? [])
+        .map(c => ({ t: Number(c?.start), d: Number(c?.dur) || 0, text: String(c?.text ?? '').replace(/\s+/g, ' ').trim() }))
+        .filter(c => c.text)
+    if (items.length === 0) return { text: '', durationSec: 0, compressed: false }
+    if (items.some(c => !Number.isFinite(c.t))) {
+        const flat = joinCaptions(caps)
+        return { text: flat.slice(0, maxChars), durationSec: 0, compressed: flat.length > maxChars }
+    }
+    const last = items[items.length - 1]
+    const durationSec = last.t + last.d
+    const blockSec = Math.max(60, Math.ceil(durationSec / 40 / 30) * 30)
+    const blocks: { at: number; text: string }[] = []
+    for (const c of items) {
+        const at = Math.floor(c.t / blockSec) * blockSec
+        const tail = blocks[blocks.length - 1]
+        if (tail && tail.at === at) tail.text += ` ${c.text}`
+        else blocks.push({ at, text: c.text })
+    }
+    const full = blocks.map(b => `[${clock(b.at)}] ${b.text}`).join('\n')
+    if (full.length <= maxChars) return { text: full, durationSec, compressed: false }
+
+    const share = Math.max(40, Math.floor(maxChars / blocks.length) - 12)
+    const cut = blocks.map(b => {
+        if (b.text.length <= share) return `[${clock(b.at)}] ${b.text}`
+        const piece = b.text.slice(0, share)
+        const sp = piece.lastIndexOf(' ')
+        return `[${clock(b.at)}] ${(sp > share * 0.6 ? piece.slice(0, sp) : piece).trim()} …`
+    })
+    return { text: cut.join('\n').slice(0, maxChars), durationSec, compressed: true }
 }
 
 /**
@@ -111,9 +212,16 @@ export async function readYoutube(rawUrl: string, opts: YoutubeOptions = {}): Pr
         detailsError = e instanceof Error ? e.message : String(e)
     }
 
-    // 도구가 통째로 실패했으면 영상 웹페이지에서 설명이라도 (남은 시간이 있을 때만)
+    // 자막을 못 받았으면(Vercel 서버 IP 는 유튜브가 「봇 확인」으로 막는다) 설명, 챕터, 조회수라도 받는다.
+    //   1순위 = next 창구 (서버 IP 에서도 열림, 0928 실측). 2순위 = 영상 웹페이지 (집, 사무실 IP 에서만 열림)
+    const blocked = !details
+    let next: NextInfo | null = null
+    if (!details || (details.subtitles ?? []).length === 0) {
+        const left = timeoutMs - (Date.now() - started)
+        if (left > 1_000) next = await fetchNextInfo(id, Math.min(left, 5_000))
+    }
     const left = timeoutMs - (Date.now() - started)
-    if (!details && left > 1_500) {
+    if (!details && !next && left > 1_500) {
         const w = await fetchPageSafely(`${url}&hl=ko`, { timeoutMs: left, maxBytes: 3 * 1024 * 1024 })
         if (w.ok) {
             const d = descriptionFromWatchPage(w.body)
@@ -123,24 +231,42 @@ export async function readYoutube(rawUrl: string, opts: YoutubeOptions = {}): Pr
 
     const videoTitle = (oembed.title || (details?.title && details.title !== 'No title found' ? details.title : '') || '').trim()
     const channel = (oembed.author_name || '').trim()
-    if (!videoTitle && !details) {
+    if (!videoTitle && !details && !next) {
         return fail(/not playable|ERROR|LOGIN_REQUIRED|UNPLAYABLE/i.test(detailsError)
             ? '이 영상은 열 수 없어요(비공개, 삭제, 연령 제한 영상일 수 있어요)'
             : '이 영상 정보를 지금 받아오지 못했어요. 잠시 후 다시 넣어 주세요')
     }
 
     const title = (channel ? `${videoTitle || '제목 없는 영상'} | ${channel}` : (videoTitle || '제목 없는 영상')).slice(0, 120)
-    const description = details?.description && details.description !== 'No description found' ? details.description.trim() : ''
-    const captions = joinCaptions(details?.subtitles ?? [])
+    const description = (details?.description && details.description !== 'No description found' ? details.description.trim() : '') || (next?.description ?? '').trim()
+    const subs = details?.subtitles ?? []
+    const flat = joinCaptions(subs)
 
-    const head = [`[유튜브 영상] ${videoTitle || '제목 없는 영상'}`, channel ? `채널: ${channel}` : '', `주소: ${url}`].filter(Boolean).join('\n')
+    const baseHead = [`[유튜브 영상] ${videoTitle || '제목 없는 영상'}`, channel ? `채널: ${channel}` : ''].filter(Boolean)
 
-    if (captions.length >= 20) {
-        const text = `${head}\n\n[자막]\n${captions}`.slice(0, maxChars)
+    if (flat.length >= 20) {
+        // 설명(챕터가 적혀 있는 경우가 많다)은 앞부분만 곁들이고, 나머지 몫은 전부 자막에
+        const desc = description ? description.slice(0, maxChars >= 20_000 ? 3_000 : 800) : ''
+        const probe = captionsToTimedText(subs, Number.MAX_SAFE_INTEGER)
+        const head = [...baseHead, probe.durationSec ? `길이: ${clock(probe.durationSec)}` : '', `주소: ${url}`].filter(Boolean).join('\n')
+        const descPart = desc ? `\n\n[설명]\n${desc}${description.length > desc.length ? ' …' : ''}` : ''
+        const note = '\n\n[자막] (앞의 [분:초]는 영상 속 시각)'
+        const room = Math.max(1_000, maxChars - head.length - descPart.length - note.length - 80)
+        const timed = captionsToTimedText(subs, room)
+        const cutNote = timed.compressed ? '\n(영상이 길어 구간마다 앞부분만 담았어요. 영상 전체를 고르게 훑은 것입니다)' : ''
+        const text = `${head}${descPart}${note}${cutNote}\n${timed.text}`.slice(0, maxChars)
         return { ok: true, url, requestedUrl, title, text, kind: 'youtube', channel, method: 'captions', source: 'youtube' }
     }
+    const stats = [next?.views, next?.date ? `올린 날 ${next.date}` : ''].filter(Boolean).join(' | ')
+    const head = [...baseHead, stats, `주소: ${url}`].filter(Boolean).join('\n')
 
-    // 자막이 없다 → 제목과 설명만. 그 사실을 글에 적어 봇이 아는 척하지 않게 한다.
-    const text = `${head}\n\n[설명]\n${description || '(설명 없음)'}\n\n(이 영상은 자막이 없어요. 제목과 설명만 기억합니다)`.slice(0, maxChars)
+    // 자막이 없다 → 제목, 설명, 챕터만. 그 사실을 글에 적어 봇이 영상 속 말을 아는 척하지 않게 한다.
+    const chapters = next?.chapters ?? []
+    const chaptersInDesc = chapters.length > 0 && description.includes(chapters[Math.min(1, chapters.length - 1)].title)
+    const chapterPart = chapters.length && !chaptersInDesc ? `\n\n[챕터]\n${chapters.map(c => `${c.at} ${c.title}`).join('\n')}` : ''
+    const why = blocked
+        ? '(지금은 이 영상의 자막을 가져오지 못했어요. 제목, 설명, 챕터만 보고 답합니다. 영상 속에서 한 말은 모릅니다)'
+        : '(이 영상은 자막이 없어요. 제목, 설명, 챕터만 보고 답합니다. 영상 속에서 한 말은 모릅니다)'
+    const text = `${head}\n\n[설명]\n${description || '(설명 없음)'}${chapterPart}\n\n${why}`.slice(0, maxChars)
     return { ok: true, url, requestedUrl, title, text, kind: 'youtube', channel, method: 'meta', source: 'youtube' }
 }
