@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { SIGNUP_CLOVERS, REFERRER_REWARD } from '@/domains/trial'
+import { SIGNUP_CLOVERS } from '@/domains/trial'
 import { safeNextPath } from '@/lib/safe-next'
 import { cookies } from 'next/headers'
 import { TERMS_COOKIE, parseTermsCookie } from '@/domains/os/onboarding'
-import { ensureOnboardingRow } from '@/domains/os/onboarding-server'
+import { ensureOnboardingRow, attributeReferral } from '@/domains/os/onboarding-server'
 
 /** 새 가입자가 먼저 가는 온보딩 화면 (대표 승인 0928) */
 const ONBOARDING_PATH = '/os/start'
@@ -135,7 +135,6 @@ export async function GET(request: Request) {
                         avatar_url: avatarUrl,
                         auth_provider: provider,
                         onboarding_completed: true,
-                        referred_by: refCode,
                         ...(kakaoPhone ? { phone: kakaoPhone } : {}),
                         ...(kakaoGender ? { gender: kakaoGender === 'male' || kakaoGender === 'female' ? kakaoGender : null } : {}),
                         ...(kakaoBirthYear ? { birth_year: kakaoBirthYear } : {}),
@@ -147,31 +146,13 @@ export async function GET(request: Request) {
                         console.error('[Auth Callback] User create error:', JSON.stringify(insertError))
                     }
 
-                    // 추천인에게 100 클로버 지급
+                    // 추천 보상은 여기서 주지 않는다. 한 곳(휴대폰 인증 /api/trial/verify)에서 한 번만 준다.
+                    // 여기서는 귀속 기록만 남긴다 (코드 다듬기, 자기 코드 막기, 덮어쓰기 금지는 attributeReferral 이 한다)
                     if (refCode) {
                         try {
-                            // 추천인 찾기 (referral_code가 refCode인 유저)
-                            const { data: referrer } = await db
-                                .from('users')
-                                .select('id, clovers')
-                                .eq('referral_code', refCode)
-                                .single()
-
-                            if (referrer) {
-                                await db.rpc('클로버_더하기', { 그사람: referrer.id, 더할값: REFERRER_REWARD })
-
-                                // 클로버 적립 기록
-                                await db.from('credit_transactions').insert({
-                                    user_id: referrer.id,
-                                    amount: REFERRER_REWARD,
-                                    balance_after: (referrer.clovers || 0) + REFERRER_REWARD,
-                                    type: 'referral_invite',
-                                    description: `${displayName || user.email || '새 유저'} 님이 초대로 가입`,
-                                })
-                                console.log(`[Auth Callback] Referrer ${referrer.id} got 100 clovers for invite`)
-                            }
+                            await attributeReferral(db, user.id, refCode, 'link')
                         } catch (refErr) {
-                            console.error('[Auth Callback] Referral reward error:', refErr)
+                            console.error('[Auth Callback] Referral attribution error:', refErr)
                         }
 
                         // 쿠키 소비 (삭제)

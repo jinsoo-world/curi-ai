@@ -7,12 +7,19 @@ import { cleanRefCode, needsOnboarding, TERMS_VERSION } from './onboarding'
 
 type Db = SupabaseClient
 
+/** 초대 코드로 추천한 사람을 찾는다. 코드 모양을 먼저 다듬고(소문자, 공백), 자기 코드는 받지 않는다 */
+export async function findReferrer(db: Db, userId: string, rawCode: unknown): Promise<{ id: string; referral_code: string } | null> {
+    const code = cleanRefCode(rawCode)
+    if (!code) return null
+    const { data: referrer } = await db.from('users').select('id, referral_code').eq('referral_code', code).maybeSingle()
+    if (!referrer || referrer.id === userId) return null
+    return referrer as { id: string; referral_code: string }
+}
+
 /** 초대 코드를 이 회원에게 귀속한다. 이미 귀속돼 있으면 덮어쓰지 않는다. 자기 코드는 받지 않는다 */
 export async function attributeReferral(db: Db, userId: string, rawCode: unknown, via: 'link' | 'code'): Promise<{ ok: boolean }> {
-    const code = cleanRefCode(rawCode)
-    if (!code) return { ok: false }
-    const { data: referrer } = await db.from('users').select('id, referral_code').eq('referral_code', code).maybeSingle()
-    if (!referrer || referrer.id === userId) return { ok: false }
+    const referrer = await findReferrer(db, userId, rawCode)
+    if (!referrer) return { ok: false }
     await db.from('users').update({ referred_by: referrer.referral_code }).eq('id', userId).is('referred_by', null)
     await db.from('user_onboarding')
         .update({ referral_code: referrer.referral_code, referral_via: via, referrer_id: referrer.id, updated_at: new Date().toISOString() })
@@ -47,7 +54,9 @@ export async function ensureOnboardingRow(db: Db, a: {
         }, { onConflict: 'user_id', ignoreDuplicates: true })
         if (insErr) return false
         if (a.provider) await db.from('users').update({ auth_provider: a.provider }).eq('id', a.userId)
-        if (a.refCookie) await attributeReferral(db, a.userId, a.refCookie, 'link')
     }
+    // 온보딩 중인 새 회원이면 행을 새로 만들 때만이 아니라 매번 귀속을 시도한다
+    // (첫 로그인 때 쿠키가 없었다가 나중에 생긴 경우). 이미 귀속돼 있으면 덮어쓰지 않는다.
+    if (needs && a.refCookie) await attributeReferral(db, a.userId, a.refCookie, 'link')
     return needs
 }

@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/sms'
+import { findReferrer } from '@/domains/os/onboarding-server'
 import { trialEndsAt, isTrialActive, REFERRER_REWARD, TRIAL_DAYS, TRIAL_CLOVERS } from '@/domains/trial'
 
 export const dynamic = 'force-dynamic'
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
         // 이미 체험 중이면 두 번 주지 않는다
         const { data: 나 } = await db
             .from('users')
-            .select('trial_ends_at, trial_phone, clovers')
+            .select('trial_ends_at, trial_phone, clovers, referred_by')
             .eq('id', user.id)
             .maybeSingle()
         if (나?.trial_ends_at && isTrialActive(나.trial_ends_at)) {
@@ -75,16 +76,11 @@ export async function POST(req: Request) {
             return Response.json({ error: '인증번호가 맞지 않아요.' }, { status: 400 })
         }
 
-        // 추천인 찾기 — 내 코드로는 못 받는다
-        let 추천인: string | null = null
-        if (typeof referralCode === 'string' && referralCode.trim()) {
-            const { data: r } = await db
-                .from('users')
-                .select('id')
-                .eq('referral_code', referralCode.trim())
-                .maybeSingle()
-            if (r && r.id !== user.id) 추천인 = r.id
-        }
+        // 추천인 찾기 — 입력한 코드가 먼저, 없으면 가입 때 초대 링크로 남은 기록(users.referred_by). 내 코드로는 못 받는다
+        // 추천 보상은 이 자리 한 곳에서만, 회원당 한 번(trial_phone 이 한 번만 채워진다) 준다.
+        const 추천인 = (await findReferrer(db, user.id, referralCode))?.id
+            ?? (await findReferrer(db, user.id, 나?.referred_by))?.id
+            ?? null
 
         const 시작 = new Date()
         const 끝 = trialEndsAt(시작)
@@ -121,7 +117,14 @@ export async function POST(req: Request) {
         // 추천한 사람에게 클로버 — 실패해도 체험권은 이미 줬으니 되돌리지 않는다
         if (추천인) {
             // 잔액은 DB 가 한 걸음으로 더한다 (여러 명이 동시에 가입해도 어긋나지 않게)
-            await db.rpc('클로버_더하기', { 그사람: 추천인, 더할값: REFERRER_REWARD })
+            const { data: 추천인잔액 } = await db.rpc('클로버_더하기', { 그사람: 추천인, 더할값: REFERRER_REWARD })
+            if (추천인잔액 != null) await db.from('credit_transactions').insert({
+                user_id: 추천인,
+                amount: REFERRER_REWARD,
+                balance_after: 추천인잔액,
+                type: 'referral_invite',
+                description: '친구가 초대로 가입',
+            })
         }
 
         return Response.json({

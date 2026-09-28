@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { REFERRER_REWARD } from '@/domains/trial'
 
 export const dynamic = 'force-dynamic'
 
@@ -107,10 +108,16 @@ export async function GET() {
             .select('*', { count: 'exact', head: true })
             .eq('referred_by', profile.referral_code)
 
+        // 실제로 보상이 나간 친구 수 = 휴대폰 인증 때 나를 추천인으로 남긴 사람
+        const { count: paid } = await db
+            .from('users')
+            .select('*', { count: 'exact', head: true })
+            .eq('trial_referrer_id', user.id)
+
         return new Response(JSON.stringify({
             referral_code: profile.referral_code,
             friends_invited: count || 0,
-            clovers_earned: (count || 0) * 100,
+            clovers_earned: (paid || 0) * REFERRER_REWARD,
             clovers: profile.clovers || 0,
         }), {
             headers: { 'Content-Type': 'application/json' },
