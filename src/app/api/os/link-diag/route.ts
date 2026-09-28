@@ -83,6 +83,37 @@ async function probeExtra(videoId: string) {
     return out
 }
 
+async function probeVisitor(videoId: string) {
+    const out: Record<string, unknown>[] = []
+    let visitor = ''
+    try {
+        const res = await fetch('https://www.youtube.com/youtubei/v1/next?prettyPrint=false', {
+            method: 'POST', signal: AbortSignal.timeout(6_000),
+            headers: { 'Content-Type': 'application/json', 'User-Agent': WEB_UA, Origin: 'https://www.youtube.com' },
+            body: JSON.stringify({ context: { client: { clientName: 'WEB', clientVersion: '2.20250925.01.00', hl: 'ko', gl: 'KR' } }, videoId }),
+        })
+        visitor = decodeURIComponent((await res.text()).match(/"visitorData":"([^"]+)"/)?.[1] ?? '')
+    } catch { /* 없으면 빈 값 */ }
+    const extra = [
+        ...CLIENTS.slice(0, 4),
+        { name: 'ANDROID', ver: '19.44.38', hdr: '3', ua: 'com.google.android.youtube/19.44.38 (Linux; U; Android 14) gzip', ctx: { platform: 'MOBILE', osName: 'Android', osVersion: '14', androidSdkVersion: 34 } },
+        { name: 'TVHTML5', ver: '7.20250923.13.00', hdr: '7', ua: 'Mozilla/5.0 (ChromiumStylePlatform) Cobalt/Version', ctx: {} },
+        { name: 'WEB_CREATOR', ver: '1.20250922.03.00', hdr: '62', ua: WEB_UA, ctx: {} },
+    ]
+    for (const c of extra) {
+        try {
+            const res = await fetch('https://youtubei.googleapis.com/youtubei/v1/player?prettyPrint=false', {
+                method: 'POST', signal: AbortSignal.timeout(6_000),
+                headers: { 'Content-Type': 'application/json', 'User-Agent': c.ua, 'X-YouTube-Client-Name': c.hdr, 'X-YouTube-Client-Version': c.ver, 'X-Goog-Visitor-Id': visitor, Origin: 'https://www.youtube.com' },
+                body: JSON.stringify({ context: { client: { clientName: c.name, clientVersion: c.ver, hl: 'ko', gl: 'KR', visitorData: visitor, ...c.ctx } }, videoId, contentCheckOk: true, racyCheckOk: true }),
+            })
+            const j = res.ok ? await res.json() as { playabilityStatus?: { status?: string; reason?: string }; captions?: { playerCaptionsTracklistRenderer?: { captionTracks?: unknown[] } } } : null
+            out.push({ client: c.name, withVisitor: !!visitor, http: res.status, status: j?.playabilityStatus?.status, reason: j?.playabilityStatus?.reason?.slice(0, 60), tracks: j?.captions?.playerCaptionsTracklistRenderer?.captionTracks?.length ?? 0 })
+        } catch (e) { out.push({ client: c.name, error: e instanceof Error ? e.message : 'err' }) }
+    }
+    return out
+}
+
 export async function GET(req: Request) {
     const rl = await checkRateLimit(createAdminClient(), rateLimitKey('link-diag', undefined, undefined, req), 3, 60)
     if (!rl.allowed) return NextResponse.json({ error: 'slow down' }, { status: 429 })
@@ -95,6 +126,6 @@ export async function GET(req: Request) {
             ? { u, ok: true, ms: Date.now() - t, source: r.source, method: r.method, len: r.text.length, title: r.title, head: r.text.slice(0, 160) }
             : { u, ok: false, ms: Date.now() - t, reason: r.reason }
     }))
-    const [youtube, extra] = await Promise.all([probe('A0LQFQphEBg'), probeExtra('A0LQFQphEBg')])
-    return NextResponse.json({ region, reads, youtube, extra })
+    const [youtube, extra, visitor] = await Promise.all([probe('A0LQFQphEBg'), probeExtra('A0LQFQphEBg'), probeVisitor('A0LQFQphEBg')])
+    return NextResponse.json({ region, reads, youtube, extra, visitor })
 }
