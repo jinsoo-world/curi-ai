@@ -11,6 +11,7 @@ import { getPublicMentorById, MENTOR_IMAGES } from '@/domains/mentor'
 import { getLinkCounts, isInMyTeam } from '@/domains/os/team-link'
 import { botPageMetadata } from '@/domains/share/botMetadata'
 import MarketTeamActions from './MarketTeamActions'
+import { withAsk } from '@/domains/os/showcase'
 
 export const dynamic = 'force-dynamic'
 
@@ -118,7 +119,7 @@ export default async function OsMarketIntroPage({
                 <h2>이렇게 물어보세요</h2>
                 <div className="os-market-intro-qs">
                     {(questions.length > 0 ? questions : [`${mentor.name}에게 뭐부터 물어보면 좋아요?`]).map((q, i) => (
-                        <Link key={i} href={chatHref} className="os-market-intro-q">
+                        <Link key={i} href={withAsk(chatHref, q)} className="os-market-intro-q">
                             <span>{q}</span>
                             <span aria-hidden>→</span>
                         </Link>

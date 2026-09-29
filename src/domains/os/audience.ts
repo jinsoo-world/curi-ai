@@ -45,6 +45,8 @@ export interface AudienceCheckInput {
     isLoggedIn: boolean
     /** level === 'insiders' 일 때, 이 방문자가 접근 그룹에 들어 있나 */
     inAllowedGroup: boolean
+    /** 둘러보기 팀 봇(domains/os/showcase DEMO_MENTOR_IDS)인가. Public 이어도 로그인 전 손님과 대화한다 */
+    isDemoBot?: boolean
 }
 
 export type AudienceBlockReason = 'just_me_blocked' | 'insiders_blocked' | 'login_required'
@@ -86,7 +88,7 @@ export function checkAudience(i: AudienceCheckInput): AudienceCheckResult {
             if (i.inAllowedGroup) return { allowed: true, reason: null, message: null }
             return { allowed: false, reason: 'insiders_blocked', message: '초대받은 사람만 대화할 수 있어요' }
         case 'public':
-            if (i.isLoggedIn) return { allowed: true, reason: null, message: null }
+            if (i.isLoggedIn || i.isDemoBot) return { allowed: true, reason: null, message: null }
             return { allowed: false, reason: 'login_required', message: LOGIN_REQUIRED_MESSAGE }
         case 'anonymous':
             return { allowed: true, reason: null, message: null }

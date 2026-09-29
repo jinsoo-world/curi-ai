@@ -5,6 +5,7 @@ import {
 } from './audience'
 import { countUserTurnsForMentor } from './usage-db'
 import { weekStartKST } from './usage'
+import { isDemoMentor } from './showcase'
 
 /** 표가 아직 DB 에 없을 때(마이그레이션 미적용) 나는 Postgres 오류 번호 */
 const TABLE_MISSING = '42P01'
@@ -150,7 +151,7 @@ export async function checkChatAudience(
         if (!isOwner && settings.level === 'insiders') {
             inAllowedGroup = await isVisitorInAllowedGroups(db, mentor.id, viewer)
         }
-        const result = checkAudience({ level: settings.level, isOwner, isLoggedIn: !!viewer.userId, inAllowedGroup })
+        const result = checkAudience({ level: settings.level, isOwner, isLoggedIn: !!viewer.userId, inAllowedGroup, isDemoBot: isDemoMentor(mentor.id) })
         return { allowed: result.allowed, message: result.message, level: settings.level, reason: result.reason }
     } catch (e) {
         console.error('[os/audience] checkChatAudience', e instanceof Error ? e.message : e)

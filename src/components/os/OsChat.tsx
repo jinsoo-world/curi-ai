@@ -28,6 +28,7 @@ import { isUsageLike, USAGE_EVENT } from '@/domains/os/usage'
 import { 클로버알림 } from '@/lib/clover-bus'
 import { CLOVER_OVERAGE_ENABLED, OVERAGE_COPY, readCloverAuto } from '@/domains/os/usage-config'
 import { isLoginGateReply } from '@/domains/os/audience'
+import { takeAsk } from '@/domains/os/showcase'
 import SocialStartLinks from './SocialStartLinks'
 import { markFirstChatDone } from '@/components/pwa/install-rules'
 import PermissionCard from './PermissionCard'
@@ -743,6 +744,17 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
         const t = retryText
         void Promise.resolve().then(() => { setRetryText(null); void send(t) })
     }, [retryText, streaming, send])
+
+    // 봇 소개 화면의 질문 칩(?ask=) = 들어오자마자 그 질문을 한 번 보낸다. 주소에서 먼저 벗겨 새로고침 때 또 안 보낸다 (가상 리더 사용시험 0929)
+    const askSent = useRef(false)
+    useEffect(() => {
+        if (askSent.current || !historyReady || loading || streaming) return
+        const { ask, rest } = takeAsk(window.location.href)
+        if (!ask) return
+        askSent.current = true
+        window.history.replaceState({}, '', rest)
+        void Promise.resolve().then(() => { void send(ask) })
+    }, [historyReady, loading, streaming, send])
     const continueWithClovers = () => {
         const t = overageAsk
         setOverageAsk(null)

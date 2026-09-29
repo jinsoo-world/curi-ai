@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getActiveMentors } from '@/domains/mentor'
 import { getLinkCounts } from '@/domains/os/team-link'
+import { arrangeMarket } from '@/domains/os/showcase'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,7 +27,7 @@ export async function GET() {
         const { data: { user } } = await supabase.auth.getUser()
         const db = createAdminClient()
 
-        const mentors = await getActiveMentors()
+        const mentors = arrangeMarket(await getActiveMentors())
         if (mentors.length === 0) return NextResponse.json({ guest: !user, bots: [] })
 
         const linkCounts = await getLinkCounts(db, mentors.map(m => m.id))

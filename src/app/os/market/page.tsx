@@ -7,13 +7,14 @@
 import Link from 'next/link'
 import { getActiveMentors } from '@/domains/mentor'
 import BotAvatar from '@/components/os/BotAvatar'
+import { arrangeMarket, isSampleMarketBot } from '@/domains/os/showcase'
 
 export const revalidate = 30   // /mentors 와 같은 주기
 
 export default async function OsMarketPage({ searchParams }: { searchParams: Promise<{ demo?: string }> }) {
     const { demo } = await searchParams
     const tail = demo === '1' ? '?demo=1' : ''
-    const mentors = await getActiveMentors()
+    const mentors = arrangeMarket(await getActiveMentors())
 
     return (
         <div className="os-market">
@@ -31,6 +32,7 @@ export default async function OsMarketPage({ searchParams }: { searchParams: Pro
                         <Link key={m.id} href={`/os/market/${m.id}${tail}`} className="os-market-card" prefetch={false}>
                             <BotAvatar shape="circle" color="white" state="idle" size={112} faceUrl={m.avatar_url ?? null} faceRim="shadow" name={m.name} />
                             <span className="os-market-name">{m.name}</span>
+                            {isSampleMarketBot(m.id) && <span className="os-market-sample">예시 봇</span>}
                             {m.title && <span className="os-market-title">{m.title}</span>}
                         </Link>
                     ))}

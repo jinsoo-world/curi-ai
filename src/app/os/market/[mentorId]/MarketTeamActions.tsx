@@ -99,7 +99,7 @@ export default function MarketTeamActions({
             </div>
             {!inTeam && !isOwner && (
                 <p className="os-market-actions-hint">
-                    팀에 넣으면 왼쪽 명단에서 바로 부를 수 있어요. 대화 요금(클로버)은 이 봇의 마켓 규칙 그대로예요.
+                    팀에 넣으면 왼쪽 명단에서 바로 부를 수 있어요. 클로버는 큐리AI에서 대화할 때 쓰는 포인트예요. 이 봇과의 대화 요금은 봇 주인이 정한 규칙을 따라요.
                 </p>
             )}
             {note && <p role="status" className="os-market-actions-note">{note}</p>}

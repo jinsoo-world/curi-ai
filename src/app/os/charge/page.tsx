@@ -99,7 +99,8 @@ export default function OsChargePage() {
         }
     }
 
-    // 손님 = 팀 API 가 손님이라 하거나, 세션을 봤는데 로그인이 없을 때
+    // 손님 = 팀 API 가 손님이라 하거나, 세션을 봤는데 로그인이 없을 때.
+    // 가상 리더 사용시험(0929): 가격을 못 보면 가입도 안 한다 → 손님에게도 요금제 카드를 그대로 보여 주고, 결제 단추만 로그인으로 보낸다(handlePay)
     const isGuest = !demo && ((!teamLoading && guest) || (sessionChecked && !userId))
 
     return (
@@ -109,13 +110,13 @@ export default function OsChargePage() {
                 <h1 className="osc-h1">요금제</h1>
                 <p className="osc-p">봇을 더 많이, 더 자주 쓰고 싶을 때 요금제를 올리면 돼요. 무료로도 시작할 수 있어요.</p>
 
-                {isGuest ? (
+                {isGuest && (
                     <div className="osc-guest">
-                        <p className="osc-p">로그인하면 내 요금제를 보고 바꿀 수 있어요.</p>
-                        <Link href={loginHref} className="os-cta">로그인하고 요금제 보기</Link>
+                        <p className="osc-p">가격은 그대로 둘러보세요. 결제할 때만 로그인하면 돼요.</p>
+                        <Link href={loginHref} className="os-cta">로그인</Link>
                     </div>
-                ) : (
-                    <>
+                )}
+                <>
                         {balance !== null && (
                             <div className="osc-balance">
                                 <div className="osc-balance-row">
@@ -141,7 +142,7 @@ export default function OsChargePage() {
 
                         <div className="osc-plans">
                             {PLANS.map(p => {
-                                const current = myPlan === p.id
+                                const current = !isGuest && myPlan === p.id   // 손님에겐 「지금 요금제」 표시를 안 붙인다
                                 return (
                                     <section key={p.id} className={`osc-plan${p.recommended ? ' rec' : ''}${current ? ' now' : ''}`} aria-label={`${p.name} 요금제`}>
                                         <div className="osc-plan-head">
@@ -203,7 +204,6 @@ export default function OsChargePage() {
                         </section>
 
                     </>
-                )}
             </div>
         </div>
     )

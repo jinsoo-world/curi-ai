@@ -75,6 +75,7 @@
 }
 .os-market-card:hover { background: var(--os-말풍선-내); }
 .os-market-name { font-size: 17px; font-weight: 700; line-height: 1.25; }
+.os-market-sample { font-size: 13px; font-weight: 600; color: var(--os-글-연); border: 1px solid currentColor; border-radius: 999px; padding: 1px 8px; }
 .os-market-title { font-size: 15px; color: var(--os-글-연); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .os-market-empty { color: var(--os-글-연); font-size: 15px; padding: 24px 0; }
 
