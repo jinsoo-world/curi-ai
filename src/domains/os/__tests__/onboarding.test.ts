@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
     sanitizeStep, STEP_ORDER, needsOnboarding, detectClientContext, cleanRefCode, parseTermsCookie, firstJobFor,
-    FIRST_HELP_CHIPS, SAMPLE_EXCHANGE, USE_CASES, LEADER_CARD, ONBOARDING_SINCE,
+    FIRST_HELP_CHIPS, SAMPLE_EXCHANGE, USE_CASES, LEADER_CARD, ONBOARDING_SINCE, onboardingForChat,
 } from '../onboarding'
 
 describe('needsOnboarding', () => {
@@ -128,5 +128,17 @@ describe('관리자 온보딩 집계', () => {
         expect(csv.startsWith('\uFEFF가입시각_KST,')).toBe(true)
         expect(csv).toContain("'=cmd")
         expect(csv.split('\r\n')).toHaveLength(3)
+    })
+})
+
+describe('onboardingForChat — 봇이 읽는 하는 일·소속·맡길 일', () => {
+    it('코드를 사람 말로 바꾼다 (기타·빈 칸은 뺀다)', () => {
+        expect(onboardingForChat({ occupation: 'lecture_coaching', org_name: ' 큐리어스 ', use_cases: ['promo', 'research'] }))
+            .toEqual({ occupation: '강의나 코칭', orgName: '큐리어스', useCases: ['홍보 글', '자료 조사'] })
+        expect(onboardingForChat({ occupation: 'other', org_name: '', use_cases: [] }))
+            .toEqual({ occupation: null, orgName: null, useCases: [] })
+    })
+    it('행이 없으면 빈 값', () => {
+        expect(onboardingForChat(null)).toEqual({ occupation: null, orgName: null, useCases: [] })
     })
 })

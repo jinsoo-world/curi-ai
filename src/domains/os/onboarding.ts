@@ -100,6 +100,16 @@ export const AUDIENCE: Choice[] = [
 export const labelOf = (list: Choice[], id: string | null | undefined): string =>
     list.find(c => c.id === id)?.label ?? (id || '')
 
+/** 대화 봇이 [사용자 정보]에 넣을 하는 일·소속·맡길 일 (모든 봇이 같이 본다. 「기타」와 빈 칸은 뺀다) */
+export function onboardingForChat(row: { occupation?: string | null; org_name?: string | null; use_cases?: string[] | null } | null): {
+    occupation: string | null; orgName: string | null; useCases: string[]
+} {
+    const occ = row?.occupation && row.occupation !== 'other' ? labelOf(OCCUPATIONS, row.occupation) : ''
+    const org = (row?.org_name ?? '').trim()
+    const uses = (row?.use_cases ?? []).map(id => USE_CASES.find(c => c.id === id)?.label).filter((l): l is string => !!l)
+    return { occupation: occ || null, orgName: org || null, useCases: uses }
+}
+
 /** 화면 3 답에 맞춘 첫 대화 칩 3개 */
 export const FIRST_HELP_CHIPS: Record<UseCase, [string, string, string]> = {
     customer: [

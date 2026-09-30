@@ -9,6 +9,7 @@
 //
 // 승인 카드 = 밖으로 나가는 일이 아니라 **둘 다 내 봇**이고 밖으로 안 나가므로 카드가 필요 없다.
 // 다만 옮기려는 말 자체가 「보내기·게시·구매·이체…」면 기존 승인 카드 경로로 보낸다(아래 ②-1).
+import { CONVERSATION_RULES } from '@/domains/mentor/answer-rules'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -162,6 +163,8 @@ export async function POST(req: Request) {
 
         // ④ 대상 봇이 한 번만 답한다
         const 규칙 = `${to.mentors?.system_prompt || `너는 「${toName}」. 주인의 AI 팀원이다.`}
+
+${CONVERSATION_RULES}
 
 [지금은 옆 봇이 옮겨 온 말이다]
 - 「${fromName}」이 주인의 말을 대신 옮겼다. 주인이 직접 물은 것처럼 답한다.

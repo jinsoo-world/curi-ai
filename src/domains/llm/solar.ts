@@ -4,7 +4,7 @@
 // 흘러오는 조각을 읽어 { text } 로 내놓고, 마지막에 { done, usage } 를 내놓는다.
 
 import { SOLAR_BASE_URL, SOLAR_CHAT_MODEL, SOLAR_MAX_OUTPUT_TOKENS, SOLAR_TEMPERATURE, SOLAR_TIMEOUT_MS } from './constants'
-import { readSseStream, extractDeltaText, extractUsage } from './sse'
+import { readSseStream, extractDeltaText, extractUsage, extractFinishReason } from './sse'
 import type { LlmChatMessage, LlmChunk, LlmUsage } from './types'
 
 export class SolarError extends Error {
@@ -68,11 +68,14 @@ export async function* solarChatStream(
     }
 
     let usage: LlmUsage | null = null
+    let finishReason: string | null = null
     for await (const payload of readSseStream(res.body)) {
         const text = extractDeltaText(payload)
         if (text) yield { text }
         const u = extractUsage(payload)
         if (u) usage = u
+        const f = extractFinishReason(payload)
+        if (f) finishReason = f
     }
-    yield { done: true, usage }
+    yield { done: true, usage, finishReason }
 }

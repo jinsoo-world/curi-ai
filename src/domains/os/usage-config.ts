@@ -73,6 +73,21 @@ export const OVERAGE_COPY = {
     autoSetting: '한도가 끝나면 묻지 않고 클로버로 이어 쓰기',
     /** 클로버가 모자랄 때 */
     short: '클로버가 모자라요. 충전하면 이어서 쓸 수 있어요.',
+    /** 창 아래 안내 (대표 0930 「매번 승인해야 해서 번거로워」: 한 번 고르면 이 대화에서는 다시 안 묻는다) */
+    sessionNote: '한 번 고르시면 이 대화에서는 다시 묻지 않아요.',
+    /** 창 안 체크 칸 (기본 꺼짐, 켜면 설정의 「묻지 않고 이어 쓰기」가 켜진다) */
+    alwaysLabel: '앞으로도 묻지 않기 (설정에서 언제든 바꿀 수 있어요)',
+}
+
+/** 이어 쓰기 창에 보이는 클로버 한 줄 (대표 0930 「클로버 주는 게 눈에 보이면 좋겠어」). 원화 환산은 안 적는다 */
+export function overageSheetNote(balance: number | null, cost: number, photoCost: number = CLOVER_COST.photoAnswer): string {
+    const head = photoCost > cost ? `답 하나에 클로버 ${cost}개(사진이 있으면 ${photoCost}개)가 쓰여요.` : `답 하나에 클로버 ${cost}개가 쓰여요.`
+    return typeof balance === 'number' ? `${head} 지금 ${balance}개 남았어요.` : head
+}
+
+/** 클로버로 이어 쓴 답 아래 작은 한 줄 */
+export function cloverSpentText(spent: number, balance: number | null): string {
+    return typeof balance === 'number' ? `🍀 클로버 ${spent}개 씀, ${balance}개 남음` : `🍀 클로버 ${spent}개 씀`
 }
 
 /** 클로버 안내 한 줄 (결제 화면 잔액 아래). 스위치에 따라 바뀐다 */

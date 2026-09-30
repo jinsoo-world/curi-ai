@@ -18,6 +18,8 @@ export interface LlmChunk {
     text?: string
     done?: boolean
     usage?: LlmUsage | null
+    /** 답이 끝난 이유 (마지막 조각). 'length' = 길이 상한에 걸려 잘림 */
+    finishReason?: string | null
 }
 
 /** 토큰 사용량 (비용 계측용). LLM 이 돌려준 값만. 없으면 만들지 않는다 */

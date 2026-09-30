@@ -49,3 +49,6 @@ export const VOICE_MAX_CALL_SECONDS = 300     // 한 통화 5분
 
 /** 모델이 둘 다 안 될 때 사용자에게 보이는 한 줄 (서버 stream.ts 와 화면이 같이 쓴다) */
 export const UNAVAILABLE_TEXT = '지금은 잠깐 쉬는 중이에요. 잠시 뒤에 다시 말 걸어 주세요.'
+
+/** 답이 길이 상한에 걸려 잘렸을 때 끝에 붙이는 안내 (실측 0930: 「혹시 이」에서 아무 표시 없이 끊겼다) */
+export const TRUNCATED_NOTE = '\n\n(답이 길어서 여기서 끊겼어요. 「이어서」라고 보내 주시면 이어서 말씀드릴게요.)'

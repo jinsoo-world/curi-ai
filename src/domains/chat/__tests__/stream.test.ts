@@ -11,7 +11,7 @@ vi.mock('../gemini', () => ({
     generateChatStream: (...args: unknown[]) => geminiMock(...args),
 }))
 
-import { generateChatStream, UNAVAILABLE_TEXT } from '../stream'
+import { generateChatStream, UNAVAILABLE_TEXT, TRUNCATED_NOTE } from '../stream'
 import { setUsageInserterForTest } from '@/domains/llm/usage-log'
 import type { GeminiMessage } from '../types'
 
@@ -168,5 +168,83 @@ describe('chat/stream — 솔라 답 길이 상한 (0929)', () => {
         solarMock.mockReturnValue(gen(['x']))
         await collect(await generateChatStream('시스템', history, { maxOutputTokens: given }))
         expect((solarMock.mock.calls[0][2] as { maxTokens?: number }).maxTokens).toBe(expected)
+    })
+})
+
+describe('chat/stream — 답이 길이 상한에 걸려 잘리면 알려준다 (0930 「혹시 이」에서 끊김)', () => {
+    beforeEach(() => {
+        solarMock.mockReset()
+        geminiMock.mockReset()
+        vi.stubEnv('UPSTAGE_API_KEY', 'up')
+        vi.stubEnv('GEMINI_API_KEY', 'gm')
+        vi.stubEnv('LLM_DRIVER', '')
+    })
+
+    it('솔라가 finish_reason=length 로 끝나면 끝에 안내 한 줄을 붙인다', async () => {
+        async function* cut() { yield { text: '혹시 이' }; yield { done: true, usage: null, finishReason: 'length' } }
+        solarMock.mockReturnValue(cut())
+        const out = await collect(await generateChatStream('시스템', history, { truncationNote: true }))
+        expect(out).toEqual(['혹시 이', TRUNCATED_NOTE])
+    })
+
+    it('truncationNote 를 안 주면(그룹방, 전달, 평가 도구) 잘려도 안내를 붙이지 않는다', async () => {
+        async function* cut() { yield { text: '혹시 이' }; yield { done: true, usage: null, finishReason: 'length' } }
+        solarMock.mockReturnValue(cut())
+        const out = await collect(await generateChatStream('시스템', history))
+        expect(out).toEqual(['혹시 이'])
+    })
+
+    it('Gemini 가 글 없이 MAX_TOKENS 로 끝나면 안내만 덩그러니 남기지 않는다', async () => {
+        vi.stubEnv('LLM_DRIVER', 'gemini')
+        async function* g() { yield { text: '', candidates: [{ finishReason: 'MAX_TOKENS' }] } }
+        geminiMock.mockResolvedValue(g())
+        const out = await collect(await generateChatStream('시스템', history, { truncationNote: true }))
+        expect(out).not.toContain(TRUNCATED_NOTE)
+    })
+
+    it('정상으로 끝나면 안내를 붙이지 않는다', async () => {
+        async function* ok() { yield { text: '끝.' }; yield { done: true, usage: null, finishReason: 'stop' } }
+        solarMock.mockReturnValue(ok())
+        const out = await collect(await generateChatStream('시스템', history))
+        expect(out).toEqual(['끝.'])
+    })
+
+    it('Gemini 가 MAX_TOKENS 로 끝나도 안내를 붙인다', async () => {
+        vi.stubEnv('LLM_DRIVER', 'gemini')
+        async function* g() { yield { text: '반쪽' }; yield { text: '', candidates: [{ finishReason: 'MAX_TOKENS' }] } }
+        geminiMock.mockResolvedValue(g())
+        const out = await collect(await generateChatStream('시스템', history, { truncationNote: true }))
+        expect(out).toEqual(['반쪽', TRUNCATED_NOTE])
+    })
+})
+
+describe('chat/stream — 검색이 필요한 말은 구글 검색이 되는 Gemini 로 (0930)', () => {
+    beforeEach(() => {
+        solarMock.mockReset()
+        geminiMock.mockReset()
+        vi.stubEnv('UPSTAGE_API_KEY', 'up')
+        vi.stubEnv('GEMINI_API_KEY', 'gm')
+        vi.stubEnv('LLM_DRIVER', '')
+    })
+
+    it('webSearch 면 솔라를 부르지 않고 Gemini(검색 켬)가 답한다', async () => {
+        geminiMock.mockResolvedValue(gen(['찾아봤어요']))
+        const out = await collect(await generateChatStream('시스템', history, { webSearch: true }))
+        expect(out).toEqual(['찾아봤어요'])
+        expect(solarMock).not.toHaveBeenCalled()
+        expect((geminiMock.mock.calls[0][2] as { recencyOn?: boolean }).recencyOn).not.toBe(false)
+    })
+
+    it('봇이 최신성(검색)을 꺼 두었으면 webSearch 여도 솔라가 답한다', async () => {
+        solarMock.mockReturnValue(gen(['솔라']))
+        await collect(await generateChatStream('시스템', history, { webSearch: true, recencyOn: false }))
+        expect(geminiMock).not.toHaveBeenCalled()
+    })
+
+    it('Gemini 열쇠가 없으면 솔라가 답한다', async () => {
+        vi.stubEnv('GEMINI_API_KEY', '')
+        solarMock.mockReturnValue(gen(['솔라']))
+        const out = await collect(await generateChatStream('시스템', history, { webSearch: true }))
+        expect(out).toEqual(['솔라'])
     })
 })

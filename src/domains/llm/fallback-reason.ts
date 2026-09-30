@@ -11,6 +11,7 @@ export type FallbackReason =
     | 'empty'        // 답이 비어 옴
     | 'image'        // 사진이 붙어서 처음부터 Gemini
     | 'forced'       // LLM_DRIVER 나 SIDE_TEXT_PROVIDER 로 Gemini 를 골랐다
+    | 'search'       // 검색을 부탁한 말이라 구글 검색이 되는 Gemini 로 보냈다 (chat/search-intent)
     | 'other'
 
 /** 솔라 첫 글자가 늦어서 우리가 끊었다는 표시 (stream.ts 가 던지고 여기서 'slow' 로 센다) */

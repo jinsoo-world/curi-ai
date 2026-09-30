@@ -24,6 +24,7 @@
 
 /* 사용 한도 원형 단추(UsageRing)는 입력창 위에 있을 때의 바깥 여백(20px)을 갖고 있다. 명단 안에선 뺀다 */
 .os-usage-slot .os-usage-ring-btn { margin: 0; }
+.os-clover-slot .os-clover-bar { margin: 0 14px 6px; }
 
 /* 우클릭(폰은 길게 누르기) 메뉴 = 편집 / 대화 새로 시작 / 숨기기 / 팀에서 빼기 */
 .os-ctx-back { position: fixed; inset: 0; z-index: 45; }

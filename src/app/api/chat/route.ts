@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { onboardingForChat } from '@/domains/os/onboarding'
+import { wantsWebSearch, WEB_SEARCH_PROMPT, SEARCH_OFFER_PROMPT } from '@/domains/chat/search-intent'
 import { getMentorById, getPublicMentorById, buildSystemPrompt, buildGeminiHistory } from '@/domains/mentor'
 import { getUserChatContext } from '@/domains/user'
 import { generateChatStream, getUserMemories, saveUserMessage, saveAssistantMessage, updateSessionActivity, incrementDailyFreeUsage, detectCrisisKeywords, CRISIS_RESPONSE, ERROR_MESSAGES, extractAndSaveMemories, extractAndUpdateTopic } from '@/domains/chat'
-import { MAX_DAILY_FREE, MAX_DAILY_FREE_GUEST, FREE_TRIAL_OPEN, UNAVAILABLE_TEXT } from '@/domains/chat/constants'
+import { MAX_DAILY_FREE, MAX_DAILY_FREE_GUEST, FREE_TRIAL_OPEN, UNAVAILABLE_TEXT, TRUNCATED_NOTE } from '@/domains/chat/constants'
 import { isTrialActive } from '@/domains/trial'
 import { generateEmbedding, matchKnowledge } from '@/domains/knowledge'
 import { pickDriverFromEnv } from '@/domains/llm'
@@ -293,12 +295,22 @@ export async function POST(req: Request) {
         let userProfile: Record<string, unknown> | null = null
         let memories: { content: string; memory_type: string }[] | null = null
 
+        // 가입 때 적은 하는 일·소속·맡길 일 (서버 전용 표라 관리자 연결로 읽는다. 모든 봇이 같이 본다)
+        let onboarding = onboardingForChat(null)
+
         if (user) {
             userProfile = await getUserChatContext(supabase, user.id)
             memories = await getUserMemories(supabase, user.id, mentorId)
+            try {
+                const { data: onb } = await createAdminClient().from('user_onboarding').select('occupation, org_name, use_cases').eq('user_id', user.id).maybeSingle()
+                onboarding = onboardingForChat(onb)
+            } catch (e) {
+                console.error('[chat] onboarding', e instanceof Error ? e.message : e)
+            }
         }
+        const hasOnboarding = !!(onboarding.occupation || onboarding.orgName || onboarding.useCases.length)
         // 💾 의미 답 저장소: 이 사람만의 정보(기억, 프로필, 고민, 스킬)가 답에 들어가면 저장 답을 쓰지도 저장하지도 않는다
-        let personalized = (memories?.length ?? 0) > 0 || !!(userProfile && (
+        let personalized = hasOnboarding || (memories?.length ?? 0) > 0 || !!(userProfile && (
             userProfile.display_name || (Array.isArray(userProfile.interests) && userProfile.interests.length > 0) || userProfile.concern || userProfile.birth_year
         ))
 
@@ -354,6 +366,7 @@ export async function POST(req: Request) {
                 interests: userProfile.interests as string[],
                 concern: userProfile.concern as string,
                 birthYear: userProfile.birth_year as number,
+                ...onboarding,
             } : null,
             memories,
         )
@@ -663,6 +676,12 @@ export async function POST(req: Request) {
         const canary = makeCanary()
         systemPrompt = `${systemPrompt}\n\n${confidentialityPrompt(canary)}`
 
+        // 🔍 검색을 부탁한 말이면 이번 한 번은 구글 검색이 되는 Gemini 가 답한다 (domains/chat/search-intent)
+        const webSearch = !attachedImage && responseSettings.recencyOn !== false && wantsWebSearch(lastUserMessage)
+        const canSearch = !attachedImage && responseSettings.recencyOn !== false && !!process.env.GEMINI_API_KEY
+        if (webSearch && canSearch) systemPrompt = `${systemPrompt}\n\n${WEB_SEARCH_PROMPT}`
+        else if (canSearch) systemPrompt = `${systemPrompt}\n\n${SEARCH_OFFER_PROMPT}`
+
         // Gemini 대화 히스토리 구성 (domains/mentor)
         const geminiMessages = buildGeminiHistory(responseSettings.initialMessage || mentor.greeting_message, messages, attachedImage)
 
@@ -674,7 +693,7 @@ export async function POST(req: Request) {
         try {
             const 사용자말수 = (Array.isArray(messages) ? messages : []).filter((m: { role?: string }) => m?.role === 'user').length
             const 판정 = cacheEligibility({
-                enabled: semanticCacheEnabled(),
+                enabled: semanticCacheEnabled() && !webSearch,
                 userTurns: 사용자말수,
                 text: lastUserMessage,
                 hasLink: !!링크차례.text,
@@ -710,10 +729,10 @@ export async function POST(req: Request) {
             console.warn('[Chat Cache] 건너뜀:', cacheErr instanceof Error ? cacheErr.message : cacheErr)
         }
 
-        const llmDriver = 저장답 !== null ? 'cache' : pickDriverFromEnv(!!attachedImage)
+        const llmDriver = 저장답 !== null ? 'cache' : (webSearch && process.env.GEMINI_API_KEY ? 'gemini' : pickDriverFromEnv(!!attachedImage))
         const response = 저장답 !== null
             ? cachedAnswerStream(저장답)
-            : await generateChatStream(systemPrompt, geminiMessages, { maxOutputTokens: responseSettings.maxOutputTokens, recencyOn: responseSettings.recencyOn, usage: { route: '/api/chat', userId: user?.id ?? null, mentorId } })
+            : await generateChatStream(systemPrompt, geminiMessages, { maxOutputTokens: responseSettings.maxOutputTokens, recencyOn: responseSettings.recencyOn, webSearch, truncationNote: true, usage: { route: '/api/chat', userId: user?.id ?? null, mentorId } })
 
         // SSE 스트림 생성
         const encoder = new TextEncoder()
@@ -775,7 +794,7 @@ export async function POST(req: Request) {
                     if (outputGuard.tripped) console.warn('[Chat Guard] 카나리 유출 차단', JSON.stringify({ mentorId, userId: user?.id ?? null, pattern: extractionPattern }))
 
                     // 💾 새로 만든 답을 저장해 둔다 (좁은 조건을 다 통과했을 때만, 기다리지 않는다)
-                    if (답저장자리 && isStorableAnswer({ text: fullResponse, guardTripped: outputGuard.tripped, answeredBy, allowGemini: cacheAllowsGemini(), unavailableText: UNAVAILABLE_TEXT })) {
+                    if (답저장자리 && !fullResponse.includes(TRUNCATED_NOTE) && isStorableAnswer({ text: fullResponse, guardTripped: outputGuard.tripped, answeredBy, allowGemini: cacheAllowsGemini(), unavailableText: UNAVAILABLE_TEXT })) {
                         const 자리 = 답저장자리
                         keepAliveAfterResponse(storeCachedAnswer(createAdminClient(), {
                             embedding: 자리.embedding, mentorId, scopeKey: 자리.scopeKey, version: 자리.version,
@@ -891,7 +910,7 @@ export async function POST(req: Request) {
                     }
 
                     controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ text: '', done: true, fullResponse, sources: responseSettings.citationsOn ? usedSources : [], readUrls, ...(overageLeft !== null ? { cloverBalance: overageLeft } : {}) })}\n\n`)
+                        encoder.encode(`data: ${JSON.stringify({ text: '', done: true, fullResponse, sources: responseSettings.citationsOn ? usedSources : [], readUrls, ...(overageLeft !== null ? { cloverBalance: overageLeft } : {}), ...(overageCharge ? { cloverSpent: overageCharge.amount } : {}) })}\n\n`)
                     )
                 } catch (error) {
                     await returnOverageClovers(overageCharge)

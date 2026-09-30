@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
     CLOVER_OVERAGE_ENABLED, CLOVER_COST, chatCloverCost, cloverBalanceNote, packAnswerHint, readCloverAuto, fillCopy, USAGE_COPY, REFUND_NOTICE, PLAN_REASON,
-    OVERAGE_COPY, overageStep, MONTHLY_LIMITS,
+    OVERAGE_COPY, overageStep, MONTHLY_LIMITS, overageSheetNote, cloverSpentText,
 } from '../usage-config'
 import { usageView } from '../usage'
 
@@ -73,5 +73,22 @@ describe('고객 화면 횟수 표기 없음 (대표 지시 0929): /os/charge', 
         expect(src).not.toMatch(COUNT)
         expect(src).not.toContain('packAnswerHint')
         expect(src).not.toContain('remaining')
+    })
+})
+
+describe('클로버 이어 쓰기 창과 답 아래 표시 (0930 대표 「매번 승인 번거로워, 클로버 주는 게 보이면 좋겠어」)', () => {
+    it('창에 한 번에 쓰는 클로버와 남은 클로버를 보여 준다 (원화 환산 없음)', () => {
+        expect(overageSheetNote(1240, 5, 15)).toBe('답 하나에 클로버 5개(사진이 있으면 15개)가 쓰여요. 지금 1240개 남았어요.')
+        expect(overageSheetNote(null, 5, 5)).toBe('답 하나에 클로버 5개가 쓰여요.')
+        expect(overageSheetNote(1240, 5)).not.toMatch(/원/)
+    })
+    it('답 아래 한 줄', () => {
+        expect(cloverSpentText(5, 1235)).toBe('🍀 클로버 5개 씀, 1235개 남음')
+        expect(cloverSpentText(5, null)).toBe('🍀 클로버 5개 씀')
+    })
+    it('이어 쓰기 창 문구: 이번 대화 동안 다시 묻지 않고, 앞으로도 안 묻게 고를 수 있다', () => {
+        expect(OVERAGE_COPY.continueBtn).toContain('클로버로 이어 쓰기')
+        expect(OVERAGE_COPY.sessionNote).toContain('이 대화에서는 다시 묻지 않아요')
+        expect(OVERAGE_COPY.alwaysLabel).toContain('앞으로도 묻지 않기')
     })
 })

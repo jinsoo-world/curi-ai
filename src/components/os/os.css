@@ -531,6 +531,7 @@
 /* ── 클로버 잔량 띠 안의 충전 링크 ── */
 .os-clover-bar .os-clover-charge { margin-left: auto; color: var(--os-포인트); text-decoration: none; font-size: 13.5px; padding: 6px 10px; border-radius: 10px; }
 .os-clover-bar .os-clover-charge:hover { background: var(--os-말풍선); }
+.os-clover-spent { margin: 4px 0 0; font-size: 12.5px; color: var(--os-글-흐림); }
 
 /* ── 루틴 (오른쪽 세부칸) ── */
 .os-routine { background: var(--os-말풍선); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; font-size: 14.5px; color: var(--os-글); }

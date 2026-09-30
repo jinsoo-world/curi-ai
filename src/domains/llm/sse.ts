@@ -67,6 +67,16 @@ export function extractDeltaText(payload: string): string {
     }
 }
 
+/** 답이 왜 끝났나 (length = 길이 상한에 걸려 잘림). 없으면 null */
+export function extractFinishReason(payload: string): string | null {
+    try {
+        const r = JSON.parse(payload)?.choices?.[0]?.finish_reason
+        return typeof r === 'string' ? r : null
+    } catch {
+        return null
+    }
+}
+
 /** 마지막 조각에 실려 오는 사용량. 없으면 null (가짜 숫자를 만들지 않는다) */
 export function extractUsage(payload: string): LlmUsage | null {
     try {

@@ -148,3 +148,60 @@ describe('buildSystemPrompt — 봇 이름과 대화 상대 이름 구분', () =
         expect(prompt).toContain('상대의 이름이 당신 이름과 같습니다')
     })
 })
+
+describe('buildSystemPrompt — 대화 원칙 (0930 기획팀장 대화 점검)', () => {
+    const 봇 = { name: '기획팀장', system_prompt: '당신은 기획팀장입니다.', greeting_message: '안녕하세요' }
+    const p = buildSystemPrompt(봇)
+    it('상대가 누군지, 오늘 무슨 이야기인지 짐작하지 않고, 들은 건 다시 묻지 않는다', () => {
+        expect(p).toContain('[🧭 대화 원칙]')
+        expect(p).toContain('짐작하지 마세요')
+        expect(p).toContain('이미 들은 것은 다시 묻지 마세요')
+    })
+    it('결론 먼저, 새 정보면 판단 고치기, 같은 목록 되풀이 금지', () => {
+        expect(p).toContain('결론을 먼저')
+        expect(p).toContain('앞의 판단을')
+        expect(p).toContain('되풀이하지 마세요')
+    })
+    it('입장을 정하고, 따져보기 전에 듣기 좋은 말부터 하지 않는다', () => {
+        expect(p).toContain('입장을 정하세요')
+        expect(p).toContain('듣기 좋은 말부터')
+    })
+    it('모르는 회사·최신 소식은 지어내지 않고, 공감은 한 줄, 못 하는 약속 금지', () => {
+        expect(p).toContain('확인한 정보가 없어요')
+        expect(p).toContain('공감은 한 줄')
+        expect(p).toContain('짐을 덜어드릴게요')
+    })
+    it('이모지는 첫인사·가벼운 잡담에만 (예전 「이모지 자연스럽게 1~2개」가 남으면 안 된다)', () => {
+        expect(p).not.toContain('이모지 자연스럽게 1~2개')
+        expect(p).toContain('이모지는 첫인사나 가벼운 잡담에만')
+    })
+    it('대화 원칙은 한 번만 들어간다', () => {
+        expect(p.match(/\[🧭 대화 원칙\]/g)).toHaveLength(1)
+    })
+})
+
+describe('buildSystemPrompt — 사용자 정보에 하는 일(온보딩) 넣기', () => {
+    const 봇 = { name: '기획팀장', system_prompt: '.', greeting_message: '안녕' }
+    it('직업·소속·쓰려는 일이 있으면 [사용자 정보]에 넣는다', () => {
+        const p = buildSystemPrompt(봇, { displayName: '지민', occupation: '강사', orgName: '큐리어스', useCases: ['홍보', '기획'] } as never)
+        expect(p).toContain('하는 일: 강사')
+        expect(p).toContain('소속: 큐리어스')
+        expect(p).toContain('큐리AI로 하려는 일: 홍보, 기획')
+    })
+    it('없으면 줄을 만들지 않는다', () => {
+        const p = buildSystemPrompt(봇, { displayName: '지민' } as never)
+        expect(p).not.toContain('하는 일:')
+    })
+})
+
+describe('buildGeminiHistory — 잘림 안내는 다음 턴 기록에서 뗀다 (코드 검토 0930)', () => {
+    it('봇 답 끝의 「이어서」 안내를 지우고 넘긴다 (모델이 따라 쓰지 않게)', async () => {
+        const { TRUNCATED_NOTE } = await import('@/domains/chat/constants')
+        const h = buildGeminiHistory('안녕', [
+            { role: 'user', content: '길게 말해줘' },
+            { role: 'assistant', content: `혹시 이${TRUNCATED_NOTE}` },
+            { role: 'user', content: '이어서' },
+        ])
+        expect(h[3]).toEqual({ role: 'model', parts: [{ text: '혹시 이' }] })
+    })
+})

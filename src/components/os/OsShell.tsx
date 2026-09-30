@@ -24,6 +24,7 @@ import NewBotSheet from './NewBotSheet'
 import { TWIN_DRAFT_COPY } from '@/domains/os/twin-draft-shared'
 import GuestRoster from './GuestRoster'
 import NewGroupSheet from './NewGroupSheet'
+import CloverBar from './CloverBar'
 import UsageBar from './UsageBar'
 import { IconStore, IconGear, IconUser, IconLogin, IconBack, IconPlug, PeopleIcon } from './Icons'
 import InstallPrompt from '@/components/pwa/InstallPrompt'
@@ -613,6 +614,8 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
                     <div className="os-left-bottom">
                         {/* 사용 한도 원형 = 「봇 마켓」 줄 바로 위 (대표 지시 0923). 누르면 사용량 모달 */}
                         {!demo && <div className="os-usage-slot"><UsageBar guest={guest} /></div>}
+                        {/* 남은 클로버 = 사용 한도 바로 아래 (대표 0930 「클로버 주는 게 눈에 보이면 좋겠어」). 손님은 안 보인다 */}
+                        {!demo && !guest && <div className="os-clover-slot"><CloverBar guest={guest} /></div>}
                         {/* 봇 마켓은 뼈대 안(/os/market)에서 그린다 = 왼쪽 명단이 남아 있어 뒤로도, 봇 타일로도 대화로 돌아온다 */}
                         <Link href={`/os/market${q}`} className="os-row-btn" aria-current={pathname.startsWith('/os/market')} style={{ textDecoration: 'none' }}><IconStore /> <span>봇 마켓</span></Link>
                         <Link href="/os/connect" className="os-row-btn" aria-current={pathname.startsWith('/os/connect')} style={{ textDecoration: 'none' }}><IconPlug /> <span>연결</span></Link>

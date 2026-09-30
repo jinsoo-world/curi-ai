@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { getCreditBalance } from '@/domains/credit'
+import { 클로버듣기, 클로버씀듣기 } from '@/lib/clover-bus'
 import { cloverBarView } from '@/domains/os/settings'
 
 export default function CloverBar({ guest }: { guest: boolean }) {
@@ -17,7 +18,10 @@ export default function CloverBar({ guest }: { guest: boolean }) {
         if (guest) return
         let alive = true
         getCreditBalance().then(n => { if (alive) setBalance(n) }).catch(() => { })
-        return () => { alive = false }
+        // 대화에서 클로버를 쓰거나 충전하면 새로고침 없이 바로 바뀐다 (대표 0930 「클로버 주는 게 눈에 보이면 좋겠어」)
+        const 끄기1 = 클로버듣기(n => setBalance(n))
+        const 끄기2 = 클로버씀듣기(n => setBalance(b => (b === null ? b : Math.max(0, b - n))))
+        return () => { alive = false; 끄기1(); 끄기2() }
     }, [guest])
 
     const view = cloverBarView(balance, guest, pathname)

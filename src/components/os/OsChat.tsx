@@ -25,8 +25,9 @@ import { FIRST_HELP_CHIPS, SAMPLE_EXCHANGE } from '@/domains/os/onboarding'
 import './first-sample.css'
 import UsageLimitCard from './UsageLimitCard'
 import { isUsageLike, USAGE_EVENT } from '@/domains/os/usage'
-import { 클로버알림 } from '@/lib/clover-bus'
-import { CLOVER_OVERAGE_ENABLED, OVERAGE_COPY, readCloverAuto } from '@/domains/os/usage-config'
+import { 클로버알림, 지금클로버 } from '@/lib/clover-bus'
+import { CLOVER_OVERAGE_ENABLED, CLOVER_AUTO_KEY, OVERAGE_COPY, readCloverAuto, overageSheetNote, cloverSpentText, chatCloverCost } from '@/domains/os/usage-config'
+import { getCreditBalance } from '@/domains/credit'
 import { isLoginGateReply } from '@/domains/os/audience'
 import { takeAsk } from '@/domains/os/showcase'
 import SocialStartLinks from './SocialStartLinks'
@@ -87,6 +88,9 @@ interface Msg {
     /** 한도 카드 (U9). warn = 알림 퍼센트 넘음, limit = 이번 달 한도 다 씀. 답 아래에 붙기만 한다 */
     usageCard?: 'warn' | 'limit'
     usagePct?: number
+    /** 한도 뒤 클로버로 이어 쓴 답이면 쓴 클로버와 남은 클로버 (대표 0930 「클로버 주는 게 보이면 좋겠어」) */
+    cloverSpent?: number
+    cloverLeft?: number | null
 }
 
 /** 80% 알림은 달마다 한 번만 (브라우저에 적어 둔다) */
@@ -445,6 +449,19 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
     const [overageAsk, setOverageAsk] = useState<string | null>(null)
     const [retryText, setRetryText] = useState<string | null>(null)
     const cloverOkOnce = useRef(false)
+    /** 이 대화에서 한 번 이어 쓰기를 골랐으면 방을 나갈 때까지 다시 묻지 않는다 (대표 0930 「매번 승인 번거로워」) */
+    const cloverOkSession = useRef(false)
+    const [overageCost, setOverageCost] = useState<number>(chatCloverCost())
+    const [overageBalance, setOverageBalance] = useState<number | null>(null)
+    const [overageAlways, setOverageAlways] = useState(false)
+    /** 이어 쓰기 창을 연다: 체크 칸은 꺼진 채로, 한 번에 쓰는 클로버와 지금 잔액을 채운다 (평소 대화, @멘션 둘 다) */
+    const openOverage = useCallback((text: string, cost: number | null) => {
+        setOverageAlways(false)
+        if (cost !== null) setOverageCost(cost)
+        setOverageBalance(지금클로버())
+        void getCreditBalance().then(n => { if (typeof n === 'number') setOverageBalance(n) }).catch(() => { })
+        setOverageAsk(text)
+    }, [])
 
     // 답을 다 받은 뒤 사용량을 한 번 읽어 원형 게이지를 고치고, 80% 를 넘었으면 이번 달 한 번만 알림 카드
     const refreshUsage = useCallback((botId: string) => {
@@ -482,7 +499,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
             setMessages(list)
             setStreaming(true)
             setState('thinking')
-            const cloverOk = CLOVER_OVERAGE_ENABLED && !guest ? (cloverOkOnce.current || readCloverAuto(window.localStorage)) : undefined
+            const cloverOk = CLOVER_OVERAGE_ENABLED && !guest ? (cloverOkOnce.current || cloverOkSession.current || readCloverAuto(window.localStorage)) : undefined
             cloverOkOnce.current = false
             const 차례: { to: ReplyBot; from: ReplyBot; question: string; asRow: boolean }[] =
                 멘션.targets.map((to, k) => ({ to, from: room, question: 멘션.question, asRow: k > 0 }))
@@ -523,7 +540,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                         ...(r.planLimited ? { usageCard: 'limit' as const } : {}),
                     })
                     setMessages(list)
-                    if (r.planLimited) { if (r.askOverage) setOverageAsk(text); 막힘 = true; break }
+                    if (r.planLimited) { if (r.askOverage) openOverage(text, null); 막힘 = true; break }
                     if (r.loginGate) { 막힘 = true; break }
                     if (!r.full || r.full.includes(UNAVAILABLE_TEXT)) continue
                     const 다음 = 이어짐 < MAX_CHAIN_HOPS ? nextChainTarget(r.full, replyBots, job.to.mentorId) : null
@@ -669,7 +686,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                     inputMethod: 'text',
                     visitorId: guest ? getVisitorId() : undefined,
                     ...(guest ? { guestMessageCount: 0 } : {}),
-                    ...(CLOVER_OVERAGE_ENABLED && !guest ? { cloverOk: cloverOkOnce.current || readCloverAuto(window.localStorage) } : {}),
+                    ...(CLOVER_OVERAGE_ENABLED && !guest ? { cloverOk: cloverOkOnce.current || cloverOkSession.current || readCloverAuto(window.localStorage) } : {}),
                 }),
             })
             cloverOkOnce.current = false
@@ -684,6 +701,9 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
             let loginGate = false
             let planLimited = false
             let askOverage = false
+            let cloverSpent = 0
+            let cloverLeft: number | null = null
+            let limitCost: number | null = null
             while (true) {
                 const { done, value } = await reader.read()
                 if (done) break
@@ -709,7 +729,9 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                             // 요금제 월간 한도에 닿음 (봇 주인이 정한 방문자 캡은 결제로 풀리지 않으니 카드 없음)
                             if (d.done && d.usageLimit && !d.visitorBotLimit) planLimited = true
                             if (d.done && d.overageAsk) askOverage = true
-                            if (d.done && typeof d.cloverBalance === 'number') 클로버알림(d.cloverBalance)
+                            if (d.done && typeof d.cloverCost === 'number') limitCost = d.cloverCost
+                            if (d.done && typeof d.cloverBalance === 'number') { 클로버알림(d.cloverBalance); cloverLeft = d.cloverBalance }
+                            if (d.done && typeof d.cloverSpent === 'number') cloverSpent = d.cloverSpent
                         } catch { /* 조각 하나 깨진 건 넘어간다 */ }
                     }
                 }
@@ -721,9 +743,10 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
             }
             else if (sources.length > 0 || readUrls.length > 0) setMessages([...base, { id: botId, role: 'assistant', createdAt: nowIso, content: full, sources, readUrls }])
             // 한도 카드 (U9): 막혔으면 그 말 아래 도달 카드. 클로버 이어 쓰기가 켜져 있으면 확인 창을 한 번 띄운다
+            if (cloverSpent > 0 && full && !full.includes(UNAVAILABLE_TEXT)) setMessages(prev => prev.map(x => x.id === botId ? { ...x, cloverSpent, cloverLeft } : x))
             if (planLimited) {
                 setMessages(prev => prev.map(x => x.id === botId ? { ...x, usageCard: 'limit' } : x))
-                if (askOverage) setOverageAsk(text)
+                if (askOverage) openOverage(text, limitCost)
             } else if (!guest && full && !loginGate && !full.includes(UNAVAILABLE_TEXT)) {
                 refreshUsage(botId)
             }
@@ -736,7 +759,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
             setStreaming(false)
         }
         // === 전달(relay), 사진 첨부 === team, openNewGroup, name, photos 가 더 들어간다
-    }, [input, streaming, messages, mentorId, guest, bot, ensureSession, team, openNewGroup, name, photos, mention, replyBots, refreshUsage])
+    }, [input, streaming, messages, mentorId, guest, bot, ensureSession, team, openNewGroup, name, photos, mention, replyBots, refreshUsage, openOverage])
 
     // 확인 창에서 「클로버로 이어 쓰기」: 막힌 말과 안내를 지우고 같은 말을 다시 보낸다 (effect 본문에서 바로 setState 하지 않는다 = 린트 규칙)
     useEffect(() => {
@@ -760,6 +783,8 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
         setOverageAsk(null)
         if (!t) return
         cloverOkOnce.current = true
+        cloverOkSession.current = true
+        if (overageAlways) { try { window.localStorage.setItem(CLOVER_AUTO_KEY, '1') } catch { /* 저장 막힘이면 이 대화에서만 */ } }
         // 막힌 사람 말부터 뒤를 지운다 (평소 대화 = 끝 2줄, @멘션 = 안내 줄과 불린 봇 답까지)
         setMessages(prev => {
             let k = prev.length - 1
@@ -951,6 +976,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                                             <LinkCards {...linkCardsFor(m, messages[i - 1]?.role === 'user' ? messages[i - 1].content : undefined)} />
                                         )}
                                         {m.usageCard && <UsageLimitCard kind={m.usageCard} pct={m.usagePct ?? 0} />}
+                                        {m.cloverSpent ? <div className="os-clover-spent">{cloverSpentText(m.cloverSpent, m.cloverLeft ?? null)}</div> : null}
                                     </>
                                 )}
                             </MsgRow>
@@ -966,7 +992,12 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                 {overageAsk !== null && (
                     <div className="os-sheet-back" data-theme="os" role="dialog" aria-modal="true" aria-label="클로버로 이어 쓰기" onClick={() => setOverageAsk(null)}>
                         <div className="os-sheet" onClick={e => e.stopPropagation()}>
-                            <p style={{ fontSize: 17, lineHeight: 1.6, margin: '4px 0 16px' }}>{OVERAGE_COPY.confirm}</p>
+                            <p style={{ fontSize: 17, lineHeight: 1.6, margin: '4px 0 8px' }}>{OVERAGE_COPY.confirm}</p>
+                            <p style={{ fontSize: 15, lineHeight: 1.6, margin: '0 0 12px', color: 'var(--os-글-연)' }}>🍀 {overageSheetNote(overageBalance, overageCost)} {OVERAGE_COPY.sessionNote}</p>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, margin: '0 0 16px', cursor: 'pointer' }}>
+                                <input type="checkbox" checked={overageAlways} onChange={e => setOverageAlways(e.target.checked)} />
+                                <span>{OVERAGE_COPY.alwaysLabel}</span>
+                            </label>
                             <div className="os-sheet-foot" style={{ justifyContent: 'flex-end', gap: 8 }}>
                                 <button type="button" className="os-btn" onClick={() => setOverageAsk(null)}>{OVERAGE_COPY.waitBtn}</button>
                                 <button type="button" className="os-btn primary" onClick={continueWithClovers}>{OVERAGE_COPY.continueBtn}</button>

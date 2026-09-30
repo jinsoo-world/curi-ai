@@ -1,13 +1,18 @@
 // domains/mentor — 시스템 프롬프트 조립
 
 import type { User, Mentor } from '@/types'
-import { ANSWER_FORMAT_RULE, ANSWER_HONESTY_RULES } from './answer-rules'
+import { ANSWER_FORMAT_RULE, ANSWER_HONESTY_RULES, CONVERSATION_RULES } from './answer-rules'
+import { TRUNCATED_NOTE } from '@/domains/chat/constants'
 
 interface UserContext {
     displayName?: string | null
     interests?: string[] | null
     concern?: string | null
     birthYear?: number | null
+    /** 온보딩에서 받은 하는 일·소속·쓰려는 일 (모든 봇이 같이 본다) */
+    occupation?: string | null
+    orgName?: string | null
+    useCases?: string[] | null
 }
 
 interface MemoryItem {
@@ -168,6 +173,8 @@ ${ANSWER_FORMAT_RULE}
 
 ${ANSWER_HONESTY_RULES}
 
+${CONVERSATION_RULES}
+
 [🔄 잡담]
 일상 대화 3턴 이상이면 유저 관심사로 가볍게 연결 시도.
 유저가 계속 잡담 원하면 따라가세요. 강제 전환 금지.
@@ -182,7 +189,8 @@ ${ANSWER_HONESTY_RULES}
 예시 (O): "가장 빠른 방법은 이미 잘 아는 주제로 시작하는 거예요. 혹시 특히 관심 가는 분야가 있으세요?"
 
 [형식]
-이모지 자연스럽게 1~2개. 채팅이지 보고서가 아닙니다.`)
+이모지는 첫인사나 가벼운 잡담에만 1개 쓰고, 조언이나 판단을 말하는 답에는 쓰지 마세요. (아래 [봇 스타일 가이드]에 이모지 설정이 있으면 그걸 따릅니다.)
+채팅이지 보고서가 아닙니다.`)
 
     // ── ⑤ 스타일 템플릿 (DB에서 동적 로드) ──
     const st = mentor.style_template
@@ -245,6 +253,15 @@ ${ANSWER_HONESTY_RULES}
                     lines.push(`→ 상대의 이름이 당신 이름과 같습니다. 헷갈리지 않게 상대는 "${userContext.displayName}님", 자신은 "저"라고 부르세요.`)
                 }
             }
+        }
+        if (userContext.occupation) {
+            lines.push(`하는 일: ${userContext.occupation}`)
+        }
+        if (userContext.orgName) {
+            lines.push(`소속: ${userContext.orgName}`)
+        }
+        if (userContext.useCases?.length) {
+            lines.push(`큐리AI로 하려는 일: ${userContext.useCases.join(', ')}`)
         }
         if (userContext.interests?.length) {
             lines.push(`관심사: ${userContext.interests.join(', ')}`)
@@ -324,7 +341,9 @@ export function buildGeminiHistory(
             }
             // 사진만 보낸 메시지는 글이 비어 있다. 그게 과거 기록이 되는 다음 턴에
             // 빈 글자를 그대로 넘기면 Gemini 가 거절해 그 대화방 전체가 멈춘다.
-            const text = msg.content || (role === 'user' ? '(사진)' : '(내용 없음)')
+            // 잘린 답에 붙였던 「이어서」 안내는 모델에게 다시 넘기지 않는다 (따라 쓰지 않게)
+            const content = role === 'model' ? (msg.content || '').replace(TRUNCATED_NOTE, '') : msg.content
+            const text = content || (role === 'user' ? '(사진)' : '(내용 없음)')
             return { role, parts: [{ text }] }
         }),
     ]

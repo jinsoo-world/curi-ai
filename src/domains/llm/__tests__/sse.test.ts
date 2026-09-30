@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseSseBuffer, readSseStream, extractDeltaText, extractUsage } from '../sse'
+import { parseSseBuffer, readSseStream, extractDeltaText, extractUsage, extractFinishReason } from '../sse'
 
 /** 문자열 조각들을 서버가 보내는 것처럼 흘려주는 가짜 스트림 */
 function streamOf(chunks: string[]): ReadableStream<Uint8Array> {
@@ -51,5 +51,15 @@ describe('llm/sse — 서버가 흘려주는 조각 읽기', () => {
         const u = extractUsage('{"choices":[],"usage":{"prompt_tokens":57,"completion_tokens":29,"total_tokens":86}}')
         expect(u).toEqual({ prompt: 57, completion: 29, total: 86 })
         expect(extractUsage('{"choices":[{"delta":{"content":"x"}}]}')).toBeNull()
+    })
+})
+
+describe('extractFinishReason — 답이 왜 끝났나 (0930 답 잘림)', () => {
+    it('길이 상한에 걸리면 length', () => {
+        expect(extractFinishReason('{"choices":[{"delta":{},"finish_reason":"length"}]}')).toBe('length')
+    })
+    it('없거나 깨진 조각이면 null', () => {
+        expect(extractFinishReason('{"choices":[{"delta":{"content":"가"}}]}')).toBeNull()
+        expect(extractFinishReason('{깨짐')).toBeNull()
     })
 })

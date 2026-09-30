@@ -6,6 +6,8 @@
 //
 // 순수 함수(프롬프트 만들기, 답 읽기, 폴백 점수)는 시험 대상이다. 모델 호출은 주입받는다.
 
+import { CONVERSATION_RULES } from '@/domains/mentor/answer-rules'
+
 /** @ 없이 말했을 때 한 번에 답할 수 있는 봇 수 상한 (대개 1, 드물게 이만큼) */
 export const MAX_GROUP_REPLIES = 3
 
@@ -155,5 +157,6 @@ export function buildGroupSystemPrompt(me: RouterBot, others: RouterBot[], mode:
     if (mode === 'routed-next') {
         줄.push(`- 앞에서 다른 봇이 이미 답했다. 네 역할로 꼭 덧붙일 게 없으면 ${PASS_TOKEN} 한 단어만 쓴다.`)
     }
-    return `${나}\n\n${줄.join('\n')}`
+    // 대화 원칙을 먼저, 방 규칙(특히 「덧붙일 것 없으면 패스」)을 맨 끝에 둔다
+    return `${나}\n\n${CONVERSATION_RULES}\n\n${줄.join('\n')}`
 }

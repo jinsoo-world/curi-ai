@@ -138,3 +138,10 @@ describe('buildGroupSystemPrompt — 봇 고유 프롬프트가 주인공, 방�
         expect(buildRouterPrompt('안녕', 봇들).system).not.toMatch(/[·—]/)
     })
 })
+
+describe('buildGroupSystemPrompt — 1:1과 같은 대화 원칙 (0930)', () => {
+    it('그룹방 봇에도 [🧭 대화 원칙]이 한 번 들어간다', () => {
+        const p = buildGroupSystemPrompt(봇들[0], 봇들.slice(1), 'mention')
+        expect(p.match(/\[🧭 대화 원칙\]/g)).toHaveLength(1)
+    })
+})
