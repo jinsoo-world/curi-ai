@@ -14,7 +14,7 @@ export async function POST() {
     if (!user) return NextResponse.json({ error: '로그인이 필요해요' }, { status: 401 })
     const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || '주인'
     try {
-        const { team, created } = await bootstrapDefaultTeam(createAdminClient(), { id: user.id, displayName })
+        const { team, created } = await bootstrapDefaultTeam(createAdminClient(), { id: user.id, displayName, ownerName: user.user_metadata?.full_name || '' })
         return NextResponse.json({ team, created })
     } catch (e) {
         if (e instanceof TeamTableMissing) return NextResponse.json({ team: [], tableMissing: true })

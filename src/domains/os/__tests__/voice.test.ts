@@ -177,7 +177,7 @@ describe('os/twin — 디지털 나 설명 조립', () => {
 
     it('presets.buildBotPrompt 는 그대로다 (트윈은 따로 만든다)', () => {
         const old = buildBotPrompt(input, '열정진')
-        expect(old).toContain('AI 팀원(봇)이다')
+        expect(old).toContain('저는 열정진님 팀의')
         expect(old).not.toContain('[말투 규칙')
         expect(old).not.toContain('디지털 분신')
     })

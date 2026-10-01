@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     }
     const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || '주인'
     try {
-        const bot = await createTeamBot(createAdminClient(), { id: user.id, displayName }, input)
+        const bot = await createTeamBot(createAdminClient(), { id: user.id, displayName, ownerName: user.user_metadata?.full_name || '' }, input)
         return NextResponse.json({ bot })
     } catch (e) {
         if (e instanceof TeamTableMissing) return NextResponse.json({ error: '봇 팀 표가 아직 준비되지 않았어요(관리자에게 알려 주세요)', tableMissing: true }, { status: 503 })
