@@ -11,6 +11,7 @@ import {
 } from '@/domains/creator'
 import { recheckAfterKnowledge } from '@/domains/os/publish-gate'
 import { moderationReply } from '@/domains/os/moderation'
+import { requireMentorOwner } from '@/lib/mentor-owner'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60   // 공개 단계에서 AI 확인(최대 25초)을 기다린다
@@ -106,15 +107,20 @@ export async function POST(req: NextRequest) {
                     )
                 }
 
+                // 🔒 이 AI 의 주인만 통과 (다른 크리에이터 창구와 같은 관문). 없으면 남의 AI 에 자료를 심을 수 있었다
+                const owner = await requireMentorOwner(mentorId)
+                if (!owner.ok) {
+                    return NextResponse.json({ error: owner.error }, { status: owner.status })
+                }
+
                 await setMentorKnowledge(admin, {
                     mentorId,
                     knowledgeText,
                     knowledgeUrls,
                 })
 
-                // 공개 중인(또는 확인 대기 중인) 내 봇이면 새 자료까지 다시 확인한다 (응답 뒤)
-                const { data: mine } = await admin.from('mentors').select('id').eq('id', mentorId).eq('creator_id', creator.id).maybeSingle()
-                if (mine) after(() => recheckAfterKnowledge(admin, { mentorId, actorUserId: user.id }))
+                // 공개 중인(또는 확인 대기 중인) 봇이면 새 자료까지 다시 확인한다 (응답 뒤)
+                after(() => recheckAfterKnowledge(admin, { mentorId, actorUserId: user.id }))
 
                 return NextResponse.json({ success: true })
             }

@@ -29,6 +29,7 @@ vi.mock('@supabase/supabase-js', () => ({ createClient: () => fakeDb() }))
 import { PATCH as updatePatch } from '@/app/api/creator/mentor/update/route'
 import { POST as mentorPost } from '@/app/api/creator/mentor/route'
 import { createMentorDraft } from '@/domains/creator'
+import { requireMentorOwner } from '@/lib/mentor-owner'
 
 beforeEach(() => { applyBotEdit.mockReset(); recheckAfterKnowledge.mockClear(); inserts.length = 0 })
 
@@ -91,6 +92,17 @@ describe('/api/creator/mentor step publish — 옛 만들기 마지막 단계', 
     it('3단계(자료)를 넣으면 공개 중인 봇을 다시 확인하게 한다', async () => {
         await mentorPost(req('http://x', 'POST', { step: 3, mentorId: 'm1', knowledgeText: '자료 글' }))
         expect(recheckAfterKnowledge).toHaveBeenCalledWith(expect.anything(), { mentorId: 'm1', actorUserId: 'u1' })
+    })
+})
+
+describe('/api/creator/mentor step 3 — 주인 확인', () => {
+    it('내 AI 가 아니면 403, 자료를 넣지도 다시 확인하지도 않는다', async () => {
+        vi.mocked(requireMentorOwner).mockResolvedValueOnce({ ok: false, error: '권한이 없습니다.', status: 403 })
+        const res = await mentorPost(req('http://x', 'POST', { step: 3, mentorId: 'someone-else', knowledgeText: '남의 봇에 심는 글' }))
+        expect(res.status).toBe(403)
+        expect(inserts).toHaveLength(0)
+        expect(recheckAfterKnowledge).not.toHaveBeenCalled()
+        expect(requireMentorOwner).toHaveBeenCalledWith('someone-else')
     })
 })
 
