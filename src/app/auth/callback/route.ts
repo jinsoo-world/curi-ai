@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { SIGNUP_CLOVERS } from '@/domains/trial'
 import { safeNextPath } from '@/lib/safe-next'
 import { onboardingPathWithNext } from '@/domains/share/guestSignup'
 import { cookies } from 'next/headers'
 import { TERMS_COOKIE, parseTermsCookie } from '@/domains/os/onboarding'
-import { ensureOnboardingRow, attributeReferral } from '@/domains/os/onboarding-server'
+import { runAfterLogin, adminDbOr } from '@/domains/auth/after-login'
 
 /** 새 가입자가 먼저 가는 온보딩 화면 (대표 승인 0928) */
 const ONBOARDING_PATH = '/os/start'
@@ -32,173 +31,26 @@ export async function GET(request: Request) {
             } = await supabase.auth.getUser()
 
             if (user) {
-                // Admin 클라이언트 사용 (RLS 우회)
-                let db = supabase
-                const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-                const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-                if (serviceKey && supabaseUrl) {
-                    const { createClient: createSupabaseClient } = require('@supabase/supabase-js')
-                    db = createSupabaseClient(supabaseUrl, serviceKey, {
-                        auth: { autoRefreshToken: false, persistSession: false },
-                    })
-                }
-
-                // 가입 선물 — 대표 확정 2026-09-15
-                //
-                // 🚨 2026-09-15 수리 = 이 블록이 원래 「users 행이 아직 없을 때」 안에만 있었다.
-                // 그런데 Supabase 는 가입하는 순간 users 행을 먼저 만든다. 그래서 여기 도착했을 땐
-                // 이미 행이 있고, 선물 블록을 통째로 건너뛰었다. 실제로 받은 사람이 한 명도 없었다
-                // (대표 지적 「jin 구글 계정에는 왜 클로버가 0개임」).
-                // 이제 프로필이 있든 없든 돈다. 두 번 주는 것은 credit_transactions 기록이 막는다.
-                // 이미 가입한 분들도 다음 로그인 때 자동으로 받는다.
-                try {
-                    const { data: 이미받음 } = await db
-                        .from('credit_transactions')
-                        .select('id')
-                        .eq('user_id', user.id)
-                        .eq('type', 'signup_bonus')
-                        .limit(1)
-
-                    if (!이미받음?.length) {
-                        const { data: 새잔액, error: 더하기오류 } = await db.rpc('클로버_더하기', {
-                            그사람: user.id,
-                            더할값: SIGNUP_CLOVERS,
-                        })
-                        if (더하기오류) {
-                            console.error('[Auth Callback] 가입 선물 지급 실패:', 더하기오류.message)
-                        } else {
-                            await db.from('credit_transactions').insert({
-                                user_id: user.id,
-                                amount: SIGNUP_CLOVERS,
-                                balance_after: 새잔액 ?? SIGNUP_CLOVERS,
-                                type: 'signup_bonus',
-                                description: '가입 선물',
-                            })
-                        }
-                    }
-                } catch (선물오류) {
-                    // 선물에 실패해도 로그인은 막지 않는다
-                    console.error('[Auth Callback] 가입 선물 실패:', 선물오류)
-                }
-
-                // 새 가입자 온보딩 (대표 승인 0928). 가입 트리거가 users 행을 먼저 만들어 아래 「첫 로그인」 분기는
-                // 거의 돌지 않는다. 그래서 새 회원 여부, 약관 동의 시각, 초대 링크 귀속은 여기서 따로 처리한다.
-                let goOnboarding = false
-                try {
-                    const cookieStore = await cookies()
-                    goOnboarding = await ensureOnboardingRow(db, {
-                        userId: user.id,
-                        authCreatedAt: user.created_at,
-                        refCookie: cookieStore.get('curi_ref')?.value ?? null,
-                        termsAt: parseTermsCookie(cookieStore.get(TERMS_COOKIE)?.value),
-                        provider: user.app_metadata?.provider ?? null,
-                    })
-                } catch (온보딩오류) {
-                    console.error('[Auth Callback] 온보딩 준비 실패:', 온보딩오류)
-                }
+                // 로그인 직후 일(가입 선물·온보딩·회원 행·카카오 정보)은 앱과 같이 쓰는 runAfterLogin 이 한다 (2026-10-01 분리, 동작 같음)
+                const db = adminDbOr(supabase)
+                const cookieStore = await cookies()
+                const refCode = cookieStore.get('curi_ref')?.value || null
+                const { isNewProfile, goOnboarding } = await runAfterLogin(db, user, {
+                    refCode,
+                    termsAt: parseTermsCookie(cookieStore.get(TERMS_COOKIE)?.value),
+                })
                 const landing = goOnboarding ? onboardingPathWithNext(ONBOARDING_PATH, next) : next
 
-                // 기존 프로필 확인
-                const { data: profile, error: profileError } = await db
-                    .from('users')
-                    .select('onboarding_completed, display_name, avatar_url, phone, gender, birth_year, auth_provider')
-                    .eq('id', user.id)
-                    .single()
-
-                if (profileError) {
-                    console.log('[Auth Callback] Profile lookup:', profileError.code, profileError.message)
-                }
-
-                if (!profile) {
-                    // 첫 로그인: OAuth 프로필로 users 레코드 생성
-                    const provider = user.app_metadata?.provider || 'unknown'
-                    const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.nickname || null
-                    const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || user.user_metadata?.profile_image_url || null
-
-                    // 초대 코드 확인 (미들웨어에서 쿠키에 저장됨)
-                    const { cookies } = await import('next/headers')
-                    const cookieStore = await cookies()
-                    const refCode = cookieStore.get('curi_ref')?.value || null
-
-                    // Kakao 추가 정보 추출 (phone, gender, birthyear 등)
-                    const kakaoPhone = user.user_metadata?.phone_number
-                        ? user.user_metadata.phone_number.replace(/[^0-9]/g, '').replace(/^82/, '0')
-                        : null
-                    const kakaoGender = user.user_metadata?.gender || null  // 'male' | 'female'
-                    const kakaoBirthYear = user.user_metadata?.birthyear
-                        ? parseInt(user.user_metadata.birthyear)
-                        : null
-
-                    const { error: insertError } = await db.from('users').upsert({
-                        id: user.id,
-                        email: user.email,
-                        display_name: displayName,
-                        avatar_url: avatarUrl,
-                        auth_provider: provider,
-                        onboarding_completed: true,
-                        ...(kakaoPhone ? { phone: kakaoPhone } : {}),
-                        ...(kakaoGender ? { gender: kakaoGender === 'male' || kakaoGender === 'female' ? kakaoGender : null } : {}),
-                        ...(kakaoBirthYear ? { birth_year: kakaoBirthYear } : {}),
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString(),
-                    }, { onConflict: 'id' })
-
-                    if (insertError) {
-                        console.error('[Auth Callback] User create error:', JSON.stringify(insertError))
-                    }
-
-                    // 추천 보상은 여기서 주지 않는다. 한 곳(휴대폰 인증 /api/trial/verify)에서 한 번만 준다.
-                    // 여기서는 귀속 기록만 남긴다 (코드 다듬기, 자기 코드 막기, 덮어쓰기 금지는 attributeReferral 이 한다)
+                if (isNewProfile) {
                     if (refCode) {
-                        try {
-                            await attributeReferral(db, user.id, refCode, 'link')
-                        } catch (refErr) {
-                            console.error('[Auth Callback] Referral attribution error:', refErr)
-                        }
-
                         // 쿠키 소비 (삭제)
                         const response = NextResponse.redirect(withNewUser(landing))
                         response.cookies.delete('curi_ref')
                         response.cookies.delete(TERMS_COOKIE)
                         return response
                     }
-
                     // 신규 유저 → 온보딩 또는 next
                     return NextResponse.redirect(withNewUser(landing))
-                }
-
-                // 기존 유저: 카카오 정보 업데이트 (전화번호, 성별, 출생연도, 아바타)
-                const updates: Record<string, unknown> = {}
-
-                // 아바타 업데이트
-                if (!profile.avatar_url && user.user_metadata?.avatar_url) {
-                    updates.avatar_url = user.user_metadata.avatar_url
-                }
-
-                // 카카오 추가 정보 (없으면 업데이트)
-                const provider = user.app_metadata?.provider || 'unknown'
-                if (provider === 'kakao') {
-                    const kakaoPhone = user.user_metadata?.phone_number
-                        ? user.user_metadata.phone_number.replace(/[^0-9]/g, '').replace(/^82/, '0')
-                        : null
-                    const kakaoGender = user.user_metadata?.gender || null
-                    const kakaoBirthYear = user.user_metadata?.birthyear
-                        ? parseInt(user.user_metadata.birthyear)
-                        : null
-
-                    if (kakaoPhone && !profile.phone) updates.phone = kakaoPhone
-                    // users.gender 는 'male', 'female', 'other' 만 받는다. 예전 '남성', '여성' 은 검사 규칙에 걸려 이 줄 전체(전화, 출생연도 포함)가 저장되지 않았다
-                    if (kakaoGender && !profile.gender) updates.gender = kakaoGender === 'male' || kakaoGender === 'female' ? kakaoGender : null
-                    if (kakaoBirthYear && !profile.birth_year) updates.birth_year = kakaoBirthYear
-                    if (!profile.auth_provider) updates.auth_provider = 'kakao'
-                }
-
-                if (Object.keys(updates).length > 0) {
-                    await db.from('users').update({
-                        ...updates,
-                        updated_at: new Date().toISOString(),
-                    }).eq('id', user.id)
-                    console.log(`[Auth Callback] Updated existing user ${user.id}:`, Object.keys(updates))
                 }
 
                 // 새 가입자 = 온보딩, 기존 회원 = next (기본 /os)
@@ -206,7 +58,6 @@ export async function GET(request: Request) {
                 done.cookies.delete(TERMS_COOKIE)
                 return done
             }
-
             return NextResponse.redirect(`${origin}${next}`)
         }
     }
