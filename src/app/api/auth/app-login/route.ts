@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { runAfterLogin, adminDbOr, parseAppLoginBody } from '@/domains/auth/after-login'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +17,10 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: '로그인이 필요해요' }, { status: 401 })
 
+    // 로그인 직후 한 번이면 충분하다. 1분에 5번까지만 (가입 선물 확인을 반복 호출로 두드리지 못하게)
+    const rl = await checkRateLimit(createAdminClient(), rateLimitKey('app-login', user.id), 5, 60)
+    if (!rl.allowed) return NextResponse.json({ error: rateLimitMessage('로그인 요청') }, { status: 429 })
+
     const body = parseAppLoginBody(await req.json().catch(() => null))
     const db = adminDbOr(supabase)
     const result = await runAfterLogin(db, user, { refCode: body.refCode, termsAt: body.termsAt })
@@ -25,5 +31,6 @@ export async function POST(req: Request) {
             .eq('id', user.id).is('display_name', null)
     }
 
+    // 앱은 goOnboarding 으로 새 가입자 화면을 정한다. isNew 는 가입 트리거가 회원 행을 먼저 만들어 거의 항상 false
     return NextResponse.json({ ok: true, isNew: result.isNewProfile, goOnboarding: result.goOnboarding })
 }
