@@ -7,6 +7,11 @@ const ensureCreatorProfile = vi.fn(async () => ({ id: 'cp1' }))
 vi.mock('../readers', () => ({ readUrl: (...a: unknown[]) => readUrl(...a), KNOWLEDGE_READ_OPTIONS: { maxBytes: 1, timeoutMs: 45_000, maxChars: 100_000 } }))
 vi.mock('@/domains/knowledge', () => ({ addKnowledgeSource: (...a: unknown[]) => addKnowledgeSource(...a) }))
 vi.mock('@/domains/creator', () => ({ ensureCreatorProfile: () => ensureCreatorProfile() }))
+// AI 확인은 moderation.test.ts 가 따로 본다. 여기서는 늘 통과
+vi.mock('../moderation', () => ({
+    reviewBot: vi.fn(async () => ({ verdict: 'pass', reasons: [], categories: [] })),
+    markPendingReview: vi.fn(async () => {}), hasPendingReview: vi.fn(async () => false), recordReviewDecision: vi.fn(async () => {}),
+}))
 
 import { addDraftSources } from '../knowledge'
 import { createTeamBot, updateTeamBot, listTeam, BotPublishDenied } from '../team'
@@ -153,7 +158,7 @@ describe('FIX 3 — 새 봇 예시 질문 = 그 일의 첫 칩 3개', () => {
             team_bots: [{ error: null }, { data: { mentor_id: 'm1' }, error: null }],
             creator_profiles: { data: null, error: null },
         })
-        await expect(updateTeamBot(db, 'u1', 't1', { oneLiner: '새 소개' })).resolves.toBeUndefined()
+        await expect(updateTeamBot(db, 'u1', 't1', { oneLiner: '새 소개' })).resolves.toEqual({})
         expect(calls.some(c => c.table === 'mentors' && c.op === 'update')).toBe(false)
     })
 })

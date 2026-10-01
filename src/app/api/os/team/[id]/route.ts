@@ -1,5 +1,7 @@
 // PATCH  /api/os/team/[id] → 고정, 숨김, 정렬, 승인 모드, 모양, 색, 한 줄 소개, 역할, 이름, 인사말, 프롬프트, 프로필 사진, 공개하기(isPublic) (봇 편집 시트)
 //        공개하기는 내가 만든 봇만(마켓에서 데려온 봇, 시연 봇은 403)
+//        AI 확인: 막힘 = 422 { code: 'MODERATION_BLOCKED', reasons }, 사람 확인 = 202 { code: 'MODERATION_REVIEW', reasons }.
+//        공개 중인 봇의 지시문, 인사말을 고쳐 통과 못 하면 공개가 내려가고 같은 답을 준다(다른 칸은 저장됨, saved: true)
 // DELETE /api/os/team/[id] → 팀에서 빼기 (봇의 몸과 대화 기록은 남는다)
 //
 // 모양/색이 실제로 바뀌면 단톡에 「눈치채기 → 받아치기」 비트를 남긴다 (look-change).
@@ -65,9 +67,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         }
         const lookKind = classifyLookChange(lookPatch)
 
-        await updateTeamBot(db, user.id, id, patch)
+        const { moderation } = await updateTeamBot(db, user.id, id, patch)
         // 공개, 비공개, 마켓 제목이 바뀌면 마켓 목록과 홈 캐시를 바로 비운다 (옛 편집 창구와 같다)
-        if (patch.isPublic !== undefined || patch.oneLiner !== undefined) {
+        if (patch.isPublic !== undefined || patch.oneLiner !== undefined || moderation) {
             revalidatePath('/mentors')
             revalidatePath('/home')
         }
@@ -87,7 +89,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
             }
         }
 
-        return NextResponse.json({ ok: true, lookBeat })
+        if (moderation?.verdict === 'block') {
+            return NextResponse.json({ code: 'MODERATION_BLOCKED', reasons: moderation.reasons, saved: true, lookBeat }, { status: 422 })
+        }
+        if (moderation?.verdict === 'review') {
+            return NextResponse.json({ code: 'MODERATION_REVIEW', reasons: moderation.reasons, saved: true, lookBeat }, { status: 202 })
+        }
+        return NextResponse.json({ ok: true, lookBeat, ...(moderation ? { moderation: { verdict: moderation.verdict } } : {}) })
     } catch (e) {
         if (e instanceof BotPublishDenied) return NextResponse.json({ error: e.message }, { status: 403 })
         console.error('[os/team PATCH]', e instanceof Error ? e.message : e)

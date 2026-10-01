@@ -58,6 +58,8 @@ function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => 
     const [avatarFile, setAvatarFile] = useState<File | null>(null)
     const [avatarPreview, setAvatarPreview] = useState<string | null>(bot.avatarUrl)
     const [isPublic, setIsPublic] = useState(!!bot.isPublic)
+    /** 공개 확인 결과 한 줄 (공개됐어요 / 확인 중이에요 / 공개할 수 없어요 + 이유) */
+    const [publishNote, setPublishNote] = useState<string | null>(null)
     const fileRef = useRef<HTMLInputElement>(null)
     const [busy, setBusy] = useState(false)
     const [err, setErr] = useState<string | null>(null)
@@ -100,14 +102,29 @@ function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => 
             if (nextAvatar !== bot.avatarUrl) patch.avatarUrl = nextAvatar
             if (bot.canPublish && isPublic !== !!bot.isPublic) patch.isPublic = isPublic
 
+            let note: string | null = null
             if (Object.keys(patch).length > 0) {
                 const res = await fetch(`/api/os/team/${bot.id}`, {
                     method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
                 })
                 const data = await res.json().catch(() => ({}))
-                if (!res.ok) throw new Error(data.error || '저장하지 못했어요')
+                const reasons = Array.isArray(data.reasons) ? (data.reasons as string[]).filter(Boolean) : []
+                // AI 확인 결과 = 다른 칸은 저장됐다. 공개만 안 됐거나 내려갔다
+                if (data.code === 'MODERATION_BLOCKED') {
+                    note = `공개할 수 없어요${reasons.length ? `. ${reasons.join(' ')}` : ''}`
+                    setIsPublic(false)
+                } else if (data.code === 'MODERATION_REVIEW') {
+                    note = '확인 중이에요. 확인되면 공개돼요'
+                    setIsPublic(false)
+                } else if (!res.ok) {
+                    throw new Error(data.error || '저장하지 못했어요')
+                } else if (patch.isPublic === true) {
+                    note = '공개됐어요'
+                }
             }
             await onSaved?.()
+            // 공개 결과가 있으면 시트를 열어 둔 채 보여 준다
+            if (note) { setPublishNote(note); return }
             onClose()
         } catch (e) {
             setErr(e instanceof Error ? e.message : '저장하지 못했어요')
@@ -195,6 +212,7 @@ function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => 
                                 data-on={isPublic ? 'true' : 'false'} disabled={busy} onClick={() => setIsPublic(v => !v)}><span /></button>
                         </div>
                         <div className="os-step" style={{ margin: '6px 0 0' }}>봇 마켓에 보이고 누구나 대화할 수 있어요</div>
+                        {publishNote && <div className="os-notice" role="status" style={{ margin: '8px 0 0' }}>{publishNote}</div>}
                     </div>
                 )}
 
