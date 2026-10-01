@@ -7,18 +7,17 @@ const ensureCreatorProfile = vi.fn(async () => ({ id: 'cp1' }))
 vi.mock('../readers', () => ({ readUrl: (...a: unknown[]) => readUrl(...a), KNOWLEDGE_READ_OPTIONS: { maxBytes: 1, timeoutMs: 45_000, maxChars: 100_000 } }))
 vi.mock('@/domains/knowledge', () => ({ addKnowledgeSource: (...a: unknown[]) => addKnowledgeSource(...a) }))
 vi.mock('@/domains/creator', () => ({ ensureCreatorProfile: () => ensureCreatorProfile() }))
-// AI 확인은 moderation.test.ts 가 따로 본다. 여기서는 늘 통과
-vi.mock('../moderation', () => ({
-    reviewBot: vi.fn(async () => ({ verdict: 'pass', reasons: [], categories: [] })),
-    markPendingReview: vi.fn(async () => {}), hasPendingReview: vi.fn(async () => false), recordReviewDecision: vi.fn(async () => {}),
-}))
+// 공개, 다시 확인은 공개 관문(publish-gate.test.ts)이 따로 본다. 여기서는 team.ts 가 관문에 무엇을 넘기는지만 본다
+const applyBotEdit = vi.fn<(...a: unknown[]) => Promise<{ moderation?: unknown }>>(async () => ({}))
+vi.mock('../publish-gate', () => ({ applyBotEdit: (...a: unknown[]) => applyBotEdit(...a) }))
+const gateArg = () => applyBotEdit.mock.calls.at(-1)![1] as { mentorId: string; creatorId: string; fields: Record<string, unknown>; wantPublic?: boolean }
 
 import { addDraftSources } from '../knowledge'
 import { createTeamBot, updateTeamBot, listTeam, BotPublishDenied } from '../team'
 import { starterTasksFor, STARTER_TASKS, COMMON_STARTERS } from '../presets'
 import { tasksFor } from '@/components/os/FirstTaskChips'
 
-beforeEach(() => { readUrl.mockReset(); addKnowledgeSource.mockClear(); ensureCreatorProfile.mockClear() })
+beforeEach(() => { readUrl.mockReset(); addKnowledgeSource.mockClear(); ensureCreatorProfile.mockClear(); applyBotEdit.mockClear() })
 
 /**
  * 표마다 돌려줄 값을 정하는 가짜 DB. 부른 내역(calls)을 표 이름별로 남긴다.
@@ -119,47 +118,55 @@ describe('FIX 3 — 새 봇 예시 질문 = 그 일의 첫 칩 3개', () => {
         expect((ins.args[0] as { sample_questions: string[] }).sample_questions).toEqual(STARTER_TASKS.planning_lead)
     })
 
-    it('updateTeamBot: 한 줄 소개를 바꾸면 마켓에 보이는 mentors.title, description 도 바꾼다', async () => {
-        const { db, calls } = fakeDb({
+    it('updateTeamBot: 한 줄 소개를 바꾸면 마켓에 보이는 mentors.title, description 도 바꾼다(관문으로)', async () => {
+        const { db } = fakeDb({
             team_bots: [{ error: null }, { data: { mentor_id: 'm1' }, error: null }],
             creator_profiles: { data: { id: 'cp1' }, error: null },
-            mentors: [{ data: { slug: 'os-1-ab' }, error: null }, { error: null }],
+            mentors: { data: { slug: 'os-1-ab' }, error: null },
         })
         await updateTeamBot(db, 'u1', 't1', { oneLiner: '팬 질문에 답해요' })
-        const up = calls.find(c => c.table === 'mentors' && c.op === 'update')!
-        expect(up.args[0]).toMatchObject({ title: '팬 질문에 답해요', description: '팬 질문에 답해요' })
-        expect(calls).toContainEqual({ table: 'mentors', op: 'eq', args: ['creator_id', 'cp1'] })
+        expect(gateArg()).toMatchObject({ mentorId: 'm1', creatorId: 'cp1', fields: { title: '팬 질문에 답해요', description: '팬 질문에 답해요' } })
+        expect(gateArg().wantPublic).toBeUndefined()
     })
 
     it('updateTeamBot: 팀 화면에서 만든 봇(os-)이 아닌 리더 봇은 한 줄 소개를 바꿔도 마켓 제목, 설명을 안 건드린다', async () => {
         const { db, calls } = fakeDb({
             team_bots: [{ error: null }, { data: { mentor_id: 'm1' }, error: null }],
             creator_profiles: { data: { id: 'cp1' }, error: null },
-            mentors: [{ data: { slug: 'creator-jin-123' }, error: null }, { error: null }],
+            mentors: { data: { slug: 'creator-jin-123' }, error: null },
         })
         await updateTeamBot(db, 'u1', 't1', { oneLiner: '팬 질문에 답해요' })
         expect(calls).toContainEqual({ table: 'team_bots', op: 'update', args: [{ one_liner: '팬 질문에 답해요' }] })
-        expect(calls.some(c => c.table === 'mentors' && c.op === 'update')).toBe(false)
+        expect(gateArg().fields).toEqual({})
     })
 
     it('updateTeamBot: 리더 봇의 이름을 바꾸면 이름만 바꾸고 제목, 설명은 그대로', async () => {
-        const { db, calls } = fakeDb({
+        const { db } = fakeDb({
             team_bots: [{ error: null }, { data: { mentor_id: 'm1' }, error: null }],
             creator_profiles: { data: { id: 'cp1' }, error: null },
-            mentors: [{ data: { slug: 'creator-jin-123' }, error: null }, { error: null }],
+            mentors: { data: { slug: 'creator-jin-123' }, error: null },
         })
         await updateTeamBot(db, 'u1', 't1', { oneLiner: '새 소개', name: '새이름' })
-        const up = calls.find(c => c.table === 'mentors' && c.op === 'update')!
-        expect(up.args[0]).toEqual({ name: '새이름' })
+        expect(gateArg().fields).toEqual({ name: '새이름' })
+    })
+
+    it('updateTeamBot: 남의 봇(내 크리에이터 번호로 안 잡힘)이면 몸은 관문에 안 보낸다', async () => {
+        const { db } = fakeDb({
+            team_bots: [{ error: null }, { data: { mentor_id: 'm1' }, error: null }],
+            creator_profiles: { data: { id: 'cp1' }, error: null },
+            mentors: { data: null, error: null },
+        })
+        await updateTeamBot(db, 'u1', 't1', { oneLiner: '새 소개' })
+        expect(applyBotEdit).not.toHaveBeenCalled()
     })
 
     it('updateTeamBot: 크리에이터 프로필이 없는 사람이 한 줄 소개만 바꾸면 팀 줄만 바꾸고 실패하지 않는다', async () => {
-        const { db, calls } = fakeDb({
+        const { db } = fakeDb({
             team_bots: [{ error: null }, { data: { mentor_id: 'm1' }, error: null }],
             creator_profiles: { data: null, error: null },
         })
         await expect(updateTeamBot(db, 'u1', 't1', { oneLiner: '새 소개' })).resolves.toEqual({})
-        expect(calls.some(c => c.table === 'mentors' && c.op === 'update')).toBe(false)
+        expect(applyBotEdit).not.toHaveBeenCalled()
     })
 })
 
@@ -172,64 +179,25 @@ describe('FIX 2 — 공개하기 (내가 만든 봇만)', () => {
         ...over,
     })
 
-    it('처음 공개하면 is_active=true, status=active 로 바꾸고 mentor_count 를 하나 올린다', async () => {
-        const { db, calls, rpc } = fakeDb(ownBot())
-        await updateTeamBot(db, 'u1', 't1', { isPublic: true })
-        const up = calls.find(c => c.table === 'mentors' && c.op === 'update')!
-        expect(up.args[0]).toMatchObject({ is_active: true, status: 'active' })
-        expect(calls).toContainEqual({ table: 'mentors', op: 'eq', args: ['creator_id', 'cp1'] })
-        expect(rpc).toHaveBeenCalledWith('increment_mentor_count', { p_creator_id: 'cp1' })
-        // 비공개였을 때만 바뀌게 조건을 건다 = 두 번 동시에 눌러도 한 번만 「처음」이 된다
-        expect(calls).toContainEqual({ table: 'mentors', op: 'eq', args: ['is_active', false] })
-        // 기록을 먼저 쓰고 수를 올린다
-        const ins = calls.findIndex(c => c.table === 'app_events' && c.op === 'insert')
-        const inc = calls.findIndex(c => c.table === 'rpc')
-        expect(ins).toBeGreaterThanOrEqual(0)
-        expect(ins).toBeLessThan(inc)
-    })
-
-    it('이미 공개된 봇(조건부 바꾸기가 0줄)이면 mentor_count 를 올리지 않는다', async () => {
-        const { db, calls, rpc } = fakeDb(ownBot({
-            mentors: [{ data: { id: 'm1', creator_id: 'cp1', slug: 'os-1-ab', is_active: true }, error: null }, { data: [], error: null }],
-        }))
-        await updateTeamBot(db, 'u1', 't1', { isPublic: true })
-        expect(rpc).not.toHaveBeenCalled()
-        expect(calls.some(c => c.table === 'app_events')).toBe(false)
-    })
-
-    it('공개 기록 조회가 실패하면 mentor_count 를 올리지 않는다', async () => {
-        const { db, rpc } = fakeDb(ownBot({ app_events: { data: null, error: { message: 'boom' } } }))
-        await updateTeamBot(db, 'u1', 't1', { isPublic: true })
-        expect(rpc).not.toHaveBeenCalled()
-    })
-
-    it('공개 기록 쓰기가 실패하면 mentor_count 를 올리지 않는다(두 번 세기보다 덜 세기가 낫다)', async () => {
-        const { db, rpc } = fakeDb(ownBot({ app_events: [{ data: [], error: null }, { error: { message: 'boom' } }] }))
-        await updateTeamBot(db, 'u1', 't1', { isPublic: true })
-        expect(rpc).not.toHaveBeenCalled()
+    it('공개하기 = 권한 확인 뒤 관문에 wantPublic=true 로 넘긴다 (AI 확인, 조건부 공개, 셈은 관문 몫)', async () => {
+        applyBotEdit.mockResolvedValueOnce({ moderation: { verdict: 'pass', reasons: [], categories: [] } })
+        const { db } = fakeDb(ownBot({ mentors: [{ data: { id: 'm1', creator_id: 'cp1', slug: 'os-1-ab', is_active: false }, error: null }, { data: { slug: 'os-1-ab' }, error: null }] }))
+        const out = await updateTeamBot(db, 'u1', 't1', { isPublic: true })
+        expect(gateArg()).toMatchObject({ mentorId: 'm1', creatorId: 'cp1', wantPublic: true, fields: {} })
+        expect(out.moderation).toMatchObject({ verdict: 'pass' })
     })
 
     it('공개 권한이 없으면 같이 보낸 다른 칸도 하나도 안 바꾼다 (403 뒤 반쪽 저장 없음)', async () => {
         const { db, calls } = fakeDb(ownBot({ team_bots: { data: { mentor_id: 'm1', linked_from_market: true }, error: null } }))
         await expect(updateTeamBot(db, 'u1', 't1', { isPublic: true, pinned: true, name: '새이름', oneLiner: '새 소개' })).rejects.toBeInstanceOf(BotPublishDenied)
         expect(calls.some(c => c.op === 'update' || c.op === 'insert')).toBe(false)
+        expect(applyBotEdit).not.toHaveBeenCalled()
     })
 
-    it('전에 공개한 적이 있으면(다시 공개) mentor_count 를 또 올리지 않는다', async () => {
-        const { db, rpc } = fakeDb(ownBot({ app_events: { data: [{ id: 'e1' }], error: null } }))
-        await updateTeamBot(db, 'u1', 't1', { isPublic: true })
-        expect(rpc).not.toHaveBeenCalled()
-    })
-
-    it('비공개로 돌리면 is_active=false 만 바꾸고 mentor_count 는 그대로 (옛 편집 화면과 같다)', async () => {
-        const { db, calls, rpc } = fakeDb(ownBot({
-            mentors: [{ data: { id: 'm1', creator_id: 'cp1', slug: 'os-1-ab', is_active: true }, error: null }, { data: [{ id: 'm1' }], error: null }],
-        }))
+    it('비공개로 돌리기 = 관문에 wantPublic=false 로 넘긴다', async () => {
+        const { db } = fakeDb(ownBot({ mentors: [{ data: { id: 'm1', creator_id: 'cp1', slug: 'os-1-ab', is_active: true }, error: null }, { data: { slug: 'os-1-ab' }, error: null }] }))
         await updateTeamBot(db, 'u1', 't1', { isPublic: false })
-        const up = calls.find(c => c.table === 'mentors' && c.op === 'update')!
-        expect(up.args[0]).toMatchObject({ is_active: false })
-        expect(up.args[0]).not.toHaveProperty('status')
-        expect(rpc).not.toHaveBeenCalled()
+        expect(gateArg().wantPublic).toBe(false)
     })
 
     it('마켓에서 데려온 남의 봇은 공개할 수 없다', async () => {

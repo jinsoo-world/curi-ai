@@ -1,19 +1,22 @@
 // domains/os — 봇 공개 전 AI 확인 (서버 전용). 대표 승인 1001.
 //
-// 공개하기를 켜면(그리고 공개 중인 봇의 지시문, 인사말을 고치면) 봇 글을 저가 모델에 한 번 보여 준다.
-//   pass   = 지금처럼 공개
+// 여기는 「확인」만 한다(읽기, 모델 묻기, 기록 읽기). 공개하는 길은 publish-gate.ts 하나뿐이다.
+//   pass   = 공개
 //   block  = 공개 안 함, 이유를 주인에게 보여 준다
-//   review = 공개 안 함, 확인 대기 표시(app_events os_bot_publish_review) + 관리자 알림 → /admin/os/bot-reviews 에서 승인/거절
+//   review = 공개 안 함, 확인 대기 표시(app_events os_bot_publish_review) → /admin/os/bot-reviews 에서 승인/거절
 // 모델이 답을 못 하거나 모양이 틀리면 review 로 본다(닫힌 쪽으로 실패 = 자동 공개 금지).
+// 팀이 보는 자동 알림(슬랙)은 보내지 않는다(대표 규칙: 팀 대상 자동 발신 금지). 관리자 목록에만 뜬다.
+// 모델 = askSideText(곁일 입구). 기본은 Gemini flash-lite, SIDE_TEXT_PROVIDER=solar 면 솔라 미니가 먼저(안 되면 Gemini).
+//   Gemini 를 바로 부르는 공용 함수가 llm 영역에 없어 이 입구를 쓴다. 입구가 AbortSignal 을 안 받아서 25초 경주로 끊는다.
 //
 // 왜 확인 대기를 mentors.status 가 아니라 app_events 에 두나 =
 //   status 칸의 허용 값이 저장소 어디에도 정의돼 있지 않다(schema.sql 에도 마이그레이션에도 없음).
 //   코드의 MentorStatus 에는 'pending_review' 가 없어서, 넣었다가 DB 규칙에 막히면 공개가 통째로 깨진다. 새 칸, 새 규칙 없이 간다.
 // 판정 기록(os_bot_moderation)에는 봇 글을 넣지 않는다 = 판정, 분류만.
 
+import { createHash } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { askSideText } from '@/domains/llm/side-text'
-import { sendSlackNotification } from '@/lib/slack'
 
 /** 초안 만들기와 같은 저가 모델 (twin-draft TWIN_DRAFT_MODEL). 설정으로만 바꾼다 */
 export const MODERATION_MODEL = 'gemini-3.5-flash-lite'
@@ -62,8 +65,8 @@ function fence(text: string): string {
 
 export function buildModerationPrompt(b: ModerationInput): { system: string; prompt: string } {
     const lines = [
-        `주인 이름: ${fence(b.ownerName).slice(0, 40)}`,
         '<<<봇자료',
+        `[주인 이름] ${fence(b.ownerName).slice(0, 40)}`,
         `[이름] ${fence(b.name)}`,
         `[제목] ${fence(b.title)}`,
         `[설명] ${fence(b.description)}`,
@@ -90,11 +93,20 @@ export function parseModerationAnswer(raw: string | null | undefined): Moderatio
     const reasons = list(o.reasons)
     const categories = list(o.categories)
     if (!reasons || !categories) return null
+    // 통과라면서 이유나 분류를 달았다 = 모델도 걸리는 게 있다는 뜻. 사람이 본다
+    if (o.verdict === 'pass' && (reasons.length > 0 || categories.length > 0)) return { verdict: 'review', reasons, categories }
     return { verdict: o.verdict, reasons, categories }
 }
 
-/** 봇 글, 자료 앞부분을 읽는다 (자료는 이미 넣어 둔 조각을 그대로 읽는다) */
-async function readBotForReview(db: SupabaseClient, mentorId: string, ownerName: string): Promise<ModerationInput> {
+/** 검사한 내용의 지문. 관리자가 승인할 때 「그 사이 바뀌었나」를 이걸로 본다 */
+export function contentHash(b: ModerationInput): string {
+    return createHash('sha256').update(JSON.stringify([
+        b.ownerName, b.name, b.title, b.description, b.systemPrompt, b.greeting, b.sampleQuestions, b.knowledge,
+    ])).digest('hex')
+}
+
+/** 봇 글, 자료 앞부분을 읽는다 (자료는 이미 넣어 둔 조각을 새것부터 읽는다 = 방금 넣은 자료가 빠지지 않는다) */
+export async function readBotForReview(db: SupabaseClient, mentorId: string, ownerName: string): Promise<ModerationInput> {
     const { data: m, error } = await db
         .from('mentors')
         .select('name, title, description, system_prompt, greeting_message, sample_questions')
@@ -102,7 +114,7 @@ async function readBotForReview(db: SupabaseClient, mentorId: string, ownerName:
         .maybeSingle()
     if (error || !m) throw new Error(error?.message ?? '봇을 못 찾았다')
     const row = m as { name: string | null; title: string | null; description: string | null; system_prompt: string | null; greeting_message: string | null; sample_questions: string[] | null }
-    const { data: chunks } = await db.from('knowledge_chunks').select('content').eq('mentor_id', mentorId).limit(20)
+    const { data: chunks } = await db.from('knowledge_chunks').select('content').eq('mentor_id', mentorId).order('created_at', { ascending: false }).limit(20)
     let knowledge = ''
     for (const c of (chunks ?? []) as { content: string | null }[]) {
         if (knowledge.length >= KNOWLEDGE_SAMPLE_CHARS) break
@@ -117,12 +129,15 @@ async function readBotForReview(db: SupabaseClient, mentorId: string, ownerName:
 
 /**
  * 봇 하나 확인. 절대 던지지 않는다 — 읽기, 모델, 모양 어느 것이 실패해도 review.
- * 판정은 app_events(os_bot_moderation)에 판정과 분류만 남긴다.
+ * 판정은 app_events(os_bot_moderation)에 판정과 분류만 남긴다. 이 기록도 옛 확인 대기를 닫는다(pickPendingReviews).
+ * 돌려주는 input, hash = 확인 대기 줄에 지문을 남길 때 쓴다(읽기 실패면 null).
  */
-export async function reviewBot(db: SupabaseClient, a: { mentorId: string; userId: string; ownerName: string }): Promise<ModerationResult> {
+export async function reviewBot(db: SupabaseClient, a: { mentorId: string; userId: string; ownerName: string }): Promise<ModerationResult & { hash: string | null }> {
     let result: ModerationResult
+    let hash: string | null = null
     try {
         const input = await readBotForReview(db, a.mentorId, a.ownerName)
+        hash = contentHash(input)
         const { system, prompt } = buildModerationPrompt(input)
         let timer: ReturnType<typeof setTimeout> | undefined
         const answer = await Promise.race([
@@ -138,65 +153,83 @@ export async function reviewBot(db: SupabaseClient, a: { mentorId: string; userI
         console.error('[os/moderation] 확인 실패, 사람이 본다', e instanceof Error ? e.message : e)
         result = CHECK_FAILED
     }
-    try {
-        const { error } = await db.from('app_events').insert({
-            name: 'os_bot_moderation', tool: 'os_publish', path: null, user_id: a.userId, anon_id: null,
-            extra: { mentor_id: a.mentorId, verdict: result.verdict, categories: result.categories },
-        })
-        if (error) console.error('[os/moderation] 판정 기록 실패', error.message)
-    } catch (e) {
-        console.error('[os/moderation] 판정 기록 실패', e instanceof Error ? e.message : e)
-    }
-    return result
+    await logReviewEvent(db, 'os_bot_moderation', a.userId, { mentor_id: a.mentorId, verdict: result.verdict, categories: result.categories })
+    return { ...result, hash }
 }
 
-/** 확인 대기 표시 + 관리자 알림(기존 슬랙 알림 창구). 실패해도 던지지 않는다. 알림에 봇 글은 넣지 않는다 */
-export async function markPendingReview(db: SupabaseClient, a: { mentorId: string; userId: string; botName: string; result: ModerationResult }): Promise<void> {
+/** 확인 기록 이름들. 봇마다 가장 늦은 줄이 그 봇의 상태다 */
+export const REVIEW_EVENTS = [
+    'os_bot_publish_review',     // 확인 대기 열림
+    'os_bot_publish_decision',   // 관리자 승인/거절 = 닫힘
+    'os_bot_moderation',         // 새 판정 = 닫힘 (review 판정이면 바로 뒤에 대기 줄이 다시 열린다)
+    'os_bot_owner_unpublish',    // 주인이 비공개로 = 닫힘
+    'os_bot_publish_closed',     // 대기 중에 주인이 고침 = 닫힘
+] as const
+let seqCounter = 0
+/** 같은 시각에 두 줄이 찍혀도 순서를 가를 수 있게 seq 를 붙인다 */
+export async function logReviewEvent(db: SupabaseClient, name: typeof REVIEW_EVENTS[number], userId: string | null, extra: Record<string, unknown>): Promise<boolean> {
     try {
         const { error } = await db.from('app_events').insert({
-            name: 'os_bot_publish_review', tool: 'os_publish', path: null, user_id: a.userId, anon_id: null,
-            extra: { mentor_id: a.mentorId, reasons: a.result.reasons, categories: a.result.categories },
+            name, tool: 'os_publish', path: null, user_id: userId, anon_id: null,
+            extra: { ...extra, seq: Date.now() * 1000 + (seqCounter++ % 1000) },
         })
-        if (error) console.error('[os/moderation] 확인 대기 표시 실패', error.message)
+        if (error) { console.error(`[os/moderation] ${name} 기록 실패`, error.message); return false }
+        return true
     } catch (e) {
-        console.error('[os/moderation] 확인 대기 표시 실패', e instanceof Error ? e.message : e)
+        console.error(`[os/moderation] ${name} 기록 실패`, e instanceof Error ? e.message : e)
+        return false
     }
-    const cats = a.result.categories.join(', ') || '없음'
-    await sendSlackNotification(`🔎 봇 공개 확인 요청: ${a.botName.slice(0, 20)} (분류: ${cats}) → /admin/os/bot-reviews`)
 }
 
-export interface PendingReview { mentorId: string; reasons: string[]; categories: string[]; requestedAt: string }
+/** 확인 대기 표시. 검사한 내용의 지문(content_hash)과 주인을 같이 남긴다. 알림은 보내지 않는다 */
+export async function markPendingReview(db: SupabaseClient, a: { mentorId: string; userId: string; ownerUserId: string | null; result: ModerationResult & { hash: string | null } }): Promise<void> {
+    await logReviewEvent(db, 'os_bot_publish_review', a.userId, {
+        mentor_id: a.mentorId, reasons: a.result.reasons, categories: a.result.categories,
+        content_hash: a.result.hash, owner_user_id: a.ownerUserId,
+    })
+}
+
+export interface PendingReview { mentorId: string; reasons: string[]; categories: string[]; requestedAt: string; contentHash: string | null }
 type ReviewEvent = { name: string; created_at: string; extra: Record<string, unknown> | null }
 
-/** 봇마다 가장 늦은 기록을 본다. 그게 확인 요청이면 대기, 승인/거절이면 끝 */
+/** 뒤에 온 기록인가: 시각, 같으면 seq */
+function later(a: ReviewEvent, b: ReviewEvent): boolean {
+    if (a.created_at !== b.created_at) return a.created_at > b.created_at
+    return Number(a.extra?.seq ?? 0) > Number(b.extra?.seq ?? 0)
+}
+
+/** 봇마다 가장 늦은 기록(대기, 결정, 판정, 주인 비공개, 고쳐서 닫힘 전부 중)을 본다. 그게 확인 대기면 대기, 아니면 끝 */
 export function pickPendingReviews(events: ReviewEvent[]): PendingReview[] {
     const last = new Map<string, ReviewEvent>()
     for (const e of events) {
         const id = String(e.extra?.mentor_id ?? '')
         if (!id) continue
         const prev = last.get(id)
-        if (!prev || e.created_at > prev.created_at) last.set(id, e)
+        if (!prev || later(e, prev)) last.set(id, e)
     }
     const out: PendingReview[] = []
     for (const [mentorId, e] of last) {
         if (e.name !== 'os_bot_publish_review') continue
         const strs = (v: unknown) => Array.isArray(v) ? v.map(String) : []
-        out.push({ mentorId, reasons: strs(e.extra?.reasons), categories: strs(e.extra?.categories), requestedAt: e.created_at })
+        out.push({
+            mentorId, reasons: strs(e.extra?.reasons), categories: strs(e.extra?.categories), requestedAt: e.created_at,
+            contentHash: typeof e.extra?.content_hash === 'string' ? e.extra.content_hash : null,
+        })
     }
     return out.sort((a, b) => (a.requestedAt < b.requestedAt ? 1 : -1))
 }
 
 async function readReviewEvents(db: SupabaseClient, mentorId?: string): Promise<ReviewEvent[]> {
-    let q = db.from('app_events').select('name, created_at, extra').in('name', ['os_bot_publish_review', 'os_bot_publish_decision'])
+    let q = db.from('app_events').select('name, created_at, extra').in('name', [...REVIEW_EVENTS])
     if (mentorId) q = q.eq('extra->>mentor_id', mentorId)
     const { data, error } = await q.order('created_at', { ascending: false }).limit(500)
     if (error) throw new Error(error.message)
     return (data ?? []) as ReviewEvent[]
 }
 
-/** 이 봇이 지금 확인 대기인가 */
-export async function hasPendingReview(db: SupabaseClient, mentorId: string): Promise<boolean> {
-    return pickPendingReviews(await readReviewEvents(db, mentorId)).some(p => p.mentorId === mentorId)
+/** 이 봇의 열린 확인 대기 (없으면 null) */
+export async function openReviewOf(db: SupabaseClient, mentorId: string): Promise<PendingReview | null> {
+    return pickPendingReviews(await readReviewEvents(db, mentorId)).find(p => p.mentorId === mentorId) ?? null
 }
 
 /** 관리자 목록: 확인 대기 봇 (이미 공개된 봇은 뺀다) */
@@ -210,11 +243,13 @@ export async function listPendingReviews(db: SupabaseClient): Promise<(PendingRe
         .map(p => ({ ...p, name: byId.get(p.mentorId)!.name, title: byId.get(p.mentorId)!.title }))
 }
 
-/** 관리자 결정 기록 (승인/거절). 이 기록이 확인 대기를 끝낸다 */
-export async function recordReviewDecision(db: SupabaseClient, a: { mentorId: string; adminUserId: string; decision: 'approve' | 'reject' }): Promise<void> {
-    const { error } = await db.from('app_events').insert({
-        name: 'os_bot_publish_decision', tool: 'admin', path: null, user_id: a.adminUserId, anon_id: null,
-        extra: { mentor_id: a.mentorId, decision: a.decision },
-    })
-    if (error) throw new Error(error.message)
+/**
+ * 창구 응답 모양 (공개 관문을 지나는 창구가 다 같이 쓴다).
+ *   block = 422 { code: 'MODERATION_BLOCKED', reasons }, review = 202 { code: 'MODERATION_REVIEW', reasons }, 그 밖 = null(원래 응답)
+ */
+export function moderationReply(m: ModerationResult | undefined): { status: 422 | 202; body: { code: string; reasons: string[]; error: string } } | null {
+    // error = 코드를 모르는 옛 화면(data.error 만 띄움)도 사람 말로 보이게
+    if (m?.verdict === 'block') return { status: 422, body: { code: 'MODERATION_BLOCKED', reasons: m.reasons, error: ['공개할 수 없어요.', ...m.reasons].join(' ') } }
+    if (m?.verdict === 'review') return { status: 202, body: { code: 'MODERATION_REVIEW', reasons: m.reasons, error: '확인 중이에요. 확인되면 공개돼요' } }
+    return null
 }

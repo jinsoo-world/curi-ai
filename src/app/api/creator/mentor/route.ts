@@ -1,5 +1,5 @@
 // /api/creator/mentor — AI 멘토 생성 & 업데이트 API
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import {
@@ -9,8 +9,11 @@ import {
     setMentorKnowledge,
     publishMentor,
 } from '@/domains/creator'
+import { recheckAfterKnowledge } from '@/domains/os/publish-gate'
+import { moderationReply } from '@/domains/os/moderation'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60   // 공개 단계에서 AI 확인(최대 25초)을 기다린다
 
 /**
  * POST — AI 멘토 생성 (Step 1~3 + 발행)
@@ -77,14 +80,17 @@ export async function POST(req: NextRequest) {
                     )
                 }
 
-                await setMentorPersona(admin, {
+                const persona = await setMentorPersona(admin, {
                     mentorId,
                     template: template || null,
                     systemPrompt: systemPrompt || '',
                     greetingMessage: greetingMessage || `안녕하세요! ${body.mentorName || 'AI'}입니다 😊`,
                     sampleQuestions: sampleQuestions || [],
                     chatThemeColor: typeof chatThemeColor === 'string' ? chatThemeColor : chatThemeColor ?? null,
-                })
+                }, { creatorId: creator.id, actorUserId: user.id })
+                // 공개 중인 봇의 지시문을 고쳤으면 다시 확인했다 = 결과를 같은 모양으로 돌려준다
+                const personaReply = moderationReply(persona.moderation)
+                if (personaReply) return NextResponse.json({ ...personaReply.body, saved: true }, { status: personaReply.status })
 
                 return NextResponse.json({ success: true })
             }
@@ -106,6 +112,10 @@ export async function POST(req: NextRequest) {
                     knowledgeUrls,
                 })
 
+                // 공개 중인(또는 확인 대기 중인) 내 봇이면 새 자료까지 다시 확인한다 (응답 뒤)
+                const { data: mine } = await admin.from('mentors').select('id').eq('id', mentorId).eq('creator_id', creator.id).maybeSingle()
+                if (mine) after(() => recheckAfterKnowledge(admin, { mentorId, actorUserId: user.id }))
+
                 return NextResponse.json({ success: true })
             }
 
@@ -120,7 +130,10 @@ export async function POST(req: NextRequest) {
                     )
                 }
 
-                await publishMentor(admin, mentorId, creator.id, isPublic !== false)
+                // 공개 관문 = AI 확인. 막힘 422, 확인 필요 202
+                const published = await publishMentor(admin, mentorId, creator.id, isPublic !== false, user.id)
+                const reply = moderationReply(published.moderation)
+                if (reply) return NextResponse.json(reply.body, { status: reply.status })
 
                 // 해당 크리에이터의 총 AI 수 조회 (보상 제한 체크용)
                 const { count: aiCount } = await admin

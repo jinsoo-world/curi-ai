@@ -11,6 +11,7 @@ export default function BotReviewsPage() {
     const [list, setList] = useState<Pending[] | null>(null)
     const [err, setErr] = useState<string | null>(null)
     const [busy, setBusy] = useState<string | null>(null)
+    const [note, setNote] = useState<string | null>(null)
 
     const load = useCallback(async () => {
         setErr(null)
@@ -23,13 +24,14 @@ export default function BotReviewsPage() {
     useEffect(() => { void load() }, [load])
 
     const decide = async (mentorId: string, decision: 'approve' | 'reject') => {
-        setBusy(mentorId); setErr(null)
+        setBusy(mentorId); setErr(null); setNote(null)
         try {
             const res = await fetch('/api/admin/os/bot-reviews', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mentorId, decision }),
             })
             const data = await res.json().catch(() => ({}))
             if (!res.ok) throw new Error(data.error || '처리하지 못했어요')
+            setNote(String(data.message ?? '처리했어요'))
             await load()
         } catch (e) {
             setErr(e instanceof Error ? e.message : '처리하지 못했어요')
@@ -42,6 +44,7 @@ export default function BotReviewsPage() {
         <div>
             <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px' }}>🔎 봇 공개 확인</h1>
             <p style={{ color: '#64748b', margin: '0 0 20px', fontSize: 14 }}>AI 가 사람 확인이 필요하다고 본 봇이에요. 승인하면 봇 마켓에 공개돼요.</p>
+            {note && <div style={{ background: '#dcfce7', color: '#166534', padding: '10px 14px', borderRadius: 8, marginBottom: 16 }}>{note}</div>}
             {err && <div style={{ background: '#fee2e2', color: '#991b1b', padding: '10px 14px', borderRadius: 8, marginBottom: 16 }}>{err}</div>}
             {list === null ? <div>읽는 중</div> : list.length === 0 ? <div style={{ color: '#64748b' }}>확인할 봇이 없어요</div> : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: 8 }}>
@@ -54,8 +57,10 @@ export default function BotReviewsPage() {
                         {list.map(p => (
                             <tr key={p.mentorId} style={{ borderTop: '1px solid #e5e7eb', fontSize: 14 }}>
                                 <td style={{ padding: 10 }}>
-                                    <a href={`/admin/mentors/${p.mentorId}`} style={{ fontWeight: 600, color: '#1a1a2e' }}>{p.name}</a>
+                                    {/* 봇 이름, 제목은 남이 쓴 글 = 글자 그대로만 보여 준다 */}
+                                    <div style={{ fontWeight: 600 }}>{p.name}</div>
                                     <div style={{ color: '#64748b', fontSize: 12 }}>{p.title}</div>
+                                    <a href={`/admin/mentors/${encodeURIComponent(p.mentorId)}`} style={{ fontSize: 12, color: '#2563eb' }}>자세히</a>
                                 </td>
                                 <td style={{ padding: 10 }}>{p.reasons.join(' / ') || '없음'}</td>
                                 <td style={{ padding: 10 }}>{p.categories.join(', ') || '없음'}</td>

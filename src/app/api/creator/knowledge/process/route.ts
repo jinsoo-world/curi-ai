@@ -1,5 +1,5 @@
 // /api/creator/knowledge/process — 업로드된 파일 텍스트 추출 + 임베딩
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { FAIL_REASON_COL } from '@/domains/knowledge/actions'
 import type { FailureReason } from '@/domains/knowledge/failure-reasons'
 import { requireMentorOwner } from '@/lib/mentor-owner'
@@ -9,6 +9,7 @@ import { logUpstageOcr } from '@/domains/llm/ocr-usage'
 import { 개인정보가리기 } from '@/domains/knowledge/개인정보가리기'
 import { docParseEnabled, underUpstageCap, callDocumentParse, DOC_SPACE_COPY } from '@/domains/knowledge/doc-parse'
 import { reserveFilePages, type PageReservation } from '@/domains/knowledge/doc-gate'
+import { recheckAfterKnowledge } from '@/domains/os/publish-gate'
 
 /**
  * VTT 파일 전처리: 타임스탬프 제거, 추임새 제거, 화자별 대화 정리
@@ -636,6 +637,8 @@ export async function POST(req: NextRequest) {
 
         const docSpace = reservation ? await reservation.view().catch(() => null) : null
         reservation = null
+        // 공개 중인(또는 확인 대기 중인) 봇이면 새 자료까지 AI 가 다시 본다 (응답 뒤)
+        after(() => recheckAfterKnowledge(admin, { mentorId, actorUserId: owner.userId }))
         return NextResponse.json({
             success: true,
             ...(docSpace ? { docSpace } : {}),

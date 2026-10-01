@@ -494,6 +494,13 @@ export default function CreatorEditPage() {
                 }),
             })
             const data = await res.json()
+            // 공개 전 AI 확인: 저장은 됐고 공개만 안 됐거나 내려갔다
+            if (data.code === 'MODERATION_BLOCKED' || data.code === 'MODERATION_REVIEW') {
+                setIsActive(false)
+                const reasons = Array.isArray(data.reasons) ? (data.reasons as string[]).join(' ') : ''
+                setToast({ type: 'error', message: data.code === 'MODERATION_BLOCKED' ? `저장했어요. 공개할 수 없어요. ${reasons}` : '저장했어요. 확인 중이에요. 확인되면 공개돼요' })
+                return
+            }
             if (!res.ok) throw new Error(data.error)
 
             setToast({ type: 'success', message: '✅ 저장 완료!' })
@@ -1601,11 +1608,20 @@ export default function CreatorEditPage() {
                                         const newVal = !isActive
                                         setIsActive(newVal)
                                         try {
-                                            await fetch('/api/creator/mentor/update', {
+                                            const res = await fetch('/api/creator/mentor/update', {
                                                 method: 'PATCH',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify({ mentorId, isActive: newVal }),
                                             })
+                                            // 공개 전 AI 확인: 막힘 422, 확인 중 202 = 아직 비공개
+                                            const data = await res.json().catch(() => ({}))
+                                            if (data.code === 'MODERATION_BLOCKED' || data.code === 'MODERATION_REVIEW') {
+                                                setIsActive(false)
+                                                const reasons = Array.isArray(data.reasons) ? (data.reasons as string[]).join(' ') : ''
+                                                setToast({ type: 'error', message: data.code === 'MODERATION_BLOCKED' ? `공개할 수 없어요. ${reasons}` : '확인 중이에요. 확인되면 공개돼요' })
+                                                return
+                                            }
+                                            if (!res.ok) throw new Error(data.error || '상태 변경 실패')
                                             setToast({ type: 'success', message: newVal ? '✅ 배포 ON — 큐리AI에 공개됩니다' : '⏸️ 배포 OFF — 비공개 상태입니다' })
                                         } catch {
                                             setIsActive(!newVal) // 롤백

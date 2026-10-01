@@ -3,8 +3,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { requireMentorOwner } from '@/lib/mentor-owner'
 import { 링크정리 } from '@/domains/creator/links'
+import { applyBotEdit } from '@/domains/os/publish-gate'
+import { moderationReply } from '@/domains/os/moderation'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60   // 배포 켜기, 공개 중인 봇 고치기는 AI 확인(최대 25초)을 기다린다
 
 export async function PATCH(req: NextRequest) {
     try {
@@ -55,28 +58,20 @@ export async function PATCH(req: NextRequest) {
         // ⚠️ 화면에서 한 번 걸렀더라도 서버에서 다시 거른다. 화면을 건너뛰고 직접 부를 수 있다.
         //    javascript: 같은 주소가 통과하면 그 링크를 누른 사람 브라우저에서 코드가 돈다.
         if (links !== undefined) updateData.links = 링크정리(links)
-        if (isActive !== undefined) {
-            updateData.is_active = isActive
-            // 비활성화는 is_active 컬럼으로만 관리
-            // status는 활성화 시에만 'active'로 복원 (suspended → active 복구)
-            if (isActive) {
-                updateData.status = 'active'
-            }
-            // is_active=false 시 status는 변경하지 않음 (관리 목록에서 유지)
-        }
-
-        const { error } = await admin
-            .from('mentors')
-            .update(updateData)
-            .eq('id', mentorId)
-
-        if (error) {
-            console.error('[Creator Update] Error:', error.message)
-            throw new Error(error.message)
-        }
+        // 배포(is_active)는 여기서 직접 쓰지 않는다 = 공개 관문(publish-gate)만 켠다.
+        //   켜기 = AI 확인 → pass 면 조건부 공개(status 도 active 로), 끄기 = 내리고 주인 비공개 기록.
+        //   공개 중인 봇의 이름, 소개, 지시문, 인사말, 예시 질문을 고치면 같은 저장에서 내리고 다시 확인한다.
+        const { moderation } = await applyBotEdit(admin, {
+            mentorId, creatorId: owner.mentor.creator_id, actorUserId: owner.userId,
+            fields: updateData,
+            wantPublic: typeof isActive === 'boolean' ? isActive : undefined,
+        })
 
         // 멘토 수정 시 목록 페이지 ISR 캐시 즉시 무효화 (아바타, 이름 등 변경 즉시 반영)
         revalidatePath('/mentors')
+
+        const reply = moderationReply(moderation)
+        if (reply) return NextResponse.json({ ...reply.body, saved: true }, { status: reply.status })
 
         return NextResponse.json({ success: true, message: '멘토가 수정되었습니다.' })
     } catch (error: unknown) {

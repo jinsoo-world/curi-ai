@@ -13,8 +13,10 @@ import { updateTeamBot, removeTeamBot, SHAPES, COLORS } from '@/domains/os'
 import { BotPublishDenied } from '@/domains/os/team'
 import type { TeamBotPatch } from '@/domains/os'
 import { classifyLookChange, postLookChangeBeat } from '@/domains/os/look-change'
+import { moderationReply } from '@/domains/os/moderation'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60   // 공개하기, 공개 중인 봇 고치기는 AI 확인(최대 25초)을 기다린다
 
 async function me() {
     const supabase = await createClient()
@@ -89,12 +91,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
             }
         }
 
-        if (moderation?.verdict === 'block') {
-            return NextResponse.json({ code: 'MODERATION_BLOCKED', reasons: moderation.reasons, saved: true, lookBeat }, { status: 422 })
-        }
-        if (moderation?.verdict === 'review') {
-            return NextResponse.json({ code: 'MODERATION_REVIEW', reasons: moderation.reasons, saved: true, lookBeat }, { status: 202 })
-        }
+        const reply = moderationReply(moderation)
+        if (reply) return NextResponse.json({ ...reply.body, saved: true, lookBeat }, { status: reply.status })
         return NextResponse.json({ ok: true, lookBeat, ...(moderation ? { moderation: { verdict: moderation.verdict } } : {}) })
     } catch (e) {
         if (e instanceof BotPublishDenied) return NextResponse.json({ error: e.message }, { status: 403 })

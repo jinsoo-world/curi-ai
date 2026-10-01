@@ -8,13 +8,21 @@ vi.mock('@/domains/llm/side-text', () => ({ askSideText: (...a: unknown[]) => as
 vi.mock('@/lib/slack', () => ({ sendSlackNotification: (...a: unknown[]) => sendSlackNotification(...a) }))
 vi.mock('@/lib/admin-guard', () => ({ requireAdminAPI: () => requireAdminAPI() }))
 const adminDbFrom = vi.fn()
+const decideReview = vi.fn<(...a: unknown[]) => Promise<unknown>>()
 vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => ({ from: (...a: unknown[]) => adminDbFrom(...a), rpc: vi.fn() }) }))
 vi.mock('@/domains/creator', () => ({ ensureCreatorProfile: vi.fn(async () => ({ id: 'cp1' })) }))
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+// 관리자 창구 시험에서만 결정 함수를 가짜로 바꾼다 (나머지는 진짜 관문)
+vi.mock('../publish-gate', async (orig) => {
+    const real = await orig<typeof import('../publish-gate')>()
+    return { ...real, decideReview: (...a: unknown[]) => (decideReview.getMockImplementation() ? decideReview(...a) : real.decideReview(...(a as Parameters<typeof real.decideReview>))) }
+})
 
 import {
     buildModerationPrompt, parseModerationAnswer, reviewBot, pickPendingReviews, KNOWLEDGE_SAMPLE_CHARS,
 } from '../moderation'
-import { updateTeamBot, decideBotReview } from '../team'
+import { updateTeamBot } from '../team'
+import { ReviewNotPending } from '../publish-gate'
 import { POST as adminPost } from '@/app/api/admin/os/bot-reviews/route'
 
 beforeEach(() => {
@@ -86,7 +94,9 @@ describe('검사 글 만들기, 답 읽기', () => {
         // 자료 속 구분선 흉내는 지워서 울타리를 못 넘는다
         expect(prompt.split('<<<').length - 1).toBe(1)
         expect(prompt.split('>>>').length - 1).toBe(1)
-        expect(prompt).toContain('주인 이름: 진')
+        // 주인 이름도 자료 = 울타리 안에 있다
+        const inside = prompt.slice(prompt.indexOf('<<<봇자료'), prompt.indexOf('봇자료>>>'))
+        expect(inside).toContain('[주인 이름] 진')
     })
 
     it('답 읽기: 엄격한 JSON 만 받는다. 코드 울타리는 벗겨 준다. 이상하면 null', () => {
@@ -96,6 +106,9 @@ describe('검사 글 만들기, 답 읽기', () => {
         expect(parseModerationAnswer('괜찮아 보여요')).toBeNull()
         expect(parseModerationAnswer(answer('ok'))).toBeNull()
         expect(parseModerationAnswer(null)).toBeNull()
+        // 통과라면서 이유나 분류를 달면 사람이 본다
+        expect(parseModerationAnswer(answer('pass', ['조금 애매'], []))?.verdict).toBe('review')
+        expect(parseModerationAnswer(answer('pass', [], ['other']))?.verdict).toBe('review')
     })
 })
 
@@ -109,7 +122,9 @@ describe('reviewBot — 봇 하나 확인', () => {
         for (const t of ['진봇', '팬 질문에 답해요', '너는 진의 말투로 답한다.', '안녕하세요', '오늘 뭐 해요?']) expect(sent.prompt).toContain(t)
         expect(sent.prompt).not.toContain('나'.repeat(KNOWLEDGE_SAMPLE_CHARS - 2999))
         const log = eventInserts(queries).find(e => e.name === 'os_bot_moderation')!
-        expect(log.extra).toEqual({ mentor_id: 'm1', verdict: 'pass', categories: [] })
+        // 판정, 분류, 순서 번호만. 봇 글은 없다
+        expect(Object.keys(log.extra).sort()).toEqual(['categories', 'mentor_id', 'seq', 'verdict'])
+        expect(log.extra).toMatchObject({ mentor_id: 'm1', verdict: 'pass', categories: [] })
     })
 
     it('모델이 답을 못 하거나, 틀린 모양이거나, 오류가 나면 「확인 필요」 (자동 공개 금지)', async () => {
@@ -149,8 +164,8 @@ describe('공개하기 + AI 확인', () => {
         expect(mentorUpdates(queries).some(u => u.is_active === true)).toBe(false)
         const mark = eventInserts(queries).find(e => e.name === 'os_bot_publish_review')!
         expect(mark.extra).toMatchObject({ mentor_id: 'm1', reasons: ['건강 효과를 단정해요'], categories: ['medical_claim'] })
-        expect(sendSlackNotification).toHaveBeenCalledTimes(1)
-        expect(String(sendSlackNotification.mock.calls[0][0])).not.toContain('너는 진의 말투로')
+        // 팀이 보는 자동 알림은 보내지 않는다 (대표 규칙). 관리자 목록에만 뜬다
+        expect(sendSlackNotification).not.toHaveBeenCalled()
     })
 
     it('모델 오류 = 확인 필요로 보고 공개하지 않는다', async () => {
@@ -186,18 +201,28 @@ describe('공개된 봇의 지시문, 인사말을 고치면 다시 확인한다
         expect(eventInserts(queries).some(e => e.name === 'os_bot_publish_review')).toBe(true)
     })
 
-    it('공개 중인 봇을 고쳤는데 통과 = 공개 유지', async () => {
+    it('공개 중인 봇을 고쳤는데 통과 = 저장과 함께 내렸다가 다시 올린다 (확인 중엔 새 글이 안 보인다)', async () => {
         askSideText.mockResolvedValue(answer('pass'))
         const { db, queries } = world({ bot: { is_active: true } })
         await updateTeamBot(db, 'u1', 't1', { systemPrompt: '새 지시문' })
-        expect(mentorUpdates(queries).some(u => u.is_active === false)).toBe(false)
+        const ups = mentorUpdates(queries)
+        expect(ups[0]).toEqual(expect.objectContaining({ system_prompt: '새 지시문', is_active: false }))
+        expect(ups.at(-1)).toEqual(expect.objectContaining({ is_active: true }))
+    })
+
+    it('공개 중인 봇의 이름, 한 줄 소개를 고쳐도 다시 확인한다', async () => {
+        askSideText.mockResolvedValue(answer('block', ['유명인 이름'], ['impersonation']))
+        const { db, queries } = world({ bot: { is_active: true } })
+        const out = await updateTeamBot(db, 'u1', 't1', { name: '아이유봇', oneLiner: '아이유가 직접 답해요' })
+        expect(out.moderation?.verdict).toBe('block')
+        expect(mentorUpdates(queries)[0]).toEqual(expect.objectContaining({ name: '아이유봇', title: '아이유가 직접 답해요', is_active: false }))
     })
 
     it('공개 안 된 봇이거나, 지시문, 인사말이 아닌 칸만 고치면 확인하지 않는다', async () => {
         const a = world({ bot: { is_active: false } })
         await updateTeamBot(a.db, 'u1', 't1', { systemPrompt: '새 지시문' })
         const b = world({ bot: { is_active: true } })
-        await updateTeamBot(b.db, 'u1', 't1', { pinned: true, name: '새이름' })
+        await updateTeamBot(b.db, 'u1', 't1', { pinned: true, avatarUrl: 'x.png' })
         expect(askSideText).not.toHaveBeenCalled()
     })
 })
@@ -216,25 +241,16 @@ describe('관리자 확인 대기 목록, 승인, 거절', () => {
         expect(out.find(p => p.mentorId === 'a')!.reasons).toEqual(['r1'])
     })
 
-    it('승인 = 확인 대기 중인 봇만 공개하고(처음이면 한 번만 셈) 결정을 기록한다', async () => {
-        const { db, queries, rpc } = world({ pendingEvents: [{ name: 'os_bot_publish_review', created_at: '2026-10-01T01:00:00Z', extra: { mentor_id: 'm1' } }] })
-        await decideBotReview(db, 'admin1', 'm1', 'approve')
-        expect(mentorUpdates(queries)).toContainEqual(expect.objectContaining({ is_active: true, status: 'active' }))
-        expect(rpc).toHaveBeenCalledWith('increment_mentor_count', { p_creator_id: 'cp1' })
-        expect(eventInserts(queries).find(e => e.name === 'os_bot_publish_decision')!.extra).toMatchObject({ mentor_id: 'm1', decision: 'approve' })
-    })
-
-    it('거절 = 공개하지 않고 결정만 기록한다', async () => {
-        const { db, queries } = world({ pendingEvents: [{ name: 'os_bot_publish_review', created_at: '2026-10-01T01:00:00Z', extra: { mentor_id: 'm1' } }] })
-        await decideBotReview(db, 'admin1', 'm1', 'reject')
-        expect(mentorUpdates(queries).some(u => u.is_active === true)).toBe(false)
-        expect(eventInserts(queries).find(e => e.name === 'os_bot_publish_decision')!.extra).toMatchObject({ decision: 'reject' })
-    })
-
-    it('확인 대기가 아닌 봇은 승인할 수 없다 (관리자라도 아무 봇이나 공개 금지)', async () => {
-        const { db, queries } = world({ pendingEvents: [] })
-        await expect(decideBotReview(db, 'admin1', 'm1', 'approve')).rejects.toThrow()
-        expect(mentorUpdates(queries)).toHaveLength(0)
+    it('pickPendingReviews: 대기 뒤에 판정, 주인 비공개, 고쳐서 닫힘이 오면 끝. 같은 시각이면 seq 로 가른다', () => {
+        const ev = (name: string, mentorId: string, at: string, extra: Record<string, unknown> = {}) => ({ name, created_at: at, extra: { mentor_id: mentorId, ...extra } })
+        const T = '2026-10-01T01:00:00Z', U = '2026-10-01T02:00:00Z'
+        const out = pickPendingReviews([
+            ev('os_bot_publish_review', 'a', T), ev('os_bot_moderation', 'a', U, { verdict: 'block' }),
+            ev('os_bot_publish_review', 'b', T), ev('os_bot_owner_unpublish', 'b', U),
+            ev('os_bot_publish_review', 'c', T), ev('os_bot_publish_closed', 'c', U),
+            ev('os_bot_moderation', 'd', T, { verdict: 'review', seq: 1 }), ev('os_bot_publish_review', 'd', T, { seq: 2 }),
+        ])
+        expect(out.map(p => p.mentorId)).toEqual(['d'])
     })
 
     it('관리자 창구: 관리자가 아니면 403, DB 를 열지 않는다', async () => {
@@ -242,5 +258,13 @@ describe('관리자 확인 대기 목록, 승인, 거절', () => {
         const res = await adminPost(new Request('http://x/api/admin/os/bot-reviews', { method: 'POST', body: JSON.stringify({ mentorId: 'm1', decision: 'approve' }) }))
         expect(res.status).toBe(403)
         expect(adminDbFrom).not.toHaveBeenCalled()
+    })
+
+    it('관리자 창구: 이미 닫힌 대기에 또 결정하면 409', async () => {
+        requireAdminAPI.mockResolvedValue({ error: null, status: 200, user: { id: 'admin-u' } })
+        decideReview.mockImplementation(async () => { throw new ReviewNotPending() })
+        const res = await adminPost(new Request('http://x/api/admin/os/bot-reviews', { method: 'POST', body: JSON.stringify({ mentorId: 'm1', decision: 'approve' }) }))
+        expect(res.status).toBe(409)
+        decideReview.mockReset()
     })
 })
