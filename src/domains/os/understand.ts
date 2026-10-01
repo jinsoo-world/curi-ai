@@ -5,6 +5,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { askSideText } from '@/domains/llm/side-text'
 import { tidyUnderstanding, isEmptyUnderstanding, type Understanding } from './understand-shared'
+import { applyBotEdit } from './publish-gate'
 
 export const UNDERSTAND_MODEL = 'gemini-3.5-flash-lite'
 const TEXT_MAX = 6_000
@@ -109,15 +110,17 @@ export async function saveUnderstanding(db: SupabaseClient, userId: string, ment
     const { data: m } = await db.from('mentors').select('system_prompt').eq('id', mentorId).eq('creator_id', (creator as { id: string }).id).maybeSingle()
     if (!m) return { savedToPrompt: false }
     const next = upsertUnderstandBlock((m as { system_prompt: string | null }).system_prompt ?? '', sourceId, row.title, u)
-    const { error } = await db.from('mentors').update({ system_prompt: next }).eq('id', mentorId).eq('creator_id', (creator as { id: string }).id)
-    if (error) throw new Error(error.message)
+    // 지시문은 AI 가 검사하는 칸 = 공개 관문으로 저장한다(공개 중이면 내리고 다시 확인)
+    await applyBotEdit(db, { mentorId, creatorId: (creator as { id: string }).id, actorUserId: userId, fields: { system_prompt: next } })
     return { savedToPrompt: true }
 }
 
-/** 자료를 뺄 때 봇 설명 속 그 자료 묶음도 뺀다 (없으면 아무것도 안 한다) */
-export async function dropUnderstanding(db: SupabaseClient, mentorId: string, sourceId: string): Promise<void> {
-    const { data: m } = await db.from('mentors').select('system_prompt').eq('id', mentorId).maybeSingle()
-    const prompt = (m as { system_prompt: string | null } | null)?.system_prompt ?? ''
+/** 자료를 뺄 때 봇 설명 속 그 자료 묶음도 뺀다 (없으면 아무것도 안 한다). 주인 확인은 부르는 쪽이 먼저 한다 */
+export async function dropUnderstanding(db: SupabaseClient, mentorId: string, sourceId: string, actorUserId: string): Promise<void> {
+    const { data: m } = await db.from('mentors').select('system_prompt, creator_id').eq('id', mentorId).maybeSingle()
+    const row = m as { system_prompt: string | null; creator_id: string | null } | null
+    const prompt = row?.system_prompt ?? ''
     if (!prompt.includes(START(sourceId))) return
-    await db.from('mentors').update({ system_prompt: removeUnderstandBlock(prompt, sourceId) }).eq('id', mentorId)
+    // 지시문이 바뀐다 = 공개 관문으로 (공개 중이면 내리고 다시 확인)
+    await applyBotEdit(db, { mentorId, creatorId: row?.creator_id ?? null, actorUserId, fields: { system_prompt: removeUnderstandBlock(prompt, sourceId) } })
 }

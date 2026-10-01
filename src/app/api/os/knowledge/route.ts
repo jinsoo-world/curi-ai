@@ -132,7 +132,7 @@ export async function DELETE(req: NextRequest) {
         await assertBotOwned(db, user.id, mentorId)
         await removeBotSource(db, mentorId, sourceId)
         // 봇 설명 속 이 자료의 「이해한 내용」 묶음도 뺀다
-        await dropUnderstanding(db, mentorId, sourceId).catch(e => console.warn('[os/knowledge] 이해 묶음 빼기 실패', e instanceof Error ? e.message : e))
+        await dropUnderstanding(db, mentorId, sourceId, user.id).catch(e => console.warn('[os/knowledge] 이해 묶음 빼기 실패', e instanceof Error ? e.message : e))
         return NextResponse.json({ ok: true })
     } catch (e) {
         return 오류응답(e)

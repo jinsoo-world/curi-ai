@@ -215,6 +215,21 @@ describe('applyBotEdit — 고치기 + 다시 확인', () => {
         expect(askSideText).not.toHaveBeenCalled()
     })
 
+    it('이미 비공개인 봇에 wantPublic=false 가 오면(옛 편집 저장은 늘 보낸다) 아무것도 안 한다 = 열린 대기도 그대로', async () => {
+        const w = stateDb({ isActive: false, events: [{ name: 'os_bot_publish_review', extra: { mentor_id: 'm1', content_hash: 'h' } }] })
+        await applyBotEdit(w.db, { ...ACT, fields: { avatar_url: 'x.png' }, wantPublic: false })
+        expect(names(w.events)).toEqual(['os_bot_publish_review'])
+        expect(w.updates).toEqual([{ avatar_url: 'x.png' }])
+    })
+
+    it('바뀐 것 비교는 다듬어서 한다: 빈 값 null 과 빈 글, 예시 질문의 빈 칸, 앞뒤 공백은 바뀐 게 아니다', async () => {
+        const w = stateDb({ isActive: true })
+        ;(w.mentor as Record<string, unknown>).description = null
+        await applyBotEdit(w.db, { ...ACT, fields: { description: '', sample_questions: [' 오늘 뭐 해요? ', '', '  '] }, wantPublic: true })
+        expect(askSideText).not.toHaveBeenCalled()
+        expect(w.mentor.is_active).toBe(true)
+    })
+
     it('이미 공개 중이고 바뀐 것 없이 공개를 다시 보내면 아무것도 안 한다', async () => {
         const w = stateDb({ isActive: true })
         const r = await applyBotEdit(w.db, { ...ACT, fields: {}, wantPublic: true })

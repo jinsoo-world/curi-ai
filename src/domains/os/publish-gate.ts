@@ -21,6 +21,14 @@ const DEMO_SLUG_PREFIX = 'os-demo-'
 /** AI 가 검사하는 mentors 칸. 이 중 하나라도 바뀌면 다시 확인 대상 (프로필 사진은 아직 안 본다) */
 export const REVIEWED_FIELDS = ['name', 'title', 'description', 'system_prompt', 'greeting_message', 'sample_questions'] as const
 
+/** 바뀐 것 비교용으로 다듬는다: 빈 값(null)은 빈 글, 글은 앞뒤 공백 무시, 목록은 칸마다 다듬고 빈 칸을 뺀다 */
+function normalizeField(v: unknown): unknown {
+    if (v === null || v === undefined) return ''
+    if (typeof v === 'string') return v.trim()
+    if (Array.isArray(v)) return v.map(x => (typeof x === 'string' ? x.trim() : x)).filter(x => x !== '' && x !== null && x !== undefined)
+    return v
+}
+
 /** 관리자 결정이 들어왔는데 열린 확인 대기가 없다(이미 결정됨, 주인이 내림, 새 판정이 남) = 409 */
 export class ReviewNotPending extends Error {
     constructor() { super('이미 처리됐거나 확인 대기 중이 아니에요') }
@@ -98,7 +106,7 @@ export async function applyBotEdit(
     if (!p) throw new Error('봇을 못 찾았다')
     const prior = p as unknown as Record<string, unknown> & { is_active: boolean | null; slug: string | null }
 
-    const changed = REVIEWED_FIELDS.some(k => k in a.fields && JSON.stringify(a.fields[k] ?? null) !== JSON.stringify(prior[k] ?? null))
+    const changed = REVIEWED_FIELDS.some(k => k in a.fields && JSON.stringify(normalizeField(a.fields[k])) !== JSON.stringify(normalizeField(prior[k])))
     const open = changed && !prior.is_active ? await openReviewOf(db, a.mentorId) : null
 
     // 검사하는 칸이 바뀌면 같은 저장에서 내린다 = 확인 전 새 글이 공개되지 않는다
@@ -113,7 +121,8 @@ export async function applyBotEdit(
     if (changed && open) await logReviewEvent(db, 'os_bot_publish_closed', a.actorUserId, { mentor_id: a.mentorId, reason: 'edited' })
 
     if (a.wantPublic === false) {
-        await unpublishByOwner(db, a)
+        // 이미 비공개면 할 일 없다(옛 편집 저장은 늘 배포 칸을 보낸다). 열린 대기도 건드리지 않는다
+        if (prior.is_active) await unpublishByOwner(db, a)
         return {}
     }
     if (a.wantPublic === true && (prior.slug ?? '').startsWith(DEMO_SLUG_PREFIX)) throw new Error('시연용 봇은 공개할 수 없어요')
