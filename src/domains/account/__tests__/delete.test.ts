@@ -25,8 +25,8 @@ function fakeDb(opts: {
             select: () => q,
             update: (p: unknown) => { mode = 'update'; patch = p; return q },
             delete: () => { mode = 'delete'; return q },
-            eq: (_c: string, _v: unknown) => q,
-            in: (_c: string, _v: unknown) => q,
+            eq: () => q,
+            in: () => q,
             order: () => q,
             limit: () => q,
             maybeSingle: async () => {
@@ -185,7 +185,7 @@ describe('deleteAccount', () => {
     })
 
     it('애플 가입자: 설정이 없으면 취소 호출을 건너뛰고 삭제는 계속', async () => {
-        const revoke = vi.fn(async () => ({ revoked: false as const, reason: 'not_configured' }))
+        const revoke = vi.fn(async () => ({ revoked: false as const, reason: 'not_configured' as const }))
         const { db } = fakeDb()
         const r = await deleteAccount(db, { ...user, provider: 'apple' }, { appleAuthorizationCode: 'code', revokeApple: revoke })
         expect(r).toEqual({ ok: true })
