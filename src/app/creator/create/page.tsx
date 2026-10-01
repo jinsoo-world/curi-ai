@@ -353,6 +353,13 @@ export default function CreatorCreatePage() {
                 }
             }
 
+            // 공개 전 AI 확인에서 사람 확인이 필요하다 = 아직 비공개. 보상 화면 대신 내 AI 관리로
+            if (pubData.code === 'MODERATION_REVIEW') {
+                alert('확인 중이에요. 확인되면 공개돼요')
+                router.push('/creator/manage')
+                return
+            }
+
             // 성공 → 미션 보상 페이지로 (2회 이하일 때만 보상 애니메이션)
             const aiCount = pubData.aiCount || 0
             if (aiCount <= 2) {

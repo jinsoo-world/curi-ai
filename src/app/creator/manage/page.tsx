@@ -596,11 +596,20 @@ export default function CreatorManagePage() {
                                                         item.id === m.id ? { ...item, is_active: newVal } : item
                                                     ))
                                                     try {
-                                                        await fetch('/api/creator/mentor/update', {
+                                                        const res = await fetch('/api/creator/mentor/update', {
                                                             method: 'PATCH',
                                                             headers: { 'Content-Type': 'application/json' },
                                                             body: JSON.stringify({ mentorId: m.id, isActive: newVal }),
                                                         })
+                                                        // 공개 전 AI 확인: 막힘 422, 확인 중 202 = 아직 비공개
+                                                        const data = await res.json().catch(() => ({}))
+                                                        if (data.code === 'MODERATION_BLOCKED' || data.code === 'MODERATION_REVIEW') {
+                                                            setMentors(prev => prev.map(item => item.id === m.id ? { ...item, is_active: false } : item))
+                                                            const reasons = Array.isArray(data.reasons) ? (data.reasons as string[]).join(' ') : ''
+                                                            alert(data.code === 'MODERATION_BLOCKED' ? `공개할 수 없어요. ${reasons}` : '확인 중이에요. 확인되면 공개돼요')
+                                                        } else if (!res.ok) {
+                                                            throw new Error(data.error || '상태 변경 실패')
+                                                        }
                                                     } catch {
                                                         // 롤백
                                                         setMentors(prev => prev.map(item =>

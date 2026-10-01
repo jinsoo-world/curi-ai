@@ -5,7 +5,7 @@
 //
 // 🔒 어느 창구든 첫 줄은 「이 봇이 내 팀 봇인가」(team_bots.user_id = 나) 확인이다.
 //    서버는 service_role 로 DB 를 만지므로 여기서 안 막으면 남의 봇 자료가 그대로 나간다.
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
@@ -14,6 +14,7 @@ import {
 } from '@/domains/os/knowledge'
 import { addSnsCaptureSource } from '@/domains/os/sns-capture'
 import { understandSource, saveUnderstanding, dropUnderstanding } from '@/domains/os/understand'
+import { recheckAfterKnowledge } from '@/domains/os/publish-gate'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -65,20 +66,25 @@ export async function POST(req: NextRequest) {
             return NextResponse.json(await saveUnderstanding(db, user.id, mentorId, String(body.sourceId ?? ''), body.understanding))
         }
         await assertRoomForMore(db, mentorId)
+        // 자료를 넣는 데 성공하면: 공개 중인(또는 확인 대기 중인) 봇은 새 자료까지 AI 가 다시 본다 (응답 뒤)
+        const added = (source: unknown) => {
+            after(() => recheckAfterKnowledge(db, { mentorId, actorUserId: user.id }))
+            return NextResponse.json({ source: { id: (source as { id: string }).id } })
+        }
 
         if (kind === 'sns') {
             // 인스타그램, 페이스북, 스레드: 캡처(글을 옮겨 적음)나 붙여넣은 글
             const source = await addSnsCaptureSource(db, mentorId, { url: body.url, images: body.images, text: body.text, userId: user.id })
-            return NextResponse.json({ source: { id: (source as { id: string }).id } })
+            return added(source)
         }
         if (kind === 'url') {
             const source = await addLinkSource(db, mentorId, String(body.url ?? ''), { userId: user.id })
-            return NextResponse.json({ source: { id: (source as { id: string }).id } })
+            return added(source)
         }
         if (kind === 'text') {
             const sourceKind = typeof body.sourceKind === 'string' ? body.sourceKind : 'text'
             const source = await addTextSource(db, mentorId, String(body.title ?? ''), String(body.text ?? ''), sourceKind)
-            return NextResponse.json({ source: { id: (source as { id: string }).id } })
+            return added(source)
         }
         if (kind === 'qa') {
             // Q&A 직접 쓰기 / CSV 한 줄이 여기로 온다 (sourceKind 로 갈래를 구분). 옛 sourceKind=fix 자료도 읽힌다.
@@ -87,7 +93,7 @@ export async function POST(req: NextRequest) {
                 authorIsMe: typeof body.authorIsMe === 'boolean' ? body.authorIsMe : undefined,
                 sourceKind: typeof body.sourceKind === 'string' ? body.sourceKind : undefined,
             })
-            return NextResponse.json({ source: { id: (source as { id: string }).id } })
+            return added(source)
         }
         return NextResponse.json({ error: '링크나 글 중 하나를 넣어 주세요' }, { status: 400 })
     } catch (e) {
@@ -126,7 +132,7 @@ export async function DELETE(req: NextRequest) {
         await assertBotOwned(db, user.id, mentorId)
         await removeBotSource(db, mentorId, sourceId)
         // 봇 설명 속 이 자료의 「이해한 내용」 묶음도 뺀다
-        await dropUnderstanding(db, mentorId, sourceId).catch(e => console.warn('[os/knowledge] 이해 묶음 빼기 실패', e instanceof Error ? e.message : e))
+        await dropUnderstanding(db, mentorId, sourceId, user.id).catch(e => console.warn('[os/knowledge] 이해 묶음 빼기 실패', e instanceof Error ? e.message : e))
         return NextResponse.json({ ok: true })
     } catch (e) {
         return 오류응답(e)

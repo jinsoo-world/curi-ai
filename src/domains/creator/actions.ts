@@ -4,6 +4,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { CreateMentorInput, SetPersonaInput, SetKnowledgeInput } from './types'
 import { PERSONA_TEMPLATES } from './types'
 import { recordBotCreated } from '@/domains/os/bot-events'
+import { applyBotEdit } from '@/domains/os/publish-gate'
+import type { ModerationResult } from '@/domains/os/moderation'
 
 /**
  * 크리에이터 프로필 생성 (없으면 생성, 있으면 반환)
@@ -56,6 +58,7 @@ export async function createMentorDraft(
             creator_id: creatorId,
             mentor_type: 'creator',
             status: 'draft',
+            is_active: false,        // 초안은 비공개. 공개는 publishMentor(공개 관문, AI 확인)로만
             name: input.name,
             slug,
             title: input.title,
@@ -85,7 +88,8 @@ export async function createMentorDraft(
 export async function setMentorPersona(
     db: SupabaseClient,
     input: SetPersonaInput,
-) {
+    ctx: { creatorId: string; actorUserId: string },
+): Promise<{ moderation?: ModerationResult }> {
     const template = input.template ? PERSONA_TEMPLATES.find(t => t.id === input.template) : null
 
     const updates: Record<string, unknown> = {
@@ -99,14 +103,13 @@ export async function setMentorPersona(
         updates.chat_theme_color = input.chatThemeColor || null
     }
 
-    const { error } = await db
-        .from('mentors')
-        .update(updates)
-        .eq('id', input.mentorId)
-
-    if (error) {
-        console.error('[Creator] setMentorPersona error:', error.message)
-        throw new Error(error.message)
+    // 지시문, 인사말, 예시 질문은 AI 가 검사하는 칸 = 공개 관문으로 저장한다(공개 중이면 내리고 다시 확인).
+    // creatorId 로 묶어 내 봇만 고친다.
+    try {
+        return await applyBotEdit(db, { mentorId: input.mentorId, creatorId: ctx.creatorId, actorUserId: ctx.actorUserId, fields: updates })
+    } catch (e) {
+        console.error('[Creator] setMentorPersona error:', e instanceof Error ? e.message : e)
+        throw e
     }
 }
 
@@ -152,34 +155,19 @@ export async function setMentorKnowledge(
 }
 
 /**
- * 멘토 공개 (draft → review → active)
- * MVP에서는 자동 심사 없이 바로 active
+ * 멘토 공개 (draft → active). 공개는 공개 관문(publish-gate)으로만 = AI 확인 → pass 면 조건부 공개 + 처음만 셈.
+ * isPublic=false 면 상태만 active(비공개 봇)로 둔다. 확인 결과(moderation)는 창구가 422/202 로 바꾼다.
  */
 export async function publishMentor(
     db: SupabaseClient,
     mentorId: string,
     creatorId: string,
     isPublic: boolean = true,
-) {
-    const { error } = await db
-        .from('mentors')
-        .update({
-            status: 'active',
-            is_active: isPublic,
-            updated_at: new Date().toISOString(),
-        })
-        .eq('id', mentorId)
-        .eq('creator_id', creatorId)
-
-    if (error) {
-        console.error('[Creator] publishMentor error:', error.message)
-        throw new Error(error.message)
-    }
-
-    // 크리에이터 mentor_count 증가
-    try {
-        await db.rpc('increment_mentor_count', { p_creator_id: creatorId })
-    } catch {
-        // RPC 없으면 무시 (DB function 추가 후 동작)
-    }
+    actorUserId: string = '',
+): Promise<{ moderation?: ModerationResult }> {
+    return applyBotEdit(db, {
+        mentorId, creatorId, actorUserId,
+        fields: { status: 'active', updated_at: new Date().toISOString() },
+        wantPublic: isPublic,
+    })
 }

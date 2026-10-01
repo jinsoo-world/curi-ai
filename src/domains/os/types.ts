@@ -29,6 +29,10 @@ export interface TeamBot {
     greeting: string
     knowledgeCount: number
     createdAt: string
+    /** 봇 마켓에 공개됐나 (mentors.is_active). 시연 목록처럼 모르면 비운다 */
+    isPublic?: boolean
+    /** 공개하기를 보여 줄 봇인가 = 내가 만든 봇(마켓에서 데려온 봇, 시연 봇 아님). 최종 판정은 서버가 다시 한다 */
+    canPublish?: boolean
 }
 
 /** 새 봇 만들기 입력 (승인 모드는 항상 always_ask 로 둔다) */
