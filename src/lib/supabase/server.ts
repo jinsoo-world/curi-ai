@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
+import { bearerFromHeader, bindBearerToAuth } from './bearer'
 
 export async function createClient() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -20,8 +21,12 @@ export async function createClient() {
     }
 
     const cookieStore = await cookies()
+    // 앱(iOS·안드로이드)은 쿠키 대신 Authorization: Bearer 로 로그인 표시를 보낸다 (bearer.ts)
+    const bearer = bearerFromHeader((await headers()).get('authorization'))
 
-    return createServerClient(supabaseUrl, supabaseAnonKey, {
+    const client = createServerClient(supabaseUrl, supabaseAnonKey, {
+        // 표시가 있으면 데이터 조회도 그 사용자 권한(RLS)으로 한다
+        ...(bearer ? { global: { headers: { Authorization: `Bearer ${bearer}` } } } : {}),
         cookies: {
             getAll() {
                 return cookieStore.getAll()
@@ -37,4 +42,5 @@ export async function createClient() {
             },
         },
     })
+    return bearer ? bindBearerToAuth(client, bearer) : client
 }
