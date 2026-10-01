@@ -313,7 +313,7 @@ export async function addLinkSource(db: SupabaseClient, mentorId: string, rawUrl
  * 예전엔 초안만 만들고 읽은 글을 버려서, 봇이 자기 글을 한 줄도 못 찾았다.
  * 새 길을 만들지 않는다 = 자료 넣기 창구와 같은 addLinkSource, addTextSource, assertRoomForMore 를 그대로 부른다.
  * 인스타그램, 스레드처럼 주소만으로 못 읽는 곳(draftLinkKind 가 read 가 아닌 것)은 열지 않는다 = 그 글은 붙여넣은 글로 들어간다.
- * 하나가 실패해도 나머지는 넣고, 던지지 않는다(봇은 이미 만들어졌다). 링크는 같이 읽어 시간을 줄인다.
+ * 하나가 실패해도 나머지는 넣고, 던지지 않는다(봇은 이미 만들어졌다). 느린 링크를 먼저 같이 띄워 시간을 줄인다.
  */
 export async function addDraftSources(
     db: SupabaseClient, mentorId: string,
@@ -330,15 +330,17 @@ export async function addDraftSources(
             console.warn('[os/knowledge] 초안 자료 넣기 실패', { mentorId, what, reason: e instanceof Error ? e.message : e })
         }
     }
-    for (const [i, text] of input.pastes.entries()) {
-        await tryAdd('paste', () => addTextSource(db, mentorId, input.pastes.length > 1 ? `붙여넣은 글 ${i + 1}` : '붙여넣은 글', text))
-    }
     const urls = input.links
         .map(l => l.trim())
         .filter(l => draftLinkKind(l) === 'read')
         .map(l => /^https?:\/\//i.test(l) ? l : `https://${l}`)
         .filter(isSafeExternalUrl)
-    await Promise.all(urls.map(url => tryAdd('link', () => addLinkSource(db, mentorId, url, { userId: input.userId }))))
+    // 느린 링크 읽기를 먼저 띄우고, 그동안 붙여넣은 글을 넣는다
+    const linkJobs = urls.map(url => tryAdd('link', () => addLinkSource(db, mentorId, url, { userId: input.userId })))
+    for (const [i, text] of input.pastes.entries()) {
+        await tryAdd('paste', () => addTextSource(db, mentorId, input.pastes.length > 1 ? `붙여넣은 글 ${i + 1}` : '붙여넣은 글', text))
+    }
+    await Promise.allSettled(linkJobs)
     return { added, failed }
 }
 

@@ -66,8 +66,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         const lookKind = classifyLookChange(lookPatch)
 
         await updateTeamBot(db, user.id, id, patch)
-        // 공개, 비공개, 마켓 제목이 바뀌면 마켓 목록 캐시를 바로 비운다 (옛 편집 창구와 같다)
-        if (patch.isPublic !== undefined || patch.oneLiner !== undefined) revalidatePath('/mentors')
+        // 공개, 비공개, 마켓 제목이 바뀌면 마켓 목록과 홈 캐시를 바로 비운다 (옛 편집 창구와 같다)
+        if (patch.isPublic !== undefined || patch.oneLiner !== undefined) {
+            revalidatePath('/mentors')
+            revalidatePath('/home')
+        }
 
         let lookBeat: { channelId: string } | null = null
         if (lookKind && mentorId) {

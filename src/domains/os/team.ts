@@ -145,8 +145,9 @@ export async function createTeamBot(
 /**
  * 봇 편집. 팀 줄(team_bots)의 칸 = 고정, 숨김, 정렬, 승인 모드, 모양, 색, 한 줄 소개, 역할.
  * 봇의 몸(mentors)에 있는 칸 = 이름, 인사말, 프롬프트, 프로필 사진. 몸은 내가 만든 것(creator_profiles 가 내 것)만 바꾼다 = 리더의 공개 봇 몸은 건드리지 않는다.
- * 한 줄 소개는 마켓이 mentors.title 을 보여 주니 내 봇이면 몸의 title, description 도 같이 바꾼다(남의 봇이면 팀 줄만).
- * isPublic = 공개하기 / 비공개 (setTeamBotPublic).
+ * 한 줄 소개는 마켓이 mentors.title 을 보여 주니, 팀 화면에서 만든 내 봇(slug os-, 시연 os-demo- 제외)이면 몸의 title, description 도 같이 바꾼다.
+ * 리더가 /creator 에서 쓴 봇은 제목, 설명이 따로 있으니 팀 줄(one_liner)만 바꾼다.
+ * isPublic = 공개하기 / 비공개. 권한 확인(authorizePublish)을 맨 먼저 해서 403 이면 아무 칸도 안 바뀐다.
  */
 export type TeamBotPatch = Partial<Pick<TeamBot, 'pinned' | 'hidden' | 'sortOrder' | 'approvalMode' | 'shape' | 'color' | 'oneLiner' | 'role' | 'name' | 'greeting' | 'systemPrompt' | 'avatarUrl'>> & { isPublic?: boolean }
 
@@ -154,6 +155,9 @@ export async function updateTeamBot(
     db: SupabaseClient, userId: string, teamBotId: string,
     patch: TeamBotPatch,
 ) {
+    // 공개 권한부터 본다. 막히면 같이 보낸 다른 칸도 쓰지 않는다(반쪽 저장 없음)
+    const publishTarget = patch.isPublic !== undefined ? await authorizePublish(db, userId, teamBotId) : null
+
     const row: Record<string, unknown> = {}
     if (patch.pinned !== undefined) row.pinned = patch.pinned
     if (patch.hidden !== undefined) row.hidden = patch.hidden
@@ -175,9 +179,8 @@ export async function updateTeamBot(
     if (patch.avatarUrl !== undefined) body.avatar_url = patch.avatarUrl
     // 한 줄 소개 → 마켓 제목. 비우면 제목은 그대로 둔다(빈 제목 카드 방지). 내 봇이 아니면 조용히 건너뛴다
     const line = (patch.oneLiner ?? '').trim().slice(0, 40)
-    const titleSync: Record<string, unknown> = line ? { title: line, description: line } : {}
 
-    if (Object.keys(body).length > 0 || Object.keys(titleSync).length > 0) {
+    if (Object.keys(body).length > 0 || line) {
         const { data: tb } = await db.from('team_bots').select('mentor_id').eq('id', teamBotId).eq('user_id', userId).maybeSingle()
         if (!tb) {
             if (Object.keys(body).length > 0) throw new Error('내 팀에 없는 봇이다')
@@ -185,22 +188,30 @@ export async function updateTeamBot(
             const { data: creator } = await db.from('creator_profiles').select('id').eq('user_id', userId).maybeSingle()
             if (!creator && Object.keys(body).length > 0) throw new Error('내가 만든 봇이 아니다')
             if (creator) {
-                const { error } = await db.from('mentors').update({ ...body, ...titleSync }).eq('id', tb.mentor_id).eq('creator_id', creator.id)
-                if (error) throw new Error(error.message)
+                // 팀 화면에서 만든 봇만 제목, 설명을 한 줄 소개에 맞춘다. 리더 봇의 긴 설명은 덮지 않는다
+                let titleSync: Record<string, unknown> = {}
+                if (line) {
+                    const { data: m } = await db.from('mentors').select('slug').eq('id', tb.mentor_id).eq('creator_id', creator.id).maybeSingle()
+                    const slug = (m as { slug: string | null } | null)?.slug ?? ''
+                    if (slug.startsWith('os-') && !slug.startsWith(DEMO_SLUG_PREFIX)) titleSync = { title: line, description: line }
+                }
+                const next = { ...body, ...titleSync }
+                if (Object.keys(next).length > 0) {
+                    const { error } = await db.from('mentors').update(next).eq('id', tb.mentor_id).eq('creator_id', creator.id)
+                    if (error) throw new Error(error.message)
+                }
             }
         }
     }
 
-    if (patch.isPublic !== undefined) await setTeamBotPublic(db, userId, teamBotId, patch.isPublic)
+    if (publishTarget && patch.isPublic !== undefined) await setTeamBotPublic(db, userId, publishTarget, patch.isPublic)
 }
 
 /**
- * 공개하기 / 비공개. 내가 만든 봇(mentors.creator_id 가 내 creator_profiles)만. 마켓에서 데려온 봇, 시연 봇은 막는다.
- * 옛 /creator 공개(publishMentor)와 같게: 공개 = is_active=true + status='active', 처음 공개할 때만 mentor_count +1.
- * 비공개 = is_active=false 만 (옛 편집 화면도 status, mentor_count 를 안 건드린다).
- * 「처음」 판정은 app_events 의 os_bot_published 기록으로 한다(새 칸 없이). 공개 목록(getActiveMentors)은 그대로 이 봇을 뽑는다.
+ * 공개하기 권한 확인. 내가 만든 봇(mentors.creator_id 가 내 creator_profiles)만. 마켓에서 데려온 봇, 시연 봇은 막는다.
+ * 아무것도 쓰지 않는다 = updateTeamBot 이 다른 칸을 쓰기 전에 부른다.
  */
-async function setTeamBotPublic(db: SupabaseClient, userId: string, teamBotId: string, isPublic: boolean) {
+async function authorizePublish(db: SupabaseClient, userId: string, teamBotId: string): Promise<{ mentorId: string; creatorId: string }> {
     const { data: tb } = await db.from('team_bots').select('mentor_id, linked_from_market').eq('id', teamBotId).eq('user_id', userId).maybeSingle()
     const teamRow = tb as { mentor_id: string; linked_from_market: boolean | null } | null
     if (!teamRow) throw new BotPublishDenied('내 팀에 없는 봇이에요')
@@ -209,28 +220,52 @@ async function setTeamBotPublic(db: SupabaseClient, userId: string, teamBotId: s
     const { data: creator } = await db.from('creator_profiles').select('id').eq('user_id', userId).maybeSingle()
     const creatorId = (creator as { id: string } | null)?.id
     if (!creatorId) throw new BotPublishDenied()
-    const { data: m } = await db.from('mentors').select('id, creator_id, slug, is_active').eq('id', teamRow.mentor_id).maybeSingle()
-    const mentor = m as { id: string; creator_id: string | null; slug: string | null; is_active: boolean | null } | null
+    const { data: m } = await db.from('mentors').select('id, creator_id, slug').eq('id', teamRow.mentor_id).maybeSingle()
+    const mentor = m as { id: string; creator_id: string | null; slug: string | null } | null
     if (!mentor || mentor.creator_id !== creatorId) throw new BotPublishDenied()
     if ((mentor.slug ?? '').startsWith(DEMO_SLUG_PREFIX)) throw new BotPublishDenied('시연용 봇은 공개할 수 없어요')
+    return { mentorId: mentor.id, creatorId }
+}
 
-    const next: Record<string, unknown> = { is_active: isPublic, updated_at: new Date().toISOString() }
-    if (isPublic) next.status = 'active'
-    const { error } = await db.from('mentors').update(next).eq('id', mentor.id).eq('creator_id', creatorId)
+/**
+ * 공개하기 / 비공개 (권한은 authorizePublish 가 먼저 봤다).
+ * 옛 /creator 공개(publishMentor)와 같게: 공개 = is_active=true + status='active', 처음 공개할 때만 mentor_count +1.
+ * 비공개 = is_active=false 만 (옛 편집 화면도 status, mentor_count 를 안 건드린다).
+ * 두 번 세기 막기(새 칸 없이):
+ *   ① 「비공개였던 줄만」 바꾸는 조건부 update → 바뀐 줄이 있을 때만 셈 후보 (동시에 두 번 눌러도 한 번만 통과)
+ *   ② app_events 의 os_bot_published 기록으로 「전에 공개한 적」을 본다. 조회가 실패하면 세지 않는다
+ *   ③ 기록을 먼저 쓰고, 쓰기에 성공했을 때만 수를 올린다 (두 번 세기보다 덜 세기가 낫다)
+ * 공개 목록(getActiveMentors)은 그대로 이 봇을 뽑는다.
+ */
+async function setTeamBotPublic(db: SupabaseClient, userId: string, target: { mentorId: string; creatorId: string }, isPublic: boolean) {
+    const { mentorId, creatorId } = target
+    const now = new Date().toISOString()
+    if (!isPublic) {
+        const { error } = await db.from('mentors').update({ is_active: false, updated_at: now }).eq('id', mentorId).eq('creator_id', creatorId)
+        if (error) throw new Error(error.message)
+        return
+    }
+
+    const { data: flipped, error } = await db.from('mentors')
+        .update({ is_active: true, status: 'active', updated_at: now })
+        .eq('id', mentorId).eq('creator_id', creatorId).eq('is_active', false)
+        .select('id')
     if (error) throw new Error(error.message)
-    if (!isPublic || mentor.is_active) return
+    if (!(flipped as unknown[] | null)?.length) return   // 이미 공개 중 = 셀 것 없음
 
-    // 처음 공개일 때만 크리에이터 봇 수 +1 (다시 공개는 세지 않는다). 기록, 셈 실패는 공개를 깨지 않는다
+    // 셈 실패는 공개를 깨지 않는다
     try {
-        const { data: seen } = await db.from('app_events').select('id').eq('name', 'os_bot_published').eq('extra->>mentor_id', mentor.id).limit(1)
-        if ((seen as unknown[] | null)?.length) return
-        await db.rpc('increment_mentor_count', { p_creator_id: creatorId })
-        await db.from('app_events').insert({
+        const { data: seen, error: seenErr } = await db.from('app_events').select('id').eq('name', 'os_bot_published').eq('extra->>mentor_id', mentorId).limit(1)
+        if (seenErr) { console.error('[os/team] 공개 기록 조회 실패, 수는 안 올린다', seenErr.message); return }
+        if ((seen as unknown[] | null)?.length) return   // 다시 공개 = 세지 않는다
+        const { error: insErr } = await db.from('app_events').insert({
             name: 'os_bot_published', tool: 'os_edit_bot', path: null, user_id: userId, anon_id: null,
-            extra: { mentor_id: mentor.id, user_id: userId },
+            extra: { mentor_id: mentorId, user_id: userId },
         })
+        if (insErr) { console.error('[os/team] 공개 기록 쓰기 실패, 수는 안 올린다', insErr.message); return }
+        await db.rpc('increment_mentor_count', { p_creator_id: creatorId })
     } catch (e) {
-        console.error('[os/team] 공개 기록 실패', e instanceof Error ? e.message : e)
+        console.error('[os/team] 공개 셈 실패', e instanceof Error ? e.message : e)
     }
 }
 

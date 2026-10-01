@@ -12,7 +12,7 @@ import { addDraftSources } from '@/domains/os/knowledge'
 import { composeGreeting, learnedLine, tidyLine } from '@/domains/os/twin-draft-shared'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60   // 링크 자료 읽기(after)가 링크 하나당 45초까지 걸린다
+export const maxDuration = 120   // 링크 자료 읽기(after)가 링크 하나당 45초까지 걸린다 (초안 창구와 같은 값)
 
 export async function POST(req: Request) {
     const supabase = await createClient()
