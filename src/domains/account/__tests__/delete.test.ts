@@ -2,10 +2,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
     CONFIRM_WORD, isConfirmed, storagePlan, deleteAccount, anonymousRef, parseDeleteBody,
+    payoutRetainUntil, purgeExpiredPayouts, PAYOUT_RETAIN_DAYS,
 } from '@/domains/account/delete'
 import { revokeAppleTokens, appleConfigFromEnv } from '@/domains/account/apple-revoke'
 
-type Call = { kind: 'select' | 'delete' | 'update' | 'storage-list' | 'storage-remove' | 'auth-delete'; target: string; detail?: unknown }
+type Call = { kind: 'select' | 'delete' | 'update' | 'upsert' | 'storage-list' | 'storage-remove' | 'auth-delete'; target: string; detail?: unknown }
 
 /** 부르는 순서를 기록하는 가짜 DB. fail 에 표 이름을 주면 그 표에서 오류를 돌려준다 */
 function fakeDb(opts: {
@@ -15,6 +16,7 @@ function fakeDb(opts: {
     fail?: Record<string, { code: string; message?: string }>
     storage?: Record<string, string[]>   // `${bucket}/${folder}` → 파일 이름들
     authDeleteError?: { message: string; status?: number } | null
+    payout?: Record<string, unknown> | null   // creator_payout_profiles 한 줄
 } = {}) {
     const calls: Call[] = []
     const failFor = (t: string) => opts.fail?.[t] ?? null
@@ -25,6 +27,8 @@ function fakeDb(opts: {
             select: () => q,
             update: (p: unknown) => { mode = 'update'; patch = p; return q },
             delete: () => { mode = 'delete'; return q },
+            upsert: (p: unknown) => { mode = 'upsert'; patch = p; return q },
+            lt: (col: string, v: unknown) => { patch = { lt: [col, v] }; return q },
             eq: () => q,
             in: () => q,
             order: () => q,
@@ -32,6 +36,7 @@ function fakeDb(opts: {
             maybeSingle: async () => {
                 calls.push({ kind: 'select', target: table })
                 if (table === 'creator_profiles') return { data: opts.creatorId === null ? null : { id: opts.creatorId ?? 'cp1' }, error: null }
+                if (table === 'creator_payout_profiles') return { data: opts.payout ?? null, error: null }
                 return { data: null, error: null }
             },
             then: (resolve: any) => {
@@ -155,6 +160,39 @@ describe('deleteAccount', () => {
         }
     })
 
+    it('정산 정보: 1년 보관함에 옮긴 뒤 원래 줄을 지운다(사람 id 없이)', async () => {
+        const payout = {
+            user_id: 'u1', legal_name: '김리더', email: 'a@b.c', phone: '010', birth_date: '1970-01-01',
+            bank_name: '국민', account_number_encrypted: 'v1.x.y.z', account_last4: '1234', account_holder: '김리더',
+            agreed_at: '2026-09-01T00:00:00Z', created_at: 'c', updated_at: 'u',
+        }
+        const { db, calls } = fakeDb({ payout })
+        const r = await deleteAccount(db, user)
+        expect(r).toEqual({ ok: true })
+        const keep = idx(calls, c => c.kind === 'upsert' && c.target === 'retained_payout_profiles')
+        const del = idx(calls, c => c.kind === 'delete' && c.target === 'creator_payout_profiles')
+        expect(keep).toBeGreaterThan(-1)
+        expect(keep).toBeLessThan(del)
+        const row = calls[keep].detail as Record<string, unknown>
+        expect(row).not.toHaveProperty('user_id')
+        expect(row).toMatchObject({ deleted_user_ref: anonymousRef('u1'), account_number_encrypted: 'v1.x.y.z', bank_name: '국민' })
+        const days = (Date.parse(row.retain_until as string) - Date.now()) / 86_400_000
+        expect(Math.round(days)).toBe(PAYOUT_RETAIN_DAYS)
+    })
+
+    it('정산 정보가 없으면 보관함에 아무것도 넣지 않는다', async () => {
+        const { db, calls } = fakeDb({ payout: null })
+        await deleteAccount(db, user)
+        expect(calls.some(c => c.kind === 'upsert')).toBe(false)
+    })
+
+    it('보관함 옮기기가 실패하면 정산 정보와 계정을 지우지 않고 중단', async () => {
+        const { db, calls } = fakeDb({ payout: { user_id: 'u1', bank_name: '국민' }, fail: { retained_payout_profiles: { code: '42501' } } })
+        await expect(deleteAccount(db, user)).rejects.toThrow()
+        expect(calls.some(c => c.kind === 'delete' && c.target === 'creator_payout_profiles')).toBe(false)
+        expect(calls.some(c => c.kind === 'auth-delete')).toBe(false)
+    })
+
     it('결제기록 분리가 실패하면(마이그레이션 미적용) 아무것도 지우지 않고 중단', async () => {
         const { db, calls } = fakeDb({ fail: { credit_transactions: { code: '23502', message: 'null value in column user_id' } } })
         await expect(deleteAccount(db, user)).rejects.toThrow()
@@ -205,6 +243,19 @@ describe('deleteAccount', () => {
         const { db } = fakeDb()
         await deleteAccount(db, user, { appleAuthorizationCode: 'code', revokeApple: revoke as any })
         expect(revoke).not.toHaveBeenCalled()
+    })
+})
+
+describe('정산 정보 1년 보관', () => {
+    it('보관 기한 = 탈퇴일 + 365일', () => {
+        expect(PAYOUT_RETAIN_DAYS).toBe(365)
+        expect(payoutRetainUntil(new Date('2026-10-01T00:00:00Z'))).toBe('2027-10-01T00:00:00.000Z')
+    })
+    it('기한이 지난 줄만 지운다', async () => {
+        const { db, calls } = fakeDb()
+        await purgeExpiredPayouts(db, new Date('2027-10-02T00:00:00Z'))
+        const c = calls.find(x => x.kind === 'delete' && x.target === 'retained_payout_profiles')
+        expect(c?.detail).toEqual({ lt: ['retain_until', '2027-10-02T00:00:00.000Z'] })
     })
 })
 

@@ -48,3 +48,30 @@ BEGIN
 END $$;
 
 COMMENT ON COLUMN public.credit_transactions.deleted_user_ref IS '탈퇴한 회원의 익명 표식. user_id 는 비워지고 기록만 5년 보관한다';
+
+-- ============================================================
+-- 탈퇴한 리더의 정산 정보 1년 보관함 (대표 확정 2026-10-01 「1년」)
+--   탈퇴 API 가 creator_payout_profiles 한 줄을 사람 id 없이 여기로 옮기고 원래 줄을 지운다.
+--   retain_until 이 지나면 매일 예약 작업(/api/cron/retention-purge)이 지운다.
+--   계좌번호는 원래처럼 잠긴 채(account_number_encrypted) 옮긴다. 평문 금지.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.retained_payout_profiles (
+  deleted_user_ref          TEXT PRIMARY KEY,
+  legal_name                TEXT,
+  email                     TEXT,
+  phone                     TEXT,
+  birth_date                DATE,
+  bank_name                 TEXT,
+  account_number_encrypted  TEXT,
+  account_last4             TEXT,
+  account_holder            TEXT,
+  agreed_at                 TIMESTAMPTZ,
+  retain_until              TIMESTAMPTZ NOT NULL,
+  moved_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS retained_payout_profiles_retain_until_idx ON public.retained_payout_profiles (retain_until);
+COMMENT ON TABLE public.retained_payout_profiles IS '탈퇴한 리더의 정산 정보. 1년 보관 후 파기. 쓰기·읽기는 서버(service_role)만';
+
+-- RLS 켜고 정책 0개 = 손님·로그인 회원은 못 본다. 서버 열쇠만 접근
+ALTER TABLE public.retained_payout_profiles ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.retained_payout_profiles FROM anon, authenticated;

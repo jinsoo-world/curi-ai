@@ -4,6 +4,8 @@
 //  - 개인 콘텐츠(내가 만든 봇·자료·대화·단체방·연동·알림·프로필)는 지운다.
 //  - 결제·크레딧·구독 기록(credit_transactions, payments, subscriptions)은 지우지 않고
 //    user_id 를 비워 「누구인지」만 끊는다(deleted_user_ref = 되돌릴 수 없는 표식). 20261010 마이그레이션 필요.
+//  - 리더 정산 정보(creator_payout_profiles)는 1년 보관(대표 확정 2026-10-01 「1년」): 사람 id 를 뗀 채
+//    retained_payout_profiles 로 옮기고 원래 줄은 지운다. 1년이 지나면 /api/cron/retention-purge 가 지운다.
 //  - 결제가 계속 나가는 구독(active, past_due)이 있으면 막고 먼저 해지하라고 안내한다.
 //    (자동 해지는 안 한다: 환불·기간 안내는 사람이 확인하고 해지하는 게 안전하다.)
 //  - 순서: 활성 구독 확인 → 결제기록 분리(실패하면 여기서 중단) → 저장소 파일 → 하위 표 → 봇 → 크리에이터 프로필 → 로그인 계정.
@@ -84,6 +86,19 @@ const MENTOR_DELETES = [
 /** 5년 보관하는 표: 지우지 않고 사람과의 연결만 끊는다 */
 const RETAINED_TABLES = ['credit_transactions', 'payments', 'subscriptions']
 
+/** 정산 정보 보관 기간 (대표 확정 2026-10-01) */
+export const PAYOUT_RETAIN_DAYS = 365
+
+export function payoutRetainUntil(now: Date): string {
+    return new Date(now.getTime() + PAYOUT_RETAIN_DAYS * 86_400_000).toISOString()
+}
+
+/** 보관 기한이 지난 정산 정보를 지운다 (매일 예약 작업) */
+export async function purgeExpiredPayouts(db: Db, now: Date = new Date()): Promise<void> {
+    const { error } = await db.from('retained_payout_profiles').delete().lt('retain_until', now.toISOString())
+    if (error) fail('보관 정산 정보 파기', error)
+}
+
 /** 없는 표·없는 열이면 건너뛴다(환경마다 표 구성이 다르다) */
 const SKIPPABLE = new Set(['42P01', '42703', 'PGRST205', 'PGRST204'])
 
@@ -158,6 +173,19 @@ export async function deleteAccount(
     await tolerant('구독 결제수단 비우기', db.from('subscriptions').update({ billing_key: '' }).eq('deleted_user_ref', ref))
     // 사용량 기록(비용 집계용)은 사람만 떼고 남긴다
     await tolerant('llm_usage 익명화', db.from('llm_usage').update({ user_id: null }).eq('user_id', uid))
+
+    // 3-1) 정산 정보는 1년 보관함으로 옮긴다. 옮기기가 실패하면 여기서 멈춘다(원래 줄을 지우기 전이라 잃는 것 없음)
+    const { data: payout, error: pErr } = await db.from('creator_payout_profiles').select('*').eq('user_id', uid).maybeSingle()
+    if (pErr && !(pErr.code && SKIPPABLE.has(pErr.code))) fail('정산 정보 조회', pErr)
+    if (payout) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { user_id: _u, created_at: _c, updated_at: _up, ...kept } = payout as Record<string, unknown>
+        const { error } = await db.from('retained_payout_profiles').upsert(
+            { ...kept, deleted_user_ref: ref, retain_until: payoutRetainUntil(new Date()) },
+            { onConflict: 'deleted_user_ref' },
+        )
+        if (error) fail('정산 정보 보관', error)
+    }
 
     // 4) 저장소 파일
     for (const t of storagePlan(uid, mentorIds)) await removeStorage(db, t)
