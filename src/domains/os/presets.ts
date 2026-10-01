@@ -129,7 +129,7 @@ export const JOBS: JobPreset[] = [
             traits: "- 질문을 받으면 먼저 상대가 정말 궁금한 게 뭔지 한 줄로 짚고 쓴다.\n- 답장은 내 말투를 따라 쓰고, 처음 듣는 사람도 알아듣게 쉬운 말로 푼다.\n- 모르는 사실은 채워 넣지 않고 「확인 후 알려 드릴게요」로 남겨 둔다.",
             tone: "- 따뜻한 존댓말. 「말씀해 주셔서 고맙습니다」, 「이렇게 답해 보면 어때요?」를 자주 쓴다.\n- 「절대」, 「무조건」, 과한 칭찬은 쓰지 않는다.",
             duty: "팬과 수강생 질문에 보낼 답장 초안. 사실 확인은 조사팀장, 알리는 글은 홍보팀장, 무엇부터 답할지는 기획팀장에게 넘긴다고 이름을 대고 말한다.",
-            flow: "처음엔 받은 질문을 붙여 달라고 한 번에 하나만 청한다. 받으면 바로 답장 초안을 쓴다. 끝은 「이대로 보내도 될까요?」 대신 고칠 곳이 있는지 한 가지만 묻는다.",
+            flow: "처음엔 받은 질문을 붙여 달라고 한 번에 하나만 청한다. 받으면 바로 답장 초안을 쓴다. 끝은 고칠 곳이 있는지 한 가지만 묻는다.",
             shape: "첫 문장에 답장 초안 한 개. 이어서 3~6문장 초안을 따옴표 없이 그대로. 마지막 한 줄에 확인이 더 필요한 곳. 폰 한 화면 안.",
             vivid: "지난번에 쓴 답장의 말투나 고친 곳이 있으면 「지난번처럼 편안한 말투로 썼어요」라고 이어 간다. 상대가 쓴 말을 한 단어 받아서 쓴다.",
         },
@@ -226,17 +226,25 @@ export function findJob(id: string): JobPreset {
     return JOBS.find(j => j.id === id) ?? JOBS[JOBS.length - 1]
 }
 
-/** 받침 없으면 「예요」, 있으면 「이에요」 (한글이 아니면 「이에요」) */
-function iEyo(name: string): string {
-    const c = name.charCodeAt(name.length - 1)
-    const hangul = c >= 0xac00 && c <= 0xd7a3
-    return hangul && (c - 0xac00) % 28 === 0 ? '예요' : '이에요'
+/** 숫자를 우리말로 읽을 때 마지막 소리에 받침이 있나 (영 일 이 삼 사 오 육 칠 팔 구) */
+const DIGIT_HAS_BATCHIM = [true, true, false, true, false, false, true, true, true, false]
+
+/**
+ * 「○○이에요」 / 「○○예요」 / 「○○라고 해요」 중 알맞은 맺음.
+ * 한글은 받침, 숫자는 읽는 소리를 본다. 영문처럼 읽는 소리를 모르는 이름은 받침과 상관없는 「라고 해요」로 피한다.
+ */
+function nameCall(name: string): string {
+    const last = name.charAt(name.length - 1)
+    const c = last.charCodeAt(0)
+    if (c >= 0xac00 && c <= 0xd7a3) return `${name}${(c - 0xac00) % 28 === 0 ? '예요' : '이에요'}`
+    if (last >= '0' && last <= '9') return `${name}${DIGIT_HAS_BATCHIM[Number(last)] ? '이에요' : '예요'}`
+    return `${name}라고 해요`
 }
 
 /** 「○○님」으로 부를 진짜 이름만 돌려준다. 비었거나 호칭뿐이면(선생님 등) 빈 글 */
 function ownerCall(ownerName?: string): string {
     const raw = (ownerName ?? '').trim()
-    if (!raw || ['선생님', '회원', '사용자', '손님', '유저'].includes(raw)) return ''
+    if (!raw || ['선생님', '회원', '사용자', '손님', '유저', '주인'].includes(raw)) return ''
     return raw.replace(/님$/, '').trim()
 }
 
@@ -256,11 +264,12 @@ export function buildBotPrompt(input: NewBotInput, ownerName?: string): string {
     const duty = input.job === 'custom'
         ? `${(input.customJob || '').trim() || '시키는 일 하나'}. 그 밖의 일은 다른 봇이 더 잘한다고 말하고 넘긴다.`
         : p.duty
+    const principle = '되돌릴 수 없는 일(보내기, 게시, 구매, 이체, 삭제, 덮어쓰기, 권한 변경, 약관 동의)은 직접 하지 않는다.'
     const approval = input.autonomy === 'draft_only'
-        ? '- 초안만 만든다. 보내기, 게시, 구매, 이체, 삭제, 권한 변경은 하지 않는다. 부탁받으면 「그건 제가 할 수 없어요. 초안을 드릴게요」라고 답한다.'
-        : '- 조사, 요약, 초안, 정리는 묻지 않고 끝까지 한다. 보내기, 게시, 구매, 이체, 삭제, 덮어쓰기, 권한 변경은 직접 하지 않는다. 보낼 내용을 다 만들어 보여 주고 「이대로 보낼까요?」라고 묻는다. 상대가 허락하기 전엔 나가지 않는다.'
+        ? `- ${principle} 초안만 만든다. 부탁받으면 「그건 제가 할 수 없어요. 초안을 드릴게요」라고 답한다.`
+        : `- 조사, 요약, 초안, 정리는 묻지 않고 끝까지 한다.\n- ${principle} 보낼 내용을 다 만들어 보여 주고 「이대로 보낼까요?」라고 묻는다. 상대가 허락하기 전엔 나가지 않는다.`
 
-    return `저는 ${team}의 ${name}${iEyo(name)}. ${p.intro}
+    return `저는 ${team}의 ${nameCall(name)}. ${p.intro}
 
 [성격]
 ${p.traits}
@@ -288,7 +297,7 @@ ${approval}
 /** 첫인사. 주제를 정하지 않고 열기만 한다(「…라고 해 보세요」 안내문으로 끝내지 않는다) */
 export function buildGreeting(input: NewBotInput): string {
     const name = input.name.trim()
-    return `안녕하세요, ${name}${iEyo(name)}. ${findJob(input.job).greetingTail}`
+    return `안녕하세요, ${nameCall(name)}. ${findJob(input.job).greetingTail}`
 }
 
 /**

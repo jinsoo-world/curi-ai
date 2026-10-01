@@ -54,6 +54,36 @@ describe('os/presets — 봇 지시문 8칸 틀', () => {
         expect(buildGreeting(mk('fan_reply', ' 답장봇 '))).toMatch(/^안녕하세요, 답장봇이에요\. /)
     })
 
+    it('조사: 한글은 받침, 숫자는 읽는 소리, 영문은 조사를 피한다', () => {
+        const cases: [string, string][] = [
+            ['진수', '진수예요'], ['기획팀장', '기획팀장이에요'],
+            ['봇2', '봇2예요'], ['봇3', '봇3이에요'], ['봇1', '봇1이에요'], ['봇4', '봇4예요'],
+            ['봇5', '봇5예요'], ['봇9', '봇9예요'], ['봇0', '봇0이에요'], ['봇6', '봇6이에요'],
+            ['Mia', 'Mia라고 해요'], ['AI', 'AI라고 해요'],
+        ]
+        for (const [name, want] of cases) {
+            expect(buildBotPrompt(mk('fan_reply', name)), name).toContain(`저는 이 팀의 ${want}.`)
+            expect(buildGreeting(mk('fan_reply', name)), name).toContain(`안녕하세요, ${want}.`)
+        }
+    })
+
+    it('「주인」, 「선생님」 같은 호칭뿐인 이름은 「이 팀」으로 쓴다', () => {
+        expect(buildBotPrompt(mk('fan_reply', '봇'), '주인')).toMatch(/^저는 이 팀의 /)
+    })
+
+    it('승인 원칙 문장이 두 모드 모두에 들어가고, 답장봇 흐름이 승인선과 부딪치지 않는다', () => {
+        const principle = '되돌릴 수 없는 일(보내기, 게시, 구매, 이체, 삭제, 덮어쓰기, 권한 변경, 약관 동의)은 직접 하지 않는다'
+        for (const j of JOBS) {
+            for (const autonomy of ['always_ask', 'draft_only'] as const) {
+                const p = buildBotPrompt(mk(j.id, '봇', { autonomy, customJob: '일' }), '진수')
+                expect(p, `${j.id} ${autonomy}`).toContain(principle)
+                expect(p.length, `${j.id} ${autonomy}`).toBeLessThanOrEqual(900)
+            }
+        }
+        expect(buildBotPrompt(mk('fan_reply', '답장봇'))).not.toContain('이대로 보내도 될까요')
+        expect(buildBotPrompt(mk('fan_reply', '답장봇'))).toContain('고칠 곳이 있는지 한 가지만 묻는다')
+    })
+
     it('기본 봇 4명은 운영 DB 교체본(1001)과 같은 글이다(승인 칸만 뒤에 더해진다)', () => {
         const byName = Object.fromEntries(Object.values(canonical).map(v => [v.name, v]))
         for (const d of DEFAULT_TEAM) {
@@ -70,6 +100,7 @@ describe('os/presets — 봇 지시문 8칸 틀', () => {
         expect(ask).toContain('직접 하지 않는다')
         const draft = buildBotPrompt(mk('dev_lead', '개발팀장', { autonomy: 'draft_only' }))
         expect(draft).toContain('초안만 만든다')
+        expect(draft).toContain('하지 않는다')
         expect(draft).not.toContain('이대로 보낼까요?')
     })
 

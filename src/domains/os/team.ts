@@ -71,7 +71,7 @@ export async function listTeam(db: SupabaseClient, userId: string): Promise<Team
  */
 export async function createTeamBot(
     db: SupabaseClient,
-    user: { id: string; displayName: string },
+    user: { id: string; displayName: string; ownerName?: string },
     input: NewBotInput,
     path: BotCreatedPath = 'os_new_bot',
 ): Promise<TeamBot> {
@@ -93,7 +93,7 @@ export async function createTeamBot(
             description: oneLiner || '',
             expertise: [],
             personality_traits: [],
-            system_prompt: buildBotPrompt(input, user.displayName),
+            system_prompt: buildBotPrompt(input, user.ownerName ?? user.displayName),
             greeting_message: buildGreeting(input),
             sample_questions: [],
         })
@@ -196,7 +196,7 @@ export async function getOwnedTeamBotMentor(db: SupabaseClient, userId: string, 
  */
 export async function bootstrapDefaultTeam(
     db: SupabaseClient,
-    user: { id: string; displayName: string },
+    user: { id: string; displayName: string; ownerName?: string },
 ): Promise<{ team: TeamBot[]; created: number }> {
     const existing = await listTeam(db, user.id)
     if (existing.length > 0) return { team: existing, created: 0 }
