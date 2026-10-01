@@ -8,7 +8,7 @@
 //    retained_payout_profiles 로 옮기고 원래 줄은 지운다. 1년이 지나면 /api/cron/retention-purge 가 지운다.
 //  - 결제가 계속 나가는 구독(active, past_due)이 있으면 막고 먼저 해지하라고 안내한다.
 //    (자동 해지는 안 한다: 환불·기간 안내는 사람이 확인하고 해지하는 게 안전하다.)
-//  - 순서: 활성 구독 확인 → 결제기록 분리(실패하면 여기서 중단) → 저장소 파일 → 하위 표 → 봇 → 크리에이터 프로필 → 로그인 계정.
+//  - 순서: 활성 구독 확인 → 결제기록 분리(실패하면 여기서 중단) → 정산 정보 보관함으로 옮기기(실패하면 중단) → 저장소 파일 → 하위 표 → 봇 → 크리에이터 프로필 → 로그인 계정.
 //    다시 불러도 안전하다(지울 것이 없으면 그냥 지나간다).
 import { createHash } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -85,6 +85,12 @@ const MENTOR_DELETES = [
 
 /** 5년 보관하는 표: 지우지 않고 사람과의 연결만 끊는다 */
 const RETAINED_TABLES = ['credit_transactions', 'payments', 'subscriptions']
+
+/** 보관함으로 옮기는 정산 정보 칸 (retained_payout_profiles 와 같아야 한다) */
+const PAYOUT_COLUMNS = [
+    'legal_name', 'email', 'phone', 'birth_date', 'bank_name',
+    'account_number_encrypted', 'account_last4', 'account_holder', 'agreed_at',
+] as const
 
 /** 정산 정보 보관 기간 (대표 확정 2026-10-01) */
 export const PAYOUT_RETAIN_DAYS = 365
@@ -178,11 +184,13 @@ export async function deleteAccount(
     const { data: payout, error: pErr } = await db.from('creator_payout_profiles').select('*').eq('user_id', uid).maybeSingle()
     if (pErr && !(pErr.code && SKIPPABLE.has(pErr.code))) fail('정산 정보 조회', pErr)
     if (payout) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { user_id: _u, created_at: _c, updated_at: _up, ...kept } = payout as Record<string, unknown>
+        // 옮길 칸을 고정한다(원래 표에 칸이 늘어도 탈퇴가 막히지 않게). 두 표를 같이 바꿀 땐 20261010 마이그레이션도 고친다
+        const src = payout as Record<string, unknown>
+        const kept = Object.fromEntries(PAYOUT_COLUMNS.map(c => [c, src[c] ?? null]))
+        // 다시 불렀을 때 보관 기한이 늘어나지 않게 이미 있으면 그대로 둔다
         const { error } = await db.from('retained_payout_profiles').upsert(
             { ...kept, deleted_user_ref: ref, retain_until: payoutRetainUntil(new Date()) },
-            { onConflict: 'deleted_user_ref' },
+            { onConflict: 'deleted_user_ref', ignoreDuplicates: true },
         )
         if (error) fail('정산 정보 보관', error)
     }

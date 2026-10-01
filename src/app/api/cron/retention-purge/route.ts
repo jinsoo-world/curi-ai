@@ -9,7 +9,7 @@ export const maxDuration = 60
 
 export async function GET(req: NextRequest) {
     const 열쇠 = process.env.CRON_SECRET
-    if (열쇠 && req.headers.get('authorization') !== `Bearer ${열쇠}`) {
+    if (!열쇠 || req.headers.get('authorization') !== `Bearer ${열쇠}`) {
         return NextResponse.json({ error: 'no' }, { status: 401 })
     }
     await purgeExpiredPayouts(createAdminClient())
