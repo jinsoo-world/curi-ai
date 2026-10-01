@@ -2,7 +2,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { ensureCreatorProfile } from '@/domains/creator'
-import { buildBotPrompt, findJob, DEFAULT_TEAM } from './presets'
+import { buildBotPrompt, buildGreeting, findJob, DEFAULT_TEAM } from './presets'
 import type { NewBotInput, TeamBot } from './types'
 import { recordBotCreated, type BotCreatedPath } from './bot-events'
 
@@ -94,7 +94,7 @@ export async function createTeamBot(
             expertise: [],
             personality_traits: [],
             system_prompt: buildBotPrompt(input, user.displayName),
-            greeting_message: `안녕하세요, ${input.name.trim()}이에요. ${job.firstTask}`,
+            greeting_message: buildGreeting(input),
             sample_questions: [],
         })
         .select('id, name, avatar_url, greeting_message')
