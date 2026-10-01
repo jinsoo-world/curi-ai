@@ -57,6 +57,7 @@ function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => 
     const [avatarUrl, setAvatarUrl] = useState<string | null>(bot.avatarUrl)
     const [avatarFile, setAvatarFile] = useState<File | null>(null)
     const [avatarPreview, setAvatarPreview] = useState<string | null>(bot.avatarUrl)
+    const [isPublic, setIsPublic] = useState(!!bot.isPublic)
     const fileRef = useRef<HTMLInputElement>(null)
     const [busy, setBusy] = useState(false)
     const [err, setErr] = useState<string | null>(null)
@@ -97,6 +98,7 @@ function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => 
             if (greeting.trim() !== (bot.greeting ?? '')) patch.greeting = greeting.trim()
             if (prompt !== (bot.systemPrompt ?? '')) patch.systemPrompt = prompt
             if (nextAvatar !== bot.avatarUrl) patch.avatarUrl = nextAvatar
+            if (bot.canPublish && isPublic !== !!bot.isPublic) patch.isPublic = isPublic
 
             if (Object.keys(patch).length > 0) {
                 const res = await fetch(`/api/os/team/${bot.id}`, {
@@ -184,6 +186,17 @@ function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => 
                     <textarea className="os-textarea" rows={3} value={greeting} onChange={e => setGreeting(e.target.value.slice(0, 200))} maxLength={200}
                         placeholder={`안녕하세요, ${name || '봇'}이에요.`} aria-label="인사말" disabled={busy} />
                 </div>
+
+                {bot.canPublish && (
+                    <div className="os-field">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div className="os-field-label" style={{ flex: 1, margin: 0 }}>공개하기</div>
+                            <button type="button" className="os-routine-switch" role="switch" aria-checked={isPublic} aria-label="공개하기"
+                                data-on={isPublic ? 'true' : 'false'} disabled={busy} onClick={() => setIsPublic(v => !v)}><span /></button>
+                        </div>
+                        <div className="os-step" style={{ margin: '6px 0 0' }}>봇 마켓에 보이고 누구나 대화할 수 있어요</div>
+                    </div>
+                )}
 
                 {err && <div className="os-notice" style={{ margin: '14px 0 0' }}>{err}</div>}
                 <div className="os-sheet-foot">
@@ -476,7 +489,7 @@ function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => v
         try {
             const res = await fetch('/api/os/twin-draft/create', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name.trim(), oneLiner, greeting, prompt, chips: draft.chips, shape, color, learned: learnedKinds(draft) }),
+                body: JSON.stringify({ name: name.trim(), oneLiner, greeting, prompt, chips: draft.chips, shape, color, learned: learnedKinds(draft), links: filled, pastes: pastes.filter(p => p.trim()) }),
             })
             const data = await res.json().catch(() => ({}))
             if (!res.ok) throw new Error(data.error || '만들지 못했어요')

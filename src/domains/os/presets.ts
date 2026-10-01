@@ -6,7 +6,7 @@
 //  - 자료가 없으면 지어내지 말고 「제가 가진 자료에는 없어요」라고 말한다.
 //  - 바뀐 게 없으면 말하지 않는다(조용함 규칙).
 
-import type { ApprovalMode, BotColor, BotShape, NewBotInput } from './types'
+import type { ApprovalMode, BotColor, BotRole, BotShape, NewBotInput } from './types'
 
 /** 봇 지시문 8칸 틀(큐리AI_봇지시문_틀_v1_1001)의 칸별 글. 이름과 만든 사람 이름은 조립할 때 끼운다 */
 export interface BotPersona {
@@ -220,6 +220,68 @@ export function suggestName(jobId: string): string {
         schedule: '일정봇', custom: '새 봇',
     }
     return table[jobId] ?? '새 봇'
+}
+
+// 맡은 일별 첫 일 3개 (대화방 첫 칩 FirstTaskChips + 새 봇 예시 질문 mentors.sample_questions). 첫 칩은 presets.firstTask 의 「」 안 문장과 같은 뜻으로 맞춘다
+export const STARTER_TASKS: Record<string, [string, string, string]> = {
+    planning_lead: [
+        '이번 주 뭐부터 해야 할지 정리해 줘',
+        '오늘 내가 결정할 것 하나만 골라 줘',
+        '내 일을 세 줄로 정리해 줘',
+    ],
+    marketing_lead: [
+        '내 다음 강의 알리는 글 3개 써 줘',
+        '짧은 홍보 문구 한 줄 만들어 줘',
+        '팬 질문에 보낼 답장 초안 하나 써 줘',
+    ],
+    dev_lead: [
+        '매주 반복하는 일 중에 자동으로 할 수 있는 게 있을까?',
+        '내 자료를 어떻게 정리하면 좋을지 알려 줘',
+        '어려운 기술 말을 쉬운 말로 풀어 줘',
+    ],
+    research_lead: [
+        '이거 사실인지 자료 찾아서 출처랑 같이 알려 줘',
+        '요즘 사람들이 많이 찾는 배움 주제 알려 줘',
+        '찾은 자료를 한 줄로 요약해 줘',
+    ],
+    fan_reply: [
+        '「강의 영상 다시 볼 수 있나요?」라는 질문에 내 말투로 답장 초안 써 줘',
+        '답장할 때 꼭 지킬 말투 규칙 3개 정리해 줘',
+        '자주 받는 질문을 3가지 유형으로 나눠 줘',
+    ],
+    content_ideas: [
+        '이번 주 글감 5개 뽑아 줘',
+        '내 자료에서 영상 소재 3개 골라 줘',
+        '지금 쓰기 좋은 제목 후보 5개 만들어 줘',
+    ],
+    lecture_digest: [
+        '내가 올린 자료를 10줄로 요약해 줘',
+        '수강생이 물을 만한 질문 3개 뽑아 줘',
+        '핵심 3개를 한 문장씩 정리해 줘',
+    ],
+    schedule: [
+        '오늘 할 일 정리해 줘',
+        '미룬 일이 있으면 하나만 골라 다음 한 걸음 알려 줘',
+        '이번 주 일정을 세 줄로 요약해 줘',
+    ],
+    chief: [
+        '이번 주 상황을 정리해 줘',
+        '오늘 내가 결정해야 할 것 하나만 골라 줘',
+        '다른 봇들에게 시킬 일을 나눠 줘',
+    ],
+}
+
+// 직접 쓴 일, 공개 봇 = 어떤 봇에게도 통하는 작은 일
+export const COMMON_STARTERS: [string, string, string] = [
+    '네가 맡은 일을 한 줄로 설명해 줘',
+    '30초 안에 확인할 수 있는 작은 일 하나 해 줘',
+    '내가 자료를 올리면 어떻게 쓸지 알려 줘',
+]
+
+/** 새 봇의 예시 질문 3개. 팀장은 팀장 칩, 맡은 일 칩이 없으면(직접 쓴 일) 공통 칩 */
+export function starterTasksFor(jobId: string, role?: BotRole): [string, string, string] {
+    if (role === 'chief') return STARTER_TASKS.chief
+    return STARTER_TASKS[jobId] ?? COMMON_STARTERS
 }
 
 export function findJob(id: string): JobPreset {

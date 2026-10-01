@@ -1,11 +1,14 @@
-// PATCH  /api/os/team/[id] → 고정, 숨김, 정렬, 승인 모드, 모양, 색, 한 줄 소개, 역할, 이름, 인사말, 프롬프트, 프로필 사진 (봇 편집 시트)
+// PATCH  /api/os/team/[id] → 고정, 숨김, 정렬, 승인 모드, 모양, 색, 한 줄 소개, 역할, 이름, 인사말, 프롬프트, 프로필 사진, 공개하기(isPublic) (봇 편집 시트)
+//        공개하기는 내가 만든 봇만(마켓에서 데려온 봇, 시연 봇은 403)
 // DELETE /api/os/team/[id] → 팀에서 빼기 (봇의 몸과 대화 기록은 남는다)
 //
 // 모양/색이 실제로 바뀌면 단톡에 「눈치채기 → 받아치기」 비트를 남긴다 (look-change).
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { updateTeamBot, removeTeamBot, SHAPES, COLORS } from '@/domains/os'
+import { BotPublishDenied } from '@/domains/os/team'
 import type { TeamBotPatch } from '@/domains/os'
 import { classifyLookChange, postLookChangeBeat } from '@/domains/os/look-change'
 
@@ -39,12 +42,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (typeof body.greeting === 'string') patch.greeting = body.greeting.slice(0, 200)
     if (typeof body.systemPrompt === 'string') patch.systemPrompt = body.systemPrompt.slice(0, 12000)
     if (typeof body.avatarUrl === 'string' || body.avatarUrl === null) patch.avatarUrl = body.avatarUrl as string | null
+    if (typeof body.isPublic === 'boolean') patch.isPublic = body.isPublic
     try {
         const db = createAdminClient()
 
         // 비트는 「실제로 달라진」 모양/색만. 같은 값 재전송은 무시.
         let mentorId: string | null = null
-        let lookPatch: { shape?: TeamBotPatch['shape']; color?: TeamBotPatch['color'] } = {}
+        const lookPatch: { shape?: TeamBotPatch['shape']; color?: TeamBotPatch['color'] } = {}
         if (patch.shape !== undefined || patch.color !== undefined) {
             const { data: tb } = await db
                 .from('team_bots')
@@ -62,6 +66,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         const lookKind = classifyLookChange(lookPatch)
 
         await updateTeamBot(db, user.id, id, patch)
+        // 공개, 비공개, 마켓 제목이 바뀌면 마켓 목록 캐시를 바로 비운다 (옛 편집 창구와 같다)
+        if (patch.isPublic !== undefined || patch.oneLiner !== undefined) revalidatePath('/mentors')
 
         let lookBeat: { channelId: string } | null = null
         if (lookKind && mentorId) {
@@ -80,6 +86,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
         return NextResponse.json({ ok: true, lookBeat })
     } catch (e) {
+        if (e instanceof BotPublishDenied) return NextResponse.json({ error: e.message }, { status: 403 })
         console.error('[os/team PATCH]', e instanceof Error ? e.message : e)
         return NextResponse.json({ error: '바꾸지 못했어요' }, { status: 500 })
     }

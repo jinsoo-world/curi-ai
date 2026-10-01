@@ -2,7 +2,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { ensureCreatorProfile } from '@/domains/creator'
-import { buildBotPrompt, buildGreeting, findJob, DEFAULT_TEAM } from './presets'
+import { buildBotPrompt, buildGreeting, findJob, starterTasksFor, DEFAULT_TEAM } from './presets'
 import type { NewBotInput, TeamBot } from './types'
 import { recordBotCreated, type BotCreatedPath } from './bot-events'
 
@@ -13,8 +13,16 @@ const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 �
 type Row = {
     id: string; mentor_id: string; role: TeamBot['role']; shape: TeamBot['shape']; color: TeamBot['color']
     one_liner: string | null; approval_mode: TeamBot['approvalMode']; pinned: boolean; hidden: boolean
-    sort_order: number; created_at: string
-    mentors: { name: string; avatar_url: string | null; greeting_message: string; system_prompt: string | null } | null
+    sort_order: number; created_at: string; linked_from_market?: boolean | null
+    mentors: { name: string; avatar_url: string | null; greeting_message: string; system_prompt: string | null; is_active?: boolean | null; slug?: string | null } | null
+}
+
+/** 손님 시연용 봇 이름표. 마켓에서도 빠지고(getActiveMentors) 공개할 수도 없다 */
+const DEMO_SLUG_PREFIX = 'os-demo-'
+
+/** 공개하기를 막을 때 (내 봇 아님, 마켓에서 데려온 봇, 시연 봇). 창구는 403 으로 돌려준다 */
+export class BotPublishDenied extends Error {
+    constructor(reason = '내가 만든 봇만 공개할 수 있어요') { super(reason) }
 }
 
 export class TeamTableMissing extends Error {
@@ -25,7 +33,7 @@ export class TeamTableMissing extends Error {
 export async function listTeam(db: SupabaseClient, userId: string): Promise<TeamBot[]> {
     const { data, error } = await db
         .from('team_bots')
-        .select('id, mentor_id, role, shape, color, one_liner, approval_mode, pinned, hidden, sort_order, created_at, mentors(name, avatar_url, greeting_message, system_prompt)')
+        .select('id, mentor_id, role, shape, color, one_liner, approval_mode, pinned, hidden, sort_order, created_at, linked_from_market, mentors(name, avatar_url, greeting_message, system_prompt, is_active, slug)')
         .eq('user_id', userId)
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true })
@@ -62,6 +70,8 @@ export async function listTeam(db: SupabaseClient, userId: string): Promise<Team
         greeting: r.mentors?.greeting_message ?? '',
         knowledgeCount: countMap.get(r.mentor_id) ?? 0,
         createdAt: r.created_at,
+        isPublic: !!r.mentors?.is_active,
+        canPublish: !r.linked_from_market && !(r.mentors?.slug ?? '').startsWith(DEMO_SLUG_PREFIX),
     }))
 }
 
@@ -95,7 +105,7 @@ export async function createTeamBot(
             personality_traits: [],
             system_prompt: buildBotPrompt(input, user.ownerName ?? user.displayName),
             greeting_message: buildGreeting(input),
-            sample_questions: [],
+            sample_questions: starterTasksFor(input.job, input.role),   // 대화방 첫 칩과 같은 3개 (마켓 카드, 정보 카드가 읽는다)
         })
         .select('id, name, avatar_url, greeting_message')
         .single()
@@ -128,15 +138,17 @@ export async function createTeamBot(
         id: tb.id, mentorId: mentor.id, name: mentor.name, role: tb.role, shape: tb.shape, color: tb.color,
         oneLiner: tb.one_liner, approvalMode: tb.approval_mode, pinned: tb.pinned, hidden: tb.hidden,
         sortOrder: tb.sort_order, avatarUrl: mentor.avatar_url, systemPrompt: '', greeting: mentor.greeting_message,
-        knowledgeCount: 0, createdAt: tb.created_at,
+        knowledgeCount: 0, createdAt: tb.created_at, isPublic: false, canPublish: true,
     }
 }
 
 /**
  * 봇 편집. 팀 줄(team_bots)의 칸 = 고정, 숨김, 정렬, 승인 모드, 모양, 색, 한 줄 소개, 역할.
  * 봇의 몸(mentors)에 있는 칸 = 이름, 인사말, 프롬프트, 프로필 사진. 몸은 내가 만든 것(creator_profiles 가 내 것)만 바꾼다 = 리더의 공개 봇 몸은 건드리지 않는다.
+ * 한 줄 소개는 마켓이 mentors.title 을 보여 주니 내 봇이면 몸의 title, description 도 같이 바꾼다(남의 봇이면 팀 줄만).
+ * isPublic = 공개하기 / 비공개 (setTeamBotPublic).
  */
-export type TeamBotPatch = Partial<Pick<TeamBot, 'pinned' | 'hidden' | 'sortOrder' | 'approvalMode' | 'shape' | 'color' | 'oneLiner' | 'role' | 'name' | 'greeting' | 'systemPrompt' | 'avatarUrl'>>
+export type TeamBotPatch = Partial<Pick<TeamBot, 'pinned' | 'hidden' | 'sortOrder' | 'approvalMode' | 'shape' | 'color' | 'oneLiner' | 'role' | 'name' | 'greeting' | 'systemPrompt' | 'avatarUrl'>> & { isPublic?: boolean }
 
 export async function updateTeamBot(
     db: SupabaseClient, userId: string, teamBotId: string,
@@ -161,14 +173,65 @@ export async function updateTeamBot(
     if (patch.greeting !== undefined) body.greeting_message = patch.greeting.trim().slice(0, 200)
     if (patch.systemPrompt !== undefined) body.system_prompt = patch.systemPrompt.slice(0, 12000)
     if (patch.avatarUrl !== undefined) body.avatar_url = patch.avatarUrl
-    if (Object.keys(body).length === 0) return
+    // 한 줄 소개 → 마켓 제목. 비우면 제목은 그대로 둔다(빈 제목 카드 방지). 내 봇이 아니면 조용히 건너뛴다
+    const line = (patch.oneLiner ?? '').trim().slice(0, 40)
+    const titleSync: Record<string, unknown> = line ? { title: line, description: line } : {}
 
-    const { data: tb } = await db.from('team_bots').select('mentor_id').eq('id', teamBotId).eq('user_id', userId).maybeSingle()
-    if (!tb) throw new Error('내 팀에 없는 봇이다')
+    if (Object.keys(body).length > 0 || Object.keys(titleSync).length > 0) {
+        const { data: tb } = await db.from('team_bots').select('mentor_id').eq('id', teamBotId).eq('user_id', userId).maybeSingle()
+        if (!tb) {
+            if (Object.keys(body).length > 0) throw new Error('내 팀에 없는 봇이다')
+        } else {
+            const { data: creator } = await db.from('creator_profiles').select('id').eq('user_id', userId).maybeSingle()
+            if (!creator && Object.keys(body).length > 0) throw new Error('내가 만든 봇이 아니다')
+            if (creator) {
+                const { error } = await db.from('mentors').update({ ...body, ...titleSync }).eq('id', tb.mentor_id).eq('creator_id', creator.id)
+                if (error) throw new Error(error.message)
+            }
+        }
+    }
+
+    if (patch.isPublic !== undefined) await setTeamBotPublic(db, userId, teamBotId, patch.isPublic)
+}
+
+/**
+ * 공개하기 / 비공개. 내가 만든 봇(mentors.creator_id 가 내 creator_profiles)만. 마켓에서 데려온 봇, 시연 봇은 막는다.
+ * 옛 /creator 공개(publishMentor)와 같게: 공개 = is_active=true + status='active', 처음 공개할 때만 mentor_count +1.
+ * 비공개 = is_active=false 만 (옛 편집 화면도 status, mentor_count 를 안 건드린다).
+ * 「처음」 판정은 app_events 의 os_bot_published 기록으로 한다(새 칸 없이). 공개 목록(getActiveMentors)은 그대로 이 봇을 뽑는다.
+ */
+async function setTeamBotPublic(db: SupabaseClient, userId: string, teamBotId: string, isPublic: boolean) {
+    const { data: tb } = await db.from('team_bots').select('mentor_id, linked_from_market').eq('id', teamBotId).eq('user_id', userId).maybeSingle()
+    const teamRow = tb as { mentor_id: string; linked_from_market: boolean | null } | null
+    if (!teamRow) throw new BotPublishDenied('내 팀에 없는 봇이에요')
+    if (teamRow.linked_from_market) throw new BotPublishDenied('마켓에서 데려온 봇은 공개할 수 없어요')
+
     const { data: creator } = await db.from('creator_profiles').select('id').eq('user_id', userId).maybeSingle()
-    if (!creator) throw new Error('내가 만든 봇이 아니다')
-    const { error } = await db.from('mentors').update(body).eq('id', tb.mentor_id).eq('creator_id', creator.id)
+    const creatorId = (creator as { id: string } | null)?.id
+    if (!creatorId) throw new BotPublishDenied()
+    const { data: m } = await db.from('mentors').select('id, creator_id, slug, is_active').eq('id', teamRow.mentor_id).maybeSingle()
+    const mentor = m as { id: string; creator_id: string | null; slug: string | null; is_active: boolean | null } | null
+    if (!mentor || mentor.creator_id !== creatorId) throw new BotPublishDenied()
+    if ((mentor.slug ?? '').startsWith(DEMO_SLUG_PREFIX)) throw new BotPublishDenied('시연용 봇은 공개할 수 없어요')
+
+    const next: Record<string, unknown> = { is_active: isPublic, updated_at: new Date().toISOString() }
+    if (isPublic) next.status = 'active'
+    const { error } = await db.from('mentors').update(next).eq('id', mentor.id).eq('creator_id', creatorId)
     if (error) throw new Error(error.message)
+    if (!isPublic || mentor.is_active) return
+
+    // 처음 공개일 때만 크리에이터 봇 수 +1 (다시 공개는 세지 않는다). 기록, 셈 실패는 공개를 깨지 않는다
+    try {
+        const { data: seen } = await db.from('app_events').select('id').eq('name', 'os_bot_published').eq('extra->>mentor_id', mentor.id).limit(1)
+        if ((seen as unknown[] | null)?.length) return
+        await db.rpc('increment_mentor_count', { p_creator_id: creatorId })
+        await db.from('app_events').insert({
+            name: 'os_bot_published', tool: 'os_edit_bot', path: null, user_id: userId, anon_id: null,
+            extra: { mentor_id: mentor.id, user_id: userId },
+        })
+    } catch (e) {
+        console.error('[os/team] 공개 기록 실패', e instanceof Error ? e.message : e)
+    }
 }
 
 /** 팀에서 뺀다. 봇의 몸(mentors)은 남긴다 — 대화 기록이 걸려 있다. 되돌릴 수 없는 삭제는 카드 뒤에서만(나중) */
