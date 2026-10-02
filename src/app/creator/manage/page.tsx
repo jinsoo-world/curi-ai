@@ -224,7 +224,7 @@ export default function CreatorManagePage() {
                         </button>
                     </div>
 
-                    {/* 연동 = 정산 예정. 산식은 아직 없다(대표 확정 전) */}
+                    {/* 연동 = 정산 예정. 정산 기준은 domains/os/payout.ts 주석, 금액 계산 코드는 아직 없다 */}
                     <div style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
                         padding: '14px 16px', marginBottom: 12, borderRadius: 12, background: '#fff', border: '1px solid #e5e7eb',
@@ -234,7 +234,7 @@ export default function CreatorManagePage() {
                                 연동 {linkTotals.totalLinks}건 = 정산 예정{linkTotals.monthNew > 0 ? ` (이번 달 새로 ${linkTotals.monthNew}건)` : ''}
                             </div>
                             <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
-                                다른 사람이 내 AI를 팀에 넣은 수예요. 정산 기준은 준비 중이에요.
+                                다른 사람이 내 AI를 팀에 넣은 수예요. 유료 회원이 내 봇과 대화한 만큼 매달 10일에 보내 드려요.
                             </div>
                         </div>
                         <button

@@ -55,7 +55,7 @@ export const HOME_COPY = {
     ],
     jobsTitle: '무엇을 맡길 수 있나요',
     marketTitle: '봇 마켓에 올리면 수익이 쌓여요',
-    marketBody: '다른 분이 내 봇과 대화하면 수익이 쌓여요. 정산 기준은 준비 중이에요.',
+    marketBody: '유료 회원이 내 봇과 대화한 만큼 매달 수익을 나눠 드려요.',
     marketBtn: '봇 마켓 보기',
     faqTitle: '안심하세요',
     faq: [

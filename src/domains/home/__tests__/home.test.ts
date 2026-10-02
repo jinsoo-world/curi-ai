@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { homeLinkGuide, isMarketHost } from '../link-guide'
 import { HOME_DRAFT_KEY, HOME_DRAFT_TTL_MS, clearHomeDraft, readHomeDraft, saveHomeDraft } from '../draft-store'
 import { HOME_FEED_CONFIG, agoText, buildHomeFeed, categoryOf, gateStats, josa, maskName, selfMadeBots, type HomeActivityRow } from '../feed'
-import { HOME_FEED_DUMMY, HOME_STATS_DUMMY, homeFeedDummyOn } from '../feed-dummy'
 import { HOME_COPY, homeStatsLine } from '../copy'
 import { classifySnsLink } from '@/domains/os/sns-link'
 import { draftLinkKind } from '@/domains/os/twin-draft-shared'
@@ -127,25 +126,19 @@ describe('home feed (real data)', () => {
     })
 })
 
-describe('dummy flag', () => {
-    it('only on with the flag', () => {
-        expect(homeFeedDummyOn(undefined)).toBe(false)
-        expect(homeFeedDummyOn('0')).toBe(false)
-        expect(homeFeedDummyOn('1')).toBe(true)
-        expect(HOME_FEED_DUMMY.length).toBeGreaterThan(0)
-        expect(HOME_STATS_DUMMY.bots).not.toBeNull()
-    })
-    it('page labels dummy data and uses the real loader otherwise', () => {
+describe('no dummy data on /home (대표 지시 1003)', () => {
+    it('page uses only the real loader, never example data', () => {
         const src = readFileSync('src/app/home/page.tsx', 'utf8')
-        expect(src).toContain('HOME_DUMMY_LABEL')
         expect(src).toContain('loadHomeActivity')
+        expect(src).not.toMatch(/DUMMY|feed-dummy|예시 데이터/)
+        expect(existsSync('src/domains/home/feed-dummy.ts')).toBe(false)
         expect(src).not.toMatch(/leader_earnings|AdSlot|adsbygoogle/)
         expect(readFileSync('src/domains/home/feed.ts', 'utf8')).not.toMatch(/from\('leader_earnings'\)/)
     })
 })
 
 describe('copy rules', () => {
-    const texts = [JSON.stringify(HOME_COPY), ...HOME_FEED_DUMMY.map(f => f.text)]
+    const texts = [JSON.stringify(HOME_COPY)]
     it('no middot or long dash', () => {
         for (const t of texts) expect(t).not.toMatch(/[·—–]/)
         for (const f of ['src/app/home/page.tsx', 'src/components/home/HomeMake.tsx', 'src/components/home/HomeTopBar.tsx']) {
