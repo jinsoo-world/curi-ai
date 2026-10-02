@@ -53,6 +53,8 @@ html, body, button, input, textarea, select {
     --color-amber-400: #fbbf24;
     --color-amber-500: #f59e0b;
     --color-amber-600: #d97706;
+    --color-amber-700: #b45309;
+    --color-amber-800: #92400e;   /* 경고 글씨 (옅은 호박색 바탕 위) */
     --color-kakao: #fee500;
     --color-naver: #03a94d;
 
@@ -127,7 +129,7 @@ html, body, button, input, textarea, select {
     --os-패널     : var(--color-neutral-900);   /* #171717 왼쪽 명단·오른쪽 세부칸. 면 분리는 선으로 */
     --os-말풍선   : var(--color-neutral-800);   /* #262626 봇 말풍선·입력창 */
     --os-말풍선-내: var(--color-neutral-700);   /* #404040 내 말풍선 (봇보다 한 톤 밝게) */
-    --os-선       : var(--color-neutral-800);
+    --os-선       : var(--color-neutral-700);   /* 말풍선(#262626)·패널과 구분되는 선 #404040 */
     --os-글       : var(--color-neutral-50);
     --os-글-연    : var(--color-neutral-400);
     --os-글-흐림  : var(--color-neutral-500);
@@ -766,7 +768,7 @@ html, body, button, input, textarea, select {
 .cat-tab.on {
   background: var(--color-primary-50);
   border-color: var(--color-primary-500);
-  color: var(--color-primary-500);
+  color: var(--color-primary-700);
   font-weight: 700;
 }
 

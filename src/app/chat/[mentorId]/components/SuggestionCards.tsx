@@ -37,7 +37,8 @@ export default function SuggestionCards({
                             height: variant === 'welcome' ? 48 : 34,
                             width: variant === 'welcome' ? '100%' : `${90 + i * 20}px`,
                             borderRadius: 24,
-                            background: 'var(--color-neutral-100)',
+                            // 불러오는 중 반짝임: 그라디언트 금지의 예외(로딩 표시). neutral-100 ↔ neutral-50
+                            background: 'linear-gradient(90deg, var(--color-neutral-100) 25%, var(--color-neutral-50) 50%, var(--color-neutral-100) 75%)',
                             backgroundSize: '200% 100%',
                             animation: `shimmer 1.5s ease-in-out infinite ${i * 0.15}s`,
                         }}

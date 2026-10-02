@@ -59,7 +59,7 @@ export default function CreatorPricingPage() {
     const plan = CREATOR_PLANS.pro
 
     return (
-        <main style={{ minHeight: '100dvh', background: 'var(--color-primary-50)' }}>
+        <main style={{ minHeight: '100dvh', background: '#fff' }}>
             <AppSidebar />
             <div style={{ maxWidth: 560, margin: '0 auto', padding: '40px 20px 80px' }}>
                 <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--color-neutral-900)', margin: '0 0 8px', wordBreak: 'keep-all' }}>
@@ -71,7 +71,7 @@ export default function CreatorPricingPage() {
 
                 {/* 값 */}
                 <div style={{
-                    background: '#fff', border: '1.5px solid var(--color-primary-100)', borderRadius: 18,
+                    background: 'var(--color-primary-50)', border: '1px solid var(--color-primary-200)', borderRadius: 16,
                     padding: '22px 24px', marginBottom: 18, textAlign: 'center',
                 }}>
                     <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', marginBottom: 6 }}>{plan.label}</div>

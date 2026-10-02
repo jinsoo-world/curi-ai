@@ -74,7 +74,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#22c55e',
+  themeColor: '#03c124',   // 큐리어스 본체 초록 (1003)
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

@@ -134,7 +134,7 @@ export default function ShareTool({
                 </p>
             )}
             {알림 && (
-                <p style={{ fontSize: 15, color: 'var(--color-amber-600)', margin: '8px 0 0', textAlign: 'center' }}>{알림}</p>
+                <p style={{ fontSize: 15, color: 'var(--color-amber-700)', margin: '8px 0 0', textAlign: 'center' }}>{알림}</p>
             )}
         </div>
     )

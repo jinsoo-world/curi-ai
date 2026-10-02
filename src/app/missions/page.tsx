@@ -533,7 +533,7 @@ export default function MissionsPage() {
                                     padding: '16px 20px',
                                     animation: 'fadeIn 0.5s ease',
                                 }}>
-                                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-amber-600)', marginBottom: 4 }}>
+                                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-amber-800)', marginBottom: 4 }}>
                                         친구 {missionStatus.friendsInvited}명이 새로 가입했습니다
                                     </div>
                                 </div>

@@ -184,7 +184,7 @@ export default function PhotoToolShell({
                         background: 'var(--color-amber-50)', border: '1.5px solid var(--color-amber-200)', borderRadius: 14,
                         padding: '14px 16px', marginBottom: 12,
                     }}>
-                        <div style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--color-amber-600)', marginBottom: 6 }}>
+                        <div style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--color-amber-800)', marginBottom: 6 }}>
                             {빠진것.length}가지만 더 고르시면 됩니다
                         </div>
                         <ul style={{ margin: 0, padding: '0 0 0 18px', display: 'grid', gap: 4 }}>

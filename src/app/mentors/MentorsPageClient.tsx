@@ -110,7 +110,7 @@ export default function MentorsPageClient({ mentors, linkCounts = {} }: { mentor
                             minHeight: 48,
                             background: 'var(--color-primary-500)',   /* 1003 주황 → 큐리어스 primaryFill */
                             color: '#FFFFFF',
-                            fontSize: 16,
+                            fontSize: 17,
                             fontWeight: 600,
                             borderRadius: 8,
                             textDecoration: 'none',
@@ -184,7 +184,7 @@ export default function MentorsPageClient({ mentors, linkCounts = {} }: { mentor
                                     borderRadius: 999,
                                     border: activeCategory === cat.key ? '1px solid var(--color-primary-500)' : '1px solid var(--선)',
                                     background: activeCategory === cat.key ? 'var(--color-primary-50)' : '#FFFFFF',
-                                    color: activeCategory === cat.key ? 'var(--color-primary-500)' : 'var(--color-neutral-700)',
+                                    color: activeCategory === cat.key ? 'var(--color-primary-700)' : 'var(--color-neutral-700)',
                                     fontSize: 15,
                                     fontWeight: 600,
                                     cursor: 'pointer',

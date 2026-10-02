@@ -42,11 +42,11 @@ function ChargeDoneInner() {
     return (
         <main style={{
             minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 20, background: 'var(--color-primary-50)',
+            padding: 20, background: '#fff',
         }}>
             <div style={{
-                width: '100%', maxWidth: 400, background: '#fff', borderRadius: 20,
-                padding: '36px 28px', textAlign: 'center', border: '1px solid var(--color-neutral-200)',
+                width: '100%', maxWidth: 400, background: 'var(--color-primary-50)', borderRadius: 16,
+                padding: '36px 28px', textAlign: 'center', border: '1px solid var(--color-primary-200)',
             }}>
                 {상태 === 'ing' && (
                     <>

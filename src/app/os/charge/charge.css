@@ -36,8 +36,8 @@
 .osc-plan-name { display: flex; align-items: center; gap: 8px; font-size: 22px; line-height: 30px; font-weight: 600; letter-spacing: -0.0194em; }
 .osc-plan-tag { font-size: 13px; line-height: 18px; font-weight: 600; color: var(--os-글-연); padding: 2px 6px; border-radius: 4px; background: var(--os-말풍선); }
 .osc-plan-price { font-size: 28px; line-height: 38px; font-weight: 700; letter-spacing: -0.0236em; margin-top: 4px; font-variant-numeric: tabular-nums; }
-.osc-badge { display: inline-block; flex-shrink: 0; font-size: 14px; line-height: 20px; font-weight: 600; padding: 4px 8px; border-radius: 4px; background: color-mix(in srgb, var(--os-클로버) 12%, transparent); color: var(--os-클로버); white-space: nowrap; }
-.osc-badge.rec { background: color-mix(in srgb, var(--os-클로버) 12%, transparent); color: var(--os-클로버); }
+.osc-badge { display: inline-block; flex-shrink: 0; font-size: 14px; line-height: 20px; font-weight: 600; padding: 4px 8px; border-radius: 4px; background: color-mix(in srgb, var(--os-클로버) 12%, transparent); color: var(--color-primary-700); white-space: nowrap; }
+.osc-badge.rec { background: color-mix(in srgb, var(--os-클로버) 12%, transparent); color: var(--color-primary-700); }
 .osc-badge.now { background: var(--os-말풍선); color: var(--os-글-연); }
 .osc-perks { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .osc-perks li { position: relative; padding-left: 26px; font-size: 17px; line-height: 1.5; color: var(--os-글); }

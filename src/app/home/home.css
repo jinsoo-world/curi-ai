@@ -59,11 +59,11 @@
 .hm-tabs.small { margin-top: 10px; }
 .hm .hm-tab { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 14px 0 10px; border: 0; border-radius: 9999px; background: #fff; box-shadow: inset 0 0 0 1px var(--hm-line); color: var(--color-neutral-700); font-size: 15px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background-color .15s, color .15s; }
 .hm .hm-tab:hover { background: var(--color-neutral-100); }
-.hm .hm-tab.on { background: var(--hm-p-50); color: var(--hm-p); box-shadow: inset 0 0 0 1px var(--hm-p); font-weight: 600; }
+.hm .hm-tab.on { background: var(--hm-p-50); color: var(--hm-p-700); box-shadow: inset 0 0 0 1px var(--hm-p); font-weight: 600; }
 .hm .hm-tab svg { flex-shrink: 0; }
 .hm-inputrow { display: flex; flex-direction: column; gap: 8px; }
 .hm-field { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 56px; padding: 7px 12px; background: #fff; border: 1px solid var(--hm-line); border-radius: var(--hm-r); cursor: text; transition: border-color .15s; }
-.hm-field:focus-within { border-color: var(--hm-p); }
+.hm-field:focus-within { border-color: var(--hm-p); box-shadow: 0 0 0 1px var(--hm-p); }   /* 테두리 1px + 링 1px = 2px */
 .hm-field-ico { display: flex; color: var(--hm-low); margin-left: 2px; }
 .hm-input { flex: 1; min-width: 150px; height: 40px; border: 0; background: transparent; outline: none; padding: 0 4px; font: inherit; font-size: 16px; font-weight: 500; color: var(--hm-strong); }
 .hm-input::placeholder, .hm-text::placeholder { color: var(--hm-low); }
@@ -85,7 +85,7 @@
 .hm-block { display: flex; flex-direction: column; gap: 8px; }
 .hm-label { font-size: 15px; line-height: 22px; font-weight: 600; color: var(--hm-strong); display: block; }
 .hm-input.small { width: 100%; height: 52px; margin-top: 8px; padding: 0 16px; background: #fff; border: 1px solid var(--hm-line); border-radius: var(--hm-r); }
-.hm-input.small:focus, .hm-text:focus { border-color: var(--hm-p); }
+.hm-input.small:focus, .hm-text:focus { border-color: var(--hm-p); box-shadow: 0 0 0 1px var(--hm-p); }
 .hm-text { width: 100%; font: inherit; font-size: 16px; font-weight: 500; line-height: 1.6; color: var(--hm-strong); padding: 12px 16px; border: 1px solid var(--hm-line); border-radius: var(--hm-r); background: #fff; resize: vertical; margin-top: 8px; outline: none; }
 .hm-hint { font-size: 14px; line-height: 20px; color: var(--hm-mid); }
 .hm-hint.center { text-align: center; margin: 0; }
@@ -120,7 +120,7 @@
 /* 이렇게 만들어져요 */
 .hm-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .hm-steps li { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: center; padding: 16px; border: 1px solid var(--hm-line); border-radius: var(--hm-card); }
-.hm-step-n { grid-row: 1 / span 2; display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 24px; padding: 0 8px; border-radius: 4px; background: var(--hm-p-50); font-size: 13px; font-weight: 600; color: var(--hm-p); }
+.hm-step-n { grid-row: 1 / span 2; display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 24px; padding: 0 8px; border-radius: 4px; background: var(--hm-p-50); font-size: 13px; font-weight: 600; color: var(--hm-p-700); }
 .hm-steps strong { font-size: 17px; line-height: 24px; font-weight: 600; color: var(--hm-strong); }
 .hm-steps li > span:last-child { font-size: 15px; line-height: 22px; color: var(--hm-mid); }
 

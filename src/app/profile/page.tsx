@@ -660,7 +660,7 @@ export default function ProfilePage() {
                                                 <div style={{
                                                     marginTop: 8, padding: '10px 14px', borderRadius: 10,
                                                     background: 'var(--color-amber-50)', border: '1px solid var(--color-amber-200)',
-                                                    fontSize: 12, color: 'var(--color-amber-600)', lineHeight: 1.5,
+                                                    fontSize: 12, color: 'var(--color-amber-800)', lineHeight: 1.5,
                                                 }}>
                                                     수신 거부 시 즉시 효력이 발생하며, 더 이상 광고성 정보를 받지 않습니다.
                                                 </div>

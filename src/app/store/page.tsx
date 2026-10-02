@@ -313,7 +313,7 @@ export default function CloverStorePage() {
                             background: 'var(--color-amber-50)',
                             borderRadius: 12,
                             fontSize: 14,
-                            color: 'var(--color-amber-600)',
+                            color: 'var(--color-amber-800)',
                             border: '1px solid var(--color-amber-200)',
                             display: 'inline-block',
                         }}>

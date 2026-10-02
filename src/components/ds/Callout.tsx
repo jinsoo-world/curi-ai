@@ -12,10 +12,10 @@ const BOX: Record<CalloutState, string> = {
 }
 const ACCENT: Record<CalloutState, string> = {
     normal: 'text-neutral-800',
-    caution: 'text-amber-600',
+    caution: 'text-amber-800',
     warning: 'text-red-600',
     positive: 'text-blue-600',
-    primary: 'text-primary-600',
+    primary: 'text-primary-700',
 }
 
 export type CalloutProps = Omit<HTMLAttributes<HTMLDivElement>, 'title' | 'content'> & {

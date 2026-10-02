@@ -135,7 +135,7 @@ export default function LoginPage() {
                 animation: 'fadeIn 0.5s ease',
             }}>
                 <div style={{
-                    fontSize: 18, fontWeight: 600, color: 'var(--color-primary-600)',
+                    fontSize: 18, fontWeight: 600, color: 'var(--color-primary-700)',
                 }}>
                     로그인하면 대화 한도 2배로 드려요
                 </div>

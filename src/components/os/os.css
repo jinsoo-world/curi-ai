@@ -369,7 +369,7 @@
 /* 1003 큐리어스 단추: 기본 = grayFill, .primary = primaryFill(초록·흰 글씨). 화면당 primary 하나 */
 .os-btn { padding: 12px 18px; border-radius: 8px; border: 0; background: var(--os-말풍선); color: var(--os-글); font-size: 16px; font-weight: 500; cursor: pointer; min-height: 48px; transition: background-color .2s; }
 .os-btn:hover { background: var(--os-말풍선-내); }
-.os-btn.primary { background: var(--color-primary-500); color: #fff; font-weight: 600; }
+.os-btn.primary { background: var(--color-primary-500); color: #fff; font-size: 17px; font-weight: 600; }
 .os-btn.primary:hover { background: var(--color-primary-600); }
 .os-btn:disabled { background: var(--os-말풍선); color: var(--os-글-흐림); cursor: default; }
 .os-swatches { display: flex; flex-wrap: wrap; gap: 10px; }

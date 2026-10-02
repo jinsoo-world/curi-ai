@@ -171,7 +171,7 @@ export default function PayoutPage() {
 const wrap: React.CSSProperties = { overflow: 'auto', padding: '24px 20px 64px', maxWidth: 560, width: '100%', margin: '0 auto', minHeight: 0, color: 'var(--os-글)' }
 const h1: React.CSSProperties = { fontSize: 28, lineHeight: '38px', letterSpacing: '-0.0236em', fontWeight: 700, margin: '12px 0 8px' }
 const h2: React.CSSProperties = { fontSize: 20, lineHeight: '28px', fontWeight: 700, margin: '0 0 4px' }
-const p: React.CSSProperties = { fontSize: 17, color: 'var(--os-글-흐림)', fontWeight: 500, lineHeight: 1.6, margin: '0 0 20px' }
+const p: React.CSSProperties = { fontSize: 17, color: 'var(--os-글-연)', fontWeight: 500, lineHeight: 1.6, margin: '0 0 20px' }
 const card: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 14, padding: 24, borderRadius: 16, background: 'var(--os-바탕)', border: '1px solid var(--os-선)', marginBottom: 16 }
 const label: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 15, lineHeight: '22px', fontWeight: 600 }
 const input: React.CSSProperties = { minHeight: 52, padding: '12px 16px', borderRadius: 8, border: '1px solid var(--os-선)', background: 'var(--os-바탕)', color: 'var(--os-글)', fontSize: 16, fontWeight: 500, outline: 0 }

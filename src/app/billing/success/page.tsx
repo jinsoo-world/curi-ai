@@ -75,16 +75,16 @@ function BillingSuccessContent() {
             justifyContent: 'center',
             padding: 24,
             background: status === 'success'
-                ? 'var(--color-primary-50)'
+                ? '#fff'
                 : '#fafafa',
         }}>
             <div style={{
                 textAlign: 'center',
                 maxWidth: 400,
-                background: '#fff',
-                borderRadius: 24,
+                background: status === 'success' ? 'var(--color-primary-50)' : '#fff',   /* 1003 흰 바탕 + 위 카드만 연초록 */
+                border: status === 'success' ? '1px solid var(--color-primary-200)' : '1px solid var(--color-neutral-200)',
+                borderRadius: 16,
                 padding: '48px 32px',
-                boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
             }}>
                 {status === 'processing' && (
                     <>
