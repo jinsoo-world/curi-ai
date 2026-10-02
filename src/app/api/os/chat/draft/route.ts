@@ -4,7 +4,7 @@
 //  - card 가 없으면 → 평소대로 /api/chat 으로 가서 봇이 답한다.
 //  - card 가 있으면 → 봇은 답하지 않고 「보낼 내용 초안 + 승인 카드」가 말풍선 자리에 뜬다.
 // 허용을 눌러도 여기서 보내지 않는다. 기록만 남고, 실제 발신은 발신 담당이 나중에 한다.
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { classifyByRules, buildIntentPrompt, parseIntentJson, summarizeAction, buildDraftPrompt } from '@/domains/agent/intent'
@@ -12,6 +12,7 @@ import type { IrreversibleAction } from '@/domains/agent/tool-gate'
 import { gateTool, IRREVERSIBLE_TOOLS } from '@/domains/agent/tool-gate'
 import { askSolar } from '@/domains/agent/ask'
 import { createPermissionRequest, PermissionTableMissing } from '@/domains/agent/permissions'
+import { mentorName, notifyNative, p014PermissionPending } from '@/domains/push'
 import { assertBotInTeam as assertBotOwned } from '@/domains/os/knowledge'   // 대화, 전달은 팀에 있는 봇이면 된다 (마켓 봇 포함)
 import { SOLAR_CHAT_MODEL } from '@/domains/llm/constants'
 
@@ -105,6 +106,8 @@ export async function POST(req: Request) {
                 판정근거: guess.reason,
             },
         })
+        // 앱 알림 P014(봇 글 허락 기다림). 응답 뒤에 보낸다 = 화면이 기다리지 않는다
+        after(() => notifyNative(db, async () => p014PermissionPending({ userId: user.id, mentorId: ownedMentorId, botName: await mentorName(db, ownedMentorId), summary })))
         return NextResponse.json({ card })
     } catch (e) {
         if (e instanceof PermissionTableMissing) {

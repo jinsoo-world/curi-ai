@@ -3,7 +3,7 @@
 //
 // 🔒 service_role 로 DB 를 만지므로 모든 질의에 로그인한 사람의 user_id 를 건다.
 //    허용해도 여기서 실제로 보내지 않는다. 보내는 일은 발신 담당이 나중에 따로 한다.
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
@@ -12,6 +12,7 @@ import {
 import type { PermissionStatus } from '@/domains/agent/permissions'
 import { IRREVERSIBLE_TOOLS } from '@/domains/agent/tool-gate'
 import type { IrreversibleAction } from '@/domains/agent/tool-gate'
+import { mentorName, notifyNative, p014PermissionPending } from '@/domains/push'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,13 +50,17 @@ export async function POST(req: NextRequest) {
     if (!summary) return NextResponse.json({ error: '카드에 쓸 한 줄이 필요해요' }, { status: 400 })
 
     try {
-        const card = await createPermissionRequest(createAdminClient(), user.id, {
-            mentorId: body.mentorId ? String(body.mentorId) : null,
+        const db = createAdminClient()
+        const mentorId = body.mentorId ? String(body.mentorId) : null
+        const card = await createPermissionRequest(db, user.id, {
+            mentorId,
             sessionId: body.sessionId ? String(body.sessionId) : null,
             actionType: actionType as IrreversibleAction,
             summary,
             payload: (body.payload && typeof body.payload === 'object') ? body.payload as Record<string, unknown> : {},
         })
+        // 앱 알림 P014(봇 글 허락 기다림). 응답 뒤에 보낸다
+        after(() => notifyNative(db, async () => p014PermissionPending({ userId: user.id, mentorId, botName: await mentorName(db, mentorId), summary })))
         return NextResponse.json({ card })
     } catch (e) {
         if (e instanceof PermissionTableMissing) {

@@ -69,6 +69,7 @@ const USER_DELETES: [string, string][] = [
     ['channels', 'user_id'],               // channel_members·channel_messages 는 연쇄 삭제
     ['team_bots', 'user_id'], ['bot_routines', 'user_id'], ['bot_skills', 'user_id'], ['bot_links', 'user_id'],
     ['connectors', 'user_id'],             // 연동 토큰 포함
+    ['push_sends', 'user_id'], ['push_devices', 'user_id'],   // 앱 알림 기록·기기 번호 (연쇄 삭제도 걸려 있지만 먼저 지운다)
     ['push_subscriptions', 'user_id'], ['notification_prefs', 'user_id'], ['notifications', 'user_id'],
     ['knowledge_syncs', 'user_id'], ['knowledge_feeds', 'user_id'], ['bot_response_settings', 'user_id'],
     ['access_group_members', 'user_id'], ['access_groups', 'owner_user_id'], ['bot_audience', 'owner_user_id'],
