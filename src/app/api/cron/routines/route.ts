@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { listEnabledRoutines, pickDue, runRoutineOnce, RoutineTableMissing } from '@/domains/os/routines'
+import { notifyNative, p001RoutineDone } from '@/domains/push'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -37,6 +38,8 @@ export async function GET(req: NextRequest) {
         for (const r of 돌것) {
             const res = await runRoutineOnce(db, r)   // 안에서 실패를 삼키고 기록만 남긴다
             if (res.ok) 성공++; else 실패++
+            // 앱 알림 P001(매일 루틴 결과). 하루 1번만 = 루틴이 여러 개면 첫 결과만 울린다. 시험 실행(화면에서 누름)은 안 보낸다
+            if (res.ok) await notifyNative(db, p001RoutineDone({ userId: r.userId, mentorId: r.mentorId, botName: res.botName, routineTitle: r.title, now }))
         }
         return NextResponse.json({ ok: true, checked: 켜진것.length, ran: 돌것.length, 성공, 실패 })
     } catch (e) {

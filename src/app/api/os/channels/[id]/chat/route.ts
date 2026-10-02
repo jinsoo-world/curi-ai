@@ -7,6 +7,7 @@
 // ④ 답은 askChat(솔라→Gemini 폴백). 둘 다 죽으면 UNAVAILABLE_TEXT.
 // ⑤ 사람 말에 링크가 있으면(최대 3개) 1:1 대화와 같은 readers 로 읽어 답하는 봇들에게 넣는다(저장 안 함).
 import { NextResponse } from 'next/server'
+import { notifyNative, p025GroupReplied } from '@/domains/push'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { readUsage } from '@/domains/os/usage-db'
@@ -155,6 +156,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
                 말한봇.push(말할봇.mentorId)
                 if (i < 고른봇.length - 1) await sleep(GROUP_SERVER_GAP_MS)
             }
+        }
+        // 앱 알림 P025(단체방 답 도착) = 답을 기다리다 앱을 닫거나 방을 나가 연결이 끊긴 경우만.
+        // 화면을 보고 있으면 답이 바로 보이므로 울리지 않는다. 방마다 10분에 1번.
+        if (req.signal.aborted && 말한봇.length > 0) {
+            const 이름 = 말한봇.map(mid => bots.find(b => b.mentorId === mid)?.name).filter((n): n is string => !!n)
+            await notifyNative(db, p025GroupReplied({ userId: user.id, channelId: id, roomName: channel.name, botNames: [...new Set(이름)] }))
         }
         return NextResponse.json({
             messages: 새말,

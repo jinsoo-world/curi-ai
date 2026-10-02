@@ -14,6 +14,7 @@ import {
     reviewBot, markPendingReview, openReviewOf, logReviewEvent, readBotForReview, contentHash, HOLD_EVENTS,
     type ModerationResult,
 } from './moderation'
+import { mentorName, notifyNative, p033Published, p034InReview, p035NeedsFix } from '@/domains/push'
 
 /** 손님 시연용 봇 이름표 (공개 금지) */
 const DEMO_SLUG_PREFIX = 'os-demo-'
@@ -118,8 +119,19 @@ export async function requestPublish(db: SupabaseClient, a: GateActor, opts: { b
     if (!opts.bypassHold && await isBotHeld(db, a.mentorId)) throw new BotHeld()
     const owner = await ownerOf(db, a.creatorId)
     const r = await reviewBot(db, { mentorId: a.mentorId, userId: a.actorUserId, ownerName: owner.displayName })
-    if (r.verdict === 'pass') await publishAtomic(db, { mentorId: a.mentorId, creatorId: a.creatorId, ownerUserId: owner.userId })
+    let published = false
+    if (r.verdict === 'pass') published = await publishAtomic(db, { mentorId: a.mentorId, creatorId: a.creatorId, ownerUserId: owner.userId })
     else if (r.verdict === 'review') await markPendingReview(db, { mentorId: a.mentorId, userId: a.actorUserId, ownerUserId: owner.userId, result: r })
+    // 앱 알림 ④ (주인에게). 통과 = 이번에 실제로 공개됐을 때만, 확인 대기, 고칠 곳
+    if (owner.userId) {
+        const u = owner.userId
+        await notifyNative(db, async () => {
+            const botName = await mentorName(db, a.mentorId)
+            if (r.verdict === 'pass') return published ? p033Published({ userId: u, mentorId: a.mentorId, botName }) : null
+            if (r.verdict === 'review') return p034InReview({ userId: u, mentorId: a.mentorId, botName })
+            return p035NeedsFix({ userId: u, mentorId: a.mentorId, botName, categories: r.categories, checkKey: r.hash ?? 'block' })
+        })
+    }
     return { verdict: r.verdict, reasons: r.reasons, categories: r.categories }
 }
 
@@ -223,6 +235,13 @@ export async function decideReview(
 
     if (decision === 'reject') {
         await logReviewEvent(db, 'os_bot_publish_decision', adminUserId, { mentor_id: mentorId, decision: 'reject' })
+        // 앱 알림 P035 (관리자 거절). 거절 이유 글은 기록에 없어 분류로 쉬운 말을 만든다
+        const ownerId = (await ownerOf(db, m.creator_id)).userId
+        if (ownerId) {
+            await notifyNative(db, async () => p035NeedsFix({
+                userId: ownerId, mentorId, botName: await mentorName(db, mentorId), categories: open.categories ?? [], checkKey: `reject:${open.contentHash ?? 'none'}`,
+            }))
+        }
         return { status: 'rejected' }
     }
     if ((m.slug ?? '').startsWith(DEMO_SLUG_PREFIX)) throw new Error('시연용 봇은 공개할 수 없어요')
@@ -237,8 +256,13 @@ export async function decideReview(
         return { status: 'rereviewed', moderation }
     }
     await releaseHold(db, adminUserId, mentorId)
-    await publishAtomic(db, { mentorId, creatorId: m.creator_id, ownerUserId: owner.userId })
+    const published = await publishAtomic(db, { mentorId, creatorId: m.creator_id, ownerUserId: owner.userId })
     await logReviewEvent(db, 'os_bot_publish_decision', adminUserId, { mentor_id: mentorId, decision: 'approve' })
+    // 앱 알림 P033 (관리자 승인으로 공개)
+    if (published && owner.userId) {
+        const u = owner.userId
+        await notifyNative(db, async () => p033Published({ userId: u, mentorId, botName: await mentorName(db, mentorId) }))
+    }
     return { status: 'approved' }
 }
 

@@ -1,6 +1,7 @@
 // domains/messaging — 타입. 채널 3개(푸시·문자·이메일)가 같은 모양으로 보낸다.
 
 import type { ApprovalMode } from '@/domains/agent/tool-gate'
+import type { PushCategory, PushInput, PushOutcome, BlockReason as PushBlockReason } from '@/domains/push/types'
 
 export type Channel = 'push' | 'sms' | 'email'
 
@@ -82,6 +83,7 @@ export type BlockReason =
     | 'sms_disabled'       // SMS_ENABLED 가 없다(대표 사전승인 전)
     | 'quiet_hours'        // 조용한 시간
     | 'driver_not_ready'   // 열쇠 없음
+    | 'push_rule'          // 앱 푸시 규칙(하루 3번·광고 동의·광고 시간·겹침 등)에 걸림. 자세한 이유는 error
 
 export interface DispatchInput {
     message: OutboundMessage
@@ -90,6 +92,18 @@ export interface DispatchInput {
     permissionRequestId?: string | null
     /** 보내는 봇의 승인 모드(team_bots.approval_mode). 모르면 always_ask */
     approvalMode?: ApprovalMode
+    /**
+     * 아이폰·안드로이드 앱 알림으로 보낸다(channel=push, audience=self 일 때만).
+     * 있으면 웹푸시 대신 앱 푸시 드라이버(domains/push sendPush)로 간다.
+     * TODO(메시지엔진 설계 1002 4-1): 상한·광고 규칙을 이 관문 본체로 올리고 웹푸시·메일에도 걸기. 지금은 앱 푸시만
+     */
+    appPush?: {
+        type: string
+        category: PushCategory
+        deeplink: string | null
+        dedupe?: PushInput['dedupe']
+        ignoreLimits?: boolean
+    }
 }
 
 export interface DispatchDeps {
@@ -99,6 +113,8 @@ export interface DispatchDeps {
     now?: () => Date
     /** 문자 채널 스위치. 기본 = process.env.SMS_ENABLED === 'true' */
     smsEnabled?: boolean
+    /** 앱 푸시 드라이버 (domains/push sendPush). 없으면 앱 푸시는 driver_not_ready */
+    appPush?: (input: PushInput) => Promise<PushOutcome>
 }
 
 export interface DispatchOutcome {
@@ -108,4 +124,7 @@ export interface DispatchOutcome {
     message: string
     error?: string
     id?: string
+    /** 앱 푸시로 갔을 때 그 결과(기기 수, sendId, 막힌 이유) */
+    push?: PushOutcome
+    pushReason?: PushBlockReason
 }

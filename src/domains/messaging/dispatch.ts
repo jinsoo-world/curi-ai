@@ -7,6 +7,9 @@
 //  4. 조용한 시간         — 푸시·문자 보류, 이메일은 간다
 //  5. 드라이버 준비        — 열쇠 없으면 blocked (죽지 않는다)
 //  6. 보내기 → message_log 에 한 줄 (받는 곳은 끝 4자만)
+//  앱 푸시(appPush 가 붙은 push, 내게 오는 알림) = 1·2 를 지난 뒤 앱 푸시 드라이버(sendPush)로 간다.
+//    설정 꺼짐·조용한 시간·하루 3번·광고 동의·광고 시간·「(광고)」·겹침은 sendPush 가 판정하고 push_sends 에 남긴다.
+//    여기서는 결과를 message_log 에 한 줄 더 남긴다. 웹푸시로 다시 보내지 않는다(같은 소식 두 번 금지).
 
 import { gateTool } from '@/domains/agent/tool-gate'
 import { isQuietHours } from './quiet-hours'
@@ -24,6 +27,7 @@ const REASON_TEXT: Record<BlockReason, string> = {
     sms_disabled: '문자는 아직 준비 중이에요.',
     quiet_hours: '조용한 시간이라 보내지 않았어요.',
     driver_not_ready: '이 채널을 보낼 열쇠가 아직 연결되지 않았어요.',
+    push_rule: '앱 알림 규칙에 걸려 보내지 않았어요.',
 }
 
 export async function dispatch(input: DispatchInput, deps: DispatchDeps): Promise<DispatchOutcome> {
@@ -66,6 +70,28 @@ export async function dispatch(input: DispatchInput, deps: DispatchDeps): Promis
 
     // 2. 채널 스위치
     if (message.channel === 'sms' && !smsEnabled) return block('sms_disabled', approvedId)
+
+    // 2-1. 앱 푸시 (아이폰·안드로이드). 내게 오는 알림만
+    if (message.channel === 'push' && input.appPush && audience === 'self') {
+        if (!deps.appPush) return block('driver_not_ready', approvedId)
+        const a = input.appPush
+        const r = await deps.appPush({
+            userId: message.userId, type: a.type, category: a.category,
+            title: message.subject ?? '큐리AI', body: message.body, deeplink: a.deeplink,
+            dedupe: a.dedupe, ignoreLimits: a.ignoreLimits,
+        })
+        const logBase = { ...base, subject: `[${a.type}] ${message.subject ?? ''}`.trim() }
+        if ('skipped' in r) {
+            return finish({ ...logBase, status: 'blocked', error: 'driver_not_ready' }, { status: 'blocked', reason: 'driver_not_ready', message: REASON_TEXT.driver_not_ready, push: r })
+        }
+        if (r.status === 'blocked') {
+            return finish({ ...logBase, status: 'blocked', error: r.reason }, { status: 'blocked', reason: 'push_rule', pushReason: r.reason, message: REASON_TEXT.push_rule, push: r })
+        }
+        if (r.status === 'sent') {
+            return finish({ ...logBase, status: 'sent', error: null }, { status: 'sent', id: `apppush:${r.batchId}`, message: '보냈어요.', push: r })
+        }
+        return finish({ ...logBase, status: 'failed', error: `기기 ${r.failed}대 실패` }, { status: 'failed', error: `기기 ${r.failed}대 실패`, message: '보내지 못했어요. 잠시 뒤 다시 해 주세요.', push: r })
+    }
 
     // 3. 내 설정 + 4. 조용한 시간
     const prefs = await store.getPrefs(message.userId).catch(() => null)
