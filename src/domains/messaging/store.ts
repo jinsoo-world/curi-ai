@@ -7,6 +7,7 @@ import type { MessageLogEntry, MessagingStore, NotificationPrefs } from './types
 /** 표가 아직 없을 때 나는 Postgres 오류 번호 */
 export const TABLE_MISSING = '42P01'
 const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
+const COLUMN_MISSING = new Set(['42703', 'PGRST204'])   // 칸이 없을 때 Postgres / PostgREST 코드
 
 type PrefsRow = { push: boolean; sms: boolean; email: boolean; quiet_from: string | null; quiet_to: string | null }
 
@@ -49,7 +50,7 @@ export function createSupabaseStore(db: SupabaseClient): MessagingStore {
         },
 
         async log(entry: MessageLogEntry) {
-            const { error } = await db.from('message_log').insert({
+            const row: Record<string, unknown> = {
                 user_id: entry.userId,
                 channel: entry.channel,
                 to_hint: entry.toHint,
@@ -57,7 +58,14 @@ export function createSupabaseStore(db: SupabaseClient): MessagingStore {
                 status: entry.status,
                 permission_request_id: entry.permissionRequestId,
                 error: entry.error,
-            })
+            }
+            if (entry.toHash) row.to_hash = entry.toHash
+            let { error } = await db.from('message_log').insert(row)
+            // to_hash 칸이 아직 없으면(마이그레이션 전) 지문만 빼고 다시 적는다. 기록이 사라지면 하루 상한을 못 센다
+            if (error && 'to_hash' in row && COLUMN_MISSING.has(error.code)) {
+                delete row.to_hash
+                ;({ error } = await db.from('message_log').insert(row))
+            }
             if (error) throw new Error(error.message)
         },
     }
