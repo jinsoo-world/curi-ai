@@ -94,7 +94,7 @@ export default function BeforeAfter({
                     border: 'none', background: '#fff',
                     boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
                     display: 'grid', placeItems: 'center',
-                    fontSize: 15, fontWeight: 900, color: '#18181b',
+                    fontSize: 15, fontWeight: 900, color: 'var(--color-neutral-900)',
                     cursor: 'ew-resize',
                 }}
             >

@@ -87,7 +87,7 @@ export default function BottomTabs() {
                     background: rgba(255,255,255,0.96);
                     -webkit-backdrop-filter: saturate(180%) blur(8px);
                     backdrop-filter: saturate(180%) blur(8px);
-                    border-top: 1px solid var(--선, #E5E7EB);
+                    border-top: 1px solid var(--color-neutral-200);
                     padding-bottom: env(safe-area-inset-bottom, 0px);
                 }
                 .btm-tab {
@@ -97,12 +97,12 @@ export default function BottomTabs() {
                     align-items: center; justify-content: center; gap: 3px;
                     padding: 9px 2px 8px;
                     text-decoration: none;
-                    color: var(--먹연, #5C6660);
-                    font-size: 11.5px; font-weight: 700; letter-spacing: -0.03em;
+                    color: var(--color-neutral-400);
+                    font-size: 12px; font-weight: 500; letter-spacing: 0;
                     min-height: 56px;
                     -webkit-tap-highlight-color: transparent;
                 }
-                .btm-tab.on { color: var(--진초록, #0B4A2A); }
+                .btm-tab.on { color: var(--color-neutral-900); font-weight: 600; }   /* 큐리어스 아래 메뉴: 고른 칸은 검정, 나머지 neutral-400 */
                 .btm-tab.on svg { stroke-width: 2.2; }
                 @media (min-width: 900px) { .btm-tabs { display: none; } }
                 @media (max-width: 899px) { body { padding-bottom: 60px; } }

@@ -37,7 +37,7 @@ export default function SuggestionCards({
                             height: variant === 'welcome' ? 48 : 34,
                             width: variant === 'welcome' ? '100%' : `${90 + i * 20}px`,
                             borderRadius: 24,
-                            background: 'linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%)',
+                            background: 'var(--color-neutral-100)',
                             backgroundSize: '200% 100%',
                             animation: `shimmer 1.5s ease-in-out infinite ${i * 0.15}s`,
                         }}
@@ -80,7 +80,7 @@ export default function SuggestionCards({
                                 borderRadius: 16,
                                 padding: '13px 18px',
                                 fontSize: 16.5,
-                                color: '#334155',
+                                color: 'var(--color-neutral-700)',
                                 cursor: 'pointer',
                                 textAlign: 'left',
                                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',

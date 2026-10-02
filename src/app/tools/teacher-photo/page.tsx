@@ -149,7 +149,7 @@ function TeacherPhotoPage안쪽() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                         {[{ id: 'male', label: '남성' }, { id: 'female', label: '여성' }].map(g => (
                             <button key={g.id} onClick={() => set성별(g.id)} style={{ ...고름(성별 === g.id), textAlign: 'center' }}>
-                                <span style={{ fontSize: 16, fontWeight: 800, color: '#18181b' }}>{g.label}</span>
+                                <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-neutral-900)' }}>{g.label}</span>
                             </button>
                         ))}
                     </div>
@@ -165,8 +165,8 @@ function TeacherPhotoPage안쪽() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
                         {HAIRS.map(h => (
                             <button key={h.id} onClick={() => setHairId(h.id)} style={고름(hairId === h.id)}>
-                                <span style={{ display: 'block', fontSize: 15, fontWeight: 800, color: '#18181b' }}>{h.label}</span>
-                                <span style={{ display: 'block', fontSize: 13, color: '#71717a', marginTop: 2, wordBreak: 'keep-all' }}>{h.desc}</span>
+                                <span style={{ display: 'block', fontSize: 15, fontWeight: 800, color: 'var(--color-neutral-900)' }}>{h.label}</span>
+                                <span style={{ display: 'block', fontSize: 13, color: 'var(--color-neutral-500)', marginTop: 2, wordBreak: 'keep-all' }}>{h.desc}</span>
                             </button>
                         ))}
                     </div>
@@ -176,7 +176,7 @@ function TeacherPhotoPage안쪽() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                         {AGES.map(a => (
                             <button key={a.id} onClick={() => setAgeId(a.id)} style={고름(ageId === a.id)}>
-                                <span style={{ display: 'block', fontSize: 14.5, fontWeight: 800, color: '#18181b' }}>{a.label}</span>
+                                <span style={{ display: 'block', fontSize: 14.5, fontWeight: 800, color: 'var(--color-neutral-900)' }}>{a.label}</span>
                                 {/* 많이 젊게 할수록 얼굴이 달라진다 — 파파님 피드백 2026-09-16
                                     「나이를 젊게 만드는 기능은 기존 인물과 너무 다르게 생성되는 경우가 있습니다」 */}
                                 {a.note && (
@@ -193,8 +193,8 @@ function TeacherPhotoPage안쪽() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                         {SKINS.map(k => (
                             <button key={k.id} onClick={() => setSkinId(k.id)} style={고름(skinId === k.id)}>
-                                <span style={{ display: 'block', fontSize: 14.5, fontWeight: 800, color: '#18181b' }}>{k.label}</span>
-                                <span style={{ display: 'block', fontSize: 12.5, color: '#71717a', marginTop: 3, wordBreak: 'keep-all', lineHeight: 1.4 }}>{k.desc}</span>
+                                <span style={{ display: 'block', fontSize: 14.5, fontWeight: 800, color: 'var(--color-neutral-900)' }}>{k.label}</span>
+                                <span style={{ display: 'block', fontSize: 12.5, color: 'var(--color-neutral-500)', marginTop: 3, wordBreak: 'keep-all', lineHeight: 1.4 }}>{k.desc}</span>
                             </button>
                         ))}
                     </div>
@@ -203,8 +203,8 @@ function TeacherPhotoPage안쪽() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(96px, 1fr))', gap: 8 }}>
                         {RATIOS.map(r => (
                             <button key={r.id} onClick={() => setRatioId(r.id)} style={고름(ratioId === r.id)}>
-                                <span style={{ display: 'block', fontSize: 14.5, fontWeight: 800, color: '#18181b' }}>{r.label}</span>
-                                <span style={{ display: 'block', fontSize: 11.5, color: '#71717a', marginTop: 3, wordBreak: 'keep-all', lineHeight: 1.4 }}>{r.use}</span>
+                                <span style={{ display: 'block', fontSize: 14.5, fontWeight: 800, color: 'var(--color-neutral-900)' }}>{r.label}</span>
+                                <span style={{ display: 'block', fontSize: 11.5, color: 'var(--color-neutral-500)', marginTop: 3, wordBreak: 'keep-all', lineHeight: 1.4 }}>{r.use}</span>
                             </button>
                         ))}
                     </div>
@@ -218,7 +218,7 @@ function TeacherPhotoPage안쪽() {
 function 칸({ 제목, children }: { 제목: string; children: React.ReactNode }) {
     return (
         <div style={{ marginBottom: 22 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>{제목}</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-700)', marginBottom: 8 }}>{제목}</div>
             {children}
         </div>
     )
@@ -236,13 +236,13 @@ function 그림칸({ 목록, 고른, 고르기, 남성 }: {
             {목록.map(o => (
                 <button key={o.id} onClick={() => 고르기(o.id)} style={고름(고른 === o.id)}>
                     {(남성 && o.sampleMale) || o.sample ? (
-                        <span style={{ position: 'relative', display: 'block', width: '100%', aspectRatio: '3 / 4', borderRadius: 12, overflow: 'hidden', marginBottom: 8, background: '#f4f4f5' }}>
+                        <span style={{ position: 'relative', display: 'block', width: '100%', aspectRatio: '3 / 4', borderRadius: 12, overflow: 'hidden', marginBottom: 8, background: 'var(--color-neutral-100)' }}>
                             <Image src={((남성 && o.sampleMale) || o.sample)!} alt="" fill sizes="160px" style={{ objectFit: 'cover', objectPosition: 'center 22%' }} />
                         </span>
                     ) : (
                         <span style={{ display: 'block', width: '100%', height: 64, borderRadius: 12, background: o.bg || o.swatch, marginBottom: 8 }} />
                     )}
-                    <span style={{ fontSize: 14.5, fontWeight: 800, color: '#18181b' }}>{o.label}</span>
+                    <span style={{ fontSize: 14.5, fontWeight: 800, color: 'var(--color-neutral-900)' }}>{o.label}</span>
                 </button>
             ))}
         </div>

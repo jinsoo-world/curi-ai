@@ -38,7 +38,7 @@ export default function UploadedPeek() {
                 alignItems: 'center',
                 gap: 14,
                 background: '#fff',
-                border: '1px solid #e4e4e7',
+                border: '1px solid var(--color-neutral-200)',
                 borderRadius: 18,
                 padding: 14,
                 marginBottom: 20,
@@ -59,7 +59,7 @@ export default function UploadedPeek() {
             />
             <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 16.5, fontWeight: 800, marginBottom: 4 }}>이 사진을 올리셨어요</div>
-                <p style={{ fontSize: 15, color: '#71717a', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
                     아래에서 무엇을 만들지 고르시면 이 사진이 그대로 넘어갑니다.
                 </p>
             </div>

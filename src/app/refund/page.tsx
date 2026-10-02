@@ -27,12 +27,12 @@ function 조({ 제목, children }: { 제목: string; children: React.ReactNode }
 
 export default function RefundPage() {
     return (
-        <div style={{ minHeight: '100dvh', background: '#f8f9fa' }}>
+        <div style={{ minHeight: '100dvh', background: 'var(--color-neutral-50)' }}>
             <header style={{
                 position: 'sticky', top: 0, zIndex: 50,
                 background: 'rgba(255,255,255,0.95)',
                 backdropFilter: 'blur(20px)',
-                borderBottom: '1px solid #f0f0f0',
+                borderBottom: '1px solid var(--color-neutral-200)',
             }}>
                 <div style={{
                     maxWidth: 800, margin: '0 auto',
@@ -62,7 +62,7 @@ export default function RefundPage() {
             }}>
                 <div style={{
                     background: '#fff', borderRadius: 20,
-                    border: '1px solid #f0f0f0',
+                    border: '1px solid var(--color-neutral-200)',
                     padding: 'clamp(24px, 5vw, 48px)',
                 }}>
                     <h1 style={{
@@ -147,7 +147,7 @@ export default function RefundPage() {
 
                         <div style={{
                             marginTop: 48, padding: '20px 24px',
-                            background: '#f9fafb', borderRadius: 12,
+                            background: 'var(--color-neutral-50)', borderRadius: 12,
                             fontSize: 14, lineHeight: 1.8,
                         }}>
                             <strong style={{ color: 검정 }}>문의</strong>

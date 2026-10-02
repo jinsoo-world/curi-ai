@@ -22,18 +22,18 @@ export default function Error({
             <div style={{
                 textAlign: 'center', maxWidth: 420,
                 background: '#fff', borderRadius: 20,
-                border: '1px solid #f0f0f0', padding: '48px 32px',
+                border: '1px solid var(--color-neutral-200)', padding: '48px 32px',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
             }}>
                 <div style={{ fontSize: 56, marginBottom: 12 }}>😵</div>
                 <h2 style={{
-                    fontSize: 22, fontWeight: 700, color: '#18181b',
+                    fontSize: 22, fontWeight: 700, color: 'var(--color-neutral-900)',
                     margin: '0 0 6px',
                 }}>
                     페이지를 불러올 수 없어요
                 </h2>
                 <p style={{
-                    fontSize: 14, color: '#6b7280', lineHeight: 1.6,
+                    fontSize: 14, color: 'var(--color-neutral-500)', lineHeight: 1.6,
                     margin: '0 0 24px',
                 }}>
                     일시적인 오류가 발생했습니다.<br />
@@ -44,7 +44,7 @@ export default function Error({
                         onClick={reset}
                         style={{
                             padding: '12px 24px', borderRadius: 12, border: 'none',
-                            background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                            background: 'var(--color-blue-500)',
                             color: '#fff', fontSize: 14, fontWeight: 600,
                             cursor: 'pointer', boxShadow: '0 4px 14px rgba(99,102,241,0.3)',
                         }}
@@ -53,15 +53,15 @@ export default function Error({
                     </button>
                     <Link href="/" style={{
                         padding: '12px 24px', borderRadius: 12,
-                        border: '1px solid #e5e7eb', background: '#fff',
-                        color: '#374151', fontSize: 14, fontWeight: 600,
+                        border: '1px solid var(--color-neutral-200)', background: '#fff',
+                        color: 'var(--color-neutral-700)', fontSize: 14, fontWeight: 600,
                         textDecoration: 'none', display: 'inline-block',
                     }}>
                         🏠 홈으로
                     </Link>
                 </div>
                 {error.digest && (
-                    <p style={{ fontSize: 11, color: '#d1d5db', marginTop: 16 }}>
+                    <p style={{ fontSize: 11, color: 'var(--color-neutral-300)', marginTop: 16 }}>
                         오류 코드: {error.digest}
                     </p>
                 )}

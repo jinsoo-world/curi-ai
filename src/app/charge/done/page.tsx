@@ -42,30 +42,30 @@ function ChargeDoneInner() {
     return (
         <main style={{
             minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 20, background: 'linear-gradient(180deg, #f0fdf4 0%, #ffffff 40%)',
+            padding: 20, background: 'var(--color-primary-50)',
         }}>
             <div style={{
                 width: '100%', maxWidth: 400, background: '#fff', borderRadius: 20,
-                padding: '36px 28px', textAlign: 'center', border: '1px solid #e4e4e7',
+                padding: '36px 28px', textAlign: 'center', border: '1px solid var(--color-neutral-200)',
             }}>
                 {상태 === 'ing' && (
                     <>
                         <div style={{ fontSize: 40, marginBottom: 14 }}>🍀</div>
-                        <p style={{ fontSize: 16, color: '#52525b', margin: 0 }}>충전하고 있어요...</p>
+                        <p style={{ fontSize: 16, color: 'var(--color-neutral-600)', margin: 0 }}>충전하고 있어요...</p>
                     </>
                 )}
 
                 {상태 === 'ok' && (
                     <>
                         <div style={{ fontSize: 44, marginBottom: 14 }}>🎉</div>
-                        <h2 style={{ fontSize: 22, fontWeight: 800, color: '#18181b', margin: '0 0 8px' }}>
+                        <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-neutral-900)', margin: '0 0 8px' }}>
                             충전 완료!
                         </h2>
-                        <p style={{ fontSize: 15, color: '#52525b', margin: '0 0 6px', lineHeight: 1.7 }}>
-                            클로버 <strong style={{ color: '#16a34a' }}>{clovers.toLocaleString()}개</strong>가 들어왔어요.
+                        <p style={{ fontSize: 15, color: 'var(--color-neutral-600)', margin: '0 0 6px', lineHeight: 1.7 }}>
+                            클로버 <strong style={{ color: 'var(--color-primary-600)' }}>{clovers.toLocaleString()}개</strong>가 들어왔어요.
                         </p>
                         {balance !== null && (
-                            <p style={{ fontSize: 13, color: '#71717a', margin: '0 0 28px' }}>
+                            <p style={{ fontSize: 13, color: 'var(--color-neutral-500)', margin: '0 0 28px' }}>
                                 지금 가진 클로버 {balance.toLocaleString()}개
                             </p>
                         )}
@@ -80,7 +80,7 @@ function ChargeDoneInner() {
                             }}
                             style={{
                                 width: '100%', padding: '14px', borderRadius: 14, border: 'none',
-                                background: '#1C2321', color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer',
+                                background: 'var(--color-neutral-900)', color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer',
                             }}
                         >
                             이어서 만들러 가기
@@ -91,10 +91,10 @@ function ChargeDoneInner() {
                 {상태 === 'fail' && (
                     <>
 
-                        <h2 style={{ fontSize: 20, fontWeight: 800, color: '#18181b', margin: '0 0 8px' }}>
+                        <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--color-neutral-900)', margin: '0 0 8px' }}>
                             충전하지 못했어요
                         </h2>
-                        <p style={{ fontSize: 14, color: '#71717a', margin: '0 0 24px', lineHeight: 1.7, wordBreak: 'keep-all' }}>
+                        <p style={{ fontSize: 14, color: 'var(--color-neutral-500)', margin: '0 0 24px', lineHeight: 1.7, wordBreak: 'keep-all' }}>
                             {오류글}<br />
                             돈이 빠져나갔는데 클로버가 안 들어왔다면 알려주세요. 바로 확인해 드립니다.
                         </p>
@@ -102,8 +102,8 @@ function ChargeDoneInner() {
                             onClick={() => router.push('/charge')}
                             style={{
                                 width: '100%', padding: '14px', borderRadius: 14,
-                                border: '1px solid #e4e4e7', background: '#fff',
-                                fontSize: 15, fontWeight: 600, color: '#3f3f46', cursor: 'pointer',
+                                border: '1px solid var(--color-neutral-200)', background: '#fff',
+                                fontSize: 15, fontWeight: 600, color: 'var(--color-neutral-700)', cursor: 'pointer',
                             }}
                         >
                             다시 시도하기

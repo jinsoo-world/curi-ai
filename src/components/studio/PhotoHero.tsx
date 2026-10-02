@@ -138,7 +138,7 @@ export default function PhotoHero() {
                             <PhotoDrop preview={올린사진} onPicked={받았을때} onError={setErr} />
                         </div>
                         {err && (
-                            <p style={{ color: '#dc2626', fontSize: 'var(--글자-작)', marginTop: 10, textAlign: 'center' }}>
+                            <p style={{ color: 'var(--color-red-600)', fontSize: 'var(--글자-작)', marginTop: 10, textAlign: 'center' }}>
                                 {err}
                             </p>
                         )}

@@ -60,13 +60,13 @@ export default function MarketingConsentPopup({ onAccept, onDismiss }: Marketing
                     {/* 핸들 */}
                     <div style={{
                         width: 40, height: 4, borderRadius: 2,
-                        background: '#e5e7eb', margin: '-12px auto 20px',
+                        background: 'var(--color-neutral-200)', margin: '-12px auto 20px',
                     }} />
 
                     {/* 이모지 아이콘 */}
                     <div style={{
                         width: 64, height: 64, borderRadius: 20,
-                        background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+                        background: 'var(--color-primary-50)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 32, margin: '0 auto 16px',
                     }}>
@@ -75,7 +75,7 @@ export default function MarketingConsentPopup({ onAccept, onDismiss }: Marketing
 
                     {/* 제목 */}
                     <h3 style={{
-                        fontSize: 20, fontWeight: 800, color: '#1e293b',
+                        fontSize: 20, fontWeight: 800, color: 'var(--color-neutral-900)',
                         textAlign: 'center', margin: '0 0 8px',
                         letterSpacing: '-0.02em',
                     }}>
@@ -84,7 +84,7 @@ export default function MarketingConsentPopup({ onAccept, onDismiss }: Marketing
 
                     {/* 설명 */}
                     <p style={{
-                        fontSize: 14, color: '#64748b', textAlign: 'center',
+                        fontSize: 14, color: 'var(--color-neutral-500)', textAlign: 'center',
                         margin: '0 0 24px', lineHeight: 1.6,
                     }}>
                         새로운 AI 멘토, 이벤트, 할인 소식을 놓치지 마세요.<br />
@@ -99,9 +99,9 @@ export default function MarketingConsentPopup({ onAccept, onDismiss }: Marketing
                         {['이벤트 소식', '새 AI 알림', '할인 혜택'].map((tag, i) => (
                             <span key={i} style={{
                                 fontSize: 12, fontWeight: 600,
-                                color: '#16a34a', background: '#f0fdf4',
+                                color: 'var(--color-primary-600)', background: 'var(--color-primary-50)',
                                 padding: '5px 12px', borderRadius: 20,
-                                border: '1px solid #dcfce7',
+                                border: '1px solid var(--color-primary-50)',
                             }}>
                                 {tag}
                             </span>
@@ -115,7 +115,7 @@ export default function MarketingConsentPopup({ onAccept, onDismiss }: Marketing
                             width: '100%', padding: '16px',
                             borderRadius: 16, border: 'none',
                             fontSize: 16, fontWeight: 700, color: '#fff',
-                            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                            background: 'var(--color-primary-500)',
                             boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
                             cursor: 'pointer',
                             marginBottom: 10,
@@ -129,7 +129,7 @@ export default function MarketingConsentPopup({ onAccept, onDismiss }: Marketing
                         style={{
                             width: '100%', padding: '14px',
                             borderRadius: 16, border: 'none',
-                            fontSize: 14, fontWeight: 500, color: '#94a3b8',
+                            fontSize: 14, fontWeight: 500, color: 'var(--color-neutral-400)',
                             background: 'transparent',
                             cursor: 'pointer',
                         }}

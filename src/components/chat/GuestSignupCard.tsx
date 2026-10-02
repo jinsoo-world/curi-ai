@@ -14,12 +14,12 @@ export default function GuestSignupCard({ botName, variant = 'inline' }: { botNa
             borderRadius: 20, background: '#fff', border: variant === 'inline' ? '1px solid #d1fadf' : 'none', textAlign: 'center',
             boxShadow: variant === 'inline' ? '0 6px 20px rgba(3,193,36,0.12)' : 'none',
         }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#1e293b', marginBottom: 6 }}>{GUEST_SIGNUP_COPY.title}</div>
-            <div style={{ fontSize: 14, color: '#64748b', marginBottom: 16, lineHeight: 1.6 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--color-neutral-900)', marginBottom: 6 }}>{GUEST_SIGNUP_COPY.title}</div>
+            <div style={{ fontSize: 14, color: 'var(--color-neutral-500)', marginBottom: 16, lineHeight: 1.6 }}>
                 {botName ? `가입하면 ${botName}와(과) 계속 이야기할 수 있어요` : GUEST_SIGNUP_COPY.body}
             </div>
-            <button type="button" onClick={() => go('kakao')} style={{ ...btn, background: '#FEE500', color: '#191919', marginBottom: 8 }}>{GUEST_SIGNUP_COPY.kakao}</button>
-            <button type="button" onClick={() => go('google')} style={{ ...btn, background: '#fff', color: '#1e293b', border: '1px solid #e2e8f0' }}>{GUEST_SIGNUP_COPY.google}</button>
+            <button type="button" onClick={() => go('kakao')} style={{ ...btn, background: '#FEE500', color: 'var(--color-neutral-900)', marginBottom: 8 }}>{GUEST_SIGNUP_COPY.kakao}</button>
+            <button type="button" onClick={() => go('google')} style={{ ...btn, background: '#fff', color: 'var(--color-neutral-900)', border: '1px solid var(--color-neutral-200)' }}>{GUEST_SIGNUP_COPY.google}</button>
         </div>
     )
 }

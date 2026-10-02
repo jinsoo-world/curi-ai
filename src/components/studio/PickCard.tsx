@@ -54,7 +54,7 @@ export function PickCard({
                 boxShadow: selected ? '0 0 0 3px rgba(34,197,94,0.12)' : 'none',
             }}
         >
-            <div style={{ width: '100%', aspectRatio: '4 / 5', overflow: 'hidden', background: '#f4f4f5' }}>
+            <div style={{ width: '100%', aspectRatio: '4 / 5', overflow: 'hidden', background: 'var(--color-neutral-100)' }}>
                 {option.sample ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={option.sample} alt={option.label} loading="lazy"

@@ -32,7 +32,7 @@ export default function Page() {
                     신분증 사진은 사진관에서 찍으시는 것이 확실합니다.
                 </p>
 
-                <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '20px 18px' }}>
+                <div style={{ background: '#fff', border: '1px solid var(--color-neutral-200)', borderRadius: 18, padding: '20px 18px' }}>
                     <div style={{ fontSize: 16.5, fontWeight: 800, marginBottom: 12 }}>이런 사진은 만들어 드려요</div>
                     <div style={{ display: 'grid', gap: 10 }}>
                         {[
@@ -42,16 +42,16 @@ export default function Page() {
                         ].map(t => (
                             <Link key={t.href} href={t.href} style={{
                                 display: 'block', padding: '15px 16px', borderRadius: 14,
-                                border: '1px solid #e4e4e7', textDecoration: 'none', color: 'inherit',
+                                border: '1px solid var(--color-neutral-200)', textDecoration: 'none', color: 'inherit',
                             }}>
                                 <span style={{ display: 'block', fontSize: 16.5, fontWeight: 800 }}>{t.label}</span>
-                                <span style={{ display: 'block', fontSize: 15, color: '#71717a', marginTop: 3 }}>{t.desc}</span>
+                                <span style={{ display: 'block', fontSize: 15, color: 'var(--color-neutral-500)', marginTop: 3 }}>{t.desc}</span>
                             </Link>
                         ))}
                     </div>
                     <Link href="/studio" style={{
                         display: 'block', marginTop: 14, padding: 15, borderRadius: 14,
-                        background: '#1C2321', color: '#fff', fontSize: 16.5, fontWeight: 800,
+                        background: 'var(--color-neutral-900)', color: '#fff', fontSize: 16.5, fontWeight: 800,
                         textAlign: 'center', textDecoration: 'none',
                     }}>
                         전체 보기

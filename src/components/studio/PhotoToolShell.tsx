@@ -149,7 +149,7 @@ export default function PhotoToolShell({
                 </div>
 
                 {errorMsg && !모자람 && (
-                    <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 15, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
+                    <div style={{ background: 'var(--color-red-50)', color: 'var(--color-red-600)', fontSize: 15, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
                         {errorMsg}
                     </div>
                 )}
@@ -158,18 +158,18 @@ export default function PhotoToolShell({
                     손님에게 「충전하러 가기」는 막다른 길이다. 계정이 없으면 충전도 못 한다.
                     클로버 판매 끝(대표 결정 1002): 회원은 충전 대신 미션(/missions)으로 보낸다. 부르는 쪽 onCharge 가 미션으로 간다. */}
                 {모자람 && (
-                    <div style={{ background: '#fff', border: '1.5px solid #e4e4e7', borderRadius: 14, padding: '16px 18px', marginBottom: 14, textAlign: 'center' }}>
+                    <div style={{ background: '#fff', border: '1.5px solid var(--color-neutral-200)', borderRadius: 14, padding: '16px 18px', marginBottom: 14, textAlign: 'center' }}>
                         <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6 }}>
                             {손님 ? '오늘 몫을 다 쓰셨어요' : '클로버가 모자라요'}
                         </div>
-                        <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                        <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: '0 0 14px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
                             {손님
                                 ? `로그인하시면 클로버 ${SIGNUP_CLOVERS}개를 바로 드려요. 만드신 사진도 그대로 받으실 수 있습니다.`
                                 : '클로버는 이제 따로 팔지 않아요. 미션을 하시면 클로버를 모아 이어서 만드실 수 있어요.'}
                         </p>
                         <button onClick={손님 ? onLogin : onCharge} style={{
                             width: '100%', padding: 14, borderRadius: 14, border: 'none',
-                            background: '#1C2321', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                            background: 'var(--color-neutral-900)', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
                         }}>
                             {손님 ? `로그인하고 클로버 ${SIGNUP_CLOVERS}개 받기` : '클로버 모으러 가기'}
                         </button>
@@ -181,10 +181,10 @@ export default function PhotoToolShell({
                     클로버가 모자란 경우는 위에서 이미 말했으니 여기서는 겹쳐 말하지 않는다. */}
                 {!loading && !모자람 && 빠진것.length > 0 && (
                     <div style={{
-                        background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 14,
+                        background: 'var(--color-amber-50)', border: '1.5px solid var(--color-amber-200)', borderRadius: 14,
                         padding: '14px 16px', marginBottom: 12,
                     }}>
-                        <div style={{ fontSize: 15.5, fontWeight: 800, color: '#92400e', marginBottom: 6 }}>
+                        <div style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--color-amber-600)', marginBottom: 6 }}>
                             {빠진것.length}가지만 더 고르시면 됩니다
                         </div>
                         <ul style={{ margin: 0, padding: '0 0 0 18px', display: 'grid', gap: 4 }}>
@@ -221,7 +221,7 @@ export default function PhotoToolShell({
                 {/* 손님에게는 클로버 대신 「오늘 몇 장까지 공짜」를 알려준다 — 대표 지적 0915
                     「클로버가 안보이는데 사진은 만들어지네?」 */}
                 {!loading && 손님 && !모자람 && (
-                    <p style={{ fontSize: 15, color: '#71717a', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                    <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.6, wordBreak: 'keep-all' }}>
                         가입 안 하셔도 클로버 {GUEST_CLOVERS}개로 한 장 만들어 보실 수 있어요.{' '}
                         <Link href="/login" style={{ color: 'var(--진초록)', fontWeight: 800, textDecoration: 'underline' }}>로그인하시면 {SIGNUP_CLOVERS}개를 더 드립니다.</Link>
                     </p>
@@ -229,35 +229,35 @@ export default function PhotoToolShell({
 
                 {result && (
                     <div style={{ marginTop: 26 }}>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: '#18181b', marginBottom: 10 }}>다 됐어요</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-neutral-900)', marginBottom: 10 }}>다 됐어요</div>
                         {compareWithOriginal && preview ? (
                             <>
-                                <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 12px' }}>가운데 손잡이를 좌우로 끌어보세요.</p>
+                                <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: '0 0 12px' }}>가운데 손잡이를 좌우로 끌어보세요.</p>
                                 <BeforeAfter before={preview} after={result} ratio="1 / 1" />
                             </>
                         ) : (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={result} alt="만든 사진" style={{ width: '100%', borderRadius: 16, border: '1px solid #e4e4e7' }} />
+                            <img src={result} alt="만든 사진" style={{ width: '100%', borderRadius: 16, border: '1px solid var(--color-neutral-200)' }} />
                         )}
 
                         {isPreviewResult ? (
-                            <div style={{ marginTop: 12, background: '#fff', border: '1px solid #e4e4e7', borderRadius: 14, padding: '18px 18px 16px', textAlign: 'center' }}>
+                            <div style={{ marginTop: 12, background: '#fff', border: '1px solid var(--color-neutral-200)', borderRadius: 14, padding: '18px 18px 16px', textAlign: 'center' }}>
                                 <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>선명한 사진은 회원만 받을 수 있어요</div>
-                                <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6 }}>
+                                <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: '0 0 14px', lineHeight: 1.6 }}>
                                     지금 보이는 건 미리보기라 흐릿해요. 로그인하면 원본을 바로 내려받습니다.
                                     <br />
                                     만드신 사진은 48시간 동안 보관해 드려요. 그 안에 받으시면 됩니다.
                                 </p>
                                 <button onClick={onLogin} style={{
                                     width: '100%', padding: 14, borderRadius: 14, border: 'none',
-                                    background: '#1C2321', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                                    background: 'var(--color-neutral-900)', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
                                 }}>로그인하고 원본 받기</button>
                             </div>
                         ) : (
                             <>
                             <a href={result} download={downloadName} onClick={() => 센다('photo_download', { tool: share.path })} style={{
                                 display: 'block', marginTop: 12, padding: 14, borderRadius: 14,
-                                background: '#18181b', color: '#fff', fontSize: 15, fontWeight: 700,
+                                background: 'var(--color-neutral-900)', color: '#fff', fontSize: 15, fontWeight: 700,
                                 textAlign: 'center', textDecoration: 'none',
                             }}>사진 내려받기</a>
                             <KeepNotice />

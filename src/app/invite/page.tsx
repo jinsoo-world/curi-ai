@@ -88,7 +88,7 @@ export default function InvitePage() {
 
                 {/* 추천 보상 안내 — 대표 확정(D2): 친구가 휴대폰 인증까지 마치면 한 번 준다 */}
                 <div style={{
-                    background: 'var(--진초록, #166534)', color: '#fff', borderRadius: 18,
+                    background: 'var(--진초록, var(--color-primary-800))', color: '#fff', borderRadius: 18,
                     padding: '18px 20px', marginBottom: 16, fontSize: 17, fontWeight: 800, lineHeight: 1.5, wordBreak: 'keep-all',
                 }}>
                     친구가 가입하고 휴대폰 인증을 마치면 클로버 {REFERRER_REWARD}개를 드려요

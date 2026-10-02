@@ -60,7 +60,7 @@ export default function MakingBar({ 예상초 = 30 }: { 예상초?: number }) {
                         height: '100%',
                         width: `${퍼센트}%`,
                         borderRadius: 999,
-                        background: 'linear-gradient(90deg, #22c55e, #16a34a)',
+                        background: 'var(--color-primary-500)',
                         transition: 'width 240ms linear',
                     }}
                 />

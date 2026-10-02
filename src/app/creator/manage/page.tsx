@@ -170,10 +170,10 @@ export default function CreatorManagePage() {
     )
 
     const statusLabels: Record<string, { label: string; color: string; bg: string }> = {
-        active: { label: 'Live', color: '#15803d', bg: '#dcfce7' },
-        draft: { label: '초안', color: '#d97706', bg: '#fef3c7' },
-        review: { label: '심사중', color: '#2563eb', bg: '#dbeafe' },
-        inactive: { label: '배포 전', color: '#6b7280', bg: '#f3f4f6' },
+        active: { label: 'Live', color: 'var(--color-primary-700)', bg: '#dcfce7' },
+        draft: { label: '초안', color: 'var(--color-amber-600)', bg: '#fef3c7' },
+        review: { label: '심사중', color: 'var(--color-blue-600)', bg: '#dbeafe' },
+        inactive: { label: '배포 전', color: 'var(--color-neutral-500)', bg: '#f3f4f6' },
     }
 
     const statCards = [
@@ -185,7 +185,7 @@ export default function CreatorManagePage() {
     ]
 
     return (
-        <div style={{ minHeight: '100dvh', background: '#f8f9fa' }}>
+        <div style={{ minHeight: '100dvh', background: 'var(--color-neutral-50)' }}>
             <AppSidebar />
             <div className="sidebar-content" style={{  minHeight: '100dvh' }}>
                 <div style={{
@@ -197,10 +197,10 @@ export default function CreatorManagePage() {
                     {/* 헤더 */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
                         <div>
-                            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#18181b', margin: 0 }}>
+                            <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>
                                 🎨 내 AI 관리
                             </h1>
-                            <p style={{ fontSize: 14, color: '#6b7280', margin: '4px 0 0' }}>
+                            <p style={{ fontSize: 14, color: 'var(--color-neutral-500)', margin: '4px 0 0' }}>
                                 내가 만든 AI를 관리하세요
                             </p>
                         </div>
@@ -210,7 +210,7 @@ export default function CreatorManagePage() {
                                 padding: '10px 20px',
                                 borderRadius: 10,
                                 border: 'none',
-                                background: '#18181b',
+                                background: 'var(--color-neutral-900)',
                                 color: '#fff',
                                 fontSize: 14,
                                 fontWeight: 600,
@@ -227,13 +227,13 @@ export default function CreatorManagePage() {
                     {/* 연동 수는 정산과 무관한 숫자. 정산 기준(대화량)은 domains/os/payout.ts 주석, 금액 계산 코드는 아직 없다 */}
                     <div style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
-                        padding: '14px 16px', marginBottom: 12, borderRadius: 12, background: '#fff', border: '1px solid #e5e7eb',
+                        padding: '14px 16px', marginBottom: 12, borderRadius: 12, background: '#fff', border: '1px solid var(--color-neutral-200)',
                     }}>
                         <div>
-                            <div style={{ fontSize: 15, fontWeight: 600, color: '#18181b' }}>
+                            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-neutral-900)' }}>
                                 내 봇을 팀에 넣은 사람 {linkTotals.totalLinks}명{linkTotals.monthNew > 0 ? ` (이번 달 새로 ${linkTotals.monthNew}명)` : ''}
                             </div>
-                            <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
+                            <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', marginTop: 2 }}>
                                 수익은 이 숫자가 아니라 유료 회원이 내 봇과 대화한 만큼 매달 10일에 보내 드려요.
                             </div>
                         </div>
@@ -262,21 +262,21 @@ export default function CreatorManagePage() {
                             padding: '16px 20px',
                             marginBottom: 20,
                             borderRadius: 16,
-                            border: '1.5px solid #bbf7d0',
-                            background: 'linear-gradient(135deg, #f0fdf4, #ffffff)',
+                            border: '1.5px solid var(--color-primary-100)',
+                            background: 'var(--color-primary-50)',
                             cursor: 'pointer',
                             textAlign: 'left',
                         }}
                     >
                         <div>
-                            <div style={{ fontSize: 15, fontWeight: 700, color: '#166534', marginBottom: 3 }}>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-primary-800)', marginBottom: 3 }}>
                                 내 AI 로 수익 내기
                             </div>
-                            <div style={{ fontSize: 13, color: '#52525b', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                            <div style={{ fontSize: 13, color: 'var(--color-neutral-600)', lineHeight: 1.6, wordBreak: 'keep-all' }}>
                                 내 자료로 AI 를 가르치고, 수강생에게 값을 매겨 열 수 있어요
                             </div>
                         </div>
-                        <span style={{ fontSize: 20, color: '#22c55e', flexShrink: 0 }}>›</span>
+                        <span style={{ fontSize: 20, color: 'var(--color-primary-500)', flexShrink: 0 }}>›</span>
                     </button>
 
                     {/* 통계 카드 */}
@@ -291,16 +291,16 @@ export default function CreatorManagePage() {
                                 background: '#fff',
                                 borderRadius: 14,
                                 padding: '20px 16px',
-                                border: '1px solid #f0f0f0',
+                                border: '1px solid var(--color-neutral-200)',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
                                 gap: 6,
                             }}>
-                                <div style={{ fontSize: 12, color: '#9ca3af', fontWeight: 500 }}>
+                                <div style={{ fontSize: 12, color: 'var(--color-neutral-400)', fontWeight: 500 }}>
                                     {card.label}
                                 </div>
-                                <div style={{ fontSize: 28, fontWeight: 700, color: '#18181b' }}>
+                                <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-neutral-900)' }}>
                                     {card.value}
                                 </div>
                             </div>
@@ -325,7 +325,7 @@ export default function CreatorManagePage() {
                                     width: '100%',
                                     padding: '10px 14px 10px 36px',
                                     borderRadius: 10,
-                                    border: '1px solid #e5e7eb',
+                                    border: '1px solid var(--color-neutral-200)',
                                     fontSize: 14,
                                     background: '#fff',
                                     outline: 'none',
@@ -335,18 +335,18 @@ export default function CreatorManagePage() {
                             <span style={{
                                 position: 'absolute',
                                 left: 12, top: '50%', transform: 'translateY(-50%)',
-                                fontSize: 16, color: '#9ca3af', pointerEvents: 'none',
+                                fontSize: 16, color: 'var(--color-neutral-400)', pointerEvents: 'none',
                             }}>🔍</span>
                         </div>
                     </div>
 
                     {/* 테이블 */}
                     {loading ? (
-                        <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>
+                        <div style={{ textAlign: 'center', padding: 60, color: 'var(--color-neutral-400)' }}>
                             불러오는 중...
                         </div>
                     ) : filteredMentors.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>
+                        <div style={{ textAlign: 'center', padding: 60, color: 'var(--color-neutral-400)' }}>
                             <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
                             <div>{search ? '검색 결과가 없습니다' : '아직 만든 AI가 없습니다'}</div>
                             {!search && (
@@ -357,7 +357,7 @@ export default function CreatorManagePage() {
                                         padding: '10px 20px',
                                         borderRadius: 10,
                                         border: 'none',
-                                        background: '#1C2321',
+                                        background: 'var(--color-neutral-900)',
                                         color: '#fff',
                                         fontSize: 14,
                                         fontWeight: 600,
@@ -372,7 +372,7 @@ export default function CreatorManagePage() {
                         <div style={{
                             background: '#fff',
                             borderRadius: 14,
-                            border: '1px solid #f0f0f0',
+                            border: '1px solid var(--color-neutral-200)',
                             overflow: 'visible',
                         }}>
                             {/* 테이블 헤더 */}
@@ -380,12 +380,12 @@ export default function CreatorManagePage() {
                                 display: 'grid',
                                 gridTemplateColumns: '40px 1fr 100px 120px 100px 80px',
                                 padding: '12px 16px',
-                                background: '#fafafa',
-                                borderBottom: '1px solid #f0f0f0',
+                                background: 'var(--color-neutral-50)',
+                                borderBottom: '1px solid var(--color-neutral-200)',
                                 borderRadius: '14px 14px 0 0',
                                 fontSize: 12,
                                 fontWeight: 600,
-                                color: '#6b7280',
+                                color: 'var(--color-neutral-500)',
                                 letterSpacing: '0.02em',
                             }}>
                                 <div></div>
@@ -409,7 +409,7 @@ export default function CreatorManagePage() {
                                             display: 'grid',
                                             gridTemplateColumns: '40px 1fr 100px 120px 100px 80px',
                                             padding: '14px 16px',
-                                            borderBottom: '1px solid #f5f5f5',
+                                            borderBottom: '1px solid var(--color-neutral-100)',
                                             alignItems: 'center',
                                             transition: 'background 100ms',
                                         }}
@@ -422,7 +422,7 @@ export default function CreatorManagePage() {
                                                 onClick={() => setOpenMenu(openMenu === m.id ? null : m.id)}
                                                 style={{
                                                     background: 'none', border: 'none', cursor: 'pointer',
-                                                    fontSize: 18, color: '#9ca3af', padding: '4px',
+                                                    fontSize: 18, color: 'var(--color-neutral-400)', padding: '4px',
                                                     lineHeight: 1,
                                                 }}
                                             >
@@ -436,7 +436,7 @@ export default function CreatorManagePage() {
                                                     background: '#fff',
                                                     borderRadius: 10,
                                                     boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
-                                                    border: '1px solid #e5e7eb',
+                                                    border: '1px solid var(--color-neutral-200)',
                                                     zIndex: 100,
                                                     minWidth: 160,
                                                     padding: '6px 0',
@@ -464,7 +464,7 @@ export default function CreatorManagePage() {
                                                                 border: 'none',
                                                                 cursor: 'pointer',
                                                                 fontSize: 13,
-                                                                color: '#374151',
+                                                                color: 'var(--color-neutral-700)',
                                                                 textAlign: 'left',
                                                             }}
                                                             onMouseEnter={e => (e.currentTarget.style.background = '#f5f5f5')}
@@ -474,7 +474,7 @@ export default function CreatorManagePage() {
                                                             {item.label}
                                                         </button>
                                                     ))}
-                                                    <div style={{ borderTop: '1px solid #f0f0f0', margin: '4px 0' }} />
+                                                    <div style={{ borderTop: '1px solid var(--color-neutral-200)', margin: '4px 0' }} />
                                                     <button
                                                         onClick={() => executeDelete(m.id)}
                                                         disabled={deleting === m.id}
@@ -488,7 +488,7 @@ export default function CreatorManagePage() {
                                                             border: 'none',
                                                             cursor: 'pointer',
                                                             fontSize: 13,
-                                                            color: '#dc2626',
+                                                            color: 'var(--color-red-600)',
                                                             textAlign: 'left',
                                                         }}
                                                         onMouseEnter={e => (e.currentTarget.style.background = '#fef2f2')}
@@ -509,10 +509,10 @@ export default function CreatorManagePage() {
                                         >
                                             <div style={{
                                                 width: 40, height: 40, borderRadius: '50%',
-                                                background: '#f3f4f6',
+                                                background: 'var(--color-neutral-100)',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                 overflow: 'hidden',
-                                                border: '1px solid #e5e7eb',
+                                                border: '1px solid var(--color-neutral-200)',
                                                 flexShrink: 0,
                                             }}>
                                                 {(m.avatar_url || MENTOR_IMAGES[m.name]) ? (
@@ -531,13 +531,13 @@ export default function CreatorManagePage() {
                                             </div>
                                             <div style={{ minWidth: 0 }}>
                                                 <div style={{
-                                                    fontSize: 14, fontWeight: 600, color: '#18181b',
+                                                    fontSize: 14, fontWeight: 600, color: 'var(--color-neutral-900)',
                                                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                                 }}>
                                                     {m.name}
                                                 </div>
                                                 <div style={{
-                                                    fontSize: 12, color: '#9ca3af', marginTop: 2,
+                                                    fontSize: 12, color: 'var(--color-neutral-400)', marginTop: 2,
                                                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                                 }}>
                                                     {m.title}
@@ -546,7 +546,7 @@ export default function CreatorManagePage() {
                                                 {(linkStats[m.id]?.linkCount ?? 0) > 0 && (
                                                     <div style={{
                                                         display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, marginRight: 6,
-                                                        fontSize: 11, color: '#15803d', background: '#f0fdf4', padding: '2px 8px', borderRadius: 8, fontWeight: 500,
+                                                        fontSize: 11, color: 'var(--color-primary-700)', background: 'var(--color-primary-50)', padding: '2px 8px', borderRadius: 8, fontWeight: 500,
                                                     }}>
                                                         👥 {linkStats[m.id].linkCount}명이 팀에 넣었어요{linkStats[m.id].monthNew > 0 ? ` (이번 달 +${linkStats[m.id].monthNew})` : ''}
                                                     </div>
@@ -557,8 +557,8 @@ export default function CreatorManagePage() {
                                                         onClick={(e) => { e.stopPropagation(); setExpandedMentor(expandedMentor === m.id ? null : m.id) }}
                                                         style={{
                                                             display: 'inline-flex', alignItems: 'center', gap: 6,
-                                                            marginTop: 4, fontSize: 11, color: '#6366f1',
-                                                            background: '#eef2ff', padding: '2px 8px', borderRadius: 8,
+                                                            marginTop: 4, fontSize: 11, color: 'var(--color-blue-500)',
+                                                            background: 'var(--color-blue-50)', padding: '2px 8px', borderRadius: 8,
                                                             cursor: 'pointer', fontWeight: 500,
                                                         }}
                                                     >
@@ -570,10 +570,10 @@ export default function CreatorManagePage() {
                                         </div>
 
                                         {/* 소유자 */}
-                                        <div className="manage-col-owner" style={{ fontSize: 12, color: '#6b7280' }}>
+                                        <div className="manage-col-owner" style={{ fontSize: 12, color: 'var(--color-neutral-500)' }}>
                                             <span style={{
                                                 display: 'inline-flex', alignItems: 'center', gap: 4,
-                                                background: '#f0fdf4', color: '#15803d',
+                                                background: 'var(--color-primary-50)', color: 'var(--color-primary-700)',
                                                 padding: '2px 8px', borderRadius: 6,
                                                 fontSize: 11, fontWeight: 500,
                                             }}>
@@ -582,7 +582,7 @@ export default function CreatorManagePage() {
                                         </div>
 
                                         {/* 생성일 */}
-                                        <div className="manage-col-date" style={{ fontSize: 12, color: '#6b7280' }}>
+                                        <div className="manage-col-date" style={{ fontSize: 12, color: 'var(--color-neutral-500)' }}>
                                             {new Date(m.created_at).toLocaleDateString('ko-KR')}
                                         </div>
 
@@ -648,7 +648,7 @@ export default function CreatorManagePage() {
                                                     background: 'none', border: 'none', cursor: 'pointer',
                                                     fontSize: 13, padding: '6px 10px',
                                                     display: 'flex', alignItems: 'center', gap: 4,
-                                                    color: '#374151', fontWeight: 500,
+                                                    color: 'var(--color-neutral-700)', fontWeight: 500,
                                                     borderRadius: 6,
                                                 }}
                                                 onMouseEnter={e => (e.currentTarget.style.background = '#f3f4f6')}
@@ -660,18 +660,18 @@ export default function CreatorManagePage() {
                                     {expandedMentor === m.id && mentorStats[m.id]?.userList?.length > 0 && (
                                         <div style={{
                                             padding: '10px 16px 10px 68px',
-                                            background: '#fafafa',
-                                            borderBottom: '1px solid #f0f0f0',
+                                            background: 'var(--color-neutral-50)',
+                                            borderBottom: '1px solid var(--color-neutral-200)',
                                             animation: 'fadeIn 0.2s ease',
                                         }}>
-                                            <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 6, fontWeight: 600 }}>대화한 사용자</div>
+                                            <div style={{ fontSize: 11, color: 'var(--color-neutral-400)', marginBottom: 6, fontWeight: 600 }}>대화한 사용자</div>
                                             {mentorStats[m.id].userList.map((u: MentorUserStat, i: number) => (
                                                 <div key={i} style={{
                                                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                    padding: '4px 0', fontSize: 12, color: '#374151',
+                                                    padding: '4px 0', fontSize: 12, color: 'var(--color-neutral-700)',
                                                 }}>
                                                     <span>👤 {u.displayName}</span>
-                                                    <span style={{ color: '#6366f1', fontWeight: 600 }}>💬 {u.messageCount}회</span>
+                                                    <span style={{ color: 'var(--color-blue-500)', fontWeight: 600 }}>💬 {u.messageCount}회</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -703,13 +703,13 @@ export default function CreatorManagePage() {
                                 animation: 'shareModalIn 0.2s ease',
                             }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#18181b' }}>🔄 소유권 이전</h3>
+                                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--color-neutral-900)' }}>🔄 소유권 이전</h3>
                                     <button
                                         onClick={() => { setTransferModal(null); setTransferEmail('') }}
-                                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#9ca3af', fontSize: 20, lineHeight: 1 }}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-neutral-400)', fontSize: 20, lineHeight: 1 }}
                                     >✕</button>
                                 </div>
-                                <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 20px', lineHeight: 1.5 }}>
+                                <p style={{ fontSize: 13, color: 'var(--color-neutral-500)', margin: '0 0 20px', lineHeight: 1.5 }}>
                                     <strong>&ldquo;{transferModal.name}&rdquo;</strong>의 소유권을 이전합니다.<br />
                                     이전받을 사용자의 이메일을 입력하세요.
                                 </p>
@@ -721,7 +721,7 @@ export default function CreatorManagePage() {
                                     onKeyDown={e => { if (e.key === 'Enter' && transferEmail.trim()) handleTransfer() }}
                                     style={{
                                         width: '100%', padding: '12px 14px',
-                                        borderRadius: 10, border: '1px solid #e5e7eb',
+                                        borderRadius: 10, border: '1px solid var(--color-neutral-200)',
                                         fontSize: 14, outline: 'none',
                                         boxSizing: 'border-box', marginBottom: 12,
                                     }}
@@ -732,9 +732,9 @@ export default function CreatorManagePage() {
                                         onClick={() => { setTransferModal(null); setTransferEmail('') }}
                                         style={{
                                             padding: '10px 20px', borderRadius: 10,
-                                            border: '1px solid #e5e7eb', background: '#fff',
+                                            border: '1px solid var(--color-neutral-200)', background: '#fff',
                                             fontSize: 14, fontWeight: 500, cursor: 'pointer',
-                                            color: '#6b7280',
+                                            color: 'var(--color-neutral-500)',
                                         }}
                                     >취소</button>
                                     <button
@@ -777,10 +777,10 @@ export default function CreatorManagePage() {
                                     @keyframes shareModalIn { from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
                                 `}</style>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-                                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#18181b' }}>공유하기</h3>
+                                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--color-neutral-900)' }}>공유하기</h3>
                                     <button
                                         onClick={() => { setShareModal(null); setCopied(false) }}
-                                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#9ca3af', fontSize: 20, lineHeight: 1 }}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-neutral-400)', fontSize: 20, lineHeight: 1 }}
                                     >✕</button>
                                 </div>
                                 <button
@@ -794,7 +794,7 @@ export default function CreatorManagePage() {
                                     }}
                                     style={{
                                         width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                                        padding: '14px 16px', border: '1px solid #e5e7eb', borderRadius: 12,
+                                        padding: '14px 16px', border: '1px solid var(--color-neutral-200)', borderRadius: 12,
                                         background: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 600,
                                         color: copied ? '#16a34a' : '#374151', marginBottom: 10,
                                         transition: 'background 0.15s',

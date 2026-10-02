@@ -256,7 +256,7 @@ const 입력칸: React.CSSProperties = {
 }
 
 const 오류칸: React.CSSProperties = {
-    background: '#fef2f2', color: '#dc2626', fontSize: 13.5,
+    background: 'var(--color-red-50)', color: 'var(--color-red-600)', fontSize: 13.5,
     padding: '10px 14px', borderRadius: 10, margin: '0 0 12px', lineHeight: 1.5,
 }
 

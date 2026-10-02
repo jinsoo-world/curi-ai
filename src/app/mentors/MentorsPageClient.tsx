@@ -249,7 +249,7 @@ export default function MentorsPageClient({ mentors, linkCounts = {} }: { mentor
                                                     fallback.style.cssText = `
                                                         width: 100%;
                                                         height: 100%;
-                                                        background: linear-gradient(135deg, #E8F2EC 0%, #C7E4D3 100%);
+                                                        background: var(--color-neutral-100);
                                                         display: flex;
                                                         align-items: center;
                                                         justify-content: center;
@@ -266,7 +266,7 @@ export default function MentorsPageClient({ mentors, linkCounts = {} }: { mentor
                                         <div style={{
                                             width: '100%',
                                             height: '100%',
-                                            background: 'linear-gradient(135deg, #E8F2EC 0%, #C7E4D3 100%)',
+                                            background: 'var(--color-primary-50)',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',

@@ -511,8 +511,8 @@ html, body, button, input, textarea, select {
   transition: transform 220ms ease, box-shadow 220ms ease;
 }
 .mentor-big-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.06);
 }
 
 /* ─── 첫 화면 사진 히로 (대표 지시 0914 「이게 메인으로」) ─── */
@@ -572,7 +572,7 @@ html, body, button, input, textarea, select {
 .app-top-inner {
   max-width: 1200px;
   margin: 0 auto;
-  height: 78px;
+  height: 64px;
   padding: 0 16px;
   display: flex;
   align-items: center;
@@ -583,9 +583,9 @@ html, body, button, input, textarea, select {
   align-items: center;
   gap: 9px;
   text-decoration: none;
-  color: var(--연두, #22c55e);   /* 큐리 글자 = 브랜드 초록 (대표 0928 「큐리 검정색 아니야」) */
+  color: var(--연두);   /* 큐리 글자 = 브랜드 초록 (대표 0928 「큐리 검정색 아니야」) */
   font-size: 18px;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: -0.03em;
   flex-shrink: 0;
 }
@@ -597,7 +597,7 @@ html, body, button, input, textarea, select {
 }
 .app-top-link {
   padding: 9px 14px;
-  border-radius: 999px;
+  border-radius: 8px;
   text-decoration: none;
   color: var(--먹연);
   font-size: 15px;
@@ -605,7 +605,7 @@ html, body, button, input, textarea, select {
   white-space: nowrap;
 }
 .app-top-link:hover { background: var(--종이); color: var(--먹); }
-.app-top-link.on { background: var(--먹); color: #fff; }
+.app-top-link.on { background: var(--color-neutral-100); color: var(--먹); font-weight: 700; }
 .app-top-right {
   margin-left: auto;
   display: flex;
@@ -627,12 +627,12 @@ html, body, button, input, textarea, select {
   text-decoration: none;
   color: var(--먹);
 }
-.app-top-credit-num { font-size: 23px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; }
+.app-top-credit-num { font-size: 23px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
 .app-top-credit-plus {
   background: var(--연두);
   color: #fff;
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 700;
   height: 34px;
   padding: 0 18px;
   display: grid;
@@ -653,7 +653,7 @@ html, body, button, input, textarea, select {
   place-items: center;
   cursor: pointer;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--먹);
   padding: 0;
   flex-shrink: 0;
@@ -674,8 +674,8 @@ html, body, button, input, textarea, select {
   width: 232px;
   background: #fff;
   border: 1px solid var(--선);
-  border-radius: 16px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.14);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.06);
   padding: 6px;
   overflow: hidden;
 }
@@ -688,7 +688,7 @@ html, body, button, input, textarea, select {
 }
 .app-top-sheet-name {
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--먹);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -700,11 +700,11 @@ html, body, button, input, textarea, select {
   gap: 4px;
   flex-shrink: 0;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--진초록);
-  background: #EAF7EF;
-  padding: 5px 10px;
-  border-radius: 999px;
+  background: var(--color-primary-50);
+  padding: 4px 8px;
+  border-radius: 4px;
   text-decoration: none;
 }
 .app-top-sheet-line {
@@ -719,9 +719,9 @@ html, body, button, input, textarea, select {
   padding: 11px 12px;
   border: none;
   background: none;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--먹);
   text-decoration: none;
   cursor: pointer;
@@ -762,12 +762,12 @@ html, body, button, input, textarea, select {
   cursor: pointer;
   white-space: nowrap;
 }
-.cat-tab:hover { border-color: #C9CFCB; color: var(--먹); }
+.cat-tab:hover { border-color: var(--color-neutral-300); color: var(--먹); }
 .cat-tab.on {
-  background: var(--먹);
-  border-color: var(--먹);
-  color: #fff;
-  font-weight: 800;
+  background: var(--color-primary-50);
+  border-color: var(--color-primary-500);
+  color: var(--color-primary-500);
+  font-weight: 700;
 }
 
 /* 도구 타일 */
@@ -788,13 +788,13 @@ html, body, button, input, textarea, select {
   color: inherit;
   transition: border-color 180ms ease, transform 180ms ease;
 }
-.tool-tile:hover { border-color: var(--연두); transform: translateY(-2px); }
+.tool-tile:hover { border-color: var(--color-neutral-400); }
 .tool-tile-img {
   position: relative;
   flex-shrink: 0;
   width: 74px;
   height: 74px;
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
   background: var(--종이);
 }
@@ -831,14 +831,14 @@ html, body, button, input, textarea, select {
   justify-content: center;
   width: 100%;
   height: 56px;
-  border-radius: 16px;
-  background: var(--단추);
+  border-radius: 8px;
+  background: var(--color-primary-500);
   color: #fff;
   font-size: 17px;
-  font-weight: 800;
+  font-weight: 700;
   text-decoration: none;
 }
-.coach-cta:hover { background: var(--단추진); }
+.coach-cta:hover { background: var(--color-primary-600); }
 
 /* ─── 만들기 도구 화면 폭 (대표 지시 0915 「PC/MO 다르게 해… 웹 기준으로는 넓게 써」) ─── */
 .tool-page {
@@ -921,8 +921,8 @@ html, body, button, input, textarea, select {
 .curi-loading-dot {
   width: 34px; height: 34px; margin: 0 auto;
   border-radius: 999px;
-  border: 3px solid #E4E4E7;
-  border-top-color: var(--연두, #22c55e);
+  border: 3px solid var(--color-neutral-200);
+  border-top-color: var(--연두);
   animation: curi-spin 0.8s linear infinite;
 }
 @keyframes curi-spin { to { transform: rotate(360deg); } }

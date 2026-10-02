@@ -54,14 +54,14 @@ export default function FirstBotShareCard({ botId, botName }: { botId: string; b
     if (!주소) return null
     const 단추 = { flex: 1, height: 48, borderRadius: 12, fontSize: 15.5, fontWeight: 800, cursor: 'pointer' } as const
     return (
-        <div style={{ margin: '12px 16px', background: '#fff', border: '1px solid var(--선, #e5e7eb)', borderRadius: 16, padding: '16px 18px' }}>
+        <div style={{ margin: '12px 16px', background: '#fff', border: '1px solid var(--선, var(--color-neutral-200))', borderRadius: 16, padding: '16px 18px' }}>
             <p style={{ fontSize: 16, fontWeight: 800, margin: '0 0 6px' }}>내 봇 링크를 수강생에게 보내 보세요</p>
-            <p style={{ fontSize: 13, color: 'var(--먹연, #6b7280)', margin: '0 0 12px', wordBreak: 'break-all' }}>{주소}</p>
+            <p style={{ fontSize: 13, color: 'var(--먹연, var(--color-neutral-500))', margin: '0 0 12px', wordBreak: 'break-all' }}>{주소}</p>
             <div style={{ display: 'flex', gap: 8 }}>
-                <button type="button" onClick={복사} style={{ ...단추, border: '1px solid #e5e7eb', background: '#fff' }}>링크 복사</button>
+                <button type="button" onClick={복사} style={{ ...단추, border: '1px solid var(--color-neutral-200)', background: '#fff' }}>링크 복사</button>
                 <button type="button" onClick={보내기} style={{ ...단추, border: 'none', background: '#FEE500', color: '#191600' }}>보내기</button>
             </div>
-            {알림 && <p style={{ fontSize: 12.5, color: 'var(--먹연, #6b7280)', margin: '8px 0 0' }}>{알림}</p>}
+            {알림 && <p style={{ fontSize: 12.5, color: 'var(--먹연, var(--color-neutral-500))', margin: '8px 0 0' }}>{알림}</p>}
         </div>
     )
 }

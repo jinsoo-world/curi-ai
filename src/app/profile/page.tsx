@@ -265,13 +265,13 @@ export default function ProfilePage() {
 
     const sectionStyle: React.CSSProperties = {
         background: '#fff', borderRadius: 20,
-        border: '1px solid #f0f0f0',
+        border: '1px solid var(--color-neutral-200)',
         padding: '28px 28px',
         marginBottom: 16,
     }
 
     const labelStyle: React.CSSProperties = {
-        fontSize: 13, fontWeight: 700, color: '#6b7280',
+        fontSize: 13, fontWeight: 700, color: 'var(--color-neutral-500)',
         marginBottom: 10, textTransform: 'uppercase',
         letterSpacing: '0.06em',
     }
@@ -292,36 +292,36 @@ export default function ProfilePage() {
                         <div>
                             {/* 프로필 카드 스켈레톤 */}
                             <div style={{
-                                background: '#fff', borderRadius: 20, border: '1px solid #f0f0f0',
+                                background: '#fff', borderRadius: 20, border: '1px solid var(--color-neutral-200)',
                                 padding: '28px', marginBottom: 16,
                             }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-                                    <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#e4e4e7', animation: 'pulseSkeleton 1.5s ease-in-out infinite' }} />
+                                    <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--color-neutral-200)', animation: 'pulseSkeleton 1.5s ease-in-out infinite' }} />
                                     <div>
-                                        <div style={{ width: 100, height: 20, borderRadius: 10, background: '#e4e4e7', marginBottom: 8, animation: 'pulseSkeleton 1.5s ease-in-out infinite' }} />
-                                        <div style={{ width: 160, height: 14, borderRadius: 7, background: '#f0f0f0', animation: 'pulseSkeleton 1.5s ease-in-out 0.3s infinite' }} />
+                                        <div style={{ width: 100, height: 20, borderRadius: 10, background: 'var(--color-neutral-200)', marginBottom: 8, animation: 'pulseSkeleton 1.5s ease-in-out infinite' }} />
+                                        <div style={{ width: 160, height: 14, borderRadius: 7, background: 'var(--color-neutral-200)', animation: 'pulseSkeleton 1.5s ease-in-out 0.3s infinite' }} />
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                                    <div style={{ width: 120, height: 12, borderRadius: 6, background: '#f0f0f0', animation: 'pulseSkeleton 1.5s ease-in-out 0.2s infinite' }} />
-                                    <div style={{ width: '70%', height: 16, borderRadius: 8, background: '#e4e4e7', animation: 'pulseSkeleton 1.5s ease-in-out 0.4s infinite' }} />
-                                    <div style={{ width: 80, height: 12, borderRadius: 6, background: '#f0f0f0', animation: 'pulseSkeleton 1.5s ease-in-out 0.5s infinite' }} />
+                                    <div style={{ width: 120, height: 12, borderRadius: 6, background: 'var(--color-neutral-200)', animation: 'pulseSkeleton 1.5s ease-in-out 0.2s infinite' }} />
+                                    <div style={{ width: '70%', height: 16, borderRadius: 8, background: 'var(--color-neutral-200)', animation: 'pulseSkeleton 1.5s ease-in-out 0.4s infinite' }} />
+                                    <div style={{ width: 80, height: 12, borderRadius: 6, background: 'var(--color-neutral-200)', animation: 'pulseSkeleton 1.5s ease-in-out 0.5s infinite' }} />
                                     <div style={{ display: 'flex', gap: 8 }}>
-                                        <div style={{ width: 80, height: 32, borderRadius: 100, background: '#f0f0f0', animation: 'pulseSkeleton 1.5s ease-in-out 0.6s infinite' }} />
-                                        <div style={{ width: 60, height: 32, borderRadius: 100, background: '#f0f0f0', animation: 'pulseSkeleton 1.5s ease-in-out 0.7s infinite' }} />
+                                        <div style={{ width: 80, height: 32, borderRadius: 100, background: 'var(--color-neutral-200)', animation: 'pulseSkeleton 1.5s ease-in-out 0.6s infinite' }} />
+                                        <div style={{ width: 60, height: 32, borderRadius: 100, background: 'var(--color-neutral-200)', animation: 'pulseSkeleton 1.5s ease-in-out 0.7s infinite' }} />
                                     </div>
                                 </div>
                             </div>
                             {/* 계정 정보 스켈레톤 */}
-                            <div style={{ background: '#fff', borderRadius: 20, border: '1px solid #f0f0f0', padding: '28px', marginBottom: 16 }}>
-                                <div style={{ width: 70, height: 12, borderRadius: 6, background: '#f0f0f0', marginBottom: 16, animation: 'pulseSkeleton 1.5s ease-in-out 0.3s infinite' }} />
+                            <div style={{ background: '#fff', borderRadius: 20, border: '1px solid var(--color-neutral-200)', padding: '28px', marginBottom: 16 }}>
+                                <div style={{ width: 70, height: 12, borderRadius: 6, background: 'var(--color-neutral-200)', marginBottom: 16, animation: 'pulseSkeleton 1.5s ease-in-out 0.3s infinite' }} />
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                                    <div style={{ width: 40, height: 14, borderRadius: 7, background: '#f0f0f0', animation: 'pulseSkeleton 1.5s ease-in-out 0.5s infinite' }} />
-                                    <div style={{ width: 100, height: 14, borderRadius: 7, background: '#e4e4e7', animation: 'pulseSkeleton 1.5s ease-in-out 0.6s infinite' }} />
+                                    <div style={{ width: 40, height: 14, borderRadius: 7, background: 'var(--color-neutral-200)', animation: 'pulseSkeleton 1.5s ease-in-out 0.5s infinite' }} />
+                                    <div style={{ width: 100, height: 14, borderRadius: 7, background: 'var(--color-neutral-200)', animation: 'pulseSkeleton 1.5s ease-in-out 0.6s infinite' }} />
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <div style={{ width: 30, height: 14, borderRadius: 7, background: '#f0f0f0', animation: 'pulseSkeleton 1.5s ease-in-out 0.7s infinite' }} />
-                                    <div style={{ width: 40, height: 14, borderRadius: 7, background: '#e4e4e7', animation: 'pulseSkeleton 1.5s ease-in-out 0.8s infinite' }} />
+                                    <div style={{ width: 30, height: 14, borderRadius: 7, background: 'var(--color-neutral-200)', animation: 'pulseSkeleton 1.5s ease-in-out 0.7s infinite' }} />
+                                    <div style={{ width: 40, height: 14, borderRadius: 7, background: 'var(--color-neutral-200)', animation: 'pulseSkeleton 1.5s ease-in-out 0.8s infinite' }} />
                                 </div>
                             </div>
                         </div>
@@ -329,13 +329,13 @@ export default function ProfilePage() {
                         <div style={{
                             textAlign: 'center', padding: '60px 20px',
                             background: '#fff', borderRadius: 20,
-                            border: '1px solid #f0f0f0',
+                            border: '1px solid var(--color-neutral-200)',
                         }}>
                             <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-                            <h3 style={{ fontSize: 20, fontWeight: 700, color: '#18181b', marginBottom: 8 }}>
+                            <h3 style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: 8 }}>
                                 로그인이 필요합니다
                             </h3>
-                            <p style={{ fontSize: 16, color: '#9ca3af', marginBottom: 24 }}>
+                            <p style={{ fontSize: 16, color: 'var(--color-neutral-400)', marginBottom: 24 }}>
                                 프로필을 확인하려면 로그인해주세요
                             </p>
                             <Link
@@ -344,7 +344,7 @@ export default function ProfilePage() {
                                     display: 'inline-block',
                                     padding: '14px 32px',
                                     borderRadius: 14,
-                                    background: '#1C2321',
+                                    background: 'var(--color-neutral-900)',
                                     color: '#fff', textDecoration: 'none',
                                     fontWeight: 600, fontSize: 16,
                                                                     }}
@@ -389,7 +389,7 @@ export default function ProfilePage() {
                                                         style={{
                                                             width: 64, height: 64, borderRadius: '50%',
                                                             objectFit: 'cover',
-                                                            border: '3px solid #dcfce7',
+                                                            border: '3px solid var(--color-primary-50)',
                                                             opacity: uploadingPhoto ? 0.5 : 1,
                                                             transition: 'opacity 200ms',
                                                         }}
@@ -397,7 +397,7 @@ export default function ProfilePage() {
                                                 ) : (
                                                     <div style={{
                                                         width: 64, height: 64, borderRadius: '50%',
-                                                        background: '#1C2321',
+                                                        background: 'var(--color-neutral-900)',
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                         fontSize: 28, color: '#fff', fontWeight: 800,
                                                         opacity: uploadingPhoto ? 0.5 : 1,
@@ -413,7 +413,7 @@ export default function ProfilePage() {
                                                     style={{
                                                         position: 'absolute', bottom: -2, right: -2,
                                                         width: 28, height: 28, borderRadius: '50%',
-                                                        background: '#fff', border: '2px solid #e4e4e7',
+                                                        background: '#fff', border: '2px solid var(--color-neutral-200)',
                                                         display: 'grid', placeItems: 'center',
                                                         boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                                                     }}
@@ -421,7 +421,7 @@ export default function ProfilePage() {
                                                     {uploadingPhoto ? (
                                                         <span style={{
                                                             width: 12, height: 12, borderRadius: '50%',
-                                                            border: '2px solid #e4e4e7', borderTopColor: '#22c55e',
+                                                            border: '2px solid var(--color-neutral-200)', borderTopColor: 'var(--color-primary-500)',
                                                             animation: 'curi-spin 0.8s linear infinite', display: 'block',
                                                         }} />
                                                     ) : (
@@ -459,12 +459,12 @@ export default function ProfilePage() {
                                         </div>
                                         <div>
                                             <h2 style={{
-                                                fontSize: 24, fontWeight: 800, color: '#18181b',
+                                                fontSize: 24, fontWeight: 800, color: 'var(--color-neutral-900)',
                                                 margin: '0 0 4px', letterSpacing: '-0.02em',
                                             }}>
                                                 {displayName}
                                             </h2>
-                                            <p style={{ fontSize: 15, color: '#9ca3af', margin: 0 }}>
+                                            <p style={{ fontSize: 15, color: 'var(--color-neutral-400)', margin: 0 }}>
                                                 {user.email}
                                             </p>
                                         </div>
@@ -474,8 +474,8 @@ export default function ProfilePage() {
                                             onClick={handleStartEdit}
                                             style={{
                                                 padding: '8px 18px', borderRadius: 10,
-                                                border: '1px solid #e4e4e7', background: '#fff',
-                                                fontSize: 14, fontWeight: 600, color: '#16a34a',
+                                                border: '1px solid var(--color-neutral-200)', background: '#fff',
+                                                fontSize: 14, fontWeight: 600, color: 'var(--color-primary-600)',
                                                 cursor: 'pointer', transition: 'all 200ms',
                                                 flexShrink: 0,
                                             }}
@@ -491,32 +491,32 @@ export default function ProfilePage() {
                                         {/* 닉네임 */}
                                         <div style={{ marginBottom: 20 }}>
                                             <div style={labelStyle}>닉네임</div>
-                                            <div style={{ fontSize: 16, color: '#18181b', fontWeight: 500 }}>
-                                                {profile?.display_name || googleName || <span style={{ color: '#d1d5db' }}>미설정</span>}
+                                            <div style={{ fontSize: 16, color: 'var(--color-neutral-900)', fontWeight: 500 }}>
+                                                {profile?.display_name || googleName || <span style={{ color: 'var(--color-neutral-300)' }}>미설정</span>}
                                             </div>
                                         </div>
 
                                         {/* 이메일 */}
                                         <div style={{ marginBottom: 20 }}>
                                             <div style={labelStyle}>이메일</div>
-                                            <div style={{ fontSize: 15, color: '#6b7280' }}>
-                                                {user?.email || <span style={{ color: '#d1d5db' }}>없음</span>}
+                                            <div style={{ fontSize: 15, color: 'var(--color-neutral-500)' }}>
+                                                {user?.email || <span style={{ color: 'var(--color-neutral-300)' }}>없음</span>}
                                             </div>
                                         </div>
 
                                         {/* 성별 */}
                                         <div style={{ marginBottom: 20 }}>
                                             <div style={labelStyle}>성별</div>
-                                            <div style={{ fontSize: 15, color: '#18181b' }}>
-                                                {profile?.gender === 'female' ? '여성' : profile?.gender === 'male' ? '남성' : profile?.gender === 'other' ? '😊 기타' : <span style={{ color: '#d1d5db' }}>미설정</span>}
+                                            <div style={{ fontSize: 15, color: 'var(--color-neutral-900)' }}>
+                                                {profile?.gender === 'female' ? '여성' : profile?.gender === 'male' ? '남성' : profile?.gender === 'other' ? '😊 기타' : <span style={{ color: 'var(--color-neutral-300)' }}>미설정</span>}
                                             </div>
                                         </div>
 
                                         {/* 휴대폰번호 */}
                                         <div style={{ marginBottom: 20 }}>
                                             <div style={labelStyle}>휴대폰번호</div>
-                                            <div style={{ fontSize: 15, color: '#18181b' }}>
-                                                {profile?.phone || <span style={{ color: '#d1d5db' }}>미설정</span>}
+                                            <div style={{ fontSize: 15, color: 'var(--color-neutral-900)' }}>
+                                                {profile?.phone || <span style={{ color: 'var(--color-neutral-300)' }}>미설정</span>}
                                             </div>
                                         </div>
 
@@ -529,8 +529,8 @@ export default function ProfilePage() {
                                             {!profile?.marketing_consent && (
                                                 <div style={{
                                                     marginTop: 8, padding: '10px 14px', borderRadius: 10,
-                                                    background: '#f0fdf4', border: '1px solid #dcfce7',
-                                                    fontSize: 13, color: '#16a34a', lineHeight: 1.5,
+                                                    background: 'var(--color-primary-50)', border: '1px solid var(--color-primary-50)',
+                                                    fontSize: 13, color: 'var(--color-primary-600)', lineHeight: 1.5,
                                                 }}>
                                                     편집에서 수신 동의하면 클로버 10개를 받습니다
                                                 </div>
@@ -552,7 +552,7 @@ export default function ProfilePage() {
                                                 placeholder={googleName || '닉네임을 입력하세요'}
                                                 style={{
                                                     width: '100%', padding: '12px 16px',
-                                                    borderRadius: 12, border: '2px solid #e4e4e7',
+                                                    borderRadius: 12, border: '2px solid var(--color-neutral-200)',
                                                     fontSize: 16, outline: 'none',
                                                     transition: 'border-color 200ms',
                                                     boxSizing: 'border-box',
@@ -567,8 +567,8 @@ export default function ProfilePage() {
                                             <div style={labelStyle}>이메일</div>
                                             <div style={{
                                                 padding: '12px 16px', borderRadius: 12,
-                                                border: '2px solid #f0f0f0', background: '#f9fafb',
-                                                fontSize: 15, color: '#9ca3af',
+                                                border: '2px solid var(--color-neutral-200)', background: 'var(--color-neutral-50)',
+                                                fontSize: 15, color: 'var(--color-neutral-400)',
                                             }}>
                                                 {user?.email || '없음'}
                                             </div>
@@ -610,7 +610,7 @@ export default function ProfilePage() {
                                                 placeholder="010-0000-0000"
                                                 style={{
                                                     width: '100%', padding: '12px 16px',
-                                                    borderRadius: 12, border: '2px solid #e4e4e7',
+                                                    borderRadius: 12, border: '2px solid var(--color-neutral-200)',
                                                     fontSize: 16, outline: 'none',
                                                     transition: 'border-color 200ms',
                                                     boxSizing: 'border-box',
@@ -632,7 +632,7 @@ export default function ProfilePage() {
                                                     border: `2px solid ${editMarketingConsent ? '#22c55e' : '#e4e4e7'}`,
                                                     background: editMarketingConsent ? '#f0fdf4' : '#fff',
                                                     cursor: 'pointer', transition: 'all 200ms',
-                                                    fontSize: 15, color: '#18181b', textAlign: 'left',
+                                                    fontSize: 15, color: 'var(--color-neutral-900)', textAlign: 'left',
                                                 }}
                                             >
                                                 <div style={{
@@ -653,14 +653,14 @@ export default function ProfilePage() {
                                                     {editMarketingConsent ? '광고성 정보 수신에 동의합니다' : '광고성 정보 수신에 동의하지 않습니다'}
                                                 </span>
                                             </button>
-                                            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 6, lineHeight: 1.5 }}>
+                                            <div style={{ fontSize: 12, color: 'var(--color-neutral-400)', marginTop: 6, lineHeight: 1.5 }}>
                                                 SMS · 이메일 · 앱 푸시 | 수신 거부 시 즉시 처리됩니다.
                                             </div>
                                             {!editMarketingConsent && profile?.marketing_consent && (
                                                 <div style={{
                                                     marginTop: 8, padding: '10px 14px', borderRadius: 10,
-                                                    background: '#fef3c7', border: '1px solid #fde68a',
-                                                    fontSize: 12, color: '#92400e', lineHeight: 1.5,
+                                                    background: 'var(--color-amber-50)', border: '1px solid var(--color-amber-200)',
+                                                    fontSize: 12, color: 'var(--color-amber-600)', lineHeight: 1.5,
                                                 }}>
                                                     수신 거부 시 즉시 효력이 발생하며, 더 이상 광고성 정보를 받지 않습니다.
                                                 </div>
@@ -668,8 +668,8 @@ export default function ProfilePage() {
                                             {editMarketingConsent && !profile?.marketing_consent && (
                                                 <div style={{
                                                     marginTop: 8, padding: '10px 14px', borderRadius: 10,
-                                                    background: '#f0fdf4', border: '1px solid #dcfce7',
-                                                    fontSize: 12, color: '#16a34a', lineHeight: 1.5, fontWeight: 600,
+                                                    background: 'var(--color-primary-50)', border: '1px solid var(--color-primary-50)',
+                                                    fontSize: 12, color: 'var(--color-primary-600)', lineHeight: 1.5, fontWeight: 600,
                                                 }}>
                                                     동의하면 클로버 10개를 드립니다
                                                 </div>
@@ -683,9 +683,9 @@ export default function ProfilePage() {
                                                 disabled={isSaving}
                                                 style={{
                                                     flex: 1, padding: '14px 0',
-                                                    borderRadius: 14, border: '1px solid #e4e4e7',
+                                                    borderRadius: 14, border: '1px solid var(--color-neutral-200)',
                                                     background: '#fff', fontSize: 16,
-                                                    fontWeight: 600, color: '#6b7280',
+                                                    fontWeight: 600, color: 'var(--color-neutral-500)',
                                                     cursor: 'pointer',
                                                 }}
                                             >
@@ -697,7 +697,7 @@ export default function ProfilePage() {
                                                 style={{
                                                     flex: 2, padding: '14px 0',
                                                     borderRadius: 14, border: 'none',
-                                                    background: '#1C2321',
+                                                    background: 'var(--color-neutral-900)',
                                                     fontSize: 16, fontWeight: 700, color: '#fff',
                                                     cursor: isSaving ? 'not-allowed' : 'pointer',
                                                     opacity: isSaving ? 0.7 : 1,
@@ -716,11 +716,11 @@ export default function ProfilePage() {
                             {!isEditing && (
                                 <div style={sectionStyle}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 17, fontWeight: 700, color: '#3f3f46' }}>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 17, fontWeight: 700, color: 'var(--color-neutral-700)' }}>
                                             <CloverIcon size={24} /> 내 클로버
                                         </span>
                                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-                                            <span style={{ fontSize: 24, fontWeight: 900, color: '#18181b' }}>
+                                            <span style={{ fontSize: 24, fontWeight: 900, color: 'var(--color-neutral-900)' }}>
                                                 {(profile?.clovers ?? 0).toLocaleString()}개
                                             </span>
                                         </span>
@@ -736,8 +736,8 @@ export default function ProfilePage() {
                                     <div style={labelStyle}>계정 정보</div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 17 }}>
-                                            <span style={{ color: '#6b7280' }}>가입일</span>
-                                            <span style={{ color: '#18181b', fontWeight: 500 }}>
+                                            <span style={{ color: 'var(--color-neutral-500)' }}>가입일</span>
+                                            <span style={{ color: 'var(--color-neutral-900)', fontWeight: 500 }}>
                                                 {new Date(user.created_at).toLocaleDateString('ko-KR', {
                                                     year: 'numeric', month: 'long', day: 'numeric'
                                                 })}
@@ -747,14 +747,14 @@ export default function ProfilePage() {
                                         {profile?.subscription_tier === 'free_trial' && (
                                             <>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 15 }}>
-                                                    <span style={{ color: '#6b7280' }}>대화 횟수</span>
-                                                    <span style={{ fontWeight: 600, fontSize: 14, color: '#7c3aed' }}>
+                                                    <span style={{ color: 'var(--color-neutral-500)' }}>대화 횟수</span>
+                                                    <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-blue-600)' }}>
                                                         무제한
                                                     </span>
                                                 </div>
                                                 <div style={{
                                                     padding: '14px 16px', borderRadius: 12, marginTop: 4,
-                                                    background: '#1C2321',
+                                                    background: 'var(--color-neutral-900)',
                                                     border: '1px solid #ddd6fe',
                                                 }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -778,7 +778,7 @@ export default function ProfilePage() {
                             {!isEditing && (
                                 <div style={{
                                     background: '#fff', borderRadius: 20,
-                                    border: '1px solid #f0f0f0',
+                                    border: '1px solid var(--color-neutral-200)',
                                     overflow: 'hidden',
                                 }}>
                                     <Link
@@ -786,39 +786,39 @@ export default function ProfilePage() {
                                         style={{
                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                             padding: '18px 24px',
-                                            textDecoration: 'none', color: '#18181b',
+                                            textDecoration: 'none', color: 'var(--color-neutral-900)',
                                             fontSize: 16, fontWeight: 500,
-                                            borderBottom: '1px solid #f0f0f0',
+                                            borderBottom: '1px solid var(--color-neutral-200)',
                                         }}
                                     >
                                         <span>내 AI 만들기</span>
-                                        <span style={{ color: '#d1d5db' }}>→</span>
+                                        <span style={{ color: 'var(--color-neutral-300)' }}>→</span>
                                     </Link>
                                     <Link
                                         href="/creator/manage"
                                         style={{
                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                             padding: '18px 24px',
-                                            textDecoration: 'none', color: '#18181b',
+                                            textDecoration: 'none', color: 'var(--color-neutral-900)',
                                             fontSize: 16, fontWeight: 500,
-                                            borderBottom: '1px solid #f0f0f0',
+                                            borderBottom: '1px solid var(--color-neutral-200)',
                                         }}
                                     >
                                         <span>내 AI 관리</span>
-                                        <span style={{ color: '#d1d5db' }}>→</span>
+                                        <span style={{ color: 'var(--color-neutral-300)' }}>→</span>
                                     </Link>
                                     <Link
                                         href="/chats"
                                         style={{
                                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                             padding: '18px 24px',
-                                            textDecoration: 'none', color: '#18181b',
+                                            textDecoration: 'none', color: 'var(--color-neutral-900)',
                                             fontSize: 16, fontWeight: 500,
-                                            borderBottom: '1px solid #f0f0f0',
+                                            borderBottom: '1px solid var(--color-neutral-200)',
                                         }}
                                     >
                                         <span>채팅</span>
-                                        <span style={{ color: '#d1d5db' }}>→</span>
+                                        <span style={{ color: 'var(--color-neutral-300)' }}>→</span>
                                     </Link>
                                     {/* 결제 내역 */}
                                     <button
@@ -839,18 +839,18 @@ export default function ProfilePage() {
                                             padding: '18px 24px',
                                             background: 'none', border: 'none',
                                             fontSize: 16, fontWeight: 500,
-                                            color: '#18181b', cursor: 'pointer',
+                                            color: 'var(--color-neutral-900)', cursor: 'pointer',
                                             textAlign: 'left',
-                                            borderBottom: '1px solid #f0f0f0',
+                                            borderBottom: '1px solid var(--color-neutral-200)',
                                         }}
                                     >
                                         <span>결제 내역</span>
-                                        <span style={{ color: '#d1d5db', transform: showPayments ? 'rotate(90deg)' : 'none', transition: 'transform 200ms' }}>→</span>
+                                        <span style={{ color: 'var(--color-neutral-300)', transform: showPayments ? 'rotate(90deg)' : 'none', transition: 'transform 200ms' }}>→</span>
                                     </button>
                                     {showPayments && (
-                                        <div style={{ padding: '0 24px 16px', background: '#fafafa' }}>
+                                        <div style={{ padding: '0 24px 16px', background: 'var(--color-neutral-50)' }}>
                                             {payments.length === 0 ? (
-                                                <p style={{ fontSize: 14, color: '#9ca3af', textAlign: 'center', padding: '20px 0' }}>
+                                                <p style={{ fontSize: 14, color: 'var(--color-neutral-400)', textAlign: 'center', padding: '20px 0' }}>
                                                     결제 내역이 없습니다.
                                                 </p>
                                             ) : (
@@ -858,10 +858,10 @@ export default function ProfilePage() {
                                                     {payments.map((p: any) => (
                                                         <div key={p.id} style={{
                                                             background: '#fff', borderRadius: 12,
-                                                            padding: '14px 16px', border: '1px solid #f0f0f0',
+                                                            padding: '14px 16px', border: '1px solid var(--color-neutral-200)',
                                                         }}>
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                                                                <span style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>
+                                                                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-neutral-900)' }}>
                                                                     ₩{p.amount?.toLocaleString()}
                                                                 </span>
                                                                 <span style={{
@@ -874,7 +874,7 @@ export default function ProfilePage() {
                                                                 </span>
                                                             </div>
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                <span style={{ fontSize: 12, color: '#9ca3af' }}>
+                                                                <span style={{ fontSize: 12, color: 'var(--color-neutral-400)' }}>
                                                                     {p.paid_at ? new Date(p.paid_at).toLocaleDateString('ko-KR', {
                                                                         year: 'numeric', month: 'long', day: 'numeric',
                                                                         hour: '2-digit', minute: '2-digit',
@@ -887,7 +887,7 @@ export default function ProfilePage() {
                                                                         rel="noopener noreferrer"
                                                                         style={{
                                                                             fontSize: 12, fontWeight: 600,
-                                                                            color: '#3b82f6', textDecoration: 'none',
+                                                                            color: 'var(--color-blue-500)', textDecoration: 'none',
                                                                         }}
                                                                     >
                                                                         🧾 영수증
@@ -908,7 +908,7 @@ export default function ProfilePage() {
                                             padding: '18px 24px',
                                             background: 'none', border: 'none',
                                             fontSize: 16, fontWeight: 500,
-                                            color: '#ef4444', cursor: 'pointer',
+                                            color: 'var(--color-red-500)', cursor: 'pointer',
                                             textAlign: 'left',
                                         }}
                                     >
@@ -942,26 +942,26 @@ export default function ProfilePage() {
                                 <>
                                     <div style={{
                                         width: 64, height: 64, margin: '0 auto 20px',
-                                        borderRadius: '50%', background: '#fef3c7',
+                                        borderRadius: '50%', background: 'var(--color-amber-50)',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         fontSize: 32,
                                     }}>⚠️</div>
                                     <h3 style={{
-                                        fontSize: 20, fontWeight: 800, color: '#18181b',
+                                        fontSize: 20, fontWeight: 800, color: 'var(--color-neutral-900)',
                                         textAlign: 'center', margin: '0 0 8px',
                                     }}>구독을 취소하시겠어요?</h3>
                                     <p style={{
-                                        fontSize: 16, color: '#6b7280', textAlign: 'center',
+                                        fontSize: 16, color: 'var(--color-neutral-500)', textAlign: 'center',
                                         margin: '0 0 20px', lineHeight: 1.6,
                                     }}>
                                         취소해도 현재 결제 기간이 끝날 때까지<br />
                                         프리미엄 기능을 계속 이용할 수 있어요.
                                     </p>
                                     <div style={{
-                                        background: '#f8fafc', borderRadius: 14, padding: '16px 18px',
-                                        marginBottom: 24, border: '1px solid #f0f0f0',
+                                        background: 'var(--color-neutral-50)', borderRadius: 14, padding: '16px 18px',
+                                        marginBottom: 24, border: '1px solid var(--color-neutral-200)',
                                     }}>
-                                        <div style={{ fontSize: 13, fontWeight: 600, color: '#18181b', marginBottom: 10 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-neutral-900)', marginBottom: 10 }}>
                                             취소 시 변경사항
                                         </div>
                                         {[
@@ -970,7 +970,7 @@ export default function ProfilePage() {
                                             { icon: '📉', text: '만료 후 하루 20회 무료 대화로 전환' },
                                             { icon: '💡', text: '언제든 다시 구독할 수 있어요' },
                                         ].map((item, i) => (
-                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: i < 3 ? 8 : 0, fontSize: 13, color: '#4b5563' }}>
+                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: i < 3 ? 8 : 0, fontSize: 13, color: 'var(--color-neutral-600)' }}>
                                                 <span>{item.icon}</span>
                                                 <span>{item.text}</span>
                                             </div>
@@ -982,8 +982,8 @@ export default function ProfilePage() {
                                             disabled={isCanceling}
                                             style={{
                                                 flex: 1, padding: '14px 0', borderRadius: 14,
-                                                border: '1px solid #e4e4e7', background: '#fff',
-                                                fontSize: 15, fontWeight: 600, color: '#18181b',
+                                                border: '1px solid var(--color-neutral-200)', background: '#fff',
+                                                fontSize: 15, fontWeight: 600, color: 'var(--color-neutral-900)',
                                                 cursor: 'pointer',
                                             }}
                                         >유지하기</button>
@@ -992,7 +992,7 @@ export default function ProfilePage() {
                                             disabled={isCanceling}
                                             style={{
                                                 flex: 1, padding: '14px 0', borderRadius: 14,
-                                                border: 'none', background: '#ef4444',
+                                                border: 'none', background: 'var(--color-red-500)',
                                                 fontSize: 15, fontWeight: 600, color: '#fff',
                                                 cursor: isCanceling ? 'not-allowed' : 'pointer',
                                                 opacity: isCanceling ? 0.7 : 1,
@@ -1010,11 +1010,11 @@ export default function ProfilePage() {
                                         fontSize: 32,
                                     }}>{cancelResult.success ? '👋' : '😥'}</div>
                                     <h3 style={{
-                                        fontSize: 20, fontWeight: 800, color: '#18181b',
+                                        fontSize: 20, fontWeight: 800, color: 'var(--color-neutral-900)',
                                         textAlign: 'center', margin: '0 0 12px',
                                     }}>{cancelResult.success ? '구독이 취소되었습니다' : '취소 실패'}</h3>
                                     <p style={{
-                                        fontSize: 16, color: '#6b7280', textAlign: 'center',
+                                        fontSize: 16, color: 'var(--color-neutral-500)', textAlign: 'center',
                                         margin: '0 0 24px', lineHeight: 1.6,
                                     }}>{cancelResult.message}</p>
                                     <button

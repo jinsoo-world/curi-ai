@@ -22,7 +22,7 @@ function ItemCard({ item, onGo }: { item: ToolItem; onGo: (href: string) => void
                 display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
                 gap: 6, padding: 14,
                 borderRadius: 16,
-                border: '1px solid #e4e4e7',
+                border: '1px solid var(--color-neutral-200)',
                 background: '#fff',
                 cursor: 'pointer', textAlign: 'left', width: '100%', height: '100%',
             }}
@@ -30,28 +30,28 @@ function ItemCard({ item, onGo }: { item: ToolItem; onGo: (href: string) => void
             {item.img ? (
                 <div style={{
                     position: 'relative', width: '100%', aspectRatio: '4 / 5',
-                    borderRadius: 12, overflow: 'hidden', background: '#f4f4f5', marginBottom: 4,
+                    borderRadius: 12, overflow: 'hidden', background: 'var(--color-neutral-100)', marginBottom: 4,
                 }}>
                     <Image src={item.img} alt="" fill sizes="(max-width: 700px) 45vw, 320px"
                         style={{ objectFit: 'cover', objectPosition: 'center 28%' }} />
                 </div>
             ) : null}
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#18181b', wordBreak: 'keep-all' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-neutral-900)', wordBreak: 'keep-all' }}>
                 {item.title}
             </div>
-            <div style={{ fontSize: 13, color: '#71717a', lineHeight: 1.6, wordBreak: 'keep-all', flex: 1 }}>
+            <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', lineHeight: 1.6, wordBreak: 'keep-all', flex: 1 }}>
                 {item.desc}
             </div>
             <div style={{ marginTop: 4 }}>
                 {item.cost === 'free' ? (
                     <span style={{
-                        fontSize: 12, fontWeight: 700, color: '#166534',
-                        background: '#dcfce7', padding: '4px 10px', borderRadius: 8,
+                        fontSize: 12, fontWeight: 700, color: 'var(--color-primary-800)',
+                        background: 'var(--color-primary-50)', padding: '4px 10px', borderRadius: 8,
                     }}>무료</span>
                 ) : (
                     <span style={{
-                        fontSize: 12, fontWeight: 700, color: '#3f3f46',
-                        background: '#f4f4f5', padding: '4px 10px', borderRadius: 8,
+                        fontSize: 12, fontWeight: 700, color: 'var(--color-neutral-700)',
+                        background: 'var(--color-neutral-100)', padding: '4px 10px', borderRadius: 8,
                         display: 'inline-flex', alignItems: 'center', gap: 4,
                     }}>
                         <CloverIcon size={13} color="#3f3f46" /> {item.cost}개
@@ -118,14 +118,14 @@ export default function StudioPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 22 }}>
                     <div>
                         <h1 style={{
-                            fontSize: 26, fontWeight: 800, color: '#18181b',
+                            fontSize: 26, fontWeight: 800, color: 'var(--color-neutral-900)',
                             margin: '0 0 6px', lineHeight: 1.35, wordBreak: 'keep-all',
                         }}>
                             {사진들고옴
                                 ? '올리신 사진으로 뭘 만들까요?'
                                 : name ? `${name}님, 오늘 뭘 만들까요?` : '오늘 뭘 만들까요?'}
                         </h1>
-                        <p style={{ fontSize: 15, color: '#71717a', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                        <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
                             {사진들고옴
                                 ? '고르시면 그 사진이 그대로 넘어갑니다. 다시 올리지 않으셔도 돼요.'
                                 : '하고 싶은 것을 고르면 바로 시작합니다.'}

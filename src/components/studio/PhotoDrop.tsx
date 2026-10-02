@@ -141,20 +141,20 @@ export function PhotoDrop({
                     }}>
                         <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: 6,
-                            fontSize: isAvatar ? 13 : 16, fontWeight: 800, color: '#16a34a',
+                            fontSize: isAvatar ? 13 : 16, fontWeight: 800, color: 'var(--color-primary-600)',
                         }}>
                             <span style={{
                                 width: isAvatar ? 20 : 24, height: isAvatar ? 20 : 24, borderRadius: 999,
-                                background: '#1C2321', color: '#fff',
+                                background: 'var(--color-neutral-900)', color: '#fff',
                                 display: 'grid', placeItems: 'center',
                                 fontSize: isAvatar ? 12 : 15, fontWeight: 900,
                             }} aria-hidden>✓</span>
                             {successLabel}
                         </span>
                         <button onClick={() => fileRef.current?.click()} style={{
-                            background: '#f4f4f5', border: 'none', borderRadius: 12,
+                            background: 'var(--color-neutral-100)', border: 'none', borderRadius: 12,
                             padding: isAvatar ? '8px 12px' : '12px 18px',
-                            fontSize: isAvatar ? 13 : 15, color: '#3f3f46',
+                            fontSize: isAvatar ? 13 : 15, color: 'var(--color-neutral-700)',
                             cursor: 'pointer', fontWeight: 700,
                         }}>다른 사진으로</button>
                     </div>
@@ -208,18 +208,18 @@ export function PhotoDrop({
                         {dragging ? '여기에 놓으세요' : emptyTitle}
                     </div>
                     {!isAvatar && (
-                        <div style={{ fontSize: 16, color: '#71717a', lineHeight: 1.7, wordBreak: 'keep-all' }}>
+                        <div style={{ fontSize: 16, color: 'var(--color-neutral-500)', lineHeight: 1.7, wordBreak: 'keep-all' }}>
                             {emptyHint ?? (
                                 <>
                                     눌러서 고르셔도 되고, 끌어다 놓거나 붙여넣어도 돼요<br />
-                                    <span style={{ fontSize: 15, color: '#a1a1aa' }}>얼굴이 잘 보이는 밝은 사진, 4MB 이하</span>
+                                    <span style={{ fontSize: 15, color: 'var(--color-neutral-400)' }}>얼굴이 잘 보이는 밝은 사진, 4MB 이하</span>
                                 </>
                             )}
                         </div>
                     )}
                     {isAvatar && emptyHint && (
                         <div style={{
-                            fontSize: 11, color: '#a1a1aa', lineHeight: 1.4,
+                            fontSize: 11, color: 'var(--color-neutral-400)', lineHeight: 1.4,
                             wordBreak: 'keep-all', textAlign: 'center', marginTop: 2,
                         }}>
                             {emptyHint}
@@ -237,8 +237,8 @@ export function PhotoDrop({
                             className="photo-drop-camera"
                             style={{
                                 width: '100%', marginTop: 10, padding: '15px 12px', borderRadius: 14,
-                                border: '1px solid #e4e4e7', background: '#fff',
-                                fontSize: 16, fontWeight: 800, color: '#18181b', cursor: 'pointer',
+                                border: '1px solid var(--color-neutral-200)', background: '#fff',
+                                fontSize: 16, fontWeight: 800, color: 'var(--color-neutral-900)', cursor: 'pointer',
                             }}
                         >
                             휴대폰 카메라로 찍기
@@ -246,7 +246,7 @@ export function PhotoDrop({
                     )}
                     {/* 얼굴 사진을 올리는 서비스라 가장 무서운 지점이다. 올리는 칸 바로 밑에 적는다 */}
                     {privacyNote !== null && (
-                        <p style={{ fontSize: 15, color: '#71717a', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                        <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.6, wordBreak: 'keep-all' }}>
                             {privacyNote ?? '올린 사진은 이 사진을 만드는 데에만 씁니다. AI 학습에 쓰지 않고, 만든 뒤 48시간 안에 지웁니다.'}
                         </p>
                     )}

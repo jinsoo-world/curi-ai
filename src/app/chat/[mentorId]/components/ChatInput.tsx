@@ -273,8 +273,8 @@ export default function ChatInput({
             {/* STT 에러 토스트 */}
             {sttError && (
                 <div style={{
-                    background: '#fef2f2',
-                    color: '#dc2626',
+                    background: 'var(--color-red-50)',
+                    color: 'var(--color-red-600)',
                     fontSize: 13,
                     fontWeight: 500,
                     padding: '8px 16px',
@@ -292,8 +292,8 @@ export default function ChatInput({
             {/* 사진 오류 토스트 */}
             {imageError && (
                 <div style={{
-                    background: '#fef2f2',
-                    color: '#dc2626',
+                    background: 'var(--color-red-50)',
+                    color: 'var(--color-red-600)',
                     fontSize: 13,
                     fontWeight: 500,
                     padding: '8px 16px',
@@ -344,12 +344,12 @@ export default function ChatInput({
                                 width: 64, height: 64,
                                 borderRadius: 12,
                                 overflow: 'hidden',
-                                background: '#f1f5f9',
+                                background: 'var(--color-neutral-100)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 flexShrink: 0,
                             }}>
                                 {imageUploading ? (
-                                    <span style={{ fontSize: 11, color: '#64748b' }}>올리는 중</span>
+                                    <span style={{ fontSize: 11, color: 'var(--color-neutral-500)' }}>올리는 중</span>
                                 ) : (
                                     // eslint-disable-next-line @next/next/no-img-element
                                     <img src={imageUrl!} alt="보낼 사진" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -361,8 +361,8 @@ export default function ChatInput({
                                     onClick={clearImage}
                                     aria-label="사진 빼기"
                                     style={{
-                                        background: '#f1f5f9', border: 'none', borderRadius: 10,
-                                        padding: '6px 12px', fontSize: 13, color: '#475569',
+                                        background: 'var(--color-neutral-100)', border: 'none', borderRadius: 10,
+                                        padding: '6px 12px', fontSize: 13, color: 'var(--color-neutral-600)',
                                         cursor: 'pointer', fontWeight: 500,
                                     }}
                                 >사진 빼기</button>
@@ -386,7 +386,7 @@ export default function ChatInput({
                             border: 'none',
                             background: 'transparent',
                             fontSize: 'clamp(17px, 1.45vw, 19px)',
-                            color: '#1e293b',
+                            color: 'var(--color-neutral-900)',
                             resize: 'none',
                             outline: 'none',
                             lineHeight: 1.6,
@@ -422,7 +422,7 @@ export default function ChatInput({
                         {isListening && (
                             <span style={{
                                 fontSize: 12,
-                                color: '#ef4444',
+                                color: 'var(--color-red-500)',
                                 fontWeight: 500,
                                 display: 'flex',
                                 alignItems: 'center',
@@ -433,7 +433,7 @@ export default function ChatInput({
                             }}>
                                 <span style={{
                                     width: 6, height: 6, borderRadius: '50%',
-                                    background: '#ef4444',
+                                    background: 'var(--color-red-500)',
                                 }} />
                                 녹음 중
                             </span>
@@ -461,7 +461,7 @@ export default function ChatInput({
                                 borderRadius: '50%',
                                 background: 'transparent',
                                 border: 'none',
-                                color: '#71717A',
+                                color: 'var(--color-neutral-500)',
                                 cursor: (isStreaming || imageUploading) ? 'default' : 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',

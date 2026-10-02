@@ -17,7 +17,7 @@ export default function Loading() {
         >
             <div style={{ textAlign: 'center' }}>
                 <div className="curi-loading-dot" />
-                <p style={{ fontSize: 16, color: '#71717a', margin: '14px 0 0' }}>불러오는 중입니다</p>
+                <p style={{ fontSize: 16, color: 'var(--color-neutral-500)', margin: '14px 0 0' }}>불러오는 중입니다</p>
             </div>
         </div>
     )

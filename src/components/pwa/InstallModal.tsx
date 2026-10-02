@@ -97,7 +97,7 @@ export default function InstallModal() {
                 position: 'fixed', left: '50%', transform: 'translateX(-50%)',
                 width: 440, maxWidth: 'calc(100vw - 24px)', maxHeight: 'calc(100dvh - 120px)', overflowY: 'auto',
                 background: '#fff', borderRadius: 18, padding: '12px 12px 12px 14px', zIndex: 90,
-                border: '1px solid #e4e4e7', boxShadow: '0 10px 30px rgba(0,0,0,0.14)', wordBreak: 'keep-all',
+                border: '1px solid var(--color-neutral-200)', boxShadow: '0 10px 30px rgba(0,0,0,0.14)', wordBreak: 'keep-all',
             }}
         >
             <style>{`
@@ -107,8 +107,8 @@ export default function InstallModal() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <Image src="/icons/curi-192.png" alt="" width={40} height={40} style={{ borderRadius: 10, flex: 'none' }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: '#18181b', lineHeight: 1.3 }}>큐리AI를 앱으로 설치해요</div>
-                    <div style={{ fontSize: 15, color: '#52525b', lineHeight: 1.4 }}>홈 화면에서 한 번 눌러 바로 열어요</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-neutral-900)', lineHeight: 1.3 }}>큐리AI를 앱으로 설치해요</div>
+                    <div style={{ fontSize: 15, color: 'var(--color-neutral-600)', lineHeight: 1.4 }}>홈 화면에서 한 번 눌러 바로 열어요</div>
                 </div>
                 <button
                     type="button"
@@ -116,7 +116,7 @@ export default function InstallModal() {
                     aria-expanded={바로설치 ? undefined : 펼침}
                     style={{
                         flex: 'none', minHeight: 44, padding: '0 14px', borderRadius: 12, border: 'none',
-                        background: '#22c55e', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                        background: 'var(--color-primary-500)', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
                     }}
                 >
                     {바로설치 ? '설치' : 펼침 ? '접기' : '방법 보기'}
@@ -125,7 +125,7 @@ export default function InstallModal() {
                     type="button"
                     onClick={닫기}
                     aria-label="설치 안내 닫기"
-                    style={{ flex: 'none', width: 44, height: 44, borderRadius: 12, border: 'none', background: 'transparent', color: '#52525b', fontSize: 20, cursor: 'pointer' }}
+                    style={{ flex: 'none', width: 44, height: 44, borderRadius: 12, border: 'none', background: 'transparent', color: 'var(--color-neutral-600)', fontSize: 20, cursor: 'pointer' }}
                 >
                     ✕
                 </button>
@@ -135,20 +135,20 @@ export default function InstallModal() {
                 <div style={{ marginTop: 12 }}>
                     <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left' }}>
                         {걸음.map((w) => (
-                            <li key={w.번호} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 16, lineHeight: 1.5, color: '#18181b' }}>
+                            <li key={w.번호} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 16, lineHeight: 1.5, color: 'var(--color-neutral-900)' }}>
                                 <b style={{
-                                    flex: 'none', width: 28, height: 28, borderRadius: '50%', background: '#22c55e', color: '#fff',
+                                    flex: 'none', width: 28, height: 28, borderRadius: '50%', background: 'var(--color-primary-500)', color: '#fff',
                                     fontWeight: 800, fontSize: 15, display: 'grid', placeItems: 'center',
                                 }}>{w.번호}</b>
                                 <span>
                                     {w.글}
-                                    {w.작게 && <><br /><small style={{ fontSize: 15, color: '#52525b' }}>{w.작게}</small></>}
+                                    {w.작게 && <><br /><small style={{ fontSize: 15, color: 'var(--color-neutral-600)' }}>{w.작게}</small></>}
                                 </span>
                             </li>
                         ))}
                     </ol>
                     {kind === 'ios' && (
-                        <p style={{ fontSize: 15, color: '#52525b', margin: '12px 0 0', lineHeight: 1.5, textAlign: 'left', background: '#f4f4f5', borderRadius: 12, padding: '10px 12px' }}>
+                        <p style={{ fontSize: 15, color: 'var(--color-neutral-600)', margin: '12px 0 0', lineHeight: 1.5, textAlign: 'left', background: 'var(--color-neutral-100)', borderRadius: 12, padding: '10px 12px' }}>
                             크롬 앱으로 열었다면 사파리로 다시 열어 주세요. 아이폰은 사파리에서만 홈 화면에 넣을 수 있어요.
                         </p>
                     )}

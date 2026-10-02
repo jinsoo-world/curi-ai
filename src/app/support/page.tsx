@@ -4,8 +4,8 @@
 import Link from 'next/link'
 import SupportForm from './SupportForm'
 
-const h2: React.CSSProperties = { fontSize: 18, fontWeight: 700, color: '#18181b', margin: '36px 0 12px' }
-const card: React.CSSProperties = { background: '#fff', borderRadius: 20, border: '1px solid #f0f0f0', padding: 'clamp(20px, 5vw, 40px)', marginBottom: 16 }
+const h2: React.CSSProperties = { fontSize: 18, fontWeight: 700, color: 'var(--color-neutral-900)', margin: '36px 0 12px' }
+const card: React.CSSProperties = { background: '#fff', borderRadius: 20, border: '1px solid var(--color-neutral-200)', padding: 'clamp(20px, 5vw, 40px)', marginBottom: 16 }
 
 const FAQ: { q: string; a: string }[] = [
     {
@@ -41,10 +41,10 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
     const appVersion = one(sp.v).slice(0, 32)
 
     return (
-        <div style={{ minHeight: '100dvh', background: '#f8f9fa' }}>
+        <div style={{ minHeight: '100dvh', background: 'var(--color-neutral-50)' }}>
             <header style={{
                 position: 'sticky', top: 0, zIndex: 50,
-                background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #f0f0f0',
+                background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--color-neutral-200)',
             }}>
                 <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 clamp(16px, 4vw, 40px)', display: 'flex', alignItems: 'center', height: 64 }}>
                     <Link href="/login" style={{
@@ -60,28 +60,28 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
 
             <main style={{ maxWidth: 800, margin: '0 auto', padding: '32px clamp(16px, 4vw, 40px) 80px' }}>
                 <div style={card}>
-                    <h1 style={{ fontSize: 28, fontWeight: 800, color: '#18181b', margin: '0 0 12px', letterSpacing: '-0.02em' }}>고객센터</h1>
-                    <p style={{ fontSize: 15, lineHeight: 1.8, color: '#4b5563', margin: 0 }}>
+                    <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-neutral-900)', margin: '0 0 12px', letterSpacing: '-0.02em' }}>고객센터</h1>
+                    <p style={{ fontSize: 15, lineHeight: 1.8, color: 'var(--color-neutral-600)', margin: 0 }}>
                         궁금한 점이나 불편한 점을 남겨 주세요. 영업일 기준 2일 안에 이메일로 답해 드려요.
                         <br />
-                        메일로 바로 보내셔도 돼요. <a href="mailto:curious@mission-driven.kr" style={{ color: '#03C124', fontWeight: 600 }}>curious@mission-driven.kr</a>
+                        메일로 바로 보내셔도 돼요. <a href="mailto:curious@mission-driven.kr" style={{ color: 'var(--color-primary-500)', fontWeight: 600 }}>curious@mission-driven.kr</a>
                     </p>
                 </div>
 
                 <section style={card} aria-labelledby="faq-title">
                     <h2 id="faq-title" style={{ ...h2, marginTop: 0 }}>자주 묻는 질문</h2>
                     {FAQ.map(f => (
-                        <details key={f.q} style={{ borderTop: '1px solid #f0f0f0', padding: '14px 0' }}>
-                            <summary style={{ fontSize: 16, fontWeight: 600, color: '#18181b', cursor: 'pointer', minHeight: 28 }}>{f.q}</summary>
-                            <p style={{ fontSize: 15, lineHeight: 1.8, color: '#4b5563', margin: '10px 0 0' }}>{f.a}</p>
+                        <details key={f.q} style={{ borderTop: '1px solid var(--color-neutral-200)', padding: '14px 0' }}>
+                            <summary style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-neutral-900)', cursor: 'pointer', minHeight: 28 }}>{f.q}</summary>
+                            <p style={{ fontSize: 15, lineHeight: 1.8, color: 'var(--color-neutral-600)', margin: '10px 0 0' }}>{f.a}</p>
                         </details>
                     ))}
-                    <p style={{ fontSize: 14, color: '#6b7280', margin: '16px 0 0' }}>
-                        <Link href="/privacy" style={{ color: '#6b7280' }}>개인정보처리방침</Link>
+                    <p style={{ fontSize: 14, color: 'var(--color-neutral-500)', margin: '16px 0 0' }}>
+                        <Link href="/privacy" style={{ color: 'var(--color-neutral-500)' }}>개인정보처리방침</Link>
                         <span aria-hidden="true">{'  ㅣ  '}</span>
-                        <Link href="/terms" style={{ color: '#6b7280' }}>서비스이용약관</Link>
+                        <Link href="/terms" style={{ color: 'var(--color-neutral-500)' }}>서비스이용약관</Link>
                         <span aria-hidden="true">{'  ㅣ  '}</span>
-                        <Link href="/refund" style={{ color: '#6b7280' }}>취소/환불정책</Link>
+                        <Link href="/refund" style={{ color: 'var(--color-neutral-500)' }}>취소/환불정책</Link>
                     </p>
                 </section>
 
@@ -92,14 +92,14 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
 
                 <section style={card} aria-labelledby="company-title">
                     <h2 id="company-title" style={{ ...h2, marginTop: 0 }}>회사 정보</h2>
-                    <dl style={{ fontSize: 14, lineHeight: 1.9, color: '#4b5563', margin: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 16 }}>
-                        <dt style={{ color: '#9ca3af' }}>상호</dt><dd style={{ margin: 0 }}>(주)미션드리븐</dd>
-                        <dt style={{ color: '#9ca3af' }}>대표</dt><dd style={{ margin: 0 }}>김진수</dd>
-                        <dt style={{ color: '#9ca3af' }}>고객센터</dt><dd style={{ margin: 0 }}>curious@mission-driven.kr</dd>
-                        <dt style={{ color: '#9ca3af' }}>전화</dt><dd style={{ margin: 0 }}>010-9716-6015</dd>
-                        <dt style={{ color: '#9ca3af' }}>사업자등록번호</dt><dd style={{ margin: 0 }}>277-88-02697</dd>
-                        <dt style={{ color: '#9ca3af' }}>통신판매번호</dt><dd style={{ margin: 0 }}>2023-서울마포-2003</dd>
-                        <dt style={{ color: '#9ca3af' }}>주소</dt><dd style={{ margin: 0, wordBreak: 'keep-all' }}>서울특별시 마포구 성지길 25-11 3층 비123호</dd>
+                    <dl style={{ fontSize: 14, lineHeight: 1.9, color: 'var(--color-neutral-600)', margin: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 16 }}>
+                        <dt style={{ color: 'var(--color-neutral-400)' }}>상호</dt><dd style={{ margin: 0 }}>(주)미션드리븐</dd>
+                        <dt style={{ color: 'var(--color-neutral-400)' }}>대표</dt><dd style={{ margin: 0 }}>김진수</dd>
+                        <dt style={{ color: 'var(--color-neutral-400)' }}>고객센터</dt><dd style={{ margin: 0 }}>curious@mission-driven.kr</dd>
+                        <dt style={{ color: 'var(--color-neutral-400)' }}>전화</dt><dd style={{ margin: 0 }}>010-9716-6015</dd>
+                        <dt style={{ color: 'var(--color-neutral-400)' }}>사업자등록번호</dt><dd style={{ margin: 0 }}>277-88-02697</dd>
+                        <dt style={{ color: 'var(--color-neutral-400)' }}>통신판매번호</dt><dd style={{ margin: 0 }}>2023-서울마포-2003</dd>
+                        <dt style={{ color: 'var(--color-neutral-400)' }}>주소</dt><dd style={{ margin: 0, wordBreak: 'keep-all' }}>서울특별시 마포구 성지길 25-11 3층 비123호</dd>
                     </dl>
                 </section>
             </main>

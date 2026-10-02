@@ -48,7 +48,7 @@ export default function ClaimPhoto() {
 
     return (
         <div style={{
-            background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18,
+            background: '#fff', border: '1px solid var(--color-neutral-200)', borderRadius: 18,
             padding: '18px 18px 16px', margin: '0 0 18px',
         }}>
             {url ? (
@@ -58,12 +58,12 @@ export default function ClaimPhoto() {
                     <img src={url} alt="방금 만든 사진" style={{ width: '100%', maxWidth: 320, borderRadius: 14, display: 'block', margin: '0 auto' }} />
                     <a href={url} download style={{
                         display: 'block', marginTop: 12, padding: 14, borderRadius: 14,
-                        background: '#18181b', color: '#fff', fontSize: 16, fontWeight: 800,
+                        background: 'var(--color-neutral-900)', color: '#fff', fontSize: 16, fontWeight: 800,
                         textAlign: 'center', textDecoration: 'none',
                     }}>선명한 사진 내려받기</a>
                 </>
             ) : (
-                <p style={{ fontSize: 15.5, color: '#71717a', margin: 0, lineHeight: 1.6 }}>{알림}</p>
+                <p style={{ fontSize: 15.5, color: 'var(--color-neutral-500)', margin: 0, lineHeight: 1.6 }}>{알림}</p>
             )}
         </div>
     )

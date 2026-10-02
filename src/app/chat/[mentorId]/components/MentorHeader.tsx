@@ -100,7 +100,7 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                         flexShrink: 0,
                         borderRadius: '50%', 
                         overflow: 'hidden',
-                        background: 'linear-gradient(135deg, #E8F2EC 0%, #D4E8DC 100%)',
+                        background: 'var(--color-primary-50)',
                         display: 'grid', placeItems: 'center',
                         fontSize: 22, border: '2px solid rgba(255,255,255,0.9)', 
                         padding: 0,
@@ -206,7 +206,7 @@ export default function MentorHeader({ mentor, mentorImage, mentorEmoji, isStrea
                             objectFit: 'cover',
                             borderRadius: 24,
                             display: 'block',
-                            background: '#E8F2EC',
+                            background: 'var(--color-primary-50)',
                         }}
                     />
                     <p style={{ color: '#fff', fontSize: 17, fontWeight: 800, marginTop: 18 }}>{mentor.name}</p>

@@ -2,12 +2,12 @@
 
 export default function PrivacyPage() {
     const sectionTitle = {
-        fontSize: 20, fontWeight: 700, color: '#18181b',
+        fontSize: 20, fontWeight: 700, color: 'var(--color-neutral-900)',
         margin: '40px 0 16px', letterSpacing: '-0.01em',
     } as const;
 
     const subTitle = {
-        fontSize: 16, fontWeight: 600, color: '#18181b',
+        fontSize: 16, fontWeight: 600, color: 'var(--color-neutral-900)',
         margin: '24px 0 8px',
     } as const;
 
@@ -18,12 +18,12 @@ export default function PrivacyPage() {
 
     const thStyle = {
         padding: '10px 16px', textAlign: 'left' as const,
-        borderBottom: '2px solid #e5e7eb', fontWeight: 600,
-        background: '#f9fafb',
+        borderBottom: '2px solid var(--color-neutral-200)', fontWeight: 600,
+        background: 'var(--color-neutral-50)',
     };
 
     const tdStyle = {
-        padding: '10px 16px', borderBottom: '1px solid #f0f0f0',
+        padding: '10px 16px', borderBottom: '1px solid var(--color-neutral-200)',
     };
 
     const infoBox = (bg: string, border: string) => ({
@@ -33,12 +33,12 @@ export default function PrivacyPage() {
     });
 
     return (
-        <div style={{ minHeight: '100dvh', background: '#f8f9fa' }}>
+        <div style={{ minHeight: '100dvh', background: 'var(--color-neutral-50)' }}>
             <header style={{
                 position: 'sticky', top: 0, zIndex: 50,
                 background: 'rgba(255,255,255,0.95)',
                 backdropFilter: 'blur(20px)',
-                borderBottom: '1px solid #f0f0f0',
+                borderBottom: '1px solid var(--color-neutral-200)',
             }}>
                 <div style={{
                     maxWidth: 800, margin: '0 auto',
@@ -47,12 +47,12 @@ export default function PrivacyPage() {
                     height: 64, gap: 12,
                 }}>
                     <a href="/mentors" style={{
-                        fontSize: 14, color: '#9ca3af', textDecoration: 'none',
+                        fontSize: 14, color: 'var(--color-neutral-400)', textDecoration: 'none',
                     }}>← 뒤로가기</a>
                     <a href="/mentors" style={{
                         display: 'flex', alignItems: 'center', gap: 8,
                         fontSize: 20, fontWeight: 800, letterSpacing: '-0.04em',
-                        background: 'linear-gradient(135deg, #16a34a, #22c55e)',
+                        background: 'var(--color-primary-600)',
                         WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                         textDecoration: 'none',
                     }}>
@@ -68,23 +68,23 @@ export default function PrivacyPage() {
             }}>
                 <div style={{
                     background: '#fff', borderRadius: 20,
-                    border: '1px solid #f0f0f0',
+                    border: '1px solid var(--color-neutral-200)',
                     padding: 'clamp(24px, 5vw, 48px)',
                 }}>
                     <h1 style={{
-                        fontSize: 28, fontWeight: 800, color: '#18181b',
+                        fontSize: 28, fontWeight: 800, color: 'var(--color-neutral-900)',
                         marginBottom: 8, letterSpacing: '-0.02em',
                     }}>
                         개인정보처리방침
                     </h1>
-                    <p style={{ fontSize: 14, color: '#9ca3af', marginBottom: 32 }}>
+                    <p style={{ fontSize: 14, color: 'var(--color-neutral-400)', marginBottom: 32 }}>
                         시행일: 2026년 3월 12일
                     </p>
 
                     {/* 목차 */}
                     <div style={infoBox('#f9fafb', '#f0f0f0')}>
-                        <p style={{ margin: '0 0 12px', fontWeight: 700, fontSize: 15, color: '#18181b' }}>목차</p>
-                        <ol style={{ paddingLeft: 20, margin: 0, fontSize: 14, lineHeight: 2, color: '#4b5563' }}>
+                        <p style={{ margin: '0 0 12px', fontWeight: 700, fontSize: 15, color: 'var(--color-neutral-900)' }}>목차</p>
+                        <ol style={{ paddingLeft: 20, margin: 0, fontSize: 14, lineHeight: 2, color: 'var(--color-neutral-600)' }}>
                             <li>개인정보의 수집</li>
                             <li>개인정보의 이용</li>
                             <li>개인정보의 보유 및 제공</li>
@@ -95,7 +95,7 @@ export default function PrivacyPage() {
                         </ol>
                     </div>
 
-                    <div style={{ fontSize: 15, lineHeight: 1.8, color: '#4b5563' }}>
+                    <div style={{ fontSize: 15, lineHeight: 1.8, color: 'var(--color-neutral-600)' }}>
 
                         {/* ===== 제1조 ===== */}
                         <h2 style={sectionTitle}>제1조 개인정보의 수집</h2>
@@ -252,7 +252,7 @@ export default function PrivacyPage() {
                         </p>
 
                         <p style={subTitle}>처리 위탁 현황</p>
-                        <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 8 }}>
+                        <p style={{ fontSize: 13, color: 'var(--color-neutral-400)', marginBottom: 8 }}>
                             서비스 제공을 위해 아래와 같은 업무를 위탁하고 있으며, 위탁받은 업체가 관계 법령을 준수하도록 관리·감독하고 있습니다.
                         </p>
                         <table style={tableStyle}>
@@ -301,12 +301,12 @@ export default function PrivacyPage() {
                         </ol>
 
                         <div style={infoBox('#fef3c7', '#fde68a')}>
-                            <p style={{ margin: '0 0 8px', fontWeight: 600, fontSize: 14, color: '#18181b' }}>권익침해 구제방법</p>
-                            <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 2 }}>
-                                개인정보침해 신고센터: (국번없이) 118 · <a href="https://privacy.kisa.or.kr" style={{ color: '#3b82f6' }}>privacy.kisa.or.kr</a><br/>
-                                대검찰청 사이버수사과: (국번없이) 1301 · <a href="https://spo.go.kr" style={{ color: '#3b82f6' }}>spo.go.kr</a><br/>
-                                경찰청 사이버안전국: (국번없이) 182 · <a href="https://ecrm.police.go.kr" style={{ color: '#3b82f6' }}>ecrm.police.go.kr</a><br/>
-                                개인정보분쟁조정위원회: (국번없이) 1833-6972 · <a href="https://www.kopico.go.kr" style={{ color: '#3b82f6' }}>kopico.go.kr</a>
+                            <p style={{ margin: '0 0 8px', fontWeight: 600, fontSize: 14, color: 'var(--color-neutral-900)' }}>권익침해 구제방법</p>
+                            <p style={{ margin: 0, fontSize: 13, color: 'var(--color-neutral-500)', lineHeight: 2 }}>
+                                개인정보침해 신고센터: (국번없이) 118 · <a href="https://privacy.kisa.or.kr" style={{ color: 'var(--color-blue-500)' }}>privacy.kisa.or.kr</a><br/>
+                                대검찰청 사이버수사과: (국번없이) 1301 · <a href="https://spo.go.kr" style={{ color: 'var(--color-blue-500)' }}>spo.go.kr</a><br/>
+                                경찰청 사이버안전국: (국번없이) 182 · <a href="https://ecrm.police.go.kr" style={{ color: 'var(--color-blue-500)' }}>ecrm.police.go.kr</a><br/>
+                                개인정보분쟁조정위원회: (국번없이) 1833-6972 · <a href="https://www.kopico.go.kr" style={{ color: 'var(--color-blue-500)' }}>kopico.go.kr</a>
                             </p>
                         </div>
 
@@ -366,8 +366,8 @@ export default function PrivacyPage() {
                             쿠키에는 이름, 전화번호 등 개인을 식별하는 정보를 저장하지 않으며, 이용자는 쿠키 설치에 대한 선택권을 가지고 있습니다.
                         </p>
                         <div style={infoBox('#f9fafb', '#f0f0f0')}>
-                            <p style={{ margin: '0 0 8px', fontWeight: 600, fontSize: 14, color: '#18181b' }}>쿠키 수집 거부 방법</p>
-                            <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 2 }}>
+                            <p style={{ margin: '0 0 8px', fontWeight: 600, fontSize: 14, color: 'var(--color-neutral-900)' }}>쿠키 수집 거부 방법</p>
+                            <p style={{ margin: 0, fontSize: 13, color: 'var(--color-neutral-500)', lineHeight: 2 }}>
                                 Chrome: [설정] → [개인정보 및 보안] → [쿠키 및 기타 사이트 데이터]<br/>
                                 Safari: [환경설정] → [개인정보] → [쿠키 및 웹사이트 데이터 수준]<br/>
                                 Edge: [설정] → [쿠키 및 사이트 권한]
@@ -387,7 +387,7 @@ export default function PrivacyPage() {
 
                         <p style={subTitle}>⑤ AI 멘토링 한계 안내</p>
                         <div style={infoBox('#f9fafb', '#f0f0f0')}>
-                            <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>
+                            <p style={{ margin: 0, fontSize: 13, color: 'var(--color-neutral-500)' }}>
                                 AI 멘토가 부정확하거나 부적절한 내용을 말할 수 있습니다.
                                 멘토의 조언이 사실인지 직접 확인해 주시고, 민감한 개인정보는 알려주지 마세요.
                                 의료·법률·재무 등 전문 분야 결정은 반드시 전문가와 상담하세요.
@@ -431,21 +431,21 @@ export default function PrivacyPage() {
                         {/* 부칙 */}
                         <div style={{
                             marginTop: 48, padding: '20px 24px',
-                            background: '#f9fafb', borderRadius: 12,
-                            border: '1px solid #f0f0f0',
+                            background: 'var(--color-neutral-50)', borderRadius: 12,
+                            border: '1px solid var(--color-neutral-200)',
                         }}>
-                            <p style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600, color: '#6b7280' }}>
+                            <p style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600, color: 'var(--color-neutral-500)' }}>
                                 부칙
                             </p>
-                            <p style={{ margin: '0 0 4px', fontSize: 14, color: '#9ca3af' }}>
+                            <p style={{ margin: '0 0 4px', fontSize: 14, color: 'var(--color-neutral-400)' }}>
                                 본 개인정보처리방침은 2026년 3월 12일부터 시행됩니다.
                             </p>
-                            <p style={{ margin: 0, fontSize: 14, color: '#9ca3af' }}>
-                                문의: <strong style={{ color: '#6b7280' }}>curious@mission-driven.kr</strong>
+                            <p style={{ margin: 0, fontSize: 14, color: 'var(--color-neutral-400)' }}>
+                                문의: <strong style={{ color: 'var(--color-neutral-500)' }}>curious@mission-driven.kr</strong>
                             </p>
                         </div>
 
-                        <p style={{ marginTop: 24, fontSize: 13, color: '#d1d5db', textAlign: 'center' }}>
+                        <p style={{ marginTop: 24, fontSize: 13, color: 'var(--color-neutral-300)', textAlign: 'center' }}>
                             © 2026 (주)미션드리븐. All rights reserved.
                         </p>
                     </div>

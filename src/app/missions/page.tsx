@@ -279,7 +279,7 @@ export default function MissionsPage() {
             <main style={{
                 
                 minHeight: '100dvh',
-                background: '#fafafa',
+                background: 'var(--color-neutral-50)',
                 padding: '32px 24px 80px',
             }}>
                 <style>{`
@@ -327,19 +327,19 @@ export default function MissionsPage() {
                         <div style={{
                             textAlign: 'center', padding: '60px 20px',
                             background: '#fff', borderRadius: 20,
-                            border: '1px solid #f0f0f0',
+                            border: '1px solid var(--color-neutral-200)',
                             animation: 'fadeIn 0.4s ease',
                         }}>
                             
-                            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#18181b', marginBottom: 8 }}>
+                            <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: 8 }}>
                                 로그인이 필요합니다
                             </h2>
-                            <p style={{ fontSize: 15, color: '#6b7280', lineHeight: 1.6, marginBottom: 24 }}>
+                            <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', lineHeight: 1.6, marginBottom: 24 }}>
                                 미션을 수행하고 클로버를 모으려면<br />먼저 로그인해주세요!
                             </p>
                             <Link href="/login" style={{
                                 display: 'inline-block', padding: '14px 32px', borderRadius: 14,
-                                background: '#1C2321',
+                                background: 'var(--color-neutral-900)',
                                 color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: 16,
                                 boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
                             }}>
@@ -353,7 +353,7 @@ export default function MissionsPage() {
                         <div style={{ textAlign: 'center', padding: 60 }}>
                             <div style={{
                                 width: 40, height: 40,
-                                border: '3px solid #e5e7eb', borderTopColor: '#22c55e',
+                                border: '3px solid var(--color-neutral-200)', borderTopColor: 'var(--color-primary-500)',
                                 borderRadius: '50%', animation: 'spin 0.8s linear infinite',
                                 margin: '0 auto',
                             }} />
@@ -368,18 +368,18 @@ export default function MissionsPage() {
                             <div style={{
                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                 background: '#F4F6F3',
-                                border: '1.5px solid #bbf7d0', borderRadius: 16,
+                                border: '1.5px solid var(--color-primary-100)', borderRadius: 16,
                                 padding: '18px 24px', marginBottom: 20,
                             }}>
                                 <div>
-                                    <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 500 }}>내 클로버</div>
-                                    <div style={{ fontSize: 28, fontWeight: 800, color: '#15803d', letterSpacing: '-0.02em' }}>
+                                    <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', fontWeight: 500 }}>내 클로버</div>
+                                    <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-primary-700)', letterSpacing: '-0.02em' }}>
                                         {clovers.toLocaleString()}
                                     </div>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
-                                    <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>총 적립</div>
-                                    <div style={{ fontSize: 14, fontWeight: 600, color: '#16a34a' }}>
+                                    <div style={{ fontSize: 11, color: 'var(--color-neutral-400)', marginBottom: 2 }}>총 적립</div>
+                                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-primary-600)' }}>
                                         +{creditHistory.filter((c: any) => c.amount > 0).reduce((s: number, c: any) => s + c.amount, 0)}
                                     </div>
                                 </div>
@@ -389,7 +389,7 @@ export default function MissionsPage() {
                             <div style={{
                                 background: '#F4F6F3',
                                 borderRadius: 16,
-                                border: '1.5px solid #a7f3d0',
+                                border: '1.5px solid var(--color-primary-100)',
                                 padding: '20px 24px',
                                 marginBottom: 20,
                                 animation: 'fadeIn 0.3s ease',
@@ -398,8 +398,8 @@ export default function MissionsPage() {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                         <CloverIcon size={28} />
                                         <div>
-                                            <div style={{ fontSize: 16, fontWeight: 700, color: '#15803d' }}>오늘의 네잎클로버</div>
-                                            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>행운을 가져다주는 네잎클로버를 찾아보세요!</div>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-primary-700)' }}>오늘의 네잎클로버</div>
+                                            <div style={{ fontSize: 12, color: 'var(--color-neutral-500)', marginTop: 2 }}>행운을 가져다주는 네잎클로버를 찾아보세요!</div>
                                         </div>
                                     </div>
                                     <div style={{
@@ -417,12 +417,12 @@ export default function MissionsPage() {
                                 }}>
                                     <div style={{
                                         height: '100%', borderRadius: 4,
-                                        background: '#22c55e',
+                                        background: 'var(--color-primary-500)',
                                         width: `${Math.min((missionStatus.cloverHuntToday / 3) * 100, 100)}%`,
                                         transition: 'width 0.5s ease',
                                     }} />
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11, color: '#9ca3af' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11, color: 'var(--color-neutral-400)' }}>
                                     <span>발견당 10클로버</span>
                                     <span>10분 체류 시 5개까지!</span>
                                 </div>
@@ -446,7 +446,7 @@ export default function MissionsPage() {
                                         <div style={{
                                             width: 52, height: 52, borderRadius: 14,
                                             background: mission.completed
-                                                ? 'linear-gradient(135deg, #dcfce7, #bbf7d0)' : '#f4f4f5',
+                                                ? 'var(--color-primary-50)' : '#f4f4f5',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             fontSize: 26, flexShrink: 0,
                                         }}>
@@ -455,22 +455,22 @@ export default function MissionsPage() {
 
                                         {/* 내용 */}
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontSize: 16, fontWeight: 700, color: '#18181b', marginBottom: 2 }}>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: 2 }}>
                                                 {mission.title}
                                             </div>
-                                            <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 8 }}>
+                                            <div style={{ fontSize: 13, color: 'var(--color-neutral-400)', marginBottom: 8 }}>
                                                 {mission.description}
                                             </div>
                                             {/* 진행바 */}
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <div style={{ flex: 1, height: 6, borderRadius: 3, background: '#f0f0f0', overflow: 'hidden' }}>
+                                                <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--color-neutral-200)', overflow: 'hidden' }}>
                                                     <div style={{
                                                         height: '100%',
                                                         width: `${Math.min((mission.progress / mission.goal) * 100, 100)}%`,
                                                         borderRadius: 3,
                                                         background: mission.completed
-                                                            ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-                                                            : 'linear-gradient(90deg, #60a5fa, #3b82f6)',
+                                                            ? 'var(--color-primary-500)'
+                                                            : 'var(--color-blue-500)',
                                                         transition: 'width 500ms ease',
                                                     }} />
                                                 </div>
@@ -490,16 +490,16 @@ export default function MissionsPage() {
                                             alignItems: 'center', gap: 6, flexShrink: 0,
                                         }}>
                                             {mission.rewardLabel && <div style={{
-                                                fontSize: 12, fontWeight: 600, color: '#16a34a',
-                                                background: '#f0fdf4', borderRadius: 8, padding: '3px 10px',
+                                                fontSize: 12, fontWeight: 600, color: 'var(--color-primary-600)',
+                                                background: 'var(--color-primary-50)', borderRadius: 8, padding: '3px 10px',
                                             }}>
                                                 {mission.rewardLabel}
                                             </div>}
                                             {mission.completed ? (
                                                 mission.id === 'share' ? (
-                                                    <span style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af' }}>오늘 완료</span>
+                                                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-neutral-400)' }}>오늘 완료</span>
                                                 ) : (
-                                                    <span style={{ fontSize: 12, fontWeight: 600, color: '#16a34a' }}>완료!</span>
+                                                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-primary-600)' }}>완료!</span>
                                                 )
                                             ) : (
                                                 <button
@@ -507,7 +507,7 @@ export default function MissionsPage() {
                                                     disabled={mission.id === 'share' && sharing}
                                                     style={{
                                                         padding: '8px 16px', borderRadius: 10, border: 'none',
-                                                        background: '#1C2321',
+                                                        background: 'var(--color-neutral-900)',
                                                         color: '#fff', fontSize: 13, fontWeight: 600,
                                                         cursor: 'pointer', transition: 'transform 150ms', whiteSpace: 'nowrap',
                                                         opacity: (mission.id === 'share' && sharing) ? 0.6 : 1,
@@ -527,13 +527,13 @@ export default function MissionsPage() {
                             {missionStatus.friendsInvited > 0 && (
                                 <div style={{
                                     marginTop: 16,
-                                    background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
-                                    border: '1.5px solid #fde68a',
+                                    background: 'var(--color-amber-50)',
+                                    border: '1.5px solid var(--color-amber-200)',
                                     borderRadius: 14,
                                     padding: '16px 20px',
                                     animation: 'fadeIn 0.5s ease',
                                 }}>
-                                    <div style={{ fontSize: 14, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>
+                                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-amber-600)', marginBottom: 4 }}>
                                         친구 {missionStatus.friendsInvited}명이 새로 가입했습니다
                                     </div>
                                 </div>
@@ -542,14 +542,14 @@ export default function MissionsPage() {
                             {/* 클로버 이력 */}
                             <div style={{
                                 marginTop: 24, background: '#fff', borderRadius: 16,
-                                border: '1px solid #f0f0f0', padding: '20px 24px',
+                                border: '1px solid var(--color-neutral-200)', padding: '20px 24px',
                                 animation: 'fadeIn 0.6s ease',
                             }}>
-                                <h3 style={{ fontSize: 16, fontWeight: 700, color: '#18181b', marginBottom: 16, margin: '0 0 16px' }}>
+                                <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: 16, margin: '0 0 16px' }}>
                                     📜 클로버 이력
                                 </h3>
                                 {creditHistory.length === 0 ? (
-                                    <div style={{ textAlign: 'center', padding: '20px 0', color: '#9ca3af', fontSize: 14 }}>
+                                    <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--color-neutral-400)', fontSize: 14 }}>
                                         아직 이력이 없습니다. 하나씩 해내면 여기에 쌓입니다.
                                     </div>
                                 ) : (
@@ -581,10 +581,10 @@ export default function MissionsPage() {
                                                     }}
                                                 >
                                                     <div>
-                                                        <div style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>
+                                                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-neutral-900)' }}>
                                                             {typeLabels[credit.type] || credit.description || credit.type}
                                                         </div>
-                                                        <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
+                                                        <div style={{ fontSize: 12, color: 'var(--color-neutral-400)', marginTop: 2 }}>
                                                             {dateStr}
                                                         </div>
                                                     </div>
@@ -624,7 +624,7 @@ export default function MissionsPage() {
                         textAlign: 'center',
                         boxShadow: '0 20px 60px rgba(0,0,0,0.2), 0 0 80px rgba(34,197,94,0.3)',
                         animation: 'cloverPulse 0.6s ease-in-out',
-                        border: '2px solid #bbf7d0',
+                        border: '2px solid var(--color-primary-100)',
                     }}>
                         <div style={{
                             fontSize: 80,
@@ -636,7 +636,7 @@ export default function MissionsPage() {
                         </div>
                         <div style={{
                             fontSize: 36, fontWeight: 900,
-                            color: '#15803d',
+                            color: 'var(--color-primary-700)',
                             letterSpacing: '-0.02em',
                             marginBottom: 8,
                         }}>
@@ -644,13 +644,13 @@ export default function MissionsPage() {
                         </div>
                         <div style={{
                             fontSize: 18, fontWeight: 600,
-                            color: '#16a34a',
+                            color: 'var(--color-primary-600)',
                             marginBottom: 4,
                         }}>
                             {cloverAnim.label}
                         </div>
                         <div style={{
-                            fontSize: 13, color: '#6b7280', marginTop: 12,
+                            fontSize: 13, color: 'var(--color-neutral-500)', marginTop: 12,
                         }}>
                             잠시 후 자동으로 닫힙니다
                         </div>
@@ -672,10 +672,10 @@ export default function MissionsPage() {
                         animation: 'fadeIn 0.3s ease',
                     }}>
                         <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-                        <h3 style={{ fontSize: 20, fontWeight: 700, color: '#18181b', marginBottom: 8 }}>
+                        <h3 style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: 8 }}>
                             공유 완료!
                         </h3>
-                        <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, marginBottom: 24 }}>
+                        <p style={{ fontSize: 14, color: 'var(--color-neutral-500)', lineHeight: 1.6, marginBottom: 24 }}>
                             친구에게 큐리AI를 알려 주셔서 고마워요
                         </p>
                         <button
@@ -683,7 +683,7 @@ export default function MissionsPage() {
                             style={{
                                 width: '100%', padding: '14px', borderRadius: 12,
                                 border: 'none',
-                                background: '#1C2321',
+                                background: 'var(--color-neutral-900)',
                                 fontSize: 14, fontWeight: 600, color: '#fff',
                                 cursor: 'pointer',
                                 boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
@@ -714,24 +714,24 @@ export default function MissionsPage() {
                                 position: 'absolute', top: 14, right: 14,
                                 width: 32, height: 32, borderRadius: '50%',
                                 background: 'rgba(0,0,0,0.06)', border: 'none',
-                                fontSize: 16, color: '#6b7280', cursor: 'pointer',
+                                fontSize: 16, color: 'var(--color-neutral-500)', cursor: 'pointer',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}
                         >
                             ✕
                         </button>
                         <div style={{ marginBottom: 12 }}><CloverIcon size={44} /></div>
-                        <h3 style={{ fontSize: 20, fontWeight: 700, color: '#18181b', marginBottom: 6 }}>
+                        <h3 style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: 6 }}>
                             친구 초대하기
                         </h3>
-                        <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, marginBottom: 20 }}>
+                        <p style={{ fontSize: 14, color: 'var(--color-neutral-500)', lineHeight: 1.6, marginBottom: 20 }}>
                             아래 링크를 친구에게 보내 주세요
                         </p>
 
                         {/* 초대 링크 */}
                         <div style={{
                             display: 'flex', alignItems: 'center', gap: 8,
-                            background: '#f4f4f5', borderRadius: 12,
+                            background: 'var(--color-neutral-100)', borderRadius: 12,
                             padding: '12px 14px', marginBottom: 12,
                         }}>
                             <input
@@ -739,7 +739,7 @@ export default function MissionsPage() {
                                 value={inviteLink}
                                 style={{
                                     flex: 1, border: 'none', background: 'transparent',
-                                    fontSize: 13, color: '#374151', outline: 'none',
+                                    fontSize: 13, color: 'var(--color-neutral-700)', outline: 'none',
                                     overflow: 'hidden', textOverflow: 'ellipsis',
                                 }}
                             />
@@ -824,7 +824,7 @@ export default function MissionsPage() {
                                 borderRadius: 12,
                                 border: 'none',
                                 background: '#FEE500',
-                                color: '#191919',
+                                color: 'var(--color-neutral-900)',
                                 fontSize: 15,
                                 fontWeight: 700,
                                 cursor: 'pointer',
@@ -850,16 +850,16 @@ export default function MissionsPage() {
                             </svg>
                             카카오톡으로 공유하기
                         </button>
-                        <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 0' }}>
+                        <p style={{ fontSize: 12, color: 'var(--color-neutral-400)', margin: '0 0 0' }}>
                             공유하면 10클로버를 받습니다
                         </p>                        {/* 초대 현황 */}
                         {missionStatus.friendsInvited > 0 && (
                             <div style={{
                                 marginTop: 16, padding: '12px 16px',
-                                background: '#f0fdf4', borderRadius: 10,
-                                border: '1px solid #bbf7d0',
+                                background: 'var(--color-primary-50)', borderRadius: 10,
+                                border: '1px solid var(--color-primary-100)',
                             }}>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d' }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-primary-700)' }}>
                                     친구 {missionStatus.friendsInvited}명이 가입했습니다
                                 </div>
                             </div>

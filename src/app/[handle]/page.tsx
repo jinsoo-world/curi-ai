@@ -49,7 +49,7 @@ function MentorCard({
             style={{
                 background: '#fff',
                 borderRadius: 20,
-                border: '1px solid #f0f0f0',
+                border: '1px solid var(--color-neutral-200)',
                 boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
                 overflow: 'hidden',
                 transition: 'transform 250ms ease, box-shadow 250ms ease',
@@ -61,7 +61,7 @@ function MentorCard({
                 position: 'relative',
                 width: '100%',
                 aspectRatio: '1 / 1',
-                background: 'linear-gradient(135deg, #f0fdf4 0%, #e8f5e9 50%, #f0f9ff 100%)',
+                background: 'var(--color-primary-50)',
                 overflow: 'hidden',
                 display: 'flex',
                 alignItems: 'center',
@@ -90,7 +90,7 @@ function MentorCard({
                             height={80}
                             style={{ borderRadius: 20, filter: 'grayscale(30%)' }}
                         />
-                        <span style={{ fontSize: 14, color: '#6b7280', fontWeight: 500 }}>AI</span>
+                        <span style={{ fontSize: 14, color: 'var(--color-neutral-500)', fontWeight: 500 }}>AI</span>
                     </div>
                 )}
             </div>
@@ -99,14 +99,14 @@ function MentorCard({
             <div style={{ padding: '20px 20px 24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     <h3 style={{
-                        fontSize: 22, fontWeight: 800, color: '#18181b',
+                        fontSize: 22, fontWeight: 800, color: 'var(--color-neutral-900)',
                         letterSpacing: '-0.02em', margin: 0,
                     }}>
                         {mentor.name}
                     </h3>
                     <span style={{
-                        fontSize: 12, fontWeight: 600, color: '#16a34a',
-                        background: '#f0fdf4', borderRadius: 100,
+                        fontSize: 12, fontWeight: 600, color: 'var(--color-primary-600)',
+                        background: 'var(--color-primary-50)', borderRadius: 100,
                         padding: '3px 10px',
                     }}>
                         AI
@@ -114,7 +114,7 @@ function MentorCard({
                 </div>
 
                 <p style={{
-                    fontSize: 15, color: '#6b7280', margin: '0 0 12px',
+                    fontSize: 15, color: 'var(--color-neutral-500)', margin: '0 0 12px',
                     fontWeight: 500,
                 }}>
                     {mentor.title}
@@ -122,7 +122,7 @@ function MentorCard({
 
                 {mentor.description && (
                     <p style={{
-                        fontSize: 14, color: '#9ca3af', lineHeight: 1.6, margin: '0 0 14px',
+                        fontSize: 14, color: 'var(--color-neutral-400)', lineHeight: 1.6, margin: '0 0 14px',
                         display: '-webkit-box', WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
                     }}>
@@ -137,9 +137,9 @@ function MentorCard({
                             <span
                                 key={i}
                                 style={{
-                                    fontSize: 13, color: '#16a34a', lineHeight: 1.4,
-                                    background: '#f0fdf4', borderRadius: 100,
-                                    padding: '5px 14px', border: '1px solid #dcfce7',
+                                    fontSize: 13, color: 'var(--color-primary-600)', lineHeight: 1.4,
+                                    background: 'var(--color-primary-50)', borderRadius: 100,
+                                    padding: '5px 14px', border: '1px solid var(--color-primary-50)',
                                 }}
                             >
                                 &ldquo;{q}&rdquo;
@@ -177,10 +177,10 @@ export default async function CreatorProfilePage({ params }: PageProps) {
     const displayName = user.display_name || cleanHandle
 
     return (
-        <div style={{ minHeight: '100dvh', background: '#f8f9fa' }}>
+        <div style={{ minHeight: '100dvh', background: 'var(--color-neutral-50)' }}>
             {/* ── Hero / Profile Header ── */}
             <header style={{
-                background: 'linear-gradient(135deg, #f0fdf4 0%, #e8f5e9 40%, #f0f9ff 100%)',
+                background: 'var(--color-primary-50)',
                 padding: '48px 20px 40px',
                 textAlign: 'center' as const,
             }}>
@@ -207,7 +207,7 @@ export default async function CreatorProfilePage({ params }: PageProps) {
                     ) : (
                         <div style={{
                             width: '100%', height: '100%',
-                            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                            background: 'var(--color-primary-500)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             color: '#fff', fontSize: 36, fontWeight: 800,
                         }}>
@@ -218,7 +218,7 @@ export default async function CreatorProfilePage({ params }: PageProps) {
 
                 {/* Name */}
                 <h1 style={{
-                    fontSize: 28, fontWeight: 800, color: '#18181b',
+                    fontSize: 28, fontWeight: 800, color: 'var(--color-neutral-900)',
                     letterSpacing: '-0.02em', margin: '0 0 4px',
                 }}>
                     {displayName}
@@ -226,7 +226,7 @@ export default async function CreatorProfilePage({ params }: PageProps) {
 
                 {/* Handle */}
                 <p style={{
-                    fontSize: 15, color: '#16a34a', margin: '0 0 8px',
+                    fontSize: 15, color: 'var(--color-primary-600)', margin: '0 0 8px',
                     fontWeight: 600,
                 }}>
                     @{cleanHandle}
@@ -234,7 +234,7 @@ export default async function CreatorProfilePage({ params }: PageProps) {
 
                 {/* Subtitle */}
                 <p style={{
-                    fontSize: 15, color: '#9ca3af', margin: 0,
+                    fontSize: 15, color: 'var(--color-neutral-400)', margin: 0,
                     maxWidth: 400, marginLeft: 'auto', marginRight: 'auto',
                 }}>
                     AI 멘토와 24시간 대화하세요
@@ -249,7 +249,7 @@ export default async function CreatorProfilePage({ params }: PageProps) {
                 {mentors.length > 0 ? (
                     <>
                         <h2 style={{
-                            fontSize: 20, fontWeight: 700, color: '#18181b',
+                            fontSize: 20, fontWeight: 700, color: 'var(--color-neutral-900)',
                             margin: '0 0 20px',
                         }}>
                             🤖 {displayName}의 AI ({mentors.length})
@@ -281,10 +281,10 @@ export default async function CreatorProfilePage({ params }: PageProps) {
                     <div style={{
                         textAlign: 'center' as const,
                         padding: '60px 20px',
-                        color: '#9ca3af',
+                        color: 'var(--color-neutral-400)',
                     }}>
                         <div style={{ fontSize: 48, marginBottom: 16 }}>🚀</div>
-                        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#6b7280', margin: '0 0 8px' }}>
+                        <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-neutral-500)', margin: '0 0 8px' }}>
                             아직 준비 중이에요
                         </h2>
                         <p style={{ fontSize: 15, margin: 0 }}>
@@ -299,20 +299,20 @@ export default async function CreatorProfilePage({ params }: PageProps) {
 
             {/* ── Footer ── */}
             <footer style={{
-                borderTop: '1px solid #f0f0f0',
+                borderTop: '1px solid var(--color-neutral-200)',
                 padding: '24px 20px 40px',
                 textAlign: 'center' as const,
             }}>
                 <Link
                     href="/mentors"
                     style={{
-                        fontSize: 14, color: '#16a34a',
+                        fontSize: 14, color: 'var(--color-primary-600)',
                         textDecoration: 'none', fontWeight: 600,
                     }}
                 >
                     큐리 AI 둘러보기 →
                 </Link>
-                <p style={{ fontSize: 13, color: '#d1d5db', marginTop: 12 }}>
+                <p style={{ fontSize: 13, color: 'var(--color-neutral-300)', marginTop: 12 }}>
                     © 2026 큐리 AI — 나를 아는 멘토
                 </p>
             </footer>

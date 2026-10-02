@@ -57,8 +57,8 @@ export default function NotificationBanner() {
                 <div
                     key={n.id}
                     style={{
-                        background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
-                        border: '1px solid #bbf7d0',
+                        background: 'var(--color-primary-50)',
+                        border: '1px solid var(--color-primary-100)',
                         borderRadius: 16,
                         padding: '16px 20px',
                         marginBottom: 12,
@@ -73,7 +73,7 @@ export default function NotificationBanner() {
                         <p style={{
                             margin: 0,
                             fontSize: 15,
-                            color: '#18181b',
+                            color: 'var(--color-neutral-900)',
                             fontWeight: 500,
                             lineHeight: 1.5,
                         }}>
@@ -84,7 +84,7 @@ export default function NotificationBanner() {
                                 href={`/chat/${n.mentor_id}`}
                                 style={{
                                     fontSize: 13,
-                                    color: '#16a34a',
+                                    color: 'var(--color-primary-600)',
                                     fontWeight: 600,
                                     textDecoration: 'none',
                                     marginTop: 4,
@@ -102,7 +102,7 @@ export default function NotificationBanner() {
                             border: 'none',
                             cursor: 'pointer',
                             fontSize: 18,
-                            color: '#a1a1aa',
+                            color: 'var(--color-neutral-400)',
                             padding: 4,
                             flexShrink: 0,
                         }}

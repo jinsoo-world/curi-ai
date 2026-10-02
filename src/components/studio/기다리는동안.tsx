@@ -77,7 +77,7 @@ export default function 기다리는동안() {
     return (
         <div style={{
             marginTop: 16, padding: '18px 18px 16px', borderRadius: 16,
-            background: '#fff', border: '1px solid var(--선, #E5E7EB)',
+            background: '#fff', border: '1px solid var(--선, var(--color-neutral-200))',
             maxWidth: 420, marginLeft: 'auto', marginRight: 'auto',
         }}>
             <p style={{ fontSize: 16, fontWeight: 800, margin: '0 0 5px', letterSpacing: '-0.03em' }}>{물음.제목}</p>
@@ -91,7 +91,7 @@ export default function 기다리는동안() {
                         <button key={g} type="button" onClick={() => void 저장(g)} disabled={보내는중}
                             style={{
                                 flex: 1, height: 48, borderRadius: 12, cursor: 'pointer',
-                                border: '1px solid var(--선, #E5E7EB)', background: '#fff',
+                                border: '1px solid var(--선, var(--color-neutral-200))', background: '#fff',
                                 fontSize: 16, fontWeight: 700, color: 'var(--먹, #111813)',
                             }}>
                             {g}
@@ -107,7 +107,7 @@ export default function 기다리는동안() {
                         placeholder={물음.안내}
                         style={{
                             flex: 1, height: 48, borderRadius: 12, padding: '0 14px',
-                            border: '1px solid var(--선, #E5E7EB)', fontSize: 16, minWidth: 0,
+                            border: '1px solid var(--선, var(--color-neutral-200))', fontSize: 16, minWidth: 0,
                         }}
                     />
                     <button type="button" onClick={() => void 저장(값)} disabled={보내는중 || !값}
