@@ -6,6 +6,7 @@
 //    user_id 를 비워 「누구인지」만 끊는다(deleted_user_ref = 되돌릴 수 없는 표식). 20261010 마이그레이션 필요.
 //  - 리더 정산 정보(creator_payout_profiles)는 1년 보관(대표 확정 2026-10-01 「1년」): 사람 id 를 뗀 채
 //    retained_payout_profiles 로 옮기고 원래 줄은 지운다. 1년이 지나면 /api/cron/retention-purge 가 지운다.
+//  - 앱(레비뉴캣) 구독은 탈퇴로 멈추지 않는다. 막지는 않고 hasStoreSubscription 으로 알려 앱이 「앱스토어나 플레이스토어에서 구독을 해지해 주세요」를 띄운다.
 //  - 결제가 계속 나가는 구독(active, past_due)이 있으면 막고 먼저 해지하라고 안내한다.
 //    (자동 해지는 안 한다: 환불·기간 안내는 사람이 확인하고 해지하는 게 안전하다.)
 //  - 순서: 활성 구독 확인 → 결제기록 분리(실패하면 여기서 중단) → 정산 정보 보관함으로 옮기기(실패하면 중단) → 저장소 파일 → 하위 표 → 봇 → 크리에이터 프로필 → 로그인 계정.
@@ -13,6 +14,7 @@
 import { createHash } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { revokeAppleTokens, type RevokeResult } from './apple-revoke'
+import { planSource, resolvePlan } from '@/domains/os/plan'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = SupabaseClient<any, any, any>
@@ -26,7 +28,8 @@ export interface DeleteUser {
 }
 
 export type DeleteResult =
-    | { ok: true }
+    /** hasStoreSubscription = 앱(레비뉴캣)에서 구독 중이었다. 탈퇴해도 스토어 구독은 저절로 안 멈추므로 앱이 해지 안내를 띄운다 */
+    | { ok: true; hasStoreSubscription?: true }
     | { ok: false; code: 'ACTIVE_SUBSCRIPTION'; message: string }
 
 export function isConfirmed(body: unknown): boolean {
@@ -107,6 +110,9 @@ export async function purgeExpiredPayouts(db: Db, now: Date = new Date()): Promi
 
 /** 없는 표·없는 열이면 건너뛴다(환경마다 표 구성이 다르다) */
 const SKIPPABLE = new Set(['42P01', '42703', 'PGRST205', 'PGRST204'])
+/** 표가 없다(Postgres 42P01, PostgREST PGRST205). 결제기록 분리에서는 이것만 건너뛴다.
+ *  열이 없음(42703, PGRST204 = deleted_user_ref 마이그레이션 전)은 건너뛰지 않고 멈춘다(사람이 안 떨어진 채 계정이 지워지면 안 된다) */
+const TABLE_MISSING = new Set(['42P01', 'PGRST205'])
 
 type DbError = { code?: string; message?: string } | null
 
@@ -169,11 +175,24 @@ export async function deleteAccount(
         mentorIds = (ms ?? []).map((m: { id: string }) => m.id)
     }
 
+    // 2-1) 앱(레비뉴캣)에서 구독 중인가. 스토어 구독은 탈퇴로 멈추지 않으므로 끝나고 알려 준다
+    const { data: planRow, error: planErr } = await db.from('user_plans').select('plan, expires_at, last_order_id').eq('user_id', uid).maybeSingle()
+    if (planErr && !(planErr.code && SKIPPABLE.has(planErr.code))) fail('요금제 확인', planErr)
+    const row = planRow as { plan: string | null; expires_at: string | null; last_order_id: string | null } | null
+    const hasStoreSubscription = resolvePlan(row).plan !== 'free' && planSource(row?.last_order_id) === 'revenuecat'
+
     // 3) 결제·크레딧·구독 기록은 보관하되 사람과 분리. 실패하면(마이그레이션 전) 여기서 멈춰 아무것도 안 지운다
     const ref = anonymousRef(uid)
     for (const table of RETAINED_TABLES) {
-        const { error } = await db.from(table).update({ user_id: null, deleted_user_ref: ref }).eq('user_id', uid)
-        if (error && error.code !== '42P01') fail(`${table} 분리`, error)
+        // 앱 구독 알림 기록은 회원번호 칸과 알림 내용도 비운다. 회원을 못 찾아 회원번호로만 남은 줄도 같이
+        const patch = table === 'revenuecat_events'
+            ? { user_id: null, deleted_user_ref: ref, app_user_id: null, payload: null }
+            : { user_id: null, deleted_user_ref: ref }
+        const keys = table === 'revenuecat_events' ? ['user_id', 'app_user_id'] : ['user_id']
+        for (const col of keys) {
+            const { error } = await db.from(table).update(patch).eq(col, uid)
+            if (error && !(error.code && TABLE_MISSING.has(error.code))) fail(`${table} 분리`, error)
+        }
     }
     // 보관하는 구독 줄에서 자동결제 열쇠는 쓸 일이 없으니 비운다(열이 다르면 건너뜀)
     await tolerant('구독 결제수단 비우기', db.from('subscriptions').update({ billing_key: '' }).eq('deleted_user_ref', ref))
@@ -230,6 +249,6 @@ export async function deleteAccount(
     }
 
     // 개인정보 없는 감사 기록: 표식·개수만
-    console.log(`[account-delete] 완료 ref=${ref} provider=${user.provider ?? 'unknown'} bots=${mentorIds.length}`)
-    return { ok: true }
+    console.log(`[account-delete] 완료 ref=${ref} provider=${user.provider ?? 'unknown'} bots=${mentorIds.length} store=${hasStoreSubscription}`)
+    return hasStoreSubscription ? { ok: true, hasStoreSubscription: true } : { ok: true }
 }

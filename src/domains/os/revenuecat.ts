@@ -51,6 +51,10 @@ export interface PlanRowFull {
     plan: string | null
     expires_at: string | null
     last_order_id: string | null
+    /** 이 줄에 마지막으로 반영한 레비뉴캣 알림 시각(event_timestamp_ms). 이보다 옛 알림은 버린다 */
+    rc_event_ms?: number | null
+    /** 지금 기간의 스토어 거래 번호. 환불이 지금 기간 것인지 볼 때 쓴다 */
+    rc_transaction_id?: string | null
 }
 
 export interface UserPlanWrite {
@@ -60,6 +64,8 @@ export interface UserPlanWrite {
     expires_at: string | null
     last_order_id: string
     updated_at: string
+    rc_event_ms?: number | null
+    rc_transaction_id?: string | null
 }
 
 /** Authorization 머리글이 설정값과 같은가. 길이가 달라도 시간이 같게(해시끼리 비교) */
@@ -125,29 +131,41 @@ export function isHandledType(type: string): boolean {
  *   BILLING_ISSUE  끝나는 날이 남았으면 그대로(유예). 지났으면 무료로
  *   EXPIRATION     레비뉴캣이 연 요금제면 무료로. 그 뒤 갱신된 줄이면 그대로
  *   PRODUCT_CHANGE 바로 적용되지 않을 수 있어 기록만. 새 상품은 다음 RENEWAL 이 바꾼다
- *   TRANSFER       revenuecat-service.ts 가 사람마다 endRevenueCatPlan 으로 처리
+ *   TRANSFER       revenuecat-service.ts 가 넘겨준 사람은 endRevenueCatPlan, 받은 사람은 레비뉴캣에 물어 맞춘다
+ *   모든 알림: 이 줄이 이미 반영한 알림보다 옛 시각이면 버린다(stale_event)
  *   그 밖(TEST, SUBSCRIBER_ALIAS 등)  무시
  */
 export function decideRevenueCatEvent(a: { event: RcEvent; userId: string; planRow: PlanRowFull | null; now: Date }): RcDecision {
     const { event: e, userId, planRow, now } = a
     const key = `${RC_KEY_PREFIX}${e.id}`
+    const eventMs = eventTime(e)
     const exp = typeof e.expiration_at_ms === 'number' ? new Date(e.expiration_at_ms) : null
     const ended = !exp || exp.getTime() <= now.getTime()
+    const isTied = !!planRow && tied(planRow)
+    // 이 줄이 이미 반영한 알림보다 옛 알림이면 종류와 상관없이 버린다(늦게 온 환불·결제 문제·해지가 갱신을 지우지 않게)
+    if (planRow?.rc_event_ms != null && eventMs < planRow.rc_event_ms) return { kind: 'ignore', reason: 'stale_event' }
+    // 끝나는 날이 지금 줄보다 앞인 「끝」 알림 = 그 뒤에 이미 갱신됐다
+    const renewedLater = isTied && !!planRow!.expires_at && !!exp && new Date(planRow!.expires_at).getTime() > exp.getTime()
 
     if (e.type === 'PRODUCT_CHANGE') return { kind: 'ignore', reason: 'product_change_pending' }
 
     if (e.type === 'EXPIRATION') {
-        if (planRow && tied(planRow) && planRow.expires_at && exp && new Date(planRow.expires_at).getTime() > exp.getTime()) {
-            return { kind: 'ignore', reason: 'renewed_later' }
-        }
-        return endRevenueCatPlan({ userId, planRow, key, now })
+        if (renewedLater) return { kind: 'ignore', reason: 'renewed_later' }
+        return endRevenueCatPlan({ userId, planRow, key, now, eventMs })
     }
 
     if (!SYNC_TYPES.has(e.type)) return { kind: 'ignore', reason: `unhandled:${e.type}` }
 
-    const refund = e.type === 'CANCELLATION' && e.cancel_reason === 'CUSTOMER_SUPPORT'
-    if (refund || ((e.type === 'CANCELLATION' || e.type === 'BILLING_ISSUE') && ended)) {
-        return endRevenueCatPlan({ userId, planRow, key, now })
+    if (e.type === 'CANCELLATION' && e.cancel_reason === 'CUSTOMER_SUPPORT') {
+        // 환불: 지금 기간의 거래일 때만 닫는다. 지난 기간 거래의 환불은 기록만
+        if (isTied && planRow!.rc_transaction_id && e.transaction_id && planRow!.rc_transaction_id !== e.transaction_id) {
+            return { kind: 'ignore', reason: 'refund_old_period' }
+        }
+        return endRevenueCatPlan({ userId, planRow, key, now, eventMs })
+    }
+    if ((e.type === 'CANCELLATION' || e.type === 'BILLING_ISSUE') && ended) {
+        if (renewedLater) return { kind: 'ignore', reason: 'renewed_later' }
+        return endRevenueCatPlan({ userId, planRow, key, now, eventMs })
     }
 
     const plan = planFromRevenueCat(e)
@@ -155,18 +173,29 @@ export function decideRevenueCatEvent(a: { event: RcEvent; userId: string; planR
     if (ended) return { kind: 'ignore', reason: 'expired' }
 
     const cur = resolvePlan(planRow, now)
-    if (planRow && tied(planRow)) {
-        // 앱이 연 요금제면 레비뉴캣을 따른다. 같은 요금제는 더 늦은 날로만 바꾼다
-        if (cur.plan === plan && cur.expiresAt && new Date(cur.expiresAt).getTime() >= exp!.getTime()) {
-            return { kind: 'ignore', reason: 'already_applied' }
-        }
+    if (isTied) {
+        // 앱이 연 요금제면 레비뉴캣을 따른다. 끝나는 날이 늘지 않으면 버린다(더 높은 요금제로 올리기만 예외)
+        const notLater = !!cur.expiresAt && new Date(cur.expiresAt).getTime() >= exp!.getTime()
+        const upgrade = cur.plan !== 'free' && planRank(plan) > planRank(cur.plan)
+        if (cur.plan !== 'free' && notLater && !upgrade) return { kind: 'ignore', reason: 'already_applied' }
     } else if (cur.plan !== 'free' && planRank(cur.plan) > planRank(plan)) {
         return { kind: 'ignore', reason: 'higher_plan_active' }
     } else if (cur.plan === plan && (!cur.expiresAt || new Date(cur.expiresAt).getTime() >= exp!.getTime())) {
         return { kind: 'ignore', reason: 'already_longer' }
     }
 
-    return { kind: 'set', reason: e.type, plan: { user_id: userId, plan, started_at: iso(now), expires_at: iso(exp!), last_order_id: key, updated_at: iso(now) } }
+    return {
+        kind: 'set', reason: e.type,
+        plan: {
+            user_id: userId, plan, started_at: iso(now), expires_at: iso(exp!), last_order_id: key, updated_at: iso(now),
+            rc_event_ms: eventMs, rc_transaction_id: e.transaction_id ?? null,
+        },
+    }
+}
+
+/** 알림 시각. 없으면 산 시각, 그것도 없으면 0 */
+export function eventTime(e: RcEvent): number {
+    return typeof e.event_timestamp_ms === 'number' ? e.event_timestamp_ms : typeof e.purchased_at_ms === 'number' ? e.purchased_at_ms : 0
 }
 
 function tied(row: PlanRowFull): boolean {
@@ -174,9 +203,33 @@ function tied(row: PlanRowFull): boolean {
 }
 
 /** 레비뉴캣이 연 요금제면 무료로 닫는다. 웹(토스) 요금제는 건드리지 않는다 */
-export function endRevenueCatPlan(a: { userId: string; planRow: PlanRowFull | null; key: string; now: Date }): RcDecision {
-    const { userId, planRow, key, now } = a
+export function endRevenueCatPlan(a: { userId: string; planRow: PlanRowFull | null; key: string; now: Date; eventMs: number }): RcDecision {
+    const { userId, planRow, key, now, eventMs } = a
     if (!planRow || !tied(planRow)) return { kind: 'ignore', reason: 'not_revenuecat_plan' }
     if (planRow.plan === 'free') return { kind: 'ignore', reason: 'already_free' }
-    return { kind: 'set', reason: 'end', plan: { user_id: userId, plan: 'free', started_at: iso(now), expires_at: null, last_order_id: key, updated_at: iso(now) } }
+    return {
+        kind: 'set', reason: 'end',
+        plan: {
+            user_id: userId, plan: 'free', started_at: iso(now), expires_at: null, last_order_id: key, updated_at: iso(now),
+            rc_event_ms: eventMs, rc_transaction_id: planRow.rc_transaction_id ?? null,
+        },
+    }
+}
+
+/** 저장할 알림 내용. 판단에 쓴 칸만 남긴다(이메일·속성·별칭·회원번호는 넣지 않는다. 회원번호는 따로 app_user_id 칸에) */
+const PAYLOAD_KEYS = [
+    'id', 'type', 'product_id', 'new_product_id', 'entitlement_ids', 'entitlement_id', 'period_type',
+    'purchased_at_ms', 'expiration_at_ms', 'event_timestamp_ms', 'environment', 'store', 'cancel_reason',
+    'expiration_reason', 'transaction_id', 'original_transaction_id',
+] as const
+
+export function minimalPayload(e: RcEvent): Record<string, unknown> {
+    const src = e as unknown as Record<string, unknown>
+    const out: Record<string, unknown> = {}
+    for (const k of PAYLOAD_KEYS) if (src[k] !== undefined && src[k] !== null) out[k] = src[k]
+    if (e.type === 'TRANSFER') {
+        out.transferred_from_count = (e.transferred_from ?? []).length
+        out.transferred_to_count = (e.transferred_to ?? []).length
+    }
+    return out
 }

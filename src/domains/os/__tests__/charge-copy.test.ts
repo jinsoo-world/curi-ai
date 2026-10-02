@@ -34,4 +34,10 @@ describe('요금제 화면 글자 (9,900원 / 39,000원)', () => {
         const src = readFileSync(join(process.cwd(), 'src/app/os/charge/page.tsx'), 'utf-8')
         expect(src).toContain('canBuyPlan(')
     })
+
+    it('/os/charge 는 앱 구독 중이면 단추 대신 안내를, 올리기 전에는 남은 기간 안내를 보인다', () => {
+        const src = readFileSync(join(process.cwd(), 'src/app/os/charge/page.tsx'), 'utf-8')
+        expect(src).toContain('STORE_SUBSCRIBED_MESSAGE')
+        expect(src).toContain('upgradeNotice(')
+    })
 })

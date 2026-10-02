@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { handleRevenueCatWebhook, supabaseRcStore } from '@/domains/os/revenuecat-service'
 import { isAuthorized } from '@/domains/os/revenuecat'
+import { syncRevenueCatUser } from '@/domains/os/revenuecat-sync'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,6 +23,12 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'bad_body' }, { status: 400 })
     }
 
-    const r = await handleRevenueCatWebhook({ authHeader, body, secret, store: supabaseRcStore(createAdminClient()) })
+    const store = supabaseRcStore(createAdminClient())
+    // 샌드박스(테스트플라이트·애플 심사) 구매는 REVENUECAT_ALLOW_SANDBOX=1 일 때만 요금제를 연다. 심사 기간에만 켠다
+    const allowSandbox = process.env.REVENUECAT_ALLOW_SANDBOX === '1'
+    const r = await handleRevenueCatWebhook({
+        authHeader, body, secret, store, allowSandbox,
+        syncUser: userId => syncRevenueCatUser({ userId, secret: process.env.REVENUECAT_SECRET_API_KEY, allowSandbox, store }),
+    })
     return NextResponse.json(r.body, { status: r.status })
 }

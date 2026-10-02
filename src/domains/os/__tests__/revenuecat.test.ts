@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-    isAuthorized, planFromRevenueCat, pickUserId, decideRevenueCatEvent, RC_KEY_PREFIX, type RcEvent,
+    isAuthorized, planFromRevenueCat, pickUserId, decideRevenueCatEvent, minimalPayload, RC_KEY_PREFIX, type RcEvent,
 } from '../revenuecat'
 import type { PlanRowFull } from '../revenuecat'
 
@@ -17,7 +17,7 @@ function ev(over: Partial<RcEvent> = {}): RcEvent {
         environment: 'PRODUCTION', store: 'APP_STORE', ...over,
     }
 }
-const rcRow = (plan: string, expMs: number): PlanRowFull => ({ plan, expires_at: new Date(expMs).toISOString(), last_order_id: `${RC_KEY_PREFIX}evt-0` })
+const rcRow = (plan: string, expMs: number, over: Partial<PlanRowFull> = {}): PlanRowFull => ({ plan, expires_at: new Date(expMs).toISOString(), last_order_id: `${RC_KEY_PREFIX}evt-0`, rc_event_ms: NOW_MS - DAY, rc_transaction_id: 'tx-cur', ...over })
 
 describe('os/revenuecat — 열쇠 확인', () => {
     it('Authorization 이 설정값과 똑같을 때만 통과 (길이가 달라도 안전하게)', () => {
@@ -27,6 +27,18 @@ describe('os/revenuecat — 열쇠 확인', () => {
         expect(isAuthorized(null, 'Bearer s3cret')).toBe(false)
         expect(isAuthorized('anything', '')).toBe(false)
         expect(isAuthorized('anything', undefined)).toBe(false)
+    })
+})
+
+describe('os/revenuecat — 저장할 알림 내용은 최소한만', () => {
+    it('이메일·속성·별칭·회원번호를 빼고 판단에 쓴 칸만 남긴다', () => {
+        const m = minimalPayload({ ...ev(), subscriber_attributes: { $email: { value: 'a@b.c' } }, country_code: 'KR' } as RcEvent)
+        expect(m).toEqual({
+            id: 'evt-1', type: 'INITIAL_PURCHASE', product_id: 'com.missiondriven.curiai.basic.monthly', entitlement_ids: ['basic'],
+            purchased_at_ms: NOW_MS, expiration_at_ms: NOW_MS + 31 * DAY, event_timestamp_ms: NOW_MS, environment: 'PRODUCTION', store: 'APP_STORE',
+        })
+        expect(JSON.stringify(m)).not.toContain(U)
+        expect(JSON.stringify(m)).not.toContain('a@b.c')
     })
 })
 
@@ -58,7 +70,46 @@ describe('os/revenuecat — 어느 요금제인가', () => {
 describe('os/revenuecat — 알림 종류별 판단', () => {
     it('INITIAL_PURCHASE: 끝나는 날(expiration_at_ms)까지 요금제를 연다', () => {
         const d = decideRevenueCatEvent({ event: ev(), userId: U, planRow: null, now: NOW })
-        expect(d).toMatchObject({ kind: 'set', plan: { user_id: U, plan: 'basic', expires_at: new Date(NOW_MS + 31 * DAY).toISOString(), last_order_id: 'revenuecat:evt-1' } })
+        expect(d).toMatchObject({ kind: 'set', plan: { user_id: U, plan: 'basic', expires_at: new Date(NOW_MS + 31 * DAY).toISOString(), last_order_id: 'revenuecat:evt-1', rc_event_ms: NOW_MS } })
+    })
+
+    it('지금 기간의 거래 번호와 알림 시각을 같이 남긴다', () => {
+        const d = decideRevenueCatEvent({ event: ev({ transaction_id: 'tx-9' }), userId: U, planRow: null, now: NOW })
+        expect(d).toMatchObject({ kind: 'set', plan: { rc_transaction_id: 'tx-9', rc_event_ms: NOW_MS } })
+    })
+
+    it('이미 반영한 알림보다 옛 시각의 알림은 무엇이든 버린다 (늦게 온 환불·결제 문제·해지)', () => {
+        const row = rcRow('basic', NOW_MS + 31 * DAY, { rc_event_ms: NOW_MS })
+        for (const over of [
+            { type: 'CANCELLATION', cancel_reason: 'CUSTOMER_SUPPORT', transaction_id: 'tx-cur' },
+            { type: 'BILLING_ISSUE', expiration_at_ms: NOW_MS - DAY },
+            { type: 'EXPIRATION', expiration_at_ms: NOW_MS - DAY },
+            { type: 'RENEWAL', expiration_at_ms: NOW_MS + 90 * DAY },
+        ]) {
+            const d = decideRevenueCatEvent({ event: ev({ ...over, event_timestamp_ms: NOW_MS - 1000 }), userId: U, planRow: row, now: NOW })
+            expect(d, over.type).toMatchObject({ kind: 'ignore', reason: 'stale_event' })
+        }
+    })
+
+    it('늦게 온 CANCELLATION·BILLING_ISSUE(이미 지난 끝나는 날)는 그 뒤 갱신된 요금제를 지우지 않는다', () => {
+        const row = rcRow('basic', NOW_MS + 30 * DAY)
+        expect(decideRevenueCatEvent({ event: ev({ type: 'BILLING_ISSUE', expiration_at_ms: NOW_MS - DAY }), userId: U, planRow: row, now: NOW })).toMatchObject({ kind: 'ignore', reason: 'renewed_later' })
+        expect(decideRevenueCatEvent({ event: ev({ type: 'CANCELLATION', cancel_reason: 'UNSUBSCRIBE', expiration_at_ms: NOW_MS - DAY }), userId: U, planRow: row, now: NOW })).toMatchObject({ kind: 'ignore', reason: 'renewed_later' })
+    })
+
+    it('환불은 지금 기간의 거래일 때만 무료로. 지난 기간 거래 환불은 지금 요금제를 두고 기록만', () => {
+        const row = rcRow('basic', NOW_MS + 30 * DAY, { rc_transaction_id: 'tx-cur' })
+        const refund = (transaction_id: string) => ev({ type: 'CANCELLATION', cancel_reason: 'CUSTOMER_SUPPORT', transaction_id })
+        expect(decideRevenueCatEvent({ event: refund('tx-old'), userId: U, planRow: row, now: NOW })).toMatchObject({ kind: 'ignore', reason: 'refund_old_period' })
+        expect(decideRevenueCatEvent({ event: refund('tx-cur'), userId: U, planRow: row, now: NOW })).toMatchObject({ kind: 'set', plan: { plan: 'free' } })
+    })
+
+    it('레비뉴캣이 연 줄에서 끝나는 날이 늘지 않는 알림은 버린다. 단 프로로 올리기는 받는다', () => {
+        const row = rcRow('basic', NOW_MS + 31 * DAY)
+        expect(decideRevenueCatEvent({ event: ev({ type: 'RENEWAL', expiration_at_ms: NOW_MS + 31 * DAY }), userId: U, planRow: row, now: NOW }).kind).toBe('ignore')
+        expect(decideRevenueCatEvent({ event: ev({ type: 'RENEWAL', entitlement_ids: ['pro'], expiration_at_ms: NOW_MS + 31 * DAY }), userId: U, planRow: row, now: NOW })).toMatchObject({ kind: 'set', plan: { plan: 'pro' } })
+        // 프로 줄에 베이직이 같은 날짜로 오면 버린다
+        expect(decideRevenueCatEvent({ event: ev({ type: 'RENEWAL', expiration_at_ms: NOW_MS + 31 * DAY }), userId: U, planRow: rcRow('pro', NOW_MS + 31 * DAY), now: NOW }).kind).toBe('ignore')
     })
 
     it('RENEWAL: 다음 끝나는 날로 바꾼다', () => {
@@ -82,7 +133,7 @@ describe('os/revenuecat — 알림 종류별 판단', () => {
     })
 
     it('CANCELLATION(환불, CUSTOMER_SUPPORT): 바로 무료로', () => {
-        const d = decideRevenueCatEvent({ event: ev({ type: 'CANCELLATION', cancel_reason: 'CUSTOMER_SUPPORT', expiration_at_ms: NOW_MS + 31 * DAY }), userId: U, planRow: rcRow('basic', NOW_MS + 31 * DAY), now: NOW })
+        const d = decideRevenueCatEvent({ event: ev({ type: 'CANCELLATION', cancel_reason: 'CUSTOMER_SUPPORT', transaction_id: 'tx-cur', expiration_at_ms: NOW_MS + 31 * DAY }), userId: U, planRow: rcRow('basic', NOW_MS + 31 * DAY), now: NOW })
         expect(d).toMatchObject({ kind: 'set', plan: { plan: 'free', expires_at: null } })
     })
 

@@ -16,7 +16,7 @@ import { createClient } from '@/lib/supabase/client'
 import { resolveReturnPath, chargeReturnUrls, OS_RETURN_KEY } from '@/domains/credit/charge-flow'
 import { CLOVER_PACKS } from '@/domains/credit/packs'
 import { startCloverCharge } from '@/domains/credit/charge-client'
-import { PLANS, canBuyPlan, isPaidPlanId, planPriceText, type PlanId } from '@/domains/os/plan'
+import { PLANS, STORE_SUBSCRIBED_MESSAGE, canBuyPlan, isPaidPlanId, planPriceText, upgradeNotice, type PlanId, type PlanSource } from '@/domains/os/plan'
 import { PLAN_REASON, REFUND_NOTICE, cloverBalanceNote } from '@/domains/os/usage-config'
 import { startPlanPayment, planReturnUrls, fetchMyPlan } from './plan-client'
 import { useOsTeam } from '@/components/os/OsShell'
@@ -30,6 +30,7 @@ export default function OsChargePage() {
     const [sessionChecked, setSessionChecked] = useState(false)
     const [balance, setBalance] = useState<number | null>(null)
     const [myPlan, setMyPlan] = useState<PlanId>('free')
+    const [planSrc, setPlanSrc] = useState<PlanSource | null>(null)
     const [paying, setPaying] = useState<PlanId | null>(null)
     // 클로버 충전 (부가). 처음엔 가장 큰 묶음을 골라 둔다
     const [selectedPack, setSelectedPack] = useState(CLOVER_PACKS[CLOVER_PACKS.length - 1].id)
@@ -60,12 +61,13 @@ export default function OsChargePage() {
             setUserId(uid)
             setSessionChecked(true)
             if (uid) {
-                const [{ data: row }, plan] = await Promise.all([
+                const [{ data: row }, mine] = await Promise.all([
                     supabase.from('users').select('clovers').eq('id', uid).single(),
                     fetchMyPlan(),
                 ])
                 setBalance(row?.clovers ?? 0)
-                setMyPlan(plan)
+                setMyPlan(mine.plan)
+                setPlanSrc(mine.source)
             }
         })
     }, [])
@@ -103,6 +105,8 @@ export default function OsChargePage() {
     // 손님 = 팀 API 가 손님이라 하거나, 세션을 봤는데 로그인이 없을 때.
     // 가상 리더 사용시험(0929): 가격을 못 보면 가입도 안 한다 → 손님에게도 요금제 카드를 그대로 보여 주고, 결제 단추만 로그인으로 보낸다(handlePay)
     const isGuest = !demo && ((!teamLoading && guest) || (sessionChecked && !userId))
+    // 앱(레비뉴캣)에서 연 유료 요금제가 살아 있다
+    const storeSub = !isGuest && myPlan !== 'free' && planSrc === 'revenuecat'
 
     return (
         <div className="osc">
@@ -141,6 +145,9 @@ export default function OsChargePage() {
                             </div>
                         )}
 
+                        {/* 앱에서 구독 중이면 웹 결제 단추 대신 안내 (이중 결제 막기, 서버도 409 로 막는다) */}
+                        {storeSub && <p className="osc-error" role="status">{STORE_SUBSCRIBED_MESSAGE}</p>}
+
                         <div className="osc-plans">
                             {PLANS.map(p => {
                                 const current = !isGuest && myPlan === p.id   // 손님에겐 「지금 요금제」 표시를 안 붙인다
@@ -160,7 +167,10 @@ export default function OsChargePage() {
                                         <ul className="osc-perks">
                                             {p.perks.map(perk => <li key={perk}>{perk}</li>)}
                                         </ul>
-                                        {canBuyPlan(isGuest ? 'free' : myPlan, p.id) && (
+                                        {canBuyPlan(isGuest ? 'free' : myPlan, p.id) && !storeSub && upgradeNotice(myPlan, p.id) && (
+                                            <p className="osc-precheck">{upgradeNotice(myPlan, p.id)}</p>
+                                        )}
+                                        {canBuyPlan(isGuest ? 'free' : myPlan, p.id) && !storeSub && (
                                             <button type="button" className={`osc-pay${p.recommended ? '' : ' ghost'}`} onClick={() => handlePay(p.id)} disabled={paying !== null || packPaying || !planAgreed}>
                                                 {paying === p.id ? '결제창을 여는 중…' : `${planPriceText(p)}으로 시작하기`}
                                             </button>

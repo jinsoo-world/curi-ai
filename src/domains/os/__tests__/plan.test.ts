@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
     PLANS, getPlan, isPaidPlanId, planLimits, makePlanOrderId, planIdFromOrderId, planOrderName, resolvePlan,
-    planRank, canBuyPlan, planPriceText, nextPlanPeriod, planAdFree, planEntitlement,
+    planRank, canBuyPlan, planPriceText, nextPlanPeriod, planAdFree, planEntitlement, planExpiresAt, upgradeNotice, STORE_SUBSCRIBED_MESSAGE,
 } from '../plan'
 
 describe('os/plan — 요금제 표 (무료 / 베이직 9,900 / 프로 39,000, 대표 결정 1002)', () => {
@@ -106,5 +106,30 @@ describe('os/plan — 요금제 표 (무료 / 베이직 9,900 / 프로 39,000, �
         expect(planEntitlement({ plan: 'pro', expires_at: '2026-11-02T00:00:00Z', last_order_id: 'plan_pro_1_x' }, now).source).toBe('toss')
         // 기한 지난 줄은 무료, 광고 있음
         expect(planEntitlement({ plan: 'pro', expires_at: '2026-09-02T00:00:00Z', last_order_id: 'plan_pro_1_x' }, now)).toMatchObject({ plan: 'free', adFree: false, source: null })
+    })
+
+    it('한 달 뒤는 그 달 마지막 날로 맞춘다 (서울 기준, 1/31 → 2/28, 윤년 2/29)', () => {
+        const kst = (s: string) => new Date(`${s}+09:00`)
+        expect(planExpiresAt(kst('2027-01-31T08:00:00')).toISOString()).toBe(kst('2027-02-28T08:00:00').toISOString())
+        expect(planExpiresAt(kst('2028-01-31T08:00:00')).toISOString()).toBe(kst('2028-02-29T08:00:00').toISOString())
+        expect(planExpiresAt(kst('2026-03-31T23:30:00')).toISOString()).toBe(kst('2026-04-30T23:30:00').toISOString())
+        expect(planExpiresAt(kst('2026-12-31T00:10:00')).toISOString()).toBe(kst('2027-01-31T00:10:00').toISOString())
+        expect(planExpiresAt(new Date('2026-10-02T00:00:00Z')).toISOString()).toBe('2026-11-02T00:00:00.000Z')
+    })
+
+    it('앱(레비뉴캣)에서 구독 중이면 웹 결제를 막는다', () => {
+        const now = new Date('2026-10-02T00:00:00Z')
+        expect(nextPlanPeriod({ plan: 'basic', expires_at: '2026-10-20T00:00:00Z', last_order_id: 'revenuecat:evt-1' }, 'pro', now)).toEqual({ ok: false, reason: 'store' })
+        // 앱 구독이 끝났으면 웹에서 살 수 있다
+        expect(nextPlanPeriod({ plan: 'basic', expires_at: '2026-09-20T00:00:00Z', last_order_id: 'revenuecat:evt-1' }, 'pro', now).ok).toBe(true)
+        expect(STORE_SUBSCRIBED_MESSAGE).toBe('앱에서 구독 중이에요. 앱스토어나 플레이스토어에서 먼저 해지해 주세요')
+    })
+
+    it('올리기 전 안내 한 줄: 베이직 → 프로일 때만', () => {
+        expect(upgradeNotice('basic', 'pro')).toBe('지금 쓰는 베이직의 남은 기간은 프로로 바뀌면서 사라져요')
+        expect(upgradeNotice('free', 'pro')).toBeNull()
+        expect(upgradeNotice('free', 'basic')).toBeNull()
+        expect(upgradeNotice('pro', 'pro')).toBeNull()
+        expect(upgradeNotice('basic', 'pro')).not.toMatch(/[—·]/)
     })
 })

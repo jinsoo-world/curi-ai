@@ -17,6 +17,7 @@ function fakeDb(opts: {
     storage?: Record<string, string[]>   // `${bucket}/${folder}` → 파일 이름들
     authDeleteError?: { message: string; status?: number } | null
     payout?: Record<string, unknown> | null   // creator_payout_profiles 한 줄
+    planRow?: Record<string, unknown> | null  // user_plans 한 줄
 } = {}) {
     const calls: Call[] = []
     const failFor = (t: string) => opts.fail?.[t] ?? null
@@ -37,6 +38,7 @@ function fakeDb(opts: {
                 calls.push({ kind: 'select', target: table })
                 if (table === 'creator_profiles') return { data: opts.creatorId === null ? null : { id: opts.creatorId ?? 'cp1' }, error: null }
                 if (table === 'creator_payout_profiles') return { data: opts.payout ?? null, error: null }
+                if (table === 'user_plans') return { data: opts.planRow ?? null, error: null }
                 return { data: null, error: null }
             },
             then: (resolve: any) => {
@@ -205,6 +207,29 @@ describe('deleteAccount', () => {
         const r = await deleteAccount(db, user)
         expect(r).toEqual({ ok: true })
         expect(calls.some(c => c.kind === 'auth-delete')).toBe(true)
+    })
+
+    it('결제기록 표가 없다는 PostgREST 코드(PGRST205)도 건너뛰고 계속한다', async () => {
+        const { db, calls } = fakeDb({ fail: { revenuecat_events: { code: 'PGRST205' }, payments: { code: 'PGRST205' } } })
+        expect(await deleteAccount(db, user)).toEqual({ ok: true })
+        expect(calls.some(c => c.kind === 'auth-delete')).toBe(true)
+    })
+
+    it('앱 구독 알림 기록: 회원번호와 알림 내용을 비우고, 회원번호로만 남은 줄(모르는 회원)도 비운다', async () => {
+        const { db, calls } = fakeDb()
+        await deleteAccount(db, user)
+        const ups = calls.filter(c => c.kind === 'update' && c.target === 'revenuecat_events')
+        expect(ups.length).toBe(2)
+        for (const u of ups) expect(u.detail).toMatchObject({ user_id: null, app_user_id: null, payload: null, deleted_user_ref: anonymousRef('u1') })
+    })
+
+    it('앱(레비뉴캣)에서 구독 중이면 탈퇴는 하되 hasStoreSubscription 을 알려 준다 (스토어 구독은 저절로 안 멈춘다)', async () => {
+        const rc = fakeDb({ planRow: { plan: 'basic', expires_at: '2099-01-01T00:00:00Z', last_order_id: 'revenuecat:evt-1' } })
+        expect(await deleteAccount(rc.db, user)).toEqual({ ok: true, hasStoreSubscription: true })
+        const toss = fakeDb({ planRow: { plan: 'basic', expires_at: '2099-01-01T00:00:00Z', last_order_id: 'plan_basic_1_x' } })
+        expect(await deleteAccount(toss.db, user)).toEqual({ ok: true })
+        const ended = fakeDb({ planRow: { plan: 'basic', expires_at: '2020-01-01T00:00:00Z', last_order_id: 'revenuecat:evt-1' } })
+        expect(await deleteAccount(ended.db, user)).toEqual({ ok: true })
     })
 
     it('그 밖의 DB 오류는 로그인 계정을 지우기 전에 중단', async () => {

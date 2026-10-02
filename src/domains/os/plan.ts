@@ -142,11 +142,20 @@ export function planPriceText(p: Pick<Plan, 'price'>): string {
     return p.price === 0 ? '0원' : `월 ${p.price.toLocaleString('ko-KR')}원`
 }
 
-/** 첫 달 결제 뒤 요금제가 끝나는 날 = 한 달 뒤 */
+const KST_OFFSET_MS = 9 * 3_600_000
+
+/**
+ * 한 달 뒤 = 서울 날짜로 다음 달 같은 날, 같은 시각. 그런 날이 없으면 그 달 마지막 날
+ * (1/31 → 2/28, 윤년 2/29 · 3/31 → 4/30). 그냥 setMonth 를 쓰면 1/31 → 3/3 으로 넘어갔다.
+ */
 export function planExpiresAt(from: Date): Date {
-    const d = new Date(from.getTime())
-    d.setMonth(d.getMonth() + 1)
-    return d
+    const k = new Date(from.getTime() + KST_OFFSET_MS)
+    const y = k.getUTCFullYear()
+    const m = k.getUTCMonth() + 1
+    const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
+    const day = Math.min(k.getUTCDate(), lastDay)
+    const out = Date.UTC(y, m, day, k.getUTCHours(), k.getUTCMinutes(), k.getUTCSeconds(), k.getUTCMilliseconds())
+    return new Date(out - KST_OFFSET_MS)
 }
 
 export interface PlanRow {
@@ -165,7 +174,16 @@ export function resolvePlan(row: PlanRow | null | undefined, now: Date = new Dat
     return { plan: row.plan, expiresAt: null }
 }
 
-export type PlanPeriod = { ok: true; expiresAt: Date } | { ok: false; reason: 'downgrade' | 'already' }
+export type PlanPeriod = { ok: true; expiresAt: Date } | { ok: false; reason: 'downgrade' | 'already' | 'store' }
+
+/** 앱(아이폰·안드로이드)에서 구독 중인 사람이 웹 결제를 하려 할 때 (이중 결제 막기) */
+export const STORE_SUBSCRIBED_MESSAGE = '앱에서 구독 중이에요. 앱스토어나 플레이스토어에서 먼저 해지해 주세요'
+
+/** 올리기 전 안내 한 줄. 남은 기간을 돌려주지 않으므로 유료 → 더 높은 유료일 때만 보인다 */
+export function upgradeNotice(current: PlanId, target: PlanId): string | null {
+    if (current === 'free' || !canBuyPlan(current, target)) return null
+    return `지금 쓰는 ${getPlan(current)!.name}의 남은 기간은 ${getPlan(target)!.name}로 바뀌면서 사라져요`
+}
 
 /**
  * 요금제 한 달 결제 뒤 끝나는 날.
@@ -174,9 +192,11 @@ export type PlanPeriod = { ok: true; expiresAt: Date } | { ok: false; reason: 'd
  *   더 위 요금제로 올린다 → 오늘부터 한 달 (아래 요금제 남은 날은 계산해 돌려주지 않는다. 일할 계산 없음)
  *   더 아래 요금제로 내린다 → 막는다(돈 받기 전에)
  *   기한 없는 같은 요금제(직접 넣어 준 것)를 또 산다 → 막는다
+ *   앱(레비뉴캣)에서 연 요금제가 살아 있다 → 막는다(스토어에서 먼저 해지)
  */
-export function nextPlanPeriod(row: PlanRow | null | undefined, target: PaidPlanId, now: Date = new Date()): PlanPeriod {
+export function nextPlanPeriod(row: (PlanRow & { last_order_id?: string | null }) | null | undefined, target: PaidPlanId, now: Date = new Date()): PlanPeriod {
     const cur = resolvePlan(row, now)
+    if (cur.plan !== 'free' && planSource(row?.last_order_id) === 'revenuecat') return { ok: false, reason: 'store' }
     if (cur.plan !== 'free' && planRank(cur.plan) > planRank(target)) return { ok: false, reason: 'downgrade' }
     if (cur.plan === target && !cur.expiresAt) return { ok: false, reason: 'already' }
     if (cur.plan === target && cur.expiresAt) return { ok: true, expiresAt: planExpiresAt(new Date(cur.expiresAt)) }
