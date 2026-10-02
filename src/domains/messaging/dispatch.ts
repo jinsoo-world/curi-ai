@@ -36,6 +36,7 @@ export async function dispatch(input: DispatchInput, deps: DispatchDeps): Promis
         userId: message.userId,
         channel: message.channel,
         toHint: toHint(message.to),
+        toHash: message.toHash ?? null,
         subject: message.subject ?? null,
         permissionRequestId: null,
     }

@@ -1,6 +1,6 @@
 // 이메일 드라이버 — AWS SES(v2). 열쇠 넷이 없으면 준비 안 됨(관문이 blocked 로 기록만 한다).
 
-import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2'
+import { SESv2Client, SendEmailCommand, GetSuppressedDestinationCommand } from '@aws-sdk/client-sesv2'
 import type { Driver, OutboundMessage, SendResult } from '../types'
 
 const REGION = process.env.SES_REGION
@@ -28,6 +28,23 @@ export function textToHtml(text: string): string {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/**
+ * SES 계정의 반송·스팸신고 명단(계정 단위 suppression list)에 있는 주소인가.
+ * 큐리어스와 같은 계정이라 큐리어스 쪽에서 반송된 주소도 여기서 잡힌다.
+ * 열쇠가 없으면 false(어차피 드라이버가 막는다). 명단에 없으면 SES 가 NotFoundException 을 준다.
+ * 그 밖의 오류(권한 없음 등)는 던진다 = 부르는 쪽이 보내지 않는다.
+ */
+export async function isSuppressedInSes(email: string): Promise<boolean> {
+    if (!emailReady()) return false
+    try {
+        await getClient().send(new GetSuppressedDestinationCommand({ EmailAddress: email }))
+        return true
+    } catch (e) {
+        if (e instanceof Error && e.name === 'NotFoundException') return false
+        throw e
+    }
+}
 
 export function createEmailDriver(): Driver {
     return {

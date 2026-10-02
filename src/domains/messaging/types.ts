@@ -11,6 +11,8 @@ export interface OutboundMessage {
     userId: string
     /** 받는 곳. 문자 = 전화번호, 이메일 = 주소. 푸시는 비움(주인의 기기 전부) */
     to?: string
+    /** 받는 주소 지문(sha256). 남에게 보낸 메일의 하루 상한을 세는 데 쓴다. 주소 자체는 기록하지 않는다 */
+    toHash?: string
     /** 푸시 제목 / 이메일 제목 */
     subject?: string
     /** 본문(글) */
@@ -55,6 +57,8 @@ export interface MessageLogEntry {
     userId: string
     channel: Channel
     toHint: string
+    /** 받는 주소 지문. 칸이 없는 DB 에서는 빼고 적는다 */
+    toHash?: string | null
     subject: string | null
     status: 'sent' | 'failed' | 'blocked'
     permissionRequestId: string | null
