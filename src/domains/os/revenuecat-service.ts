@@ -2,7 +2,7 @@
 // 판단은 revenuecat.ts(순수). 여기는 순서와 저장만. 저장소는 바꿔 끼울 수 있게 RcStore 로 받는다(시험이 쉽게).
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
-    decideRevenueCatEvent, endRevenueCatPlan, eventTime, isAuthorized, isHandledType, isUuid, minimalPayload, pickUserId, RC_KEY_PREFIX,
+    claimVerdict, decideRevenueCatEvent, endRevenueCatPlan, eventTime, isAuthorized, isHandledType, isUuid, minimalPayload, pickUserId, RC_KEY_PREFIX,
     type PlanRowFull, type RcDecision, type RcEvent, type UserPlanWrite,
 } from './revenuecat'
 
@@ -17,15 +17,22 @@ export interface RcEventRecord {
     reason: string | null
     /** 판단에 쓴 칸만 (minimalPayload) */
     payload: unknown
+    /** 이 처리가 알림을 잡은 시각. 처리 중으로 5분 넘게 멈추면 다음 재전송이 넘겨받는다 */
+    claimed_at?: string | null
 }
 
 export interface RcStore {
     userExists(userId: string): Promise<boolean>
     getPlanRow(userId: string): Promise<PlanRowFull | null>
-    /** 조건부 쓰기: 이 줄에 반영된 알림 시각(rc_event_ms)이 row.rc_event_ms 보다 새면 쓰지 않고 false */
-    savePlan(row: UserPlanWrite): Promise<boolean>
-    /** 알림을 먼저 잡는다(INSERT … ON CONFLICT DO NOTHING). 이미 있으면 false */
-    claimEvent(e: RcEventRecord): Promise<boolean>
+    /**
+     * 조건부 쓰기. expected = 판단할 때 읽은 줄(없었으면 null).
+     *   줄이 있었다 → last_order_id 가 그대로이고(그 사이 토스 결제가 없었고) 반영된 알림 시각이 이 알림보다 새지 않을 때만 고친다
+     *   줄이 없었다 → 새로 넣는다. 그 사이 누가 넣었으면 false
+     * false 면 부르는 쪽이 한 번 더 읽고 다시 판단한다
+     */
+    savePlan(row: UserPlanWrite, expected: PlanRowFull | null): Promise<boolean>
+    /** 알림을 먼저 잡는다(INSERT … ON CONFLICT DO NOTHING). 있는 줄이면 claimVerdict 로 넘겨받기·바쁨·같은 알림 */
+    claimEvent(e: RcEventRecord, now: Date): Promise<'claimed' | 'busy' | 'duplicate'>
     finishEvent(id: string, patch: Pick<RcEventRecord, 'outcome' | 'reason' | 'user_id'>): Promise<void>
     /** 처리 실패 때 잡은 것을 풀어 레비뉴캣이 다시 보내면 처리되게 */
     releaseEvent(id: string): Promise<void>
@@ -72,11 +79,14 @@ export async function handleRevenueCatWebhook(a: {
     const { store } = a
     let claimed = false
     try {
-        claimed = await store.claimEvent({
+        const c = await store.claimEvent({
             id: e.id, type: e.type, app_user_id: e.app_user_id ?? null, user_id: null, environment: e.environment ?? null,
-            event_ms: eventTime(e) || null, outcome: 'processing', reason: null, payload: minimalPayload(e),
-        })
-        if (!claimed) return { status: 200, body: { ok: true, outcome: 'duplicate' } }
+            event_ms: eventTime(e) || null, outcome: 'processing', reason: null, payload: minimalPayload(e), claimed_at: now.toISOString(),
+        }, now)
+        if (c === 'duplicate') return { status: 200, body: { ok: true, outcome: 'duplicate' } }
+        // 다른 처리가 방금 잡고 아직 끝내지 않았다 = 500 으로 돌려보내 레비뉴캣이 나중에 다시 보내게(200 이면 영영 빠진다)
+        if (c === 'busy') return { status: 500, body: { error: 'busy' } }
+        claimed = true
 
         const done = async (outcome: string, userId: string | null, reason: string | null, extra: Record<string, unknown> = {}): Promise<RcResult> => {
             await store.finishEvent(e.id, { outcome, reason, user_id: userId })
@@ -93,8 +103,8 @@ export async function handleRevenueCatWebhook(a: {
             let closed = 0
             for (const uid of from) {
                 if (!(await store.userExists(uid))) continue
-                const d = endRevenueCatPlan({ userId: uid, planRow: await store.getPlanRow(uid), key: `${RC_KEY_PREFIX}${e.id}`, now, eventMs: eventTime(e) })
-                if (d.kind === 'set' && await store.savePlan(d.plan)) closed++
+                const decide = (planRow: PlanRowFull | null) => endRevenueCatPlan({ userId: uid, planRow, key: `${RC_KEY_PREFIX}${e.id}`, now, eventMs: eventTime(e) })
+                if ((await applyOnce(store, uid, decide)).outcome === 'set') closed++
             }
             let synced = 0
             for (const uid of to) {
@@ -112,15 +122,29 @@ export async function handleRevenueCatWebhook(a: {
             return await done('unknown_user', null, null)
         }
 
-        const d: RcDecision = decideRevenueCatEvent({ event: e, userId, planRow: await store.getPlanRow(userId), now })
-        if (d.kind === 'ignore') return await done('ignored', userId, d.reason)
-        const applied = await store.savePlan(d.plan)
-        return await done(applied ? 'set' : 'stale', userId, d.reason)
+        const r = await applyOnce(store, userId, planRow => decideRevenueCatEvent({ event: e, userId, planRow, now }))
+        return await done(r.outcome, userId, r.reason)
     } catch (err) {
         console.error('[revenuecat] 처리 실패:', e.type, e.id, err instanceof Error ? err.message : err)
         if (claimed) await store.releaseEvent(e.id).catch(() => {})
         return { status: 500, body: { error: 'store_failed' } }
     }
+}
+
+type ApplyResult = { outcome: 'set' | 'stale' | 'ignored'; reason: string }
+
+/**
+ * 읽고 → 판단하고 → 조건부로 쓴다. 쓰기가 막히면(그 사이 다른 알림·토스 결제·새 줄) 한 번 더 읽고 다시 판단해 쓴다.
+ * 두 번째도 막히면 stale.
+ */
+async function applyOnce(store: RcStore, userId: string, decide: (row: PlanRowFull | null) => RcDecision): Promise<ApplyResult> {
+    for (let i = 0; i < 2; i++) {
+        const row = await store.getPlanRow(userId)
+        const d = decide(row)
+        if (d.kind === 'ignore') return { outcome: 'ignored', reason: d.reason }
+        if (await store.savePlan(d.plan, row)) return { outcome: 'set', reason: d.reason }
+    }
+    return { outcome: 'stale', reason: 'write_conflict' }
 }
 
 /** Supabase(service_role) 저장소. user_plans 는 토스와 같은 표, 알림 기록은 revenuecat_events */
@@ -138,22 +162,35 @@ export function supabaseRcStore(db: SupabaseClient): RcStore {
             must(error, 'user_plans 읽기')
             return (data as PlanRowFull | null) ?? null
         },
-        async savePlan(row) {
-            const ts = row.rc_event_ms ?? 0
-            // ① 있는 줄: 반영된 알림 시각이 비었거나 이 알림보다 옛것일 때만 고친다 (한 줄 UPDATE 라 동시에 와도 하나만 이긴다)
-            const up = await db.from('user_plans').update(row).eq('user_id', row.user_id)
-                .or(`rc_event_ms.is.null,rc_event_ms.lte.${ts}`).select('user_id')
-            must(up.error, 'user_plans 고치기')
-            if ((up.data ?? []).length > 0) return true
-            // ② 줄이 없으면 새로 넣는다. 그 사이 누가 넣었으면(충돌) 아무것도 안 하고 false
+        async savePlan(row, expected) {
+            if (expected) {
+                // 있는 줄: 읽은 때와 last_order_id 가 같고(그 사이 토스 결제 없음), 반영된 알림 시각이 비었거나 이 알림보다 옛것일 때만
+                let q = db.from('user_plans').update(row).eq('user_id', row.user_id)
+                q = expected.last_order_id == null ? q.is('last_order_id', null) : q.eq('last_order_id', expected.last_order_id)
+                const up = await q.or(`rc_event_ms.is.null,rc_event_ms.lte.${row.rc_event_ms ?? 0}`).select('user_id')
+                must(up.error, 'user_plans 고치기')
+                return (up.data ?? []).length > 0
+            }
+            // 줄이 없었다: 새로 넣는다. 그 사이 누가 넣었으면(충돌) false → 부르는 쪽이 다시 읽고 조건부 UPDATE
             const ins = await db.from('user_plans').upsert(row, { onConflict: 'user_id', ignoreDuplicates: true }).select('user_id')
             must(ins.error, 'user_plans 넣기')
             return (ins.data ?? []).length > 0
         },
-        async claimEvent(e) {
-            const { data, error } = await db.from('revenuecat_events').upsert(e, { onConflict: 'id', ignoreDuplicates: true }).select('id')
-            must(error, 'revenuecat_events 잡기')
-            return (data ?? []).length > 0
+        async claimEvent(e, now) {
+            const ins = await db.from('revenuecat_events').upsert(e, { onConflict: 'id', ignoreDuplicates: true }).select('id')
+            must(ins.error, 'revenuecat_events 잡기')
+            if ((ins.data ?? []).length > 0) return 'claimed'
+            const { data: cur, error } = await db.from('revenuecat_events').select('outcome, claimed_at').eq('id', e.id).maybeSingle()
+            must(error, 'revenuecat_events 읽기')
+            if (!cur) return 'busy' // 그 사이 풀렸다 = 다시 보내면 잡힌다
+            const v = claimVerdict(cur as { outcome: string; claimed_at: string | null }, now)
+            if (v !== 'takeover') return v
+            // 멈춘 처리를 넘겨받는다. 둘이 동시에 넘겨받지 않게 읽은 claimed_at 이 그대로일 때만
+            let q = db.from('revenuecat_events').update({ claimed_at: now.toISOString() }).eq('id', e.id).eq('outcome', 'processing')
+            q = cur.claimed_at == null ? q.is('claimed_at', null) : q.eq('claimed_at', cur.claimed_at)
+            const take = await q.select('id')
+            must(take.error, 'revenuecat_events 넘겨받기')
+            return (take.data ?? []).length > 0 ? 'claimed' : 'busy'
         },
         async finishEvent(id, patch) {
             const { error } = await db.from('revenuecat_events').update(patch).eq('id', id)

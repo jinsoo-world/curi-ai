@@ -20,13 +20,15 @@ vi.mock('@/lib/supabase/admin', () => ({
         },
     }),
 }))
+const hdr: { auth: string | null } = { auth: null }
+vi.mock('next/headers', () => ({ headers: async () => ({ get: (k: string) => (k.toLowerCase() === 'authorization' ? hdr.auth : null) }) }))
 vi.mock('@/domains/os/revenuecat-sync', () => ({ maybeSyncRevenueCat: (...a: unknown[]) => (sync as (...x: unknown[]) => Promise<boolean>)(...a) }))
 
 import { GET } from '../entitlement/route'
 
 const U = '11111111-1111-4111-8111-111111111111'
 
-beforeEach(() => { state.user = null; state.rows = []; state.error = null; sync.mockReset(); sync.mockResolvedValue(false) })
+beforeEach(() => { hdr.auth = null; state.user = null; state.rows = []; state.error = null; sync.mockReset(); sync.mockResolvedValue(false) })
 
 describe('GET /api/billing/entitlement', () => {
     it('로그인 표시가 없으면 401 (저장 금지 머리글 포함)', async () => {
@@ -57,8 +59,15 @@ describe('GET /api/billing/entitlement', () => {
         sync.mockResolvedValue(true)
         const body = await (await GET()).json()
         expect(sync).toHaveBeenCalledTimes(1)
-        expect((sync.mock.calls[0] as unknown[])[0]).toMatchObject({ userId: U })
+        expect((sync.mock.calls[0] as unknown[])[0]).toMatchObject({ userId: U, fromApp: false, planRow: null })
         expect(body).toMatchObject({ plan: 'pro', adFree: true })
+    })
+
+    it('앱(Bearer)에서 온 요청이면 fromApp=true 로 넘긴다', async () => {
+        state.user = { id: U }
+        hdr.auth = 'Bearer abc.def.ghi'
+        await GET()
+        expect((sync.mock.calls[0] as unknown[])[0]).toMatchObject({ userId: U, fromApp: true })
     })
 
     it('표가 없으면(42P01, PGRST205) 무료', async () => {

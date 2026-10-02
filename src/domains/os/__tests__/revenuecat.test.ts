@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-    isAuthorized, planFromRevenueCat, pickUserId, decideRevenueCatEvent, minimalPayload, RC_KEY_PREFIX, type RcEvent,
+    isAuthorized, planFromRevenueCat, pickUserId, decideRevenueCatEvent, minimalPayload, claimVerdict, CLAIM_STALE_MS, RC_KEY_PREFIX, type RcEvent,
 } from '../revenuecat'
 import type { PlanRowFull } from '../revenuecat'
 
@@ -30,6 +30,19 @@ describe('os/revenuecat — 열쇠 확인', () => {
     })
 })
 
+describe('os/revenuecat — 알림 잡기 판정 (claimVerdict)', () => {
+    const MIN = 60_000
+    it('처리 중으로 5분 넘게 멈춘 알림은 넘겨받고, 5분 안이면 바쁨(500 으로 다시 받기), 끝난 알림은 같은 알림', () => {
+        expect(claimVerdict({ outcome: 'processing', claimed_at: new Date(NOW_MS - 6 * MIN).toISOString() }, NOW)).toBe('takeover')
+        expect(claimVerdict({ outcome: 'processing', claimed_at: null }, NOW)).toBe('takeover')
+        expect(claimVerdict({ outcome: 'processing', claimed_at: new Date(NOW_MS - 4 * MIN).toISOString() }, NOW)).toBe('busy')
+        for (const outcome of ['set', 'ignored', 'stale', 'unknown_user']) {
+            expect(claimVerdict({ outcome, claimed_at: new Date(NOW_MS - 60 * MIN).toISOString() }, NOW)).toBe('duplicate')
+        }
+        expect(CLAIM_STALE_MS).toBe(5 * MIN)
+    })
+})
+
 describe('os/revenuecat — 저장할 알림 내용은 최소한만', () => {
     it('이메일·속성·별칭·회원번호를 빼고 판단에 쓴 칸만 남긴다', () => {
         const m = minimalPayload({ ...ev(), subscriber_attributes: { $email: { value: 'a@b.c' } }, country_code: 'KR' } as RcEvent)
@@ -47,6 +60,12 @@ describe('os/revenuecat — 어느 요금제인가', () => {
         expect(planFromRevenueCat(ev({ entitlement_ids: ['basic'] }))).toBe('basic')
         expect(planFromRevenueCat(ev({ entitlement_ids: ['basic', 'pro'] }))).toBe('pro')
         expect(planFromRevenueCat(ev({ entitlement_ids: null, entitlement_id: 'pro' }))).toBe('pro')
+    })
+
+    it('권한 이름이 constructor·toString 같은 객체 기본 이름이어도 요금제로 착각하지 않는다', () => {
+        for (const name of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+            expect(planFromRevenueCat(ev({ entitlement_ids: [name], product_id: 'x' }))).toBeNull()
+        }
     })
 
     it('권한이 없으면 상품 이름으로 (아이폰·안드로이드, 안드로이드는 상품:기본요금 꼴도)', () => {

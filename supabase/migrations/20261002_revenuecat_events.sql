@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS public.revenuecat_events (
   reason            TEXT,
   payload           JSONB,                               -- 판단에 쓴 칸만(이메일·속성·별칭 없음). 탈퇴하면 NULL
   deleted_user_ref  TEXT,                                -- 탈퇴한 회원의 익명 표식
+  claimed_at        TIMESTAMPTZ,                         -- 처리가 알림을 잡은 시각. processing 으로 5분 넘게 멈추면 다음 재전송이 넘겨받는다
   received_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -36,6 +37,7 @@ CREATE INDEX IF NOT EXISTS revenuecat_events_deleted_user_ref_idx ON public.reve
 COMMENT ON TABLE  public.revenuecat_events         IS '레비뉴캣(앱 안 구독) 웹훅 알림. 같은 id 는 한 번만 처리. 서버 전용';
 -- 이미 만든 뒤 다시 실행해도 칸이 맞게
 ALTER TABLE public.revenuecat_events ADD COLUMN IF NOT EXISTS event_ms BIGINT;
+ALTER TABLE public.revenuecat_events ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS revenuecat_events_app_user_idx ON public.revenuecat_events (app_user_id) WHERE app_user_id IS NOT NULL;
 
 COMMENT ON COLUMN public.revenuecat_events.outcome IS 'processing = 잡고 처리 중 / set = user_plans 를 고침 / stale = 더 새 알림이 먼저 씀 / ignored = 바꿀 것 없음 / unknown_user = 회원을 못 찾음';

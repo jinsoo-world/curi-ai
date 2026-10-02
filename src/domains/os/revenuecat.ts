@@ -17,6 +17,22 @@ export const RC_KEY_PREFIX = 'revenuecat:'
 /** 레비뉴캣 권한(entitlement) 이름 = 우리 요금제 이름 */
 export const RC_ENTITLEMENTS: Record<string, PaidPlanId> = { basic: 'basic', pro: 'pro' }
 
+/** 권한 이름 → 요금제. constructor·toString 같은 객체 기본 이름은 요금제가 아니다 */
+export function entitlementPlan(name: unknown): PaidPlanId | null {
+    return typeof name === 'string' && Object.hasOwn(RC_ENTITLEMENTS, name) ? RC_ENTITLEMENTS[name] : null
+}
+
+/** 처리 중(processing)으로 이보다 오래 멈춘 알림은 다음 재전송이 넘겨받는다 */
+export const CLAIM_STALE_MS = 5 * 60_000
+
+/** 이미 있는 알림 줄을 보고: 넘겨받기 / 바쁨(500 으로 다시 받기) / 같은 알림(200) */
+export function claimVerdict(existing: { outcome: string; claimed_at?: string | null }, now: Date): 'takeover' | 'busy' | 'duplicate' {
+    if (existing.outcome !== 'processing') return 'duplicate'
+    const at = existing.claimed_at ? Date.parse(existing.claimed_at) : NaN
+    if (!Number.isFinite(at) || now.getTime() - at > CLAIM_STALE_MS) return 'takeover'
+    return 'busy'
+}
+
 /** 스토어 상품 이름 (권한 이름이 안 왔을 때 쓴다) */
 export const IAP_PRODUCTS: { plan: PaidPlanId; ios: string; android: string }[] = [
     { plan: 'basic', ios: 'com.missiondriven.curiai.basic.monthly', android: 'basic_monthly' },
@@ -89,7 +105,7 @@ function planFromProduct(productId: string | null | undefined): PaidPlanId | nul
 /** 이 알림이 어느 요금제인가. 권한 이름 먼저(둘 다면 높은 쪽), 없으면 상품 이름 */
 export function planFromRevenueCat(e: RcEvent): PaidPlanId | null {
     const ents = [...(e.entitlement_ids ?? []), ...(e.entitlement_id ? [e.entitlement_id] : [])]
-    const fromEnt = ents.map(x => RC_ENTITLEMENTS[x]).filter((x): x is PaidPlanId => !!x)
+    const fromEnt = ents.map(entitlementPlan).filter((x): x is PaidPlanId => !!x)
     if (fromEnt.length) return fromEnt.sort((a, b) => planRank(b) - planRank(a))[0]
     return planFromProduct(e.product_id)
 }

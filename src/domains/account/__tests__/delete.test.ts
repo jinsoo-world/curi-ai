@@ -31,6 +31,7 @@ function fakeDb(opts: {
             upsert: (p: unknown) => { mode = 'upsert'; patch = p; return q },
             lt: (col: string, v: unknown) => { patch = { lt: [col, v] }; return q },
             eq: () => q,
+            ilike: (col: string, v: unknown) => { calls.push({ kind: 'select', target: `${table}:ilike`, detail: [col, v] }); return q },
             in: () => q,
             order: () => q,
             limit: () => q,
@@ -221,6 +222,8 @@ describe('deleteAccount', () => {
         const ups = calls.filter(c => c.kind === 'update' && c.target === 'revenuecat_events')
         expect(ups.length).toBe(2)
         for (const u of ups) expect(u.detail).toMatchObject({ user_id: null, app_user_id: null, payload: null, deleted_user_ref: anonymousRef('u1') })
+        // 회원번호 칸은 대소문자를 가리지 않고 찾는다 (레비뉴캣이 대문자로 보낼 수 있다)
+        expect(calls.find(c => c.target === 'revenuecat_events:ilike')?.detail).toEqual(['app_user_id', 'u1'])
     })
 
     it('앱(레비뉴캣)에서 구독 중이면 탈퇴는 하되 hasStoreSubscription 을 알려 준다 (스토어 구독은 저절로 안 멈춘다)', async () => {

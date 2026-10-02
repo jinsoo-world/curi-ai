@@ -190,7 +190,9 @@ export async function deleteAccount(
             : { user_id: null, deleted_user_ref: ref }
         const keys = table === 'revenuecat_events' ? ['user_id', 'app_user_id'] : ['user_id']
         for (const col of keys) {
-            const { error } = await db.from(table).update(patch).eq(col, uid)
+            // 회원번호 칸(app_user_id)은 레비뉴캣이 대문자로 보낼 수 있어 대소문자를 가리지 않는다
+            const q = db.from(table).update(patch)
+            const { error } = await (col === 'app_user_id' ? q.ilike(col, uid) : q.eq(col, uid))
             if (error && !(error.code && TABLE_MISSING.has(error.code))) fail(`${table} 분리`, error)
         }
     }

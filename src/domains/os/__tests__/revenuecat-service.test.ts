@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { handleRevenueCatWebhook, type RcStore, type RcEventRecord } from '../revenuecat-service'
-import type { PlanRowFull, RcEvent, UserPlanWrite } from '../revenuecat'
+import { claimVerdict, type PlanRowFull, type RcEvent, type UserPlanWrite } from '../revenuecat'
 
 const NOW = new Date('2026-10-02T00:00:00Z')
 const NOW_MS = NOW.getTime()
@@ -9,25 +9,36 @@ const U = '11111111-1111-4111-8111-111111111111'
 const V = '33333333-3333-4333-8333-333333333333'
 const AUTH = 'Bearer rc-webhook-secret'
 
-/** DB 와 같은 규칙의 메모리 저장소: 알림은 먼저 잡고(claim), 요금제 쓰기는 더 새 알림일 때만 */
+/** DB 와 같은 규칙의 메모리 저장소: 알림은 먼저 잡고(claim), 요금제 쓰기는 읽은 줄 그대로일 때만(낙관적 확인) + 더 새 알림일 때만 */
 function memStore(users: string[] = [U, V]) {
     const plans = new Map<string, PlanRowFull>()
     const events = new Map<string, RcEventRecord>()
     let fail = false
     const store: RcStore = {
         async userExists(id) { return users.includes(id) },
-        async getPlanRow(id) { return plans.get(id) ?? null },
-        async savePlan(w: UserPlanWrite) {
+        async getPlanRow(id) { const r = plans.get(id); return r ? { ...r } : null },
+        async savePlan(w: UserPlanWrite, expected: PlanRowFull | null) {
             if (fail) throw new Error('db down')
             const cur = plans.get(w.user_id)
-            if (cur && cur.rc_event_ms != null && w.rc_event_ms != null && cur.rc_event_ms > w.rc_event_ms) return false
+            if (!expected) {
+                if (cur) return false            // 넣으려는데 그 사이 줄이 생겼다(충돌)
+            } else {
+                if (!cur || cur.last_order_id !== expected.last_order_id) return false   // 그 사이 다른 결제가 썼다
+                if (cur.rc_event_ms != null && w.rc_event_ms != null && cur.rc_event_ms > w.rc_event_ms) return false
+            }
             plans.set(w.user_id, { plan: w.plan, expires_at: w.expires_at, last_order_id: w.last_order_id, rc_event_ms: w.rc_event_ms ?? null, rc_transaction_id: w.rc_transaction_id ?? null })
             return true
         },
-        async claimEvent(e) {
-            if (events.has(e.id)) return false
-            events.set(e.id, e)
-            return true
+        async claimEvent(e, now) {
+            const cur = events.get(e.id)
+            if (cur) {
+                const v = claimVerdict(cur, now)
+                if (v !== 'takeover') return v
+                events.set(e.id, { ...cur, claimed_at: now.toISOString() })
+                return 'claimed'
+            }
+            events.set(e.id, { ...e, claimed_at: now.toISOString() })
+            return 'claimed'
         },
         async finishEvent(id, patch) { events.set(id, { ...events.get(id)!, ...patch }) },
         async releaseEvent(id) { events.delete(id) },
@@ -197,10 +208,12 @@ describe('POST /api/billing/revenuecat/webhook 속', () => {
         expect(anon.body).toMatchObject({ outcome: 'unknown_user' })
     })
 
-    it('동시에 온 같은 알림: 먼저 잡은 쪽만 처리한다', async () => {
+    it('동시에 온 같은 알림: 먼저 잡은 쪽만 처리하고, 늦은 쪽은 500(바쁨)으로 돌려보낸다. 끝난 뒤 다시 오면 duplicate', async () => {
         const { store } = memStore()
         const [a, b] = await Promise.all([run(store, { event: ev() }), run(store, { event: ev() })])
-        expect([a.body.outcome, b.body.outcome].sort()).toEqual(['duplicate', 'set'])
+        expect([a.status, b.status].sort()).toEqual([200, 500])
+        expect([a, b].find(r => r.status === 200)!.body.outcome).toBe('set')
+        expect((await run(store, { event: ev() })).body.outcome).toBe('duplicate')
     })
 
     it('조건부 쓰기에서 더 새 알림이 먼저 써 두었으면 stale 로 끝난다', async () => {
@@ -210,7 +223,8 @@ describe('POST /api/billing/revenuecat/webhook 속', () => {
         const orig = m.store.getPlanRow
         m.store.getPlanRow = async (id) => { const r = await orig(id); m.plans.set(U, { ...m.plans.get(U)!, rc_event_ms: NOW_MS + 999 }); return r }
         const r = await run(m.store, { event: ev({ id: 'evt-2', type: 'RENEWAL', transaction_id: 'tx-2', expiration_at_ms: NOW_MS + 62 * DAY, event_timestamp_ms: NOW_MS + 1 }) })
-        expect(r.body).toMatchObject({ outcome: 'stale' })
+        // 다시 읽고 다시 판단하니 더 새 알림이 이미 있다 = 옛 알림으로 버린다
+        expect(r.body).toMatchObject({ outcome: 'ignored', reason: 'stale_event' })
         expect(m.plans.get(U)!.expires_at).toBe(new Date(NOW_MS + 31 * DAY).toISOString())
     })
 
@@ -219,5 +233,51 @@ describe('POST /api/billing/revenuecat/webhook 속', () => {
         m.breakDb()
         expect((await run(m.store, { event: ev() })).status).toBe(500)
         expect(m.events.has('evt-1')).toBe(false)
+    })
+
+    it('처리 중으로 멈춘 알림(5분 넘음)은 다음 재전송이 넘겨받아 처리한다', async () => {
+        const m = memStore()
+        m.events.set('evt-1', { id: 'evt-1', type: 'INITIAL_PURCHASE', app_user_id: U, user_id: null, environment: 'PRODUCTION', event_ms: NOW_MS, outcome: 'processing', reason: null, payload: {}, claimed_at: new Date(NOW_MS - 6 * 60_000).toISOString() })
+        const r = await run(m.store, { event: ev() })
+        expect(r).toMatchObject({ status: 200, body: { outcome: 'set' } })
+        expect(m.plans.get(U)?.plan).toBe('basic')
+    })
+
+    it('다른 처리가 방금 잡은 알림(5분 안)은 500 으로 돌려보내 레비뉴캣이 다시 보내게', async () => {
+        const m = memStore()
+        m.events.set('evt-1', { id: 'evt-1', type: 'INITIAL_PURCHASE', app_user_id: U, user_id: null, environment: 'PRODUCTION', event_ms: NOW_MS, outcome: 'processing', reason: null, payload: {}, claimed_at: new Date(NOW_MS - 60_000).toISOString() })
+        const r = await run(m.store, { event: ev() })
+        expect(r.status).toBe(500)
+        expect(r.body).toMatchObject({ error: 'busy' })
+        expect(m.events.get('evt-1')?.outcome).toBe('processing')
+    })
+
+    it('읽은 뒤 웹(토스)에서 프로를 사면, 앱 알림이 그 결제를 덮지 않는다 (낙관적 확인 → 다시 판단)', async () => {
+        const m = memStore()
+        await run(m.store, { event: ev() })
+        const orig = m.store.getPlanRow
+        let first = true
+        m.store.getPlanRow = async (id) => {
+            const r = await orig(id)
+            if (first) { first = false; m.plans.set(U, { plan: 'pro', expires_at: new Date(NOW_MS + 20 * DAY).toISOString(), last_order_id: 'plan_pro_1_x', rc_event_ms: NOW_MS, rc_transaction_id: 'tx-1' }) }
+            return r
+        }
+        const r = await run(m.store, { event: ev({ id: 'evt-2', type: 'RENEWAL', transaction_id: 'tx-2', expiration_at_ms: NOW_MS + 62 * DAY, event_timestamp_ms: NOW_MS + 1 }) })
+        expect(r.body).toMatchObject({ outcome: 'ignored', reason: 'higher_plan_active' })
+        expect(m.plans.get(U)).toMatchObject({ plan: 'pro', last_order_id: 'plan_pro_1_x' })
+    })
+
+    it('줄이 없어 넣으려는데 그 사이 다른 알림이 넣었으면, 한 번 더 읽고 다시 쓴다', async () => {
+        const m = memStore()
+        const orig = m.store.getPlanRow
+        let first = true
+        m.store.getPlanRow = async (id) => {
+            const r = await orig(id)
+            if (first) { first = false; m.plans.set(U, { plan: 'basic', expires_at: new Date(NOW_MS + 5 * DAY).toISOString(), last_order_id: 'revenuecat:evt-0', rc_event_ms: NOW_MS - DAY, rc_transaction_id: 'tx-0' }) }
+            return r
+        }
+        const r = await run(m.store, { event: ev() })
+        expect(r.body).toMatchObject({ outcome: 'set' })
+        expect(m.plans.get(U)).toMatchObject({ last_order_id: 'revenuecat:evt-1', expires_at: new Date(NOW_MS + 31 * DAY).toISOString() })
     })
 })
