@@ -153,7 +153,8 @@ describe('deleteAccount', () => {
         expect(creator).toBeLessThan(authDel)
         expect(authDel).toBe(calls.length - 1)
         // 결제·크레딧·구독은 지우지 않고 분리만 한다
-        for (const t of ['credit_transactions', 'payments', 'subscriptions']) {
+        // 앱 안 구독 알림 기록(revenuecat_events)도 결제 기록이라 5년 보관, 사람만 뗀다 (1002)
+        for (const t of ['credit_transactions', 'payments', 'subscriptions', 'revenuecat_events']) {
             expect(calls.some(c => c.kind === 'delete' && c.target === t)).toBe(false)
             const up = calls.find(c => c.kind === 'update' && c.target === t)
             expect(up?.detail).toMatchObject({ user_id: null, deleted_user_ref: anonymousRef('u1') })

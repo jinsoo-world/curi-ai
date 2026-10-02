@@ -1,11 +1,12 @@
-// domains/os — 요금제 표 (무료 / 베이직 월 29,000원 / 프로 월 99,000원)
+// domains/os — 요금제 표 (무료 / 베이직 월 9,900원 / 프로 월 39,000원)
 //
 // 대표 확정 0923: 「클로버를 충전하는 개념이고, 산 날동안 1년 쓸 수 있다 이런 문구는 빼.
-//                  구독은 무료(기본) / 29,000원 / 99,000원 이렇게 2개 요금제로 해.」
+//                  구독은 무료(기본) / 유료 2개 요금제로 해.」
+// 대표 결정 1002: 가격을 베이직 29,000 → 9,900원, 프로 99,000 → 39,000원으로 내린다. 요금제 이름(id)은 그대로.
 // 같은 날 확정: 내 팀 봇과의 대화는 클로버 0(무료). 한도는 대표 결정 0928 로 월간 하나(숫자는 usage-config.ts).
 //
 // ⚠️ 각 요금제의 혜택 구성(봇 수·한도 배수·perks)은 부대표 추천(미확정). 대표 검수 필요.
-//    가격 3개(0 / 29,000 / 99,000)만 대표 확정.
+//    가격 3개(0 / 9,900 / 39,000)만 대표 확정(1002).
 // 순수 값·계산만 여기. DB·브라우저는 만지지 않는다(시험이 쉽게).
 import { MONTHLY_LIMITS } from './usage-config'
 
@@ -24,6 +25,8 @@ export interface Plan {
     maxBots: number | null
     /** 화면에 한 줄씩 보이는 혜택. 답변 횟수는 쓰지 않는다(대표 지시 0929, 한도 숫자는 limitMonth 에만) */
     perks: string[]
+    /** 광고 없음. 앱은 이 값이 false 일 때만 광고를 띄운다 (대표 결정 1002: 9,900원 베이직부터 광고 없음) */
+    adFree: boolean
     /** 「가장 많이 골라요」 배지 */
     recommended?: boolean
 }
@@ -35,6 +38,7 @@ export const PLANS: Plan[] = [
         price: 0,
         limitMonth: MONTHLY_LIMITS.free,
         maxBots: 4,
+        adFree: false,
         perks: [
             '봇 4개까지',
             '가볍게 써 보기',
@@ -44,13 +48,15 @@ export const PLANS: Plan[] = [
     {
         id: 'basic',
         name: '베이직',
-        price: 29000,
+        price: 9900,
         limitMonth: MONTHLY_LIMITS.basic,
         maxBots: 10,
+        adFree: true,
         recommended: true,
         perks: [
             '봇 10개까지',
             '넉넉하게 쓰기',
+            '광고 없이 쓰기',
             '외부 연결 (노션, 슬랙, 카카오톡, 인스타그램, 큐리어스)',
             '아침 루틴',
             '그룹 대화',
@@ -59,12 +65,14 @@ export const PLANS: Plan[] = [
     {
         id: 'pro',
         name: '프로',
-        price: 99000,
+        price: 39000,
         limitMonth: MONTHLY_LIMITS.pro,
         maxBots: null,
+        adFree: true,
         perks: [
             '봇 무제한',
             '가장 넉넉하게 쓰기',
+            '광고 없이 쓰기',
             '사진 첨부 10장',
             '봇끼리 전달',
             '우선 처리',
@@ -97,6 +105,11 @@ export function planLimits(id: PlanId): PlanLimits {
     return { limitMonth: p.limitMonth, maxBots: p.maxBots }
 }
 
+/** 광고 없는 요금제인가. 모르는 값은 무료(광고 있음) */
+export function planAdFree(id: PlanId): boolean {
+    return (getPlan(id) ?? PLANS[0]).adFree
+}
+
 /** 요금제 주문번호. 접두사 plan_<요금제>_ 로 클로버 주문(clover_…)과 갈린다 */
 export function makePlanOrderId(planId: PaidPlanId, now: number = Date.now(), random: string = Math.random().toString(36).slice(2, 8)): string {
     return `plan_${planId}_${now}_${random}`
@@ -112,6 +125,21 @@ export function planIdFromOrderId(orderId: string | null | undefined): PaidPlanI
 /** 토스 결제창·영수증에 보이는 이름 */
 export function planOrderName(planId: PaidPlanId): string {
     return `큐리AI ${getPlan(planId)!.name} 1개월`
+}
+
+/** 요금제 순서. 무료 < 베이직 < 프로 (PLANS 표 순서) */
+export function planRank(id: PlanId): number {
+    return PLANS.findIndex(p => p.id === id)
+}
+
+/** 지금 요금제에서 이 요금제를 결제할 수 있나. 위로만 올린다(내리면 남은 기간을 날린다) */
+export function canBuyPlan(current: PlanId, target: PlanId): boolean {
+    return isPaidPlanId(target) && planRank(target) > planRank(current)
+}
+
+/** 화면 가격 글자. 무료 「0원」, 유료 「월 9,900원」 */
+export function planPriceText(p: Pick<Plan, 'price'>): string {
+    return p.price === 0 ? '0원' : `월 ${p.price.toLocaleString('ko-KR')}원`
 }
 
 /** 첫 달 결제 뒤 요금제가 끝나는 날 = 한 달 뒤 */
@@ -135,4 +163,52 @@ export function resolvePlan(row: PlanRow | null | undefined, now: Date = new Dat
         return { plan: row.plan, expiresAt: exp.toISOString() }
     }
     return { plan: row.plan, expiresAt: null }
+}
+
+export type PlanPeriod = { ok: true; expiresAt: Date } | { ok: false; reason: 'downgrade' | 'already' }
+
+/**
+ * 요금제 한 달 결제 뒤 끝나는 날.
+ *   처음이거나 기한이 지났다 → 오늘부터 한 달
+ *   같은 요금제를 남은 기간 중에 또 산다 → 남은 기간 끝에 한 달을 붙인다(두 번 사도 날리지 않는다)
+ *   더 위 요금제로 올린다 → 오늘부터 한 달 (아래 요금제 남은 날은 계산해 돌려주지 않는다. 일할 계산 없음)
+ *   더 아래 요금제로 내린다 → 막는다(돈 받기 전에)
+ *   기한 없는 같은 요금제(직접 넣어 준 것)를 또 산다 → 막는다
+ */
+export function nextPlanPeriod(row: PlanRow | null | undefined, target: PaidPlanId, now: Date = new Date()): PlanPeriod {
+    const cur = resolvePlan(row, now)
+    if (cur.plan !== 'free' && planRank(cur.plan) > planRank(target)) return { ok: false, reason: 'downgrade' }
+    if (cur.plan === target && !cur.expiresAt) return { ok: false, reason: 'already' }
+    if (cur.plan === target && cur.expiresAt) return { ok: true, expiresAt: planExpiresAt(new Date(cur.expiresAt)) }
+    return { ok: true, expiresAt: planExpiresAt(now) }
+}
+
+/** 요금제가 어디서 열렸나. last_order_id 접두사로 안다 (토스 plan_… / 앱 레비뉴캣 revenuecat:…) */
+export type PlanSource = 'toss' | 'revenuecat'
+
+export function planSource(lastOrderId: string | null | undefined): PlanSource | null {
+    if (!lastOrderId) return null
+    if (lastOrderId.startsWith('plan_')) return 'toss'
+    if (lastOrderId.startsWith('revenuecat:')) return 'revenuecat'
+    return null
+}
+
+export interface PlanEntitlement {
+    plan: PlanId
+    expiresAt: string | null
+    adFree: boolean
+    source: PlanSource | null
+    limits: PlanLimits
+}
+
+/** 앱·웹이 같은 답을 보도록 지금 권한 한 묶음 (/api/billing/entitlement) */
+export function planEntitlement(row: (PlanRow & { last_order_id?: string | null }) | null | undefined, now: Date = new Date()): PlanEntitlement {
+    const r = resolvePlan(row, now)
+    return {
+        plan: r.plan,
+        expiresAt: r.expiresAt,
+        adFree: planAdFree(r.plan),
+        source: r.plan === 'free' ? null : planSource(row?.last_order_id),
+        limits: planLimits(r.plan),
+    }
 }

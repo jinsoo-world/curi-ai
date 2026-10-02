@@ -152,7 +152,7 @@ export default function AppSidebar() {
 
                 {/* 오른쪽 — 남은 개수와 나 */}
                 <div className="app-top-right">
-                    {/* 「충전」 → 「요금제」 (대표 확정 0923: 구독 무료/29,000/99,000 + 클로버 충전은 부가) */}
+                    {/* 「충전」 → 「요금제」 (대표 확정 0923: 구독 무료/9,900/39,000(가격 1002) + 클로버 충전은 부가) */}
                     <Link data-guide="guide-clover" href="/os/charge" className="app-top-credit" aria-label="요금제 보기">
                         <CloverIcon size={34} />
                         <CloverCount 값={잔액} />

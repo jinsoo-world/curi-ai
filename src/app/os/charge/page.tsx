@@ -1,8 +1,9 @@
 'use client'
 
-// 봇 팀 요금제 (/os/charge) = 무료 / 베이직 월 29,000원 / 프로 월 99,000원.
+// 봇 팀 요금제 (/os/charge) = 무료 / 베이직 월 9,900원 / 프로 월 39,000원 (가격 대표 결정 1002).
 // 대표 확정 0923 「클로버를 충전하는 개념이고, 산 날동안 1년 쓸 수 있다 이런 문구는 빼.
-//                 구독은 무료(기본) / 29,000원 / 99,000원 이렇게 2개 요금제로 해.」
+//                 구독은 무료(기본) / 유료 2개 요금제로 해.」
+// 결제 단추는 지금보다 위 요금제에만 보인다(canBuyPlan). 프로를 쓰는 중에 베이직을 사면 남은 프로 기간을 날린다.
 // 대화는 월간 한도로 세고 클로버를 쓰지 않는다(서버 /api/chat 기준). 클로버는 사진 같은 부가 기능에 쓴다. 클로버 충전은 아래 부가 섹션.
 // 대표 지시 0923 「클로버 충전은 워딩 바꿔. 사진이 주력이 아니다 이제」 → 사진 N장·1년·할인 배지 표기는 뺐다.
 // ⚠️ 카드 안 혜택 구성은 부대표 추천(미확정), 대표 검수 필요 — 값은 src/domains/os/plan.ts PLANS.
@@ -15,7 +16,7 @@ import { createClient } from '@/lib/supabase/client'
 import { resolveReturnPath, chargeReturnUrls, OS_RETURN_KEY } from '@/domains/credit/charge-flow'
 import { CLOVER_PACKS } from '@/domains/credit/packs'
 import { startCloverCharge } from '@/domains/credit/charge-client'
-import { PLANS, isPaidPlanId, type PlanId } from '@/domains/os/plan'
+import { PLANS, canBuyPlan, isPaidPlanId, planPriceText, type PlanId } from '@/domains/os/plan'
 import { PLAN_REASON, REFUND_NOTICE, cloverBalanceNote } from '@/domains/os/usage-config'
 import { startPlanPayment, planReturnUrls, fetchMyPlan } from './plan-client'
 import { useOsTeam } from '@/components/os/OsShell'
@@ -149,7 +150,7 @@ export default function OsChargePage() {
                                             <div>
                                                 <div className="osc-plan-name">{p.name}{p.id === 'free' && <span className="osc-plan-tag">기본</span>}</div>
                                                 <div className="osc-plan-price">
-                                                    {p.price === 0 ? '0원' : <>월 {p.price.toLocaleString()}원</>}
+                                                    {planPriceText(p)}
                                                 </div>
                                             </div>
                                             {current && <span className="osc-badge now">지금 쓰는 중</span>}
@@ -159,9 +160,9 @@ export default function OsChargePage() {
                                         <ul className="osc-perks">
                                             {p.perks.map(perk => <li key={perk}>{perk}</li>)}
                                         </ul>
-                                        {isPaidPlanId(p.id) && !current && (
+                                        {canBuyPlan(isGuest ? 'free' : myPlan, p.id) && (
                                             <button type="button" className={`osc-pay${p.recommended ? '' : ' ghost'}`} onClick={() => handlePay(p.id)} disabled={paying !== null || packPaying || !planAgreed}>
-                                                {paying === p.id ? '결제창을 여는 중…' : `월 ${p.price.toLocaleString()}원으로 시작하기`}
+                                                {paying === p.id ? '결제창을 여는 중…' : `${planPriceText(p)}으로 시작하기`}
                                             </button>
                                         )}
                                     </section>

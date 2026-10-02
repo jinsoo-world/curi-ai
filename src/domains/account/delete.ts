@@ -84,7 +84,7 @@ const MENTOR_DELETES = [
 ]
 
 /** 5년 보관하는 표: 지우지 않고 사람과의 연결만 끊는다 */
-const RETAINED_TABLES = ['credit_transactions', 'payments', 'subscriptions']
+const RETAINED_TABLES = ['credit_transactions', 'payments', 'subscriptions', 'revenuecat_events']
 
 /** 보관함으로 옮기는 정산 정보 칸 (retained_payout_profiles 와 같아야 한다) */
 const PAYOUT_COLUMNS = [
