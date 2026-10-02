@@ -360,6 +360,10 @@ export default function LoginPage() {
                         취소/환불정책
                     </Link>
                     <span aria-hidden="true" style={{ color: '#d1d5db' }}>ㅣ</span>
+                    <Link href="/support" style={{ color: '#6b7280', textDecoration: 'none' }}>
+                        고객센터
+                    </Link>
+                    <span aria-hidden="true" style={{ color: '#d1d5db' }}>ㅣ</span>
                     <Link
                         href="/en"
                         lang="en"

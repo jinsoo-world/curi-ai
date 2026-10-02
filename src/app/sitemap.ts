@@ -67,6 +67,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             changeFrequency: 'yearly',
             priority: 0.3,
         },
+        {
+            url: `${baseUrl}/support`,
+            lastModified: new Date(),
+            changeFrequency: 'monthly',
+            priority: 0.4,
+        },
     ]
 
     // 동적 페이지: 공개된 멘토 프로필 (커스텀 핸들)

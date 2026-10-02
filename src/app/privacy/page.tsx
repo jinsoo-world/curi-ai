@@ -241,6 +241,7 @@ export default function PrivacyPage() {
                             </tbody>
                         </table>
 
+                        <p>문의 기록은 답변과 분쟁 처리를 위해 3년 보관 후 파기합니다.</p>
                         <p>
                             ③ 개인정보 수집 및 이용에 대한 동의를 거부할 권리가 있으며, 필수 정보에 대한 동의 거부 시 서비스 이용이 제한됩니다.
                         </p>
@@ -417,7 +418,7 @@ export default function PrivacyPage() {
                                     </tr>
                                     <tr>
                                         <td style={{ ...tdStyle, fontWeight: 600, border: 'none' }}>이메일</td>
-                                        <td style={{ ...tdStyle, border: 'none' }}>jin@mission-driven.kr</td>
+                                        <td style={{ ...tdStyle, border: 'none' }}>curious@mission-driven.kr</td>
                                     </tr>
                                     <tr>
                                         <td style={{ ...tdStyle, fontWeight: 600, border: 'none' }}>회사명</td>
@@ -440,7 +441,7 @@ export default function PrivacyPage() {
                                 본 개인정보처리방침은 2026년 3월 12일부터 시행됩니다.
                             </p>
                             <p style={{ margin: 0, fontSize: 14, color: '#9ca3af' }}>
-                                문의: <strong style={{ color: '#6b7280' }}>jin@mission-driven.kr</strong>
+                                문의: <strong style={{ color: '#6b7280' }}>curious@mission-driven.kr</strong>
                             </p>
                         </div>
 
