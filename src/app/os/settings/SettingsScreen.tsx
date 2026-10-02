@@ -23,7 +23,7 @@ import InstallPrompt from '@/components/pwa/InstallPrompt'
 import SnsLinkCard from '@/components/os/SnsLinkCard'
 import DeleteAccountSection from '@/components/account/DeleteAccountSection'
 import { BlockedBotsCard } from '@/components/os/ReportBlock'
-import { CLOVER_AUTO_KEY, CLOVER_OVERAGE_ENABLED, OVERAGE_COPY, readCloverAuto } from '@/domains/os/usage-config'
+import { CLOVER_AUTO_KEY, CLOVER_OVERAGE_ENABLED, OVERAGE_COPY, cloverChats, readCloverAuto } from '@/domains/os/usage-config'
 
 /** 1:1 문의 창구 (환불 안내, 사업자 정보와 같은 메일) */
 const CONTACT_EMAIL = 'curious@mission-driven.kr'
@@ -388,15 +388,16 @@ function UsageTab() {
                     <div className="os-set-text"><b>{t('plan.current')}</b></div>
                     <span className="os-set-value">{usage.kind === 'ok' ? planNameL(locale, usage.data.plan) : t('plan.free')}</span>
                 </div>
-                {usage.kind === 'ok' && (
+                {/* 클로버 판매 끝(대표 결정 1002): 클로버는 「모아 둔 대화 N번」으로 보이고, 0번이면 이 줄과 이어 쓰기 칸을 안 그린다 */}
+                {usage.kind === 'ok' && cloverChats(clover) > 0 && (
                     <div className="os-set-line">
                         <div className="os-set-text"><b>{t('clover.label')}</b><div className="os-set-hint">{t('clover.sub')}</div></div>
                         <span className="os-set-value" style={isLowClover(clover) ? { color: 'var(--os-경고)' } : undefined}>
-                            {clover === null ? t('clover.counting') : t('clover.balance', { n: withComma(clover) })}
+                            {t('clover.balance', { n: withComma(cloverChats(clover)) })}
                         </span>
                     </div>
                 )}
-                {CLOVER_OVERAGE_ENABLED && usage.kind === 'ok' && (
+                {CLOVER_OVERAGE_ENABLED && usage.kind === 'ok' && cloverChats(clover) > 0 && (
                     <label className="os-set-line" style={{ cursor: 'pointer' }}>
                         <div className="os-set-text"><b>{OVERAGE_COPY.autoSetting}</b></div>
                         <input type="checkbox" checked={cloverAuto} onChange={e => 이어쓰기바꾸기(e.target.checked)} style={{ width: 22, height: 22 }} />
@@ -404,9 +405,6 @@ function UsageTab() {
                 )}
                 <div className="os-set-actions">
                     <Link href="/os/charge?from=/os/settings" className="os-btn primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>{t('plan.manage')}</Link>
-                    {usage.kind === 'ok' && (
-                        <Link href="/os/charge?from=/os/settings" className="os-btn" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>{t('clover.charge')}</Link>
-                    )}
                 </div>
             </div>
         </>

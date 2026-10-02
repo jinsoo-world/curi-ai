@@ -4,8 +4,9 @@
 // 대표 확정 0923 「클로버를 충전하는 개념이고, 산 날동안 1년 쓸 수 있다 이런 문구는 빼.
 //                 구독은 무료(기본) / 유료 2개 요금제로 해.」
 // 결제 단추는 지금보다 위 요금제에만 보인다(canBuyPlan). 프로를 쓰는 중에 베이직을 사면 남은 프로 기간을 날린다.
-// 대화는 월간 한도로 세고 클로버를 쓰지 않는다(서버 /api/chat 기준). 클로버는 사진 같은 부가 기능에 쓴다. 클로버 충전은 아래 부가 섹션.
-// 대표 지시 0923 「클로버 충전은 워딩 바꿔. 사진이 주력이 아니다 이제」 → 사진 N장·1년·할인 배지 표기는 뺐다.
+// 대화는 월간 한도로 센다(서버 /api/chat 기준). 한도를 다 쓰면 가진 클로버로 이어 쓴다.
+// 대표 결정 1002 「웹 요금도 이거에 맞게 수정해줘. 클로버는 없애구.」 → 클로버 충전 칸은 뺐다. 파는 것은 월 요금제뿐.
+// 이미 가진 클로버는 「모아 둔 대화 N번」으로 보이고, 하나도 없으면 안 보인다. 새 클로버 주문은 서버(/api/credits/charge)도 막는다.
 // ⚠️ 카드 안 혜택 구성은 부대표 추천(미확정), 대표 검수 필요 — 값은 src/domains/os/plan.ts PLANS.
 // 손님 = 4060 강사, 작가, 크리에이터. 글자 17px 이상, 단추 52px 이상, 색은 [data-theme="os"] 토큰만.
 // 어디서 왔는지(?from=/os/chat/…)를 기억해 「돌아가기」와 결제 뒤 도착지로 쓴다.
@@ -13,11 +14,9 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { resolveReturnPath, chargeReturnUrls, OS_RETURN_KEY } from '@/domains/credit/charge-flow'
-import { CLOVER_PACKS } from '@/domains/credit/packs'
-import { startCloverCharge } from '@/domains/credit/charge-client'
+import { resolveReturnPath, OS_RETURN_KEY } from '@/domains/credit/charge-flow'
 import { PLANS, STORE_SUBSCRIBED_MESSAGE, canBuyPlan, isPaidPlanId, planPriceText, upgradeNotice, type PlanId, type PlanSource } from '@/domains/os/plan'
-import { PLAN_REASON, REFUND_NOTICE, cloverBalanceNote } from '@/domains/os/usage-config'
+import { PLAN_REASON, REFUND_NOTICE, cloverBalanceNote, cloverChatsText } from '@/domains/os/usage-config'
 import { startPlanPayment, planReturnUrls, fetchMyPlan } from './plan-client'
 import { useOsTeam } from '@/components/os/OsShell'
 import CloverIcon from '@/components/ui/CloverIcon'
@@ -32,18 +31,14 @@ export default function OsChargePage() {
     const [myPlan, setMyPlan] = useState<PlanId>('free')
     const [planSrc, setPlanSrc] = useState<PlanSource | null>(null)
     const [paying, setPaying] = useState<PlanId | null>(null)
-    // 클로버 충전 (부가). 처음엔 가장 큰 묶음을 골라 둔다
-    const [selectedPack, setSelectedPack] = useState(CLOVER_PACKS[CLOVER_PACKS.length - 1].id)
-    const [packPaying, setPackPaying] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
-    // 결제 단추 앞 필수 확인 (청약철회 안내). 요금제와 클로버를 따로 받는다. 체크 전에는 결제 단추가 안 눌린다
+    // 결제 단추 앞 필수 확인 (청약철회 안내). 체크 전에는 결제 단추가 안 눌린다
     const [planAgreed, setPlanAgreed] = useState(!REFUND_NOTICE.agree)
-    const [packAgreed, setPackAgreed] = useState(!REFUND_NOTICE.agree)
     const [returnTo, setReturnTo] = useState('/os')
     // 시연 모드 (/os/charge?demo=1) = 로그인 없이 요금제 카드를 볼 수 있게 (OsShell 의 ?demo=1 과 같은 규칙). 결제 단추는 로그인으로 보낸다
     const [demo, setDemo] = useState(false)
 
-    // 세션 한 번 읽고 → ①어디서 왔는지 기억 ②클로버 잔량 ③지금 요금제. (effect 본문에서 바로 setState 하지 않는다 = 린트 규칙)
+    // 세션 한 번 읽고 → ①어디서 왔는지 기억 ②클로버 잔량(모아 둔 대화) ③지금 요금제. (effect 본문에서 바로 setState 하지 않는다 = 린트 규칙)
     useEffect(() => {
         const supabase = createClient()
         supabase.auth.getSession().then(async ({ data }) => {
@@ -87,21 +82,6 @@ export default function OsChargePage() {
         }
     }
 
-    const pack = CLOVER_PACKS.find(p => p.id === selectedPack) ?? CLOVER_PACKS[0]
-    const handlePackPay = async () => {
-        if (!userId) { router.push(loginHref); return }
-        setPackPaying(true)
-        setErrorMsg(null)
-        try {
-            // 주문번호 clover_… 로 나가서 done 페이지가 클로버 지급 쪽으로 가른다(요금제 plan_… 과 섞이지 않는다)
-            const urls = chargeReturnUrls(window.location.origin, '/os/charge/done', '/os/charge', pack.id)
-            await startCloverCharge({ userId, pack, ...urls })
-        } catch (error) {
-            setErrorMsg(error instanceof Error ? error.message : '결제를 시작하지 못했어요.')
-            setPackPaying(false)
-        }
-    }
-
     // 손님 = 팀 API 가 손님이라 하거나, 세션을 봤는데 로그인이 없을 때.
     // 가상 리더 사용시험(0929): 가격을 못 보면 가입도 안 한다 → 손님에게도 요금제 카드를 그대로 보여 주고, 결제 단추만 로그인으로 보낸다(handlePay)
     const isGuest = !demo && ((!teamLoading && guest) || (sessionChecked && !userId))
@@ -122,11 +102,11 @@ export default function OsChargePage() {
                     </div>
                 )}
                 <>
-                        {balance !== null && (
+                        {cloverChatsText(balance) && (
                             <div className="osc-balance">
                                 <div className="osc-balance-row">
-                                    <span className="osc-balance-label">지금 가진 클로버</span>
-                                    <span className="osc-balance-num"><CloverIcon size={24} />{balance.toLocaleString()}개</span>
+                                    <span className="osc-balance-label">모아 둔 대화</span>
+                                    <span className="osc-balance-num"><CloverIcon size={24} />{cloverChatsText(balance)}</span>
                                 </div>
                                 <p className="osc-balance-sub">{cloverBalanceNote()}</p>
                             </div>
@@ -171,7 +151,7 @@ export default function OsChargePage() {
                                             <p className="osc-precheck">{upgradeNotice(myPlan, p.id)}</p>
                                         )}
                                         {canBuyPlan(isGuest ? 'free' : myPlan, p.id) && !storeSub && (
-                                            <button type="button" className={`osc-pay${p.recommended ? '' : ' ghost'}`} onClick={() => handlePay(p.id)} disabled={paying !== null || packPaying || !planAgreed}>
+                                            <button type="button" className={`osc-pay${p.recommended ? '' : ' ghost'}`} onClick={() => handlePay(p.id)} disabled={paying !== null || !planAgreed}>
                                                 {paying === p.id ? '결제창을 여는 중…' : `${planPriceText(p)}으로 시작하기`}
                                             </button>
                                         )}
@@ -184,35 +164,6 @@ export default function OsChargePage() {
 
                         <p className="osc-note">정기 결제는 준비 중이에요. 지금은 첫 달만 결제돼요.</p>
 
-                        {/* 클로버 충전 (부가). 사진 N장·산 날부터 1년·할인 배지는 화면에서 뺐다(대표 지시 0923). 값은 0915 확정 그대로 */}
-                        <section className="osc-clover" aria-label="클로버 충전">
-                            <h2 className="osc-h2">클로버 충전</h2>
-                            <p className="osc-p">클로버는 사진 만들기 같은 부가 기능에 써요. 대화는 클로버를 쓰지 않아요.</p>
-                            <div className="osc-packs" role="radiogroup" aria-label="충전 상품">
-                                {CLOVER_PACKS.map(p => (
-                                    <button
-                                        key={p.id}
-                                        type="button"
-                                        className="osc-pack"
-                                        aria-pressed={selectedPack === p.id}
-                                        onClick={() => setSelectedPack(p.id)}
-                                    >
-                                        <span className="osc-pack-left"><CloverIcon size={30} /><span className="osc-pack-clovers">클로버 {p.clovers.toLocaleString()}개</span></span>
-                                        <span className="osc-pack-won">{p.won.toLocaleString()}원</span>
-                                    </button>
-                                ))}
-                            </div>
-                            {REFUND_NOTICE.clover && <p className="osc-precheck">{REFUND_NOTICE.clover} <Link href="/refund">자세히 보기</Link></p>}
-                            {REFUND_NOTICE.agree && (
-                                <label className="osc-agree">
-                                    <input type="checkbox" checked={packAgreed} onChange={e => setPackAgreed(e.target.checked)} />
-                                    <span>{REFUND_NOTICE.agree}</span>
-                                </label>
-                            )}
-                            <button type="button" className="osc-pay ghost" onClick={handlePackPay} disabled={packPaying || paying !== null || !packAgreed}>
-                                {packPaying ? '결제창을 여는 중…' : `클로버 ${pack.clovers.toLocaleString()}개 ${pack.won.toLocaleString()}원 충전하기`}
-                            </button>
-                        </section>
 
                     </>
             </div>

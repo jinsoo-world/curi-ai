@@ -249,9 +249,9 @@ export async function refundDocClovers(db: SupabaseClient, userId: string, amoun
 /** 화면 문구 (쪽 수, 클로버 개수 없이) */
 export const DOC_SPACE_COPY = {
     fullFree: '이 파일은 이번 달 무료로 넣을 수 있는 양보다 커요. 유료로 바꾸시면 훨씬 많은 자료를 넣고, 봇이 더 정확하게 답해요.',
-    fullPaid: '이번 달 자료 넣기를 100% 쓰셨어요. 이 파일은 클로버로 이어서 넣거나 요금제를 올려서 넣을 수 있어요.',
-    noClovers: '클로버가 모자라요. 충전하면 이어서 넣을 수 있어요.',
+    fullPaid: '이번 달 자료 넣기를 100% 쓰셨어요. 이 파일은 모아 둔 대화로 이어서 넣거나 요금제를 올려서 넣을 수 있어요.',
+    noClovers: '모아 둔 대화가 모자라요. 요금제를 올리시면 이어서 넣을 수 있어요.',
     tooLong: '파일이 너무 길어요. 나눠서 올려 주세요.',
     cap: '지금 자료를 읽는 사람이 많아요. 잠시 뒤 다시 시도해 주세요.',
-    cloverNote: '이 파일을 넣는 데 클로버가 쓰여요.',
+    cloverNote: '이 파일을 넣는 데 모아 둔 대화가 쓰여요.',
 } as const

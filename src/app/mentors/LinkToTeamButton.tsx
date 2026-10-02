@@ -67,7 +67,7 @@ export default function LinkToTeamButton({ mentorId, initialInTeam, initialCount
             </div>
             {!inTeam && !isOwner && (
                 <p style={{ fontSize: 13, color: 'var(--먹연)', margin: 0, lineHeight: 1.5 }}>
-                    팀에 넣으면 내 봇 화면 격자에서 바로 부를 수 있어요. 대화 요금(클로버)은 이 봇의 마켓 규칙 그대로예요.
+                    팀에 넣으면 내 봇 화면 격자에서 바로 부를 수 있어요. 대화는 이 봇의 마켓 규칙 그대로예요.
                 </p>
             )}
             {note && <p role="status" style={{ fontSize: 14, color: 'var(--먹)', margin: 0 }}>{note}</p>}

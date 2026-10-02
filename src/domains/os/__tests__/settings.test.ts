@@ -72,12 +72,18 @@ describe('클로버 잔량 띠', () => {
     it('20개 이하면 경고색, 21개부터는 보통', () => {
         expect(cloverBarView(21, false, '/os')?.warn).toBe(false)
         expect(cloverBarView(20, false, '/os')?.warn).toBe(true)
-        expect(cloverBarView(0, false, '/os')?.warn).toBe(true)
     })
 
-    it('충전 주소에 지금 있는 자리를 안전하게 싣는다', () => {
+    it('남은 대화가 0번이면 띠를 안 그린다 (클로버 판매 끝, 대표 결정 1002)', () => {
+        expect(cloverBarView(0, false, '/os')).toBeNull()
+        expect(cloverBarView(4, false, '/os')).toBeNull()
+    })
+
+    it('클로버는 「대화 N번」으로 보이고, 단추는 충전이 아니라 요금제로 간다', () => {
         const v = cloverBarView(100, false, '/os/chat/abc')
-        expect(v?.text).toBe('클로버 100개 남음')
+        expect(v?.text).toBe('모아 둔 대화 20번 남음')
+        expect(v?.action).toBe('요금제')
+        expect(v?.text).not.toContain('클로버')
         expect(v?.href).toBe('/os/charge?from=%2Fos%2Fchat%2Fabc')
         // 원화 환산은 절대 넣지 않는다 (대표 확정 0915)
         expect(v?.text).not.toContain('원')

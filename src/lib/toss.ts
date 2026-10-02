@@ -146,6 +146,19 @@ export async function confirmPayment(paymentKey: string, orderId: string, amount
     }
 }
 
+/**
+ * 결제 한 건 조회. requestedAt = 토스가 적은 「결제창을 연 시각」(브라우저가 꾸밀 수 없다).
+ * 클로버 판매가 끝난 뒤 들어온 주문인지 가를 때 쓴다.
+ */
+export async function getPayment(paymentKey: string) {
+    const res = await fetch(`${TOSS_API_BASE}/payments/${encodeURIComponent(paymentKey)}`, {
+        headers: { Authorization: getAuthHeader() },
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data?.message || '결제 조회에 실패했습니다.')
+    return data as { paymentKey: string; orderId: string; status: string; requestedAt: string }
+}
+
 /** 충전용 주문번호 — 어떤 상품을 샀는지 알아볼 수 있게 접두사를 붙인다 */
 export function generateChargeOrderId(packId: string): string {
     return `clover_${packId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`

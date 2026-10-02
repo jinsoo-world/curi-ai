@@ -4,6 +4,7 @@
 // 한 곳에 두고 시험을 붙여 두면 어느 화면에서도 같은 답이 나온다. 브라우저, DB 는 여기서 만지지 않는다.
 
 import { isLowClover } from '@/domains/credit/charge-flow'
+import { cloverChats } from './usage-config'
 
 /* ────────────────────────── 글자 크기 ────────────────────────── */
 
@@ -101,7 +102,7 @@ export interface CloverBarView {
 export const SIGNUP_CLOVERS = 40
 
 /**
- * 입력창 위 「🍀 클로버 N개 남음 [충전]」 한 줄.
+ * 입력창 위 「🍀 모아 둔 대화 N번 남음 [요금제]」 한 줄 (옛 「클로버 N개 남음 [충전]」).
  * ⛔ 원화 환산은 넣지 않는다(대표 확정 0915).
  * 잔량을 아직 못 읽었으면 null = 띠를 아예 안 그린다(0 으로 깜빡이면 놀란다).
  */
@@ -114,11 +115,13 @@ export function cloverBarView(balance: number | null | undefined, guest: boolean
             warn: false,
         }
     }
-    if (balance === null || balance === undefined || Number.isNaN(balance)) return null
+    // 클로버 판매 끝(대표 결정 1002): 클로버는 「모아 둔 대화 N번」으로 보이고, 0번이면 띠를 안 그린다. 단추는 요금제로
+    const 대화 = cloverChats(balance)
+    if (대화 <= 0) return null
     return {
-        text: `클로버 ${balance}개 남음`,
+        text: `모아 둔 대화 ${대화.toLocaleString('ko-KR')}번 남음`,
         href: `/os/charge?from=${encodeURIComponent(from || '/os')}`,
-        action: '충전',
+        action: '요금제',
         warn: isLowClover(balance),
     }
 }

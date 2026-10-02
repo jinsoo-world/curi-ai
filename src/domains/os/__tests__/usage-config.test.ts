@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
     CLOVER_OVERAGE_ENABLED, CLOVER_COST, chatCloverCost, cloverBalanceNote, packAnswerHint, readCloverAuto, fillCopy, USAGE_COPY, REFUND_NOTICE, PLAN_REASON,
-    OVERAGE_COPY, overageStep, MONTHLY_LIMITS, overageSheetNote, cloverSpentText,
+    OVERAGE_COPY, overageStep, MONTHLY_LIMITS, overageSheetNote, cloverSpentText, cloverChats, cloverChatsText,
 } from '../usage-config'
 import { usageView } from '../usage'
 
@@ -11,10 +11,10 @@ describe('usage-config: 클로버 이어 쓰기 스위치 (대표 승인 0928 23
         expect(chatCloverCost()).toBe(5)
         expect(chatCloverCost({ photo: true })).toBe(15)
         expect(packAnswerHint(2000)).toBe('')           // 횟수 표기 금지 (대표 지시 0929)
-        expect(cloverBalanceNote()).toBe('이번 달 한도 안에서는 클로버를 쓰지 않아요')
+        expect(cloverBalanceNote()).toBe('이번 달 사용량을 다 쓴 뒤에 이어서 쓸 수 있어요')
         expect(readCloverAuto({ getItem: () => '1' })).toBe(true)
         expect(readCloverAuto({ getItem: () => null })).toBe(false)
-        expect(OVERAGE_COPY.confirm).toBe('이번 달 사용량을 모두 쓰셨어요. 이어서 쓰시면 클로버가 쓰여요.')
+        expect(OVERAGE_COPY.confirm).toBe('이번 달 사용량을 모두 쓰셨어요. 모아 두신 대화로 이어서 쓰실 수 있어요.')
     })
 
     it('순서: 월 한도를 먼저 쓰고, 다 쓴 뒤에만 클로버', () => {
@@ -46,7 +46,7 @@ describe('usage-config: 문구', () => {
         expect(fillCopy(USAGE_COPY.warnCard, 82)).toBe('이번 달 사용량이 82%예요')
     })
     it('청약철회 안내와 필수 확인이 들어 있다. 가운데점, 긴 대시 없음', () => {
-        for (const v of [REFUND_NOTICE.plan, REFUND_NOTICE.clover, REFUND_NOTICE.agree, ...Object.values(USAGE_COPY)]) {
+        for (const v of [REFUND_NOTICE.plan, REFUND_NOTICE.agree, ...Object.values(USAGE_COPY)]) {
             expect(v).not.toMatch(/[·—–]/)
         }
         expect(REFUND_NOTICE.agree.startsWith('[필수]')).toBe(true)
@@ -77,18 +77,40 @@ describe('고객 화면 횟수 표기 없음 (대표 지시 0929): /os/charge', 
 })
 
 describe('클로버 이어 쓰기 창과 답 아래 표시 (0930 대표 「매번 승인 번거로워, 클로버 주는 게 보이면 좋겠어」)', () => {
-    it('창에 한 번에 쓰는 클로버와 남은 클로버를 보여 준다 (원화 환산 없음)', () => {
-        expect(overageSheetNote(1240, 5, 15)).toBe('답 하나에 클로버 5개(사진이 있으면 15개)가 쓰여요. 지금 1240개 남았어요.')
-        expect(overageSheetNote(null, 5, 5)).toBe('답 하나에 클로버 5개가 쓰여요.')
-        expect(overageSheetNote(1240, 5)).not.toMatch(/원/)
+    it('창에 한 번에 쓰는 대화 수와 남은 대화를 보여 준다 (클로버 개수, 원화 환산 없음)', () => {
+        expect(overageSheetNote(1240, 5, 15)).toBe('답 하나에 모아 둔 대화 1번(사진이 있으면 3번)이 쓰여요. 지금 248번 남았어요.')
+        expect(overageSheetNote(null, 5, 5)).toBe('답 하나에 모아 둔 대화 1번이 쓰여요.')
+        expect(overageSheetNote(1240, 5)).not.toMatch(/원|클로버/)
     })
     it('답 아래 한 줄', () => {
-        expect(cloverSpentText(5, 1235)).toBe('🍀 클로버 5개 씀, 1235개 남음')
-        expect(cloverSpentText(5, null)).toBe('🍀 클로버 5개 씀')
+        expect(cloverSpentText(5, 1235)).toBe('🍀 모아 둔 대화 1번 씀, 247번 남음')
+        expect(cloverSpentText(15, 1225)).toBe('🍀 모아 둔 대화 3번 씀, 245번 남음')
+        expect(cloverSpentText(5, null)).toBe('🍀 모아 둔 대화 1번 씀')
     })
     it('이어 쓰기 창 문구: 이번 대화 동안 다시 묻지 않고, 앞으로도 안 묻게 고를 수 있다', () => {
-        expect(OVERAGE_COPY.continueBtn).toContain('클로버로 이어 쓰기')
+        expect(OVERAGE_COPY.continueBtn).toBe('모아 둔 대화로 이어 쓰기')
         expect(OVERAGE_COPY.sessionNote).toContain('이 대화에서는 다시 묻지 않아요')
         expect(OVERAGE_COPY.alwaysLabel).toContain('앞으로도 묻지 않기')
+    })
+})
+
+describe('클로버 판매 끝 (대표 결정 1002 「클로버는 없애구」): 잔액은 「대화 N번」으로 보인다', () => {
+    it('텍스트 답 1번에 드는 클로버로 나눠 내림한다', () => {
+        expect(cloverChats(1240)).toBe(248)
+        expect(cloverChats(4)).toBe(0)
+        expect(cloverChats(null)).toBe(0)
+        expect(cloverChats(Number.NaN)).toBe(0)
+        expect(cloverChatsText(1240)).toBe('대화 248번')
+        expect(cloverChatsText(12400)).toBe('대화 2,480번')
+    })
+    it('남은 대화가 0번이면 아무것도 안 보인다', () => {
+        expect(cloverChatsText(0)).toBe('')
+        expect(cloverChatsText(4)).toBe('')
+        expect(cloverChatsText(null)).toBe('')
+    })
+    it('고객 화면 문구에 충전 안내가 없다', () => {
+        for (const v of [...Object.values(OVERAGE_COPY), REFUND_NOTICE.plan, REFUND_NOTICE.agree, cloverBalanceNote()]) {
+            expect(v).not.toMatch(/충전|클로버/)
+        }
     })
 })

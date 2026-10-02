@@ -40,15 +40,15 @@ export function DocSpaceLine({ refreshKey = 0 }: { refreshKey?: number }) {
     )
 }
 
-/** 한도 카드: 무료는 요금제 보기만, 유료는 클로버로 이어 넣기도 */
+/** 한도 카드: 무료는 요금제 보기만, 유료는 클로버(화면 이름 「모아 둔 대화」)로 이어 넣기도. 클로버 판매 끝(대표 결정 1002)이라 채우기 단추는 요금제로 */
 export function DocSpaceCard({ block, busy, onPayClovers }: { block: DocSpaceBlock; busy?: boolean; onPayClovers: () => void }) {
     const [ask, setAsk] = useState(false)
     return (
         <div className="os-notice" style={{ margin: '14px 0 0', display: 'grid', gap: 10 }} role="alert">
-            <div>{ask ? '이 파일을 넣는 데 클로버가 쓰여요. 넣은 뒤 남은 클로버는 충전 화면에서 보실 수 있어요.' : block.message}</div>
+            <div>{ask ? '이 파일을 넣는 데 모아 둔 대화가 쓰여요. 넣은 뒤 남은 대화는 요금제 화면에서 보실 수 있어요.' : block.message}</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {block.code === 'doc_space_full' && block.canPayClovers && !ask && (
-                    <button type="button" className="os-btn primary" disabled={busy} onClick={() => setAsk(true)}>클로버로 이어 넣기</button>
+                    <button type="button" className="os-btn primary" disabled={busy} onClick={() => setAsk(true)}>모아 둔 대화로 이어 넣기</button>
                 )}
                 {ask && (
                     <>
@@ -58,7 +58,7 @@ export function DocSpaceCard({ block, busy, onPayClovers }: { block: DocSpaceBlo
                 )}
                 {!ask && (
                     <Link className="os-btn" href="/os/charge">
-                        {block.code === 'no_clovers' ? '클로버 채우기' : block.canPayClovers ? '요금제 올리기' : '유료로 바꾸기'}
+                        {block.code === 'no_clovers' || block.canPayClovers ? '요금제 올리기' : '유료로 바꾸기'}
                     </Link>
                 )}
             </div>

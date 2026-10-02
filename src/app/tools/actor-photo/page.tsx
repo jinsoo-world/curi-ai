@@ -338,7 +338,7 @@ function ActorPhotoPage안쪽() {
                     </div>
                 )}
 
-                {/* 클로버가 모자랄 때 — 손님에게 「충전하러 가기」는 막다른 길이다. 2026-09-15 */}
+                {/* 클로버가 모자랄 때 — 손님에게 「충전하러 가기」는 막다른 길이다. 2026-09-15. 클로버 판매 끝(대표 결정 1002): 회원은 미션으로 */}
                 {모자람 && (
                     <div style={{ background: '#fff', border: '1.5px solid #e4e4e7', borderRadius: 14, padding: '16px 18px', marginBottom: 14, textAlign: 'center' }}>
                         <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6 }}>
@@ -347,13 +347,13 @@ function ActorPhotoPage안쪽() {
                         <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
                             {손님
                                 ? `로그인하시면 클로버 ${SIGNUP_CLOVERS}개를 바로 드려요. 만드신 사진도 그대로 받으실 수 있습니다.`
-                                : '클로버를 채우시면 바로 이어서 만드실 수 있어요.'}
+                                : '클로버는 이제 따로 팔지 않아요. 미션을 하시면 클로버를 모아 이어서 만드실 수 있어요.'}
                         </p>
-                        <button onClick={() => (손님 ? router.push('/login') : router.push(`/charge?back=${encodeURIComponent(window.location.pathname)}`))} style={{
+                        <button onClick={() => (손님 ? router.push('/login') : router.push('/missions'))} style={{
                             width: '100%', padding: 14, borderRadius: 14, border: 'none',
                             background: '#1C2321', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
                         }}>
-                            {손님 ? `로그인하고 클로버 ${SIGNUP_CLOVERS}개 받기` : '클로버 충전하기'}
+                            {손님 ? `로그인하고 클로버 ${SIGNUP_CLOVERS}개 받기` : '클로버 모으러 가기'}
                         </button>
                     </div>
                 )}

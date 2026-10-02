@@ -469,9 +469,14 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
     const openOverage = useCallback((text: string, cost: number | null) => {
         setOverageAlways(false)
         if (cost !== null) setOverageCost(cost)
-        setOverageBalance(지금클로버())
-        void getCreditBalance().then(n => { if (typeof n === 'number') setOverageBalance(n) }).catch(() => { })
-        setOverageAsk(text)
+        // 클로버 판매 끝(대표 결정 1002): 모아 둔 대화가 답 하나에도 모자라면 창을 안 띄운다(채울 곳이 없다). 한도 카드의 「요금제 보기」만 남는다
+        const 한번 = cost ?? chatCloverCost()
+        const 열기 = (n: number | null) => {
+            if (n !== null && n < 한번) return
+            setOverageBalance(n)
+            setOverageAsk(text)
+        }
+        void getCreditBalance().then(n => 열기(typeof n === 'number' ? n : 지금클로버())).catch(() => 열기(지금클로버()))
     }, [])
 
     // 답을 다 받은 뒤 사용량을 한 번 읽어 원형 게이지를 고치고, 80% 를 넘었으면 이번 달 한 번만 알림 카드
@@ -1002,7 +1007,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                 {/* 입력 막대 dock  -  폰에선 화면 맨 아래 붙는다(os.css). 미리보기 띠 + 막대를 한 칸으로 묶어야
                     그 아래 빈 배경이 흰 띠로 안 남는다(대표 폰 실측 0923) */}
                 {overageAsk !== null && (
-                    <div className="os-sheet-back" data-theme="os" role="dialog" aria-modal="true" aria-label="클로버로 이어 쓰기" onClick={() => setOverageAsk(null)}>
+                    <div className="os-sheet-back" data-theme="os" role="dialog" aria-modal="true" aria-label={OVERAGE_COPY.continueBtn} onClick={() => setOverageAsk(null)}>
                         <div className="os-sheet" onClick={e => e.stopPropagation()}>
                             <p style={{ fontSize: 17, lineHeight: 1.6, margin: '4px 0 8px' }}>{OVERAGE_COPY.confirm}</p>
                             <p style={{ fontSize: 15, lineHeight: 1.6, margin: '0 0 12px', color: 'var(--os-글-연)' }}>🍀 {overageSheetNote(overageBalance, overageCost)} {OVERAGE_COPY.sessionNote}</p>

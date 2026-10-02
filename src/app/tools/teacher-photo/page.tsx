@@ -139,7 +139,7 @@ function TeacherPhotoPage안쪽() {
                 onMake={make}
                 errorMsg={errorMsg}
                 needCharge={needCharge}
-                onCharge={() => router.push(`/charge?back=${encodeURIComponent(window.location.pathname)}`)}
+                onCharge={() => router.push('/missions')}   // 클로버 판매 끝(대표 결정 1002): 충전 대신 미션으로
                 result={result}
                 isPreviewResult={미리보기}
                 onLogin={() => router.push('/login')}

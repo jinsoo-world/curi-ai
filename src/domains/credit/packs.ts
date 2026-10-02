@@ -60,6 +60,28 @@ export function discountPercent(pack: CloverPack): number {
 
 export type PackId = (typeof CLOVER_PACKS)[number]['id']
 
+/**
+ * 클로버 판매 끝 — 대표 결정 2026-10-02 「웹 요금도 이거에 맞게 수정해줘. 클로버는 없애구.」
+ * 이제 파는 것은 월 요금제(무료 / 베이직 / 프로)뿐이다. 이미 가진 클로버는 다 쓸 때까지 그대로 쓴다.
+ * 이 시각(서울 2026-10-03 0시) 뒤에 토스 결제창을 연 클로버 주문은 서버가 승인하지 않는다.
+ * 그 전에 결제창을 열어 둔 주문은 끝까지 받아 준다. 상품 표(CLOVER_PACKS)는 그 주문의 금액 대조에 쓰여 남겨 둔다.
+ */
+export const CLOVER_SALES_ENDED_AT = '2026-10-02T15:00:00Z'
+
+/** 이 시각에 연 주문을 받아도 되는가. 시각을 모르거나 못 읽으면 받지 않는다 */
+export function cloverSaleAllowed(startedAt: string | null | undefined, endedAt: string = CLOVER_SALES_ENDED_AT): boolean {
+    if (!startedAt) return false
+    const t = Date.parse(startedAt)
+    if (Number.isNaN(t)) return false
+    return t < Date.parse(endedAt)
+}
+
+/** 주문번호(clover_<상품>_<시각>_<덧붙임>)에 적힌 시각. 토스 조회가 안 될 때만 대신 쓴다 */
+export function cloverOrderStartedAt(orderId: string | null | undefined): string | null {
+    const m = typeof orderId === 'string' ? /^clover_[^_]+_(\d{12,})_/.exec(orderId) : null
+    return m ? new Date(Number(m[1])).toISOString() : null
+}
+
 /** 상품 하나를 찾는다. 값을 묻는 곳은 전부 이 함수를 쓴다. */
 export function getPack(id: PackId): CloverPack | undefined {
     return CLOVER_PACKS.find(p => p.id === id)

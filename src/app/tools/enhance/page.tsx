@@ -154,10 +154,11 @@ export default function EnhancePage() {
                         <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 15, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
                             {errorMsg}
                             {needCharge && (
-                                <button onClick={() => router.push(`/charge?back=${encodeURIComponent(window.location.pathname)}`)} style={{
+                                // 클로버 판매 끝(대표 결정 1002): 충전 대신 미션으로
+                                <button onClick={() => router.push('/missions')} style={{
                                     display: 'block', marginTop: 10, background: '#dc2626', color: '#fff', border: 'none',
                                     borderRadius: 10, padding: '9px 16px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-                                }}>충전하러 가기</button>
+                                }}>클로버 모으러 가기</button>
                             )}
                         </div>
                     )}
