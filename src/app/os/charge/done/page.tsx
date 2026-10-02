@@ -78,7 +78,7 @@ function DoneInner() {
                         <CloverIcon size={48} />
                         <h2>충전 완료</h2>
                         <p>클로버 <b style={{ color: 'var(--os-클로버)' }}>{clovers.toLocaleString()}개</b>가 들어왔어요.</p>
-                        {cloverChatsText(balance) && <p>모아 둔 대화 {cloverChatsText(balance)}</p>}
+                        {cloverChatsText(balance) && <p>모아 둔 {cloverChatsText(balance)}</p>}
                         <button type="button" className="osc-pay" onClick={goBack}>봇 팀으로 돌아가기</button>
                     </>
                 )}
