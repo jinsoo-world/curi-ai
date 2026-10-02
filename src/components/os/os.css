@@ -252,7 +252,7 @@
 .os-icon-btn::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; }
 .os-icon-btn svg { width: 20px; height: 20px; display: block; flex: 0 0 auto; }
 .os-icon-btn:hover { background: var(--os-말풍선-내); color: var(--os-글); }
-.os-head-btn { display: grid; grid-auto-flow: column; align-items: center; gap: 4px; flex: 0 0 auto; min-width: 44px; min-height: 44px; padding: 0 10px; border: 1px solid var(--os-선); border-radius: 22px; background: transparent; color: var(--os-글); font-size: 15px; font-weight: 600; line-height: 1; cursor: pointer; font-family: inherit; }
+.os-head-btn { display: grid; grid-auto-flow: column; align-items: center; gap: 4px; flex: 0 0 auto; min-width: 44px; min-height: 44px; padding: 0 10px; border: 1px solid var(--os-선); border-radius: 8px; background: transparent; color: var(--os-글); font-size: 15px; font-weight: 600; line-height: 1; cursor: pointer; font-family: inherit; }
 .os-head-btn svg { width: 20px; height: 20px; display: block; }
 .os-head-btn:hover { background: var(--os-말풍선-내); }
 .os-head-btn[aria-expanded="true"] { background: var(--os-말풍선-내); border-color: var(--os-글-연); }

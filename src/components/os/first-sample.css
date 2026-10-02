@@ -1,5 +1,5 @@
 /* 첫 대화 예시 (가입 온보딩 화면 3 답에 맞춘 보기용. 저장하지 않는다) */
 .os-sample { margin: 6px 0 4px; padding: 12px; border: 1px dashed var(--os-선); border-radius: 16px; }
-.os-sample-tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--os-말풍선); color: var(--os-글-흐림); margin-bottom: 8px; }
+.os-sample-tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: var(--os-말풍선); color: var(--os-글-흐림); margin-bottom: 8px; }
 .os-sample .os-bubble { white-space: pre-wrap; }
 .os-sample-me { display: flex; justify-content: flex-end; margin-bottom: 8px; }

@@ -53,7 +53,7 @@
 .os-conn-logo { width: 32px; height: 32px; border-radius: 8px; flex: 0 0 auto; display: block; }
 .os-conn-head { display: flex; align-items: center; gap: 12px; min-height: 44px; }
 .os-conn-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.os-conn-state { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--os-말풍선-내); color: var(--os-글-흐림); white-space: nowrap; }
+.os-conn-state { font-size: 12px; padding: 2px 8px; border-radius: 4px; background: var(--os-말풍선-내); color: var(--os-글-흐림); white-space: nowrap; }
 .os-conn-state.on { color: var(--os-클로버); background: color-mix(in srgb, var(--os-클로버) 16%, transparent); }
 
 @media (max-width: 420px) {
@@ -76,7 +76,7 @@
 .os-set-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .os-set-link { color: var(--os-포인트); text-decoration: underline; text-underline-offset: 3px; display: inline-flex; align-items: center; min-height: 44px; }
 .os-set-link:hover { text-decoration: underline; }
-.os-set-badge { display: inline-block; vertical-align: middle; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--os-말풍선-내); color: var(--os-글-연); }
+.os-set-badge { display: inline-block; vertical-align: middle; margin-left: 6px; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: var(--os-말풍선-내); color: var(--os-글-연); }
 .os-set-amount { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; }
 .os-set-amount input {
     background: var(--os-말풍선-내); color: var(--os-글); border: 1px solid var(--os-선);

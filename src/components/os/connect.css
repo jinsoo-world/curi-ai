@@ -22,7 +22,7 @@
 .os-svc-body { flex: 1; min-width: 0; }
 .os-svc-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .os-svc-hint { font-size: calc(15px * var(--os-font-scale, 1)); color: var(--os-글-연); margin-top: 2px; line-height: 1.5; }
-.os-svc-badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--os-말풍선-내); color: var(--os-글-흐림); white-space: nowrap; }
+.os-svc-badge { font-size: 12px; padding: 2px 8px; border-radius: 4px; background: var(--os-말풍선-내); color: var(--os-글-흐림); white-space: nowrap; }
 .os-svc-badge.on { color: var(--os-클로버); background: color-mix(in srgb, var(--os-클로버) 16%, transparent); }
 .os-svc-badge.soon { color: var(--os-경고); background: color-mix(in srgb, var(--os-경고) 16%, transparent); }
 .os-svc-badge.bad { color: var(--os-오류); background: color-mix(in srgb, var(--os-오류) 16%, transparent); }
