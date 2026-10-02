@@ -61,7 +61,7 @@
     position: absolute; right: calc(var(--배지) * -0.15); top: calc(var(--배지) * -0.15);
     width: var(--배지); height: var(--배지); border-radius: 50%;
     background: var(--os-승인); color: var(--os-바탕);
-    font-size: calc(var(--배지) * 0.66); font-weight: 800; line-height: 1;
+    font-size: calc(var(--배지) * 0.66); font-weight: 700; line-height: 1;
     display: grid; place-items: center;
     box-shadow: 0 0 0 2px var(--os-패널);
 }
