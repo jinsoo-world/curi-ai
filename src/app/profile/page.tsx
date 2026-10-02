@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import DeleteAccountSection from '@/components/account/DeleteAccountSection'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -918,6 +919,7 @@ export default function ProfilePage() {
                                     >
                                         로그아웃
                                     </button>
+                                    <DeleteAccountSection />
                                 </div>
                             )}
                         </div>

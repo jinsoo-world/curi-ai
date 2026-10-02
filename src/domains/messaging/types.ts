@@ -17,6 +17,8 @@ export interface OutboundMessage {
     body: string
     /** 이메일 HTML 본문. 없으면 body 를 그대로 감싼다 */
     html?: string
+    /** 이메일 답장 주소(Reply-To). 고객센터 알림에서 문의한 분 주소 */
+    replyTo?: string
     /** 푸시를 누르면 열 주소. 기본 /os */
     url?: string
 }

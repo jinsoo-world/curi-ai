@@ -31,6 +31,8 @@ import { logLlmUsage, keepAliveAfterResponse } from '@/domains/llm/usage-log'
 import { SOLAR_CHAT_MODEL } from '@/domains/llm/constants'
 import { correctiveRetrieve } from '@/domains/knowledge/corrective'
 import { askQuickWithFallback } from '@/domains/agent/ask'
+import { isBotBlocked } from '@/domains/os/blocks'
+import { BLOCKED_CHAT_TEXT } from '@/domains/os/reports'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -229,6 +231,18 @@ export async function POST(req: Request) {
             ?? (user ? await getOwnedTeamBotMentor(createAdminClient(), user.id, mentorId) : null)
         if (!mentor) {
             return new Response('Mentor not found', { status: 404 })
+        }
+
+        // 🚫 내가 차단한 봇 = 대화하지 않는다 (애플 심사 지침 1.2). 차단 해제는 설정 「차단한 봇」
+        if (user && await isBotBlocked(createAdminClient(), user.id, (mentor as { id: string }).id)) {
+            const enc = new TextEncoder()
+            const blockedStream = new ReadableStream({
+                start(controller) {
+                    controller.enqueue(enc.encode(`data: ${JSON.stringify({ text: BLOCKED_CHAT_TEXT, done: true, fullResponse: BLOCKED_CHAT_TEXT, botBlocked: true })}\n\n`))
+                    controller.close()
+                },
+            })
+            return new Response(blockedStream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' } })
         }
 
         // 🎯 Audience — 이 사람이 이 봇과 대화해도 되나 (Just Me / Insiders / Public / Anonymous, domains/os/audience)

@@ -40,6 +40,7 @@ export function createEmailDriver(): Driver {
                 const r = await getClient().send(new SendEmailCommand({
                     FromEmailAddress: FROM!,
                     Destination: { ToAddresses: [to] },
+                    ...(msg.replyTo && EMAIL_RE.test(msg.replyTo) ? { ReplyToAddresses: [msg.replyTo] } : {}),
                     Content: {
                         Simple: {
                             Subject: { Data: msg.subject ?? '큐리AI', Charset: 'UTF-8' },

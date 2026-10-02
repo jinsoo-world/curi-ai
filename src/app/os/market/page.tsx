@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { getActiveMentors } from '@/domains/mentor'
 import BotAvatar from '@/components/os/BotAvatar'
 import { arrangeMarket, isSampleMarketBot } from '@/domains/os/showcase'
+import { HideBlockedBots } from '@/components/os/ReportBlock'
 
 export const revalidate = 30   // /mentors 와 같은 주기
 
@@ -18,6 +19,8 @@ export default async function OsMarketPage({ searchParams }: { searchParams: Pro
 
     return (
         <div className="os-market">
+            {/* 내가 차단한 봇은 카드를 숨긴다 (애플 심사 지침 1.2) */}
+            <HideBlockedBots />
             <h1>봇 마켓</h1>
             <p className="os-market-sub">
                 리더들이 만든 공개 봇이에요. 얼굴을 누르면 소개를 먼저 보여 줘요.{' '}
@@ -29,7 +32,7 @@ export default async function OsMarketPage({ searchParams }: { searchParams: Pro
             ) : (
                 <div className="os-market-grid">
                     {mentors.map(m => (
-                        <Link key={m.id} href={`/os/market/${m.id}${tail}`} className="os-market-card" prefetch={false}>
+                        <Link key={m.id} href={`/os/market/${m.id}${tail}`} className="os-market-card" prefetch={false} data-mentor-id={m.id}>
                             <BotAvatar shape="circle" color="white" state="idle" size={112} faceUrl={m.avatar_url ?? null} faceRim="shadow" name={m.name} />
                             <span className="os-market-name">{m.name}</span>
                             {isSampleMarketBot(m.id) && <span className="os-market-sample">예시 봇</span>}

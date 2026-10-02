@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { askSideText } from '@/domains/llm/side-text'
 import { createProactiveNotification } from '@/domains/notification'
+import { isBotBlocked } from '@/domains/os/blocks'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,6 +51,7 @@ export async function POST(req: Request) {
 
             const mentorId = lastSession?.mentor_id
             if (!mentorId) continue
+            if (await isBotBlocked(supabase, user.id, mentorId)) continue   // 차단한 봇 = 말 만들지도 않는다
 
             // 멘토 정보
             const { data: mentor } = await supabase

@@ -49,6 +49,7 @@ export function MsgRow({
     createdAt,
     copyText,
     rowId,
+    actions,
     children,
 }: {
     side: 'me' | 'bot'
@@ -57,6 +58,8 @@ export function MsgRow({
     copyText?: string | null
     /** 한 줄만 열리게 할 때 쓰는 안정 id. 없으면 내부 id */
     rowId?: string
+    /** 시각, 복사 옆에 붙는 단추 (봇 말풍선의 신고, 차단) */
+    actions?: { label: string; onClick: () => void }[]
     children: ReactNode
 }) {
     const autoId = useId()
@@ -114,7 +117,7 @@ export function MsgRow({
             onClick={onRowClick}
         >
             <div className="os-msg-main">{children}</div>
-            {open && (label || canCopy) && (
+            {open && (label || canCopy || !!actions?.length) && (
                 <div className={`os-msg-meta ${side}`} role="group" aria-label="메시지 정보">
                     {label ? (
                         <time className="os-msg-time" dateTime={createdAt || undefined}>{label}</time>
@@ -129,6 +132,10 @@ export function MsgRow({
                             {copied ? '복사됨' : '복사'}
                         </button>
                     )}
+                    {actions?.map(a => (
+                        <button key={a.label} type="button" className="os-msg-copy"
+                            onClick={e => { e.stopPropagation(); setOpen(false); a.onClick() }}>{a.label}</button>
+                    ))}
                 </div>
             )}
         </div>
