@@ -9,13 +9,22 @@ import KnowledgeList from './KnowledgeList'
 import FeedList from './FeedList'
 import RoutinePanel from './RoutinePanel'
 import ResponseSettingsSheet from './ResponseSettingsSheet'
+import { BotSafetyActions } from './ReportBlock'
 
 const ROLE_LABEL: Record<TeamBot['role'], string> = { twin: '디지털 나', chief: '비서실장', helper: '도우미' }
 
 /** demo = 시연(/os?demo=1). 시연 봇은 내 봇이 아니라 자료 창구가 403 을 내니 목록을 부르지 않고 한 줄만 보인다.
  *  OsChat 이 demo 를 안 넘겨도 시연 봇은 id 가 demo- 로 시작하니 스스로 알아본다 */
-export default function DetailPane({ bot, publicName, demo = false }: { bot: TeamBot | null; publicName: string | null; demo?: boolean }) {
+export default function DetailPane({ bot, publicName, demo = false, mentorId, guest = false, onBlocked }: {
+    bot: TeamBot | null; publicName: string | null; demo?: boolean
+    /** 신고, 차단할 봇 (공개 봇은 bot 이 없어 따로 받는다) */
+    mentorId?: string; guest?: boolean; onBlocked?: () => void
+}) {
     const 시연 = demo || !!bot?.id.startsWith('demo-')
+    // 🚩 신고 = 모든 봇, 차단 = 남이 만든 봇에만 (내 봇은 차단할 일이 없다). 애플 심사 지침 1.2
+    const 안전 = mentorId
+        ? <><h4>신고, 차단</h4><BotSafetyActions mentorId={mentorId} botName={bot?.name ?? publicName ?? '이 봇'} guest={guest} onBlocked={onBlocked} canBlock={!bot?.canPublish} /></>
+        : null
     const [답변설정열림, set답변설정열림] = useState(false)
     const [답변설정펼침, set답변설정펼침] = useState(false)
     const [audienceOpen, setAudienceOpen] = useState(false)
@@ -41,6 +50,7 @@ export default function DetailPane({ bot, publicName, demo = false }: { bot: Tea
             <div>
                 <h4>이 봇</h4>
                 <div className="os-card">{publicName ? <><b>{publicName}</b>은 리더가 만든 공개 봇이에요. 내 팀에 넣는 기능은 곧 열려요.</> : '봇 정보를 불러오는 중…'}</div>
+                {publicName && 안전}
             </div>
         )
     }
@@ -90,6 +100,7 @@ export default function DetailPane({ bot, publicName, demo = false }: { bot: Tea
             <RoutinePanel mentorId={bot.mentorId} botName={bot.name} />
 
             {/* 이번 주 = 미룬 일, 승인, 체크인, 자료 (세부칸 맨 아래) */}
+            {안전}
         </div>
     )
 }

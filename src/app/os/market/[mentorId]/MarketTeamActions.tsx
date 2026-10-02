@@ -6,6 +6,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useOsTeam } from '@/components/os/OsShell'
+import { BotSafetyActions } from '@/components/os/ReportBlock'
 
 interface Props {
     mentorId: string
@@ -103,6 +104,13 @@ export default function MarketTeamActions({
                 </p>
             )}
             {note && <p role="status" className="os-market-actions-note">{note}</p>}
+            {/* 🚩 신고, 차단 (애플 심사 지침 1.2). 내 봇에는 안 보인다. 차단하면 마켓 목록으로 돌아간다 */}
+            {!isOwner && (
+                <div className="os-market-actions-row" style={{ marginTop: 8 }}>
+                    <BotSafetyActions mentorId={mentorId} botName={mentorName} guest={guest} compact
+                        onBlocked={() => { void refresh(); router.push('/os/market') }} />
+                </div>
+            )}
         </div>
     )
 }

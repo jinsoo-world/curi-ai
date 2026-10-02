@@ -1,6 +1,7 @@
 // domains/notification — 타입 및 쿼리
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isBotBlocked } from '@/domains/os/blocks'
 
 export interface Notification {
     id: string
@@ -61,6 +62,8 @@ export async function createProactiveNotification(
     mentorId: string,
     message: string,
 ) {
+    // 🚫 차단한 봇은 먼저 말 걸지 않는다 (애플 심사 지침 1.2)
+    if (await isBotBlocked(db, userId, mentorId)) return null
     const { data, error } = await db
         .from('notifications')
         .insert({

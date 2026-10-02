@@ -4,6 +4,7 @@
 // 시간 규칙은 전부 schedule.ts(순수)에 있고 여기는 DB 와 모델만 만진다.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isBotBlocked } from './blocks'
 import { solarChatStream } from '@/domains/llm'
 import { buildRoutinePrompt, shouldRunNow, alreadyRanInSlot } from './schedule'
 import type { OnMissingData, ScheduleKind } from './schedule'
@@ -202,6 +203,8 @@ export interface RunResult {
 export async function runRoutineOnce(db: SupabaseClient, routine: BotRoutine): Promise<RunResult> {
     const 시작 = Date.now()
     let 결과: RunResult
+    // 🚫 차단한 봇의 루틴은 돌지 않는다 (차단할 때 멈추지만, 그 사이 켜졌어도 한 번 더 막는다)
+    if (await isBotBlocked(db, routine.userId, routine.mentorId)) return { ok: false, result: '실패: 차단한 봇이에요', text: '' }
     try {
         const { data: mentor } = await db
             .from('mentors')

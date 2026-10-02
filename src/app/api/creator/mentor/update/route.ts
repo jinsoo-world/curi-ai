@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { requireMentorOwner } from '@/lib/mentor-owner'
 import { 링크정리 } from '@/domains/creator/links'
-import { applyBotEdit } from '@/domains/os/publish-gate'
+import { applyBotEdit, BotHeld } from '@/domains/os/publish-gate'
 import { moderationReply } from '@/domains/os/moderation'
 
 export const dynamic = 'force-dynamic'
@@ -75,6 +75,7 @@ export async function PATCH(req: NextRequest) {
 
         return NextResponse.json({ success: true, message: '멘토가 수정되었습니다.' })
     } catch (error: unknown) {
+        if (error instanceof BotHeld) return NextResponse.json({ error: error.message, code: 'BOT_HELD' }, { status: 409 })
         console.error('[Creator Update API] Error:', error)
         const message = error instanceof Error ? error.message : '멘토 수정 중 오류가 발생했습니다.'
         return NextResponse.json({ error: message }, { status: 500 })
