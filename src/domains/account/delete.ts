@@ -179,6 +179,8 @@ export async function deleteAccount(
     await tolerant('구독 결제수단 비우기', db.from('subscriptions').update({ billing_key: '' }).eq('deleted_user_ref', ref))
     // 사용량 기록(비용 집계용)은 사람만 떼고 남긴다
     await tolerant('llm_usage 익명화', db.from('llm_usage').update({ user_id: null }).eq('user_id', uid))
+    // 고객센터 문의는 답변과 분쟁 처리를 위해 3년 보관한다(개인정보처리방침 제3조). 사람만 뗀다
+    await tolerant('support_inquiries 분리', db.from('support_inquiries').update({ user_id: null }).eq('user_id', uid))
 
     // 3-1) 정산 정보는 1년 보관함으로 옮긴다. 옮기기가 실패하면 여기서 멈춘다(원래 줄을 지우기 전이라 잃는 것 없음)
     const { data: payout, error: pErr } = await db.from('creator_payout_profiles').select('*').eq('user_id', uid).maybeSingle()

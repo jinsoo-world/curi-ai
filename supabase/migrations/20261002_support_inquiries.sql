@@ -11,8 +11,11 @@ create table if not exists public.support_inquiries (
   platform text null,
   app_version text null,
   status text not null default 'open',
-  answered_at timestamptz null
+  answered_at timestamptz null,
+  handled_by uuid null
 );
+-- 먼저 만든 표에도 같은 칸이 있게 (여러 번 돌려도 안전)
+alter table public.support_inquiries add column if not exists handled_by uuid null;
 
 do $$ begin
   alter table public.support_inquiries
@@ -36,4 +39,5 @@ alter table public.support_inquiries enable row level security;
 -- 정책을 일부러 하나도 만들지 않는다: anon, authenticated 는 읽기도 쓰기도 못 한다
 revoke all on public.support_inquiries from anon, authenticated;
 
-comment on table public.support_inquiries is '고객센터 문의. /api/support/inquiry 가 넣고 /admin/os/inquiries 에서 처리. 서버만 접근';
+comment on table public.support_inquiries is '고객센터 문의. /api/support/inquiry 가 넣고 /admin/os/inquiries 에서 처리. 서버만 접근. 탈퇴하면 user_id 만 비우고 3년 보관';
+comment on column public.support_inquiries.handled_by is '마지막으로 상태를 바꾼 관리자 id';

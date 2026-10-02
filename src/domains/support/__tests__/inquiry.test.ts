@@ -19,20 +19,22 @@ vi.mock('@/domains/messaging/drivers/email', () => ({
     createEmailDriver: () => ({ ready: () => emailReady(), send: (...a: unknown[]) => emailSend(...a) }),
 }))
 
-import { validateInquiry, INQUIRY_CATEGORIES, SUPPORT_EMAIL } from '../inquiry'
+import { validateInquiry, INQUIRY_CATEGORIES, SUPPORT_EMAIL, safeReplyTo, NOTIFY_CAP_PER_HOUR, ADMIN_INQUIRIES_URL } from '../inquiry'
 import { POST } from '@/app/api/support/inquiry/route'
 import { GET as adminGet, POST as adminPost } from '@/app/api/admin/os/inquiries/route'
 
 /** 부른 표와 동작을 기록하는 가짜 DB */
 type Op = { op: string; args: unknown[] }
 type Q = { table: string; ops: Op[] }
-function routedDb(result: (q: Q) => unknown = () => ({ data: null, error: null })) {
+/** 기본: 지난 1시간 문의 수 = 1 (방금 넣은 것) */
+const defaultResult = (q: Q) => (q.ops.some(o => o.op === 'gte') ? { count: 1, data: null, error: null } : { data: null, error: null })
+function routedDb(result: (q: Q) => unknown = defaultResult) {
     const queries: Q[] = []
     adminFrom.mockImplementation((table: string) => {
         const q: Q = { table, ops: [] }
         queries.push(q)
         const chain: Record<string, unknown> = {}
-        for (const op of ['select', 'insert', 'update', 'eq', 'order', 'limit', 'in']) {
+        for (const op of ['select', 'insert', 'update', 'eq', 'order', 'limit', 'in', 'gte']) {
             chain[op] = (...args: unknown[]) => { q.ops.push({ op, args }); return chain }
         }
         const done = async () => result(q)
@@ -81,6 +83,18 @@ describe('validateInquiry — 입력 확인', () => {
         expect(validateInquiry({ ...GOOD, body: '가'.repeat(10) }).ok).toBe(true)
         expect(validateInquiry({ ...GOOD, body: '가'.repeat(2000) }).ok).toBe(true)
         expect(validateInquiry({ ...GOOD, body: '가'.repeat(2001) }).ok).toBe(false)
+    })
+    it('글자 수는 Postgres 처럼 센다 (이모지 하나 = 1자)', () => {
+        expect(validateInquiry({ ...GOOD, body: '😀'.repeat(10) }).ok).toBe(true)
+        expect(validateInquiry({ ...GOOD, body: '😀'.repeat(9) }).ok).toBe(false)
+        expect(validateInquiry({ ...GOOD, body: '😀'.repeat(2000) }).ok).toBe(true)   // UTF-16 으로는 4000
+        expect(validateInquiry({ ...GOOD, body: '😀'.repeat(2001) }).ok).toBe(false)
+    })
+    it('답장 주소는 깨끗한 이메일일 때만', () => {
+        expect(safeReplyTo('fan@example.com')).toBe('fan@example.com')
+        expect(safeReplyTo('a@b.co\r\nBcc: x@y.z')).toBeUndefined()
+        expect(safeReplyTo('"x"<a@b.co>')).toBeUndefined()
+        expect(safeReplyTo('a,b@c.co')).toBeUndefined()
     })
     it('앱 정보는 아는 값만 받고 이상하면 버린다', () => {
         const r = validateInquiry({ ...GOOD, platform: 'windows', appVersion: '<script>' })
@@ -143,17 +157,50 @@ describe('POST /api/support/inquiry', () => {
         expect(msg.body).toContain('결제와 환불')
         expect(msg.body).toContain('나'.repeat(300))
         expect(msg.body).not.toContain('나'.repeat(301))
+        expect(msg.body).toContain(ADMIN_INQUIRIES_URL)
+        expect(ADMIN_INQUIRIES_URL).toBe('https://www.curi-ai.com/admin/os/inquiries')
+        expect((msg as { replyTo?: string }).replyTo).toBe('fan@example.com')
+    })
+    it('메일 결과가 실패면 경고를 남긴다 (개인정보 없이)', async () => {
+        routedDb()
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+        emailSend.mockResolvedValueOnce({ ok: false })
+        expect((await POST(req(GOOD))).status).toBe(200)
+        expect(warn).toHaveBeenCalled()
+        expect(JSON.stringify(warn.mock.calls)).not.toContain('fan@example.com')
+        warn.mockRestore()
+    })
+    it('전체 알림 메일은 1시간에 30통까지, 넘어도 문의는 저장한다', async () => {
+        expect(NOTIFY_CAP_PER_HOUR).toBe(30)
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+        const qs = routedDb(q => (q.ops.some(o => o.op === 'gte') ? { count: 31, data: null, error: null } : { data: null, error: null }))
+        expect((await POST(req(GOOD))).status).toBe(200)
+        expect(insertsOf(qs)).toHaveLength(1)
+        expect(emailSend).not.toHaveBeenCalled()
+        expect(warn).toHaveBeenCalled()
+        const countQ = qs.find(q => q.ops.some(o => o.op === 'gte'))!
+        expect(countQ.table).toBe('support_inquiries')
+        expect(countQ.ops.find(o => o.op === 'gte')!.args[0]).toBe('created_at')
+        warn.mockRestore()
+    })
+    it('30통째까지는 보낸다', async () => {
+        routedDb(q => (q.ops.some(o => o.op === 'gte') ? { count: 30, data: null, error: null } : { data: null, error: null }))
+        await POST(req(GOOD))
+        expect(emailSend).toHaveBeenCalledTimes(1)
     })
     it('메일이 실패해도 문의는 성공으로 답한다', async () => {
         routedDb()
         emailSend.mockRejectedValueOnce(new Error('ses down'))
         expect((await POST(req(GOOD))).status).toBe(200)
     })
-    it('메일 열쇠가 없으면 보내지 않는다', async () => {
+    it('메일 열쇠가 없으면 보내지 않고 경고를 남긴다', async () => {
         routedDb()
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
         emailReady.mockReturnValue(false)
         expect((await POST(req(GOOD))).status).toBe(200)
         expect(emailSend).not.toHaveBeenCalled()
+        expect(warn).toHaveBeenCalled()
+        warn.mockRestore()
     })
     it('표에 못 넣으면 500', async () => {
         routedDb(q => (q.ops.some(o => o.op === 'insert') ? { data: null, error: { message: 'boom' } } : { data: null, error: null }))
@@ -170,7 +217,7 @@ describe('/api/admin/os/inquiries — 관리자 창구', () => {
         routedDb()
         requireAdminAPI.mockResolvedValue({ error: 'Forbidden', status: 403, user: null })
         expect((await adminGet(adminReq('GET', 'http://localhost/api/admin/os/inquiries'))).status).toBe(403)
-        expect((await adminPost(adminReq('POST', 'http://localhost/api/admin/os/inquiries', { id: 'i1', status: 'answered' }))).status).toBe(403)
+        expect((await adminPost(adminReq('POST', 'http://localhost/api/admin/os/inquiries', { id: '0b6f4a52-3c1e-4d9a-9f1e-2a7c5d8e9b10', status: 'answered' }))).status).toBe(403)
         expect(adminFrom).not.toHaveBeenCalled()
     })
     it('목록은 최신순, 상태로 거른다', async () => {
@@ -183,14 +230,35 @@ describe('/api/admin/os/inquiries — 관리자 창구', () => {
         expect(q.ops.find(o => o.op === 'order')?.args).toEqual(['created_at', { ascending: false }])
         expect(q.ops.find(o => o.op === 'eq')?.args).toEqual(['status', 'open'])
     })
-    it('상태 바꾸기: 답함이면 답한 시각을 적는다, 이상한 상태는 400', async () => {
-        requireAdminAPI.mockResolvedValue({ error: null, status: 200, user: { id: 'admin' } })
-        const qs = routedDb(() => ({ data: { id: 'i1' }, error: null }))
-        expect((await adminPost(adminReq('POST', 'http://localhost/x', { id: 'i1', status: 'bogus' }))).status).toBe(400)
-        const res = await adminPost(adminReq('POST', 'http://localhost/x', { id: 'i1', status: 'answered' }))
+    const ID = '0b6f4a52-3c1e-4d9a-9f1e-2a7c5d8e9b10'
+    const lastUpdate = (qs: Q[]) => qs.flatMap(q => q.ops.filter(o => o.op === 'update')).at(-1)!.args[0] as Record<string, unknown>
+    it('상태 바꾸기: 답함이면 답한 시각과 처리한 관리자를 적는다, 이상한 상태는 400', async () => {
+        requireAdminAPI.mockResolvedValue({ error: null, status: 200, user: { id: 'admin-1' } })
+        const qs = routedDb(() => ({ data: [{ id: ID }], error: null }))
+        expect((await adminPost(adminReq('POST', 'http://localhost/x', { id: ID, status: 'bogus' }))).status).toBe(400)
+        const res = await adminPost(adminReq('POST', 'http://localhost/x', { id: ID, status: 'answered' }))
         expect(res.status).toBe(200)
-        const upd = qs.flatMap(q => q.ops.filter(o => o.op === 'update'))[0].args[0] as { status: string; answered_at: string }
+        const upd = lastUpdate(qs)
         expect(upd.status).toBe('answered')
         expect(typeof upd.answered_at).toBe('string')
+        expect(upd.handled_by).toBe('admin-1')
+    })
+    it('다시 열면 답한 시각을 비운다', async () => {
+        requireAdminAPI.mockResolvedValue({ error: null, status: 200, user: { id: 'admin-1' } })
+        const qs = routedDb(() => ({ data: [{ id: ID }], error: null }))
+        expect((await adminPost(adminReq('POST', 'http://localhost/x', { id: ID, status: 'open' }))).status).toBe(200)
+        expect(lastUpdate(qs)).toEqual({ status: 'open', answered_at: null, handled_by: 'admin-1' })
+    })
+    it('id 모양이 이상하면 400, 표를 안 연다', async () => {
+        requireAdminAPI.mockResolvedValue({ error: null, status: 200, user: { id: 'admin-1' } })
+        routedDb()
+        expect((await adminPost(adminReq('POST', 'http://localhost/x', { id: 'i1', status: 'closed' }))).status).toBe(400)
+        expect((await adminPost(adminReq('POST', 'http://localhost/x', { id: `${ID}' or 1=1`, status: 'closed' }))).status).toBe(400)
+        expect(adminFrom).not.toHaveBeenCalled()
+    })
+    it('바뀐 줄이 0개면 404', async () => {
+        requireAdminAPI.mockResolvedValue({ error: null, status: 200, user: { id: 'admin-1' } })
+        routedDb(() => ({ data: [], error: null }))
+        expect((await adminPost(adminReq('POST', 'http://localhost/x', { id: ID, status: 'closed' }))).status).toBe(404)
     })
 })

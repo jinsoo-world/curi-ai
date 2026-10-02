@@ -57,7 +57,7 @@ export default function BizFooter({ maxWidth = 400, marginTop = 32 }: Props) {
                 <Link href="/refund" style={{ color: '#6b7280', textDecoration: 'none' }}>
                     취소/환불정책
                 </Link>
-                <span style={{ color: '#d1d5db' }}>ㅣ</span>
+                <span aria-hidden="true" style={{ color: '#d1d5db' }}>ㅣ</span>
                 <Link href="/support" style={{ color: '#6b7280', textDecoration: 'none' }}>
                     고객센터
                 </Link>
