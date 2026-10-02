@@ -4,10 +4,10 @@
 //   ② P001 매일 루틴 결과         하루 1번(서울 날짜)
 //   ③ P025 단체방 답 도착         방마다 10분 1개
 //   ④ P033 공개 봇 검사 통과 / P034 공개 전 한 번 더 확인 중 / P035 공개하려면 고칠 곳   봇마다(P035 는 검사 1번당)
-//   ⑤ P089 3일 안부              (아직 일으키는 곳이 없다. 3일 미접속을 찾는 예약 작업이 생기면 붙인다)
-// 전부 정보(info). 광고는 ⑤ 하나뿐이다.
+//   ⑤ P089 3일 안부              7일에 1번. 매일 서울 10시 예약 작업(api/cron/push-checkin)이 고른다(checkin.ts)
+// ①~④는 정보(info). 광고는 ⑤ 하나뿐이다.
 
-import { deeplinkBot, deeplinkGroup } from './deeplink'
+import { DEEPLINK_HOME, deeplinkBot, deeplinkGroup } from './deeplink'
 import { kstDate } from './rules'
 import type { PushInput } from './types'
 
@@ -108,5 +108,23 @@ export function p035NeedsFix(a: { userId: string; mentorId: string; botName?: st
         body: `${BOT(a.botName)}: ${fixHint(a.categories)} 고쳐서 다시 올려 주세요.`,
         deeplink: deeplinkBot(a.mentorId),
         dedupe: { key: `${a.mentorId}:${a.checkKey}` },
+    }
+}
+
+/** ⑤ P089 겹침 창 = 7일(주 1번) */
+export const P089_DEDUPE_MINUTES = 7 * 24 * 60
+
+/**
+ * ⑤ 3일 안부 (광고). 마지막 접속 3일째인 광고 동의자에게 주 1번.
+ * 기획팀장 봇이 있으면 그 방으로, 없으면 홈으로. 수신 거부 문구는 sendPush 가 본문 끝에 붙인다.
+ */
+export function p089CheckIn(a: { userId: string; mentorId: string | null; botName?: string | null }): PushInput {
+    const who = a.mentorId ? iga(BOT(a.botName)) : '봇들이'
+    return {
+        userId: a.userId, type: 'P089', category: 'ad',
+        title: '(광고) 잘 지내세요?',
+        body: `${who} 이번 주 할 일을 정리해 둘 준비가 됐어요. 한마디만 건네 주세요.`,
+        deeplink: a.mentorId ? deeplinkBot(a.mentorId) : DEEPLINK_HOME,
+        dedupe: { key: 'checkin', withinMinutes: P089_DEDUPE_MINUTES },
     }
 }
