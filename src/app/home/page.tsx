@@ -1,6 +1,6 @@
 // /home 첫 화면 (대표 지시 0928 23:53). 첫 주소(/)가 여기로 온다. 로그인 뒤 첫 화면은 그대로 /os.
 // 광고 칸 없음. 활동 줄과 누적 숫자는 실제 기록만, 기준보다 적으면 숨긴다.
-// 예시 데이터는 NEXT_PUBLIC_HOME_FEED_DUMMY 를 켰을 때만. 그때는 「예시 데이터」 표시가 항상 붙는다.
+// 예시(가짜) 데이터는 공개 화면에 절대 넣지 않는다(대표 지시 1003). 환경 변수와 상관없이 실제 기록만.
 // 모양은 탈잉(taling.me) 첫 화면 구성을 따른다 (대표 지시 0929 01:07, home.css): 흰 바탕, 굵은 구역 제목과 오른쪽 「보기」 글자 단추, 좁은 화면은 구역 사이 회색 띠.
 
 import type { Metadata } from 'next'
@@ -8,7 +8,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { loadHomeActivity, type HomeActivity } from '@/domains/home/feed'
-import { HOME_DUMMY_LABEL, HOME_FEED_DUMMY, HOME_STATS_DUMMY, homeFeedDummyOn } from '@/domains/home/feed-dummy'
 import { HOME_COPY, homeStatsLine, homeStatsParts } from '@/domains/home/copy'
 import { JOBS } from '@/domains/os/presets'
 import { PLANS, planPriceText } from '@/domains/os/plan'
@@ -38,18 +37,17 @@ export const metadata: Metadata = {
     robots: { index: true, follow: true },
 }
 
-async function activity(): Promise<HomeActivity & { dummy: boolean }> {
-    if (homeFeedDummyOn()) return { feed: HOME_FEED_DUMMY, stats: HOME_STATS_DUMMY, dummy: true }
+async function activity(): Promise<HomeActivity> {
     try {
-        return { ...(await loadHomeActivity(createAdminClient())), dummy: false }
+        return await loadHomeActivity(createAdminClient())
     } catch {
-        return { feed: [], stats: { bots: null, chats: null }, dummy: false }
+        return { feed: [], stats: { bots: null, chats: null } }
     }
 }
 
 export default async function HomePage() {
     const c = HOME_COPY
-    const { feed, stats, dummy } = await activity()
+    const { feed, stats } = await activity()
     const statsLine = homeStatsLine(stats)
     const statsParts = homeStatsParts(stats)
     const jobs = JOBS.filter(j => j.id !== 'custom' && j.oneLiner)
@@ -66,14 +64,14 @@ export default async function HomePage() {
                         {feed.length > 0 && (
                             <div className="hm-sec-head">
                                 <div>
-                                    <h2>{c.feedTitle}{dummy && <span className="hm-dummy">{HOME_DUMMY_LABEL}</span>}</h2>
-                                    {!dummy && <p className="hm-sec-sub">{c.feedNote}</p>}
+                                    <h2>{c.feedTitle}</h2>
+                                    <p className="hm-sec-sub">{c.feedNote}</p>
                                 </div>
                             </div>
                         )}
                         {statsLine && (
                             <div className="hm-stats" aria-label={statsLine}>
-                                <span className="hm-stats-lead">{statsParts.lead}{dummy && feed.length === 0 && <span className="hm-dummy">{HOME_DUMMY_LABEL}</span>}</span>
+                                <span className="hm-stats-lead">{statsParts.lead}</span>
                                 <div className="hm-stats-nums">
                                     {statsParts.parts.map(p => (
                                         <span key={p.label} className="hm-stat"><span className="hm-stat-l">{p.label}</span><strong>{p.value}</strong></span>

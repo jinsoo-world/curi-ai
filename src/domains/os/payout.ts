@@ -4,7 +4,8 @@
 //  - 계좌번호는 그대로 저장하지 않는다. connectors/crypto 의 자물쇠(CONNECTOR_SECRET_KEY)로 잠가 넣는다.
 //  - 밖으로 나가는 모양(PayoutView)에는 계좌 뒤 4자리만 담는다. 잠긴 원문도 담지 않는다.
 //  - 서버(service_role)에서만 쓴다. user_id 는 여기서 반드시 건다.
-//  - 실제 정산 금액 산식은 여기 없다(대표 확정 전). 화면은 「정산 기준은 준비 중이에요」.
+//  - 정산 기준은 대표 확정(1003): 유료 회원 구독료 실수령의 20%를 대화량대로 나눔, 프로 봇 2배, 매달 10일, 3.3% 원천징수, 1만원 미만 이월,
+//    유료 회원 100명 넘은 다음 달부터 지급. 금액 계산 코드는 아직 여기 없다.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { encryptSecret } from '@/domains/connectors/crypto'

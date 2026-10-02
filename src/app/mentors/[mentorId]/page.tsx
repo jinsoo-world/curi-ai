@@ -1,6 +1,6 @@
 // /mentors/[mentorId] — 봇 상세. 마켓 카드의 「자세히」로 들어온다.
 // 「내 팀에 추가」 단추, 「N명이 팀에 넣었어요」 배지, 대화 시작 링크.
-// 내가 만든 봇이면 「연동 N건 = 정산 예정」과 「정산 정보 넣기」 링크가 더 보인다(산식은 아직 없다).
+// 내가 만든 봇이면 「내 봇을 팀에 넣은 사람 N명」(정산과 무관한 숫자)과 「정산 정보 넣기」 링크가 더 보인다(정산 기준은 domains/os/payout.ts 주석, 금액 계산 코드는 아직 없다).
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -113,10 +113,10 @@ export default async function MentorDetailPage({ params }: { params: Promise<{ m
                     <section style={{ marginTop: 32, padding: 18, borderRadius: 18, background: '#FFFFFF', border: '1px solid var(--선)' }}>
                         <h2 style={{ ...h2, marginBottom: 8 }}>내 봇 정산</h2>
                         <p style={{ fontSize: 16, color: 'var(--먹)', margin: '0 0 6px', lineHeight: 1.6 }}>
-                            연동 {linkCount}건 = 정산 예정{monthNew > 0 ? ` (이번 달 새로 ${monthNew}건)` : ''}
+                            내 봇을 팀에 넣은 사람 {linkCount}명{monthNew > 0 ? ` (이번 달 새로 ${monthNew}명)` : ''}
                         </p>
                         <p style={{ fontSize: 14, color: 'var(--먹연)', margin: '0 0 14px', lineHeight: 1.6 }}>
-                            정산 기준은 준비 중이에요. 정산 정보를 먼저 넣어 두면 기준이 정해지는 대로 바로 받을 수 있어요.
+                            유료 회원이 내 봇과 대화한 만큼 매달 10일에 보내 드려요. 1만원이 안 되면 다음 달에 합쳐서 보내요. 첫 지급은 유료 회원이 100명을 넘은 다음 달부터예요.
                         </p>
                         <Link href="/os/payout" style={{ display: 'inline-block', minHeight: 44, padding: '11px 18px', borderRadius: 12, background: payoutReady ? '#FFFFFF' : 'var(--먹)', color: payoutReady ? 'var(--먹)' : '#FFFFFF', border: payoutReady ? '1px solid var(--선)' : 0, fontSize: 15, fontWeight: 600, textDecoration: 'none' }}>
                             {payoutReady ? '정산 정보 고치기' : '정산 정보 넣기'}

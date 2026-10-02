@@ -64,7 +64,7 @@ describe('고객 화면 횟수 표기 없음 (대표 지시 0929): /os/charge', 
             for (const perk of p.perks) expect(perk).not.toMatch(COUNT)
             expect(p.perks.some(x => x.includes('답변'))).toBe(false)
         }
-        expect(PLANS.map(p => p.perks[1])).toEqual(['가볍게 써 보기', '넉넉하게 쓰기', '가장 넉넉하게 쓰기'])
+        expect(PLANS.map(p => p.perks[0])).toEqual(['가볍게 써 보기', '넉넉하게 쓰기', '가장 넉넉하게 쓰기'])
         expect(PLANS.map(p => p.limitMonth)).toEqual([30, 370, 1250])
     })
     it('결제 화면 코드에 횟수 문구와 묶음 횟수 표기가 없다', async () => {
