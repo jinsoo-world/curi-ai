@@ -120,33 +120,22 @@ export default function LoginPage() {
             background: 'var(--color-neutral-50)',
             position: 'relative',
         }}>
-            {/* Background blobs */}
-            <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-                <div style={{
-                    position: 'absolute', width: 320, height: 320, top: -120, right: -100,
-                    background: 'rgba(187, 247, 208, 0.25)', filter: 'blur(80px)', borderRadius: '50%',
-                }} />
-                <div style={{
-                    position: 'absolute', width: 280, height: 280, bottom: -100, left: -80,
-                    background: 'rgba(220, 252, 231, 0.3)', filter: 'blur(80px)', borderRadius: '50%',
-                }} />
-            </div>
+            {/* 1003 큐리어스 본체 모양: 흐린 초록 얼룩 배경 없앰. 회색 면 위 흰 카드 한 장 */}
 
             {/* 🎉 무료체험 배너 */}
             <div style={{
                 position: 'relative', zIndex: 10,
                 width: '100%', maxWidth: 400,
                 background: 'var(--color-primary-50)',
-                border: '1.5px solid var(--color-primary-100)',
-                borderRadius: 16,
-                padding: '16px 20px',
+                border: '1px solid var(--color-primary-200)',
+                borderRadius: 8,
+                padding: '12px 16px',
                 marginBottom: 20,
                 textAlign: 'center',
                 animation: 'fadeIn 0.5s ease',
             }}>
                 <div style={{
-                    fontSize: 17, fontWeight: 800, color: 'var(--color-primary-700)',
-                    letterSpacing: '-0.02em',
+                    fontSize: 18, fontWeight: 600, color: 'var(--color-primary-600)',
                 }}>
                     로그인하면 대화 한도 2배로 드려요
                 </div>
@@ -160,18 +149,18 @@ export default function LoginPage() {
                 position: 'relative', zIndex: 10,
                 width: '100%', maxWidth: 400,
                 background: '#fff',
-                borderRadius: 24,
-                padding: '44px 32px 32px',
-                boxShadow: '0 2px 16px rgba(0,0,0,0.05), 0 1px 4px rgba(0,0,0,0.03)',
+                borderRadius: 16,
+                border: '1px solid var(--color-neutral-200)',
+                padding: '40px 24px 28px',
                 animation: 'fadeIn 0.5s ease 0.1s both',
             }}>
                 {/* Logo */}
                 <div style={{ textAlign: 'center', marginBottom: 32 }}>
                     <span style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}><BotAvatar shape="clover" color="green" state="talking" size={96} name="큐리AI" /></span>
-                    {/* 큐리 글자 = 브랜드 초록(globals.css --연두 #22C55E). 검정 아님 (대표 0928) */}
+                    {/* 큐리 글자 = 브랜드 초록(globals.css --연두 = 큐리어스 #03C124). 검정 아님 (대표 0928) */}
                     <h1 style={{
-                        fontSize: 28, fontWeight: 800, color: 'var(--연두, var(--color-primary-500))',
-                        letterSpacing: '-0.03em', marginBottom: 6,
+                        fontSize: 28, lineHeight: '38px', fontWeight: 700, color: 'var(--연두, var(--color-primary-500))',
+                        letterSpacing: '-0.0236em', marginBottom: 8,
                     }}>
                         큐리 AI
                     </h1>
@@ -185,7 +174,8 @@ export default function LoginPage() {
                     <div role="alert" data-testid="login-error" style={{
                         padding: '12px 16px', marginBottom: 16,
                         background: 'var(--color-red-50)', color: 'var(--color-red-700)',
-                        borderRadius: 12, fontSize: 15, lineHeight: 1.5, textAlign: 'center',
+                        border: '1px solid var(--color-red-200)',
+                        borderRadius: 8, fontSize: 15, lineHeight: 1.5, textAlign: 'center',
                     }}>
                         {error}
                     </div>
@@ -201,13 +191,12 @@ export default function LoginPage() {
                         style={{
                             width: '100%',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-                            padding: '16px 24px', fontSize: 17, fontWeight: 700,
-                            borderRadius: 16,
+                            padding: '14px 24px', fontSize: 18, fontWeight: 600,
+                            borderRadius: 8,
                             minHeight: 56,
-                            background: '#FEE500',
+                            background: 'var(--color-kakao)',
                             color: 'var(--color-neutral-900)',
-                            border: wantProvider === 'kakao' ? '2px solid #191919' : 'none',
-                            boxShadow: '0 2px 8px rgba(254,229,0,0.25)',
+                            border: wantProvider === 'kakao' ? '2px solid var(--color-neutral-900)' : 'none',
                             cursor: 'pointer',
                             transition: 'all 200ms',
                             opacity: isLoading !== null ? 0.5 : 1,
@@ -226,8 +215,8 @@ export default function LoginPage() {
                         {lastProvider === 'kakao' && (
                             <span style={{
                                 background: 'var(--color-neutral-900)', color: '#fff',
-                                fontSize: 11, fontWeight: 700,
-                                padding: '4px 10px', borderRadius: 20,
+                                fontSize: 13, fontWeight: 600,
+                                padding: '2px 6px', borderRadius: 4,
                                 marginLeft: 4, whiteSpace: 'nowrap',
                             }}>
                                 최근 사용
@@ -255,13 +244,12 @@ export default function LoginPage() {
                             style={{
                                 width: '100%',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-                                padding: '16px 24px', fontSize: 17, fontWeight: 600,
-                                borderRadius: 16,
+                                padding: '14px 24px', fontSize: 18, fontWeight: 600,
+                                borderRadius: 8,
                                 minHeight: 56,
                                 background: '#fff',
                                 color: 'var(--color-neutral-900)',
-                                border: wantProvider === 'google' ? '2px solid #1a1a2e' : '1.5px solid #d1d5db',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                                border: wantProvider === 'google' ? '2px solid var(--color-neutral-900)' : '1px solid var(--color-neutral-200)',
                                 cursor: 'pointer',
                                 transition: 'all 200ms',
                                 opacity: isLoading !== null || isInAppBrowser ? 0.5 : 1,
@@ -302,7 +290,7 @@ export default function LoginPage() {
 
 
 
-                <p data-testid="login-notice" style={{ fontSize: 13, color: 'var(--color-neutral-500)', textAlign: 'center', margin: '12px 0 0', lineHeight: 1.5 }}>
+                <p data-testid="login-notice" style={{ fontSize: 14, color: 'var(--color-neutral-500)', textAlign: 'center', margin: '12px 0 0', lineHeight: 1.5 }}>
                     시작하면 만 14세 이상이며{' '}
                     <Link href="/terms" target="_blank" style={{ color: 'var(--color-neutral-600)', textDecoration: 'underline' }}>이용약관</Link>과{' '}
                     <Link href="/privacy" target="_blank" style={{ color: 'var(--color-neutral-600)', textDecoration: 'underline' }}>개인정보처리방침</Link>에 동의한 것으로 봐요.

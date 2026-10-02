@@ -85,7 +85,7 @@ export default function PayoutPage() {
 
     return (
         <div style={wrap}>
-            <Link href="/os" style={{ fontSize: 14, color: 'var(--os-글-연)', textDecoration: 'none' }}>← 봇 화면으로</Link>
+            <Link href="/os" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, fontSize: 16, color: 'var(--os-글-연)', textDecoration: 'none' }}>← 봇 화면으로</Link>
             <h1 style={h1}>정산 정보</h1>
             <p style={p}>
                 유료 회원이 내 봇과 대화한 만큼 매달 10일에 여기 넣어 둔 계좌로 보내 드려요. 1만원이 안 되면 다음 달에 합쳐서 보내요.
@@ -144,7 +144,7 @@ export default function PayoutPage() {
 
                     <label style={{ ...label, flexDirection: 'row', alignItems: 'flex-start', gap: 10, fontWeight: 400 }}>
                         <input type="checkbox" checked={form.agreed} onChange={e => set('agreed', e.target.checked)} style={{ width: 22, height: 22, marginTop: 2 }} />
-                        <span style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--os-글-연)' }}>
+                        <span style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--os-글-연)' }}>
                             정산을 위해 이름, 이메일, 휴대폰, 생년월일, 계좌 정보를 모으는 것에 동의해요. 정산과 세금 신고에만 쓰고, 그만두면 지워 달라고 할 수 있어요.
                         </span>
                     </label>
@@ -160,20 +160,21 @@ export default function PayoutPage() {
 
             {note && !editing && <p role="status" style={{ fontSize: 15, color: note.kind === 'ok' ? 'var(--os-클로버)' : 'var(--os-오류)' }}>{note.text}</p>}
 
-            <p style={{ ...p, fontSize: 13, color: 'var(--os-글-흐림)' }}>
+            <p style={{ ...p, fontSize: 14, color: 'var(--os-글-흐림)' }}>
                 계좌번호는 서버가 잠가서 저장해요. 화면에는 뒤 4자리만 다시 보여요.
             </p>
         </div>
     )
 }
 
-const wrap: React.CSSProperties = { overflow: 'auto', padding: '20px 20px 60px', maxWidth: 560, width: '100%', margin: '0 auto', minHeight: 0, color: 'var(--os-글)' }
-const h1: React.CSSProperties = { fontSize: 22, fontWeight: 700, margin: '12px 0 8px' }
-const h2: React.CSSProperties = { fontSize: 17, fontWeight: 700, margin: '0 0 6px' }
-const p: React.CSSProperties = { fontSize: 15, color: 'var(--os-글-연)', lineHeight: 1.6, margin: '0 0 16px' }
-const card: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 14, padding: 18, borderRadius: 18, background: 'var(--os-패널)', border: '1px solid var(--os-선)', marginBottom: 16 }
-const label: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 15, fontWeight: 600 }
-const input: React.CSSProperties = { minHeight: 48, padding: '10px 12px', borderRadius: 12, border: '1px solid var(--os-선)', background: 'var(--os-말풍선)', color: 'var(--os-글)', fontSize: 16, outline: 0 }
-const dl: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 14px', margin: 0, fontSize: 15 }
+// 1003 큐리어스 본체 규격: 제목 headline-1, 카드 16px + 테두리, 입력칸 8px 흰 바탕 + 회색 테두리(Field·Input)
+const wrap: React.CSSProperties = { overflow: 'auto', padding: '24px 20px 64px', maxWidth: 560, width: '100%', margin: '0 auto', minHeight: 0, color: 'var(--os-글)' }
+const h1: React.CSSProperties = { fontSize: 28, lineHeight: '38px', letterSpacing: '-0.0236em', fontWeight: 700, margin: '12px 0 8px' }
+const h2: React.CSSProperties = { fontSize: 20, lineHeight: '28px', fontWeight: 700, margin: '0 0 4px' }
+const p: React.CSSProperties = { fontSize: 17, color: 'var(--os-글-흐림)', fontWeight: 500, lineHeight: 1.6, margin: '0 0 20px' }
+const card: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 14, padding: 24, borderRadius: 16, background: 'var(--os-바탕)', border: '1px solid var(--os-선)', marginBottom: 16 }
+const label: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 15, lineHeight: '22px', fontWeight: 600 }
+const input: React.CSSProperties = { minHeight: 52, padding: '12px 16px', borderRadius: 8, border: '1px solid var(--os-선)', background: 'var(--os-바탕)', color: 'var(--os-글)', fontSize: 16, fontWeight: 500, outline: 0 }
+const dl: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px', margin: 0, fontSize: 16 }
 const dt: React.CSSProperties = { color: 'var(--os-글-흐림)' }
 const dd: React.CSSProperties = { margin: 0 }
