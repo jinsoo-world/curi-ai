@@ -49,8 +49,9 @@ export function classifyFcm(status: number, body: string): DeliveryResult {
     try { j = JSON.parse(body) as FcmError } catch { /* 빈 몸통 */ }
     const code = j.error?.details?.find(d => d.errorCode)?.errorCode ?? j.error?.status ?? ''
     const msg = j.error?.message ?? ''
-    // UNREGISTERED = 앱을 지웠거나 번호가 만료. INVALID_ARGUMENT 중 「번호가 틀림」도 죽은 번호로 본다
-    const disable = code === 'UNREGISTERED' || status === 404 ||
+    // UNREGISTERED = 앱을 지웠거나 번호가 만료. INVALID_ARGUMENT 중 「번호가 틀림」도 죽은 번호로 본다.
+    // 404 만으로는 끄지 않는다(프로젝트 번호가 틀려도 404 = 그때 안드로이드 기기를 전부 끄면 안 된다)
+    const disable = code === 'UNREGISTERED' ||
         (code === 'INVALID_ARGUMENT' && /registration token/i.test(msg))
     return { ok: false, error: `fcm ${status}${code ? ` ${code}` : ''}`, disable }
 }

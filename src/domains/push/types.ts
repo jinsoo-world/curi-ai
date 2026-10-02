@@ -29,7 +29,7 @@ export interface PushInput {
      * withinMinutes 가 없으면 기한 없이(평생 1번), 있으면 그 분 안에서만 막는다.
      */
     dedupe?: { key: string; withinMinutes?: number }
-    /** 관리자 시험 발송 전용. 하루 상한·조용한 시간·설정 꺼짐을 건너뛴다(광고 규칙은 그대로) */
+    /** 관리자 시험 발송 전용. 하루 3번·조용한 시간을 건너뛴다(푸시 꺼짐·광고 규칙·광고 상한은 그대로) */
     ignoreLimits?: boolean
 }
 
@@ -84,9 +84,9 @@ export interface PushSendRow {
 /** sendPush 가 DB 에 묻는 것. 시험에서는 가짜로 갈아 끼운다 */
 export interface PushStore {
     listDevices(userId: string): Promise<PushDevice[]>
-    /** since 이후 「보냄」 묶음(batch) 수. category 를 주면 그 종류만 */
+    /** since 이후 「보냄」 묶음(batch) 수(시험 발송 TEST 제외). category 를 주면 그 종류만 */
     countSentBatches(userId: string, since: Date, category?: PushCategory): Promise<number>
-    /** 같은 type + key 로 보낸 적이 있나(since 가 있으면 그 뒤로만) */
+    /** 같은 type + key 로 「보냄」이 있나(since 가 있으면 그 뒤로만). 실패·막힘은 안 센다 */
     hasSent(userId: string, type: string, key: string, since: Date | null): Promise<boolean>
     /** users.marketing_consent */
     hasMarketingConsent(userId: string): Promise<boolean>

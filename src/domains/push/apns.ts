@@ -41,8 +41,9 @@ export function makeApnsJwt(c: Pick<ApnsConfig, 'keyId' | 'teamId' | 'p8'>, nowS
     return `${input}.${b64url(sig)}`
 }
 
-/** 이 이유면 기기 번호가 죽었다 = 그 기기를 끈다 */
-const DEAD_REASONS = new Set(['BadDeviceToken', 'Unregistered', 'DeviceTokenNotForTopic', 'ExpiredToken'])
+/** 이 이유면 기기 번호가 죽었다 = 그 기기를 끈다.
+ *  DeviceTokenNotForTopic 은 넣지 않는다(APNS_BUNDLE_ID 가 틀려도 나온다 = 그때 아이폰을 전부 끄면 안 된다) */
+const DEAD_REASONS = new Set(['BadDeviceToken', 'Unregistered', 'ExpiredToken'])
 
 export function classifyApns(status: number, body: string): DeliveryResult {
     if (status === 200) return { ok: true }

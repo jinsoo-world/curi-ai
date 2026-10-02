@@ -29,7 +29,9 @@ describe('애플(APNs)', () => {
     it('410 · BadDeviceToken · Unregistered 는 죽은 번호 = 기기를 끈다', () => {
         expect(classifyApns(410, '{"reason":"Unregistered"}')).toMatchObject({ ok: false, disable: true })
         expect(classifyApns(400, '{"reason":"BadDeviceToken"}')).toMatchObject({ ok: false, disable: true })
-        expect(classifyApns(400, '{"reason":"DeviceTokenNotForTopic"}')).toMatchObject({ ok: false, disable: true })
+    })
+    it('DeviceTokenNotForTopic 은 앱 번호(APNS_BUNDLE_ID) 설정 실수일 수 있어 끄지 않는다', () => {
+        expect(classifyApns(400, '{"reason":"DeviceTokenNotForTopic"}')).toMatchObject({ ok: false, disable: false })
     })
     it('일시 오류(429, 500, 503)는 기기를 끄지 않는다', () => {
         expect(classifyApns(429, '{"reason":"TooManyRequests"}')).toMatchObject({ ok: false, disable: false })
@@ -76,7 +78,10 @@ describe('구글(FCM)', () => {
         expect(fcmConfig({ FCM_SERVICE_ACCOUNT_JSON: SA })?.projectId).toBe('curiai-57dc7')
     })
 
-    it('UNREGISTERED 와 404 는 죽은 번호 = 기기를 끈다', () => {
+    it('404 만으로는 끄지 않는다(프로젝트 번호가 틀려도 404)', () => {
+        expect(classifyFcm(404, JSON.stringify({ error: { status: 'NOT_FOUND', message: 'Requested entity was not found.' } }))).toMatchObject({ ok: false, disable: false })
+    })
+    it('UNREGISTERED 는 죽은 번호 = 기기를 끈다', () => {
         const body = JSON.stringify({ error: { status: 'NOT_FOUND', details: [{ '@type': 'type.googleapis.com/google.firebase.fcm.v1.FcmError', errorCode: 'UNREGISTERED' }] } })
         expect(classifyFcm(404, body)).toMatchObject({ ok: false, disable: true, error: 'fcm 404 UNREGISTERED' })
         const bad = JSON.stringify({ error: { status: 'INVALID_ARGUMENT', message: 'The registration token is not a valid FCM registration token' } })

@@ -139,9 +139,15 @@ describe('sendPush — 정보 알림의 조용한 시간과 설정', () => {
         const { store } = fakeStore({ prefs: { push: false, quietFrom: null, quietTo: null } })
         expect(await sendPush(INFO, deps(store, kst(14)))).toEqual({ status: 'blocked', reason: 'push_off' })
     })
-    it('관리자 시험 발송은 상한·조용한 시간을 건너뛴다', async () => {
+    it('관리자 시험 발송은 하루 3번·조용한 시간을 건너뛴다', async () => {
         const { store } = fakeStore({ sentToday: 5 })
         expect(await sendPush({ ...INFO, type: 'TEST', ignoreLimits: true }, deps(store, kst(23)))).toMatchObject({ status: 'sent' })
+    })
+    it('관리자 시험 발송이어도 푸시를 끈 사람에겐 안 가고, 광고 하루 1번도 그대로', async () => {
+        const off = fakeStore({ prefs: { push: false, quietFrom: null, quietTo: null } })
+        expect(await sendPush({ ...INFO, ignoreLimits: true }, deps(off.store, kst(14)))).toEqual({ status: 'blocked', reason: 'push_off' })
+        const ad = fakeStore({ consent: true, adToday: 1 })
+        expect(await sendPush({ ...AD, ignoreLimits: true }, deps(ad.store, kst(14)))).toEqual({ status: 'blocked', reason: 'ad_daily_cap' })
     })
 })
 
@@ -179,9 +185,12 @@ describe('sendPush — 기기별 보내기와 죽은 기기 끄기', () => {
         expect(out).toMatchObject({ status: 'failed', delivered: 0, failed: 1, disabled: 0 })
         expect(disabled).toEqual([])
     })
-    it('기기가 없으면 no_device', async () => {
-        const { store } = fakeStore({ devices: [] })
+    it('기기가 없으면 no_device 이고, 다른 DB 조회·기록을 하지 않는다(앱 없는 사람이 대부분)', async () => {
+        const { store, rows } = fakeStore({ devices: [] })
+        const counted = vi.spyOn(store, 'countSentBatches')
         expect(await sendPush(INFO, deps(store, kst(14)))).toEqual({ status: 'blocked', reason: 'no_device' })
+        expect(counted).not.toHaveBeenCalled()
+        expect(rows).toHaveLength(0)
     })
     it('열쇠가 없는 쪽(안드로이드) 기기는 건너뛰고 아이폰만 보낸다', async () => {
         const { store, rows } = fakeStore({ devices: [IOS, AND] })

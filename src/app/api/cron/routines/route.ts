@@ -10,10 +10,10 @@
 //    진짜 5분 주기는 **바깥 예약 서비스**(cron-job.org 등)에서 같은 주소를 부르면 된다:
 //      GET https://…/api/cron/routines   머리글: Authorization: Bearer <CRON_SECRET>   주기: */5 * * * *
 //    이 코드는 어느 쪽으로 불려도 똑같이 동작한다(판정은 5분 창 규칙이 한다).
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { listEnabledRoutines, pickDue, runRoutineOnce, RoutineTableMissing } from '@/domains/os/routines'
-import { notifyNative, p001RoutineDone } from '@/domains/push'
+import { notifyNative, p001RoutineDone, type PushInput } from '@/domains/push'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -35,12 +35,15 @@ export async function GET(req: NextRequest) {
         const 돌것 = pickDue(켜진것, now).slice(0, MAX_PER_RUN)
 
         let 성공 = 0, 실패 = 0
+        const 알림: PushInput[] = []
         for (const r of 돌것) {
             const res = await runRoutineOnce(db, r)   // 안에서 실패를 삼키고 기록만 남긴다
             if (res.ok) 성공++; else 실패++
             // 앱 알림 P001(매일 루틴 결과). 하루 1번만 = 루틴이 여러 개면 첫 결과만 울린다. 시험 실행(화면에서 누름)은 안 보낸다
-            if (res.ok) await notifyNative(db, p001RoutineDone({ userId: r.userId, mentorId: r.mentorId, botName: res.botName, routineTitle: r.title, now }))
+            if (res.ok) 알림.push(p001RoutineDone({ userId: r.userId, mentorId: r.mentorId, botName: res.botName, routineTitle: r.title, now }))
         }
+        // 응답 뒤에 차례로 보낸다 = 애플·구글이 느려도 루틴 돌리는 시간을 잡아먹지 않는다(같은 사람 하루 1번 판정이 섞이지 않게 차례로)
+        if (알림.length > 0) after(async () => { for (const p of 알림) await notifyNative(db, p) })
         return NextResponse.json({ ok: true, checked: 켜진것.length, ran: 돌것.length, 성공, 실패 })
     } catch (e) {
         // 표가 아직 없으면 「준비 중」이지 고장이 아니다. 빨간 카드를 만들지 않는다.

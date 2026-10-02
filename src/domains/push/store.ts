@@ -19,7 +19,7 @@ export function createSupabasePushStore(db: Db): PushStore {
 
         async countSentBatches(userId, since, category) {
             let q = db.from('push_sends').select('batch_id')
-                .eq('user_id', userId).eq('status', 'sent').gte('sent_at', since.toISOString())
+                .eq('user_id', userId).eq('status', 'sent').neq('push_type', 'TEST').gte('sent_at', since.toISOString())
             if (category) q = q.eq('category', category)
             const { data, error } = await q.limit(500)
             if (error) throw new Error(error.message)
@@ -28,7 +28,7 @@ export function createSupabasePushStore(db: Db): PushStore {
 
         async hasSent(userId, type, key, since) {
             let q = db.from('push_sends').select('id')
-                .eq('user_id', userId).eq('push_type', type).eq('dedupe_key', key).neq('status', 'blocked')
+                .eq('user_id', userId).eq('push_type', type).eq('dedupe_key', key).eq('status', 'sent')
             if (since) q = q.gte('sent_at', since.toISOString())
             const { data, error } = await q.limit(1)
             if (error) throw new Error(error.message)

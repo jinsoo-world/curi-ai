@@ -84,6 +84,10 @@ export async function dispatch(input: DispatchInput, deps: DispatchDeps): Promis
         if ('skipped' in r) {
             return finish({ ...logBase, status: 'blocked', error: 'driver_not_ready' }, { status: 'blocked', reason: 'driver_not_ready', message: REASON_TEXT.driver_not_ready, push: r })
         }
+        if (r.status === 'blocked' && r.reason === 'no_device') {
+            // 앱을 안 깐 사람(대부분)은 일이 생길 때마다 여기로 온다. 기록하지 않는다
+            return { status: 'blocked', reason: 'push_rule', pushReason: 'no_device', message: '앱 알림을 받을 기기가 없어요.', push: r }
+        }
         if (r.status === 'blocked') {
             return finish({ ...logBase, status: 'blocked', error: r.reason }, { status: 'blocked', reason: 'push_rule', pushReason: r.reason, message: REASON_TEXT.push_rule, push: r })
         }

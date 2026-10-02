@@ -209,6 +209,13 @@ describe('dispatch — 앱 푸시(아이폰·안드로이드)는 같은 관문�
         expect(appPush).toHaveBeenCalledWith(expect.objectContaining({ ignoreLimits: true }))
     })
 
+    it('앱이 없는 사람(no_device)은 기록하지 않고 조용히 끝난다', async () => {
+        const { store, logs } = fakeStore()
+        const out = await dispatch(appInput, { store, drivers: { push: fakeDriver(), sms: fakeDriver(), email: fakeDriver() }, now: DAY, appPush: async () => ({ status: 'blocked' as const, reason: 'no_device' as const }) })
+        expect(out).toMatchObject({ status: 'blocked', pushReason: 'no_device' })
+        expect(logs).toHaveLength(0)
+    })
+
     it('앱 푸시 열쇠가 없으면 driver_not_ready', async () => {
         const { store } = fakeStore()
         const out = await dispatch(appInput, { store, drivers: { push: fakeDriver(), sms: fakeDriver(), email: fakeDriver() }, now: DAY, appPush: async () => ({ skipped: 'not_configured' as const }) })

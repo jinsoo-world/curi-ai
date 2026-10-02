@@ -60,6 +60,7 @@ export function deviceRow(userId: string, input: RegisterInput, now: Date) {
         timezone: input.timezone,
         last_seen_at: now.toISOString(),
         disabled_at: null,
+        disabled_reason: null,
     }
 }
 
