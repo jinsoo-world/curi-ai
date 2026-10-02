@@ -171,4 +171,27 @@ describe('messaging/dispatch — 모든 발신은 관문 한 곳을 지난다', 
         expect(r.status).toBe('sent')
         warn.mockRestore()
     })
+
+    it('남에게 보낸 메일이 나갔는데 기록이 실패하면 console.error (하루 상한을 못 세게 되니 크게 알린다)', async () => {
+        const { store } = fakeStore({ approved: ['ok-1'] })
+        store.log = async () => { throw new Error('insert failed') }
+        const err = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+        const r = await dispatch({ message: msg('email'), audience: 'other', permissionRequestId: 'ok-1' }, { store, drivers: drivers(), now: DAY })
+        expect(r.status).toBe('sent')
+        expect(err).toHaveBeenCalledTimes(1)
+        expect(warn).not.toHaveBeenCalled()
+        err.mockRestore(); warn.mockRestore()
+    })
+
+    it('막힌 기록이 실패하면 지금처럼 경고만', async () => {
+        const { store } = fakeStore()
+        store.log = async () => { throw new Error('insert failed') }
+        const err = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+        await dispatch({ message: msg('email'), audience: 'other' }, { store, drivers: drivers(), now: DAY })
+        expect(err).not.toHaveBeenCalled()
+        expect(warn).toHaveBeenCalledTimes(1)
+        err.mockRestore(); warn.mockRestore()
+    })
 })

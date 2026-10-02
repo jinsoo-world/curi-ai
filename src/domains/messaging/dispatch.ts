@@ -42,7 +42,10 @@ export async function dispatch(input: DispatchInput, deps: DispatchDeps): Promis
     }
     const finish = async (entry: MessageLogEntry, outcome: DispatchOutcome): Promise<DispatchOutcome> => {
         try { await store.log(entry) } catch (e) {
-            console.warn('[messaging] 기록 실패(표 없음?)', e instanceof Error ? e.message : e)
+            const why = e instanceof Error ? e.message : e
+            // 남에게 실제로 나간 것의 기록이 빠지면 하루 상한(outbound-guard)이 그만큼 덜 센다. 크게 알린다
+            if (audience === 'other' && entry.status === 'sent') console.error('[messaging] 남에게 보낸 기록 실패. 하루 상한이 덜 셀 수 있다', why)
+            else console.warn('[messaging] 기록 실패(표 없음?)', why)
         }
         return outcome
     }

@@ -2,7 +2,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const dispatchWith = vi.fn()
-const guard = { countSentToday: vi.fn(), isSuppressed: vi.fn() }
+const getApprovedRequest = vi.fn()
+const guard = { listSentToday: vi.fn(), reserve: vi.fn(), release: vi.fn(), isSuppressed: vi.fn() }
 
 vi.mock('@/lib/supabase/server', () => ({
     createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) } }),
@@ -13,7 +14,10 @@ vi.mock('@/lib/rate-limit', () => ({
     rateLimitKey: (a: string, b: string) => `${a}:${b}`,
     rateLimitMessage: (s: string) => s,
 }))
-vi.mock('@/domains/messaging', () => ({ dispatchWith: (...a: unknown[]) => dispatchWith(...a) }))
+vi.mock('@/domains/messaging', () => ({
+    dispatchWith: (...a: unknown[]) => dispatchWith(...a),
+    createSupabaseStore: () => ({ getApprovedRequest: (...a: unknown[]) => getApprovedRequest(...a) }),
+}))
 vi.mock('@/domains/messaging/outbound-guard', async (orig) => {
     const real = await orig<typeof import('@/domains/messaging/outbound-guard')>()
     return { ...real, createOutboundGuardStore: () => guard }
@@ -31,7 +35,10 @@ const saved: Record<string, string | undefined> = {}
 beforeEach(() => {
     for (const k of ENV_KEYS) { saved[k] = process.env[k]; delete process.env[k] }
     dispatchWith.mockReset().mockResolvedValue({ status: 'sent', message: '보냈어요.' })
-    guard.countSentToday.mockReset().mockResolvedValue({ total: 0, recipientHashes: [] })
+    getApprovedRequest.mockReset().mockImplementation(async (id: string, userId: string) => id === 'card-1' ? { id, userId } : null)
+    guard.listSentToday.mockReset().mockResolvedValue([])
+    guard.reserve.mockReset().mockResolvedValue('res-1')
+    guard.release.mockReset().mockResolvedValue(undefined)
     guard.isSuppressed.mockReset().mockResolvedValue(false)
 })
 afterEach(() => { for (const k of ENV_KEYS) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k] } })
@@ -44,6 +51,31 @@ describe('/api/os/messages/send', () => {
         const arg = dispatchWith.mock.calls[0][1] as { message: { toHash?: string; to?: string } }
         expect(arg.message.to).toBe('fan@example.com')
         expect(arg.message.toHash).toBe(hashRecipient('fan@example.com'))
+        expect(getApprovedRequest).toHaveBeenCalledWith('card-1', 'u1')
+        expect(guard.release).toHaveBeenCalledWith('res-1')   // 보내고 나면 보내는 중 줄을 지운다(최종 기록은 관문이 따로 적는다)
+    })
+
+    it('승인 카드가 없으면(없는 카드·남의 카드) 잠금·반송 명단을 보기 전에 403', async () => {
+        const res = await post(mail({ permissionRequestId: 'someone-elses-card' }))
+        expect(res.status).toBe(403)
+        expect((await res.json()).message).toBe('허용된 승인 카드가 없어 보내지 않았어요.')
+        expect(guard.isSuppressed).not.toHaveBeenCalled()
+        expect(guard.reserve).not.toHaveBeenCalled()
+        expect(guard.listSentToday).not.toHaveBeenCalled()
+        expect(dispatchWith).not.toHaveBeenCalled()
+    })
+
+    it('카드 확인이 실패해도 403 (닫힌 쪽)', async () => {
+        getApprovedRequest.mockRejectedValue(new Error('db down'))
+        const res = await post(mail())
+        expect(res.status).toBe(403)
+        expect(guard.isSuppressed).not.toHaveBeenCalled()
+    })
+
+    it('관문이 던져도 보내는 중 줄은 지운다', async () => {
+        dispatchWith.mockRejectedValue(new Error('boom'))
+        await expect(post(mail())).rejects.toThrow('boom')
+        expect(guard.release).toHaveBeenCalledWith('res-1')
     })
 
     it("OS_OUTBOUND_MAIL_ENABLED='0' 이면 503, 관문을 부르지 않는다", async () => {
@@ -61,7 +93,7 @@ describe('/api/os/messages/send', () => {
     })
 
     it('하루 20통을 넘기면 429', async () => {
-        guard.countSentToday.mockResolvedValue({ total: 20, recipientHashes: Array(20).fill(hashRecipient('fan@example.com')) })
+        guard.listSentToday.mockResolvedValue(Array.from({ length: 20 }, (_, i) => ({ id: `r${i}`, toHash: hashRecipient('fan@example.com') })))
         const res = await post(mail())
         expect(res.status).toBe(429)
         expect(dispatchWith).not.toHaveBeenCalled()
@@ -94,6 +126,6 @@ describe('/api/os/messages/send', () => {
         process.env.OS_OUTBOUND_MAIL_ENABLED = '0'
         const res = await post({ permissionRequestId: 'card-1', channel: 'push', body: '안녕하세요' })
         expect(res.status).toBe(200)
-        expect(guard.countSentToday).not.toHaveBeenCalled()
+        expect(guard.listSentToday).not.toHaveBeenCalled()
     })
 })
