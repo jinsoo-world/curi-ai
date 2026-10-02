@@ -6,6 +6,8 @@
  * 전에는 「하루 20회 무료 대화」 「텍스트 + 음성 멘토링」이었다. 옛 제품(대화) 얘기다.
  * 지금 우리가 파는 것은 사진이고, 값은 클로버로 매긴다.
  *
+ * 클로버 충전 칸은 뺐다(대표 결정 1002 「클로버는 없애구」). 파는 것은 월 요금제뿐.
+ *
  * 숫자는 전부 실제 코드에서 읽는다. 화면에 손으로 적으면 갈라진다
  * (실제로 화면 9,900원 / 청구 7,900원으로 갈려 있던 적이 있다).
  */
@@ -15,7 +17,6 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import AppSidebar from '@/components/AppSidebar'
 import CloverIcon from '@/components/ui/CloverIcon'
-import { CLOVER_PACKS } from '@/domains/credit/packs'
 import { PLANS } from '@/domains/os/plan'
 import { PHOTO_COST } from '@/domains/studio/photo'
 import { ENHANCE_COST } from '@/domains/studio/enhance'
@@ -62,7 +63,7 @@ export default function PricingPage() {
                 <section style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '20px 18px', marginBottom: 16 }}>
                     <h2 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 4px' }}>봇 팀 요금제</h2>
                     <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 16px' }}>
-                        이번 달 사용량 안에서는 클로버를 쓰지 않아요.
+                        매달 1일에 사용량이 다시 채워져요.
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {PLANS.map((p) => (
@@ -148,42 +149,6 @@ export default function PricingPage() {
                     >
                         클로버 모으는 법 보기
                     </Link>
-                </section>
-
-                {/* 클로버 충전 (부가). 사진 N장·할인 표기는 뺐다(대표 지시 0923). 값은 0915 확정 그대로 */}
-                <section style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '20px 18px', marginBottom: 16 }}>
-                    <h2 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 4px' }}>클로버 충전</h2>
-                    <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 16px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                        봇 마켓의 다른 리더 봇과 대화하거나 한도를 넘겨 더 쓸 때, 그리고 사진을 만들 때 클로버를 써요. 이번 달 사용량 안에서는 클로버를 쓰지 않아요.
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {CLOVER_PACKS.map((p) => (
-                            <div
-                                key={p.id}
-                                style={{
-                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                    gap: 10, padding: '14px 16px', border: '1px solid #e4e4e7', borderRadius: 14,
-                                }}
-                            >
-                                <div style={{ fontSize: 17, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                                    <CloverIcon size={18} /> 클로버 {p.clovers.toLocaleString()}개
-                                </div>
-                                <div style={{ fontSize: 18, fontWeight: 900, flexShrink: 0 }}>{p.won.toLocaleString()}원</div>
-                            </div>
-                        ))}
-                    </div>
-                    <button
-                        onClick={() => router.push('/os/charge')}
-                        style={{
-                            width: '100%', marginTop: 14, padding: 16, borderRadius: 16, border: '1.5px solid #1C2321',
-                            background: '#fff', color: '#1C2321', fontSize: 17, fontWeight: 800, cursor: 'pointer',
-                        }}
-                    >
-                        클로버 충전하러 가기
-                    </button>
-                    <p style={{ fontSize: 14.5, color: '#a1a1aa', margin: '10px 0 0', textAlign: 'center' }}>
-                        한 번 사면 끝. 정기 결제가 아니에요.
-                    </p>
                 </section>
 
                 {/* 이미 구독 중인 분에게만 */}

@@ -723,11 +723,6 @@ export default function ProfilePage() {
                                             <span style={{ fontSize: 24, fontWeight: 900, color: '#18181b' }}>
                                                 {(profile?.clovers ?? 0).toLocaleString()}개
                                             </span>
-                                            <button onClick={() => router.push('/charge')} style={{
-                                                background: '#1C2321', color: '#fff', border: 'none',
-                                                borderRadius: 999, padding: '10px 18px',
-                                                fontSize: 15, fontWeight: 800, cursor: 'pointer',
-                                            }}>충전</button>
                                         </span>
                                     </div>
 

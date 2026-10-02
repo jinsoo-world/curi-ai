@@ -1,39 +1,7 @@
 'use client'
-// 브라우저에서 토스 결제창을 열고, 끝난 뒤 서버에 확인받는 두 걸음.
-// 옛 충전 화면(/charge)과 봇 팀 다크 화면(/os/charge)이 똑같이 부른다. 겉만 다르고 속은 하나.
-import type { CloverPack } from './packs'
-import { makeChargeOrderId } from './charge-flow'
-
-interface StartArgs {
-    /** 로그인한 사람 id. 토스 customerKey 로 쓴다 */
-    userId: string
-    pack: CloverPack
-    successUrl: string
-    failUrl: string
-}
-
-/**
- * 토스 결제창 열기. 금액은 상품 표에서만 읽는다(브라우저가 정하지 못하게).
- * 열쇠가 없으면 던진다 → 화면이 「결제 설정이 아직 안 됐어요」로 보여준다.
- */
-export async function startCloverCharge({ userId, pack, successUrl, failUrl }: StartArgs): Promise<void> {
-    const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY
-    if (!clientKey) throw new Error('결제 설정이 아직 안 됐어요. 잠시 뒤 다시 시도해 주세요.')
-
-    const { loadTossPayments } = await import('@tosspayments/tosspayments-sdk')
-    const tossPayments = await loadTossPayments(clientKey)
-    const payment = tossPayments.payment({ customerKey: userId })
-
-    await payment.requestPayment({
-        method: 'CARD',
-        amount: { currency: 'KRW', value: pack.won },
-        orderId: makeChargeOrderId(pack.id),
-        orderName: `클로버 ${pack.clovers.toLocaleString()}개`,
-        successUrl,
-        failUrl,
-        card: { useEscrow: false, flowMode: 'DEFAULT', useCardPoint: false, useAppCardOnly: false },
-    })
-}
+// 클로버 충전 결제 뒤 서버에 확인받는 걸음.
+// 대표 결정 1002 「클로버는 없애구」 → 결제창을 여는 쪽(startCloverCharge)은 지웠다. 새 클로버 주문은 없다.
+// 확인 쪽만 남긴 것은 판매가 끝나기 전에 결제창을 연 주문이 결제 뒤 돌아오는 자리(/charge/done, /os/charge/done)에서 끝까지 받게 하려는 것이다.
 
 export interface ConfirmResult {
     clovers: number

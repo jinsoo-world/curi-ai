@@ -1375,7 +1375,7 @@ export default function CreatorCreatePage() {
                             </div>
                             <p style={{ fontSize: 15, color: '#78350f', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
                                 고급 설정은 클로버 50개가 필요합니다. 무료로 기본정보만으로도 AI를 만들 수 있어요. {cloverBalance !== null && cloverBalance < 50 && (
-                                    <>현재 클로버: {cloverBalance}개. <Link href="/charge" style={{ color: '#b45309', fontWeight: 700, textDecoration: 'underline' }}>충전하기</Link></>
+                                    <>현재 클로버: {cloverBalance}개.</>
                                 )}
                             </p>
                         </div>

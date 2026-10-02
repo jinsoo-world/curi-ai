@@ -7,6 +7,7 @@ import CloverIcon from '@/components/ui/CloverIcon'
 import Link from 'next/link'
 import { getCreditBalance } from '@/domains/credit'
 import { usageTone, withComma, type UsageLike } from '@/domains/os/usage'
+import { cloverChats } from '@/domains/os/usage-config'
 import { planNameL, usageDetailL } from '@/domains/os/i18n'
 import { useLocale } from './LocaleProvider'
 import { RingSvg } from './UsageRing'
@@ -64,11 +65,14 @@ export default function UsageModal({ data, onClose }: { data: UsageLike; onClose
                     </div>
                 </section>
 
-                <section className="os-usage-sec" aria-label={t('clover.label')}>
-                    <div className="os-usage-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><CloverIcon size={16} /><span>{t('clover.label')}</span></div>
-                    <b>{clover === null ? t('clover.counting') : t('clover.balance', { n: withComma(clover) })}</b>
-                    <div className="os-usage-sub">{t('clover.sub')}</div>
-                </section>
+                {/* 클로버 판매 끝(대표 결정 1002): 클로버는 「모아 둔 대화 N번」으로 보이고, 0번이면 이 칸을 안 그린다 */}
+                {cloverChats(clover) > 0 && (
+                    <section className="os-usage-sec" aria-label={t('clover.label')}>
+                        <div className="os-usage-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><CloverIcon size={16} /><span>{t('clover.label')}</span></div>
+                        <b>{t('clover.balance', { n: withComma(cloverChats(clover)) })}</b>
+                        <div className="os-usage-sub">{t('clover.sub')}</div>
+                    </section>
+                )}
 
                 <section className="os-usage-sec os-usage-plan" aria-label={t('plan.label')}>
                     <span>{t('plan.current')}: <b>{planNameL(locale, data.plan)}</b></span>

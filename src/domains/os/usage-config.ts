@@ -64,35 +64,54 @@ export function overageStep(a: { blocked: boolean; cloverOk?: unknown }, enabled
     return a.cloverOk === true ? 'charge' : 'ask'
 }
 
+// 클로버 판매 끝(대표 결정 1002 「클로버는 없애구」): 고객 화면에서는 클로버를 「모아 둔 대화」로 부른다. 충전 안내는 요금제로 바꿨다.
 export const OVERAGE_COPY = {
     /** 한도 소진 순간 한 번 묻는 창 (횟수, 개수 안 보임) */
-    confirm: '이번 달 사용량을 모두 쓰셨어요. 이어서 쓰시면 클로버가 쓰여요.',
-    continueBtn: '클로버로 이어 쓰기',
+    confirm: '이번 달 사용량을 모두 쓰셨어요. 모아 두신 대화로 이어서 쓰실 수 있어요.',
+    continueBtn: '모아 둔 대화로 이어 쓰기',
     waitBtn: '다음 달까지 기다리기',
     /** 설정 한 줄 (기본 꺼짐) */
-    autoSetting: '한도가 끝나면 묻지 않고 클로버로 이어 쓰기',
+    autoSetting: '한도가 끝나면 묻지 않고 모아 둔 대화로 이어 쓰기',
     /** 클로버가 모자랄 때 */
-    short: '클로버가 모자라요. 충전하면 이어서 쓸 수 있어요.',
+    short: '모아 두신 대화를 다 쓰셨어요. 요금제를 올리시면 이어서 쓸 수 있어요.',
     /** 창 아래 안내 (대표 0930 「매번 승인해야 해서 번거로워」: 한 번 고르면 이 대화에서는 다시 안 묻는다) */
     sessionNote: '한 번 고르시면 이 대화에서는 다시 묻지 않아요.',
     /** 창 안 체크 칸 (기본 꺼짐, 켜면 설정의 「묻지 않고 이어 쓰기」가 켜진다) */
     alwaysLabel: '앞으로도 묻지 않기 (설정에서 언제든 바꿀 수 있어요)',
 }
 
-/** 이어 쓰기 창에 보이는 클로버 한 줄 (대표 0930 「클로버 주는 게 눈에 보이면 좋겠어」). 원화 환산은 안 적는다 */
+/** 클로버 개수 → 대화 몇 번 (텍스트 답 1번 = CLOVER_COST.text 개, 내림). 대표 결정 1002: 고객 화면에는 클로버 대신 대화 수로 보인다 */
+export function cloverChats(balance: number | null | undefined): number {
+    if (typeof balance !== 'number' || !Number.isFinite(balance) || balance <= 0) return 0
+    return Math.floor(balance / CLOVER_COST.text)
+}
+
+/** 「대화 N번」. 0번이면 빈 값 = 화면에 아무것도 안 그린다 */
+export function cloverChatsText(balance: number | null | undefined): string {
+    const n = cloverChats(balance)
+    return n > 0 ? `대화 ${n.toLocaleString('ko-KR')}번` : ''
+}
+
+/** 쓴 클로버 → 대화 몇 번 (사진 답 15개 = 3번). 1번보다 적게 보이지 않게 올림 */
+function spentChats(spent: number): number {
+    return Math.max(1, Math.ceil(spent / CLOVER_COST.text))
+}
+
+/** 이어 쓰기 창에 보이는 한 줄 (대표 0930 「클로버 주는 게 눈에 보이면 좋겠어」). 원화 환산은 안 적는다 */
 export function overageSheetNote(balance: number | null, cost: number, photoCost: number = CLOVER_COST.photoAnswer): string {
-    const head = photoCost > cost ? `답 하나에 클로버 ${cost}개(사진이 있으면 ${photoCost}개)가 쓰여요.` : `답 하나에 클로버 ${cost}개가 쓰여요.`
-    return typeof balance === 'number' ? `${head} 지금 ${balance}개 남았어요.` : head
+    const head = photoCost > cost ? `답 하나에 모아 둔 대화 ${spentChats(cost)}번(사진이 있으면 ${spentChats(photoCost)}번)이 쓰여요.` : `답 하나에 모아 둔 대화 ${spentChats(cost)}번이 쓰여요.`
+    return typeof balance === 'number' ? `${head} 지금 ${cloverChats(balance).toLocaleString('ko-KR')}번 남았어요.` : head
 }
 
 /** 클로버로 이어 쓴 답 아래 작은 한 줄 */
 export function cloverSpentText(spent: number, balance: number | null): string {
-    return typeof balance === 'number' ? `🍀 클로버 ${spent}개 씀, ${balance}개 남음` : `🍀 클로버 ${spent}개 씀`
+    const head = `🍀 모아 둔 대화 ${spentChats(spent)}번 씀`
+    return typeof balance === 'number' ? `${head}, ${cloverChats(balance).toLocaleString('ko-KR')}번 남음` : head
 }
 
-/** 클로버 안내 한 줄 (결제 화면 잔액 아래). 스위치에 따라 바뀐다 */
+/** 모아 둔 대화 안내 한 줄 (결제 화면 잔액 아래). 스위치에 따라 바뀐다 */
 export function cloverBalanceNote(): string {
-    return CLOVER_OVERAGE_ENABLED ? '이번 달 한도 안에서는 클로버를 쓰지 않아요' : '대화는 클로버를 쓰지 않아요'
+    return CLOVER_OVERAGE_ENABLED ? '이번 달 사용량을 다 쓴 뒤에 이어서 쓸 수 있어요' : '이번 달 사용량과 따로 남아 있어요'
 }
 
 /** 충전 묶음 옆 답변 횟수는 보이지 않는다 (대표 지시 0929 00:13, 횟수 표기 금지). 늘 빈 값 */
@@ -135,9 +154,8 @@ export const PLAN_REASON: Record<PlanId, string> = {
  *  연 요금제 문구는 연 요금제를 열 때 넣는다(지금은 없음). */
 export const REFUND_NOTICE = {
     plan: '결제한 날부터 7일 안에 한 번도 쓰지 않으셨으면 전액 돌려드립니다. 7일 안에 일부 쓰셨으면 남은 답변 수만큼 돌려드리고, 이미 받은 답변은 돌려드릴 수 없습니다. 해지하시면 다음 결제부터 멈춥니다.',
-    clover: '산 날부터 7일 안에 한 개도 쓰지 않으셨으면 전액 돌려드립니다. 일부 쓰셨으면 남은 클로버만큼 돌려드리고, 이벤트나 선물로 받은 클로버는 돌려드리지 않습니다. 정기 결제가 아닙니다.',
     /** 결제 단추 앞 필수 확인. 체크해야 결제 단추가 눌린다 */
-    agree: '[필수] 결제 후 쓰기 시작한 답변과 클로버는 돌려받을 수 없고, 쓰지 않은 부분은 7일 안에 돌려받을 수 있다는 안내를 확인했습니다.',
+    agree: '[필수] 결제 후 쓰기 시작한 답변은 돌려받을 수 없고, 쓰지 않은 부분은 7일 안에 돌려받을 수 있다는 안내를 확인했습니다.',
 }
 
 /** {n} 자리 채우기 */

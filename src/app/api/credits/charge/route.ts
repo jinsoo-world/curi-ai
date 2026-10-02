@@ -6,11 +6,15 @@
 //  ① 금액을 브라우저가 정하지 못하게 한다 — 상품 표에서만 읽는다
 //  ② 토스에 실제로 결제됐는지 확인받는다 — 화면 말만 믿지 않는다
 //  ③ 같은 결제로 두 번 지급하지 않는다 — 새로고침·재시도로 클로버가 두 배 들어간다
+//
+// 대표 결정 2026-10-02 「클로버는 없애구」 → 새 주문은 받지 않는다(410).
+// 판매 끝 시각(CLOVER_SALES_ENDED_AT) 전에 토스 결제창을 연 주문만 끝까지 승인한다.
+// 막을 때는 토스 승인을 부르지 않으므로 돈이 빠져나가지 않는다.
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { confirmPayment } from '@/lib/toss'
-import { getPack, isValidPackId } from '@/domains/credit/packs'
+import { confirmPayment, getPayment } from '@/lib/toss'
+import { cloverOrderStartedAt, cloverSaleAllowed, getPack, isValidPackId } from '@/domains/credit/packs'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,6 +56,18 @@ export async function POST(req: NextRequest) {
 
         if (이미지급) {
             return NextResponse.json({ success: true, alreadyDone: true })
+        }
+
+        // 판매가 끝난 뒤에 연 주문이면 승인하지 않는다. 시각은 토스가 적은 값을 믿고, 조회가 안 될 때만 주문번호를 본다
+        let 연시각: string | null = null
+        try {
+            연시각 = (await getPayment(paymentKey)).requestedAt ?? null
+        } catch (e) {
+            console.error('[Charge] 결제 조회 실패:', e instanceof Error ? e.message : e)
+            연시각 = cloverOrderStartedAt(orderId)
+        }
+        if (!cloverSaleAllowed(연시각)) {
+            return NextResponse.json({ error: '클로버 판매를 마쳤어요. 결제는 되지 않았어요. 요금제 화면에서 월 요금제를 골라 주세요.' }, { status: 410 })
         }
 
         // ② 토스에 확인받는다

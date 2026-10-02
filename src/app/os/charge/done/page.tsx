@@ -3,6 +3,7 @@
 // 결제가 끝나고 토스가 돌려보내는 자리 (/os/charge/done). 두 갈래:
 //  ① 요금제(주문번호 plan_basic_… / plan_pro_…, ?plan=) → 서버(/api/os/plan)가 토스에 확인받고 요금제를 시작한다.
 //  ② 클로버 충전(주문번호 clover_…, ?packId=) → 서버(/api/credits/charge)가 확인받고 클로버를 넣는다(옛 흐름 그대로).
+//     클로버 판매는 끝났다(대표 결정 1002). 이 갈래는 판매 끝 전에 결제창을 연 주문을 끝까지 받으려고 남겨 둔다.
 // 갈래는 주문번호 접두사로 가른다. 요금제 결제가 클로버 지급 쪽으로 흘러가지 않게 한다.
 // 다 되면 어디서 왔는지(curi_os_back) 그 자리로 돌려보낸다.
 import { useEffect, useState, Suspense } from 'react'
@@ -10,6 +11,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { confirmCloverCharge } from '@/domains/credit/charge-client'
 import { resolveReturnPath, OS_RETURN_KEY } from '@/domains/credit/charge-flow'
 import { getPlan, planIdFromOrderId } from '@/domains/os/plan'
+import { cloverChatsText } from '@/domains/os/usage-config'
 import { confirmPlanPayment } from '../plan-client'
 import CloverIcon from '@/components/ui/CloverIcon'
 import '../charge.css'
@@ -76,7 +78,7 @@ function DoneInner() {
                         <CloverIcon size={48} />
                         <h2>충전 완료</h2>
                         <p>클로버 <b style={{ color: 'var(--os-클로버)' }}>{clovers.toLocaleString()}개</b>가 들어왔어요.</p>
-                        {balance !== null && <p>지금 가진 클로버 {balance.toLocaleString()}개</p>}
+                        {cloverChatsText(balance) && <p>모아 둔 대화 {cloverChatsText(balance)}</p>}
                         <button type="button" className="osc-pay" onClick={goBack}>봇 팀으로 돌아가기</button>
                     </>
                 )}
