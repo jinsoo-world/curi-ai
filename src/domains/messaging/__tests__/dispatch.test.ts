@@ -195,3 +195,61 @@ describe('messaging/dispatch — 모든 발신은 관문 한 곳을 지난다', 
         err.mockRestore(); warn.mockRestore()
     })
 })
+
+describe('dispatch — 앱 푸시(아이폰·안드로이드)는 같은 관문을 지나 sendPush 로 간다', () => {
+    const appInput = {
+        message: { channel: 'push' as const, userId: 'u1', subject: '기획팀장이 루틴을 마쳤어요', body: '결과가 왔어요', url: 'curiai://bot/m1' },
+        audience: 'self' as const,
+        appPush: { type: 'P001', category: 'info' as const, deeplink: 'curiai://bot/m1', dedupe: { key: 'day:2026-09-23' } },
+    }
+
+    it('앱 푸시 드라이버로 보내고 웹푸시는 부르지 않는다. message_log 에도 한 줄', async () => {
+        const { store, logs } = fakeStore()
+        const web = fakeDriver()
+        const appPush = vi.fn(async () => ({ status: 'sent' as const, batchId: 'b1', delivered: 1, failed: 0, disabled: 0, sendIds: ['s1'] }))
+        const out = await dispatch(appInput, { store, drivers: { push: web, sms: fakeDriver(), email: fakeDriver() }, now: DAY, appPush })
+        expect(out).toMatchObject({ status: 'sent', id: 'apppush:b1' })
+        expect(web.send).not.toHaveBeenCalled()
+        expect(appPush).toHaveBeenCalledWith(expect.objectContaining({ userId: 'u1', type: 'P001', category: 'info', title: '기획팀장이 루틴을 마쳤어요', deeplink: 'curiai://bot/m1', dedupe: { key: 'day:2026-09-23' } }))
+        expect(logs).toEqual([expect.objectContaining({ channel: 'push', status: 'sent', subject: '[P001] 기획팀장이 루틴을 마쳤어요' })])
+    })
+
+    it('앱 푸시 규칙에 걸리면 막고 이유를 남긴다. 웹푸시로 다시 보내지 않는다', async () => {
+        const { store, logs } = fakeStore()
+        const web = fakeDriver()
+        const appPush = vi.fn(async () => ({ status: 'blocked' as const, reason: 'daily_cap' as const }))
+        const out = await dispatch(appInput, { store, drivers: { push: web, sms: fakeDriver(), email: fakeDriver() }, now: DAY, appPush })
+        expect(out).toMatchObject({ status: 'blocked', reason: 'push_rule', pushReason: 'daily_cap' })
+        expect(web.send).not.toHaveBeenCalled()
+        expect(logs[0]).toMatchObject({ status: 'blocked', error: 'daily_cap' })
+    })
+
+    it('조용한 시간 판정도 앱 푸시 드라이버가 한다(관리자 시험은 건너뛸 수 있게)', async () => {
+        const { store } = fakeStore()
+        const appPush = vi.fn(async () => ({ status: 'sent' as const, batchId: 'b', delivered: 1, failed: 0, disabled: 0, sendIds: [] }))
+        const out = await dispatch({ ...appInput, appPush: { ...appInput.appPush, ignoreLimits: true } }, { store, drivers: { push: fakeDriver(), sms: fakeDriver(), email: fakeDriver() }, now: NIGHT, appPush })
+        expect(out.status).toBe('sent')
+        expect(appPush).toHaveBeenCalledWith(expect.objectContaining({ ignoreLimits: true }))
+    })
+
+    it('앱이 없는 사람(no_device)은 기록하지 않고 조용히 끝난다', async () => {
+        const { store, logs } = fakeStore()
+        const out = await dispatch(appInput, { store, drivers: { push: fakeDriver(), sms: fakeDriver(), email: fakeDriver() }, now: DAY, appPush: async () => ({ status: 'blocked' as const, reason: 'no_device' as const }) })
+        expect(out).toMatchObject({ status: 'blocked', pushReason: 'no_device' })
+        expect(logs).toHaveLength(0)
+    })
+
+    it('앱 푸시 열쇠가 없으면 driver_not_ready', async () => {
+        const { store } = fakeStore()
+        const out = await dispatch(appInput, { store, drivers: { push: fakeDriver(), sms: fakeDriver(), email: fakeDriver() }, now: DAY, appPush: async () => ({ skipped: 'not_configured' as const }) })
+        expect(out).toMatchObject({ status: 'blocked', reason: 'driver_not_ready' })
+    })
+
+    it('남에게 보내는 메시지는 앱 푸시 길을 타지 않는다(승인 카드 규칙 그대로)', async () => {
+        const { store } = fakeStore()
+        const appPush = vi.fn()
+        const out = await dispatch({ ...appInput, audience: 'other', permissionRequestId: null }, { store, drivers: { push: fakeDriver(), sms: fakeDriver(), email: fakeDriver() }, now: DAY, appPush })
+        expect(out).toMatchObject({ status: 'blocked', reason: 'no_permission' })
+        expect(appPush).not.toHaveBeenCalled()
+    })
+})

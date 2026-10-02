@@ -192,6 +192,8 @@ export interface RunResult {
     result: string
     /** 봇이 만든 글 (시험 실행 때 화면에 바로 보여준다) */
     text: string
+    /** 봇 이름 (성공했을 때만. 앱 알림 문구에 쓴다) */
+    botName?: string
 }
 
 /**
@@ -231,7 +233,7 @@ export async function runRoutineOnce(db: SupabaseClient, routine: BotRoutine): P
             await db.from('messages').insert({ session_id: sessionId, role: 'assistant', content: text })
             await db.from('chat_sessions').update({ last_message_at: new Date().toISOString() }).eq('id', sessionId)
         }
-        결과 = { ok: true, result: `성공: ${text.slice(0, 60).replace(/\s+/g, ' ')}…`, text }
+        결과 = { ok: true, result: `성공: ${text.slice(0, 60).replace(/\s+/g, ' ')}…`, text, botName: (mentor.name as string) || undefined }
     } catch (e) {
         const 이유 = e instanceof Error ? e.message : String(e)
         console.error('[os/routine run]', routine.id, 이유)

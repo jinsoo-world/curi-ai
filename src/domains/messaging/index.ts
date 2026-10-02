@@ -6,6 +6,7 @@ import { createSupabaseStore } from './store'
 import { createPushDriver } from './drivers/push'
 import { createSmsDriver } from './drivers/sms'
 import { createEmailDriver } from './drivers/email'
+import { sendPushWith } from '@/domains/push/live'
 import type { DispatchInput, DispatchOutcome } from './types'
 
 export { dispatch } from './dispatch'
@@ -23,5 +24,6 @@ export function dispatchWith(db: SupabaseClient, input: DispatchInput): Promise<
     return dispatch(input, {
         store: createSupabaseStore(db),
         drivers: { push: createPushDriver(db), sms: createSmsDriver(), email: createEmailDriver() },
+        appPush: input => sendPushWith(db, input),
     })
 }
