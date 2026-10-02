@@ -1,8 +1,10 @@
 // /api/os/plan — 내 요금제
-//   GET  → { plan, expiresAt, limits }  (행이 없거나 표가 아직 없으면 free)
+//   GET  → { plan, expiresAt, limits, adFree, source }  (행이 없거나 표가 아직 없으면 free)
 //   POST → 첫 달 결제 승인 + 요금제 시작. { paymentKey, orderId, amount, planId }
 //
-// 대표 확정 0923: 무료 / 베이직 월 29,000원 / 프로 월 99,000원. 자동 갱신(빌링키)은 심사 전이라 아직 없다.
+// 대표 확정 0923 + 가격 결정 1002: 무료 / 베이직 월 9,900원 / 프로 월 39,000원. 자동 갱신(빌링키)은 심사 전이라 아직 없다.
+// 앱(아이폰·안드로이드) 구독은 레비뉴캣 웹훅(/api/billing/revenuecat/webhook)이 같은 user_plans 표에 쓴다.
+// 앱에서 구독 중인 사람은 여기서 결제하지 못한다(이중 결제 막기, 409 STORE_SUBSCRIBED_MESSAGE).
 //
 // POST 가 지켜야 할 것 세 가지 (/api/credits/charge 와 같은 원칙)
 //  ① 금액을 브라우저가 정하지 못하게 한다 — 요금제 표(plan.ts)에서만 읽는다
@@ -14,11 +16,11 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { confirmPayment } from '@/lib/toss'
 import { isTableMissing } from '@/domains/os/admin-stats'
-import { getPlan, isPaidPlanId, planExpiresAt, planIdFromOrderId, planLimits, resolvePlan } from '@/domains/os/plan'
+import { STORE_SUBSCRIBED_MESSAGE, getPlan, isPaidPlanId, nextPlanPeriod, planAdFree, planIdFromOrderId, planLimits, planSource, resolvePlan } from '@/domains/os/plan'
 
 export const dynamic = 'force-dynamic'
 
-const FREE = { plan: 'free' as const, expiresAt: null, limits: planLimits('free') }
+const FREE = { plan: 'free' as const, expiresAt: null, limits: planLimits('free'), adFree: false, source: null }
 
 export async function GET() {
     const supabase = await createClient()
@@ -27,7 +29,7 @@ export async function GET() {
     try {
         const { data, error } = await createAdminClient()
             .from('user_plans')
-            .select('plan, expires_at')
+            .select('plan, expires_at, last_order_id')
             .eq('user_id', user.id)
             .maybeSingle()
         // 표가 아직 없어도(42P01) 화면은 깨지지 않는다 = 무료로 본다
@@ -36,7 +38,7 @@ export async function GET() {
             return NextResponse.json(FREE)
         }
         const r = resolvePlan(data)
-        return NextResponse.json({ ...r, limits: planLimits(r.plan) })
+        return NextResponse.json({ ...r, limits: planLimits(r.plan), adFree: planAdFree(r.plan), source: r.plan === 'free' ? null : planSource(data?.last_order_id) })
     } catch (e) {
         console.error('[os/plan]', e instanceof Error ? e.message : e)
         return NextResponse.json(FREE)
@@ -81,6 +83,16 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: true, alreadyDone: true, ...r })
         }
 
+        // 내리기(프로가 남았는데 베이직)는 돈 받기 전에 멈춘다. 같은 요금제를 또 사면 남은 기간 뒤에 붙인다
+        const now = new Date()
+        const period = nextPlanPeriod(기존, planId, now)
+        if (!period.ok) {
+            const msg = period.reason === 'store' ? STORE_SUBSCRIBED_MESSAGE
+                : period.reason === 'downgrade' ? '지금 쓰시는 요금제가 더 높아요. 끝난 뒤에 바꿔 주세요. 결제는 되지 않았어요.'
+                    : '이미 쓰고 계신 요금제예요. 결제는 되지 않았어요.'
+            return NextResponse.json({ error: msg }, { status: 409 })
+        }
+
         // ② 토스에 확인받는다
         const payment = await confirmPayment(paymentKey, orderId, plan.price)
         if (payment.totalAmount !== plan.price) {
@@ -88,9 +100,8 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '결제 금액이 맞지 않아요.' }, { status: 400 })
         }
 
-        // 요금제 시작. 첫 달만 결제되므로 끝나는 날 = 한 달 뒤
-        const now = new Date()
-        const expiresAt = planExpiresAt(now)
+        // 요금제 시작. 끝나는 날은 위 nextPlanPeriod 가 정했다
+        const expiresAt = period.expiresAt
         const { error: 쓰기오류 } = await admin.from('user_plans').upsert({
             user_id: user.id,
             plan: planId,

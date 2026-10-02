@@ -2,7 +2,7 @@
 // 요금제 첫 달 결제 — 브라우저에서 토스 결제창을 열고, 끝난 뒤 서버(/api/os/plan)에 확인받는 두 걸음.
 // 클로버 충전(domains/credit/charge-client.ts)과 같은 모양. 그 파일은 건드리지 않고 요금제용을 따로 둔다.
 // 자동 갱신(빌링키)은 심사 전이라 만들지 않는다 = 첫 달만 단건 결제.
-import { getPlan, makePlanOrderId, planOrderName, type PaidPlanId, type PlanId } from '@/domains/os/plan'
+import { getPlan, makePlanOrderId, planOrderName, type PaidPlanId, type PlanId, type PlanSource } from '@/domains/os/plan'
 
 interface StartArgs {
     /** 로그인한 사람 id. 토스 customerKey 로 쓴다 */
@@ -59,14 +59,22 @@ export async function confirmPlanPayment(params: { paymentKey: string; orderId: 
     return { plan: data.plan ?? 'free', expiresAt: data.expiresAt ?? null, alreadyDone: !!data.alreadyDone }
 }
 
+export interface MyPlan {
+    plan: PlanId
+    /** 어디서 열렸나. revenuecat = 앱에서 구독 중 → 웹 결제 단추 대신 안내 */
+    source: PlanSource | null
+}
+
 /** 지금 내 요금제 읽기. 실패하면 무료로 본다(화면이 깨지지 않게) */
-export async function fetchMyPlan(): Promise<PlanId> {
+export async function fetchMyPlan(): Promise<MyPlan> {
     try {
         const res = await fetch('/api/os/plan', { cache: 'no-store' })
-        if (!res.ok) return 'free'
+        if (!res.ok) return { plan: 'free', source: null }
         const data = await res.json()
-        return data.plan === 'basic' || data.plan === 'pro' ? data.plan : 'free'
+        const plan: PlanId = data.plan === 'basic' || data.plan === 'pro' ? data.plan : 'free'
+        const source: PlanSource | null = data.source === 'toss' || data.source === 'revenuecat' ? data.source : null
+        return { plan, source }
     } catch {
-        return 'free'
+        return { plan: 'free', source: null }
     }
 }

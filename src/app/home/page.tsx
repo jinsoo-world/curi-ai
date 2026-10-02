@@ -11,7 +11,7 @@ import { loadHomeActivity, type HomeActivity } from '@/domains/home/feed'
 import { HOME_DUMMY_LABEL, HOME_FEED_DUMMY, HOME_STATS_DUMMY, homeFeedDummyOn } from '@/domains/home/feed-dummy'
 import { HOME_COPY, homeStatsLine, homeStatsParts } from '@/domains/home/copy'
 import { JOBS } from '@/domains/os/presets'
-import { PLANS } from '@/domains/os/plan'
+import { PLANS, planPriceText } from '@/domains/os/plan'
 import HomeTopBar from '@/components/home/HomeTopBar'
 import HomeMake from '@/components/home/HomeMake'
 import HomeStickyCta from '@/components/home/HomeStickyCta'
@@ -140,7 +140,7 @@ export default async function HomePage() {
                         {PLANS.map(p => (
                             <div key={p.id} className={`hm-plan ${p.recommended ? 'rec' : ''}`}>
                                 <strong>{p.name}</strong>
-                                <span className="hm-plan-price">{p.price === 0 ? '0원' : `월 ${p.price.toLocaleString('ko-KR')}원`}</span>
+                                <span className="hm-plan-price">{planPriceText(p)}</span>
                                 <span className="hm-plan-perk">{p.perks.find(x => !/\d/.test(x)) ?? ''}</span>
                             </div>
                         ))}

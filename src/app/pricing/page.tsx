@@ -58,7 +58,7 @@ export default function PricingPage() {
                     봇 팀은 무료로 시작할 수 있어요. 더 많이 쓰고 싶을 때 요금제를 올리면 됩니다.
                 </p>
 
-                {/* 요금제 (대표 확정 0923: 무료 / 월 29,000원 / 월 99,000원). 값은 src/domains/os/plan.ts PLANS 한 표만 본다 */}
+                {/* 요금제 (대표 확정 0923, 가격 1002). 값은 src/domains/os/plan.ts PLANS 한 표만 본다 */}
                 <section style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '20px 18px', marginBottom: 16 }}>
                     <h2 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 4px' }}>봇 팀 요금제</h2>
                     <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 16px' }}>
