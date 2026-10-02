@@ -16,6 +16,7 @@ const navItems = [
     { href: '/admin/ebook-logs', label: '📕 전자책', id: 'ebook-logs' },
     { href: '/admin/os', label: '🤝 봇 OS', id: 'os' },
     { href: '/admin/os/bot-reviews', label: '🔎 봇 공개 확인', id: 'bot-reviews' },
+    { href: '/admin/os/reports', label: '🚩 봇 신고', id: 'bot-reports' },
 ]
 
 export default function AdminSidebar() {

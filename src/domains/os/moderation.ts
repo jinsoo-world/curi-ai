@@ -164,6 +164,7 @@ export const REVIEW_EVENTS = [
     'os_bot_moderation',         // 새 판정 = 닫힘 (review 판정이면 바로 뒤에 대기 줄이 다시 열린다)
     'os_bot_owner_unpublish',    // 주인이 비공개로 = 닫힘
     'os_bot_publish_closed',     // 대기 중에 주인이 고침 = 닫힘
+    'os_bot_admin_unpublish',    // 관리자가 신고를 보고 내림 = 닫힘 (reports.ts)
 ] as const
 let seqCounter = 0
 /** 같은 시각에 두 줄이 찍혀도 순서를 가를 수 있게 seq 를 붙인다 */
@@ -182,7 +183,7 @@ export async function logReviewEvent(db: SupabaseClient, name: typeof REVIEW_EVE
 }
 
 /** 확인 대기 표시. 검사한 내용의 지문(content_hash)과 주인을 같이 남긴다. 알림은 보내지 않는다 */
-export async function markPendingReview(db: SupabaseClient, a: { mentorId: string; userId: string; ownerUserId: string | null; result: ModerationResult & { hash: string | null } }): Promise<void> {
+export async function markPendingReview(db: SupabaseClient, a: { mentorId: string; userId: string | null; ownerUserId: string | null; result: ModerationResult & { hash: string | null } }): Promise<void> {
     await logReviewEvent(db, 'os_bot_publish_review', a.userId, {
         mentor_id: a.mentorId, reasons: a.result.reasons, categories: a.result.categories,
         content_hash: a.result.hash, owner_user_id: a.ownerUserId,

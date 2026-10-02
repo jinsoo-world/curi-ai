@@ -24,6 +24,7 @@ import { UNAVAILABLE_TEXT } from '@/domains/chat/constants'
 import { GROUP_SERVER_GAP_MS, sleep } from '@/domains/os/group-stagger'
 import { readUrlsInText, buildLinkPrompt, linkTextForTurn } from '@/domains/os/readers'
 import type { ReadUrlView } from '@/domains/os/readers'
+import { listBlockedMentorIds, withoutBlocked } from '@/domains/os/reports'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -90,7 +91,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         const channel = await getChannel(db, user.id, id)
         if (!channel) return NextResponse.json({ error: '그 방을 못 찾았어요' }, { status: 404 })
 
-        const bots = await getChannelBots(db, user.id, channel.memberMentorIds)
+        // 내가 차단한 봇은 방에 있어도 답하지 않는다(@콕집어도, 눈치 라우터도)
+        const bots = withoutBlocked(await getChannelBots(db, user.id, channel.memberMentorIds), await listBlockedMentorIds(db, user.id), b => b.mentorId)
         if (bots.length === 0) return NextResponse.json({ error: '이 방에 말할 봇이 없어요' }, { status: 400 })
 
         // 🔗 링크 읽기 (읽기만 하는 일이라 승인 카드 없음, 절대 던지지 않음)

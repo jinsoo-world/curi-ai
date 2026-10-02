@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getActiveMentors } from '@/domains/mentor'
 import { getLinkCounts } from '@/domains/os/team-link'
 import { arrangeMarket } from '@/domains/os/showcase'
+import { listBlockedMentorIds, withoutBlocked } from '@/domains/os/reports'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +28,9 @@ export async function GET() {
         const { data: { user } } = await supabase.auth.getUser()
         const db = createAdminClient()
 
-        const mentors = arrangeMarket(await getActiveMentors())
+        // 내가 차단한 봇은 빼고 보여 준다 (애플 심사 지침 1.2)
+        const blocked = await listBlockedMentorIds(db, user?.id)
+        const mentors = withoutBlocked(arrangeMarket(await getActiveMentors()), blocked, m => m.id)
         if (mentors.length === 0) return NextResponse.json({ guest: !user, bots: [] })
 
         const linkCounts = await getLinkCounts(db, mentors.map(m => m.id))

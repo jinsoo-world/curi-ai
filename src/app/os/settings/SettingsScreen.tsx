@@ -21,6 +21,7 @@ import NotificationSettings, { Toggle } from '@/components/os/NotificationSettin
 import { RingSvg } from '@/components/os/UsageRing'
 import InstallPrompt from '@/components/pwa/InstallPrompt'
 import SnsLinkCard from '@/components/os/SnsLinkCard'
+import { BlockedBotsCard } from '@/components/os/ReportBlock'
 import { CLOVER_AUTO_KEY, CLOVER_OVERAGE_ENABLED, OVERAGE_COPY, readCloverAuto } from '@/domains/os/usage-config'
 
 /** 1:1 문의 창구 (환불 안내, 사업자 정보와 같은 메일) */
@@ -277,6 +278,10 @@ function GeneralTab({ localeChoice, setLocaleChoice }: { localeChoice: LocaleCho
             <div className="os-set-sub" style={{ marginTop: 18 }}>
                 {t('connect.line')} <Link href="/os/connect" className="os-set-link">{t('connect.link')}</Link>
             </div>
+
+            {/* 차단한 봇 = 해제하면 마켓, 대화에 다시 보인다 (애플 심사 지침 1.2) */}
+            <h2>차단한 봇</h2>
+            <BlockedBotsCard />
 
             {/* 1:1 문의 (U17). 창구는 환불 안내, 사업자 정보와 같은 메일 */}
             <h2>{t('contact.label')}</h2>

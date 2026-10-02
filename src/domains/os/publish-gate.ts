@@ -188,3 +188,35 @@ export async function decideReview(
     await logReviewEvent(db, 'os_bot_publish_decision', adminUserId, { mentor_id: mentorId, decision: 'approve' })
     return { status: 'approved' }
 }
+
+/** 신고로 자동으로 내렸을 때 확인 대기에 남는 분류 (관리자 목록이 이걸로 「신고로 내림」을 안다) */
+export const REPORT_REVIEW_CATEGORY = 'user_reports'
+
+/**
+ * 신고가 쌓여 자동으로 내린다(reports.ts 가 부른다). 공개 중인 줄만 내리고, 내렸을 때만 확인 대기를 연다.
+ * 지우지 않는다. 관리자가 /admin/os/bot-reviews 에서 승인하면 다시 공개된다.
+ * 돌려주는 값 = 이번에 실제로 내렸나 (이미 비공개면 false)
+ */
+export async function unpublishForReports(db: SupabaseClient, mentorId: string, reporterCount: number): Promise<boolean> {
+    const { data: flipped, error } = await db.from('mentors')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('id', mentorId).eq('is_active', true).select('id')
+    if (error) throw new Error(error.message)
+    if (!(flipped as unknown[] | null)?.length) return false
+    const { data: m } = await db.from('mentors').select('creator_id').eq('id', mentorId).maybeSingle()
+    const owner = await ownerOf(db, (m as { creator_id?: string | null } | null)?.creator_id ?? null)
+    let hash: string | null = null
+    try { hash = contentHash(await readBotForReview(db, mentorId, owner.displayName)) } catch { hash = null }
+    await markPendingReview(db, {
+        mentorId, userId: null, ownerUserId: owner.userId,
+        result: { verdict: 'review', reasons: [`신고 ${reporterCount}건이 7일 안에 쌓여 자동으로 내렸어요`], categories: [REPORT_REVIEW_CATEGORY], hash },
+    })
+    return true
+}
+
+/** 관리자가 신고를 보고 내린다. 열린 확인 대기도 이 기록으로 닫힌다 (승인 목록에서 빠진다) */
+export async function unpublishByAdmin(db: SupabaseClient, adminUserId: string, mentorId: string): Promise<void> {
+    const { error } = await db.from('mentors').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', mentorId)
+    if (error) throw new Error(error.message)
+    await logReviewEvent(db, 'os_bot_admin_unpublish', adminUserId, { mentor_id: mentorId })
+}

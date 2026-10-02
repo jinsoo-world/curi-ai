@@ -8,7 +8,9 @@ vi.mock('@/lib/slack', () => ({ sendSlackNotification: (...a: unknown[]) => send
 
 import {
     requestPublish, applyBotEdit, unpublishByOwner, recheckAfterKnowledge, decideReview, ReviewNotPending,
+    unpublishForReports, unpublishByAdmin,
 } from '../publish-gate'
+import { openReviewOf } from '../moderation'
 
 beforeEach(() => { askSideText.mockReset(); sendSlackNotification.mockReset() })
 
@@ -302,5 +304,35 @@ describe('관리자 결정', () => {
         askSideText.mockResolvedValue(answer('block', ['위험'], ['illegal']))
         await requestPublish(w.db, ACT)
         await expect(decideReview(w.db, 'admin-u', 'm1', 'approve')).rejects.toBeInstanceOf(ReviewNotPending)
+    })
+})
+
+describe('신고로 내리기 (1002)', () => {
+    it('공개 중이면 내리고 확인 대기를 연다(분류 user_reports). 이미 비공개면 아무것도 안 한다', async () => {
+        const w = stateDb({ isActive: true })
+        expect(await unpublishForReports(w.db, 'm1', 3)).toBe(true)
+        expect(w.mentor.is_active).toBe(false)
+        const open = await openReviewOf(w.db, 'm1')
+        expect(open?.categories).toEqual(['user_reports'])
+        expect(open?.contentHash).toBeTruthy()
+        const before = w.events.length
+        expect(await unpublishForReports(w.db, 'm1', 4)).toBe(false)
+        expect(w.events.length).toBe(before)
+        expect(askSideText).not.toHaveBeenCalled()
+    })
+    it('신고 대기를 관리자가 승인하면 다시 공개된다 (내용 그대로면 AI 안 부름)', async () => {
+        const w = stateDb({ isActive: true })
+        await unpublishForReports(w.db, 'm1', 3)
+        const r = await decideReview(w.db, 'admin-u', 'm1', 'approve')
+        expect(r.status).toBe('approved')
+        expect(w.mentor.is_active).toBe(true)
+        expect(askSideText).not.toHaveBeenCalled()
+    })
+    it('관리자가 내리면 열린 대기도 닫힌다', async () => {
+        const w = stateDb({ isActive: true })
+        await unpublishForReports(w.db, 'm1', 3)
+        await unpublishByAdmin(w.db, 'admin-u', 'm1')
+        expect(w.mentor.is_active).toBe(false)
+        expect(await openReviewOf(w.db, 'm1')).toBeNull()
     })
 })

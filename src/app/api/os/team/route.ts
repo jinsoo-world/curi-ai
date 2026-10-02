@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { listTeam, createTeamBot, TeamTableMissing, SHAPES, COLORS, JOBS } from '@/domains/os'
 import type { NewBotInput } from '@/domains/os'
+import { listBlockedMentorIds, withoutBlocked } from '@/domains/os/reports'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,8 +16,10 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ team: [], guest: true })
     try {
-        const team = await listTeam(createAdminClient(), user.id)
-        return NextResponse.json({ team })
+        const db = createAdminClient()
+        // 마켓에서 넣었다가 차단한 봇은 팀 목록에서도 빠진다
+        const [team, blocked] = await Promise.all([listTeam(db, user.id), listBlockedMentorIds(db, user.id)])
+        return NextResponse.json({ team: withoutBlocked(team, blocked, b => b.mentorId) })
     } catch (e) {
         if (e instanceof TeamTableMissing) return NextResponse.json({ team: [], tableMissing: true })
         console.error('[os/team GET]', e instanceof Error ? e.message : e)

@@ -9,6 +9,7 @@ import {
     getChannel, getChannelBots, listChannelMessages,
     addChannelMembers, removeChannelMembers, renameChannel, deleteChannel, ChannelTableMissing,
 } from '@/domains/os/channels'
+import { listBlockedMentorIds, withoutBlocked } from '@/domains/os/reports'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,11 +27,17 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         const db = createAdminClient()
         const channel = await getChannel(db, user.id, id)      // 🔒 남의 방은 null
         if (!channel) return NextResponse.json({ error: '그 방을 못 찾았어요' }, { status: 404 })
-        const [members, messages] = await Promise.all([
+        const [members, messages, blocked] = await Promise.all([
             getChannelBots(db, user.id, channel.memberMentorIds),
             listChannelMessages(db, user.id, id),
+            listBlockedMentorIds(db, user.id),
         ])
-        return NextResponse.json({ channel, members, messages })
+        // 내가 차단한 봇은 멤버와 지난 말에서 빠진다
+        return NextResponse.json({
+            channel,
+            members: withoutBlocked(members, blocked, b => b.mentorId),
+            messages: messages.filter(m => !m.mentorId || !blocked.has(m.mentorId)),
+        })
     } catch (e) {
         if (e instanceof ChannelTableMissing) return NextResponse.json({ tableMissing: true }, { status: 503 })
         console.error('[os/channels GET one]', e instanceof Error ? e.message : e)
