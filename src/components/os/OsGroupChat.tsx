@@ -17,6 +17,7 @@ import MentionPicker from './MentionPicker'
 import { useMentionComposer } from './useMentionComposer'
 import { useComposerAutoHeight } from './useComposerAutoHeight'
 import { MsgRow, MsgMetaProvider } from './MsgRow'
+import { useMessageSafety } from './ReportBlock'
 import TypingIndicator from './TypingIndicator'
 import MentionRichText from './MentionRichText'
 import { GROUP_THINK_MS, GROUP_GAP_MS, sleep } from '@/domains/os/group-stagger'
@@ -46,6 +47,14 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
     const [notReady, setNotReady] = useState(false)
     /** 봇 말 id → 그 답을 쓸 때 읽은 링크 (이번 화면에서만. 저장하지 않는다) */
     const [readByMsg, setReadByMsg] = useState<Record<string, ReadUrlItem[]>>({})
+    // 🚩 신고, 차단 (애플 심사 지침 1.2). 차단하면 이 방 멤버와 말에서 바로 뺀다(서버도 다음부터 그 봇을 부르지 않는다)
+    const safety = useMessageSafety({
+        guest: false,
+        onBlocked: (blockedId: string) => {
+            setMembers(prev => prev.filter(x => x.mentorId !== blockedId))
+            setMessages(prev => prev.filter(x => x.mentorId !== blockedId))
+        },
+    })
     const endRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLTextAreaElement>(null)
     const inputWrapRef = useRef<HTMLDivElement>(null)
@@ -283,7 +292,11 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                             </MsgRow>
                         )
                         : (
-                            <MsgRow key={m.id} rowId={m.id} side="bot" createdAt={m.createdAt} copyText={m.content}>
+                            <MsgRow key={m.id} rowId={m.id} side="bot" createdAt={m.createdAt} copyText={m.content}
+                                actions={m.mentorId ? [
+                                    { label: '신고하기', onClick: () => safety.report(m.mentorId!, 이름(m.mentorId), m.content, m.id) },
+                                    ...(team.find(b => b.mentorId === m.mentorId)?.canPublish ? [] : [{ label: '차단하기', onClick: () => void safety.block(m.mentorId!) }]),
+                                ] : undefined}>
                                 <div className="os-sender">{아바타(m.mentorId)}<span>{보낸사람(m)}</span></div>
                                 {!isUrlOnlyText(m.content) && <div className="os-bubble bot md"><MentionRichText text={m.content} bots={chipBots} markdown /></div>}
                                 <OgLinkPreview text={m.content} />
@@ -434,6 +447,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                     ))}
                 </>}
             </aside>
+            {safety.ui}
         </div>
     )
 }

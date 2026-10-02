@@ -9,7 +9,7 @@ import {
     setMentorKnowledge,
     publishMentor,
 } from '@/domains/creator'
-import { recheckAfterKnowledge } from '@/domains/os/publish-gate'
+import { recheckAfterKnowledge, BotHeld } from '@/domains/os/publish-gate'
 import { moderationReply } from '@/domains/os/moderation'
 import { requireMentorOwner } from '@/lib/mentor-owner'
 
@@ -155,6 +155,8 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: '잘못된 step입니다.' }, { status: 400 })
         }
     } catch (error: unknown) {
+        // 신고로 묶인 봇 공개 = 409 (관리자 확인 뒤에만 공개된다)
+        if (error instanceof BotHeld) return NextResponse.json({ error: error.message, code: 'BOT_HELD' }, { status: 409 })
         console.error('[Creator API] Error:', error)
         const message = error instanceof Error ? error.message : 'AI 생성 중 오류가 발생했습니다.'
         return NextResponse.json({ error: message }, { status: 500 })

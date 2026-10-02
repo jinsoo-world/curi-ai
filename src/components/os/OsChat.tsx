@@ -48,6 +48,7 @@ import PhotoGrid from './PhotoGrid'
 import { photoPayload } from '@/domains/os/photos'
 // === /사진 첨부 ===
 import { MsgRow, MsgMetaProvider } from './MsgRow'
+import { useMessageSafety } from './ReportBlock'
 import TypingIndicator from './TypingIndicator'
 import OgLinkPreview, { isUrlOnlyText } from './OgLinkPreview'
 // === @ 멘션 ===
@@ -179,7 +180,7 @@ function initialChatState(mentorId: string, freshStart: boolean): {
 }
 
 export default function OsChat({ mentorId, freshStart = false }: { mentorId: string; freshStart?: boolean }) {
-    const { team, loading, guest, openNewBot, openNewGroup, openEditBot, setBotPresence, toggleNav, navOpen } = useOsTeam()
+    const { team, loading, guest, openNewBot, openNewGroup, openEditBot, setBotPresence, toggleNav, navOpen, refresh: refreshTeam } = useOsTeam()
     const router = useRouter()
     const bot = useMemo(() => team.find(b => b.mentorId === mentorId) ?? null, [team, mentorId])
     const [publicBot, setPublicBot] = useState<PublicBot | null>(null)
@@ -191,7 +192,17 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
     const [streaming, setStreaming] = useState(false)
     const [sessionId, setSessionId] = useState<string | null>(() => boot.sessionId)
     const [historyReady, setHistoryReady] = useState(() => boot.historyReady)
-    const [detailOpen, setDetailOpen] = useState(false)   // 항상 닫힌 채 시작. 열 때만 세부칸을 그린다(대표 0923 「닫힌 채로, 열 때 로딩」)
+    const [detailOpen, setDetailOpen] = useState(false)
+    // 🚩 신고, 차단 (애플 심사 지침 1.2). 신고는 모든 봇 답에(내 봇의 AI 답도 신고할 수 있다), 차단은 남의 봇에만. 차단하면 봇 명단으로 나간다
+    const 차단뒤 = () => { void refreshTeam(); router.push('/os') }
+    const safety = useMessageSafety({ guest, onBlocked: 차단뒤 })
+    const 안전단추 = (who: { mentorId: string; name: string }, text: string, messageId?: string) => {
+        const 내봇 = who.mentorId === mentorId ? !!bot?.canPublish : !!team.find(b => b.mentorId === who.mentorId)?.canPublish
+        return [
+            { label: '신고하기', onClick: () => safety.report(who.mentorId, who.name, text, messageId) },
+            ...(내봇 ? [] : [{ label: '차단하기', onClick: () => void safety.block(who.mentorId) }]),
+        ]
+    }   // 항상 닫힌 채 시작. 열 때만 세부칸을 그린다(대표 0923 「닫힌 채로, 열 때 로딩」)
     const [addSheet, setAddSheet] = useState(false)
     const [demo, setDemo] = useState(false)
     // 폰(좁은 화면)은 입력창 안내를 짧게 (대표 승인 0928 사용성 9번)
@@ -944,7 +955,8 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                             ? <MsgRow key={m.id} rowId={m.id} side="bot" createdAt={m.createdAt} copyText={m.content}><RelayBubble view={m.relay} answer={m.content} /></MsgRow>
                         // === /전달(relay) ===
                         : (
-                            <MsgRow key={m.id} rowId={m.id} side="bot" createdAt={m.createdAt} copyText={m.content}>
+                            <MsgRow key={m.id} rowId={m.id} side="bot" createdAt={m.createdAt} copyText={m.content}
+                                actions={m.content && !m.card ? 안전단추(옆봇 ?? { mentorId: bot?.mentorId ?? publicBot?.id ?? mentorId, name }, m.content, m.id) : undefined}>
                                 {(!m.content && !m.card && (streaming || state === 'thinking')) ? (
                                     <TypingIndicator name={말한이름} avatar={얼굴(28, 'idle') ?? typingAvatar} />
                                 ) : (
@@ -1084,9 +1096,11 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                     <button className="os-icon-btn os-right-close" aria-label="닫기" title="닫기" tabIndex={detailOpen ? 0 : -1}
                         onClick={() => setDetailOpen(false)}><CloseIcon /></button>
                 </div>
-                {detailOpen && <DetailPane bot={bot} publicName={publicBot?.name ?? null} />}
+                {detailOpen && <DetailPane bot={bot} publicName={publicBot?.name ?? null}
+                    mentorId={bot?.mentorId ?? publicBot?.id ?? mentorId} guest={guest} onBlocked={차단뒤} />}
             </aside>
 
+            {safety.ui}
             {addSheet && bot && (
                 <AddKnowledgeSheet mentorId={bot.mentorId} onClose={() => setAddSheet(false)} onAdded={() => { }} />
             )}
