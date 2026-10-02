@@ -14,6 +14,7 @@ function fakeDb() {
             delete: () => { c.mode = 'delete'; return q },
             upsert: (p: unknown) => { c.mode = 'upsert'; c.patch = p; return q },
             eq: (...a: unknown[]) => { c.eq.push(a); return q },
+            ilike: (...a: unknown[]) => { c.eq.push(a); return q },
             maybeSingle: async () => ({ data: null, error: null }),
             then: (ok: any) => ok({ data: [], error: null }),
         }
