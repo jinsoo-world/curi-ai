@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { bootstrapDefaultTeam, TeamTableMissing } from '@/domains/os'
-import { listBlockedMentorIds, withoutBlocked } from '@/domains/os/reports'
+import { listBlockedMentorIds, withoutBlocked } from '@/domains/os/blocks'
 
 export const dynamic = 'force-dynamic'
 

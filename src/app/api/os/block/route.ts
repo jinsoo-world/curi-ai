@@ -1,12 +1,13 @@
 // GET    /api/os/block              → 내가 차단한 봇 { mentorIds, bots: [{ mentorId, name, avatarUrl, blockedAt }] }
-// POST   /api/os/block { mentorId } → 차단 (마켓, 팀 목록, 대화, 그룹방에서 나에게만 빠진다)
-// DELETE /api/os/block { mentorId } → 차단 해제 (?mentorId= 도 받는다)
+// POST   /api/os/block { mentorId } → 차단 (마켓, 팀 목록, 대화, 그룹방, 전달, 루틴에서 나에게만 빠진다. 팀 줄 숨김, 루틴 멈춤)
+// DELETE /api/os/block { mentorId } 또는 ?mentorId= → 차단 해제 (숨김, 루틴을 차단 전으로 되돌린다)
 // 로그인 회원만 (쿠키 또는 앱 Bearer). 애플 심사 지침 1.2.
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
-import { isMentorId, blockBot, unblockBot, listBlockedBots, mentorExists, ReportTableMissing } from '@/domains/os/reports'
+import { isMentorId, mentorExists } from '@/domains/os/reports'
+import { blockBot, unblockBot, listBlockedBots, ReportTableMissing } from '@/domains/os/blocks'
 
 export const dynamic = 'force-dynamic'
 

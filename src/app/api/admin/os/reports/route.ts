@@ -32,9 +32,9 @@ export async function POST(req: Request) {
     if (!isMentorId(body.mentorId) || !action) return NextResponse.json({ error: 'mentorId, action 이 필요해요' }, { status: 400 })
     try {
         const r = await handleReports(createAdminClient(), auth.user.id, body.mentorId, action)
-        if (action !== 'dismiss') { revalidatePath('/mentors'); revalidatePath('/home') }
+        if (action !== 'dismiss') { revalidatePath('/os/market'); revalidatePath('/home'); revalidatePath('/mentors') }
         const message = action === 'unpublish' ? `봇을 내렸어요 (신고 ${r.closed}건 조치됨)`
-            : action === 'keep' ? `그대로 둬요 (신고 ${r.closed}건 닫음${r.republished ? ', 다시 공개함' : ''})`
+            : action === 'keep' ? (r.note ?? `그대로 둬요 (신고 ${r.closed}건 닫음${r.republished ? ', 다시 공개함' : ''})`)
             : `신고 ${r.closed}건을 닫았어요`
         return NextResponse.json({ ok: true, ...r, message })
     } catch (e) {

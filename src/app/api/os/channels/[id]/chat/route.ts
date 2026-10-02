@@ -24,7 +24,7 @@ import { UNAVAILABLE_TEXT } from '@/domains/chat/constants'
 import { GROUP_SERVER_GAP_MS, sleep } from '@/domains/os/group-stagger'
 import { readUrlsInText, buildLinkPrompt, linkTextForTurn } from '@/domains/os/readers'
 import type { ReadUrlView } from '@/domains/os/readers'
-import { listBlockedMentorIds, withoutBlocked } from '@/domains/os/reports'
+import { listBlockedMentorIds, withoutBlocked } from '@/domains/os/blocks'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60

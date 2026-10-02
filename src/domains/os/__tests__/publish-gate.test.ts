@@ -8,7 +8,7 @@ vi.mock('@/lib/slack', () => ({ sendSlackNotification: (...a: unknown[]) => send
 
 import {
     requestPublish, applyBotEdit, unpublishByOwner, recheckAfterKnowledge, decideReview, ReviewNotPending,
-    unpublishForReports, unpublishByAdmin,
+    unpublishForReports, unpublishByAdmin, isBotHeld, releaseHold, BotHeld,
 } from '../publish-gate'
 import { openReviewOf } from '../moderation'
 
@@ -307,32 +307,80 @@ describe('관리자 결정', () => {
     })
 })
 
-describe('신고로 내리기 (1002)', () => {
-    it('공개 중이면 내리고 확인 대기를 연다(분류 user_reports). 이미 비공개면 아무것도 안 한다', async () => {
+describe('신고로 내리기 + 묶음 (1002)', () => {
+    it('공개 중이면 내리고 확인 대기(user_reports)와 묶음을 건다. 이미 비공개면 아무것도 안 한다', async () => {
         const w = stateDb({ isActive: true })
         expect(await unpublishForReports(w.db, 'm1', 3)).toBe(true)
         expect(w.mentor.is_active).toBe(false)
         const open = await openReviewOf(w.db, 'm1')
         expect(open?.categories).toEqual(['user_reports'])
         expect(open?.contentHash).toBeTruthy()
+        expect(await isBotHeld(w.db, 'm1')).toBe(true)
         const before = w.events.length
         expect(await unpublishForReports(w.db, 'm1', 4)).toBe(false)
         expect(w.events.length).toBe(before)
         expect(askSideText).not.toHaveBeenCalled()
     })
-    it('신고 대기를 관리자가 승인하면 다시 공개된다 (내용 그대로면 AI 안 부름)', async () => {
+    it('신고로 내린 뒤 주인이 공개를 눌러도 비공개 그대로 = BotHeld (AI 도 안 부름)', async () => {
+        const w = stateDb({ isActive: true })
+        await unpublishForReports(w.db, 'm1', 3)
+        askSideText.mockResolvedValue(answer('pass'))
+        await expect(applyBotEdit(w.db, { ...ACT, fields: {}, wantPublic: true })).rejects.toBeInstanceOf(BotHeld)
+        await expect(requestPublish(w.db, ACT)).rejects.toBeInstanceOf(BotHeld)
+        expect(w.mentor.is_active).toBe(false)
+        expect(askSideText).not.toHaveBeenCalled()
+        expect(new BotHeld().message).toBe('신고로 확인 중이라 지금은 공개할 수 없어요')
+    })
+    it('묶인 동안 주인이 글을 고쳐도 관리자 확인 대기는 남는다, 자료를 넣어도 AI 를 안 부른다', async () => {
+        const w = stateDb({ isActive: true })
+        await unpublishForReports(w.db, 'm1', 3)
+        await applyBotEdit(w.db, { ...ACT, fields: { name: '새이름' } })
+        expect(w.mentor.is_active).toBe(false)
+        expect((await openReviewOf(w.db, 'm1'))?.categories).toContain('user_reports')
+        await recheckAfterKnowledge(w.db, { mentorId: 'm1', actorUserId: 'owner-u' })
+        expect(askSideText).not.toHaveBeenCalled()
+        expect(w.mentor.is_active).toBe(false)
+    })
+    it('묶인 동안 주인이 비공개를 눌러도 관리자 확인 대기가 닫히지 않는다', async () => {
+        const w = stateDb({ isActive: true })
+        await unpublishForReports(w.db, 'm1', 3)
+        await applyBotEdit(w.db, { ...ACT, fields: {}, wantPublic: false })
+        expect(await openReviewOf(w.db, 'm1')).not.toBeNull()
+    })
+    it('관리자 승인 = 묶음을 풀고 다시 공개 (내용 그대로면 AI 안 부름). 그 뒤엔 주인 공개도 된다', async () => {
         const w = stateDb({ isActive: true })
         await unpublishForReports(w.db, 'm1', 3)
         const r = await decideReview(w.db, 'admin-u', 'm1', 'approve')
         expect(r.status).toBe('approved')
         expect(w.mentor.is_active).toBe(true)
+        expect(await isBotHeld(w.db, 'm1')).toBe(false)
         expect(askSideText).not.toHaveBeenCalled()
     })
-    it('관리자가 내리면 열린 대기도 닫힌다', async () => {
+    it('관리자 승인인데 그 사이 내용이 바뀌었으면 AI 가 다시 보고, 통과해야만 묶음이 풀린다', async () => {
+        const w = stateDb({ isActive: true })
+        await unpublishForReports(w.db, 'm1', 3)
+        await applyBotEdit(w.db, { ...ACT, fields: { name: '바뀐이름' } })
+        askSideText.mockResolvedValue(answer('block', ['위험'], ['illegal']))
+        expect((await decideReview(w.db, 'admin-u', 'm1', 'approve')).status).toBe('rereviewed')
+        expect(w.mentor.is_active).toBe(false)
+        expect(await isBotHeld(w.db, 'm1')).toBe(true)
+    })
+    it('관리자 거절 = 묶음 그대로', async () => {
+        const w = stateDb({ isActive: true })
+        await unpublishForReports(w.db, 'm1', 3)
+        await decideReview(w.db, 'admin-u', 'm1', 'reject')
+        expect(await isBotHeld(w.db, 'm1')).toBe(true)
+    })
+    it('관리자가 내리면 묶이고 열린 대기도 닫힌다. 주인 공개는 막힌다. 풀면 다시 된다', async () => {
         const w = stateDb({ isActive: true })
         await unpublishForReports(w.db, 'm1', 3)
         await unpublishByAdmin(w.db, 'admin-u', 'm1')
         expect(w.mentor.is_active).toBe(false)
         expect(await openReviewOf(w.db, 'm1')).toBeNull()
+        await expect(applyBotEdit(w.db, { ...ACT, fields: {}, wantPublic: true })).rejects.toBeInstanceOf(BotHeld)
+        await releaseHold(w.db, 'admin-u', 'm1')
+        askSideText.mockResolvedValue(answer('pass'))
+        await applyBotEdit(w.db, { ...ACT, fields: {}, wantPublic: true })
+        expect(w.mentor.is_active).toBe(true)
     })
 })

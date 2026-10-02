@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { listTeam, createTeamBot, TeamTableMissing, SHAPES, COLORS, JOBS } from '@/domains/os'
 import type { NewBotInput } from '@/domains/os'
-import { listBlockedMentorIds, withoutBlocked } from '@/domains/os/reports'
+import { listBlockedMentorIds, withoutBlocked } from '@/domains/os/blocks'
 
 export const dynamic = 'force-dynamic'
 

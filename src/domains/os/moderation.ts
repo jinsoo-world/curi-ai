@@ -166,9 +166,12 @@ export const REVIEW_EVENTS = [
     'os_bot_publish_closed',     // 대기 중에 주인이 고침 = 닫힘
     'os_bot_admin_unpublish',    // 관리자가 신고를 보고 내림 = 닫힘 (reports.ts)
 ] as const
+/** 신고, 관리자 조치로 묶임(공개 금지) / 풀림. 확인 대기와는 따로 센다 (publish-gate.isBotHeld) */
+export const HOLD_EVENTS = ['os_bot_admin_hold', 'os_bot_admin_release'] as const
+
 let seqCounter = 0
 /** 같은 시각에 두 줄이 찍혀도 순서를 가를 수 있게 seq 를 붙인다 */
-export async function logReviewEvent(db: SupabaseClient, name: typeof REVIEW_EVENTS[number], userId: string | null, extra: Record<string, unknown>): Promise<boolean> {
+export async function logReviewEvent(db: SupabaseClient, name: typeof REVIEW_EVENTS[number] | typeof HOLD_EVENTS[number], userId: string | null, extra: Record<string, unknown>): Promise<boolean> {
     try {
         const { error } = await db.from('app_events').insert({
             name, tool: 'os_publish', path: null, user_id: userId, anon_id: null,

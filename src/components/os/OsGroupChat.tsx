@@ -294,7 +294,7 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                         : (
                             <MsgRow key={m.id} rowId={m.id} side="bot" createdAt={m.createdAt} copyText={m.content}
                                 actions={m.mentorId ? [
-                                    { label: '신고하기', onClick: () => safety.report(m.mentorId!, 이름(m.mentorId), m.content) },
+                                    { label: '신고하기', onClick: () => safety.report(m.mentorId!, 이름(m.mentorId), m.content, m.id) },
                                     ...(team.find(b => b.mentorId === m.mentorId)?.canPublish ? [] : [{ label: '차단하기', onClick: () => void safety.block(m.mentorId!) }]),
                                 ] : undefined}>
                                 <div className="os-sender">{아바타(m.mentorId)}<span>{보낸사람(m)}</span></div>

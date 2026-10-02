@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 
-interface Item { id: string; reason: string; label: string; detail: string | null; excerpt: string | null; createdAt: string }
+interface Item { id: string; reason: string; label: string; detail: string | null; excerpt: string | null; excerptFromServer: boolean; guest: boolean; createdAt: string }
 interface Group {
     mentorId: string; name: string; title: string; isActive: boolean; count: number; reporterCount: number
     reasons: { reason: string; label: string; count: number }[]; latestAt: string; items: Item[]
@@ -55,7 +55,7 @@ export default function BotReportsPage() {
         <div>
             <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px' }}>🚩 봇 신고</h1>
             <p style={{ color: '#64748b', margin: '0 0 20px', fontSize: 14 }}>
-                이용자가 넣은 신고예요. 24시간 안에 확인해 주세요. 7일 안에 서로 다른 3명이 신고하면 봇은 자동으로 내려가고 「봇 공개 확인」에도 올라가요.
+                이용자가 넣은 신고예요. 24시간 안에 확인해 주세요. 7일 안에 로그인한 회원 3명(서로 다른 인터넷 주소 3개)이 신고하면 봇은 자동으로 내려가 묶이고 「봇 공개 확인」에도 올라가요. 주인은 묶인 동안 다시 공개할 수 없어요. 「유지」를 누르면 묶음이 풀려요.
             </p>
             {missing && <div style={{ background: '#fef9c3', color: '#854d0e', padding: '10px 14px', borderRadius: 8, marginBottom: 16 }}>신고 표가 아직 없어요(마이그레이션 20261002_bot_reports_blocks.sql 적용 전)</div>}
             {note && <div style={{ background: '#dcfce7', color: '#166534', padding: '10px 14px', borderRadius: 8, marginBottom: 16 }}>{note}</div>}
@@ -84,9 +84,14 @@ export default function BotReportsPage() {
                             <ul style={{ margin: '12px 0 0', paddingLeft: 18, fontSize: 13 }}>
                                 {g.items.map(it => (
                                     <li key={it.id} style={{ marginBottom: 8 }}>
-                                        <b>{it.label}</b> <span style={{ color: '#94a3b8' }}>{new Date(it.createdAt).toLocaleString('ko-KR')}</span>
+                                        <b>{it.label}</b> <span style={{ color: '#94a3b8' }}>{new Date(it.createdAt).toLocaleString('ko-KR')}{it.guest ? ', 손님 신고(자동 내림에 안 셈)' : ''}</span>
                                         {it.detail && <div style={{ whiteSpace: 'pre-wrap' }}>설명: {it.detail}</div>}
-                                        {it.excerpt && <div style={{ whiteSpace: 'pre-wrap', background: '#f8fafc', padding: '6px 8px', borderRadius: 6, marginTop: 4, color: '#334155' }}>{it.excerpt}</div>}
+                                        {it.excerpt && (
+                                            <div style={{ marginTop: 4 }}>
+                                                <div style={{ fontSize: 11, color: '#64748b' }}>{it.excerptFromServer ? '서버에 저장된 봇 말' : '신고자가 보낸 인용'}</div>
+                                                <div style={{ whiteSpace: 'pre-wrap', background: '#f8fafc', padding: '6px 8px', borderRadius: 6, color: '#334155' }}>{it.excerpt}</div>
+                                            </div>
+                                        )}
                                     </li>
                                 ))}
                             </ul>

@@ -9,7 +9,7 @@ import {
     getChannel, getChannelBots, listChannelMessages,
     addChannelMembers, removeChannelMembers, renameChannel, deleteChannel, ChannelTableMissing,
 } from '@/domains/os/channels'
-import { listBlockedMentorIds, withoutBlocked } from '@/domains/os/reports'
+import { listBlockedMentorIds, withoutBlocked } from '@/domains/os/blocks'
 
 export const dynamic = 'force-dynamic'
 

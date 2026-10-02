@@ -1,6 +1,7 @@
 // api/notifications/proactive — 48시간 미접속 사용자에게 Proactive 알림 생성
 // Vercel Cron 또는 수동 호출용
 
+import { listBlockedMentorIds } from '@/domains/os/blocks'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createProactiveNotification } from '@/domains/notification'
 import { GEMINI_MODEL } from '@/domains/chat/constants'
@@ -59,8 +60,11 @@ export async function POST(req: Request) {
 
             if (existing?.length) continue
 
-            // 랜덤 멘토 선택
-            const mentor = mentors[Math.floor(Math.random() * mentors.length)]
+            // 랜덤 멘토 선택 (내가 차단한 봇은 빼고)
+            const blocked = await listBlockedMentorIds(supabase, user.id)
+            const pool = mentors.filter(m => !blocked.has(m.id))
+            if (pool.length === 0) continue
+            const mentor = pool[Math.floor(Math.random() * pool.length)]
 
             // 멘토 톤으로 메시지 생성
             const message = await generateProactiveMessage(

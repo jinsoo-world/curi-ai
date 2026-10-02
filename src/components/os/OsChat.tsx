@@ -196,10 +196,10 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
     // 🚩 신고, 차단 (애플 심사 지침 1.2). 신고는 모든 봇 답에(내 봇의 AI 답도 신고할 수 있다), 차단은 남의 봇에만. 차단하면 봇 명단으로 나간다
     const 차단뒤 = () => { void refreshTeam(); router.push('/os') }
     const safety = useMessageSafety({ guest, onBlocked: 차단뒤 })
-    const 안전단추 = (who: { mentorId: string; name: string }, text: string) => {
+    const 안전단추 = (who: { mentorId: string; name: string }, text: string, messageId?: string) => {
         const 내봇 = who.mentorId === mentorId ? !!bot?.canPublish : !!team.find(b => b.mentorId === who.mentorId)?.canPublish
         return [
-            { label: '신고하기', onClick: () => safety.report(who.mentorId, who.name, text) },
+            { label: '신고하기', onClick: () => safety.report(who.mentorId, who.name, text, messageId) },
             ...(내봇 ? [] : [{ label: '차단하기', onClick: () => void safety.block(who.mentorId) }]),
         ]
     }   // 항상 닫힌 채 시작. 열 때만 세부칸을 그린다(대표 0923 「닫힌 채로, 열 때 로딩」)
@@ -956,7 +956,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                         // === /전달(relay) ===
                         : (
                             <MsgRow key={m.id} rowId={m.id} side="bot" createdAt={m.createdAt} copyText={m.content}
-                                actions={m.content && !m.card ? 안전단추(옆봇 ?? { mentorId: bot?.mentorId ?? publicBot?.id ?? mentorId, name }, m.content) : undefined}>
+                                actions={m.content && !m.card ? 안전단추(옆봇 ?? { mentorId: bot?.mentorId ?? publicBot?.id ?? mentorId, name }, m.content, m.id) : undefined}>
                                 {(!m.content && !m.card && (streaming || state === 'thinking')) ? (
                                     <TypingIndicator name={말한이름} avatar={얼굴(28, 'idle') ?? typingAvatar} />
                                 ) : (

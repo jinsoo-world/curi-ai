@@ -5,6 +5,7 @@
 // 기존 자료 도메인 함수(addKnowledgeSource 등)를 그대로 부른다. 우회로를 새로 만들지 않는다.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isBotBlocked } from './blocks'
 import { addKnowledgeSource } from '@/domains/knowledge'
 import { failReasonLine, FAIL_REASON_COL, LEGACY_FAIL_REASON_COL } from '@/domains/knowledge/actions'
 import { failureMessage, FAILURE_REASONS } from '@/domains/knowledge/failure-reasons'
@@ -44,6 +45,8 @@ export async function assertBotInTeam(db: SupabaseClient, userId: string, mentor
         throw new Error(error.message)
     }
     if (!data) throw new BotNotMine()
+    // 🚫 차단한 봇 = 팀에 있어도 「내 팀 봇 아님」 (전달, 멘션, 초안, 자료 창구가 다 여기를 지난다. 애플 심사 지침 1.2)
+    if (await isBotBlocked(db, userId, mentorId)) throw new BotNotMine()
 }
 
 /**

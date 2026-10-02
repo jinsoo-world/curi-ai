@@ -31,7 +31,8 @@ import { logLlmUsage, keepAliveAfterResponse } from '@/domains/llm/usage-log'
 import { SOLAR_CHAT_MODEL } from '@/domains/llm/constants'
 import { correctiveRetrieve } from '@/domains/knowledge/corrective'
 import { askQuickWithFallback } from '@/domains/agent/ask'
-import { isBotBlocked, BLOCKED_CHAT_TEXT } from '@/domains/os/reports'
+import { isBotBlocked } from '@/domains/os/blocks'
+import { BLOCKED_CHAT_TEXT } from '@/domains/os/reports'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60

@@ -1,17 +1,20 @@
-// POST /api/os/report { mentorId, reason, detail?, messageExcerpt?, visitorId? } → 봇 신고 (애플 심사 지침 1.2)
-// 로그인 회원(쿠키 또는 앱 Bearer)도, 손님(visitorId, 대화와 같은 값)도 된다.
-// 7일 안 서로 다른 신고자 3명 = 봇을 자동으로 내리고 관리자 확인 대기에 올린다(domains/os/reports). 지우지 않는다.
+// POST /api/os/report { mentorId, reason, detail?, messageExcerpt?, messageId?, visitorId? } → 봇 신고 (애플 심사 지침 1.2)
+// 로그인 회원(쿠키 또는 앱 Bearer)도, 손님(visitorId, 대화와 같은 값)도 된다. 회원이면 visitorId 는 무시한다.
+// 없는 봇이어도 똑같이 200 = 있는지 없는지 새지 않는다(저장은 안 함).
+// 자동 내림(회원 3명 + 주소 3개, 7일)은 domains/os/reports. 내렸으면 마켓, 홈 캐시를 비운다. 신고자에게는 알리지 않는다.
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
-import { parseReportBody, cleanVisitorId, submitReport, mentorExists, ReportTableMissing } from '@/domains/os/reports'
+import { parseReportBody, cleanVisitorId, submitReport, hashIp, requestIp, ReportTableMissing } from '@/domains/os/reports'
 
 export const dynamic = 'force-dynamic'
 
 /** 한 사람 10분에 5건, 같은 인터넷 주소(손님) 하루 20건 */
 const PER_REPORTER = { limit: 5, windowSec: 600 }
 const PER_IP_GUEST = { limit: 20, windowSec: 86_400 }
+const DONE = '신고했어요. 24시간 안에 확인할게요'
 
 export async function POST(req: Request) {
     const supabase = await createClient()
@@ -33,10 +36,11 @@ export async function POST(req: Request) {
     if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 })
 
     try {
-        if (!(await mentorExists(db, parsed.value.mentorId))) return NextResponse.json({ error: '그 봇을 찾지 못했어요' }, { status: 404 })
-        await submitReport(db, { ...parsed.value, reporterUserId: user?.id ?? null, reporterVisitorId: visitorId })
-        // 자동 내림 여부는 신고자에게 알리지 않는다
-        return NextResponse.json({ ok: true, message: '신고했어요. 24시간 안에 확인할게요' })
+        const r = await submitReport(db, {
+            ...parsed.value, reporterUserId: user?.id ?? null, reporterVisitorId: visitorId, ipHash: hashIp(requestIp(req)),
+        })
+        if (r.autoUnpublished) { revalidatePath('/os/market'); revalidatePath('/home'); revalidatePath('/mentors') }
+        return NextResponse.json({ ok: true, message: DONE })
     } catch (e) {
         if (e instanceof ReportTableMissing) return NextResponse.json({ error: '신고를 받을 준비가 아직 안 됐어요' }, { status: 503 })
         console.error('[os/report POST]', e instanceof Error ? e.message : e)

@@ -14,6 +14,7 @@ import { BotPublishDenied } from '@/domains/os/team'
 import type { TeamBotPatch } from '@/domains/os'
 import { classifyLookChange, postLookChangeBeat } from '@/domains/os/look-change'
 import { moderationReply } from '@/domains/os/moderation'
+import { BotHeld } from '@/domains/os/publish-gate'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60   // 공개하기, 공개 중인 봇 고치기는 AI 확인(최대 25초)을 기다린다
@@ -96,6 +97,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         return NextResponse.json({ ok: true, lookBeat, ...(moderation ? { moderation: { verdict: moderation.verdict } } : {}) })
     } catch (e) {
         if (e instanceof BotPublishDenied) return NextResponse.json({ error: e.message }, { status: 403 })
+        if (e instanceof BotHeld) return NextResponse.json({ error: e.message, code: 'BOT_HELD' }, { status: 409 })
         console.error('[os/team PATCH]', e instanceof Error ? e.message : e)
         return NextResponse.json({ error: '바꾸지 못했어요' }, { status: 500 })
     }

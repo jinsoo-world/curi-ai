@@ -7,7 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getActiveMentors } from '@/domains/mentor'
 import { getLinkCounts } from '@/domains/os/team-link'
 import { arrangeMarket } from '@/domains/os/showcase'
-import { listBlockedMentorIds, withoutBlocked } from '@/domains/os/reports'
+import { listBlockedMentorIds, withoutBlocked } from '@/domains/os/blocks'
 
 export const dynamic = 'force-dynamic'
 

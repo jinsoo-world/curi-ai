@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { getVisitorId } from '@/lib/visitor'
+import { useOsTeam } from './OsShell'
 
 /** 서버 REPORT_REASONS 와 같은 순서, 같은 이름. 화면 글에는 중간점을 쓰지 않는다 */
 export const REPORT_REASON_CHIPS: { id: string; label: string }[] = [
@@ -55,11 +56,13 @@ export function SafetyToast({ text, onDone }: { text: string | null; onDone: () 
     )
 }
 
-export function ReportSheet({ mentorId, botName, excerpt, onClose, onDone }: {
+export function ReportSheet({ mentorId, botName, excerpt, messageId, onClose, onDone }: {
     mentorId: string
     botName: string
     /** 신고한 말풍선 글 (메시지에서 열었을 때) */
     excerpt?: string | null
+    /** 서버에 저장된 말 번호. 있으면 서버가 진짜 글을 꺼낸다 (방금 받은 말은 없을 수 있다) */
+    messageId?: string | null
     onClose: () => void
     onDone: (message: string) => void
 }) {
@@ -74,7 +77,7 @@ export function ReportSheet({ mentorId, botName, excerpt, onClose, onDone }: {
         try {
             const res = await fetch('/api/os/report', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mentorId, reason, detail: detail.trim() || undefined, messageExcerpt: excerpt ? excerpt.slice(0, 1000) : undefined, visitorId: getVisitorId() || undefined }),
+                body: JSON.stringify({ mentorId, reason, detail: detail.trim() || undefined, messageExcerpt: excerpt ? excerpt.slice(0, 1000) : undefined, messageId: messageId || undefined, visitorId: getVisitorId() || undefined }),
             })
             const d = await res.json().catch(() => ({}))
             if (!res.ok) throw new Error(d.error || '신고를 보내지 못했어요')
@@ -151,11 +154,11 @@ export function BotSafetyActions({ mentorId, botName, guest, onBlocked, compact 
 
 /** 말풍선 메뉴에서 쓰는 신고, 차단 (한 화면에 시트 하나) */
 export function useMessageSafety(opts: { guest: boolean; onBlocked?: (mentorId: string) => void }) {
-    const [target, setTarget] = useState<{ mentorId: string; botName: string; excerpt: string } | null>(null)
+    const [target, setTarget] = useState<{ mentorId: string; botName: string; excerpt: string; messageId?: string | null } | null>(null)
     const [toast, setToast] = useState<string | null>(null)
     const clear = useCallback(() => setToast(null), [])
     const { guest, onBlocked } = opts
-    const report = useCallback((mentorId: string, botName: string, excerpt: string) => setTarget({ mentorId, botName, excerpt }), [])
+    const report = useCallback((mentorId: string, botName: string, excerpt: string, messageId?: string | null) => setTarget({ mentorId, botName, excerpt, messageId }), [])
     const block = useCallback(async (mentorId: string) => {
         if (guest) { setToast('로그인하면 차단할 수 있어요'); return }
         const r = await confirmAndBlock(mentorId)
@@ -164,7 +167,7 @@ export function useMessageSafety(opts: { guest: boolean; onBlocked?: (mentorId: 
     }, [guest, onBlocked])
     const ui = (
         <>
-            {target && <ReportSheet mentorId={target.mentorId} botName={target.botName} excerpt={target.excerpt} onClose={() => setTarget(null)} onDone={setToast} />}
+            {target && <ReportSheet mentorId={target.mentorId} botName={target.botName} excerpt={target.excerpt} messageId={target.messageId} onClose={() => setTarget(null)} onDone={setToast} />}
             <SafetyToast text={toast} onDone={clear} />
         </>
     )
@@ -229,15 +232,17 @@ export function BlockedBotsCard() {
  * 화면을 사람마다 따로 그리지 않아도 되게 브라우저에서 한 번 읽어 가린다. 손님이면 아무것도 안 한다.
  */
 export function HideBlockedBots() {
+    const { guest, loading } = useOsTeam()
     const [ids, setIds] = useState<string[]>([])
     useEffect(() => {
+        if (loading || guest) return   // 손님은 차단이 없다 = 부르지 않는다
         let alive = true
         fetch('/api/os/block', { cache: 'no-store' })
             .then(r => (r.ok ? r.json() : null))
             .then(d => { if (alive && d && Array.isArray(d.mentorIds)) setIds((d.mentorIds as unknown[]).filter((x): x is string => typeof x === 'string' && /^[0-9a-f-]{36}$/i.test(x))) })
             .catch(() => { })
         return () => { alive = false }
-    }, [])
-    if (ids.length === 0) return null
+    }, [guest, loading])
+    if (guest || ids.length === 0) return null
     return <style>{ids.map(id => `[data-mentor-id="${id}"]`).join(',')}{'{display:none!important}'}</style>
 }

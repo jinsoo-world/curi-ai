@@ -11,7 +11,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
-    reviewBot, markPendingReview, openReviewOf, logReviewEvent, readBotForReview, contentHash,
+    reviewBot, markPendingReview, openReviewOf, logReviewEvent, readBotForReview, contentHash, HOLD_EVENTS,
     type ModerationResult,
 } from './moderation'
 
@@ -32,6 +32,45 @@ function normalizeField(v: unknown): unknown {
 /** 관리자 결정이 들어왔는데 열린 확인 대기가 없다(이미 결정됨, 주인이 내림, 새 판정이 남) = 409 */
 export class ReviewNotPending extends Error {
     constructor() { super('이미 처리됐거나 확인 대기 중이 아니에요') }
+}
+
+/** 신고, 관리자 조치로 묶인 봇을 주인이 공개하려 했다 = 409 (관리자 승인, 유지로만 풀린다) */
+export class BotHeld extends Error {
+    constructor() { super('신고로 확인 중이라 지금은 공개할 수 없어요') }
+}
+
+/**
+ * 묶여 있나 = 이 봇의 묶음/풀림 기록 중 가장 늦은 것이 묶음이면 묶임.
+ * 조회가 실패하면 던진다(공개 쪽으로 실패하지 않는다).
+ */
+export async function isBotHeld(db: SupabaseClient, mentorId: string): Promise<boolean> {
+    const { data, error } = await db.from('app_events').select('name, created_at, extra').in('name', [...HOLD_EVENTS])
+        .eq('extra->>mentor_id', mentorId).order('created_at', { ascending: false }).limit(50)
+    if (error) throw new Error(error.message)
+    let last: { name: string; created_at: string; extra: Record<string, unknown> | null } | null = null
+    for (const e of (data ?? []) as { name: string; created_at: string; extra: Record<string, unknown> | null }[]) {
+        if (!last || e.created_at > last.created_at || (e.created_at === last.created_at && Number(e.extra?.seq ?? 0) > Number(last.extra?.seq ?? 0))) last = e
+    }
+    return last?.name === 'os_bot_admin_hold'
+}
+
+async function holdBot(db: SupabaseClient, actorUserId: string | null, mentorId: string, reason: 'reports' | 'admin'): Promise<void> {
+    if (!(await logReviewEvent(db, 'os_bot_admin_hold', actorUserId, { mentor_id: mentorId, reason }))) throw new Error('묶음 기록을 남기지 못했어요')
+}
+
+/** 묶음 풀기 (관리자 승인, 유지에서만 부른다). 묶여 있었으면 true */
+export async function releaseHold(db: SupabaseClient, adminUserId: string, mentorId: string): Promise<boolean> {
+    if (!(await isBotHeld(db, mentorId))) return false
+    await logReviewEvent(db, 'os_bot_admin_release', adminUserId, { mentor_id: mentorId })
+    return true
+}
+
+/** 묶인 봇의 확인 대기를 관리자 목록에 다시 올린다 (주인이 고쳐 옛 대기가 닫혔을 때). 지문 없음 = 승인하면 AI 가 다시 본다 */
+async function requeueHeld(db: SupabaseClient, actorUserId: string, mentorId: string): Promise<void> {
+    await markPendingReview(db, {
+        mentorId, userId: actorUserId, ownerUserId: null,
+        result: { verdict: 'review', reasons: ['신고로 확인 중에 주인이 내용을 고쳤어요'], categories: [REPORT_REVIEW_CATEGORY], hash: null },
+    })
 }
 
 /** 누가, 어느 봇에. creatorId 가 null 이면 주인 없는 옛 기본 봇(관리자만 닿는다) */
@@ -74,7 +113,9 @@ async function publishAtomic(db: SupabaseClient, a: { mentorId: string; creatorI
 }
 
 /** 공개 요청 = AI 확인 → pass 면 공개, review 면 확인 대기, block 이면 그대로 */
-export async function requestPublish(db: SupabaseClient, a: GateActor): Promise<ModerationResult> {
+export async function requestPublish(db: SupabaseClient, a: GateActor, opts: { bypassHold?: boolean } = {}): Promise<ModerationResult> {
+    // 신고, 관리자 조치로 묶인 봇은 AI 를 부르지 않고 거절한다 (관리자 승인 길만 bypassHold)
+    if (!opts.bypassHold && await isBotHeld(db, a.mentorId)) throw new BotHeld()
     const owner = await ownerOf(db, a.creatorId)
     const r = await reviewBot(db, { mentorId: a.mentorId, userId: a.actorUserId, ownerName: owner.displayName })
     if (r.verdict === 'pass') await publishAtomic(db, { mentorId: a.mentorId, creatorId: a.creatorId, ownerUserId: owner.userId })
@@ -105,6 +146,9 @@ export async function applyBotEdit(
     if (pErr) throw new Error(pErr.message)
     if (!p) throw new Error('봇을 못 찾았다')
     const prior = p as unknown as Record<string, unknown> & { is_active: boolean | null; slug: string | null }
+    const held = await isBotHeld(db, a.mentorId)
+    // 묶인 봇 공개 요청 = 아무것도 쓰기 전에 거절 (409)
+    if (held && a.wantPublic === true) throw new BotHeld()
 
     const changed = REVIEWED_FIELDS.some(k => k in a.fields && JSON.stringify(normalizeField(a.fields[k])) !== JSON.stringify(normalizeField(prior[k])))
     const open = changed && !prior.is_active ? await openReviewOf(db, a.mentorId) : null
@@ -119,6 +163,12 @@ export async function applyBotEdit(
     }
     // 확인 대기 중에 고쳤다 = 옛 대기는 다른 글을 본 것이니 닫는다
     if (changed && open) await logReviewEvent(db, 'os_bot_publish_closed', a.actorUserId, { mentor_id: a.mentorId, reason: 'edited' })
+
+    // 묶인 동안 = 공개 시도 없이 글만 저장. 고쳐서 닫힌 대기는 관리자 목록에 다시 올린다. 주인 비공개도 대기를 닫지 않는다
+    if (held) {
+        if (changed && open) await requeueHeld(db, a.actorUserId, a.mentorId)
+        return {}
+    }
 
     if (a.wantPublic === false) {
         // 이미 비공개면 할 일 없다(옛 편집 저장은 늘 배포 칸을 보낸다). 열린 대기도 건드리지 않는다
@@ -142,6 +192,7 @@ export async function recheckAfterKnowledge(db: SupabaseClient, a: { mentorId: s
         const { data } = await db.from('mentors').select('is_active, creator_id').eq('id', a.mentorId).maybeSingle()
         const m = data as { is_active: boolean | null; creator_id: string | null } | null
         if (!m) return
+        if (await isBotHeld(db, a.mentorId)) return   // 묶인 봇 = 관리자만 연다
         const open = !m.is_active ? await openReviewOf(db, a.mentorId) : null
         if (!m.is_active && !open) return
         if (m.is_active) {
@@ -181,9 +232,11 @@ export async function decideReview(
     if (!open.contentHash || now !== open.contentHash) {
         // 대기 뒤에 내용이 바뀌었다 = 관리자가 본 것과 다르다. 옛 대기를 닫고 AI 가 지금 내용을 다시 본다
         await logReviewEvent(db, 'os_bot_publish_decision', adminUserId, { mentor_id: mentorId, decision: 'stale' })
-        const moderation = await requestPublish(db, { mentorId, creatorId: m.creator_id, actorUserId: adminUserId })
+        const moderation = await requestPublish(db, { mentorId, creatorId: m.creator_id, actorUserId: adminUserId }, { bypassHold: true })
+        if (moderation.verdict === 'pass') await releaseHold(db, adminUserId, mentorId)   // 통과해야만 묶음이 풀린다
         return { status: 'rereviewed', moderation }
     }
+    await releaseHold(db, adminUserId, mentorId)
     await publishAtomic(db, { mentorId, creatorId: m.creator_id, ownerUserId: owner.userId })
     await logReviewEvent(db, 'os_bot_publish_decision', adminUserId, { mentor_id: mentorId, decision: 'approve' })
     return { status: 'approved' }
@@ -207,16 +260,21 @@ export async function unpublishForReports(db: SupabaseClient, mentorId: string, 
     const owner = await ownerOf(db, (m as { creator_id?: string | null } | null)?.creator_id ?? null)
     let hash: string | null = null
     try { hash = contentHash(await readBotForReview(db, mentorId, owner.displayName)) } catch { hash = null }
+    await holdBot(db, null, mentorId, 'reports')
     await markPendingReview(db, {
         mentorId, userId: null, ownerUserId: owner.userId,
-        result: { verdict: 'review', reasons: [`신고 ${reporterCount}건이 7일 안에 쌓여 자동으로 내렸어요`], categories: [REPORT_REVIEW_CATEGORY], hash },
+        result: { verdict: 'review', reasons: [`로그인한 회원 ${reporterCount}명이 7일 안에 신고해 자동으로 내렸어요`], categories: [REPORT_REVIEW_CATEGORY], hash },
     })
     return true
 }
 
-/** 관리자가 신고를 보고 내린다. 열린 확인 대기도 이 기록으로 닫힌다 (승인 목록에서 빠진다) */
+/**
+ * 관리자가 신고를 보고 내린다 + 묶는다(주인이 다시 공개 못 함). 열린 확인 대기도 이 기록으로 닫힌다.
+ * 풀기 = releaseHold (관리자 신고 화면의 「유지」)
+ */
 export async function unpublishByAdmin(db: SupabaseClient, adminUserId: string, mentorId: string): Promise<void> {
     const { error } = await db.from('mentors').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', mentorId)
     if (error) throw new Error(error.message)
+    await holdBot(db, adminUserId, mentorId, 'admin')
     await logReviewEvent(db, 'os_bot_admin_unpublish', adminUserId, { mentor_id: mentorId })
 }
