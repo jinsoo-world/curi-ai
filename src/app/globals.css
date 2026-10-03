@@ -1,4 +1,5 @@
 @import "tailwindcss";
+/* 빌드 저장본 갱신 2026-10-03: 운영이 옛 globals.css 저장본을 써서 --color-* 토큰이 비어 버튼이 안 보였다. 이 줄로 파일 내용이 바뀌어 새로 빌드된다. */
 
 /* 글꼴 — 프리텐다드 (대표 확인 0915 = 비글루가 쓰는 글꼴) */
 html, body, button, input, textarea, select {
