@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     const ev = (name: 'draft_started' | 'draft_succeeded' | 'draft_failed', extra: Record<string, unknown>) =>
         void recordDraftEvent(db, { name, userId: user.id, extra: { ...extra, ms: Date.now() - started } })
     ev('draft_started', { links: links.length, pastes: pastes.length })
-    const sources = await collectDraftSources(links, pastes, started + 50_000, user.id)
+    const sources = await collectDraftSources(links, pastes, started + 35_000, user.id)   // 60초 첫마디: 읽기 35초 + 초안 모델 20초 (예전 50초)
     if (sources.texts.length === 0) {
         ev('draft_failed', { reason: 'nothing_read', unread: sources.unread.length })
         return NextResponse.json({ error: '읽은 글이 없어요. 글을 붙여넣거나 다른 링크를 넣어 주세요', unread: sources.unread }, { status: 422 })

@@ -68,6 +68,12 @@ export interface TwinDraft {
     limits: string[]
     chips: string[]
     example: { q: string; a: string }
+    /** 예시 문답 2쌍까지 (example 은 첫 쌍) */
+    examples?: { q: string; a: string }[]
+    /** 자료에서 뽑은 구체적 사실 (from = 자료 번호, 1부터) */
+    facts?: { text: string; from: number }[]
+    /** 리더가 실제로 쓴 고유 표현, 말버릇 */
+    phrases?: string[]
     /** 봇이 따를 설명 (twin.ts 로 조립, 말투 초안은 덧붙임) */
     prompt: string
     /** 근거 없이 추정한 칸 이름 */
@@ -156,4 +162,21 @@ export function composeGreeting(learned: string, typed: string): string {
 function withGwa(word: string): string {
     const c = word.charCodeAt(word.length - 1) - 0xac00
     return c >= 0 && c <= 11171 && c % 28 !== 0 ? '과' : '와'
+}
+
+/** 블로그 글 하나 주소면 그 주소 (네이버 글번호, 티스토리 글). 블로그 첫 화면, 피드 주소면 null */
+export function postUrlOf(raw: string): string | null {
+    let u: URL
+    try { u = new URL(raw) } catch { return null }
+    const host = u.hostname.replace(/^(www|m)\./, '').toLowerCase()
+    if (host === 'blog.naver.com') {
+        if (u.searchParams.get('logNo')) return raw
+        return /^\/[A-Za-z0-9_-]{2,40}\/\d{5,}/.test(u.pathname) ? raw : null
+    }
+    if (host.endsWith('.tistory.com')) {
+        const path = u.pathname.replace(/\/+$/, '')
+        if (!path || /^\/(rss|feed|category|tag|guestbook|notice)(\/|$)/i.test(path)) return null
+        return raw
+    }
+    return null
 }

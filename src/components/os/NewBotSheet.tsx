@@ -599,6 +599,8 @@ function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => v
                     <div>말투: {draft.voiceRules.join(' / ') || '없음'}{guess('voiceRules')}</div>
                     <div>금지선: 기본 금지선{draft.limits.length > 0 ? ` + ${draft.limits.join(', ')}` : ''}{guess('limits')}</div>
                     <div>첫 질문: {draft.chips.join(' / ') || '없음'}{guess('chips')}</div>
+                    {(draft.facts ?? []).length > 0 && <div>자료에서 찾은 사실: {(draft.facts ?? []).map(f => f.text).join(' / ')}</div>}
+                    {(draft.phrases ?? []).length > 0 && <div>자주 쓰는 표현: {(draft.phrases ?? []).join(' / ')}</div>}
                     {draft.example.q && <div>예시: 「{draft.example.q}」 → 「{draft.example.a}」{guess('example')}</div>}
                 </div>
             </div>
