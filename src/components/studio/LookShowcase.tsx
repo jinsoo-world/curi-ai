@@ -77,7 +77,7 @@ export default function LookShowcase() {
                                 aspectRatio: '3 / 4',
                                 borderRadius: 16,
                                 overflow: 'hidden',
-                                background: '#18181B',
+                                background: 'var(--color-neutral-900)',
                                 display: 'block',
                                 textDecoration: 'none',
                             }}

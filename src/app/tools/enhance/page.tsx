@@ -100,7 +100,7 @@ export default function EnhancePage() {
 
                 <div>
                     <div style={{ marginBottom: 22 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>1. 고칠 사진 올리기</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-700)', marginBottom: 8 }}>1. 고칠 사진 올리기</div>
                         <PhotoDrop
                             preview={preview}
                             onPicked={(dataUrl, mt) => {
@@ -124,7 +124,7 @@ export default function EnhancePage() {
                 {!result && <ShareTool path="/tools/enhance" title="사진 화질 개선하기" description="흐릿하고 오래된 사진을 또렷하게 되살립니다." image="/og/enhance.png" />}
 
                     <div style={{ opacity: base64 ? 1 : 0.4, pointerEvents: base64 ? 'auto' : 'none', marginBottom: 24 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>2. 어떻게 고칠까요</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-700)', marginBottom: 8 }}>2. 어떻게 고칠까요</div>
                         <div style={{ display: 'grid', gap: 10 }}>
                             {ENHANCE_MODES.map(m => (
                                 <button key={m.id} onClick={() => setModeId(m.id)} style={{
@@ -135,13 +135,13 @@ export default function EnhancePage() {
                                     cursor: 'pointer', textAlign: 'left',
                                 }}>
                                     {m.sample && (
-                                        <span style={{ position: 'relative', width: 56, height: 56, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: '#f4f4f5' }}>
+                                        <span style={{ position: 'relative', width: 56, height: 56, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: 'var(--color-neutral-100)' }}>
                                             <Image src={m.sample} alt="" fill sizes="56px" style={{ objectFit: 'cover', objectPosition: 'center 20%' }} />
                                         </span>
                                     )}
                                     <span style={{ minWidth: 0 }}>
-                                        <span style={{ display: 'block', fontSize: 15.5, fontWeight: 800, color: '#18181b' }}>{m.label}</span>
-                                        <span style={{ display: 'block', fontSize: 15, color: '#71717a', marginTop: 2, wordBreak: 'keep-all' }}>{m.desc}</span>
+                                        <span style={{ display: 'block', fontSize: 15.5, fontWeight: 800, color: 'var(--color-neutral-900)' }}>{m.label}</span>
+                                        <span style={{ display: 'block', fontSize: 15, color: 'var(--color-neutral-500)', marginTop: 2, wordBreak: 'keep-all' }}>{m.desc}</span>
                                     </span>
                                 </button>
                             ))}
@@ -151,12 +151,12 @@ export default function EnhancePage() {
 
                 <div>
                     {errorMsg && (
-                        <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 15, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
+                        <div style={{ background: 'var(--color-red-50)', color: 'var(--color-red-600)', fontSize: 15, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
                             {errorMsg}
                             {needCharge && (
                                 // 클로버 판매 끝(대표 결정 1002): 충전 대신 미션으로
                                 <button onClick={() => router.push('/missions')} style={{
-                                    display: 'block', marginTop: 10, background: '#dc2626', color: '#fff', border: 'none',
+                                    display: 'block', marginTop: 10, background: 'var(--color-red-600)', color: '#fff', border: 'none',
                                     borderRadius: 10, padding: '9px 16px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
                                 }}>클로버 모으러 가기</button>
                             )}
@@ -180,28 +180,28 @@ export default function EnhancePage() {
 
                     {result && preview && (
                         <div style={{ marginTop: 26 }}>
-                            <div style={{ fontSize: 15, fontWeight: 700, color: '#18181b', marginBottom: 4 }}>다 됐어요</div>
-                            <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 12px' }}>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: 4 }}>다 됐어요</div>
+                            <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: '0 0 12px' }}>
                                 가운데 손잡이를 좌우로 끌어보세요.
                             </p>
                             <BeforeAfter before={preview} after={result} ratio="1 / 1" />
 
                             {미리보기 ? (
-                                <div style={{ marginTop: 12, background: '#fff', border: '1px solid #e4e4e7', borderRadius: 14, padding: '18px 18px 16px', textAlign: 'center' }}>
+                                <div style={{ marginTop: 12, background: '#fff', border: '1px solid var(--color-neutral-200)', borderRadius: 14, padding: '18px 18px 16px', textAlign: 'center' }}>
                                     <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>선명한 사진은 회원만 받을 수 있어요</div>
-                                    <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6 }}>
+                                    <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: '0 0 14px', lineHeight: 1.6 }}>
                                         지금 보이는 건 미리보기라 흐릿해요. 로그인하면 원본을 바로 내려받습니다.
                                     </p>
                                     <button onClick={() => router.push('/login')} style={{
                                         width: '100%', padding: 14, borderRadius: 14, border: 'none',
-                                        background: '#1C2321', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                                        background: 'var(--color-neutral-900)', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
                                     }}>로그인하고 원본 받기</button>
                                 </div>
                             ) : (
                                 <>
                                 <a href={result} download="화질_개선_사진.png" style={{
                                     display: 'block', marginTop: 12, padding: 14, borderRadius: 14,
-                                    background: '#18181b', color: '#fff', fontSize: 15, fontWeight: 700,
+                                    background: 'var(--color-neutral-900)', color: '#fff', fontSize: 15, fontWeight: 700,
                                     textAlign: 'center', textDecoration: 'none',
                                 }}>사진 내려받기</a>
                             <KeepNotice />

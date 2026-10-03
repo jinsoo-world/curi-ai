@@ -45,7 +45,7 @@
 .os-quiet-pair { display: inline-flex; align-items: center; gap: 8px; }
 .os-quiet input[type="time"] {
     background: var(--os-말풍선-내); color: var(--os-글); border: 1px solid var(--os-선);
-    border-radius: 10px; padding: 0 10px; height: 44px; font-size: 15px; font-family: inherit; min-width: 0; width: 118px;
+    border-radius: 8px; padding: 0 10px; height: 44px; font-size: 15px; font-family: inherit; min-width: 0; width: 118px;
 }
 .os-quiet span { color: var(--os-글-연); }
 
@@ -53,7 +53,7 @@
 .os-conn-logo { width: 32px; height: 32px; border-radius: 8px; flex: 0 0 auto; display: block; }
 .os-conn-head { display: flex; align-items: center; gap: 12px; min-height: 44px; }
 .os-conn-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.os-conn-state { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--os-말풍선-내); color: var(--os-글-흐림); white-space: nowrap; }
+.os-conn-state { font-size: 12px; padding: 2px 8px; border-radius: 4px; background: var(--os-말풍선-내); color: var(--os-글-흐림); white-space: nowrap; }
 .os-conn-state.on { color: var(--os-클로버); background: color-mix(in srgb, var(--os-클로버) 16%, transparent); }
 
 @media (max-width: 420px) {
@@ -65,7 +65,7 @@
 .os-set-layout { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 12px; }
 .os-set-tabs { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 12px; }
 .os-set-tab {
-    display: block; width: 100%; text-align: left; min-height: 44px; padding: 10px 14px; border: 0; border-radius: 12px;
+    display: block; width: 100%; text-align: left; min-height: 44px; padding: 10px 14px; border: 0; border-radius: 8px;
     background: transparent; color: var(--os-글-연); font-size: calc(15px * var(--os-font-scale, 1)); cursor: pointer; font-family: inherit;
 }
 .os-set-tab:hover { background: var(--os-말풍선); color: var(--os-글); }
@@ -76,11 +76,11 @@
 .os-set-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .os-set-link { color: var(--os-포인트); text-decoration: underline; text-underline-offset: 3px; display: inline-flex; align-items: center; min-height: 44px; }
 .os-set-link:hover { text-decoration: underline; }
-.os-set-badge { display: inline-block; vertical-align: middle; margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--os-말풍선-내); color: var(--os-글-연); }
+.os-set-badge { display: inline-block; vertical-align: middle; margin-left: 6px; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: var(--os-말풍선-내); color: var(--os-글-연); }
 .os-set-amount { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; }
 .os-set-amount input {
     background: var(--os-말풍선-내); color: var(--os-글); border: 1px solid var(--os-선);
-    border-radius: 10px; padding: 0 12px; height: 44px; font-size: 16px; font-family: inherit; width: 160px;
+    border-radius: 8px; padding: 0 12px; height: 44px; font-size: 16px; font-family: inherit; width: 160px;
 }
 /* 설정 안의 「앱으로 설치」 = 명단 쪽처럼 화면 아래에 떠다니지 않고 카드 안에 그대로 앉는다 */
 .os-set-install .pwa-install { position: static; margin: 12px 0 0; }

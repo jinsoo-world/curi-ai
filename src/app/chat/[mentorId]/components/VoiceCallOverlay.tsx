@@ -381,23 +381,23 @@ export default function VoiceCallOverlay({
     ) : null
 
     return (
-        <div style={{ position:'fixed',inset:0,zIndex:9999,background:'#F9FAFB',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center' }}>
+        <div style={{ position:'fixed',inset:0,zIndex:9999,background: 'var(--color-neutral-50)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center' }}>
             <style>{`@keyframes voicePulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}@keyframes voiceWave{0%{transform:scaleY(.5)}100%{transform:scaleY(1.3)}}@keyframes ringPulse{0%{box-shadow:0 0 0 0 rgba(249,115,22,.3)}100%{box-shadow:0 0 0 20px rgba(249,115,22,0)}}`}</style>
             <div style={{ width:180,height:180,borderRadius:'50%',border:`6px solid ${ringColor}`,overflow:'hidden',animation:phase==='speaking'?'ringPulse 1.5s ease-in-out infinite':'none',display:'flex',alignItems:'center',justifyContent:'center',backgroundColor:'#fff' }}>
                 {mentorImage ? <img src={mentorImage} alt={mentorName} style={{ width:'100%',height:'100%',objectFit:'cover' }} /> : <span style={{ fontSize:64 }}>{mentorEmoji}</span>}
             </div>
-            <h2 style={{ fontSize:24,fontWeight:700,color:'#111',margin:'20px 0 8px' }}>{mentorName}</h2>
+            <h2 style={{ fontSize:24,fontWeight:700,color: 'var(--color-neutral-900)',margin:'20px 0 8px' }}>{mentorName}</h2>
             <div style={{ display:'flex',alignItems:'center',padding:'6px 16px',borderRadius:20,background:phase==='speaking'?'rgba(249,115,22,0.08)':phase==='expired'?'rgba(239,68,68,0.08)':'rgba(0,0,0,0.04)',color:phase==='speaking'?'#f97316':phase==='expired'?'#ef4444':'#666',fontSize:14,fontWeight:500 }}>{phase === 'expired' ? '무료체험 종료' : statusText} {statusDots}</div>
             <p style={{ color:'#aaa',fontSize:14,marginTop:8 }}>{formatDuration(callDuration)}{phase !== 'expired' && phase !== 'idle' ? ` / ${formatDuration(maxCallSecondsRef.current)}` : ''}</p>
             {voiceExpired && phase === 'expired' && (
-                <div style={{ margin:'20px 24px 0',padding:'16px 20px',borderRadius:16,background:'linear-gradient(135deg,#FEF2F2,#FFF7ED)',border:'1px solid #FECACA',maxWidth:320,textAlign:'center' }}>
-                    <p style={{ fontSize:16,fontWeight:700,color:'#DC2626',marginBottom:8 }}>📞 무료체험이 종료되었어요</p>
+                <div style={{ margin:'20px 24px 0',padding:'16px 20px',borderRadius:16,background: 'var(--color-red-50)',border: '1px solid var(--color-red-200)',maxWidth:320,textAlign:'center' }}>
+                    <p style={{ fontSize:16,fontWeight:700,color: 'var(--color-red-600)',marginBottom:8 }}>📞 무료체험이 종료되었어요</p>
                     <p style={{ fontSize:13,color:'#666',lineHeight:1.5 }}>{`총 ${Math.floor(VOICE_FREE_TOTAL_SECONDS / 60)}분의 무료 음성통화를 모두 사용하셨습니다.`}<br/>텍스트 채팅은 계속 이용 가능합니다!</p>
                 </div>
             )}
-            {transcript && !voiceExpired && <div style={{ margin:'20px 24px 0',padding:'12px 16px',borderRadius:12,background:'#fff',border:'1px solid #e5e7eb',maxWidth:300,fontSize:14,color:'#374151',textAlign:'center',maxHeight:80,overflow:'hidden' }}>{transcript}</div>}
-            {error && <div style={{ margin:'12px 24px 0',padding:'8px 16px',borderRadius:8,background:'#FEF2F2',color:'#DC2626',fontSize:13,textAlign:'center' }}>{error}</div>}
-            <button onClick={handleHangup} style={{ position:'absolute',bottom:60,width:64,height:64,borderRadius:'50%',background:'#EF4444',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 12px rgba(239,68,68,0.3)' }}>
+            {transcript && !voiceExpired && <div style={{ margin:'20px 24px 0',padding:'12px 16px',borderRadius:12,background: '#fff',border: '1px solid var(--color-neutral-200)',maxWidth:300,fontSize:14,color: 'var(--color-neutral-700)',textAlign:'center',maxHeight:80,overflow:'hidden' }}>{transcript}</div>}
+            {error && <div style={{ margin:'12px 24px 0',padding:'8px 16px',borderRadius:8,background: 'var(--color-red-50)',color: 'var(--color-red-600)',fontSize:13,textAlign:'center' }}>{error}</div>}
+            <button onClick={handleHangup} style={{ position:'absolute',bottom:60,width:64,height:64,borderRadius:'50%',background: 'var(--color-red-500)',border: 'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',boxShadow: '0 4px 12px rgba(239,68,68,0.3)' }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="23" y1="1" x2="1" y2="23"/></svg>
             </button>
         </div>

@@ -107,17 +107,17 @@ export default function ShareTool({
         flex: 1,
         padding: '13px 10px',
         borderRadius: 13,
-        border: '1px solid #e4e4e7',
+        border: '1px solid var(--color-neutral-200)',
         background: '#fff',
         fontSize: 15,
         fontWeight: 800,
-        color: '#18181b',
+        color: 'var(--color-neutral-900)',
         cursor: 'pointer',
     } as const
 
     return (
         <div style={{ marginTop: 14 }}>
-            <div style={{ fontSize: 15, color: '#71717a', marginBottom: 8, textAlign: 'center' }}>
+            <div style={{ fontSize: 15, color: 'var(--color-neutral-500)', marginBottom: 8, textAlign: 'center' }}>
                 이 도구를 친구에게 알려주세요
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -129,12 +129,12 @@ export default function ShareTool({
                 </button>
             </div>
             {추천코드 && (
-                <p style={{ fontSize: 13.5, color: '#a1a1aa', margin: '8px 0 0', textAlign: 'center' }}>
+                <p style={{ fontSize: 13.5, color: 'var(--color-neutral-400)', margin: '8px 0 0', textAlign: 'center' }}>
                     내 추천코드가 함께 나갑니다. 친구가 가입하면 클로버를 받아요.
                 </p>
             )}
             {알림 && (
-                <p style={{ fontSize: 15, color: '#b45309', margin: '8px 0 0', textAlign: 'center' }}>{알림}</p>
+                <p style={{ fontSize: 15, color: 'var(--color-amber-700)', margin: '8px 0 0', textAlign: 'center' }}>{알림}</p>
             )}
         </div>
     )

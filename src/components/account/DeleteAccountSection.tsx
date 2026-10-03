@@ -70,18 +70,18 @@ export default function DeleteAccountSection() {
                     display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
                 }}>
                     <div role="dialog" aria-modal="true" aria-labelledby="delete-account-title" onClick={e => e.stopPropagation()} style={{
-                        width: '100%', maxWidth: 480, background: '#fff', color: '#18181b',
+                        width: '100%', maxWidth: 480, background: '#fff', color: 'var(--color-neutral-900)',
                         borderRadius: '20px 20px 0 0', padding: '24px 20px calc(24px + env(safe-area-inset-bottom))', boxSizing: 'border-box',
                     }}>
                         <h3 id="delete-account-title" style={{ fontSize: 20, fontWeight: 800, margin: '0 0 10px' }}>회원 탈퇴</h3>
-                        <p style={{ fontSize: 15, lineHeight: 1.7, color: '#4b5563', margin: '0 0 16px' }}>{DELETE_WARNING}</p>
-                        <label htmlFor="delete-account-word" style={{ display: 'block', fontSize: 14, color: '#4b5563', marginBottom: 6 }}>
+                        <p style={{ fontSize: 15, lineHeight: 1.7, color: 'var(--color-neutral-600)', margin: '0 0 16px' }}>{DELETE_WARNING}</p>
+                        <label htmlFor="delete-account-word" style={{ display: 'block', fontSize: 14, color: 'var(--color-neutral-600)', marginBottom: 6 }}>
                             계속하려면 아래 칸에 {DELETE_WORD} 라고 적어 주세요.
                         </label>
                         <input id="delete-account-word" value={typed} onChange={e => setTyped(e.target.value)} autoComplete="off"
                             placeholder={DELETE_WORD} style={{
                                 width: '100%', boxSizing: 'border-box', fontSize: 16, padding: '12px 14px', borderRadius: 12,
-                                border: '1px solid #e5e7eb', color: '#18181b', background: '#fff',
+                                border: '1px solid var(--color-neutral-200)', color: 'var(--color-neutral-900)', background: '#fff',
                             }} />
 
                         {subMsg && (
@@ -93,11 +93,11 @@ export default function DeleteAccountSection() {
                                 }}>웹에서 결제한 구독 해지하기</button>
                             </div>
                         )}
-                        {note && <div role="status" style={{ background: '#dcfce7', color: '#166534', padding: '10px 14px', borderRadius: 10, marginTop: 14, fontSize: 14 }}>{note}</div>}
-                        {err && <div role="alert" style={{ background: '#fee2e2', color: '#991b1b', padding: '10px 14px', borderRadius: 10, marginTop: 14, fontSize: 14 }}>{err}</div>}
+                        {note && <div role="status" style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary-800)', padding: '10px 14px', borderRadius: 10, marginTop: 14, fontSize: 14 }}>{note}</div>}
+                        {err && <div role="alert" style={{ background: 'var(--color-red-50)', color: 'var(--color-red-700)', padding: '10px 14px', borderRadius: 10, marginTop: 14, fontSize: 14 }}>{err}</div>}
 
                         <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
-                            <button type="button" onClick={close} disabled={busy} style={{ ...btn, flex: 1, border: '1px solid #e5e7eb', background: '#fff', color: '#18181b' }}>취소</button>
+                            <button type="button" onClick={close} disabled={busy} style={{ ...btn, flex: 1, border: '1px solid var(--color-neutral-200)', background: '#fff', color: 'var(--color-neutral-900)' }}>취소</button>
                             <button type="button" onClick={() => void remove()} disabled={busy || !isDeleteWordTyped(typed)} style={{
                                 ...btn, flex: 1, border: 0, color: '#fff',
                                 background: busy || !isDeleteWordTyped(typed) ? '#f3b4ae' : RED,

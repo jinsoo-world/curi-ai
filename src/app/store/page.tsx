@@ -71,7 +71,7 @@ export default function CloverStorePage() {
             <main style={{
                 
                 minHeight: '100dvh',
-                background: '#fafafa',
+                background: 'var(--color-neutral-50)',
                 padding: '32px 24px 80px',
             }}>
                 <style>{`
@@ -100,15 +100,15 @@ export default function CloverStorePage() {
                             onClick={() => setShowInfoModal(true)}
                             style={{
                                 width: 22, height: 22, borderRadius: '50%',
-                                border: '1.5px solid #d1d5db', background: '#fff',
-                                fontSize: 12, color: '#9ca3af', cursor: 'pointer',
+                                border: '1.5px solid var(--color-neutral-300)', background: '#fff',
+                                fontSize: 12, color: 'var(--color-neutral-400)', cursor: 'pointer',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}
                         >
                             ?
                         </button>
                     </div>
-                    <p style={{ fontSize: 14, color: '#6b7280', marginTop: 4, marginBottom: 20, animation: 'fadeIn 0.3s ease' }}>
+                    <p style={{ fontSize: 14, color: 'var(--color-neutral-500)', marginTop: 4, marginBottom: 20, animation: 'fadeIn 0.3s ease' }}>
                         미션으로 모은 클로버를 다양한 혜택과 교환하세요!
                     </p>
 
@@ -119,25 +119,25 @@ export default function CloverStorePage() {
                     }}>
                         <div style={{
                             flex: 1,
-                            background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
-                            border: '1.5px solid #bbf7d0',
+                            background: 'var(--color-primary-50)',
+                            border: '1.5px solid var(--color-primary-100)',
                             borderRadius: 14,
                             padding: '16px 20px',
                         }}>
-                            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>보유 클로버</div>
-                            <div style={{ fontSize: 24, fontWeight: 800, color: '#15803d' }}>
+                            <div style={{ fontSize: 12, color: 'var(--color-neutral-500)', marginBottom: 2 }}>보유 클로버</div>
+                            <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--color-primary-700)' }}>
                                 {user ? clovers.toLocaleString() : '—'}
                             </div>
                         </div>
                         <div style={{
                             flex: 1,
                             background: '#fff',
-                            border: '1px solid #f0f0f0',
+                            border: '1px solid var(--color-neutral-200)',
                             borderRadius: 14,
                             padding: '16px 20px',
                         }}>
-                            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>내 쿠폰함</div>
-                            <div style={{ fontSize: 24, fontWeight: 800, color: '#374151' }}>
+                            <div style={{ fontSize: 12, color: 'var(--color-neutral-500)', marginBottom: 2 }}>내 쿠폰함</div>
+                            <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--color-neutral-700)' }}>
                                 {user ? coupons : '—'}
                             </div>
                         </div>
@@ -148,20 +148,20 @@ export default function CloverStorePage() {
                         <div style={{
                             textAlign: 'center', padding: '48px 20px',
                             background: '#fff', borderRadius: 20,
-                            border: '1px solid #f0f0f0',
+                            border: '1px solid var(--color-neutral-200)',
                             animation: 'fadeIn 0.4s ease',
                             marginBottom: 24,
                         }}>
                             
-                            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#18181b', marginBottom: 6 }}>
+                            <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: 6 }}>
                                 로그인이 필요합니다
                             </h2>
-                            <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, marginBottom: 20 }}>
+                            <p style={{ fontSize: 14, color: 'var(--color-neutral-500)', lineHeight: 1.6, marginBottom: 20 }}>
                                 클로버 상점을 이용하려면 로그인해주세요!
                             </p>
                             <Link href="/login" style={{
                                 display: 'inline-block', padding: '12px 28px', borderRadius: 12,
-                                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                background: 'var(--color-primary-500)',
                                 color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: 15,
                                 boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
                             }}>
@@ -203,7 +203,7 @@ export default function CloverStorePage() {
                         display: 'flex', justifyContent: 'flex-end',
                         marginBottom: 12, animation: 'fadeIn 0.4s ease',
                     }}>
-                        <span style={{ fontSize: 13, color: '#9ca3af' }}>
+                        <span style={{ fontSize: 13, color: 'var(--color-neutral-400)' }}>
                             낮은 가격순
                         </span>
                     </div>
@@ -222,7 +222,7 @@ export default function CloverStorePage() {
                                 style={{
                                     background: '#fff',
                                     borderRadius: 14,
-                                    border: '1px solid #f0f0f0',
+                                    border: '1px solid var(--color-neutral-200)',
                                     overflow: 'hidden',
                                     cursor: user ? 'pointer' : 'default',
                                     transition: 'transform 150ms, box-shadow 150ms',
@@ -255,7 +255,7 @@ export default function CloverStorePage() {
                                     {/* 할인 배지 */}
                                     <div style={{
                                         position: 'absolute', top: 8, left: 8,
-                                        background: '#ef4444', color: '#fff',
+                                        background: 'var(--color-red-500)', color: '#fff',
                                         padding: '2px 8px', borderRadius: 6,
                                         fontSize: 11, fontWeight: 700,
                                     }}>
@@ -265,11 +265,11 @@ export default function CloverStorePage() {
 
                                 {/* 상품 정보 */}
                                 <div style={{ padding: '12px 14px 16px' }}>
-                                    <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 2 }}>
+                                    <div style={{ fontSize: 12, color: 'var(--color-neutral-400)', marginBottom: 2 }}>
                                         {item.brand}
                                     </div>
                                     <div style={{
-                                        fontSize: 14, fontWeight: 600, color: '#18181b',
+                                        fontSize: 14, fontWeight: 600, color: 'var(--color-neutral-900)',
                                         marginBottom: 8, lineHeight: 1.4,
                                         display: '-webkit-box',
                                         WebkitLineClamp: 2,
@@ -280,19 +280,19 @@ export default function CloverStorePage() {
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                         <span style={{
-                                            fontSize: 13, color: '#ef4444', fontWeight: 700,
+                                            fontSize: 13, color: 'var(--color-red-500)', fontWeight: 700,
                                         }}>
                                             {item.discountPercent}%
                                         </span>
                                         <span style={{
-                                            fontSize: 12, color: '#9ca3af',
+                                            fontSize: 12, color: 'var(--color-neutral-400)',
                                             textDecoration: 'line-through',
                                         }}>
                                             {item.originalPrice.toLocaleString()}
                                         </span>
                                     </div>
                                     <div style={{
-                                        fontSize: 16, fontWeight: 800, color: '#15803d',
+                                        fontSize: 16, fontWeight: 800, color: 'var(--color-primary-700)',
                                         marginTop: 2,
                                     }}>
                                         <CloverIcon size={13} /> {item.cloverPrice.toLocaleString()}
@@ -310,11 +310,11 @@ export default function CloverStorePage() {
                     }}>
                         <div style={{
                             padding: '14px 20px',
-                            background: '#fef3c7',
+                            background: 'var(--color-amber-50)',
                             borderRadius: 12,
                             fontSize: 14,
-                            color: '#92400e',
-                            border: '1px solid #fde68a',
+                            color: 'var(--color-amber-800)',
+                            border: '1px solid var(--color-amber-200)',
                             display: 'inline-block',
                         }}>
                             클로버 상점은 지금 준비 중입니다. 곧 실제로 바꿀 수 있게 됩니다.
@@ -347,17 +347,17 @@ export default function CloverStorePage() {
                                 position: 'absolute', top: 14, right: 14,
                                 width: 32, height: 32, borderRadius: '50%',
                                 background: 'rgba(0,0,0,0.06)', border: 'none',
-                                fontSize: 16, color: '#6b7280', cursor: 'pointer',
+                                fontSize: 16, color: 'var(--color-neutral-500)', cursor: 'pointer',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}
                         >
                             ✕
                         </button>
                         <div style={{ marginBottom: 12 }}><CloverIcon size={44} /></div>
-                        <h3 style={{ fontSize: 20, fontWeight: 700, color: '#18181b', marginBottom: 8 }}>
+                        <h3 style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: 8 }}>
                             클로버란 무엇일까요?
                         </h3>
-                        <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.7 }}>
+                        <p style={{ fontSize: 14, color: 'var(--color-neutral-500)', lineHeight: 1.7 }}>
                             클로버는 큐리 AI에서 받을 수 있는 새로운 보상이에요.<br />
                             미션을 완료하고 클로버를 모아보세요.<br />
                             클로버는 스토어에서 모바일 상품권 등<br />
@@ -368,8 +368,8 @@ export default function CloverStorePage() {
                             style={{
                                 marginTop: 20, width: '100%',
                                 padding: '14px', borderRadius: 12,
-                                border: '1px solid #e5e7eb', background: '#fff',
-                                fontSize: 15, fontWeight: 600, color: '#374151',
+                                border: '1px solid var(--color-neutral-200)', background: '#fff',
+                                fontSize: 15, fontWeight: 600, color: 'var(--color-neutral-700)',
                                 cursor: 'pointer',
                             }}
                         >
@@ -400,7 +400,7 @@ export default function CloverStorePage() {
                                 position: 'absolute', top: 14, right: 14,
                                 width: 32, height: 32, borderRadius: '50%',
                                 background: 'rgba(0,0,0,0.06)', border: 'none',
-                                fontSize: 16, color: '#6b7280', cursor: 'pointer',
+                                fontSize: 16, color: 'var(--color-neutral-500)', cursor: 'pointer',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}
                         >
@@ -411,26 +411,26 @@ export default function CloverStorePage() {
                                 <Image src={showPurchaseModal.image} alt={showPurchaseModal.brand} width={120} height={120} style={{ objectFit: 'contain' }} />
                             ) : showPurchaseModal.emoji}
                         </div>
-                        <h3 style={{ fontSize: 18, fontWeight: 700, color: '#18181b', marginBottom: 4 }}>
+                        <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: 4 }}>
                             {showPurchaseModal.name}
                         </h3>
-                        <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 16 }}>
+                        <div style={{ fontSize: 13, color: 'var(--color-neutral-400)', marginBottom: 16 }}>
                             {showPurchaseModal.brand}
                         </div>
 
                         <div style={{
-                            background: '#f4f4f5', borderRadius: 12,
+                            background: 'var(--color-neutral-100)', borderRadius: 12,
                             padding: '14px 16px', marginBottom: 16,
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                                <span style={{ fontSize: 14, color: '#6b7280' }}>정가</span>
-                                <span style={{ fontSize: 14, color: '#9ca3af', textDecoration: 'line-through' }}>
+                                <span style={{ fontSize: 14, color: 'var(--color-neutral-500)' }}>정가</span>
+                                <span style={{ fontSize: 14, color: 'var(--color-neutral-400)', textDecoration: 'line-through' }}>
                                     ₩{showPurchaseModal.originalPrice.toLocaleString()}
                                 </span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: 14, color: '#6b7280' }}>교환 가격</span>
-                                <span style={{ fontSize: 18, fontWeight: 800, color: '#15803d' }}>
+                                <span style={{ fontSize: 14, color: 'var(--color-neutral-500)' }}>교환 가격</span>
+                                <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--color-primary-700)' }}>
                                     <CloverIcon size={15} /> {showPurchaseModal.cloverPrice.toLocaleString()}
                                 </span>
                             </div>
@@ -444,7 +444,7 @@ export default function CloverStorePage() {
                             marginBottom: 20,
                             border: clovers >= showPurchaseModal.cloverPrice ? '1px solid #bbf7d0' : '1px solid #fecaca',
                         }}>
-                            <span style={{ fontSize: 13, color: '#6b7280' }}>내 클로버</span>
+                            <span style={{ fontSize: 13, color: 'var(--color-neutral-500)' }}>내 클로버</span>
                             <span style={{
                                 fontSize: 14, fontWeight: 700,
                                 color: clovers >= showPurchaseModal.cloverPrice ? '#15803d' : '#dc2626',
@@ -462,7 +462,7 @@ export default function CloverStorePage() {
                                 style={{
                                     width: '100%', padding: '14px', borderRadius: 12,
                                     border: 'none',
-                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                    background: 'var(--color-primary-500)',
                                     color: '#fff', fontSize: 16, fontWeight: 700,
                                     cursor: 'pointer',
                                     boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
@@ -476,8 +476,8 @@ export default function CloverStorePage() {
                                     disabled
                                     style={{
                                         width: '100%', padding: '14px', borderRadius: 12,
-                                        border: 'none', background: '#e5e7eb',
-                                        color: '#9ca3af', fontSize: 16, fontWeight: 700,
+                                        border: 'none', background: 'var(--color-neutral-200)',
+                                        color: 'var(--color-neutral-400)', fontSize: 16, fontWeight: 700,
                                         cursor: 'not-allowed',
                                     }}
                                 >
@@ -485,7 +485,7 @@ export default function CloverStorePage() {
                                 </button>
                                 <Link href="/missions" style={{
                                     display: 'block', marginTop: 10,
-                                    fontSize: 13, color: '#22c55e', textDecoration: 'none',
+                                    fontSize: 13, color: 'var(--color-primary-500)', textDecoration: 'none',
                                     fontWeight: 600,
                                 }}>
                                     미션에서 클로버 모으기 →

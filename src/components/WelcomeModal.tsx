@@ -57,7 +57,7 @@ export default function WelcomeModal() {
                 <div style={{
                     width: 72, height: 72,
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+                    background: 'var(--color-primary-50)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     margin: '0 auto 20px',
                 }}>
@@ -65,7 +65,7 @@ export default function WelcomeModal() {
                 </div>
 
                 <h2 style={{
-                    fontSize: 22, fontWeight: 800, color: '#18181b',
+                    fontSize: 22, fontWeight: 800, color: 'var(--color-neutral-900)',
                     margin: '0 0 24px',
                 }}>
                     클로버를 받았습니다
@@ -74,7 +74,7 @@ export default function WelcomeModal() {
                 {/* Duration highlight */}
                 <div style={{
                     fontSize: 56, fontWeight: 900,
-                    background: 'linear-gradient(135deg, #16a34a, #22c55e)',
+                    background: 'var(--color-primary-600)',
                     WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                     lineHeight: 1.1,
                 }}>
@@ -82,7 +82,7 @@ export default function WelcomeModal() {
                 </div>
 
                 <p style={{
-                    fontSize: 16, color: '#6b7280',
+                    fontSize: 16, color: 'var(--color-neutral-500)',
                     margin: '12px 0 28px', lineHeight: 1.5,
                 }}>
                     모든 AI 기능을 무료로 사용할 수 있어요
@@ -98,7 +98,7 @@ export default function WelcomeModal() {
                         border: 'none',
                         fontSize: 17, fontWeight: 700,
                         color: '#fff',
-                        background: 'linear-gradient(135deg, #16a34a, #22c55e)',
+                        background: 'var(--color-primary-600)',
                         cursor: 'pointer',
                         boxShadow: '0 4px 16px rgba(34,197,94,0.35)',
                         transition: 'transform 150ms ease, box-shadow 150ms ease',

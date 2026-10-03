@@ -60,9 +60,9 @@ export default function PricingPage() {
                 </p>
 
                 {/* 요금제 (대표 확정 0923, 가격 1002). 값은 src/domains/os/plan.ts PLANS 한 표만 본다 */}
-                <section style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '20px 18px', marginBottom: 16 }}>
+                <section style={{ background: '#fff', border: '1px solid var(--color-neutral-200)', borderRadius: 18, padding: '20px 18px', marginBottom: 16 }}>
                     <h2 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 4px' }}>봇 팀 요금제</h2>
-                    <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 16px' }}>
+                    <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: '0 0 16px' }}>
                         매달 1일에 사용량이 다시 채워져요.
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -74,7 +74,7 @@ export default function PricingPage() {
                                 </div>
                                 <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
                                     {p.perks.map((perk) => (
-                                        <li key={perk} style={{ fontSize: 14.5, color: '#3f3f46', lineHeight: 1.6, wordBreak: 'keep-all' }}>{perk}</li>
+                                        <li key={perk} style={{ fontSize: 14.5, color: 'var(--color-neutral-700)', lineHeight: 1.6, wordBreak: 'keep-all' }}>{perk}</li>
                                     ))}
                                 </ul>
                             </div>
@@ -84,20 +84,20 @@ export default function PricingPage() {
                         onClick={() => router.push('/os/charge')}
                         style={{
                             width: '100%', marginTop: 14, padding: 16, borderRadius: 16, border: 'none',
-                            background: '#1C2321', color: '#fff', fontSize: 17, fontWeight: 800, cursor: 'pointer',
+                            background: 'var(--color-neutral-900)', color: '#fff', fontSize: 17, fontWeight: 800, cursor: 'pointer',
                         }}
                     >
                         요금제 보기
                     </button>
-                    <p style={{ fontSize: 14.5, color: '#a1a1aa', margin: '10px 0 0', textAlign: 'center' }}>
+                    <p style={{ fontSize: 14.5, color: 'var(--color-neutral-400)', margin: '10px 0 0', textAlign: 'center' }}>
                         정기 결제는 준비 중이에요. 지금은 첫 달만 결제돼요.
                     </p>
                 </section>
 
                 {/* 사진 한 장에 얼마 */}
-                <section style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '20px 18px', marginBottom: 16 }}>
+                <section style={{ background: '#fff', border: '1px solid var(--color-neutral-200)', borderRadius: 18, padding: '20px 18px', marginBottom: 16 }}>
                     <h2 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 4px' }}>사진 한 장에 얼마</h2>
-                    <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 16px' }}>
+                    <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: '0 0 16px' }}>
                         사진을 만들 때 클로버를 씁니다.
                     </p>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -120,13 +120,13 @@ export default function PricingPage() {
                             </li>
                         ))}
                     </ul>
-                    <p style={{ fontSize: 14.5, color: '#a1a1aa', margin: '14px 0 0', lineHeight: 1.6 }}>
+                    <p style={{ fontSize: 14.5, color: 'var(--color-neutral-400)', margin: '14px 0 0', lineHeight: 1.6 }}>
                         나를 닮은 AI 만들기는 무료입니다.
                     </p>
                 </section>
 
                 {/* 공짜로 할 수 있는 것 */}
-                <section style={{ background: '#F4F6F3', border: '1px solid #e4e4e7', borderRadius: 18, padding: '20px 18px', marginBottom: 16 }}>
+                <section style={{ background: '#F4F6F3', border: '1px solid var(--color-neutral-200)', borderRadius: 18, padding: '20px 18px', marginBottom: 16 }}>
                     <h2 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 12px' }}>돈 안 내고 할 수 있는 것</h2>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {[
@@ -134,7 +134,7 @@ export default function PricingPage() {
                             `가입하면 클로버 ${SIGNUP_CLOVERS}개를 드려요`,
                             `무료 체험권을 받으면 ${TRIAL_DAYS}일 동안 쓸 수 있고 클로버 ${TRIAL_CLOVERS}개를 더 드려요`,
                         ].map((t) => (
-                            <li key={t} style={{ fontSize: 15.5, color: '#3f3f46', lineHeight: 1.6, display: 'flex', gap: 8, wordBreak: 'keep-all' }}>
+                            <li key={t} style={{ fontSize: 15.5, color: 'var(--color-neutral-700)', lineHeight: 1.6, display: 'flex', gap: 8, wordBreak: 'keep-all' }}>
                                 <CloverIcon size={15} />
                                 <span>{t}</span>
                             </li>
@@ -144,7 +144,7 @@ export default function PricingPage() {
                         href="/missions"
                         style={{
                             display: 'inline-block', marginTop: 14, fontSize: 15.5, fontWeight: 800,
-                            color: '#166534', textDecoration: 'none',
+                            color: 'var(--color-primary-800)', textDecoration: 'none',
                         }}
                     >
                         클로버 모으는 법 보기
@@ -153,13 +153,13 @@ export default function PricingPage() {
 
                 {/* 이미 구독 중인 분에게만 */}
                 {구독중 && (
-                    <section style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '18px' }}>
+                    <section style={{ background: '#fff', border: '1px solid var(--color-neutral-200)', borderRadius: 18, padding: '18px' }}>
                         <h2 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 6px' }}>구독 중이신 분</h2>
-                        <p style={{ fontSize: 15, color: '#71717a', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                        <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
                             예전에 시작하신 구독은 그대로 쓰실 수 있습니다. 사진은 구독과 별개로 클로버로 만듭니다.
                             바꾸거나 그만두시려면 마이페이지에서 하실 수 있어요.
                         </p>
-                        <Link href="/profile" style={{ display: 'inline-block', marginTop: 10, fontSize: 15.5, fontWeight: 800, color: '#166534', textDecoration: 'none' }}>
+                        <Link href="/profile" style={{ display: 'inline-block', marginTop: 10, fontSize: 15.5, fontWeight: 800, color: 'var(--color-primary-800)', textDecoration: 'none' }}>
                             마이페이지로 가기
                         </Link>
                     </section>

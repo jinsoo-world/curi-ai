@@ -164,7 +164,7 @@ export default function FirstGuide() {
                 <h2 style={{ fontSize: 19, fontWeight: 900, margin: '0 0 8px', letterSpacing: '-0.02em', wordBreak: 'keep-all' }}>
                     {지금.제목}
                 </h2>
-                <p style={{ fontSize: 16.5, color: '#52525b', margin: '0 0 18px', lineHeight: 1.65, wordBreak: 'keep-all' }}>
+                <p style={{ fontSize: 16.5, color: 'var(--color-neutral-600)', margin: '0 0 18px', lineHeight: 1.65, wordBreak: 'keep-all' }}>
                     {지금.설명}
                 </p>
 
@@ -176,7 +176,7 @@ export default function FirstGuide() {
                         padding: 16,
                         borderRadius: 14,
                         border: 'none',
-                        background: '#1C2321',
+                        background: 'var(--color-neutral-900)',
                         color: '#fff',
                         fontSize: 17,
                         fontWeight: 800,
@@ -195,7 +195,7 @@ export default function FirstGuide() {
                         padding: 10,
                         border: 'none',
                         background: 'none',
-                        color: '#a1a1aa',
+                        color: 'var(--color-neutral-400)',
                         fontSize: 14.5,
                         cursor: 'pointer',
                     }}

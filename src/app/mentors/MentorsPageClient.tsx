@@ -57,7 +57,7 @@ export default function MentorsPageClient({ mentors, linkCounts = {} }: { mentor
     // 실제 DB 멘토가 없으면 빈 상태 표시
     if (mentors.length === 0) {
         return (
-            <div style={{ minHeight: '100dvh', background: 'var(--종이)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+            <div style={{ minHeight: '100dvh', background: 'var(--종이)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
                 <MembershipBanner />
                 <AppSidebar />
                 <div style={{ textAlign: 'center', maxWidth: 400 }}>
@@ -106,15 +106,15 @@ export default function MentorsPageClient({ mentors, linkCounts = {} }: { mentor
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: 6,
-                            padding: '12px 24px',
-                            background: '#FF6B35',
+                            padding: '12px 20px',
+                            minHeight: 48,
+                            background: 'var(--color-primary-500)',   /* 1003 주황 → 큐리어스 primaryFill */
                             color: '#FFFFFF',
-                            fontSize: 15,
-                            fontWeight: 700,
-                            borderRadius: 999,
+                            fontSize: 17,
+                            fontWeight: 600,
+                            borderRadius: 8,
                             textDecoration: 'none',
-                            boxShadow: '0 2px 12px rgba(255, 107, 53, 0.25)',
-                            transition: 'all 200ms',
+                            transition: 'background-color 200ms',
                         }}
                         className="discover-primary-cta"
                     >
@@ -138,11 +138,10 @@ export default function MentorsPageClient({ mentors, linkCounts = {} }: { mentor
                             display: 'flex',
                             alignItems: 'center',
                             gap: 12,
-                            padding: '14px 22px',
+                            padding: '14px 16px',
                             background: '#FFFFFF',
                             border: '1px solid var(--선)',
-                            borderRadius: 999,
-                            boxShadow: '0 1px 8px rgba(42, 38, 37, 0.04)',
+                            borderRadius: 8,   /* 1003 큐리어스 검색칸: 8px + 회색 테두리 */
                         }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--먹연)" strokeWidth="2.5" strokeLinecap="round">
                                 <circle cx="11" cy="11" r="7" />
@@ -183,10 +182,10 @@ export default function MentorsPageClient({ mentors, linkCounts = {} }: { mentor
                                 style={{
                                     padding: '9px 18px',
                                     borderRadius: 999,
-                                    border: '1px solid var(--선)',
-                                    background: activeCategory === cat.key ? 'var(--먹)' : '#FFFFFF',
-                                    color: activeCategory === cat.key ? '#FFFFFF' : 'var(--먹연)',
-                                    fontSize: 14,
+                                    border: activeCategory === cat.key ? '1px solid var(--color-primary-500)' : '1px solid var(--선)',
+                                    background: activeCategory === cat.key ? 'var(--color-primary-50)' : '#FFFFFF',
+                                    color: activeCategory === cat.key ? 'var(--color-primary-700)' : 'var(--color-neutral-700)',
+                                    fontSize: 15,
                                     fontWeight: 600,
                                     cursor: 'pointer',
                                     whiteSpace: 'nowrap',
@@ -249,7 +248,7 @@ export default function MentorsPageClient({ mentors, linkCounts = {} }: { mentor
                                                     fallback.style.cssText = `
                                                         width: 100%;
                                                         height: 100%;
-                                                        background: linear-gradient(135deg, #E8F2EC 0%, #C7E4D3 100%);
+                                                        background: var(--color-neutral-100);
                                                         display: flex;
                                                         align-items: center;
                                                         justify-content: center;
@@ -266,7 +265,7 @@ export default function MentorsPageClient({ mentors, linkCounts = {} }: { mentor
                                         <div style={{
                                             width: '100%',
                                             height: '100%',
-                                            background: 'linear-gradient(135deg, #E8F2EC 0%, #C7E4D3 100%)',
+                                            background: 'var(--color-primary-50)',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -498,9 +497,7 @@ export default function MentorsPageClient({ mentors, linkCounts = {} }: { mentor
                 }
                 
                 :global(.discover-primary-cta:hover) {
-                    background: #E8552C !important;
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 16px rgba(255, 107, 53, 0.4) !important;
+                    background: var(--color-primary-600) !important;
                 }
                 
                 /* Category chip hover (ensure touch target) */

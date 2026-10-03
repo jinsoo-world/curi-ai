@@ -265,7 +265,7 @@ export default function AppSidebar() {
                                     fontWeight: 700,
                                     color: 'var(--진초록)',
                                     padding: '14px 16px',
-                                    background: '#f0fdf4',
+                                    background: 'var(--color-primary-50)',
                                     borderRadius: 12,
                                 }}
                             >

@@ -383,7 +383,7 @@ export default function EbookViewer({ ebook, meta, ctaLinks, onClose, onEditRequ
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     marginBottom: 24, paddingBottom: 12, borderBottom: `2px solid ${t.accentLight}`,
                 }}>
-                    <span style={{ fontSize: 11, color: '#94a3b8', maxWidth: '70%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 11, color: 'var(--color-neutral-400)', maxWidth: '70%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {ebook.cover.title}
                     </span>
                     <span style={{ fontSize: 10, color: '#fff', background: t.pageAccent, padding: '3px 12px', borderRadius: 10, fontWeight: 600 }}>
@@ -395,7 +395,7 @@ export default function EbookViewer({ ebook, meta, ctaLinks, onClose, onEditRequ
                     contentEditable suppressContentEditableWarning
                     onBlur={e => handleContentEdit(pageIndex, 'title', e.currentTarget.textContent || '')}
                     style={{
-                        fontSize: 'clamp(20px, 4vw, 28px)', fontWeight: 700, color: '#0f172a',
+                        fontSize: 'clamp(20px, 4vw, 28px)', fontWeight: 700, color: 'var(--color-neutral-900)',
                         margin: '0 0 20px', lineHeight: 1.4, wordBreak: 'keep-all', outline: 'none', cursor: 'text',
                     }}
                 >{page.title}</h2>
@@ -404,7 +404,7 @@ export default function EbookViewer({ ebook, meta, ctaLinks, onClose, onEditRequ
                     contentEditable suppressContentEditableWarning
                     onBlur={e => handleContentEdit(pageIndex, 'content', e.currentTarget.innerText || '')}
                     style={{
-                        fontSize: 'clamp(15px, 2.5vw, 18px)', color: '#334155',
+                        fontSize: 'clamp(15px, 2.5vw, 18px)', color: 'var(--color-neutral-700)',
                         lineHeight: 1.9, whiteSpace: 'pre-wrap', wordBreak: 'keep-all',
                         outline: 'none', cursor: 'text', minHeight: 120,
                     }}
@@ -429,10 +429,10 @@ export default function EbookViewer({ ebook, meta, ctaLinks, onClose, onEditRequ
                 )}
 
                 {page.checklist?.length ? (
-                    <div style={{ margin: '24px 0', padding: '20px 24px', background: '#ecfdf5', border: '1px solid #86efac', borderRadius: 12 }}>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: '#166534', margin: '0 0 12px' }}>✅ 당장 해야 할 미션</p>
+                    <div style={{ margin: '24px 0', padding: '20px 24px', background: 'var(--color-primary-50)', border: '1px solid #86efac', borderRadius: 12 }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary-800)', margin: '0 0 12px' }}>✅ 당장 해야 할 미션</p>
                         {page.checklist.map((item, i) => (
-                            <p key={i} style={{ fontSize: 13, color: '#15803d', margin: '8px 0', lineHeight: 1.6 }}>☐ {item}</p>
+                            <p key={i} style={{ fontSize: 13, color: 'var(--color-primary-700)', margin: '8px 0', lineHeight: 1.6 }}>☐ {item}</p>
                         ))}
                     </div>
                 ) : null}
@@ -477,7 +477,7 @@ export default function EbookViewer({ ebook, meta, ctaLinks, onClose, onEditRequ
                         {showThemeMenu && (
                             <div style={{
                                 position: 'absolute', top: '100%', right: 0, marginTop: 6,
-                                background: '#1e293b', borderRadius: 10, padding: 6,
+                                background: 'var(--color-neutral-900)', borderRadius: 10, padding: 6,
                                 boxShadow: '0 8px 24px rgba(0,0,0,0.4)', zIndex: 10, minWidth: 120,
                             }}>
                                 {(Object.keys(THEMES) as ThemeKey[]).map(key => (
@@ -557,7 +557,7 @@ export default function EbookViewer({ ebook, meta, ctaLinks, onClose, onEditRequ
                 {/* 수정 채팅 패널 */}
                 {showChat && (
                     <div style={{
-                        width: 'min(360px, 40vw)', background: '#1e293b',
+                        width: 'min(360px, 40vw)', background: 'var(--color-neutral-900)',
                         borderLeft: '1px solid rgba(255,255,255,0.1)',
                         display: 'flex', flexDirection: 'column', flexShrink: 0,
                     }}>

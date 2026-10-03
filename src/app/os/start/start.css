@@ -20,7 +20,7 @@
 .onb-bar { height: 4px; border-radius: 4px; background: var(--os-말풍선); overflow: hidden; margin: 6px 0 22px; }
 .onb-bar > span { display: block; height: 100%; background: var(--os-클로버); transition: width .25s; }
 .onb-kicker { font-size: 16px; font-weight: 700; color: var(--os-클로버); margin-bottom: 6px; }
-.onb-h1 { font-size: 26px; line-height: 1.35; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 18px; }
+.onb-h1 { font-size: 26px; line-height: 1.35; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 18px; }
 .onb-sub { color: var(--os-글-연); margin: -8px 0 16px; }
 .onb-hint { font-size: 15px; color: var(--os-글-흐림); margin: -4px 0 0; }
 .onb-ok { color: var(--os-클로버); font-weight: 700; margin: 0 0 12px; }
@@ -31,7 +31,7 @@
 .onb-big { display: flex; flex-direction: column; gap: 10px; }
 .onb-grid { display: grid; grid-template-columns: 1fr 1fr; }
 .onb-bigbtn {
-    min-height: 56px; padding: 10px 18px; border-radius: 16px; text-align: left;
+    min-height: 56px; padding: 10px 18px; border-radius: 8px; text-align: left;
     background: var(--os-말풍선); color: var(--os-글); border: 2px solid transparent;
     font-size: 18px; font-weight: 700; cursor: pointer;
 }
@@ -45,7 +45,7 @@
 }
 .onb-chip[aria-pressed="true"] { border-color: var(--os-클로버); }
 .onb-input {
-    width: 100%; min-height: 54px; margin-top: 12px; padding: 0 16px; border-radius: 14px;
+    width: 100%; min-height: 54px; margin-top: 12px; padding: 0 16px; border-radius: 8px;
     background: var(--os-말풍선); color: var(--os-글); border: 1px solid var(--os-선);
     font-size: 17px; /* 16px 이상 = 아이폰이 확대하지 않는다 */
 }
@@ -55,13 +55,13 @@
 }
 .onb-check input { width: 24px; height: 24px; accent-color: var(--os-클로버); flex: none; }
 .onb-check span { flex: 1; }
-.onb-check-all { font-weight: 800; font-size: 18px; border-bottom-width: 2px; }
+.onb-check-all { font-weight: 700; font-size: 18px; border-bottom-width: 2px; }
 .onb-check-opt { border-bottom: 0; margin-top: 10px; }
 .onb-see { color: var(--os-글-흐림); font-size: 15px; text-decoration: underline; padding: 8px; }
 
 /* 화면 5 카드 (숫자 없이 한 줄 안내) */
-.onb-card { margin: 18px 0 4px; padding: 18px; border-radius: 18px; border: 1px solid var(--os-선); background: var(--os-패널); }
-.onb-card-title { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+.onb-card { margin: 18px 0 4px; padding: 18px; border-radius: 16px; border: 1px solid var(--os-선); background: var(--os-패널); }
+.onb-card-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
 .onb-card-line { font-size: 17px; color: var(--os-글-연); }
 .onb-card-note { font-size: 13px; color: var(--os-글-흐림); margin-top: 10px; }
 
@@ -76,7 +76,7 @@
 .onb-cta {
     display: block; width: 100%; max-width: 520px; min-height: 58px; margin: 0 auto;
     border: 0; border-radius: 18px; background: var(--os-클로버); color: #000;
-    font-size: 19px; font-weight: 800; cursor: pointer;
+    font-size: 19px; font-weight: 700; cursor: pointer;
 }
 .onb-cta:disabled { opacity: .4; cursor: default; }
 @media (max-width: 380px) { .onb-grid { grid-template-columns: 1fr; } .onb-h1 { font-size: 23px; } }

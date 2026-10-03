@@ -10,7 +10,7 @@ export default function NotFound() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            background: '#f8f9fa',
+            background: 'var(--color-neutral-50)',
             padding: '20px',
             textAlign: 'center',
             fontFamily: 'Pretendard, -apple-system, sans-serif',
@@ -19,14 +19,14 @@ export default function NotFound() {
             <h1 style={{
                 fontSize: 28,
                 fontWeight: 800,
-                color: '#18181b',
+                color: 'var(--color-neutral-900)',
                 margin: '0 0 8px',
             }}>
                 페이지를 찾을 수 없어요
             </h1>
             <p style={{
                 fontSize: 15,
-                color: '#9ca3af',
+                color: 'var(--color-neutral-400)',
                 margin: '0 0 32px',
                 lineHeight: 1.6,
             }}>
@@ -39,7 +39,7 @@ export default function NotFound() {
                     style={{
                         padding: '12px 28px',
                         borderRadius: 12,
-                        background: '#1C2321',
+                        background: 'var(--color-neutral-900)',
                         color: '#fff',
                         fontWeight: 700,
                         fontSize: 15,
@@ -56,10 +56,10 @@ export default function NotFound() {
                         padding: '12px 28px',
                         borderRadius: 12,
                         background: '#fff',
-                        color: '#374151',
+                        color: 'var(--color-neutral-700)',
                         fontWeight: 600,
                         fontSize: 15,
-                        border: '1px solid #e5e7eb',
+                        border: '1px solid var(--color-neutral-200)',
                         cursor: 'pointer',
                         transition: 'all 0.2s',
                     }}

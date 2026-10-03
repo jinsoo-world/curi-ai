@@ -59,48 +59,48 @@ export default function CreatorPricingPage() {
     const plan = CREATOR_PLANS.pro
 
     return (
-        <main style={{ minHeight: '100dvh', background: 'linear-gradient(180deg, #f0fdf4 0%, #ffffff 40%)' }}>
+        <main style={{ minHeight: '100dvh', background: '#fff' }}>
             <AppSidebar />
             <div style={{ maxWidth: 560, margin: '0 auto', padding: '40px 20px 80px' }}>
-                <h1 style={{ fontSize: 26, fontWeight: 800, color: '#18181b', margin: '0 0 8px', wordBreak: 'keep-all' }}>
+                <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--color-neutral-900)', margin: '0 0 8px', wordBreak: 'keep-all' }}>
                     내 AI 로 시작하기
                 </h1>
-                <p style={{ fontSize: 15, color: '#52525b', lineHeight: 1.7, margin: '0 0 28px', wordBreak: 'keep-all' }}>
+                <p style={{ fontSize: 15, color: 'var(--color-neutral-600)', lineHeight: 1.7, margin: '0 0 28px', wordBreak: 'keep-all' }}>
                     나를 닮은 AI 를 만들어 두면, 내가 자는 동안에도 수강생 질문에 답합니다.
                 </p>
 
                 {/* 값 */}
                 <div style={{
-                    background: '#fff', border: '1.5px solid #bbf7d0', borderRadius: 18,
+                    background: 'var(--color-primary-50)', border: '1px solid var(--color-primary-200)', borderRadius: 16,
                     padding: '22px 24px', marginBottom: 18, textAlign: 'center',
                 }}>
-                    <div style={{ fontSize: 13, color: '#71717a', marginBottom: 6 }}>{plan.label}</div>
-                    <div style={{ fontSize: 32, fontWeight: 800, color: '#18181b' }}>
+                    <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', marginBottom: 6 }}>{plan.label}</div>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--color-neutral-900)' }}>
                         ₩{plan.price.toLocaleString()}
-                        <span style={{ fontSize: 15, fontWeight: 500, color: '#71717a' }}> / 월</span>
+                        <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-neutral-500)' }}> / 월</span>
                     </div>
                 </div>
 
                 {/* 혜택 */}
-                <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '20px 22px', marginBottom: 22 }}>
+                <div style={{ background: '#fff', border: '1px solid var(--color-neutral-200)', borderRadius: 18, padding: '20px 22px', marginBottom: 22 }}>
                     {혜택.map((f, i) => (
                         <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: i === 혜택.length - 1 ? 0 : 12 }}>
-                            <span style={{ color: '#22c55e', fontWeight: 700, flexShrink: 0 }}>✓</span>
-                            <span style={{ fontSize: 15, color: '#3f3f46', lineHeight: 1.6, wordBreak: 'keep-all' }}>{f}</span>
+                            <span style={{ color: 'var(--color-primary-500)', fontWeight: 700, flexShrink: 0 }}>✓</span>
+                            <span style={{ fontSize: 15, color: 'var(--color-neutral-700)', lineHeight: 1.6, wordBreak: 'keep-all' }}>{f}</span>
                         </div>
                     ))}
                 </div>
 
                 {/* 수수료 안내 — 숨기지 않는다 */}
-                <div style={{ background: '#fafafa', borderRadius: 14, padding: '14px 18px', marginBottom: 22 }}>
-                    <div style={{ fontSize: 13, color: '#52525b', lineHeight: 1.7, wordBreak: 'keep-all' }}>
-                        수강생이 내 AI 를 결제하면 <strong style={{ color: '#18181b' }}>결제 금액의 1.5%</strong>가
+                <div style={{ background: 'var(--color-neutral-50)', borderRadius: 14, padding: '14px 18px', marginBottom: 22 }}>
+                    <div style={{ fontSize: 13, color: 'var(--color-neutral-600)', lineHeight: 1.7, wordBreak: 'keep-all' }}>
+                        수강생이 내 AI 를 결제하면 <strong style={{ color: 'var(--color-neutral-900)' }}>결제 금액의 1.5%</strong>가
                         서비스 이용료로 나가고, 카드 수수료는 별도입니다. 나머지는 전부 내 몫입니다.
                     </div>
                 </div>
 
                 {errorMsg && (
-                    <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 14, padding: '12px 16px', borderRadius: 12, marginBottom: 14 }}>
+                    <div style={{ background: 'var(--color-red-50)', color: 'var(--color-red-600)', fontSize: 14, padding: '12px 16px', borderRadius: 12, marginBottom: 14 }}>
                         {errorMsg}
                     </div>
                 )}
@@ -122,7 +122,7 @@ export default function CreatorPricingPage() {
                 >
                     {loading ? '결제창을 여는 중...' : `월 ₩${plan.price.toLocaleString()} 시작하기`}
                 </button>
-                <p style={{ fontSize: 12, color: '#a1a1aa', textAlign: 'center', margin: '12px 0 0', lineHeight: 1.6 }}>
+                <p style={{ fontSize: 12, color: 'var(--color-neutral-400)', textAlign: 'center', margin: '12px 0 0', lineHeight: 1.6 }}>
                     언제든 해지할 수 있어요. 해지하면 다음 달부터 결제되지 않습니다.
                 </p>
             </div>

@@ -37,7 +37,8 @@ export default function SuggestionCards({
                             height: variant === 'welcome' ? 48 : 34,
                             width: variant === 'welcome' ? '100%' : `${90 + i * 20}px`,
                             borderRadius: 24,
-                            background: 'linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%)',
+                            // 불러오는 중 반짝임: 그라디언트 금지의 예외(로딩 표시). neutral-100 ↔ neutral-50
+                            background: 'linear-gradient(90deg, var(--color-neutral-100) 25%, var(--color-neutral-50) 50%, var(--color-neutral-100) 75%)',
                             backgroundSize: '200% 100%',
                             animation: `shimmer 1.5s ease-in-out infinite ${i * 0.15}s`,
                         }}
@@ -80,7 +81,7 @@ export default function SuggestionCards({
                                 borderRadius: 16,
                                 padding: '13px 18px',
                                 fontSize: 16.5,
-                                color: '#334155',
+                                color: 'var(--color-neutral-700)',
                                 cursor: 'pointer',
                                 textAlign: 'left',
                                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',

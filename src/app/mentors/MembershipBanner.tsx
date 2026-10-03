@@ -12,7 +12,7 @@ export function MembershipBanner() {
     return (
         <>
             <div style={{
-                background: 'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)',
+                background: 'var(--color-primary-600)',
                 padding: '12px 16px',
                 display: 'flex',
                 alignItems: 'center',

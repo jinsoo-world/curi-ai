@@ -135,7 +135,7 @@ function ActorPhotoPage안쪽() {
     const 모자람 = needCharge || (있는클로버 !== null && 있는클로버 < getModel(modelId)!.cost)
 
     return (
-        <main style={{ minHeight: '100dvh', background: '#fafafa' }}>
+        <main style={{ minHeight: '100dvh', background: 'var(--color-neutral-50)' }}>
             <AppSidebar />
             <div className="tool-page">
                 <ToolHero
@@ -158,7 +158,7 @@ function ActorPhotoPage안쪽() {
 
                 {/* 1단계 사진 */}
                 <div style={{ marginBottom: 22 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>1. 내 사진 올리기</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-700)', marginBottom: 8 }}>1. 내 사진 올리기</div>
                     <PhotoDrop
                         preview={preview}
                         onPicked={(dataUrl, mt) => {
@@ -173,7 +173,7 @@ function ActorPhotoPage안쪽() {
                 <div style={{ opacity: base64 ? 1 : 0.4, pointerEvents: base64 ? 'auto' : 'none' }}>
                     {/* 모델 고르기 — 우리 이름으로 판다 */}
                     <div style={{ marginBottom: 22 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>2. 어떤 모델로 만들까요</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-700)', marginBottom: 8 }}>2. 어떤 모델로 만들까요</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             {CURI_MODELS.map(m => {
                                 const 못씀 = !!m.comingSoon
@@ -196,19 +196,19 @@ function ActorPhotoPage안쪽() {
                                             ) : m.label.slice(0, 1)}
                                         </span>
                                         <span style={{ flex: 1, minWidth: 0 }}>
-                                            <span style={{ fontSize: 15, fontWeight: 700, color: '#18181b' }}>{m.label}</span>
+                                            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-900)' }}>{m.label}</span>
                                             <span style={{
                                                 marginLeft: 6, fontSize: 11, fontWeight: 700,
                                                 color: 못씀 ? '#71717a' : '#166534',
                                                 background: 못씀 ? '#f4f4f5' : '#dcfce7',
                                                 padding: '2px 7px', borderRadius: 7,
                                             }}>{m.badge}</span>
-                                            <span style={{ display: 'block', fontSize: 13.5, color: '#71717a', marginTop: 3, wordBreak: 'keep-all' }}>
+                                            <span style={{ display: 'block', fontSize: 13.5, color: 'var(--color-neutral-500)', marginTop: 3, wordBreak: 'keep-all' }}>
                                                 {m.comingSoon || m.desc}
                                             </span>
                                         </span>
                                         {!못씀 && (
-                                            <span style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', flexShrink: 0 }}><CloverIcon size={13} color="#3f3f46" /> {m.cost}개</span>
+                                            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-700)', flexShrink: 0 }}><CloverIcon size={13} color="#3f3f46" /> {m.cost}개</span>
                                         )}
                                     </button>
                                 )
@@ -218,21 +218,21 @@ function ActorPhotoPage안쪽() {
 
                     {/* 성별 — 대표 지적 2026-09-15 「남잔데 왜 여자가 있냐」 */}
                     <div style={{ marginBottom: 22 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>3. 남성 여성</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-700)', marginBottom: 8 }}>3. 남성 여성</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                             {[{ id: 'male', label: '남성' }, { id: 'female', label: '여성' }].map(g => (
                                 <button key={g.id} onClick={() => set성별(g.id)} style={{
                                     padding: '14px 8px', borderRadius: 14,
                                     border: 성별 === g.id ? '2.5px solid #22c55e' : '1.5px solid #e4e4e7',
                                     background: 성별 === g.id ? '#f0fdf4' : '#fff', cursor: 'pointer',
-                                    fontSize: 16, fontWeight: 800, color: '#18181b',
+                                    fontSize: 16, fontWeight: 800, color: 'var(--color-neutral-900)',
                                 }}>{g.label}</button>
                             ))}
                         </div>
                     </div>
 
                     <div style={{ marginBottom: 22 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>4. 어떤 느낌으로</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-700)', marginBottom: 8 }}>4. 어떤 느낌으로</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                             {ACTOR_MOODS.map(o => (
                                 <PickCard key={o.id} option={o} selected={styleId === o.id} onSelect={setStyleId} kind="outfit" />
@@ -240,7 +240,7 @@ function ActorPhotoPage안쪽() {
                         </div>
                     </div>
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>5. 스튜디오 바탕</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-700)', marginBottom: 8 }}>5. 스튜디오 바탕</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                             {ACTOR_BACKDROPS.map(o => (
                                 <PickCard key={o.id} option={o} selected={backdropId === o.id} onSelect={setBackdropId} kind="backdrop" />
@@ -250,7 +250,7 @@ function ActorPhotoPage안쪽() {
 
                     {/* 머리 — 대표 지적 2026-09-15 「머리를 왜 까는거야」 「옵션으로 하게 해」 */}
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>6. 머리 모양</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-700)', marginBottom: 8 }}>6. 머리 모양</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
                             {HAIRS.map(h => (
                                 <button key={h.id} onClick={() => setHairId(h.id)} style={{
@@ -258,22 +258,22 @@ function ActorPhotoPage안쪽() {
                                     border: hairId === h.id ? '2.5px solid #22c55e' : '1.5px solid #e4e4e7',
                                     background: hairId === h.id ? '#f0fdf4' : '#fff', cursor: 'pointer',
                                 }}>
-                                    <span style={{ display: 'block', fontSize: 15, fontWeight: 800, color: '#18181b' }}>{h.label}</span>
-                                    <span style={{ display: 'block', fontSize: 13, color: '#71717a', marginTop: 2, wordBreak: 'keep-all' }}>{h.desc}</span>
+                                    <span style={{ display: 'block', fontSize: 15, fontWeight: 800, color: 'var(--color-neutral-900)' }}>{h.label}</span>
+                                    <span style={{ display: 'block', fontSize: 13, color: 'var(--color-neutral-500)', marginTop: 2, wordBreak: 'keep-all' }}>{h.desc}</span>
                                 </button>
                             ))}
                         </div>
                     </div>
                     {/* 나이 — 대표 지시 0914 「나이도 조정할 수 있도록」 「-10살까지」 */}
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>7. 나이</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-700)', marginBottom: 8 }}>7. 나이</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                             {AGES.map(a => (
                                 <button key={a.id} onClick={() => setAgeId(a.id)} style={{
                                     padding: '14px 8px', borderRadius: 14,
                                     border: ageId === a.id ? '2.5px solid #22c55e' : '1.5px solid #e4e4e7',
                                     background: ageId === a.id ? '#f0fdf4' : '#fff', cursor: 'pointer',
-                                    fontSize: 15, fontWeight: 700, color: '#18181b',
+                                    fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-900)',
                                 }}>
                                     <span style={{ display: 'block' }}>{a.label}</span>
                                     {/* 많이 젊게 할수록 얼굴이 달라진다 — 파파님 피드백 2026-09-16 */}
@@ -285,14 +285,14 @@ function ActorPhotoPage안쪽() {
                                 </button>
                             ))}
                         </div>
-                        <p style={{ fontSize: 13.5, color: '#71717a', marginTop: 8, lineHeight: 1.5 }}>
+                        <p style={{ fontSize: 13.5, color: 'var(--color-neutral-500)', marginTop: 8, lineHeight: 1.5 }}>
                             얼굴은 그대로 두고 피부와 머리숱만 손봐요. 너무 티 나지 않게요.
                         </p>
                     </div>
 
                     {/* 피부 — 파파님 피드백 2026-09-16 「피부 보정 기능도 있으면 좋겠습니다」 */}
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>8. 피부</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-700)', marginBottom: 8 }}>8. 피부</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                             {SKINS.map(k => (
                                 <button key={k.id} onClick={() => setSkinId(k.id)} style={{
@@ -300,8 +300,8 @@ function ActorPhotoPage안쪽() {
                                     border: skinId === k.id ? '2.5px solid #22c55e' : '1.5px solid #e4e4e7',
                                     background: skinId === k.id ? '#f0fdf4' : '#fff', cursor: 'pointer',
                                 }}>
-                                    <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: '#18181b' }}>{k.label}</span>
-                                    <span style={{ display: 'block', fontSize: 12.5, color: '#71717a', marginTop: 3, wordBreak: 'keep-all', lineHeight: 1.4 }}>{k.desc}</span>
+                                    <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-900)' }}>{k.label}</span>
+                                    <span style={{ display: 'block', fontSize: 12.5, color: 'var(--color-neutral-500)', marginTop: 3, wordBreak: 'keep-all', lineHeight: 1.4 }}>{k.desc}</span>
                                 </button>
                             ))}
                         </div>
@@ -309,7 +309,7 @@ function ActorPhotoPage안쪽() {
 
                     {/* 비율 — 어디에 쓸 사진인지에 따라 다르다 */}
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 8 }}>9. 사진 모양</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-700)', marginBottom: 8 }}>9. 사진 모양</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(96px, 1fr))', gap: 8 }}>
                             {RATIOS.map(r => (
                                 <button key={r.id} onClick={() => setRatioId(r.id)} style={{
@@ -324,8 +324,8 @@ function ActorPhotoPage안쪽() {
                                         background: ratioId === r.id ? '#22c55e' : '#d4d4d8',
                                         borderRadius: 4, display: 'block',
                                     }} />
-                                    <span style={{ fontSize: 15, fontWeight: 700, color: '#18181b' }}>{r.label}</span>
-                                    <span style={{ fontSize: 11, color: '#71717a', textAlign: 'center', wordBreak: 'keep-all', lineHeight: 1.4 }}>{r.use}</span>
+                                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-900)' }}>{r.label}</span>
+                                    <span style={{ fontSize: 11, color: 'var(--color-neutral-500)', textAlign: 'center', wordBreak: 'keep-all', lineHeight: 1.4 }}>{r.use}</span>
                                 </button>
                             ))}
                         </div>
@@ -333,25 +333,25 @@ function ActorPhotoPage안쪽() {
                 </div>
 
                 {errorMsg && !모자람 && (
-                    <div style={{ background: '#fef2f2', color: '#dc2626', fontSize: 15, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
+                    <div style={{ background: 'var(--color-red-50)', color: 'var(--color-red-600)', fontSize: 15, padding: '12px 16px', borderRadius: 12, marginBottom: 14, lineHeight: 1.6 }}>
                         {errorMsg}
                     </div>
                 )}
 
                 {/* 클로버가 모자랄 때 — 손님에게 「충전하러 가기」는 막다른 길이다. 2026-09-15. 클로버 판매 끝(대표 결정 1002): 회원은 미션으로 */}
                 {모자람 && (
-                    <div style={{ background: '#fff', border: '1.5px solid #e4e4e7', borderRadius: 14, padding: '16px 18px', marginBottom: 14, textAlign: 'center' }}>
+                    <div style={{ background: '#fff', border: '1.5px solid var(--color-neutral-200)', borderRadius: 14, padding: '16px 18px', marginBottom: 14, textAlign: 'center' }}>
                         <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6 }}>
                             {손님 ? '오늘 몫을 다 쓰셨어요' : '클로버가 모자라요'}
                         </div>
-                        <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                        <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: '0 0 14px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
                             {손님
                                 ? `로그인하시면 클로버 ${SIGNUP_CLOVERS}개를 바로 드려요. 만드신 사진도 그대로 받으실 수 있습니다.`
                                 : '클로버는 이제 따로 팔지 않아요. 미션을 하시면 클로버를 모아 이어서 만드실 수 있어요.'}
                         </p>
                         <button onClick={() => (손님 ? router.push('/login') : router.push('/missions'))} style={{
                             width: '100%', padding: 14, borderRadius: 14, border: 'none',
-                            background: '#1C2321', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                            background: 'var(--color-neutral-900)', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
                         }}>
                             {손님 ? `로그인하고 클로버 ${SIGNUP_CLOVERS}개 받기` : '클로버 모으러 가기'}
                         </button>
@@ -360,10 +360,10 @@ function ActorPhotoPage안쪽() {
 
                 {!loading && !모자람 && 빠진것.length > 0 && (
                     <div style={{
-                        background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 14,
+                        background: 'var(--color-amber-50)', border: '1.5px solid var(--color-amber-200)', borderRadius: 14,
                         padding: '14px 16px', marginBottom: 12,
                     }}>
-                        <div style={{ fontSize: 15.5, fontWeight: 800, color: '#92400e', marginBottom: 6 }}>
+                        <div style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--color-amber-800)', marginBottom: 6 }}>
                             {빠진것.length}가지만 더 고르시면 됩니다
                         </div>
                         <ul style={{ margin: 0, padding: '0 0 0 18px', display: 'grid', gap: 4 }}>
@@ -394,7 +394,7 @@ function ActorPhotoPage안쪽() {
                 )}
 
                 {!loading && 손님 && (
-                    <p style={{ fontSize: 15, color: '#71717a', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                    <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: '10px 0 0', textAlign: 'center', lineHeight: 1.6, wordBreak: 'keep-all' }}>
                         가입 안 하셔도 클로버 {GUEST_CLOVERS}개로 한 장 만들어 보실 수 있어요.{' '}
                         <Link href="/login" style={{ color: 'var(--진초록)', fontWeight: 800, textDecoration: 'underline' }}>로그인하시면 {SIGNUP_CLOVERS}개를 더 드립니다.</Link>
                     </p>
@@ -403,30 +403,30 @@ function ActorPhotoPage안쪽() {
                 {/* 결과 */}
                 {result && (
                     <div style={{ marginTop: 26 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#18181b', marginBottom: 10 }}>완성됐어요</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: 10 }}>완성됐어요</div>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={result} alt="만든 프로필 사진" style={{ width: '100%', borderRadius: 16, border: '1px solid #e4e4e7' }} />
+                        <img src={result} alt="만든 프로필 사진" style={{ width: '100%', borderRadius: 16, border: '1px solid var(--color-neutral-200)' }} />
                         {미리보기 ? (
                             <div style={{
-                                marginTop: 12, background: '#fff', border: '1px solid #e4e4e7',
+                                marginTop: 12, background: '#fff', border: '1px solid var(--color-neutral-200)',
                                 borderRadius: 14, padding: '18px 18px 16px', textAlign: 'center',
                             }}>
                                 <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>
                                     선명한 사진은 회원만 받을 수 있어요
                                 </div>
-                                <p style={{ fontSize: 15, color: '#71717a', margin: '0 0 14px', lineHeight: 1.6 }}>
+                                <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: '0 0 14px', lineHeight: 1.6 }}>
                                     지금 보이는 건 미리보기라 흐릿해요. 로그인하면 원본을 바로 내려받습니다.
                                 </p>
                                 <button onClick={() => router.push('/login')} style={{
                                     width: '100%', padding: '14px', borderRadius: 14, border: 'none',
-                                    background: '#1C2321', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                                    background: 'var(--color-neutral-900)', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
                                 }}>로그인하고 원본 받기</button>
                             </div>
                         ) : (
                             <>
                             <a href={result} download="배우_프로필_사진.png" style={{
                                 display: 'block', marginTop: 12, padding: '14px', borderRadius: 14,
-                                background: '#18181b', color: '#fff', fontSize: 15, fontWeight: 700,
+                                background: 'var(--color-neutral-900)', color: '#fff', fontSize: 15, fontWeight: 700,
                                 textAlign: 'center', textDecoration: 'none',
                             }}>사진 내려받기</a>
                             <KeepNotice />
@@ -437,16 +437,16 @@ function ActorPhotoPage안쪽() {
                 )}
 
                 {/* 어떻게 되나 */}
-                <div style={{ marginTop: 30, background: '#fff', border: '1px solid #e4e4e7', borderRadius: 16, padding: '18px 20px' }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#3f3f46', marginBottom: 10 }}>어떻게 되나요</div>
+                <div style={{ marginTop: 30, background: '#fff', border: '1px solid var(--color-neutral-200)', borderRadius: 16, padding: '18px 20px' }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-neutral-700)', marginBottom: 10 }}>어떻게 되나요</div>
                     {['얼굴이 잘 보이는 사진 한 장을 올려요', '느낌과 바탕을 고릅니다', '실물과 같은 얼굴로 나옵니다'].map((t, i) => (
                         <div key={i} style={{ display: 'flex', gap: 10, marginBottom: i === 2 ? 0 : 8 }}>
                             <span style={{
                                 flexShrink: 0, width: 20, height: 20, borderRadius: '50%',
-                                background: '#1C2321', color: '#fff', fontSize: 12, fontWeight: 700,
+                                background: 'var(--color-neutral-900)', color: '#fff', fontSize: 12, fontWeight: 700,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>{i + 1}</span>
-                            <span style={{ fontSize: 15, color: '#52525b', lineHeight: 1.6, wordBreak: 'keep-all' }}>{t}</span>
+                            <span style={{ fontSize: 15, color: 'var(--color-neutral-600)', lineHeight: 1.6, wordBreak: 'keep-all' }}>{t}</span>
                         </div>
                     ))}
                 </div>

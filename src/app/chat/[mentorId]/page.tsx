@@ -733,19 +733,19 @@ export default function ChatPage() {
                 {/* 스켈레톤 헤더 */}
                 <div style={{
                     display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '12px 24px', borderBottom: '1px solid #eee', background: '#fff',
+                    padding: '12px 24px', borderBottom: '1px solid var(--color-neutral-200)', background: '#fff',
                 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#e4e4e7', animation: 'pulseSkeleton 1.5s ease-in-out infinite' }} />
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--color-neutral-200)', animation: 'pulseSkeleton 1.5s ease-in-out infinite' }} />
                     <div>
-                        <div style={{ width: 80, height: 16, borderRadius: 8, background: '#e4e4e7', marginBottom: 6, animation: 'pulseSkeleton 1.5s ease-in-out infinite' }} />
-                        <div style={{ width: 140, height: 12, borderRadius: 6, background: '#f0f0f0', animation: 'pulseSkeleton 1.5s ease-in-out 0.3s infinite' }} />
+                        <div style={{ width: 80, height: 16, borderRadius: 8, background: 'var(--color-neutral-200)', marginBottom: 6, animation: 'pulseSkeleton 1.5s ease-in-out infinite' }} />
+                        <div style={{ width: 140, height: 12, borderRadius: 6, background: 'var(--color-neutral-200)', animation: 'pulseSkeleton 1.5s ease-in-out 0.3s infinite' }} />
                     </div>
                 </div>
                 {/* 스켈레톤 메시지 영역 */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 20px', gap: 16 }}>
-                    <div style={{ width: 88, height: 88, borderRadius: '50%', background: '#e4e4e7', animation: 'pulseSkeleton 1.5s ease-in-out infinite' }} />
-                    <div style={{ width: 100, height: 20, borderRadius: 10, background: '#e4e4e7', animation: 'pulseSkeleton 1.5s ease-in-out 0.2s infinite' }} />
-                    <div style={{ width: 200, height: 14, borderRadius: 7, background: '#f0f0f0', animation: 'pulseSkeleton 1.5s ease-in-out 0.4s infinite' }} />
+                    <div style={{ width: 88, height: 88, borderRadius: '50%', background: 'var(--color-neutral-200)', animation: 'pulseSkeleton 1.5s ease-in-out infinite' }} />
+                    <div style={{ width: 100, height: 20, borderRadius: 10, background: 'var(--color-neutral-200)', animation: 'pulseSkeleton 1.5s ease-in-out 0.2s infinite' }} />
+                    <div style={{ width: 200, height: 14, borderRadius: 7, background: 'var(--color-neutral-200)', animation: 'pulseSkeleton 1.5s ease-in-out 0.4s infinite' }} />
                     <div style={{ width: '80%', maxWidth: 400, height: 60, borderRadius: 20, background: '#f0ede8', marginTop: 16, animation: 'pulseSkeleton 1.5s ease-in-out 0.6s infinite' }} />
                 </div>
                 <style>{`
@@ -765,7 +765,7 @@ export default function ChatPage() {
             display: 'flex',
             flexDirection: 'row',
             height: '100dvh',
-            background: '#FAFAFA',
+            background: 'var(--color-neutral-50)',
         }}>
             {/* 메인 채팅 영역 */}
             <div
@@ -813,7 +813,7 @@ export default function ChatPage() {
                         display: 'flex',
                         justifyContent: 'center',
                         WebkitOverflowScrolling: 'touch',
-                        background: '#FAFAFA',
+                        background: 'var(--color-neutral-50)',
                     }}
                 >
                     <div className="chat-messages-inner" style={{
@@ -855,7 +855,7 @@ export default function ChatPage() {
                                         width: 18,
                                         height: 18,
                                         borderRadius: '50%',
-                                        background: '#1C2321',
+                                        background: 'var(--color-neutral-900)',
                                         border: '3px solid #fff',
                                     }} />
                                 </div>
@@ -865,7 +865,7 @@ export default function ChatPage() {
                                     margin: 0,
                                     fontSize: 'clamp(28px, 2.6vw, 36px)',
                                     fontWeight: 800,
-                                    color: '#18181b',
+                                    color: 'var(--color-neutral-900)',
                                     marginBottom: 4,
                                     letterSpacing: '-0.02em',
                                     display: 'flex',
@@ -876,8 +876,8 @@ export default function ChatPage() {
                                     <span style={{
                                         fontSize: 'clamp(12px, 1.1vw, 14px)',
                                         fontWeight: 600,
-                                        color: '#22c55e',
-                                        background: '#f0fdf4',
+                                        color: 'var(--color-primary-500)',
+                                        background: 'var(--color-primary-50)',
                                         borderRadius: 100,
                                         padding: '3px 10px',
                                     }}>AI</span>
@@ -885,7 +885,7 @@ export default function ChatPage() {
                                 <p style={{
                                     margin: 0,
                                     fontSize: 'clamp(15px, 1.35vw, 18px)',
-                                    color: '#6b7280',
+                                    color: 'var(--color-neutral-500)',
                                     marginBottom: 18,
                                 }}>
                                     {mentor.title}
@@ -911,7 +911,7 @@ export default function ChatPage() {
                                             padding: 'clamp(10px, 1vw, 14px) clamp(20px, 2vw, 32px)',
                                             borderRadius: 100,
                                             border: 'none',
-                                            background: '#1C2321',
+                                            background: 'var(--color-neutral-900)',
                                             color: '#fff',
                                             fontSize: 'clamp(15px, 1.35vw, 17px)',
                                             fontWeight: 600,
@@ -974,7 +974,7 @@ export default function ChatPage() {
                                         <h3 style={{
                                             fontSize: 'clamp(16px, 1.45vw, 19px)',
                                             fontWeight: 700,
-                                            color: '#1e293b',
+                                            color: 'var(--color-neutral-900)',
                                             margin: '0 0 14px 0',
                                         }}>
                                             이런 걸 물어보세요
@@ -990,9 +990,9 @@ export default function ChatPage() {
                                                         gap: 12,
                                                         padding: 'clamp(14px, 1.3vw, 20px) clamp(18px, 1.7vw, 24px)',
                                                         borderRadius: 14,
-                                                        border: '1px solid #e5e7eb',
+                                                        border: '1px solid var(--color-neutral-200)',
                                                         background: '#fff',
-                                                        color: '#374151',
+                                                        color: 'var(--color-neutral-700)',
                                                         fontSize: 'clamp(15px, 1.35vw, 18px)',
                                                         fontWeight: 500,
                                                         cursor: 'pointer',
@@ -1062,9 +1062,9 @@ export default function ChatPage() {
                                 style={{
                                     padding: '8px 14px',
                                     borderRadius: 20,
-                                    border: '1px solid #d1fae5',
-                                    background: '#f0fdf4',
-                                    color: '#16a34a',
+                                    border: '1px solid var(--color-primary-50)',
+                                    background: 'var(--color-primary-50)',
+                                    color: 'var(--color-primary-600)',
                                     fontSize: 13,
                                     fontWeight: 500,
                                     cursor: 'pointer',
@@ -1117,7 +1117,7 @@ export default function ChatPage() {
                         <div
                             onClick={e => e.stopPropagation()}
                             style={{
-                                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                                background: 'var(--color-neutral-900)',
                                 borderRadius: 24, padding: '36px 32px', maxWidth: 380, width: '90%',
                                 textAlign: 'center', position: 'relative', overflow: 'hidden',
                             }}
@@ -1137,7 +1137,7 @@ export default function ChatPage() {
                             <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', marginBottom: 6 }}>
                                 {mentor.name}의 목소리를 들어보세요
                             </div>
-                            <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 24, lineHeight: 1.6 }}>
+                            <div style={{ fontSize: 13, color: 'var(--color-neutral-400)', marginBottom: 24, lineHeight: 1.6 }}>
                                 AI가 복제한 진짜 목소리로 대화할 수 있어요
                             </div>
 
@@ -1155,7 +1155,7 @@ export default function ChatPage() {
                                         style={{ width: '100%', height: 40 }}
                                         onEnded={() => {}}
                                     />
-                                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 8 }}>
+                                    <div style={{ fontSize: 11, color: 'var(--color-neutral-500)', marginTop: 8 }}>
                                         🎧 멘토의 실제 목소리 샘플
                                     </div>
                                 </div>
@@ -1168,14 +1168,14 @@ export default function ChatPage() {
                                 background: 'rgba(255,255,255,0.04)',
                                 borderRadius: 12, padding: '14px 16px',
                             }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#e2e8f0' }}>
-                                    <span>📞</span> 이 목소리로 <strong style={{ color: '#4ade80' }}>직접 통화</strong> 가능
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-neutral-200)' }}>
+                                    <span>📞</span> 이 목소리로 <strong style={{ color: 'var(--color-primary-500)' }}>직접 통화</strong> 가능
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#e2e8f0' }}>
-                                    <span>💬</span> 매일 <strong style={{ color: '#4ade80' }}>무제한</strong> 텍스트 대화
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-neutral-200)' }}>
+                                    <span>💬</span> 매일 <strong style={{ color: 'var(--color-primary-500)' }}>무제한</strong> 텍스트 대화
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#e2e8f0' }}>
-                                    <span>📝</span> 대화 기록 <strong style={{ color: '#4ade80' }}>영구 저장</strong>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-neutral-200)' }}>
+                                    <span>📝</span> 대화 기록 <strong style={{ color: 'var(--color-primary-500)' }}>영구 저장</strong>
                                 </div>
                             </div>
 
@@ -1184,7 +1184,7 @@ export default function ChatPage() {
                                 style={{
                                     display: 'inline-flex', alignItems: 'center', gap: 8,
                                     padding: '14px 36px',
-                                    background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                                    background: 'var(--color-primary-500)',
                                     color: '#fff', borderRadius: 14, fontSize: 16, fontWeight: 800,
                                     textDecoration: 'none',
                                     boxShadow: '0 4px 20px rgba(34,197,94,0.4)',
@@ -1195,7 +1195,7 @@ export default function ChatPage() {
                             >
                                 🚀 무료 가입하고 전화하기
                             </a>
-                            <div style={{ fontSize: 11, color: '#64748b', marginTop: 12 }}>
+                            <div style={{ fontSize: 11, color: 'var(--color-neutral-500)', marginTop: 12 }}>
                                 ✓ 30초 가입 ✓ 카드 불필요 ✓ 언제든 탈퇴
                             </div>
 
@@ -1206,7 +1206,7 @@ export default function ChatPage() {
                                     position: 'absolute', top: 12, right: 12,
                                     background: 'rgba(255,255,255,0.1)', border: 'none',
                                     borderRadius: '50%', width: 32, height: 32,
-                                    color: '#94a3b8', fontSize: 18, cursor: 'pointer',
+                                    color: 'var(--color-neutral-400)', fontSize: 18, cursor: 'pointer',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 }}
                             >×</button>
@@ -1389,14 +1389,14 @@ export default function ChatPage() {
                                 margin: '0 0 8px',
                                 fontSize: 20,
                                 fontWeight: 700,
-                                color: '#1e293b',
+                                color: 'var(--color-neutral-900)',
                             }}>
                                 {loginGateReason === 'photo' ? '사진은 회원만 보낼 수 있어요' : '무료 체험이 끝났어요!'}
                             </h3>
                             <p style={{
                                 margin: '0 0 24px',
                                 fontSize: 14,
-                                color: '#64748b',
+                                color: 'var(--color-neutral-500)',
                                 lineHeight: 1.6,
                             }}>
                                 {loginGateReason === 'photo' ? (
@@ -1415,7 +1415,7 @@ export default function ChatPage() {
                                     padding: '14px 20px',
                                     borderRadius: 14,
                                     border: 'none',
-                                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                    background: 'var(--color-primary-500)',
                                     color: '#fff',
                                     fontSize: 16,
                                     fontWeight: 700,

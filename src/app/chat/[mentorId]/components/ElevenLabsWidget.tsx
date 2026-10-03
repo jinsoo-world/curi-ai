@@ -182,7 +182,7 @@ export default function ElevenLabsWidget({
     const getOrbStyle = (): React.CSSProperties => {
         if (errorMsg) {
             return {
-                background: 'radial-gradient(circle, #fca5a5 0%, #ef4444 50%, #dc2626 100%)',
+                background: 'radial-gradient(circle, #fca5a5 0%, var(--color-red-500) 50%, var(--color-red-600) 100%)',
                 boxShadow: '0 0 60px rgba(239,68,68,0.3)',
                 animation: 'orbIdle 4s ease-in-out infinite',
                 transform: 'scale(0.95)',
@@ -242,7 +242,7 @@ export default function ElevenLabsWidget({
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 padding: '12px 24px',
-                borderBottom: '1px solid #eee',
+                borderBottom: '1px solid var(--color-neutral-200)',
                 background: '#fff',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -251,7 +251,7 @@ export default function ElevenLabsWidget({
                         style={{
                             background: 'none', border: 'none',
                             fontSize: 20, cursor: 'pointer',
-                            padding: '4px 8px', color: '#18181b',
+                            padding: '4px 8px', color: 'var(--color-neutral-900)',
                         }}
                     >
                         ←
@@ -266,7 +266,7 @@ export default function ElevenLabsWidget({
                         />
                     )}
                     <div>
-                        <div style={{ fontWeight: 700, fontSize: 18, color: '#18181b', lineHeight: 1.3 }}>
+                        <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--color-neutral-900)', lineHeight: 1.3 }}>
                             {mentorName}
                         </div>
                         <div style={{
@@ -278,7 +278,7 @@ export default function ElevenLabsWidget({
                             {isConnected && !errorMsg && (
                                 <span style={{
                                     display: 'inline-block', width: 6, height: 6,
-                                    borderRadius: '50%', background: '#1C2321',
+                                    borderRadius: '50%', background: 'var(--color-neutral-900)',
                                     animation: 'pulseSoft 1.5s ease-in-out infinite',
                                 }} />
                             )}
@@ -289,9 +289,9 @@ export default function ElevenLabsWidget({
                 <button
                     onClick={handleClose}
                     style={{
-                        background: 'none', border: '1px solid #e4e4e7',
+                        background: 'none', border: '1px solid var(--color-neutral-200)',
                         borderRadius: 8, padding: '6px 14px',
-                        fontSize: 15, color: '#52525b',
+                        fontSize: 15, color: 'var(--color-neutral-600)',
                         cursor: 'pointer', fontWeight: 500,
                     }}
                 >
@@ -322,7 +322,7 @@ export default function ElevenLabsWidget({
 
                 {/* 이름 + 상태 */}
                 <div style={{ textAlign: 'center', maxWidth: 400 }}>
-                    <h2 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: '#18181b', marginBottom: 8 }}>
+                    <h2 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: 'var(--color-neutral-900)', marginBottom: 8 }}>
                         {mentorName}
                     </h2>
                     <p style={{
@@ -333,7 +333,7 @@ export default function ElevenLabsWidget({
                         {getStatusText()}
                     </p>
                     {process.env.NODE_ENV === 'development' && (
-                        <p style={{ margin: '4px 0 0', fontSize: 11, color: '#d4d4d8' }}>
+                        <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--color-neutral-300)' }}>
                             sdk:{sdkStatus} manual:{manualStatus} speaking:{String(isAgentSpeaking)}
                         </p>
                     )}
@@ -349,7 +349,7 @@ export default function ElevenLabsWidget({
                         }}
                         style={{
                             padding: '10px 24px', borderRadius: 50,
-                            background: '#1C2321', border: 'none',
+                            background: 'var(--color-neutral-900)', border: 'none',
                             color: '#fff', fontSize: 15, fontWeight: 600,
                             cursor: 'pointer',
                         }}
@@ -366,7 +366,7 @@ export default function ElevenLabsWidget({
                         display: 'flex', flexDirection: 'column', gap: 8,
                         padding: '16px',
                         background: '#fff', borderRadius: 20,
-                        border: '1px solid #e5e7eb',
+                        border: '1px solid var(--color-neutral-200)',
                         boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
                     }}>
                         {transcript.slice(-6).map((msg, i) => (
@@ -375,7 +375,7 @@ export default function ElevenLabsWidget({
                                 justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
                             }}>
                                 <span style={{
-                                    fontSize: 14, color: '#18181b',
+                                    fontSize: 14, color: 'var(--color-neutral-900)',
                                     background: msg.role === 'user' ? '#dcfce7' : '#f0ede8',
                                     padding: '8px 14px', borderRadius: 16,
                                     maxWidth: '80%', lineHeight: 1.5,
@@ -393,7 +393,7 @@ export default function ElevenLabsWidget({
                     style={{
                         display: 'flex', alignItems: 'center', gap: 8,
                         padding: '14px 32px', borderRadius: 50,
-                        background: '#ef4444', border: 'none',
+                        background: 'var(--color-red-500)', border: 'none',
                         color: '#fff', fontSize: 16, fontWeight: 700,
                         cursor: 'pointer',
                         boxShadow: '0 4px 20px rgba(239,68,68,0.3)',
@@ -406,9 +406,9 @@ export default function ElevenLabsWidget({
             {/* 하단 */}
             <div style={{
                 padding: '16px 24px', textAlign: 'center',
-                borderTop: '1px solid #eee', background: '#fff',
+                borderTop: '1px solid var(--color-neutral-200)', background: '#fff',
             }}>
-                <p style={{ margin: 0, fontSize: 12, color: '#a1a1aa' }}>
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--color-neutral-400)' }}>
                     Powered by ElevenLabs · 큐리 AI
                 </p>
             </div>

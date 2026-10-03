@@ -75,29 +75,29 @@ function BillingSuccessContent() {
             justifyContent: 'center',
             padding: 24,
             background: status === 'success'
-                ? 'linear-gradient(180deg, #f0fdf4 0%, #fff 50%)'
+                ? '#fff'
                 : '#fafafa',
         }}>
             <div style={{
                 textAlign: 'center',
                 maxWidth: 400,
-                background: '#fff',
-                borderRadius: 24,
+                background: status === 'success' ? 'var(--color-primary-50)' : '#fff',   /* 1003 흰 바탕 + 위 카드만 연초록 */
+                border: status === 'success' ? '1px solid var(--color-primary-200)' : '1px solid var(--color-neutral-200)',
+                borderRadius: 16,
                 padding: '48px 32px',
-                boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
             }}>
                 {status === 'processing' && (
                     <>
                         <div style={{
                             width: 64, height: 64, margin: '0 auto 24px',
-                            borderRadius: '50%', border: '4px solid #e4e4e7',
-                            borderTopColor: '#22c55e',
+                            borderRadius: '50%', border: '4px solid var(--color-neutral-200)',
+                            borderTopColor: 'var(--color-primary-500)',
                             animation: 'spin 1s linear infinite',
                         }} />
-                        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#18181b', margin: '0 0 8px' }}>
+                        <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-neutral-900)', margin: '0 0 8px' }}>
                             결제 처리 중...
                         </h2>
-                        <p style={{ fontSize: 15, color: '#6b7280', margin: 0 }}>
+                        <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: 0 }}>
                             잠시만 기다려주세요
                         </p>
                     </>
@@ -107,16 +107,16 @@ function BillingSuccessContent() {
                     <>
                         <div style={{
                             width: 72, height: 72, margin: '0 auto 24px',
-                            background: '#f0fdf4', borderRadius: '50%',
+                            background: 'var(--color-primary-50)', borderRadius: '50%',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontSize: 36,
                         }}>
                             🎉
                         </div>
-                        <h2 style={{ fontSize: 24, fontWeight: 800, color: '#18181b', margin: '0 0 8px' }}>
+                        <h2 style={{ fontSize: 24, fontWeight: 800, color: 'var(--color-neutral-900)', margin: '0 0 8px' }}>
                             {isLeaderPlan ? '내 AI 시작!' : '프리미엄 시작!'}
                         </h2>
-                        <p style={{ fontSize: 15, color: '#6b7280', margin: '0 0 32px' }}>
+                        <p style={{ fontSize: 15, color: 'var(--color-neutral-500)', margin: '0 0 32px' }}>
                             {isLeaderPlan ? (
                                 <>리더 플랜이 시작됐어요.<br />
                                 이제 내 AI 를 만들어 수강생에게 열어보세요!</>
@@ -130,7 +130,7 @@ function BillingSuccessContent() {
                             style={{
                                 width: '100%', padding: '14px 24px', borderRadius: 12,
                                 border: 'none', fontSize: 16, fontWeight: 700,
-                                background: '#1C2321', color: '#fff', cursor: 'pointer',
+                                background: 'var(--color-neutral-900)', color: '#fff', cursor: 'pointer',
                             }}
                         >
                             멘토 만나기 →
@@ -142,24 +142,24 @@ function BillingSuccessContent() {
                     <>
                         <div style={{
                             width: 72, height: 72, margin: '0 auto 24px',
-                            background: '#fef2f2', borderRadius: '50%',
+                            background: 'var(--color-red-50)', borderRadius: '50%',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontSize: 36,
                         }}>
                             😥
                         </div>
-                        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#18181b', margin: '0 0 8px' }}>
+                        <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-neutral-900)', margin: '0 0 8px' }}>
                             결제 실패
                         </h2>
-                        <p style={{ fontSize: 15, color: '#ef4444', margin: '0 0 24px' }}>
+                        <p style={{ fontSize: 15, color: 'var(--color-red-500)', margin: '0 0 24px' }}>
                             {error}
                         </p>
                         <button
                             onClick={() => router.push('/os/charge')}
                             style={{
                                 width: '100%', padding: '14px 24px', borderRadius: 12,
-                                border: '1px solid #e4e4e7', fontSize: 16, fontWeight: 600,
-                                background: '#fff', color: '#18181b', cursor: 'pointer',
+                                border: '1px solid var(--color-neutral-200)', fontSize: 16, fontWeight: 600,
+                                background: '#fff', color: 'var(--color-neutral-900)', cursor: 'pointer',
                             }}
                         >
                             다시 시도하기

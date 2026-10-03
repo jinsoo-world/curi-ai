@@ -17,7 +17,7 @@ export default function ChatError({
         <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             minHeight: '100dvh', padding: 24,
-            background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)',
+            background: 'var(--color-neutral-900)',
         }}>
             <div style={{
                 textAlign: 'center', maxWidth: 380,
@@ -45,7 +45,7 @@ export default function ChatError({
                         onClick={reset}
                         style={{
                             padding: '12px 24px', borderRadius: 12, border: 'none',
-                            background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                            background: 'var(--color-blue-500)',
                             color: '#fff', fontSize: 14, fontWeight: 600,
                             cursor: 'pointer', boxShadow: '0 4px 14px rgba(99,102,241,0.3)',
                         }}

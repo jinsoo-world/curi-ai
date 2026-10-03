@@ -152,7 +152,7 @@ function SessionItem({
         >
             {/* 고정 아이콘 */}
             {session.is_pinned && (
-                <span style={{ color: '#22c55e', flexShrink: 0, display: 'flex' }}>
+                <span style={{ color: 'var(--color-primary-500)', flexShrink: 0, display: 'flex' }}>
                     <PinIcon filled />
                 </span>
             )}
@@ -171,7 +171,7 @@ function SessionItem({
                         }}
                         style={{
                             width: '100%',
-                            border: '1px solid #22c55e',
+                            border: '1px solid var(--color-primary-500)',
                             borderRadius: 8,
                             padding: '4px 8px',
                             fontSize: 14,
@@ -195,7 +195,7 @@ function SessionItem({
                         </div>
                         <div style={{
                             fontSize: 12,
-                            color: '#94a3b8',
+                            color: 'var(--color-neutral-400)',
                             marginTop: 3,
                             display: 'flex',
                             alignItems: 'center',
@@ -218,7 +218,7 @@ function SessionItem({
                         style={{
                             background: 'none', border: 'none', cursor: 'pointer',
                             padding: 4, borderRadius: 6,
-                            color: '#94a3b8',
+                            color: 'var(--color-neutral-400)',
                             display: 'flex', alignItems: 'center',
                             opacity: 0,
                             transition: 'opacity 0.15s',
@@ -236,7 +236,7 @@ function SessionItem({
                             background: '#fff',
                             borderRadius: 10,
                             boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
-                            border: '1px solid #f1f5f9',
+                            border: '1px solid var(--color-neutral-100)',
                             zIndex: 100,
                             minWidth: 140,
                             overflow: 'hidden',
@@ -252,7 +252,7 @@ function SessionItem({
                                     display: 'flex', alignItems: 'center', gap: 8,
                                     width: '100%', padding: '10px 14px',
                                     background: 'none', border: 'none',
-                                    fontSize: 14, color: '#374151',
+                                    fontSize: 14, color: 'var(--color-neutral-700)',
                                     cursor: 'pointer', textAlign: 'left',
                                 }}
                                 onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc' }}
@@ -272,7 +272,7 @@ function SessionItem({
                                     display: 'flex', alignItems: 'center', gap: 8,
                                     width: '100%', padding: '10px 14px',
                                     background: 'none', border: 'none',
-                                    fontSize: 14, color: '#374151',
+                                    fontSize: 14, color: 'var(--color-neutral-700)',
                                     cursor: 'pointer', textAlign: 'left',
                                 }}
                                 onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc' }}
@@ -292,9 +292,9 @@ function SessionItem({
                                     display: 'flex', alignItems: 'center', gap: 8,
                                     width: '100%', padding: '10px 14px',
                                     background: 'none', border: 'none',
-                                    fontSize: 14, color: '#ef4444',
+                                    fontSize: 14, color: 'var(--color-red-500)',
                                     cursor: 'pointer', textAlign: 'left',
-                                    borderTop: '1px solid #f1f5f9',
+                                    borderTop: '1px solid var(--color-neutral-100)',
                                 }}
                                 onMouseEnter={e => { e.currentTarget.style.background = '#fef2f2' }}
                                 onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
@@ -329,7 +329,7 @@ export default function ChatSidebar({
             flexDirection: 'column',
             height: '100%',
             background: '#fff',
-            borderRight: '1px solid #f1f5f9',
+            borderRight: '1px solid var(--color-neutral-100)',
         }}>
             {/* 헤더 */}
             <div style={{
@@ -337,13 +337,13 @@ export default function ChatSidebar({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '16px 16px 14px',
-                borderBottom: '1px solid #f0f0f0',
+                borderBottom: '1px solid var(--color-neutral-200)',
             }}>
                 <h3 style={{
                     margin: 0,
                     fontSize: 16,
                     fontWeight: 700,
-                    color: '#1e293b',
+                    color: 'var(--color-neutral-900)',
                     letterSpacing: '-0.01em',
                 }}>
                     대화내역
@@ -356,7 +356,7 @@ export default function ChatSidebar({
                         width: 36, height: 36,
                         borderRadius: 10,
                         background: 'none', border: 'none',
-                        color: '#64748b', cursor: 'pointer',
+                        color: 'var(--color-neutral-500)', cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         transition: 'background 0.15s',
                     }}
@@ -381,7 +381,7 @@ export default function ChatSidebar({
                     <div style={{
                         textAlign: 'center',
                         padding: '48px 16px',
-                        color: '#94a3b8',
+                        color: 'var(--color-neutral-400)',
                         fontSize: 14,
                     }}>
                         <div style={{ fontSize: 32, marginBottom: 12 }}>💬</div>
@@ -394,7 +394,7 @@ export default function ChatSidebar({
                             <>
                                 <div style={{
                                     fontSize: 11, fontWeight: 600,
-                                    color: '#94a3b8', textTransform: 'uppercase',
+                                    color: 'var(--color-neutral-400)', textTransform: 'uppercase',
                                     letterSpacing: '0.05em',
                                     padding: '10px 14px 4px',
                                 }}>
@@ -419,7 +419,7 @@ export default function ChatSidebar({
                                 {pinned.length > 0 && (
                                     <div style={{
                                         fontSize: 11, fontWeight: 600,
-                                        color: '#94a3b8', textTransform: 'uppercase',
+                                        color: 'var(--color-neutral-400)', textTransform: 'uppercase',
                                         letterSpacing: '0.05em',
                                         padding: '14px 14px 4px',
                                     }}>
@@ -445,19 +445,19 @@ export default function ChatSidebar({
             {/* 하단 멘토 정보 + AI 뱃지 */}
             <div style={{
                 padding: '12px 16px',
-                borderTop: '1px solid #f0f0f0',
+                borderTop: '1px solid var(--color-neutral-200)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
-                background: '#fafafa',
+                background: 'var(--color-neutral-50)',
             }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-neutral-700)' }}>
                     {mentorName}
                 </span>
                 <span style={{
                     fontSize: 10, fontWeight: 700,
-                    background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                    background: 'var(--color-primary-500)',
                     color: '#fff',
                     padding: '2px 7px',
                     borderRadius: 5,

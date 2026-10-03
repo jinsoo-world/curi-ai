@@ -98,7 +98,7 @@ export default async function CoachPage({ params }: Props) {
                             aspectRatio: '3 / 4',
                             borderRadius: 20,
                             overflow: 'hidden',
-                            background: '#E8F2EC',
+                            background: 'var(--color-primary-50)',
                         }}
                     >
                         {사진 ? (
@@ -132,7 +132,7 @@ export default async function CoachPage({ params }: Props) {
                         {분야.length > 0 && (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 18 }}>
                                 {분야.map((c) => (
-                                    <span key={c} style={{ background: '#EAF7EF', color: 'var(--진초록)', fontSize: 13, fontWeight: 700, padding: '6px 12px', borderRadius: 999 }}>
+                                    <span key={c} style={{ background: 'var(--color-primary-50)', color: 'var(--진초록)', fontSize: 13, fontWeight: 700, padding: '6px 12px', borderRadius: 999 }}>
                                         {c}
                                     </span>
                                 ))}

@@ -48,7 +48,7 @@ export default function GlobalError({
                             onClick={reset}
                             style={{
                                 padding: '14px 28px', borderRadius: 12, border: 'none',
-                                background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                                background: 'var(--color-blue-600)',
                                 color: '#fff', fontSize: 15, fontWeight: 600,
                                 cursor: 'pointer', boxShadow: '0 4px 14px rgba(99,102,241,0.3)',
                             }}

@@ -34,8 +34,8 @@ export default function MentorBigCard({
                 aspectRatio: '3 / 4',
                 borderRadius: 'var(--둥근)',
                 overflow: 'hidden',
-                background: '#E8F2EC',
-                boxShadow: 'var(--그림자)',
+                background: 'var(--color-neutral-100)',
+                border: '1px solid var(--color-neutral-200)',
                 textDecoration: 'none',
                 color: 'inherit',
             }}

@@ -38,7 +38,7 @@ export default function ReviewLoginPage() {
 
     return (
         <main style={{
-            minHeight: '100dvh', background: '#f8f9fa',
+            minHeight: '100dvh', background: 'var(--color-neutral-50)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: 20,
         }}>
@@ -47,21 +47,21 @@ export default function ReviewLoginPage() {
                 style={{
                     width: '100%', maxWidth: 360,
                     background: '#fff', borderRadius: 20,
-                    border: '1px solid #f0f0f0',
+                    border: '1px solid var(--color-neutral-200)',
                     padding: 32,
                 }}
             >
                 <h1 style={{
-                    fontSize: 20, fontWeight: 800, color: '#18181b',
+                    fontSize: 20, fontWeight: 800, color: 'var(--color-neutral-900)',
                     margin: '0 0 6px', letterSpacing: '-0.02em',
                 }}>
                     🤖 큐리 AI
                 </h1>
-                <p style={{ fontSize: 13, color: '#71717a', margin: '0 0 24px' }}>
+                <p style={{ fontSize: 13, color: 'var(--color-neutral-500)', margin: '0 0 24px' }}>
                     심사용 로그인
                 </p>
 
-                <label style={{ display: 'block', fontSize: 13, color: '#52525b', marginBottom: 6 }}>
+                <label style={{ display: 'block', fontSize: 13, color: 'var(--color-neutral-600)', marginBottom: 6 }}>
                     아이디(이메일)
                 </label>
                 <input
@@ -72,12 +72,12 @@ export default function ReviewLoginPage() {
                     required
                     style={{
                         width: '100%', padding: '12px 14px', marginBottom: 16,
-                        borderRadius: 12, border: '1px solid #e4e4e7',
+                        borderRadius: 12, border: '1px solid var(--color-neutral-200)',
                         fontSize: 15, boxSizing: 'border-box',
                     }}
                 />
 
-                <label style={{ display: 'block', fontSize: 13, color: '#52525b', marginBottom: 6 }}>
+                <label style={{ display: 'block', fontSize: 13, color: 'var(--color-neutral-600)', marginBottom: 6 }}>
                     비밀번호
                 </label>
                 <input
@@ -88,14 +88,14 @@ export default function ReviewLoginPage() {
                     required
                     style={{
                         width: '100%', padding: '12px 14px', marginBottom: 20,
-                        borderRadius: 12, border: '1px solid #e4e4e7',
+                        borderRadius: 12, border: '1px solid var(--color-neutral-200)',
                         fontSize: 15, boxSizing: 'border-box',
                     }}
                 />
 
                 {errorMsg && (
                     <div style={{
-                        background: '#fef2f2', color: '#dc2626', fontSize: 13,
+                        background: 'var(--color-red-50)', color: 'var(--color-red-600)', fontSize: 13,
                         padding: '10px 14px', borderRadius: 10, marginBottom: 14,
                     }}>
                         {errorMsg}

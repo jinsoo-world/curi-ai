@@ -28,10 +28,10 @@ export default function BizFooter({ maxWidth = 400, marginTop = 32 }: Props) {
             width: '100%', maxWidth,
             margin: `${marginTop}px auto 0`,
             padding: '24px 0 16px',
-            borderTop: '1px solid #e5e7eb',
+            borderTop: '1px solid var(--color-neutral-200)',
         }}>
             <div style={{
-                fontSize: 12, color: '#9ca3af', lineHeight: 1.9,
+                fontSize: 12, color: 'var(--color-neutral-400)', lineHeight: 1.9,
                 letterSpacing: '-0.01em',
             }}>
                 <div>미션드리븐 (대표 : 김진수) ㅣ curious@mission-driven.kr</div>
@@ -46,34 +46,34 @@ export default function BizFooter({ maxWidth = 400, marginTop = 32 }: Props) {
                 display: 'flex', gap: 4, marginTop: 14,
                 fontSize: 12, flexWrap: 'wrap',
             }}>
-                <Link href="/privacy" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
+                <Link href="/privacy" style={{ color: 'var(--color-neutral-500)', textDecoration: 'none', fontWeight: 600 }}>
                     개인정보처리방침
                 </Link>
-                <span style={{ color: '#d1d5db' }}>ㅣ</span>
-                <Link href="/terms" style={{ color: '#6b7280', textDecoration: 'none' }}>
+                <span style={{ color: 'var(--color-neutral-300)' }}>ㅣ</span>
+                <Link href="/terms" style={{ color: 'var(--color-neutral-500)', textDecoration: 'none' }}>
                     서비스이용약관
                 </Link>
-                <span style={{ color: '#d1d5db' }}>ㅣ</span>
-                <Link href="/refund" style={{ color: '#6b7280', textDecoration: 'none' }}>
+                <span style={{ color: 'var(--color-neutral-300)' }}>ㅣ</span>
+                <Link href="/refund" style={{ color: 'var(--color-neutral-500)', textDecoration: 'none' }}>
                     취소/환불정책
                 </Link>
-                <span aria-hidden="true" style={{ color: '#d1d5db' }}>ㅣ</span>
-                <Link href="/support" style={{ color: '#6b7280', textDecoration: 'none' }}>
+                <span aria-hidden="true" style={{ color: 'var(--color-neutral-300)' }}>ㅣ</span>
+                <Link href="/support" style={{ color: 'var(--color-neutral-500)', textDecoration: 'none' }}>
                     고객센터
                 </Link>
-                <span aria-hidden="true" style={{ color: '#d1d5db' }}>ㅣ</span>
+                <span aria-hidden="true" style={{ color: 'var(--color-neutral-300)' }}>ㅣ</span>
                 <Link
                     href="/en"
                     lang="en"
                     hrefLang="en"
-                    style={{ color: '#6b7280', textDecoration: 'none' }}
+                    style={{ color: 'var(--color-neutral-500)', textDecoration: 'none' }}
                 >
                     English
                 </Link>
             </div>
 
             <div style={{
-                fontSize: 11, color: '#d1d5db', marginTop: 12,
+                fontSize: 11, color: 'var(--color-neutral-300)', marginTop: 12,
             }}>
                 Copyright © 미션드리븐 All rights reserved.
             </div>

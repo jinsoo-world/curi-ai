@@ -80,20 +80,20 @@ export default function Page() {
                     만든 사진은 48시간 동안 여기 있습니다. 그 뒤에는 지워지니 미리 내려받아 두세요.
                 </p>
 
-                {사진들 === null && <p style={{ fontSize: 16, color: '#a1a1aa' }}>불러오는 중입니다</p>}
+                {사진들 === null && <p style={{ fontSize: 16, color: 'var(--color-neutral-400)' }}>불러오는 중입니다</p>}
 
                 {사진들?.length === 0 && (
-                    <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 18, padding: '36px 22px', textAlign: 'center' }}>
+                    <div style={{ background: '#fff', border: '1px solid var(--color-neutral-200)', borderRadius: 18, padding: '36px 22px', textAlign: 'center' }}>
                         <p style={{ fontSize: 17, fontWeight: 800, margin: '0 0 8px' }}>
                             {로그인함 === false ? '로그인하면 만든 사진이 보여요' : '아직 만든 사진이 없어요'}
                         </p>
-                        <p style={{ fontSize: 15.5, color: '#71717a', margin: '0 0 18px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
+                        <p style={{ fontSize: 15.5, color: 'var(--color-neutral-500)', margin: '0 0 18px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
                             {로그인함 === false
                                 ? '만든 사진은 로그인한 분의 것만 48시간 동안 남습니다.'
                                 : '사진 한 장만 있으면 바로 만들 수 있습니다.'}
                         </p>
                         <Link href={로그인함 === false ? '/login' : '/studio'} style={{
-                            display: 'inline-block', background: '#1C2321', color: '#fff',
+                            display: 'inline-block', background: 'var(--color-neutral-900)', color: '#fff',
                             padding: '14px 28px', borderRadius: 999, fontWeight: 800, fontSize: 16, textDecoration: 'none',
                         }}>{로그인함 === false ? '로그인하기' : '만들러 가기'}</Link>
                     </div>
@@ -102,7 +102,7 @@ export default function Page() {
                 {!!사진들?.length && (
                     <div className="look-grid">
                         {사진들.map((p) => (
-                            <div key={p.id} style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: 16, overflow: 'hidden' }}>
+                            <div key={p.id} style={{ background: '#fff', border: '1px solid var(--color-neutral-200)', borderRadius: 16, overflow: 'hidden' }}>
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img src={p.url} alt={이름[p.kind] ?? '만든 사진'} style={{ width: '100%', display: 'block', aspectRatio: '4 / 5', objectFit: 'cover' }} />
                                 <div style={{ padding: '10px 12px 12px' }}>
@@ -115,10 +115,10 @@ export default function Page() {
                                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                         }}>{옵션[p.url]}</div>
                                     )}
-                                    <div style={{ fontSize: 13.5, color: '#a1a1aa', marginTop: 2 }}>{남은시간(p.expiresAt)}</div>
+                                    <div style={{ fontSize: 13.5, color: 'var(--color-neutral-400)', marginTop: 2 }}>{남은시간(p.expiresAt)}</div>
                                     <a href={p.url} download style={{
                                         display: 'block', marginTop: 8, padding: '10px 8px', borderRadius: 11,
-                                        background: '#18181b', color: '#fff', fontSize: 15, fontWeight: 700,
+                                        background: 'var(--color-neutral-900)', color: '#fff', fontSize: 15, fontWeight: 700,
                                         textAlign: 'center', textDecoration: 'none',
                                     }}>내려받기</a>
                                 </div>

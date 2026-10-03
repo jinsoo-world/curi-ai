@@ -96,7 +96,7 @@ export default function WelcomeGift() {
 
                 <div style={{
                     width: 132, height: 132, margin: '0 auto 22px',
-                    borderRadius: 999, background: '#EAF7EF',
+                    borderRadius: 999, background: 'var(--color-primary-50)',
                     display: 'grid', placeItems: 'center',
                 }}>
                     <CloverIcon size={74} />
@@ -124,7 +124,7 @@ export default function WelcomeGift() {
                     style={{
                         width: '100%', height: 42, marginTop: 6,
                         border: 'none', background: 'none',
-                        color: '#a1a1aa', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                        color: 'var(--color-neutral-400)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
                     }}
                 >
                     다음에 할게요

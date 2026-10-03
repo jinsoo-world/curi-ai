@@ -117,40 +117,29 @@ export default function LoginPage() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '24px',
-            background: '#fafafa',
+            background: 'var(--color-neutral-50)',
             position: 'relative',
         }}>
-            {/* Background blobs */}
-            <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-                <div style={{
-                    position: 'absolute', width: 320, height: 320, top: -120, right: -100,
-                    background: 'rgba(187, 247, 208, 0.25)', filter: 'blur(80px)', borderRadius: '50%',
-                }} />
-                <div style={{
-                    position: 'absolute', width: 280, height: 280, bottom: -100, left: -80,
-                    background: 'rgba(220, 252, 231, 0.3)', filter: 'blur(80px)', borderRadius: '50%',
-                }} />
-            </div>
+            {/* 1003 큐리어스 본체 모양: 흐린 초록 얼룩 배경 없앰. 회색 면 위 흰 카드 한 장 */}
 
             {/* 🎉 무료체험 배너 */}
             <div style={{
                 position: 'relative', zIndex: 10,
                 width: '100%', maxWidth: 400,
-                background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
-                border: '1.5px solid #bbf7d0',
-                borderRadius: 16,
-                padding: '16px 20px',
+                background: 'var(--color-primary-50)',
+                border: '1px solid var(--color-primary-200)',
+                borderRadius: 8,
+                padding: '12px 16px',
                 marginBottom: 20,
                 textAlign: 'center',
                 animation: 'fadeIn 0.5s ease',
             }}>
                 <div style={{
-                    fontSize: 17, fontWeight: 800, color: '#15803d',
-                    letterSpacing: '-0.02em',
+                    fontSize: 18, fontWeight: 600, color: 'var(--color-primary-700)',
                 }}>
                     로그인하면 대화 한도 2배로 드려요
                 </div>
-                <div style={{ fontSize: 15, color: '#4b5563', marginTop: 4 }}>
+                <div style={{ fontSize: 15, color: 'var(--color-neutral-600)', marginTop: 4 }}>
                     기획, 홍보, 개발, 조사를 맡는 봇 4명이 기다려요
                 </div>
             </div>
@@ -160,22 +149,22 @@ export default function LoginPage() {
                 position: 'relative', zIndex: 10,
                 width: '100%', maxWidth: 400,
                 background: '#fff',
-                borderRadius: 24,
-                padding: '44px 32px 32px',
-                boxShadow: '0 2px 16px rgba(0,0,0,0.05), 0 1px 4px rgba(0,0,0,0.03)',
+                borderRadius: 16,
+                border: '1px solid var(--color-neutral-200)',
+                padding: '40px 24px 28px',
                 animation: 'fadeIn 0.5s ease 0.1s both',
             }}>
                 {/* Logo */}
                 <div style={{ textAlign: 'center', marginBottom: 32 }}>
                     <span style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}><BotAvatar shape="clover" color="green" state="talking" size={96} name="큐리AI" /></span>
-                    {/* 큐리 글자 = 브랜드 초록(globals.css --연두 #22C55E). 검정 아님 (대표 0928) */}
+                    {/* 큐리 글자 = 브랜드 초록(globals.css --연두 = 큐리어스 #03C124). 검정 아님 (대표 0928) */}
                     <h1 style={{
-                        fontSize: 28, fontWeight: 800, color: 'var(--연두, #22C55E)',
-                        letterSpacing: '-0.03em', marginBottom: 6,
+                        fontSize: 28, lineHeight: '38px', fontWeight: 700, color: 'var(--연두, var(--color-primary-500))',
+                        letterSpacing: '-0.0236em', marginBottom: 8,
                     }}>
                         큐리 AI
                     </h1>
-                    <p style={{ fontSize: 16, color: '#4b5563', lineHeight: 1.6 }}>
+                    <p style={{ fontSize: 16, color: 'var(--color-neutral-600)', lineHeight: 1.6 }}>
                         로그인하고 내 봇 만들기를 시작해요
                     </p>
                 </div>
@@ -184,8 +173,9 @@ export default function LoginPage() {
                 {error && (
                     <div role="alert" data-testid="login-error" style={{
                         padding: '12px 16px', marginBottom: 16,
-                        background: '#fef2f2', color: '#991b1b',
-                        borderRadius: 12, fontSize: 15, lineHeight: 1.5, textAlign: 'center',
+                        background: 'var(--color-red-50)', color: 'var(--color-red-700)',
+                        border: '1px solid var(--color-red-200)',
+                        borderRadius: 8, fontSize: 15, lineHeight: 1.5, textAlign: 'center',
                     }}>
                         {error}
                     </div>
@@ -201,13 +191,12 @@ export default function LoginPage() {
                         style={{
                             width: '100%',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-                            padding: '16px 24px', fontSize: 17, fontWeight: 700,
-                            borderRadius: 16,
+                            padding: '14px 24px', fontSize: 18, fontWeight: 600,
+                            borderRadius: 8,
                             minHeight: 56,
-                            background: '#FEE500',
-                            color: '#191919',
-                            border: wantProvider === 'kakao' ? '2px solid #191919' : 'none',
-                            boxShadow: '0 2px 8px rgba(254,229,0,0.25)',
+                            background: 'var(--color-kakao)',
+                            color: 'var(--color-neutral-900)',
+                            border: wantProvider === 'kakao' ? '2px solid var(--color-neutral-900)' : 'none',
                             cursor: 'pointer',
                             transition: 'all 200ms',
                             opacity: isLoading !== null ? 0.5 : 1,
@@ -216,7 +205,7 @@ export default function LoginPage() {
                         {isLoading === 'kakao' ? (
                             <div style={{
                                 width: 20, height: 20, borderRadius: '50%',
-                                border: '2px solid #d1d5db', borderTopColor: '#191919',
+                                border: '2px solid var(--color-neutral-300)', borderTopColor: 'var(--color-neutral-900)',
                                 animation: 'spin 0.8s linear infinite',
                             }} />
                         ) : (
@@ -225,9 +214,9 @@ export default function LoginPage() {
                         카카오로 시작하기
                         {lastProvider === 'kakao' && (
                             <span style={{
-                                background: '#1f2937', color: '#fff',
-                                fontSize: 11, fontWeight: 700,
-                                padding: '4px 10px', borderRadius: 20,
+                                background: 'var(--color-neutral-900)', color: '#fff',
+                                fontSize: 13, fontWeight: 600,
+                                padding: '2px 6px', borderRadius: 4,
                                 marginLeft: 4, whiteSpace: 'nowrap',
                             }}>
                                 최근 사용
@@ -255,13 +244,12 @@ export default function LoginPage() {
                             style={{
                                 width: '100%',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-                                padding: '16px 24px', fontSize: 17, fontWeight: 600,
-                                borderRadius: 16,
+                                padding: '14px 24px', fontSize: 18, fontWeight: 600,
+                                borderRadius: 8,
                                 minHeight: 56,
                                 background: '#fff',
-                                color: '#1a1a2e',
-                                border: wantProvider === 'google' ? '2px solid #1a1a2e' : '1.5px solid #d1d5db',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                                color: 'var(--color-neutral-900)',
+                                border: wantProvider === 'google' ? '2px solid var(--color-neutral-900)' : '1px solid var(--color-neutral-200)',
                                 cursor: 'pointer',
                                 transition: 'all 200ms',
                                 opacity: isLoading !== null || isInAppBrowser ? 0.5 : 1,
@@ -270,7 +258,7 @@ export default function LoginPage() {
                             {isLoading === 'google' ? (
                                 <div style={{
                                     width: 20, height: 20, borderRadius: '50%',
-                                    border: '2px solid #d1d5db', borderTopColor: '#22c55e',
+                                    border: '2px solid var(--color-neutral-300)', borderTopColor: 'var(--color-primary-500)',
                                     animation: 'spin 0.8s linear infinite',
                                 }} />
                             ) : (
@@ -279,7 +267,7 @@ export default function LoginPage() {
                             Google로 시작하기
                             {lastProvider === 'google' && (
                                 <span style={{
-                                    background: '#1f2937', color: '#fff',
+                                    background: 'var(--color-neutral-900)', color: '#fff',
                                     fontSize: 11, fontWeight: 700,
                                     padding: '4px 10px', borderRadius: 20,
                                     marginLeft: 4, whiteSpace: 'nowrap',
@@ -290,7 +278,7 @@ export default function LoginPage() {
                         </button>
                         {isInAppBrowser && (
                             <div style={{
-                                fontSize: 14, color: '#b91c1c', textAlign: 'center',
+                                fontSize: 14, color: 'var(--color-red-700)', textAlign: 'center',
                                 marginTop: 4, fontWeight: 500,
                             }}>
                                 ⚠️ 카카오톡에서는 Google 로그인이 제한됩니다
@@ -302,10 +290,10 @@ export default function LoginPage() {
 
 
 
-                <p data-testid="login-notice" style={{ fontSize: 13, color: '#6b7280', textAlign: 'center', margin: '12px 0 0', lineHeight: 1.5 }}>
+                <p data-testid="login-notice" style={{ fontSize: 14, color: 'var(--color-neutral-500)', textAlign: 'center', margin: '12px 0 0', lineHeight: 1.5 }}>
                     시작하면 만 14세 이상이며{' '}
-                    <Link href="/terms" target="_blank" style={{ color: '#4b5563', textDecoration: 'underline' }}>이용약관</Link>과{' '}
-                    <Link href="/privacy" target="_blank" style={{ color: '#4b5563', textDecoration: 'underline' }}>개인정보처리방침</Link>에 동의한 것으로 봐요.
+                    <Link href="/terms" target="_blank" style={{ color: 'var(--color-neutral-600)', textDecoration: 'underline' }}>이용약관</Link>과{' '}
+                    <Link href="/privacy" target="_blank" style={{ color: 'var(--color-neutral-600)', textDecoration: 'underline' }}>개인정보처리방침</Link>에 동의한 것으로 봐요.
                 </p>
                 {/* Skip */}
                 {/* 먼저 둘러보기 = 카카오, 구글 아래 작은 글자 단추(누르는 칸 44px). 위계는 카카오 = 구글 > 둘러보기 (대표 0928).
@@ -315,7 +303,7 @@ export default function LoginPage() {
                     style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'center', width: 'fit-content',
                         minHeight: 44, padding: '0 14px', fontSize: 16, fontWeight: 600, margin: '10px auto 0',
-                        color: '#4b5563', textAlign: 'center', textDecoration: 'underline', textUnderlineOffset: 4,
+                        color: 'var(--color-neutral-600)', textAlign: 'center', textDecoration: 'underline', textUnderlineOffset: 4,
                     }}
                 >
                     먼저 둘러보기
@@ -328,11 +316,11 @@ export default function LoginPage() {
                 width: '100%', maxWidth: 400,
                 marginTop: 32,
                 padding: '24px 0 16px',
-                borderTop: '1px solid #e5e7eb',
+                borderTop: '1px solid var(--color-neutral-200)',
             }}>
                 {/* 사업자 정보 */}
                 <div style={{
-                    fontSize: 12, color: '#9ca3af', lineHeight: 1.9,
+                    fontSize: 12, color: 'var(--color-neutral-400)', lineHeight: 1.9,
                     letterSpacing: '-0.01em',
                 }}>
                     <div>미션드리븐 (대표 : 김진수) ㅣ curious@mission-driven.kr</div>
@@ -348,27 +336,27 @@ export default function LoginPage() {
                     display: 'flex', gap: 4, marginTop: 14,
                     fontSize: 12, flexWrap: 'wrap',
                 }}>
-                    <Link href="/privacy" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
+                    <Link href="/privacy" style={{ color: 'var(--color-neutral-500)', textDecoration: 'none', fontWeight: 600 }}>
                         개인정보처리방침
                     </Link>
-                    <span style={{ color: '#d1d5db' }}>ㅣ</span>
-                    <Link href="/terms" style={{ color: '#6b7280', textDecoration: 'none' }}>
+                    <span style={{ color: 'var(--color-neutral-300)' }}>ㅣ</span>
+                    <Link href="/terms" style={{ color: 'var(--color-neutral-500)', textDecoration: 'none' }}>
                         서비스이용약관
                     </Link>
-                    <span style={{ color: '#d1d5db' }}>ㅣ</span>
-                    <Link href="/refund" style={{ color: '#6b7280', textDecoration: 'none' }}>
+                    <span style={{ color: 'var(--color-neutral-300)' }}>ㅣ</span>
+                    <Link href="/refund" style={{ color: 'var(--color-neutral-500)', textDecoration: 'none' }}>
                         취소/환불정책
                     </Link>
-                    <span aria-hidden="true" style={{ color: '#d1d5db' }}>ㅣ</span>
-                    <Link href="/support" style={{ color: '#6b7280', textDecoration: 'none' }}>
+                    <span aria-hidden="true" style={{ color: 'var(--color-neutral-300)' }}>ㅣ</span>
+                    <Link href="/support" style={{ color: 'var(--color-neutral-500)', textDecoration: 'none' }}>
                         고객센터
                     </Link>
-                    <span aria-hidden="true" style={{ color: '#d1d5db' }}>ㅣ</span>
+                    <span aria-hidden="true" style={{ color: 'var(--color-neutral-300)' }}>ㅣ</span>
                     <Link
                         href="/en"
                         lang="en"
                         hrefLang="en"
-                        style={{ color: '#6b7280', textDecoration: 'none' }}
+                        style={{ color: 'var(--color-neutral-500)', textDecoration: 'none' }}
                     >
                         English
                     </Link>
@@ -376,7 +364,7 @@ export default function LoginPage() {
 
                 {/* 카피라이트 */}
                 <div style={{
-                    fontSize: 11, color: '#d1d5db', marginTop: 12,
+                    fontSize: 11, color: 'var(--color-neutral-300)', marginTop: 12,
                 }}>
                     Copyright © 미션드리븐 All rights reserved.
                 </div>

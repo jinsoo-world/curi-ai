@@ -14,7 +14,7 @@ export default function KeepNotice() {
                 margin: '10px 0 0',
                 fontSize: 15,
                 lineHeight: 1.6,
-                color: '#71717a',
+                color: 'var(--color-neutral-500)',
                 textAlign: 'center',
                 wordBreak: 'keep-all',
             }}

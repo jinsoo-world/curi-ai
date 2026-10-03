@@ -1,4 +1,4 @@
-// /home 모양 규칙 (대표 지시 0929): 탈잉 첫 화면 구성, 곳은 아이콘 알약 칸, 주소는 칩, 못 읽는다는 말 없음, 로고 글자는 브랜드 초록
+// /home 모양 규칙 (대표 지시 0929 구성 + 1003 큐리어스 본체 디자인 시스템): 탈잉 첫 화면 구성, 곳은 아이콘 알약 칸, 주소는 칩, 못 읽는다는 말 없음, 로고 글자는 브랜드 초록
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { HOME_LINK_LINES } from '../link-guide'
@@ -9,14 +9,15 @@ const css = readFileSync('src/app/home/home.css', 'utf8')
 const make = readFileSync('src/components/home/HomeMake.tsx', 'utf8')
 
 describe('/home look', () => {
-    it('taling-like tokens and layout', () => {
-        expect(css).toContain('--hm-gray: #F5F5F9')
-        expect(css).toContain('--hm-band: #EFEFF3')
-        expect(css).toMatch(/\.hm \.hm-tab\.on \{[^}]*background: var\(--hm-strong\)/)
+    it('curious design-system tokens (1003): neutral 회색, 고른 탭은 초록 테두리', () => {
+        expect(css).toContain('--hm-gray: var(--color-neutral-50)')
+        expect(css).toContain('--hm-band: var(--color-neutral-100)')
+        expect(css).toMatch(/\.hm \.hm-tab\.on \{[^}]*background: var\(--hm-p-50\)/)
+        expect(css).not.toMatch(/gradient/)
     })
     it('logo text stays in the curi brand green', () => {
         expect(css).toMatch(/\.hm-logo \{[^}]*color: var\(--hm-brand\)/)
-        expect(css).toContain('--hm-brand: var(--연두, #22c55e)')
+        expect(css).toContain('--hm-brand: var(--color-primary-500)')
     })
     it('feed box has no inner scroll', () => {
         expect(css).not.toMatch(/\.hm-feed-list \{[^}]*overflow-y/)

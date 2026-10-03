@@ -1,25 +1,26 @@
-/* /home 첫 화면. 탈잉(taling.me) 첫 화면 구성을 우리 코드로 따른다 (대표 지시 0929 01:07).
-   실측: 폭 1200px, 위 메뉴 PC 80px(좌우 32px), 회색 바탕 #F5F5F9 와 둥글기 12px, 구역 제목 24/36 굵기 600 (좁은 화면 22/33),
-   부제 15/22 #454648, 좁은 화면 구역 사이 8px 회색 띠 #EFEFF3, 고른 알약 칸은 진한 #1C1D1F 로 채움, 테두리 알약은 흰 바탕.
-   탈잉 로고, 그림, 이름, 문구는 쓰지 않는다. 강조색은 큐리 초록. 큐리AI 글자는 브랜드 초록(--연두). 색은 .hm 한 곳에만 적는다. */
+/* /home 첫 화면. 구성(구역 순서·글자 단추)은 탈잉 첫 화면을 따르고(대표 지시 0929 01:07),
+   모양은 큐리어스 본체 디자인 시스템으로 다시 입혔다(대표 지시 1003 「큐리어스 디자인 엠디 참고해서 다시 만들어」).
+   색 = globals.css 큐리어스 토큰만(--color-neutral-*, --color-primary-*). 흰 바탕 위 neutral-50/100 한 단계까지.
+   둥글기 = 단추·입력 8px(rounded-lg), 카드 16px(rounded-2xl), 배지 4px. 굵기 = 700/600/500 세 단계.
+   초록 채운 단추는 「내 AI 만들기」 하나만. 고른 상태(탭·추천 요금제)는 초록 테두리. */
 .hm {
-    --hm-strong: #1C1D1F;
-    --hm-normal: #232426;
-    --hm-high: #454648;
-    --hm-mid: #6E6F73;
-    --hm-low: #9A9BA0;
-    --hm-gray: #F5F5F9;
-    --hm-band: #EFEFF3;
-    --hm-line: #E6E6EB;
-    --hm-p: #03C124;
-    --hm-p-600: #03B021;
-    --hm-p-700: #02891A;
-    --hm-p-50: #E6F9E9;
-    --hm-brand: var(--연두, #22c55e);
-    --hm-warn: #BB4D00;
-    --hm-warn-bg: #FFF6E5;
-    --hm-r: 12px;
-    --hm-shadow: 0 8px 24px rgba(28, 29, 31, 0.08);
+    --hm-strong: var(--color-neutral-900);
+    --hm-normal: var(--color-neutral-800);
+    --hm-high: var(--color-neutral-600);
+    --hm-mid: var(--color-neutral-500);
+    --hm-low: var(--color-neutral-400);
+    --hm-gray: var(--color-neutral-50);
+    --hm-band: var(--color-neutral-100);
+    --hm-line: var(--color-neutral-200);
+    --hm-p: var(--color-primary-500);
+    --hm-p-600: var(--color-primary-600);
+    --hm-p-700: var(--color-primary-700);
+    --hm-p-50: var(--color-primary-50);
+    --hm-brand: var(--color-primary-500);
+    --hm-warn: var(--color-red-500);
+    --hm-r: 8px;      /* 단추·입력 (rounded-lg) */
+    --hm-card: 16px;  /* 카드 (rounded-2xl) */
+    --hm-shadow: 0 16px 48px rgba(0, 0, 0, 0.06);
     min-height: 100dvh;
     background: #fff;
     color: var(--hm-strong);
@@ -33,83 +34,84 @@
 .hm button { min-height: 0; font-family: inherit; }
 
 /* 위 메뉴 */
-.hm-top { position: sticky; top: 0; z-index: 30; background: #fff; }
-.hm-top-in { max-width: 1264px; height: 56px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.hm-logo { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 20px; letter-spacing: -0.04em; color: var(--hm-brand); text-decoration: none; flex-shrink: 0; }
+.hm-top { position: sticky; top: 0; z-index: 30; background: #fff; border-bottom: 1px solid var(--hm-line); }
+.hm-top-in { max-width: 1264px; height: 52px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.hm-logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 20px; letter-spacing: -0.04em; color: var(--hm-brand); text-decoration: none; flex-shrink: 0; }
 .hm-logo img { width: 30px; height: 30px; }
 .hm-nav { display: flex; align-items: center; gap: 14px; }
-.hm-nav > a { font-size: 14px; line-height: 20px; font-weight: 500; color: var(--hm-normal); text-decoration: none; white-space: nowrap; }
+.hm-nav > a { font-size: 15px; line-height: 22px; font-weight: 500; color: var(--hm-normal); text-decoration: none; white-space: nowrap; }
 .hm-nav > a:hover { color: var(--hm-p-700); }
 .hm-more { position: relative; }
-.hm .hm-more > button { height: 32px; padding: 0 12px; border: 0; border-radius: 6px; background: var(--hm-p); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-.hm .hm-more > button:hover { background: var(--hm-p-600); }
-.hm-more-menu { position: absolute; right: 0; top: calc(100% + 8px); min-width: 168px; background: #fff; border: 1px solid var(--hm-line); border-radius: var(--hm-r); box-shadow: var(--hm-shadow); padding: 6px; display: flex; flex-direction: column; }
-.hm-more-menu a { padding: 12px 14px; border-radius: 8px; font-size: 16px; line-height: 24px; font-weight: 600; color: var(--hm-normal); text-decoration: none; }
-.hm-more-menu a:hover { background: var(--hm-gray); }
+.hm .hm-more > button { height: 40px; padding: 0 12px; border: 1px solid var(--hm-line); border-radius: var(--hm-r); background: #fff; color: var(--color-neutral-700); font-size: 15px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background-color .2s; }
+.hm .hm-more > button:hover { background: var(--color-neutral-100); }
+.hm-more-menu { position: absolute; right: 0; top: calc(100% + 8px); min-width: 184px; background: #fff; border: 1px solid var(--hm-line); border-radius: 12px; box-shadow: var(--hm-shadow); padding: 6px; display: flex; flex-direction: column; }
+.hm-more-menu a { padding: 12px 14px; border-radius: var(--hm-r); font-size: 16px; line-height: 24px; font-weight: 500; color: var(--hm-normal); text-decoration: none; }
+.hm-more-menu a:hover { background: var(--color-neutral-100); }
 
 .hm-main { max-width: 1240px; margin: 0 auto; padding: 0 20px 40px; }
 
 /* 맨 위 만들기 */
-.hm-make { padding-top: 20px; scroll-margin-top: 64px; }
-.hm-title { font-size: 24px; line-height: 34px; font-weight: 700; letter-spacing: -0.02em; color: var(--hm-strong); margin: 0 0 6px; }
-.hm-sub { font-size: 15px; line-height: 22px; color: var(--hm-high); margin: 0 0 20px; }
+.hm-make { padding-top: 32px; scroll-margin-top: 64px; }
+.hm-title { font-size: 28px; line-height: 38px; font-weight: 700; letter-spacing: -0.0236em; color: var(--hm-strong); margin: 0 0 8px; }
+.hm-sub { font-size: 16px; line-height: 24px; font-weight: 500; color: var(--hm-mid); margin: 0 0 24px; }
 .hm-tabs { display: flex; gap: 8px; overflow-x: auto; margin: 0 -20px 12px; padding: 2px 20px; scrollbar-width: none; }
 .hm-tabs::-webkit-scrollbar { display: none; }
 .hm-tabs.small { margin-top: 10px; }
-.hm .hm-tab { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px 0 10px; border: 0; border-radius: 9999px; background: #fff; box-shadow: inset 0 0 0 1px var(--hm-line); color: var(--hm-normal); font-size: 15px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background-color .15s, color .15s; }
-.hm .hm-tab:hover { background: var(--hm-gray); }
-.hm .hm-tab.on { background: var(--hm-strong); color: #fff; box-shadow: none; }
+.hm .hm-tab { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 14px 0 10px; border: 0; border-radius: 9999px; background: #fff; box-shadow: inset 0 0 0 1px var(--hm-line); color: var(--color-neutral-700); font-size: 15px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background-color .15s, color .15s; }
+.hm .hm-tab:hover { background: var(--color-neutral-100); }
+.hm .hm-tab.on { background: var(--hm-p-50); color: var(--hm-p-700); box-shadow: inset 0 0 0 1px var(--hm-p); font-weight: 600; }
 .hm .hm-tab svg { flex-shrink: 0; }
 .hm-inputrow { display: flex; flex-direction: column; gap: 8px; }
-.hm-field { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 56px; padding: 8px 12px; background: var(--hm-gray); border-radius: var(--hm-r); cursor: text; transition: box-shadow .15s, background-color .15s; }
-.hm-field:focus-within { background: #fff; box-shadow: inset 0 0 0 2px var(--hm-strong); }
+.hm-field { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 56px; padding: 7px 12px; background: #fff; border: 1px solid var(--hm-line); border-radius: var(--hm-r); cursor: text; transition: border-color .15s; }
+.hm-field:focus-within { border-color: var(--hm-p); box-shadow: 0 0 0 1px var(--hm-p); }   /* 테두리 1px + 링 1px = 2px */
 .hm-field-ico { display: flex; color: var(--hm-low); margin-left: 2px; }
-.hm-input { flex: 1; min-width: 150px; height: 40px; border: 0; background: transparent; outline: none; padding: 0 4px; font: inherit; font-size: 16px; color: var(--hm-strong); }
+.hm-input { flex: 1; min-width: 150px; height: 40px; border: 0; background: transparent; outline: none; padding: 0 4px; font: inherit; font-size: 16px; font-weight: 500; color: var(--hm-strong); }
 .hm-input::placeholder, .hm-text::placeholder { color: var(--hm-low); }
-.hm-pill { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 36px; padding: 0 4px 0 8px; background: #fff; border-radius: 9999px; box-shadow: inset 0 0 0 1px var(--hm-line); font-size: 14px; font-weight: 600; color: var(--hm-normal); }
+.hm-pill { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 36px; padding: 0 4px 0 8px; background: var(--color-neutral-100); border-radius: var(--hm-r); font-size: 14px; font-weight: 500; color: var(--hm-normal); }
 .hm-pill svg { flex-shrink: 0; }
 .hm-pill-t { min-width: 0; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hm .hm-pill-x { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; flex-shrink: 0; border: 0; border-radius: 50%; background: transparent; color: var(--hm-mid); cursor: pointer; }
-.hm .hm-pill-x:hover { background: var(--hm-gray); color: var(--hm-strong); }
-.hm .hm-btn { display: inline-flex; align-items: center; justify-content: center; height: 56px; padding: 0 24px; border: 0; border-radius: var(--hm-r); background: var(--hm-p); color: #fff; font-size: 17px; font-weight: 700; cursor: pointer; white-space: nowrap; text-decoration: none; transition: background-color .15s; }
+.hm .hm-pill-x:hover { background: var(--color-neutral-200); color: var(--hm-strong); }
+.hm .hm-btn { display: inline-flex; align-items: center; justify-content: center; height: 56px; padding: 0 24px; border: 0; border-radius: var(--hm-r); background: var(--hm-p); color: #fff; font-size: 18px; font-weight: 600; cursor: pointer; white-space: nowrap; text-decoration: none; transition: background-color .15s; }
 .hm .hm-btn:hover { background: var(--hm-p-600); }
-.hm .hm-btn:disabled { background: var(--hm-band); color: var(--hm-low); cursor: not-allowed; }
+.hm .hm-btn:active { background: var(--hm-p-700); }
+.hm .hm-btn:disabled { background: var(--color-neutral-200); color: var(--hm-low); font-weight: 500; cursor: not-allowed; }
 .hm .hm-btn.wide { width: 100%; }
 .hm-guide { font-size: 15px; line-height: 22px; color: var(--hm-p-700); font-weight: 600; margin: 10px 0 0; display: block; }
 .hm-guide.bad { color: var(--hm-warn); }
-.hm-safe { font-size: 13px; line-height: 18px; color: var(--hm-mid); margin: 12px 0 0; }
-.hm .hm-direct { margin-top: 8px; background: none; border: 0; padding: 4px 0; font-size: 15px; line-height: 22px; font-weight: 600; color: var(--hm-p-700); text-decoration: underline; text-underline-offset: 4px; cursor: pointer; text-align: left; }
+.hm-safe { font-size: 14px; line-height: 20px; color: var(--hm-mid); margin: 12px 0 0; }
+.hm .hm-direct { margin-top: 8px; background: none; border: 0; padding: 4px 0; font-size: 15px; line-height: 22px; font-weight: 600; color: var(--hm-p-700); min-height: 44px; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; text-align: left; }
 .hm-panel { margin-top: 16px; border-top: 1px solid var(--hm-line); padding-top: 20px; display: flex; flex-direction: column; gap: 16px; max-width: 760px; }
 .hm-block { display: flex; flex-direction: column; gap: 8px; }
-.hm-label { font-size: 15px; line-height: 22px; font-weight: 700; color: var(--hm-strong); display: block; }
-.hm-input.small { width: 100%; height: 48px; margin-top: 8px; padding: 0 14px; background: var(--hm-gray); border-radius: var(--hm-r); }
-.hm-input.small:focus, .hm-text:focus { background: #fff; box-shadow: inset 0 0 0 2px var(--hm-strong); }
-.hm-text { width: 100%; font: inherit; font-size: 16px; line-height: 1.6; color: var(--hm-strong); padding: 12px 14px; border: 0; border-radius: var(--hm-r); background: var(--hm-gray); resize: vertical; margin-top: 8px; outline: none; }
+.hm-label { font-size: 15px; line-height: 22px; font-weight: 600; color: var(--hm-strong); display: block; }
+.hm-input.small { width: 100%; height: 52px; margin-top: 8px; padding: 0 16px; background: #fff; border: 1px solid var(--hm-line); border-radius: var(--hm-r); }
+.hm-input.small:focus, .hm-text:focus { border-color: var(--hm-p); box-shadow: 0 0 0 1px var(--hm-p); }
+.hm-text { width: 100%; font: inherit; font-size: 16px; font-weight: 500; line-height: 1.6; color: var(--hm-strong); padding: 12px 16px; border: 1px solid var(--hm-line); border-radius: var(--hm-r); background: #fff; resize: vertical; margin-top: 8px; outline: none; }
 .hm-hint { font-size: 14px; line-height: 20px; color: var(--hm-mid); }
 .hm-hint.center { text-align: center; margin: 0; }
 .hm-consent { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; line-height: 22px; color: var(--hm-high); cursor: pointer; }
 .hm-consent input { width: 20px; height: 20px; margin: 1px 0 0; flex-shrink: 0; accent-color: var(--hm-p); }
-.hm .hm-btn:focus-visible, .hm .hm-tab:focus-visible, .hm-job:focus-visible, .hm .hm-sticky-btn:focus-visible, .hm-faq summary:focus-visible, .hm-more-link:focus-visible, .hm .hm-pill-x:focus-visible { outline: 3px solid #56D56C; outline-offset: 2px; }
+.hm .hm-btn:focus-visible, .hm .hm-tab:focus-visible, .hm-job:focus-visible, .hm .hm-sticky-btn:focus-visible, .hm-faq summary:focus-visible, .hm-more-link:focus-visible, .hm .hm-pill-x:focus-visible { outline: 3px solid var(--color-primary-300); outline-offset: 2px; }
 
 /* 구역: 좁은 화면은 구역 사이 8px 회색 띠 (탈잉과 같은 리듬) */
 .hm-sec { scroll-margin-top: 64px; }
-.hm-sec::before { content: ''; display: block; height: 8px; background: var(--hm-band); margin: 32px calc(50% - 50vw); }
+.hm-sec::before { content: ''; display: block; height: 8px; background: var(--hm-band); margin: 40px calc(50% - 50vw); }
 .hm-sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-.hm-sec-head h2 { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 22px; line-height: 33px; font-weight: 600; letter-spacing: -0.02em; color: var(--hm-strong); margin: 0; }
-.hm-sec-sub { font-size: 15px; line-height: 22px; color: var(--hm-high); margin: 2px 0 0; }
-.hm-sec-head + .hm-sec-sub { margin-top: -10px; }
-.hm-more-link { flex-shrink: 0; display: inline-flex; align-items: center; gap: 2px; font-size: 14px; line-height: 20px; font-weight: 500; color: var(--hm-normal); text-decoration: none; white-space: nowrap; }
+.hm-sec-head h2 { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 20px; line-height: 28px; font-weight: 700; letter-spacing: -0.012em; color: var(--hm-strong); margin: 0; }
+.hm-sec-sub { font-size: 16px; line-height: 24px; font-weight: 500; color: var(--hm-mid); margin: 4px 0 0; }
+.hm-sec-head + .hm-sec-sub { margin-top: -12px; }
+.hm-more-link { flex-shrink: 0; display: inline-flex; align-items: center; gap: 2px; min-height: 44px; font-size: 15px; line-height: 22px; font-weight: 500; color: var(--hm-mid); text-decoration: none; white-space: nowrap; }
 .hm-more-link:hover { color: var(--hm-p-700); }
 
 /* 지금 만들어지는 AI: 큰 숫자 카드 + 활동 줄 카드 (스크롤 없음) */
-.hm-stats { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 20px 16px; border: 1px solid var(--hm-line); border-radius: var(--hm-r); text-align: center; margin-bottom: 12px; }
+.hm-stats { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 20px 16px; border: 1px solid var(--hm-line); border-radius: var(--hm-card); background: var(--hm-gray); text-align: center; margin-bottom: 12px; }
 .hm-stats-lead { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; line-height: 20px; color: var(--hm-high); }
 .hm-stats-nums { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 28px; }
 .hm-stat { display: flex; align-items: baseline; gap: 8px; }
-.hm-stat-l { font-size: 15px; color: var(--hm-high); }
+.hm-stat-l { font-size: 15px; color: var(--hm-mid); }
 .hm-stat strong { font-size: 30px; line-height: 40px; font-weight: 700; letter-spacing: -0.02em; color: var(--hm-p); font-variant-numeric: tabular-nums; }
 .hm-feed-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: 8px; }
-.hm-feed-list li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--hm-line); border-radius: 10px; background: #fff; }
+.hm-feed-list li { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--hm-line); border-radius: 12px; background: #fff; }
 .hm-feed-ico { width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; background: var(--hm-p-50); display: flex; align-items: center; justify-content: center; }
 .hm-feed-ico img { border-radius: 6px; }
 .hm-feed-txt { min-width: 0; display: flex; flex-direction: column; font-size: 15px; line-height: 22px; font-weight: 500; color: var(--hm-normal); }
@@ -117,40 +119,40 @@
 
 /* 이렇게 만들어져요 */
 .hm-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.hm-steps li { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: center; padding: 16px; border: 1px solid var(--hm-line); border-radius: var(--hm-r); }
-.hm-step-n { grid-row: 1 / span 2; display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 24px; padding: 0 8px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--hm-strong); font-size: 13px; font-weight: 600; color: var(--hm-strong); }
-.hm-steps strong { font-size: 16px; line-height: 24px; font-weight: 600; color: var(--hm-strong); }
-.hm-steps li > span:last-child { font-size: 14px; line-height: 20px; color: var(--hm-mid); }
+.hm-steps li { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: center; padding: 16px; border: 1px solid var(--hm-line); border-radius: var(--hm-card); }
+.hm-step-n { grid-row: 1 / span 2; display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 24px; padding: 0 8px; border-radius: 4px; background: var(--hm-p-50); font-size: 13px; font-weight: 600; color: var(--hm-p-700); }
+.hm-steps strong { font-size: 17px; line-height: 24px; font-weight: 600; color: var(--hm-strong); }
+.hm-steps li > span:last-child { font-size: 15px; line-height: 22px; color: var(--hm-mid); }
 
 /* 무엇을 맡길 수 있나요: 카드 격자 */
 .hm-jobs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 8px; }
-.hm-job { text-align: left; display: flex; flex-direction: column; gap: 4px; padding: 16px 14px; border: 1px solid var(--hm-line); border-radius: var(--hm-r); background: #fff; cursor: pointer; font: inherit; color: inherit; transition: border-color .15s, box-shadow .15s; }
-.hm-job:hover { border-color: var(--hm-strong); }
-.hm-job strong { font-size: 15px; line-height: 22px; font-weight: 600; color: var(--hm-strong); }
-.hm-job span { font-size: 14px; line-height: 20px; color: var(--hm-mid); }
+.hm-job { text-align: left; display: flex; flex-direction: column; gap: 4px; padding: 16px; border: 1px solid var(--hm-line); border-radius: var(--hm-card); background: #fff; cursor: pointer; font: inherit; color: inherit; transition: border-color .15s, box-shadow .15s; }
+.hm-job:hover { border-color: var(--hm-low); }
+.hm-job strong { font-size: 17px; line-height: 24px; font-weight: 600; color: var(--hm-strong); }
+.hm-job span { font-size: 15px; line-height: 22px; color: var(--hm-mid); }
 
 /* 안심하세요 */
-.hm-faq { display: flex; flex-direction: column; border-top: 1px solid var(--hm-strong); }
+.hm-faq { display: flex; flex-direction: column; border-top: 1px solid var(--hm-line); }
 .hm-faq details { border-bottom: 1px solid var(--hm-line); }
-.hm-faq summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 2px; font-size: 16px; line-height: 24px; font-weight: 600; color: var(--hm-strong); cursor: pointer; }
+.hm-faq summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 2px; font-size: 17px; line-height: 24px; font-weight: 600; color: var(--hm-strong); cursor: pointer; }
 .hm-faq summary::-webkit-details-marker { display: none; }
 .hm-faq summary::after { content: ''; width: 9px; height: 9px; flex-shrink: 0; margin-right: 6px; border-right: 1.6px solid var(--hm-mid); border-bottom: 1.6px solid var(--hm-mid); transform: translateY(-3px) rotate(45deg); transition: transform .2s; }
 .hm-faq details[open] summary::after { transform: translateY(2px) rotate(-135deg); }
-.hm-faq p { font-size: 15px; line-height: 1.6; color: var(--hm-high); margin: -4px 2px 0; padding-bottom: 16px; }
+.hm-faq p { font-size: 16px; line-height: 1.6; color: var(--hm-high); margin: -4px 2px 0; padding-bottom: 16px; }
 
 /* 가격 */
 .hm-plans { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 16px; }
-.hm-plan { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 12px; padding: 16px; border: 1px solid var(--hm-line); border-radius: var(--hm-r); }
-.hm-plan.rec { border-color: var(--hm-strong); box-shadow: inset 0 0 0 1px var(--hm-strong); }
-.hm-plan strong { font-size: 16px; line-height: 24px; font-weight: 600; color: var(--hm-strong); }
+.hm-plan { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 12px; padding: 16px; border: 1px solid var(--hm-line); border-radius: var(--hm-card); }
+.hm-plan.rec { border-color: var(--hm-p); box-shadow: inset 0 0 0 1px var(--hm-p); }
+.hm-plan strong { font-size: 17px; line-height: 24px; font-weight: 600; color: var(--hm-strong); }
 .hm-plan-price { grid-row: 1 / span 2; grid-column: 2; font-size: 18px; line-height: 26px; font-weight: 700; color: var(--hm-strong); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.hm-plan.rec .hm-plan-price { color: var(--hm-p-700); }
-.hm-plan-perk { font-size: 14px; line-height: 20px; color: var(--hm-mid); }
+.hm-plan.rec .hm-plan-price { color: var(--hm-p); }
+.hm-plan-perk { font-size: 15px; line-height: 22px; color: var(--hm-mid); }
 
 /* 아래 고정 단추: 오른쪽 아래 작은 둥근 단추 (좁은 화면은 아래 메뉴 띠 위) */
 .hm-sticky { position: fixed; right: 16px; bottom: calc(57px + 16px + env(safe-area-inset-bottom, 0px)); z-index: 50; }
-.hm .hm-sticky-btn { height: 48px; padding: 0 20px; border: 0; border-radius: 9999px; background: var(--hm-strong); color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 16px rgba(28, 29, 31, 0.24); }
-.hm .hm-sticky-btn:hover { background: #000; }
+.hm .hm-sticky-btn { height: 48px; padding: 0 20px; border: 0; border-radius: 9999px; background: var(--hm-strong); color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16); }
+.hm .hm-sticky-btn:hover { background: var(--color-neutral-600); }
 
 @media (min-width: 640px) {
     .hm-inputrow { flex-direction: row; align-items: stretch; }
@@ -173,20 +175,22 @@
     .hm .hm-sticky-btn { height: 52px; padding: 0 24px; font-size: 17px; }
 }
 @media (min-width: 1024px) {
-    .hm-top-in { height: 80px; }
+    .hm-top-in { height: 64px; }
     .hm-logo { font-size: 22px; }
     .hm-logo img { width: 32px; height: 32px; }
     .hm-nav { gap: 20px; }
-    .hm-make { padding-top: 48px; }
-    .hm-title { font-size: 32px; line-height: 44px; margin-bottom: 8px; }
-    .hm-sub { font-size: 16px; line-height: 24px; margin-bottom: 24px; }
+    .hm-make { padding-top: 56px; }
+    .hm-title { font-size: 40px; line-height: 52px; letter-spacing: -0.0282em; margin-bottom: 12px; }
+    .hm-sub { font-size: 18px; line-height: 26px; margin-bottom: 28px; }
     .hm .hm-tab { height: 44px; padding: 0 18px 0 12px; font-size: 16px; }
-    .hm-field { min-height: 60px; padding: 10px 16px; }
-    .hm .hm-btn:not(.wide) { min-height: 60px; padding: 0 32px; font-size: 18px; }
+    .hm-field { min-height: 64px; padding: 11px 16px; }
+    .hm-input { font-size: 18px; }
+    .hm .hm-btn:not(.wide) { min-height: 64px; padding: 0 32px; font-size: 20px; }
     .hm-sec::before { margin: 64px calc(50% - 50vw); }
     .hm-sec + .hm-sec::before { height: 0; margin: 64px 0 0; }
     .hm-sec-head { margin-bottom: 20px; }
-    .hm-sec-head h2 { font-size: 24px; line-height: 36px; }
+    .hm-sec-head h2 { font-size: 24px; line-height: 32px; letter-spacing: -0.023em; }
+    .hm-sec-sub { font-size: 18px; line-height: 26px; }
     .hm-sec-head + .hm-sec-sub { margin-top: -14px; }
     .hm-stats { padding: 24px; }
     .hm-stat strong { font-size: 36px; line-height: 48px; }

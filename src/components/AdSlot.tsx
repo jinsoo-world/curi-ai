@@ -74,7 +74,7 @@ function AdSlotInner({ slot, className }: AdSlotProps) {
             <div
                 style={{
                     fontSize: 11,
-                    color: '#a1a1aa',
+                    color: 'var(--color-neutral-400)',
                     marginBottom: 4,
                     textAlign: 'left',
                     display: 광고가채워짐 ? 'block' : 'none',

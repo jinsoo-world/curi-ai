@@ -73,7 +73,7 @@ export default function LoginNudge({ guest, next = '/os' }: { guest: boolean; ne
                         ? '로그인하면 대화 한도가 2배로 늘고, 내 봇 팀과 나눈 대화가 그대로 남아요.'
                         : '카카오나 구글로 3초면 끝나요. 내 봇 팀과 나눈 대화도 그대로 남아요.'}
                 </p>
-                <a href={href} className="os-cta" style={{ width: '100%', justifyContent: 'center', textDecoration: 'none', background: '#03C124', color: '#fff' }}>
+                <a href={href} className="os-cta" style={{ width: '100%', justifyContent: 'center', textDecoration: 'none', background: 'var(--color-primary-500)', color: '#fff' }}>
                     로그인하고 2배로 받기
                 </a>
                 <button type="button" onClick={() => setOpen(null)}

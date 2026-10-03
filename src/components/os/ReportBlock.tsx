@@ -48,7 +48,7 @@ export function SafetyToast({ text, onDone }: { text: string | null; onDone: () 
         <div role="status" aria-live="polite" data-theme="os"
             style={{
                 position: 'fixed', left: '50%', bottom: 'calc(24px + env(safe-area-inset-bottom))', transform: 'translateX(-50%)', zIndex: 1000,
-                background: 'var(--os-글, #111)', color: 'var(--os-바탕, #fff)', padding: '12px 18px', borderRadius: 12, fontSize: 15,
+                background: 'var(--os-글, var(--color-neutral-900))', color: 'var(--os-바탕, #fff)', padding: '12px 18px', borderRadius: 12, fontSize: 15,
                 maxWidth: 'calc(100vw - 32px)', boxShadow: '0 6px 20px rgba(0,0,0,.2)',
             }}>
             {text}

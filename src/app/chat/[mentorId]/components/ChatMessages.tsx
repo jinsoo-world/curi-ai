@@ -208,7 +208,7 @@ function TTSButton({ message, mentorName, autoPlay, systemPrompt, voiceId }: { m
             {(status === 'playing' || status === 'loading') && (
                 <div style={{
                     width: 28, height: 3, borderRadius: 2,
-                    background: '#e2e8f0', overflow: 'hidden',
+                    background: 'var(--color-neutral-200)', overflow: 'hidden',
                 }}>
                     <div style={{
                         width: `${status === 'loading' ? 30 : progress}%`,
@@ -378,18 +378,18 @@ function MarkdownContent({ content }: { content: string }) {
                         const isInline = !className
                         return isInline ? (
                             <code style={{
-                                background: '#f1f5f9',
+                                background: 'var(--color-neutral-100)',
                                 padding: '2px 6px',
                                 borderRadius: 5,
                                 fontSize: '0.88em',
                                 fontFamily: "'SF Mono', 'Fira Code', monospace",
-                                color: '#334155',
+                                color: 'var(--color-neutral-700)',
                             }}>{children}</code>
                         ) : (
                             <code style={{
                                 display: 'block',
-                                background: '#f8fafc',
-                                border: '1px solid #e2e8f0',
+                                background: 'var(--color-neutral-50)',
+                                border: '1px solid var(--color-neutral-200)',
                                 padding: 14,
                                 borderRadius: 10,
                                 fontSize: '0.85em',
@@ -401,10 +401,10 @@ function MarkdownContent({ content }: { content: string }) {
                     },
                     blockquote: ({ children }) => (
                         <blockquote style={{
-                            borderLeft: '3px solid #22c55e',
+                            borderLeft: '3px solid var(--color-primary-500)',
                             paddingLeft: 14,
                             margin: '10px 0',
-                            color: '#64748b',
+                            color: 'var(--color-neutral-500)',
                         }}>{children}</blockquote>
                     ),
                     a: ({ href, children }) => (
@@ -413,7 +413,7 @@ function MarkdownContent({ content }: { content: string }) {
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
-                                color: '#3b82f6',
+                                color: 'var(--color-blue-500)',
                                 textDecoration: 'underline',
                                 textUnderlineOffset: '3px',
                                 fontWeight: 500,
@@ -443,7 +443,7 @@ function TypingIndicator() {
             {[0, 1, 2].map(i => (
                 <span key={i} style={{
                     width: 7, height: 7, borderRadius: '50%',
-                    background: '#94a3b8',
+                    background: 'var(--color-neutral-400)',
                     animation: `geminiDot 1.4s ease-in-out ${i * 0.2}s infinite`,
                 }} />
             ))}
@@ -522,7 +522,7 @@ export default function ChatMessages({
                             animation: 'msgFadeIn 0.5s ease-out',
                         }}>
                             <div style={{
-                                background: 'linear-gradient(135deg, #eff6ff, #f0f9ff)',
+                                background: 'var(--color-blue-50)',
                                 border: '1px solid #bfdbfe',
                                 borderRadius: 16,
                                 padding: '14px 20px',
@@ -533,11 +533,11 @@ export default function ChatMessages({
                                 <div style={{ fontSize: 14, fontWeight: 600, color: '#1e40af', marginBottom: 4 }}>
                                     대화가 꽤 쌓였네요!
                                 </div>
-                                <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>
+                                <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', lineHeight: 1.6 }}>
                                     지금까지 나눈 핵심 내용을 정리한<br />
-                                    <strong style={{ color: '#3b82f6' }}>전자책 원고</strong>를 받아보세요
+                                    <strong style={{ color: 'var(--color-blue-500)' }}>전자책 원고</strong>를 받아보세요
                                 </div>
-                                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
+                                <div style={{ fontSize: 11, color: 'var(--color-neutral-400)', marginTop: 6 }}>
                                     상단의 <strong>{exportLabel || '전자책 원고 보기'}</strong> 버튼을 눌러보세요 ↗
                                 </div>
                             </div>
@@ -564,8 +564,8 @@ export default function ChatMessages({
                                     display: 'inline-flex', alignItems: 'center', gap: 6,
                                     padding: '6px 16px',
                                     borderRadius: 20,
-                                    background: '#f1f5f9',
-                                    color: '#64748b',
+                                    background: 'var(--color-neutral-100)',
+                                    color: 'var(--color-neutral-500)',
                                     fontSize: 13,
                                     fontWeight: 500,
                                 }}>
@@ -628,7 +628,7 @@ export default function ChatMessages({
                                     <div style={{
                                         fontSize: 'clamp(13px, 1.1vw, 14px)',
                                         fontWeight: 600,
-                                        color: '#71717A',
+                                        color: 'var(--color-neutral-500)',
                                         marginBottom: 4,
                                         letterSpacing: '-0.01em',
                                     }}>
@@ -649,7 +649,7 @@ export default function ChatMessages({
                                             overflow: 'hidden',
                                             maxWidth: 260,
                                             marginLeft: isUser ? 'auto' : 0,
-                                            border: '1px solid #e2e8f0',
+                                            border: '1px solid var(--color-neutral-200)',
                                         }}
                                     >
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -674,7 +674,7 @@ export default function ChatMessages({
                                         boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                                     } : {
                                         padding: '4px 0',
-                                        color: '#1e293b',
+                                        color: 'var(--color-neutral-900)',
                                         fontSize: 'clamp(17px, 1.5vw, 19px)',
                                         lineHeight: 1.8,
                                         wordBreak: 'break-word' as const,
@@ -706,7 +706,7 @@ export default function ChatMessages({
                                             <div style={{
                                                 marginTop: 16,
                                                 padding: '28px 24px',
-                                                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                                                background: 'var(--color-neutral-900)',
                                                 border: '1px solid rgba(34,197,94,0.3)',
                                                 borderRadius: 20,
                                                 textAlign: 'center',
@@ -733,7 +733,7 @@ export default function ChatMessages({
                                                     가입하면 더 깊은 대화가 시작돼요
                                                 </div>
                                                 <div style={{
-                                                    fontSize: 13, color: '#94a3b8', marginBottom: 20,
+                                                    fontSize: 13, color: 'var(--color-neutral-400)', marginBottom: 20,
                                                     lineHeight: 1.7,
                                                 }}>
                                                     카카오 / Google 계정으로 3초 가입
@@ -753,9 +753,9 @@ export default function ChatMessages({
                                                     ].map((item, i) => (
                                                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                                             <span style={{ fontSize: 18 }}>{item.icon}</span>
-                                                            <span style={{ fontSize: 14, color: '#e2e8f0' }}>
+                                                            <span style={{ fontSize: 14, color: 'var(--color-neutral-200)' }}>
                                                                 {item.text.split(item.highlight).map((part, j) =>
-                                                                    j === 0 ? <span key={j}>{part}<strong style={{ color: '#4ade80' }}>{item.highlight}</strong></span> : <span key={j}>{part}</span>
+                                                                    j === 0 ? <span key={j}>{part}<strong style={{ color: 'var(--color-primary-500)' }}>{item.highlight}</strong></span> : <span key={j}>{part}</span>
                                                                 )}
                                                             </span>
                                                         </div>
@@ -769,7 +769,7 @@ export default function ChatMessages({
                                                         alignItems: 'center',
                                                         gap: 10,
                                                         padding: '14px 36px',
-                                                        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                                                        background: 'var(--color-primary-500)',
                                                         color: '#fff',
                                                         borderRadius: 14,
                                                         fontSize: 16,
@@ -790,7 +790,7 @@ export default function ChatMessages({
                                                 >
                                                     🚀 무료 회원가입하기
                                                 </a>
-                                                <div style={{ fontSize: 11, color: '#64748b', marginTop: 12 }}>
+                                                <div style={{ fontSize: 11, color: 'var(--color-neutral-500)', marginTop: 12 }}>
                                                     ✓ 30초 가입 ✓ 카드 등록 불필요 ✓ 언제든 탈퇴 가능
                                                 </div>
                                             </div>
@@ -804,7 +804,7 @@ export default function ChatMessages({
                                 {timeStr && (msg.content || msg.imageUrl) && (
                                     <div style={{
                                         fontSize: 11,
-                                        color: '#b0b8c1',
+                                        color: 'var(--color-neutral-400)',
                                         marginTop: 4,
                                         textAlign: isUser ? 'right' : 'left',
                                         display: 'flex',
@@ -813,7 +813,7 @@ export default function ChatMessages({
                                         justifyContent: isUser ? 'flex-end' : 'flex-start',
                                     }}>
                                         {isVoiceCall && (
-                                            <span style={{ color: '#22c55e', fontWeight: 500 }}>📞 음성통화</span>
+                                            <span style={{ color: 'var(--color-primary-500)', fontWeight: 500 }}>📞 음성통화</span>
                                         )}
                                         {timeStr}
                                     </div>

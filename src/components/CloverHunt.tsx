@@ -384,7 +384,7 @@ export default function CloverHunt() {
                                 top: '100%', left: '50%',
                                 transform: 'translateX(-50%)',
                                 marginTop: 4,
-                                fontSize: 12, color: '#9ca3af',
+                                fontSize: 12, color: 'var(--color-neutral-400)',
                                 whiteSpace: 'nowrap', fontWeight: 600,
                                 animation: 'cloverEarnFloat 1s ease-out forwards',
                             }}>
@@ -400,10 +400,10 @@ export default function CloverHunt() {
                             transform: 'translateX(-50%)',
                             zIndex: 9999,
                             background: isGolden
-                                ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                                ? 'var(--color-amber-500)'
                                 : isAllClear
-                                    ? 'linear-gradient(135deg, #8b5cf6, #6d28d9)'
-                                    : 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                    ? 'var(--color-blue-500)'
+                                    : 'var(--color-primary-500)',
                             color: '#fff',
                             padding: '14px 24px',
                             borderRadius: 16,

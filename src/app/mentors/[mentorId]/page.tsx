@@ -67,7 +67,7 @@ export default async function MentorDetailPage({ params }: { params: Promise<{ m
                 <Link href="/mentors" style={{ fontSize: 14, color: 'var(--먹연)', textDecoration: 'none' }}>← 발견하기로</Link>
 
                 <section style={{ display: 'flex', gap: 20, alignItems: 'flex-start', marginTop: 16, flexWrap: 'wrap' }}>
-                    <div style={{ position: 'relative', width: 140, height: 140, borderRadius: 24, overflow: 'hidden', flexShrink: 0, background: 'linear-gradient(135deg, #E8F2EC 0%, #C7E4D3 100%)' }}>
+                    <div style={{ position: 'relative', width: 140, height: 140, borderRadius: 24, overflow: 'hidden', flexShrink: 0, background: 'var(--color-primary-50)' }}>
                         {avatarUrl ? (
                             <Image src={avatarUrl} alt={mentor.name} fill sizes="140px" style={{ objectFit: 'cover' }} />
                         ) : (
