@@ -54,11 +54,11 @@ describe('FIX 1 — 링크로 만든 봇은 읽은 링크와 붙여넣은 글을
             pastes: ['인스타에 올린 글을 붙여넣었어요. 오늘도 수강생과 이야기했어요.'],
             userId: 'u1',
         })
-        expect(r).toEqual({ added: 2, failed: 0 })
-        // 인스타그램은 주소만으로 못 읽으니 링크 자료로 넣지 않는다 (글은 붙여넣은 글로 들어간다)
-        expect(readUrl).toHaveBeenCalledTimes(1)
+        // 1003 변경: 초안이 인스타그램 공개 계정을 읽으므로 봇 자료에도 넣는다 (예전엔 버려서 봇이 인스타 글을 못 찾았다)
+        expect(r).toEqual({ added: 3, failed: 0 })
+        expect(readUrl).toHaveBeenCalledTimes(2)
         const types = addKnowledgeSource.mock.calls.map(c => c[4])
-        expect(types.sort()).toEqual(['text', 'url'])
+        expect(types.sort()).toEqual(['text', 'url', 'url'])
         expect(addKnowledgeSource.mock.calls.every(c => c[1] === 'm1')).toBe(true)
     })
 

@@ -11,7 +11,7 @@ import { failReasonLine, FAIL_REASON_COL, LEGACY_FAIL_REASON_COL } from '@/domai
 import { failureMessage, FAILURE_REASONS } from '@/domains/knowledge/failure-reasons'
 import { readUrl, KNOWLEDGE_READ_OPTIONS } from '@/domains/os/readers'
 import { markInjectionPatterns } from '@/domains/chat/injection'
-import { draftLinkKind } from '@/domains/os/twin-draft-shared'
+import { draftLinkKind, draftSourceKind, postUrlOf } from '@/domains/os/twin-draft-shared'
 
 /** 표가 아직 DB 에 없을 때 나는 Postgres 오류 번호 */
 const TABLE_MISSING = '42P01'
@@ -308,21 +308,28 @@ export async function addLinkSource(db: SupabaseClient, mentorId: string, rawUrl
         throw new Error('그 주소에서 읽을 글을 못 찾았어요. 다른 주소를 넣거나 글을 붙여 넣어 주세요')
     }
     console.log('[os/knowledge] 링크 읽음', { kind: read.kind, method: read.method, chars: text.length })
-    return addKnowledgeSource(db, mentorId, read.title, text, read.kind === 'youtube' ? 'youtube' : 'url', read.url)
+    return addKnowledgeSource(db, mentorId, read.title, text, read.kind === 'youtube' ? 'youtube' : 'url', read.url, {
+        meta: { sourceKind: read.kind === 'youtube' ? 'youtube' : 'url', fetchedAt: new Date().toISOString() },
+        ingest: { dedupe: true },
+    })
 }
 
 /**
- * 「내 링크로 만들기」로 만든 봇에 초안이 읽은 링크와 붙여넣은 글을 자료로 넣는다(1001).
- * 예전엔 초안만 만들고 읽은 글을 버려서, 봇이 자기 글을 한 줄도 못 찾았다.
- * 새 길을 만들지 않는다 = 자료 넣기 창구와 같은 addLinkSource, addTextSource, assertRoomForMore 를 그대로 부른다.
- * 인스타그램, 스레드처럼 주소만으로 못 읽는 곳(draftLinkKind 가 read 가 아닌 것)은 열지 않는다 = 그 글은 붙여넣은 글로 들어간다.
- * 하나가 실패해도 나머지는 넣고, 던지지 않는다(봇은 이미 만들어졌다). 느린 링크를 먼저 같이 띄워 시간을 줄인다.
+ * 「내 링크로 만들기」로 만든 봇에 초안이 읽은 링크와 붙여넣은 글을 자료로 넣는다(1001, 1003 보강).
+ * 1003: 봇 자료 = 초안이 읽은 것과 같게.
+ *   블로그(네이버 RSS, 티스토리), 유튜브 채널, Substack, RSS = 초안과 같은 「계정 연결」 가져오기로 최근 글, 영상을 **편마다** 자료로 (제목, 주소, 날짜)
+ *   블로그 글 하나 주소 = 그 글 / 인스타그램, 스레드 공개 계정 = 캡션을 한 자료로 (예전엔 버렸다)
+ *   그 밖의 웹 글, 유튜브 영상 하나 = 예전처럼 addLinkSource
+ * 같은 글은 두 번 넣지 않는다(dedupe = 글 해시, 가져오기 = 이미 있는 주소). 하나가 실패해도 나머지는 넣고 던지지 않는다.
  */
+const FEED_PLATFORMS = new Set(['youtube', 'naver_blog', 'tistory', 'substack', 'rss'])
+
 export async function addDraftSources(
     db: SupabaseClient, mentorId: string,
-    input: { links: string[]; pastes: string[]; userId?: string },
+    input: { links: string[]; pastes: string[]; userId?: string; deadline?: number },
 ): Promise<{ added: number; failed: number }> {
     let added = 0, failed = 0
+    const deadline = input.deadline ?? Date.now() + 100_000
     const tryAdd = async (what: string, add: () => Promise<unknown>) => {
         try {
             await assertRoomForMore(db, mentorId)
@@ -335,11 +342,63 @@ export async function addDraftSources(
     }
     const urls = input.links
         .map(l => l.trim())
-        .filter(l => draftLinkKind(l) === 'read')
+        .filter(l => draftLinkKind(l) === 'read' || ['instagram', 'threads'].includes(draftSourceKind(/^https?:\/\//i.test(l) ? l : `https://${l}`)))
         .map(l => /^https?:\/\//i.test(l) ? l : `https://${l}`)
         .filter(isSafeExternalUrl)
+    // sns-link, feeds 는 이 파일을 거꾸로 불러서(순환) 쓸 때 불러온다
+    const { classifySnsLink } = await import('./sns-link')
+
+    const oneLink = async (url: string) => {
+        let target: ReturnType<typeof classifySnsLink> | null = null
+        try { target = classifySnsLink(url) } catch { target = null }   // 유튜브 영상 하나 등
+        const post = postUrlOf(url)
+
+        // 인스타그램, 스레드 공개 계정 = 캡션 묶음 한 자료
+        if (target && (target.platform === 'instagram' || target.platform === 'threads')) {
+            const read = await readUrl(url, { ...KNOWLEDGE_READ_OPTIONS, timeoutMs: 15_000 })
+            if (!read.ok || read.text.trim().length < 20) { failed++; return }
+            const { text } = markInjectionPatterns(read.text)
+            await tryAdd(target.platform, () => addKnowledgeSource(db, mentorId, `내 ${target.platform === 'instagram' ? '인스타그램' : '스레드'} 글`, `출처: ${url}\n\n${text}`, 'url', url, {
+                meta: { sourceKind: target.platform, citationUrl: url, authorIsMe: true, fetchedAt: new Date().toISOString() },
+                ingest: { dedupe: true },
+            }))
+            return
+        }
+
+        // 블로그, 채널 = 최근 글을 편마다
+        if (target?.feed && FEED_PLATFORMS.has(target.platform) && !post) {
+            const { FETCHERS } = await import('./feeds')
+            const { data } = await db.from('knowledge_sources').select('original_url').eq('mentor_id', mentorId)
+            const known = new Set(((data ?? []) as { original_url: string | null }[]).map(r => r.original_url).filter(Boolean) as string[])
+            const feed = { id: 'draft', mentorId, userId: input.userId ?? '', kind: target.feed.kind, handleOrUrl: target.feed.handleOrUrl, status: 'connected' as const, lastSyncedAt: null, lastError: null, itemCount: 0, createdAt: '' }
+            let items
+            try {
+                items = (await FETCHERS[target.feed.kind](feed, null, { maxItems: MAX_SOURCES_PER_BOT, deadline, isKnown: u => known.has(u) })).items
+            } catch (e) {
+                failed++
+                console.warn('[os/knowledge] 초안 자료 가져오기 실패', { mentorId, url, reason: e instanceof Error ? e.message : e })
+                return
+            }
+            for (const it of items) {
+                const body = String(it.text ?? '').trim()
+                if (body.length < 20 || known.has(it.url)) continue
+                const { text } = markInjectionPatterns(body)
+                const kind = draftSourceKind(it.url)
+                await tryAdd(kind, () => addKnowledgeSource(db, mentorId, (it.title || it.url).slice(0, 120), text, target.feed!.kind === 'youtube' ? 'youtube' : 'url', it.url, {
+                    meta: { sourceKind: kind, citationUrl: it.url, authorIsMe: true, fetchedAt: new Date().toISOString() },
+                    ingest: { dedupe: true, ...(it.publishedAt ? { publishedAt: it.publishedAt } : {}) },
+                }))
+                known.add(it.url)
+            }
+            return
+        }
+
+        // 그 밖 = 글 하나 (블로그 글 하나 주소면 그 글)
+        await tryAdd('link', () => addLinkSource(db, mentorId, post ?? url, { userId: input.userId }))
+    }
+
     // 느린 링크 읽기를 먼저 띄우고, 그동안 붙여넣은 글을 넣는다
-    const linkJobs = urls.map(url => tryAdd('link', () => addLinkSource(db, mentorId, url, { userId: input.userId })))
+    const linkJobs = urls.map(url => oneLink(url).catch(e => { failed++; console.warn('[os/knowledge] 초안 링크 실패', { mentorId, url, reason: e instanceof Error ? e.message : e }) }))
     for (const [i, text] of input.pastes.entries()) {
         await tryAdd('paste', () => addTextSource(db, mentorId, input.pastes.length > 1 ? `붙여넣은 글 ${i + 1}` : '붙여넣은 글', text))
     }

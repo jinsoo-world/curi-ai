@@ -51,7 +51,7 @@ export async function POST(req: Request) {
         if (links.length > 0 || pastes.length > 0) {
             after(async () => {
                 try {
-                    const r = await addDraftSources(db, bot.mentorId, { links, pastes, userId: user.id })
+                    const r = await addDraftSources(db, bot.mentorId, { links, pastes, userId: user.id, deadline: Date.now() + 100_000 })   // 함수 한도 120초 안
                     console.log('[os/twin-draft/create] 자료 넣음', { mentorId: bot.mentorId, ...r })
                 } catch (e) {
                     console.error('[os/twin-draft/create] 자료 넣기 실패', e instanceof Error ? e.message : e)
