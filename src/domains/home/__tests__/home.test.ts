@@ -151,8 +151,12 @@ describe('copy rules', () => {
         expect(pricing).not.toMatch(/한 달 답변|하루 3장|사진 \$\{/)
         expect(pricing).not.toContain('내 팀 봇과의 대화는 클로버를 쓰지 않아요')
     })
-    it('root goes to /home', () => {
-        expect(readFileSync('src/app/page.tsx', 'utf8')).toContain("redirect('/home')")
+    it('root goes to the OS make screen (1003 「OS UI에 다 옮겨놔」)', () => {
+        expect(readFileSync('src/app/page.tsx', 'utf8')).toContain("redirect('/os/make')")
+        const cfg = readFileSync('next.config.ts', 'utf8')
+        expect(cfg).toMatch(/source: '\/', destination: '\/os\/make', permanent: true/)
+        expect(cfg).toMatch(/source: '\/home', destination: '\/os\/make', permanent: true/)
+        expect(cfg).toMatch(/source: '\/mentors', destination: '\/os\/market', permanent: true/)
     })
 })
 
@@ -178,7 +182,7 @@ describe('one pricing page (/os/charge)', () => {
             expect(src, f).toContain('href="/os/charge"')
             expect(src, f).not.toContain('href="/pricing"')
         }
-        expect(readFileSync('next.config.ts', 'utf8')).toMatch(/source: '\/pricing', destination: '\/os\/charge', permanent: false/)
+        expect(readFileSync('next.config.ts', 'utf8')).toMatch(/source: '\/pricing', destination: '\/os\/charge', permanent: true/)
     })
 })
 

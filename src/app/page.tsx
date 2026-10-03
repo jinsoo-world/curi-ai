@@ -8,7 +8,8 @@ import { redirect } from 'next/navigation'
  *              첫 손님이 가장 먼저 밟는 자리라 그 왕복이 그대로 첫인상이 된다(실측 1.34초 → 0.2초대).
  * 2026-09-22 = 대표 지시: 멘토 없는 메인 홈(studio)으로 리디렉트. /mentors는 멘토 발견 페이지로 유지.
  * 2026-09-29 = 대표 지시 0928 23:53: 첫 주소는 새 첫 화면 /home 으로. 사진 도구 /studio 는 더보기 메뉴에 남는다.
+ * 2026-10-03 = 대표 확정 「OS UI에 다 옮겨놔」: 첫 주소는 OS 안 주소 넣기 /os/make (next.config 308 이 먼저 받는다).
  */
 export default function HomePage() {
-    redirect('/home')
+    redirect('/os/make')
 }

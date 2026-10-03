@@ -30,16 +30,24 @@ const nextConfig: NextConfig = {
   // 옛 주소 → 새 주소. /chats(대화 목록)는 내 봇 팀(/os)으로 통일 (대표 지시 0923)
   async redirects() {
     return [
-      { source: '/chats', destination: '/os', permanent: false },
-      // 첫 주소는 새 첫 화면으로 곧바로 (페이지를 거치면 1초 새로고침 안내가 끼어 느리다). 대표 지시 0928 23:53
-      { source: '/', destination: '/home', permanent: false },
-      // 가격 화면은 하나만: 원래 가격 화면 /os/charge (대표 지시 0929 00:52). 주소 뒤 값은 그대로 따라간다
-      { source: '/pricing', destination: '/os/charge', permanent: false },
-      // 옛 찾기 화면은 「크리에이터를 찾을 수 없습니다」만 떴다 → 새 마켓으로 (대표 0929)
-      { source: '/discover', destination: '/os/market', permanent: false },
-      { source: '/discover/:path*', destination: '/os/market', permanent: false },
-      // 옛 AI 만들기(긴 글 입력 화면) → 첫 화면 만들기 칸. ?advanced=1 이면 옛 화면(고급 편집) 그대로
-      { source: '/creator/create', missing: [{ type: 'query', key: 'advanced' }], destination: '/home#make', permanent: false },
+      // 대표 확정 10/3 12:32 「OS UI에 다 옮겨놔. 이전 home이나 이런 UI 싫어」 = OS 바깥 공개 화면은 OS 안 대응 화면으로 영구 이동(308).
+      // 페이지 파일은 지우지 않았다. 되돌리려면 이 줄만 지우면 된다(단 308 은 브라우저가 기억하니 되돌릴 땐 307 로 한 번 덮는다). 표 = docs/ui/os이식_지도_1003.md
+      { source: '/', destination: '/os/make', permanent: true },
+      { source: '/home', destination: '/os/make', permanent: true },
+      { source: '/landing', destination: '/os/make', permanent: true },
+      { source: '/mentors', destination: '/os/market', permanent: true },
+      { source: '/mentors/:mentorId', destination: '/os/market/:mentorId', permanent: true },
+      { source: '/coach/:mentorId', destination: '/os/market/:mentorId', permanent: true },
+      { source: '/chat/:mentorId', destination: '/os/chat/:mentorId', permanent: true },
+      { source: '/chats', destination: '/os', permanent: true },
+      // 가격 화면은 하나만: /os/charge (대표 지시 0929 00:52). 주소 뒤 값은 그대로 따라간다
+      { source: '/pricing', destination: '/os/charge', permanent: true },
+      // 클로버 판매는 10/2 종료 → 요금제로
+      { source: '/store', destination: '/os/charge', permanent: true },
+      { source: '/discover', destination: '/os/market', permanent: true },
+      { source: '/discover/:path*', destination: '/os/market', permanent: true },
+      // 옛 AI 만들기(긴 글 입력 화면) → OS 주소 넣기. ?advanced=1 이면 옛 화면(고급 편집) 그대로
+      { source: '/creator/create', missing: [{ type: 'query', key: 'advanced' }], destination: '/os/make', permanent: false },
     ]
   },
   // 클라이언트 캐시 헤더

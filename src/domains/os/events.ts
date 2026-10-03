@@ -22,6 +22,7 @@ import posthog from 'posthog-js'
 export type OsEvent =
     | 'os_view'
     | 'os_bot_created'
+    | 'os_make_started'   // /os/make 「내 AI 만들기」 누름 (1003)
     | 'os_message_sent'
     | 'os_approval_shown'
     | 'os_approval_decided'

@@ -318,10 +318,11 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
     // /home 에서 넣어 둔 주소가 브라우저에 남아 있으면 (가입 직후, 첫 설정을 마친 뒤) 만들기 창을 연다
     const homeResume = useRef(false)
     useEffect(() => {
-        if (homeResume.current || loading || guest || pathname.startsWith('/os/start')) return
+        if (homeResume.current || loading || guest || pathname.startsWith('/os/start') || pathname.startsWith('/os/make')) return
         homeResume.current = true
-        if (readHomeDraft(window.localStorage)) setSheet(true)
-    }, [loading, guest, pathname])
+        // 이어 만들기는 /os/make 가 한다(고치기 단계 없이 바로 봇까지). 1003
+        if (readHomeDraft(window.localStorage)) router.push('/os/make')
+    }, [loading, guest, pathname, router])
 
     const visible = useMemo(() => {
         const q = query.trim()
@@ -452,7 +453,8 @@ export default function OsShell({ children }: { children: React.ReactNode }) {
 
     const addButtons = (
         <>
-            <button type="button" className="os-add-btn" onClick={() => setSheet(true)} title="새 봇 만들기">＋ 개인봇</button>
+            {/* 「＋ 개인봇」 = OS 안 주소 넣기 화면 (대표 확정 1003). 옛 만들기 창은 그 화면 아래 「주소 없이 할 일을 골라 만들기」와 /os?new=1 */}
+            <button type="button" className="os-add-btn" onClick={() => router.push(`/os/make${demo ? '?demo=1' : ''}`)} title="새 봇 만들기">＋ 개인봇</button>
             <button type="button" className="os-add-btn" onClick={() => setGroupSheet(true)} title="봇 여러 명과 한 방">＋ 단체방</button>
         </>
     )

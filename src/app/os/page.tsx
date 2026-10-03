@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useOsTeam } from '@/components/os/OsShell'
 import BotAvatar from '@/components/os/BotAvatar'
+import { readHomeDraft } from '@/domains/home/draft-store'
 
 export default function OsHome() {
     const { team, loading, guest, openNewBot } = useOsTeam()
@@ -17,11 +18,15 @@ export default function OsHome() {
     useEffect(() => {
         if (loading) return
         const demo = new URLSearchParams(window.location.search).get('demo') === '1'
+        // 주소를 넣어 두고 로그인하고 온 분 = 주소 넣기 화면이 이어 만든다 (1003)
+        if (!guest && !demo && readHomeDraft(window.localStorage)) { router.replace('/os/make'); return }
+        if (guest && !demo) {
+            // 손님(로그인 전) 첫 경험 = OS 안 주소 넣기 (대표 확정 1003 「OS UI에 다 옮겨놔」). 옛 /os/welcome 은 남겨 둠
+            router.replace('/os/make')
+            return
+        }
         if (first) {
             router.replace(`/os/chat/${first.mentorId}${demo ? '?demo=1' : ''}`)
-        } else if (guest && !demo) {
-            // 손님(로그인 전)은 소개 화면부터. 둘러보기(?demo=1)는 그대로 시연 팀으로 간다
-            router.replace('/os/welcome')
         }
     }, [loading, first, guest, router])
 
