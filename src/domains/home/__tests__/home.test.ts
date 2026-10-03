@@ -154,9 +154,9 @@ describe('copy rules', () => {
     it('root goes to the OS make screen (1003 「OS UI에 다 옮겨놔」)', () => {
         expect(readFileSync('src/app/page.tsx', 'utf8')).toContain("redirect('/os/make')")
         const cfg = readFileSync('next.config.ts', 'utf8')
-        expect(cfg).toMatch(/source: '\/', destination: '\/os\/make', permanent: true/)
-        expect(cfg).toMatch(/source: '\/home', destination: '\/os\/make', permanent: true/)
-        expect(cfg).toMatch(/source: '\/mentors', destination: '\/os\/market', permanent: true/)
+        expect(cfg).toMatch(/source: '\/', destination: '\/os\/make', permanent: false/)
+        expect(cfg).toMatch(/source: '\/home', destination: '\/os\/make', permanent: false/)
+        expect(cfg).toMatch(/source: '\/mentors', destination: '\/os\/market', permanent: false/)
     })
 })
 
@@ -182,7 +182,7 @@ describe('one pricing page (/os/charge)', () => {
             expect(src, f).toContain('href="/os/charge"')
             expect(src, f).not.toContain('href="/pricing"')
         }
-        expect(readFileSync('next.config.ts', 'utf8')).toMatch(/source: '\/pricing', destination: '\/os\/charge', permanent: true/)
+        expect(readFileSync('next.config.ts', 'utf8')).toMatch(/source: '\/pricing', destination: '\/os\/charge', permanent: false/)
     })
 })
 
