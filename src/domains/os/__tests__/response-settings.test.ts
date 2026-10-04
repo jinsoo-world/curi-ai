@@ -12,6 +12,7 @@ import {
     clampCustomInstructions,
     defaultResponseSettings,
     fetchResponseSettingsRow,
+    loadResponseSettingsForChat,
     mergeResponseSettings,
     resolveMaxOutputTokens,
     sanitizeResponseSettingsInput,
@@ -28,6 +29,8 @@ describe('defaultResponseSettings — kind 에 따른 기본값', () => {
         expect(defaultResponseSettings('public').length).toBe('intelligent')
         expect(defaultResponseSettings('public').recencyOn).toBe(true)
         expect(defaultResponseSettings('public').noAnswerText).toBe(DEFAULT_NO_ANSWER_TEXT)
+        expect(DEFAULT_NO_ANSWER_TEXT).toContain('모르겠어요')
+        expect(DEFAULT_NO_ANSWER_TEXT.length).toBeLessThanOrEqual(30)
     })
 })
 
@@ -230,5 +233,43 @@ describe('botHasKnowledge — 쓸 수 있는 조각이 있어야 자료 있음 (
     it('못 세면 false = 모델이 답하게 둔다', async () => {
         expect(await botHasKnowledge(fakeDb({ error: { message: 'x' } }).db, 'm')).toBe(false)
         expect(await botHasKnowledge(fakeDb({ throws: true }).db, 'm')).toBe(false)
+    })
+})
+
+describe('자료 없는 봇의 「자료 안에서만」 (대표 승인 1005)', () => {
+    type Row = { creativity?: string } | null
+    // 표 이름별로 알맞은 가짜 DB 응답을 돌려준다
+    function fakeDb(row: Row, chunks: number) {
+        return {
+            from(table: string) {
+                const q: Record<string, unknown> = {}
+                const self = () => q
+                for (const m of ['select', 'eq', 'limit']) q[m] = self
+                q.maybeSingle = async () => ({ data: table === 'bot_response_settings' ? row : null, error: null })
+                q.then = (res: (v: unknown) => unknown) => res({ data: table === 'knowledge_chunks' ? Array.from({ length: chunks }, (_, i) => ({ id: i })) : [], error: null })
+                return q
+            },
+        } as never
+    }
+    it('리더가 직접 「자료만」을 골랐으면 자료가 없어도 strict 그대로 (모델을 안 부르고 한 줄로 답)', async () => {
+        const r = await loadResponseSettingsForChat(fakeDb({ creativity: 'strict' }, 0), 'm1', { creator_id: null }, null)
+        expect(r.settings.creativity).toBe('strict')
+    })
+    it('리더가 만든 공개 봇은 기본값(strict)이어도 자료가 없으면 strict 그대로', async () => {
+        const r = await loadResponseSettingsForChat(fakeDb(null, 0), 'm1', { creator_id: 'c1' }, null)
+        expect(r.settings.creativity).toBe('strict')
+    })
+    it('리더 봇이 아닌 공식 봇, 시연 봇이 기본값으로 strict 이고 자료가 없으면 대화가 되게 adaptive', async () => {
+        const r = await loadResponseSettingsForChat(fakeDb(null, 0), 'm1', { creator_id: null }, null)
+        expect(r.settings.creativity).toBe('adaptive')
+    })
+    it('자료가 있으면 strict 그대로', async () => {
+        const r = await loadResponseSettingsForChat(fakeDb(null, 3), 'm1', { creator_id: null }, null)
+        expect(r.settings.creativity).toBe('strict')
+    })
+    it('자료만 설정의 프롬프트는 일반 지식 답을 막고 짧게 모른다고 하게 한다', () => {
+        const s = defaultResponseSettings('public')
+        const out = applyResponseSettingsToPrompt('기본', { settings: s })
+        expect(out).toContain('일반 지식으로 답하지 말고')
     })
 })

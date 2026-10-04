@@ -14,7 +14,7 @@ import {
     EXTRA_MODES, THEME_CHOICES, readExtraUsage, readThemeChoice, saveExtraUsage, saveThemeChoice,
     type ExtraMode, type ExtraUsage, type ThemeChoice,
 } from '@/domains/os/local-prefs'
-import { isUsageLike, usageTone, withComma, type UsageLike } from '@/domains/os/usage'
+import { isUsageLike, usageTone, type UsageLike } from '@/domains/os/usage'
 import { isLowClover } from '@/domains/credit/charge-flow'
 import { useLocale, paintTheme } from '@/components/os/LocaleProvider'
 import { useIosApp } from '@/hooks/useIosApp'
@@ -395,7 +395,7 @@ function UsageTab() {
                     <div className="os-set-line">
                         <div className="os-set-text"><b>{t('clover.label')}</b><div className="os-set-hint">{t('clover.sub')}</div></div>
                         <span className="os-set-value" style={isLowClover(clover) ? { color: 'var(--os-경고)' } : undefined}>
-                            {t('clover.balance', { n: withComma(cloverChats(clover)) })}
+                            {t('clover.balance')}
                         </span>
                     </div>
                 )}

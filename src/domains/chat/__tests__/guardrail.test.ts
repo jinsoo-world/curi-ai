@@ -50,9 +50,10 @@ describe('chat/guardrail', () => {
     })
 
     describe('ERROR_MESSAGES', () => {
-        it('무료 대화 2회 이하 시 안내 메시지', () => {
+        it('무료 대화 2회 이하 시 안내 메시지 (남은 횟수 숫자는 안 보인다)', () => {
             const msg = ERROR_MESSAGES.freeUsageExhausted(2)
-            expect(msg).toContain('2회')
+            expect(msg).not.toMatch(/\d/)
+            expect(msg).toContain('구독')
         })
 
         it('무료 대화 3회 이상 시 빈 문자열', () => {

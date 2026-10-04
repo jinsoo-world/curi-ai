@@ -78,14 +78,15 @@ describe('고객 화면 횟수 표기 없음 (대표 지시 0929): /os/charge', 
 
 describe('클로버 이어 쓰기 창과 답 아래 표시 (0930 대표 「매번 승인 번거로워, 클로버 주는 게 보이면 좋겠어」)', () => {
     it('창에 한 번에 쓰는 대화 수와 남은 대화를 보여 준다 (클로버 개수, 원화 환산 없음)', () => {
-        expect(overageSheetNote(1240, 5, 15)).toBe('답 하나에 모아 둔 대화 1번(사진이 있으면 3번)이 쓰여요. 지금 248번 남았어요.')
-        expect(overageSheetNote(null, 5, 5)).toBe('답 하나에 모아 둔 대화 1번이 쓰여요.')
+        expect(overageSheetNote(1240, 5, 15)).toBe('답 하나에 모아 둔 대화가 쓰여요.')
+        expect(overageSheetNote(null, 5, 5)).toBe('답 하나에 모아 둔 대화가 쓰여요.')
+        expect(overageSheetNote(1240, 5, 15)).not.toMatch(/\d/)
         expect(overageSheetNote(1240, 5)).not.toMatch(/원|클로버/)
     })
     it('답 아래 한 줄', () => {
-        expect(cloverSpentText(5, 1235)).toBe('🍀 모아 둔 대화 1번 씀, 247번 남음')
-        expect(cloverSpentText(15, 1225)).toBe('🍀 모아 둔 대화 3번 씀, 245번 남음')
-        expect(cloverSpentText(5, null)).toBe('🍀 모아 둔 대화 1번 씀')
+        expect(cloverSpentText(5, 1235)).toBe('🍀 모아 둔 대화로 이어 썼어요')
+        expect(cloverSpentText(15, 1225)).not.toMatch(/\d/)
+        expect(cloverSpentText(5, null)).toBe('🍀 모아 둔 대화로 이어 썼어요')
     })
     it('이어 쓰기 창 문구: 이번 대화 동안 다시 묻지 않고, 앞으로도 안 묻게 고를 수 있다', () => {
         expect(OVERAGE_COPY.continueBtn).toBe('모아 둔 대화로 이어 쓰기')
@@ -100,8 +101,9 @@ describe('클로버 판매 끝 (대표 결정 1002 「클로버는 없애구」)
         expect(cloverChats(4)).toBe(0)
         expect(cloverChats(null)).toBe(0)
         expect(cloverChats(Number.NaN)).toBe(0)
-        expect(cloverChatsText(1240)).toBe('대화 248번')
-        expect(cloverChatsText(12400)).toBe('대화 2,480번')
+        // 고객 화면에는 횟수 숫자를 안 보인다 (대표 승인 1005)
+        expect(cloverChatsText(1240)).toBe('남아 있어요')
+        expect(cloverChatsText(12400)).not.toMatch(/\d/)
     })
     it('남은 대화가 0번이면 아무것도 안 보인다', () => {
         expect(cloverChatsText(0)).toBe('')

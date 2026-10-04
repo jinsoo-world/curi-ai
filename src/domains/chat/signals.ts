@@ -21,9 +21,9 @@ interface SignalData {
 export async function saveSignal(
     db: SupabaseClient,
     params: {
-        sessionId: string
+        sessionId: string | null
         mentorId: string
-        userId: string
+        userId: string | null
         signalType: SignalType
         signalData?: SignalData
     }
@@ -138,9 +138,9 @@ export function detectTopicGap(aiResponse: string): {
  */
 export async function saveTopicGapSignal(
     db: SupabaseClient,
-    sessionId: string,
+    sessionId: string | null,
     mentorId: string,
-    userId: string,
+    userId: string | null,
     userQuestion: string,
     aiResponse: string,
     matchedPhrase: string,
@@ -243,4 +243,37 @@ export async function getSignalStats(
     }
 
     return stats
+}
+
+/** 저장 전에 전화번호, 이메일을 가린다 (리더에게 질문을 보여 줄 때 개인정보가 섞이지 않게) */
+export function maskPersonalInfo(text: string): string {
+    return text
+        .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '[이메일]')
+        .replace(/\+?\d[\d\s-]{7,}\d/g, '[번호]')
+}
+
+/**
+ * 「답 못 한 질문」을 조용히 남긴다. 대화 답이 끝난 뒤 기다리지 않고 부른다.
+ * 절대 던지지 않는다 (실패해도 대화에 영향 없음). forced 면 말투와 상관없이 기록한다(자료에 없어 모델을 안 부른 경우).
+ */
+export async function recordTopicGap(
+    db: SupabaseClient,
+    p: { sessionId?: string | null; mentorId: string; userId?: string | null; question: string; answer: string; forced?: boolean },
+): Promise<void> {
+    try {
+        if (!p.mentorId || !p.question || !p.answer) return
+        const found = detectTopicGap(p.answer)
+        if (!p.forced && !found.isGap) return
+        await saveTopicGapSignal(
+            db,
+            p.sessionId ?? null,
+            p.mentorId,
+            p.userId ?? null,
+            maskPersonalInfo(p.question),
+            p.answer,
+            found.matchedPhrase ?? '자료에 없음',
+        )
+    } catch (e) {
+        console.error('[Signals] recordTopicGap 실패:', e instanceof Error ? e.message : e)
+    }
 }

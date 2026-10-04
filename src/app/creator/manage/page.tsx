@@ -26,16 +26,9 @@ interface Stats {
     totalUsers: number
 }
 
-interface MentorUserStat {
-    userId: string
-    displayName: string
-    messageCount: number
-}
-
 interface MentorStatItem {
     messages: number
     users: number
-    userList: MentorUserStat[]
 }
 
 /** 봇 마켓 연동 수 (누가 내 봇을 팀에 넣었나). /api/os/team/link/mine */
@@ -54,7 +47,6 @@ export default function CreatorManagePage() {
     const [isAdmin, setIsAdmin] = useState(false)
     const [openMenu, setOpenMenu] = useState<string | null>(null)
     const [deleting, setDeleting] = useState<string | null>(null)
-    const [expandedMentor, setExpandedMentor] = useState<string | null>(null)
     const [shareModal, setShareModal] = useState<{ id: string; name: string; title: string } | null>(null)
     const [copied, setCopied] = useState(false)
     const [myRefCode, setMyRefCode] = useState<string | null>(null)
@@ -180,7 +172,7 @@ export default function CreatorManagePage() {
         { icon: '🤖', label: '내가 만든 AI', value: stats.total },
         { icon: '🌐', label: '공개된 AI', value: stats.active },
         { icon: '💬', label: '전체 메시지', value: stats.totalMessages },
-        { icon: '👤', label: '대화한 사용자', value: stats.totalUsers },
+        { icon: '👤', label: '대화한 사람 수 (합계)', value: stats.totalUsers },
         { icon: '👥', label: '팀에 넣은 사람', value: linkTotals.totalLinks },
     ]
 
@@ -554,16 +546,14 @@ export default function CreatorManagePage() {
                                                 {/* AI별 통계 뱃지 */}
                                                 {mentorStats[m.id] && mentorStats[m.id].messages > 0 && (
                                                     <div
-                                                        onClick={(e) => { e.stopPropagation(); setExpandedMentor(expandedMentor === m.id ? null : m.id) }}
                                                         style={{
                                                             display: 'inline-flex', alignItems: 'center', gap: 6,
                                                             marginTop: 4, fontSize: 11, color: 'var(--color-blue-500)',
                                                             background: 'var(--color-blue-50)', padding: '2px 8px', borderRadius: 8,
-                                                            cursor: 'pointer', fontWeight: 500,
+                                                            fontWeight: 500,
                                                         }}
                                                     >
-                                                        👤 {mentorStats[m.id].users}명 · 💬 {mentorStats[m.id].messages}개
-                                                        <span style={{ fontSize: 9, opacity: 0.6 }}>{expandedMentor === m.id ? '▲' : '▼'}</span>
+                                                        대화 {mentorStats[m.id].messages}개 (전체 합계)
                                                     </div>
                                                 )}
                                             </div>
@@ -656,26 +646,6 @@ export default function CreatorManagePage() {
                                             >✏️ 수정</button>
                                         </div>
                                     </div>
-                                    {/* AI별 사용자 드롭다운 */}
-                                    {expandedMentor === m.id && mentorStats[m.id]?.userList?.length > 0 && (
-                                        <div style={{
-                                            padding: '10px 16px 10px 68px',
-                                            background: 'var(--color-neutral-50)',
-                                            borderBottom: '1px solid var(--color-neutral-200)',
-                                            animation: 'fadeIn 0.2s ease',
-                                        }}>
-                                            <div style={{ fontSize: 11, color: 'var(--color-neutral-400)', marginBottom: 6, fontWeight: 600 }}>대화한 사용자</div>
-                                            {mentorStats[m.id].userList.map((u: MentorUserStat, i: number) => (
-                                                <div key={i} style={{
-                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                    padding: '4px 0', fontSize: 12, color: 'var(--color-neutral-700)',
-                                                }}>
-                                                    <span>👤 {u.displayName}</span>
-                                                    <span style={{ color: 'var(--color-blue-500)', fontWeight: 600 }}>💬 {u.messageCount}회</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
                                 </React.Fragment>
                                 )
                             })}

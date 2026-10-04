@@ -36,6 +36,7 @@ import { correctiveRetrieve } from '@/domains/knowledge/corrective'
 import { askQuickWithFallback } from '@/domains/agent/ask'
 import { isBotBlocked } from '@/domains/os/blocks'
 import { BLOCKED_CHAT_TEXT } from '@/domains/os/reports'
+import { recordTopicGap } from '@/domains/chat/signals'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -586,6 +587,15 @@ export async function POST(req: Request) {
         if (!링크읽음 && !smallTalk && !shouldAnswerFromKnowledge(responseSettings.settings, ragMatches)) {
             const encoder = new TextEncoder()
             const text = responseSettings.noAnswerText
+            // 📌 답 못 한 질문 기록 (기다리지 않고, 실패해도 대화에 영향 없음). 모델을 안 불렀으니 말투와 상관없이 남긴다
+            keepAliveAfterResponse(recordTopicGap(createAdminClient(), {
+                sessionId: sessionOwned ? (sessionId ?? null) : null,
+                mentorId: (mentor as { id: string }).id,
+                userId: user?.id ?? null,
+                question: String(lastUserMessage),
+                answer: text,
+                forced: true,
+            }))
             const noAnswerStream = new ReadableStream({
                 start(controller) {
                     controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text, done: true, fullResponse: text })}\n\n`))
@@ -920,6 +930,18 @@ export async function POST(req: Request) {
                             extractAndUpdateTopic(supabase, sessionId, messages.length + 1)
                                 .catch(err => console.error('[Chat] Topic extraction failed:', err))
                         }
+                    }
+
+                    // 📌 답 못 한 질문 기록: 답에 「잘 모르겠」 같은 말이 있으면 conversation_signals 에 남긴다.
+                    //    기다리지 않는다(응답 뒤에 끝냄). 실패해도 대화에 영향 없음 (recordTopicGap 은 던지지 않는다)
+                    if (fullResponse) {
+                        keepAliveAfterResponse(recordTopicGap(createAdminClient(), {
+                            sessionId: !isGuestSession ? (sessionId ?? null) : null,
+                            mentorId: (mentor as { id: string }).id,
+                            userId: user?.id ?? null,
+                            question: String(lastUserMessage),
+                            answer: fullResponse,
+                        }))
                     }
 
                     // 📊 비회원 대화 로깅 (게스트 세션일 때 DB에 기록)

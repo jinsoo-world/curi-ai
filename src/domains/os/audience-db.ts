@@ -184,7 +184,7 @@ export async function checkVisitorBotWeeklyLimit(
         if (used >= limit) {
             return {
                 allowed: false,
-                message: `이 봇 주인이 정해 둔 방문자 주간 한도(${limit}번)에 닿았어요. 다음 주 월요일 0시(서울)에 다시 채워져요.`,
+                message: `이 봇 주인이 정해 둔 방문자 주간 한도에 닿았어요. 다음 주 월요일 0시(서울)에 다시 채워져요.`,
                 used,
                 limit,
             }

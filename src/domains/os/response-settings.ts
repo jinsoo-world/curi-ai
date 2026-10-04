@@ -106,7 +106,8 @@ export const MIN_CUSTOM_LENGTH_CHARS = 50
 export const MAX_CUSTOM_LENGTH_CHARS = 4000
 
 /** 자료에 없을 때 봇이 할 말의 기본값 */
-export const DEFAULT_NO_ANSWER_TEXT = '음, 그 부분은 제가 갖고 있는 자료에는 없어서 정확한 답을 드리기 어려워요. 다른 걸 여쭤봐 주실래요?'
+// 짧은 한 줄. 「잘 모르겠」 표현이 들어 있어 「답 못 한 질문」 기록(detectTopicGap)에도 걸린다 (대표 승인 1005)
+export const DEFAULT_NO_ANSWER_TEXT = '자료에 없어서 잘 모르겠어요.'
 
 /* ────────────────────────── 순수 함수 ────────────────────────── */
 
@@ -238,7 +239,7 @@ function lengthInstruction(settings: ResponseSettings): string {
 function creativityInstruction(settings: ResponseSettings): string {
     switch (settings.creativity) {
         case 'strict':
-            return '반드시 위에서 준 자료 안의 내용만 근거로 답하라. 자료에 없는 내용은 추측하거나 지어내지 말고, 자료에 없으면 모른다고 솔직히 말하라.'
+            return '반드시 위에서 준 자료 안의 내용만 근거로 답하라. 자료에 없는 내용은 추측하거나 지어내지 말고, 자료에 없으면 일반 지식으로 답하지 말고, 짧게 한 줄로 모르겠다고만 말하라.'
         case 'creative':
             return '자료를 참고하되, 자료에 없는 내용도 자유롭게 상상하거나 일반 지식으로 보태 답해도 좋다.'
         case 'adaptive':
@@ -345,9 +346,12 @@ export async function loadResponseSettingsForChat(
     const kind = await classifyBotKind(db, mentorId, mentor, userId)
     const row = await fetchResponseSettingsRow(db, mentorId)
     let settings = mergeResponseSettings(row, kind)
-    // 자료가 하나도 없는 봇에 Strict 를 걸면 모든 질문에 「모른다」가 나간다(손님 시연 팀장, 자료 안 올린 리더 봇).
-    // Strict 는 「자료가 있는 봇」에서만 켠다. 자료가 없으면 Adaptive 로 답한다.
-    if (settings.creativity === 'strict' && !(await botHasKnowledge(db, mentorId))) {
+    // 「자료 안에서만」(strict)인데 쓸 자료가 하나도 없으면 모델을 부르지 않고 「모르겠어요」 한 줄로 답한다 (대표 승인 1005).
+    // 예외: 리더가 고른 게 아니라 기본값으로 strict 가 된 「리더가 만든 게 아닌 봇」(공식 팀장, 손님 시연 봇)은
+    //       자료를 안 올렸어도 대화가 돼야 하므로 Adaptive 로 답한다.
+    const 직접골랐다 = row?.creativity === 'strict'
+    const 리더봇 = !!mentor?.creator_id
+    if (settings.creativity === 'strict' && !직접골랐다 && !리더봇 && !(await botHasKnowledge(db, mentorId))) {
         settings = { ...settings, creativity: 'adaptive' }
     }
     return {

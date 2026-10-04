@@ -100,7 +100,8 @@ export async function GET() {
         // 통계 계산
         let totalMessages = 0
         let totalUsers = 0
-        const mentorStats: Record<string, { messages: number; users: number; userList: { userId: string; displayName: string; messageCount: number }[] }> = {}
+        // 익명 요약만: 봇별 합계(메시지 수, 대화한 사람 수). 회원 이름과 회원별 메시지 수는 내려주지 않는다 (대표 승인 1005)
+        const mentorStats: Record<string, { messages: number; users: number }> = {}
 
         if (mentorIds.length > 0) {
             // 세션 목록 (mentor_id, user_id, message_count 포함)
@@ -119,44 +120,18 @@ export async function GET() {
                 totalUsers = allUsers.size
 
                 // AI별 통계 집계
-                const userIdSet = new Set<string>()
                 for (const s of sessions) {
                     if (!mentorStats[s.mentor_id]) {
-                        mentorStats[s.mentor_id] = { messages: 0, users: 0, userList: [] }
+                        mentorStats[s.mentor_id] = { messages: 0, users: 0 }
                     }
                     mentorStats[s.mentor_id].messages += (s.message_count || 0)
-                    userIdSet.add(s.user_id)
                 }
 
-                // AI별 고유 사용자 수 + 사용자별 메시지 수
+                // AI별 고유 사용자 수 (사람 목록은 만들지 않는다)
                 for (const mentorId of Object.keys(mentorStats)) {
-                    const mentorSessions = sessions.filter(s => s.mentor_id === mentorId)
-                    const userMap = new Map<string, number>()
-                    for (const s of mentorSessions) {
-                        userMap.set(s.user_id, (userMap.get(s.user_id) || 0) + (s.message_count || 0))
-                    }
-                    mentorStats[mentorId].users = userMap.size
-                    mentorStats[mentorId].userList = Array.from(userMap.entries()).map(([userId, messageCount]) => ({
-                        userId, displayName: '', messageCount,
-                    }))
-                }
-
-                // 사용자 이름 일괄 조회
-                const allUserIds = [...new Set(sessions.map(s => s.user_id))]
-                if (allUserIds.length > 0) {
-                    const { data: users } = await admin
-                        .from('users')
-                        .select('id, display_name')
-                        .in('id', allUserIds)
-
-                    const nameMap = new Map((users || []).map(u => [u.id, u.display_name || '익명']))
-                    for (const ms of Object.values(mentorStats)) {
-                        for (const u of ms.userList) {
-                            u.displayName = nameMap.get(u.userId) || '익명'
-                        }
-                        // 메시지 수 내림차순 정렬
-                        ms.userList.sort((a, b) => b.messageCount - a.messageCount)
-                    }
+                    const people = new Set<string>()
+                    for (const s of sessions) if (s.mentor_id === mentorId) people.add(s.user_id)
+                    mentorStats[mentorId].users = people.size
                 }
             }
         }

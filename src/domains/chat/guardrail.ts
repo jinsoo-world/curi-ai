@@ -48,8 +48,8 @@ export const ERROR_MESSAGES = {
     /** 무료 대화 소진 */
     freeUsageExhausted: (remaining: number) =>
         remaining <= 2
-            ? `오늘 무료 대화가 ${remaining}회 남았어요! 더 많은 대화를 원하시면 구독을 살펴보세요 😊`
+            ? '오늘 무료 대화가 거의 끝나가요! 더 많은 대화를 원하시면 구독을 살펴보세요 😊'
             : '',
     /** 무료 대화 완전 소진 */
-    freeUsageDone: '오늘의 무료 대화를 다 사용하셨어요! 🙏\n내일 다시 만나요, 아니면 프리미엄 구독으로 하루 500회 대화를 즐겨보세요 ✨\n\n👉 /pricing 에서 구독 플랜을 확인해보세요!',
+    freeUsageDone: '오늘의 무료 대화를 다 사용하셨어요! 🙏\n내일 다시 만나요, 아니면 프리미엄 구독으로 더 많은 대화를 즐겨보세요 ✨\n\n👉 /pricing 에서 구독 플랜을 확인해보세요!',
 } as const

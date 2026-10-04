@@ -79,9 +79,10 @@ describe('클로버 잔량 띠', () => {
         expect(cloverBarView(4, false, '/os')).toBeNull()
     })
 
-    it('클로버는 「대화 N번」으로 보이고, 단추는 충전이 아니라 요금제로 간다', () => {
+    it('클로버는 「모아 둔 대화」로 보이고(횟수 숫자 없음), 단추는 충전이 아니라 요금제로 간다', () => {
         const v = cloverBarView(100, false, '/os/chat/abc')
-        expect(v?.text).toBe('모아 둔 대화 20번 남음')
+        expect(v?.text).toBe('모아 둔 대화가 남아 있어요')
+        expect(v?.text).not.toMatch(/\d/)
         expect(v?.action).toBe('요금제')
         expect(v?.text).not.toContain('클로버')
         expect(v?.href).toBe('/os/charge?from=%2Fos%2Fchat%2Fabc')

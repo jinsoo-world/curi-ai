@@ -86,27 +86,21 @@ export function cloverChats(balance: number | null | undefined): number {
     return Math.floor(balance / CLOVER_COST.text)
 }
 
-/** 「대화 N번」. 0번이면 빈 값 = 화면에 아무것도 안 그린다 */
+/** 모아 둔 대화가 있으면 짧은 한 줄, 없으면 빈 값 = 화면에 아무것도 안 그린다. 횟수 숫자는 고객 화면에 안 보인다(대표 승인 1005) */
 export function cloverChatsText(balance: number | null | undefined): string {
-    const n = cloverChats(balance)
-    return n > 0 ? `대화 ${n.toLocaleString('ko-KR')}번` : ''
+    return cloverChats(balance) > 0 ? '남아 있어요' : ''
 }
 
-/** 쓴 클로버 → 대화 몇 번 (사진 답 15개 = 3번). 1번보다 적게 보이지 않게 올림 */
-function spentChats(spent: number): number {
-    return Math.max(1, Math.ceil(spent / CLOVER_COST.text))
-}
-
-/** 이어 쓰기 창에 보이는 한 줄 (대표 0930 「클로버 주는 게 눈에 보이면 좋겠어」). 원화 환산은 안 적는다 */
+/** 이어 쓰기 창에 보이는 한 줄. 횟수와 원화 환산은 안 적는다 */
 export function overageSheetNote(balance: number | null, cost: number, photoCost: number = CLOVER_COST.photoAnswer): string {
-    const head = photoCost > cost ? `답 하나에 모아 둔 대화 ${spentChats(cost)}번(사진이 있으면 ${spentChats(photoCost)}번)이 쓰여요.` : `답 하나에 모아 둔 대화 ${spentChats(cost)}번이 쓰여요.`
-    return typeof balance === 'number' ? `${head} 지금 ${cloverChats(balance).toLocaleString('ko-KR')}번 남았어요.` : head
+    void balance; void cost; void photoCost
+    return '답 하나에 모아 둔 대화가 쓰여요.'
 }
 
-/** 클로버로 이어 쓴 답 아래 작은 한 줄 */
+/** 클로버로 이어 쓴 답 아래 작은 한 줄 (횟수는 안 적는다) */
 export function cloverSpentText(spent: number, balance: number | null): string {
-    const head = `🍀 모아 둔 대화 ${spentChats(spent)}번 씀`
-    return typeof balance === 'number' ? `${head}, ${cloverChats(balance).toLocaleString('ko-KR')}번 남음` : head
+    void spent; void balance
+    return '🍀 모아 둔 대화로 이어 썼어요'
 }
 
 /** 모아 둔 대화 안내 한 줄 (결제 화면 잔액 아래). 스위치에 따라 바뀐다 */

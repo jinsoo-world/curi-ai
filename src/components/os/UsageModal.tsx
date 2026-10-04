@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import CloverIcon from '@/components/ui/CloverIcon'
 import Link from 'next/link'
 import { getCreditBalance } from '@/domains/credit'
-import { usageTone, withComma, type UsageLike } from '@/domains/os/usage'
+import { usageTone, type UsageLike } from '@/domains/os/usage'
 import { cloverChats } from '@/domains/os/usage-config'
 import { planNameL, usageDetailL } from '@/domains/os/i18n'
 import { useLocale } from './LocaleProvider'
@@ -71,7 +71,7 @@ export default function UsageModal({ data, onClose }: { data: UsageLike; onClose
                 {cloverChats(clover) > 0 && (
                     <section className="os-usage-sec" aria-label={t('clover.label')}>
                         <div className="os-usage-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><CloverIcon size={16} /><span>{t('clover.label')}</span></div>
-                        <b>{t('clover.balance', { n: withComma(cloverChats(clover)) })}</b>
+                        <b>{t('clover.balance')}</b>
                         <div className="os-usage-sub">{t('clover.sub')}</div>
                     </section>
                 )}
