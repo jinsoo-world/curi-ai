@@ -23,7 +23,7 @@ function fakeDb(existingUrls: string[] = []) {
     const from = () => {
         const chain: Record<string, unknown> = {}
         for (const op of ['select', 'eq', 'or', 'in', 'order', 'limit']) chain[op] = () => chain
-        chain.then = (ok: (v: unknown) => unknown) => Promise.resolve({ count: 0, data: existingUrls.map(u => ({ original_url: u })), error: null }).then(ok)
+        chain.then = (ok: (v: unknown) => unknown) => Promise.resolve({ count: 0, data: existingUrls.map((u, i) => ({ id: `s${i}`, original_url: u })), error: null }).then(ok)
         return chain
     }
     return { from } as never
@@ -80,6 +80,8 @@ describe('addDraftSources: 소스별로 초안과 같은 길로 읽어 편마다
         }))
         const r = await addDraftSources(fakeDb(['https://blog.naver.com/me/1']), 'm1', { links: ['https://blog.naver.com/me'], pastes: [] })
         expect(r.added).toBe(0)
+        expect(r.failed).toBe(0)                  // 이미 넣어 둔 블로그를 다시 넣은 것은 실패가 아니다
+        expect(r.failures).toEqual([])
         expect(addKnowledgeSource).not.toHaveBeenCalled()
     })
 

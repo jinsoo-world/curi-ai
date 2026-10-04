@@ -349,6 +349,8 @@ export interface AccountAddResult {
     /** 하나도 못 넣었을 때 사람에게 보일 이유 */
     reason?: string
     code?: string
+    /** 새 글이 없고 이 계정의 글이 이미 들어 있다 (실패가 아니다). 이미 있는 자료 하나의 번호 */
+    already?: { id: string }
 }
 
 /**
@@ -362,9 +364,11 @@ export async function addAccountSources(
     const out: AccountAddResult = { sources: [], failed: 0 }
     const { FETCHERS } = await import('./feeds')
     const deadline = input.deadline ?? Date.now() + 100_000
-    const { data } = await db.from('knowledge_sources').select('original_url').eq('mentor_id', mentorId)
-    const known = new Set(((data ?? []) as { original_url: string | null }[]).map(r => r.original_url).filter(Boolean) as string[])
+    const { data } = await db.from('knowledge_sources').select('id, original_url').eq('mentor_id', mentorId)
+    const rows = ((data ?? []) as { id?: string; original_url: string | null }[])
+    const known = new Set(rows.map(r => r.original_url).filter(Boolean) as string[])
     const key = accountKeyOf(url) ?? accountKeyOf(target.feed.handleOrUrl)
+    const ownRow = key ? rows.find(r => accountKeyOf(r.original_url) === key && r.id) : undefined
     let own = 0
     try {
         const usage = await loadSlotUsage(db, mentorId)
@@ -404,7 +408,11 @@ export async function addAccountSources(
             if (e instanceof Error && e.message === FULL_LINE) { out.code = 'full'; break }
         }
     }
-    if (out.sources.length === 0 && !out.reason) { out.reason = fetched.note || '새로 읽을 글이 없었어요'; out.code = 'empty' }
+    if (out.sources.length === 0 && !out.reason) {
+        // 새 글이 없는데 이 계정의 글이 이미 들어 있으면 실패가 아니다 (같은 주소를 다시 넣었을 때)
+        if (ownRow?.id && out.failed === 0 && fetched.items.every(it => known.has(it.url))) { out.already = { id: ownRow.id }; return out }
+        out.reason = fetched.note || '새로 읽을 글이 없었어요'; out.code = 'empty'
+    }
     return out
 }
 
@@ -422,6 +430,7 @@ export async function addLinkSource(db: SupabaseClient, mentorId: string, rawUrl
     const account = await accountTargetOf(url)
     if (account) {
         const r = await addAccountSources(db, mentorId, account, url, { userId: opts.userId })
+        if (r.already) return { id: r.already.id, deduped: true, accountCount: 0 }     // 이미 다 들어 있음 = 실패 아님
         if (r.sources.length === 0) throw new LinkReadError(r.reason || '그 주소에서 읽을 글을 못 찾았어요', r.code)
         return { ...r.sources[r.sources.length - 1], accountCount: r.sources.length }
     }
@@ -524,6 +533,7 @@ export async function addDraftSources(
         if (target?.feed && FEED_PLATFORMS.has(target.platform) && !post) {
             const r = await addAccountSources(db, mentorId, { platform: target.platform, feed: target.feed }, url, { userId: input.userId, deadline })
             added += r.sources.length
+            if (r.sources.length === 0 && r.already) return          // 이미 넣어 둔 계정 = 실패로 세지 않는다
             if (r.sources.length === 0) await fail(url, r.reason || '읽을 글을 못 찾았어요', r.code)
             else if (r.failed > 0) failed += r.failed
             return
