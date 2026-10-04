@@ -89,10 +89,14 @@ export async function POST(req: NextRequest) {
     const update: Record<string, unknown> = {
         updated_at: now,
         step: STEP_ORDER.indexOf(step) + 1,
+        user_agent: ua.slice(0, 300) || null,
+    }
+    // 들어온 길 칸은 브라우저가 처음 들어온 순간을 적어 보낸 줄(first_touch_at)이면 덮어쓰지 않는다 (2026-10-05).
+    // 그 줄이 아직 없을 때만 이 요청의 기기와 방문 기록 첫 줄로 채운다 (아래 별도 쓰기).
+    const pathFields: Record<string, unknown> = {
         device: ctx.device,
         os: ctx.os,
         app_shell: ctx.app_shell,
-        user_agent: ua.slice(0, 300) || null,
         visitor_id: cut(body.visitorId, 60),
         ...(visit ? {
             utm_source: visit.utm_source, utm_medium: visit.utm_medium, utm_campaign: visit.utm_campaign,
@@ -136,6 +140,15 @@ export async function POST(req: NextRequest) {
     }
 
     const { error } = await db.from('user_onboarding').update(update).eq('user_id', user.id)
+    if (!error) {
+        // 칸이 아직 없는 DB 에서도 온보딩은 계속된다(오류는 무시)
+        const { error: pathErr } = await db.from('user_onboarding').update(pathFields).eq('user_id', user.id).is('first_touch_at', null)
+        if (pathErr) {
+            console.warn('[onboarding] 들어온 길 칸 쓰기 건너뜀:', pathErr.message)
+            // first_touch_at 칸이 없는 옛 DB 라면 예전처럼 덮어쓴다
+            if (['42703', 'PGRST204'].includes(pathErr.code ?? '')) await db.from('user_onboarding').update(pathFields).eq('user_id', user.id)
+        }
+    }
     if (error) {
         console.error('[onboarding] 저장 실패:', error.message)
         return NextResponse.json({ error: '저장하지 못했어요. 다시 눌러 주세요.' }, { status: 500 })

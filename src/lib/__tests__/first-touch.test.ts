@@ -28,3 +28,22 @@ describe('first-touch', () => {
         expect(recordFirstTouch(s, { params: new URLSearchParams(), referrer: 'https://curi.ai/a', host: 'curi.ai', path: '/b' }).referrer).toBeNull()
     })
 })
+
+describe('first-touch 기기와 추천 코드 (2026-10-05)', () => {
+    const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1'
+    it('처음 들어온 기기와 ?ref 를 적는다', () => {
+        const s = mem()
+        const ft = recordFirstTouch(s, { params: new URLSearchParams('ref=abc12'), referrer: '', host: 'curi.ai', path: '/os', ua: IPHONE })
+        expect(ft.ref_code).toBe('abc12'); expect(ft.device).toBe('mobile'); expect(ft.os).toBe('ios'); expect(ft.app_shell).toBe('web')
+    })
+    it('앱 껍데기를 알려 주면 앱으로 적는다', () => {
+        const ft = recordFirstTouch(mem(), { params: new URLSearchParams(), referrer: '', host: 'h', path: '/', ua: IPHONE, nativePlatform: 'ios' })
+        expect(ft.app_shell).toBe('ios_app')
+    })
+    it('예전에 기기 없이 적힌 기록에는 기기만 채우고 나머지는 그대로', () => {
+        const s = mem()
+        s.setItem(FIRST_TOUCH_KEY, JSON.stringify({ utm_source: 'kakao', utm_medium: null, utm_campaign: null, referrer: null, path: '/a', at: '2026-10-01T00:00:00Z' }))
+        const ft = recordFirstTouch(s, { params: new URLSearchParams('utm_source=x'), referrer: '', host: 'h', path: '/b', ua: IPHONE })
+        expect(ft.utm_source).toBe('kakao'); expect(ft.device).toBe('mobile')
+    })
+})

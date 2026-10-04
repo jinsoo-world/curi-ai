@@ -16,6 +16,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { confirmPayment } from '@/lib/toss'
 import { isTableMissing } from '@/domains/os/admin-stats'
+import { markFirstPaid } from '@/domains/acquisition/attr'
 import { STORE_SUBSCRIBED_MESSAGE, getPlan, isPaidPlanId, nextPlanPeriod, planAdFree, planIdFromOrderId, planLimits, planSource, resolvePlan } from '@/domains/os/plan'
 
 export const dynamic = 'force-dynamic'
@@ -114,6 +115,9 @@ export async function POST(req: NextRequest) {
             console.error('[os/plan] 저장 실패:', 쓰기오류.message, { orderId })
             return NextResponse.json({ error: '결제는 됐는데 요금제 저장에 실패했어요. 고객센터로 알려주세요.' }, { status: 500 })
         }
+
+        // 처음 결제면 어디서 온 사람인지 사본을 남긴다(광고비 판단용). 실패해도 결제 결과는 그대로다
+        await markFirstPaid(admin, user.id, 'toss', now)
 
         return NextResponse.json({
             success: true,

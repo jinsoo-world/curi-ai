@@ -1,6 +1,7 @@
 // domains/os — 레비뉴캣 웹훅 처리 (열쇠 확인 → 알림 잡기 → 사람 찾기 → 판단 → 조건부 저장 → 기록)
 // 판단은 revenuecat.ts(순수). 여기는 순서와 저장만. 저장소는 바꿔 끼울 수 있게 RcStore 로 받는다(시험이 쉽게).
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { markFirstPaid } from '@/domains/acquisition/attr'
 import {
     claimVerdict, decideRevenueCatEvent, endRevenueCatPlan, eventTime, isAuthorized, isHandledType, isUuid, minimalPayload, pickUserId, RC_KEY_PREFIX,
     type PlanRowFull, type RcDecision, type RcEvent, type UserPlanWrite,
@@ -36,6 +37,8 @@ export interface RcStore {
     finishEvent(id: string, patch: Pick<RcEventRecord, 'outcome' | 'reason' | 'user_id'>): Promise<void>
     /** 처리 실패 때 잡은 것을 풀어 레비뉴캣이 다시 보내면 처리되게 */
     releaseEvent(id: string): Promise<void>
+    /** 처음 결제한 사람이면 시각, 경로, 출처 사본을 적는다 (광고비 판단용). 없어도 되고, 실패해도 결제 처리는 그대로다 */
+    markFirstPaid?(userId: string, now: Date): Promise<unknown>
 }
 
 export interface RcResult {
@@ -123,6 +126,10 @@ export async function handleRevenueCatWebhook(a: {
         }
 
         const r = await applyOnce(store, userId, planRow => decideRevenueCatEvent({ event: e, userId, planRow, now }))
+        // 진짜 결제(샌드박스 아님)로 요금제가 열렸으면 처음 결제 기록을 남긴다. 실패해도 이 알림은 정상 처리한다
+        if (r.outcome === 'set' && (e.type === 'INITIAL_PURCHASE' || e.type === 'RENEWAL') && e.environment !== 'SANDBOX' && store.markFirstPaid) {
+            try { await store.markFirstPaid(userId, now) } catch { /* 계측이 결제 처리를 막지 않는다 */ }
+        }
         return await done(r.outcome, userId, r.reason)
     } catch (err) {
         console.error('[revenuecat] 처리 실패:', e.type, e.id, err instanceof Error ? err.message : err)
@@ -151,6 +158,7 @@ async function applyOnce(store: RcStore, userId: string, decide: (row: PlanRowFu
 export function supabaseRcStore(db: SupabaseClient): RcStore {
     const must = (error: { message: string } | null, what: string) => { if (error) throw new Error(`${what}: ${error.message}`) }
     return {
+        markFirstPaid: (userId, now) => markFirstPaid(db, userId, 'revenuecat', now),
         async userExists(userId) {
             const { data, error } = await db.from('users').select('id').eq('id', userId).maybeSingle()
             must(error, 'users 읽기')
