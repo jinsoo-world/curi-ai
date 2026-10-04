@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 import { createHash } from 'node:crypto'
 import { readUrl, KNOWLEDGE_READ_OPTIONS } from '@/domains/os/readers'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { addDraftSources, addLinkSource, loadSlotUsage } from '@/domains/os/knowledge'
+import { addDraftSources, addLinkSource, loadSlotUsage, assertRoomForMore } from '@/domains/os/knowledge'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
@@ -34,6 +34,12 @@ export async function POST(req: Request) {
         const r = await addDraftSources(db, TEST_MENTOR, { links: urls, pastes: [], deadline: Date.now() + 100_000 })
         const slots = await loadSlotUsage(db, TEST_MENTOR)
         return NextResponse.json({ ip, region, result: r, slots: slots.slots, perKey: Object.fromEntries(slots.perKey), ms: Date.now() - t0 })
+    }
+    if (b.action === 'room') {
+        const slots = await loadSlotUsage(db, TEST_MENTOR)
+        const out: Record<string, string> = {}
+        for (const u of urls) { try { await assertRoomForMore(db, TEST_MENTOR, { url: u }); out[u] = 'ok' } catch (e) { out[u] = e instanceof Error ? e.message : String(e) } }
+        return NextResponse.json({ slots: slots.slots, out })
     }
     if (b.action === 'link') {
         const t0 = Date.now()
