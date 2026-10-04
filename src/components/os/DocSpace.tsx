@@ -2,6 +2,7 @@
 // 월 자료 넣기: 퍼센트 한 줄과 한도 카드. 쪽 수, 클로버 개수는 보이지 않습니다 (대표 지시 0929).
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useIosApp } from '@/hooks/useIosApp'
 
 export interface DocSpaceBlock {
     code: 'doc_space_full' | 'no_clovers' | 'file_too_long' | 'cap'
@@ -43,6 +44,7 @@ export function DocSpaceLine({ refreshKey = 0 }: { refreshKey?: number }) {
 /** 한도 카드: 무료는 요금제 보기만, 유료는 클로버(화면 이름 「모아 둔 대화」)로 이어 넣기도. 클로버 판매 끝(대표 결정 1002)이라 채우기 단추는 요금제로 */
 export function DocSpaceCard({ block, busy, onPayClovers }: { block: DocSpaceBlock; busy?: boolean; onPayClovers: () => void }) {
     const [ask, setAsk] = useState(false)
+    const iosApp = useIosApp()   // 아이폰 앱 안에서는 요금제 올리기 링크를 숨긴다(앱스토어 3.1.1)
     return (
         <div className="os-notice" style={{ margin: '14px 0 0', display: 'grid', gap: 10 }} role="alert">
             <div>{ask ? '이 파일을 넣는 데 모아 둔 대화가 쓰여요. 넣은 뒤 남은 대화는 요금제 화면에서 보실 수 있어요.' : block.message}</div>
@@ -56,7 +58,7 @@ export function DocSpaceCard({ block, busy, onPayClovers }: { block: DocSpaceBlo
                         <button type="button" className="os-btn" disabled={busy} onClick={() => setAsk(false)}>취소</button>
                     </>
                 )}
-                {!ask && (
+                {!ask && iosApp === false && (
                     <Link className="os-btn" href="/os/charge">
                         {block.code === 'no_clovers' || block.canPayClovers ? '요금제 올리기' : '유료로 바꾸기'}
                     </Link>

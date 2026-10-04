@@ -5,11 +5,14 @@ import { createClient as createServerClient } from '@/lib/supabase/server'
 import { issueBillingKey, chargeBilling, generateOrderId } from '@/lib/toss'
 import { createSubscription, savePayment, getPlan, isValidPlanType } from '@/domains/subscription'
 import { sendErrorAlert } from '@/lib/slack'
+import { isIosAppUserAgent } from '@/lib/app-shell'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
     try {
+        // 아이폰 앱 안에서는 웹 카드결제를 받지 않는다(앱스토어 3.1.1)
+        if (isIosAppUserAgent(req.headers.get('user-agent'))) return NextResponse.json({ error: '앱에서는 결제할 수 없어요.' }, { status: 403 })
         const { authKey, customerKey, planType } = await req.json()
 
         // 🔒 누구 구독인지는 로그인 정보에서만 정한다.

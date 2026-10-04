@@ -19,11 +19,14 @@ import { PLANS, STORE_SUBSCRIBED_MESSAGE, canBuyPlan, isPaidPlanId, planPriceTex
 import { PLAN_REASON, REFUND_NOTICE, cloverBalanceNote, cloverChatsText } from '@/domains/os/usage-config'
 import { startPlanPayment, planReturnUrls, fetchMyPlan } from './plan-client'
 import { useOsTeam } from '@/components/os/OsShell'
+import { useIosApp } from '@/hooks/useIosApp'
+import { APP_PLAN_NOTE } from '@/lib/app-shell'
 import CloverIcon from '@/components/ui/CloverIcon'
 import './charge.css'
 
 export default function OsChargePage() {
     const router = useRouter()
+    const iosApp = useIosApp()   // 아이폰 앱 안이면 true: 카드결제와 가격을 보이지 않는다(앱스토어 3.1.1). 웹은 false
     const { guest, loading: teamLoading } = useOsTeam()
     const [userId, setUserId] = useState<string | null>(null)
     const [sessionChecked, setSessionChecked] = useState(false)
@@ -93,6 +96,9 @@ export default function OsChargePage() {
             <div className="osc-inner">
                 {/* 「대화로 돌아가기」는 OsShell 한 장 화면 줄이 그린다 (U14). returnTo 는 로그인, 결제 뒤 도착지로 계속 쓴다 */}
                 <h1 className="osc-h1">요금제</h1>
+                {/* 아이폰 앱: 결제 단추, 가격, 로그인 유도 없이 한 줄만. 링크도 없다 */}
+                {iosApp === true && <p className="osc-p" data-testid="osc-app-note">{APP_PLAN_NOTE}</p>}
+                {iosApp === false && (<>
                 <p className="osc-p">봇을 더 많이, 더 자주 쓰고 싶을 때 요금제를 올리면 돼요. 무료로도 시작할 수 있어요.</p>
 
                 {isGuest && (
@@ -166,6 +172,7 @@ export default function OsChargePage() {
 
 
                     </>
+                </>)}
             </div>
         </div>
     )

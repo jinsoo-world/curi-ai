@@ -16,6 +16,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { confirmPayment } from '@/lib/toss'
 import { isTableMissing } from '@/domains/os/admin-stats'
+import { isIosAppUserAgent } from '@/lib/app-shell'
 import { markFirstPaid } from '@/domains/acquisition/attr'
 import { STORE_SUBSCRIBED_MESSAGE, getPlan, isPaidPlanId, nextPlanPeriod, planAdFree, planIdFromOrderId, planLimits, planSource, resolvePlan } from '@/domains/os/plan'
 
@@ -51,6 +52,8 @@ export async function POST(req: NextRequest) {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return NextResponse.json({ error: '로그인이 필요해요.' }, { status: 401 })
+        // 아이폰 앱 안에서는 웹 카드결제를 받지 않는다(앱스토어 3.1.1). 화면에서도 가리지만 서버도 막는다
+        if (isIosAppUserAgent(req.headers.get('user-agent'))) return NextResponse.json({ error: '앱에서는 결제할 수 없어요.' }, { status: 403 })
 
         const { paymentKey, orderId, amount, planId } = await req.json()
         if (!paymentKey || !orderId) return NextResponse.json({ error: '결제 정보가 없어요.' }, { status: 400 })

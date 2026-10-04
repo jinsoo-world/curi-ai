@@ -11,7 +11,12 @@ const config: CapacitorConfig = {
     server: {
         url: 'https://www.curi-ai.com/os',
         cleartext: false,          // http(암호화 안 된 주소) 금지
+        // 애플 로그인(웹 방식)이 앱 안 화면에서 돌게 허용한다. 목록에 없는 다른 사이트 주소는 사파리로 넘어가 로그인이 끊긴다
+        allowNavigation: ['appleid.apple.com', 'idmsa.apple.com', '*.supabase.co'],
     },
+    // 서버가 「아이폰 앱에서 온 요청」을 알아보는 표시. 앱 안에서는 웹 카드결제와 가격 안내를 숨긴다(앱스토어 3.1.1, src/lib/app-shell.ts)
+    // 새로 빌드한 앱부터 붙는다. 화면 쪽은 window.Capacitor 로도 알아본다.
+    appendUserAgent: 'CuriAIApp/ios',
     ios: {
         contentInset: 'automatic', // 노치·홈 표시줄만큼 알아서 띄운다
         backgroundColor: '#0B0B0C',

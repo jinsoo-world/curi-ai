@@ -13,7 +13,8 @@
 //    다시 불러도 안전하다(지울 것이 없으면 그냥 지나간다).
 import { createHash } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { revokeAppleTokens, type RevokeResult } from './apple-revoke'
+import { revokeAppleTokens, revokeStoredAppleToken, type RevokeResult } from './apple-revoke'
+import { readAppleRefreshToken } from './apple-token'
 import { planSource, resolvePlan } from '@/domains/os/plan'
 import { addSuppressions } from '@/domains/messaging/suppressions'
 
@@ -21,6 +22,9 @@ import { addSuppressions } from '@/domains/messaging/suppressions'
 type Db = SupabaseClient<any, any, any>
 
 export const CONFIRM_WORD = '탈퇴'
+
+/** 탈퇴한 사람 자리에 넣는 「아무도 아닌」 회원번호 */
+const NIL_USER = '00000000-0000-0000-0000-000000000000'
 
 export interface DeleteUser {
     id: string
@@ -79,13 +83,15 @@ const USER_DELETES: [string, string][] = [
     ['mentor_match_logs', 'user_id'], ['analytics_events', 'user_id'], ['app_events', 'user_id'], ['visit_logs', 'user_id'],
     ['creator_payout_profiles', 'user_id'], ['conversation_credits', 'user_id'], ['user_plans', 'user_id'],
     ['user_onboarding', 'user_id'], ['signup_surveys', 'user_id'],
+    ['apple_login_tokens', 'user_id'], ['message_campaign_sends', 'user_id'], ['ai_subscriptions', 'user_id'], ['user_bot_blocks', 'user_id'], ['credits', 'user_id'], ['marketing_consent_log', 'user_id'],
 ]
 
 /** 내가 만든 봇에 딸린 표 (mentor_id 기준, 자식 먼저) — 마지막에 mentors 자체 */
 const MENTOR_DELETES = [
     'knowledge_chunks', 'knowledge_sources', 'ontology_relations', 'ontology_entities', 'channel_members',
     'team_bots', 'bot_links', 'bot_audience', 'bot_access_groups', 'bot_response_settings', 'bot_routines',
-    'knowledge_feeds', 'knowledge_syncs', 'mentor_monetization', 'mentor_link_counts',
+    'knowledge_feeds', 'knowledge_syncs', 'mentor_monetization',
+    // mentor_link_counts 는 표가 아니라 bot_links 를 세는 보기(view)라 지울 수 없다(지우면 55000 으로 탈퇴가 멈춘다). bot_links 를 지우면 같이 사라진다
 ]
 
 /** 5년 보관하는 표: 지우지 않고 사람과의 연결만 끊는다 */
@@ -155,7 +161,7 @@ async function removeStorage(db: Db, t: StorageTarget) {
 export async function deleteAccount(
     db: Db,
     user: DeleteUser,
-    opts: { appleAuthorizationCode?: string; revokeApple?: (code?: string) => Promise<RevokeResult> } = {},
+    opts: { appleAuthorizationCode?: string; revokeApple?: (code?: string) => Promise<RevokeResult>; revokeStored?: (refreshToken: string, clientId: string) => Promise<RevokeResult> } = {},
 ): Promise<DeleteResult> {
     const uid = user.id
 
@@ -182,6 +188,9 @@ export async function deleteAccount(
     if (planErr && !(planErr.code && SKIPPABLE.has(planErr.code))) fail('요금제 확인', planErr)
     const row = planRow as { plan: string | null; expires_at: string | null; last_order_id: string | null } | null
     const hasStoreSubscription = resolvePlan(row).plan !== 'free' && planSource(row?.last_order_id) === 'revenuecat'
+
+    // 2-2) 애플로 로그인한 사람이면, 로그인 때 잠가 둔 애플 연결 열쇠를 지우기 전에 꺼내 둔다(6단계에서 애플 쪽 연결을 끊는 데 쓴다)
+    const appleStored = user.provider === 'apple' ? await readAppleRefreshToken(db, uid) : null
 
     // 3) 결제·크레딧·구독 기록은 보관하되 사람과 분리. 실패하면(마이그레이션 전) 여기서 멈춰 아무것도 안 지운다
     const ref = anonymousRef(uid)
@@ -234,6 +243,10 @@ export async function deleteAccount(
         console.warn('[account-delete] 받지 않을 사람 명단 기록 실패', e instanceof Error ? e.message : e)
     }
 
+    // 3-3) SNS 보너스 중복 방지 열쇠(같은 블로그로 계정을 새로 만들어 또 받는 것 막기)는 지우지 않고 사람만 뗀다.
+    //      user_id 를 「아무도 아닌 값(0 으로 된 번호)」 으로 바꾸면 그 주소는 계속 이미 받은 것으로 막힌다
+    await tolerant('sns_bonus_keys 익명화', db.from('sns_bonus_keys').update({ user_id: NIL_USER }).eq('user_id', uid))
+
     // 4) 저장소 파일
     for (const t of storagePlan(uid, mentorIds)) await removeStorage(db, t)
 
@@ -252,10 +265,12 @@ export async function deleteAccount(
     }
     await tolerant('creator_profiles 삭제', db.from('creator_profiles').delete().eq('user_id', uid))
 
-    // 6) 애플 연결 끊기 (실패해도 탈퇴는 계속한다)
+    // 6) 애플 연결 끊기 (실패해도 탈퇴는 계속한다). 웹 로그인 때 보관한 열쇠가 있으면 그걸로, 없으면 앱이 보낸 인증 코드로
     if (user.provider === 'apple') {
         try {
-            const r = await (opts.revokeApple ?? revokeAppleTokens)(opts.appleAuthorizationCode)
+            const r = appleStored
+                ? await (opts.revokeStored ?? revokeStoredAppleToken)(appleStored.refreshToken, appleStored.clientId)
+                : await (opts.revokeApple ?? revokeAppleTokens)(opts.appleAuthorizationCode)
             if (!r.revoked) console.log(`[account-delete] 애플 토큰 취소 건너뜀/실패: ${r.reason}`)
         } catch (e) {
             console.warn('[account-delete] 애플 토큰 취소 오류', e instanceof Error ? e.message : e)

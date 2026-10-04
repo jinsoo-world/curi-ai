@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import BotAvatar from '@/components/os/BotAvatar'
-import { KakaoMark, GoogleMark } from '@/components/brand/SocialMarks'
+import { KakaoMark, GoogleMark, AppleMark } from '@/components/brand/SocialMarks'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { safeNextPath } from '@/lib/safe-next'
@@ -24,9 +24,11 @@ export default function LoginPage() {
     const [isInAppBrowser, setIsInAppBrowser] = useState(false)
 
     // 다른 화면의 「카카오로 시작」「구글로 시작」에서 왔나 (?provider=)
-    const [wantProvider, setWantProvider] = useState<'kakao' | 'google' | null>(null)
+    const [wantProvider, setWantProvider] = useState<'kakao' | 'google' | 'apple' | null>(null)
+    // 애플 로그인 단추: Supabase 에 애플 설정이 끝나 실제로 열려 있을 때만 보인다 (/api/auth/apple-ready). 안 열렸으면 카카오, 구글만
+    const [appleReady, setAppleReady] = useState(false)
     const autoStarted = useRef(false)
-    const [startNow, setStartNow] = useState<{ provider: 'kakao' | 'google'; next: string | null } | null>(null)
+    const [startNow, setStartNow] = useState<{ provider: 'kakao' | 'google' | 'apple'; next: string | null } | null>(null)
 
     useEffect(() => {
         // 최근 사용한 로그인 방식 확인
@@ -38,7 +40,7 @@ export default function LoginPage() {
         const next = safeNextPath(params.get('next'))
         setNextPath(next)
         const p = params.get('provider')
-        const want = p === 'kakao' || p === 'google' ? p : null
+        const want = p === 'kakao' || p === 'google' || p === 'apple' ? p : null
         setWantProvider(want)
         if (want) {
             // 새로고침, 뒤로 가기로 다시 자동 시작하지 않게 주소에서 뗀다
@@ -54,11 +56,24 @@ export default function LoginPage() {
                 return
             }
             const inApp = /KAKAOTALK|NAVER|Line|Instagram|FB_IAB|FBAN/i.test(navigator.userAgent || '')
-            if (want && !autoStarted.current && !(want === 'google' && inApp)) {
+            if (want && want !== 'apple' && !autoStarted.current && !(want === 'google' && inApp)) {
                 autoStarted.current = true
                 setStartNow({ provider: want, next })
             }
         })
+
+        // 애플 로그인이 열려 있나. 열려 있고 ?provider=apple 로 왔으면 바로 시작한다
+        fetch('/api/auth/apple-ready').then(r => r.json()).then((d: { ready?: boolean }) => {
+            if (!d?.ready) return
+            setAppleReady(true)
+            if (want === 'apple' && !autoStarted.current) {
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                    if (session?.user || autoStarted.current) return
+                    autoStarted.current = true
+                    setStartNow({ provider: 'apple', next })
+                })
+            }
+        }).catch(() => { /* 확인 못 하면 애플 단추는 숨긴 채 그대로 */ })
 
         // 카카오톡/인앱 브라우저 감지
         const ua = navigator.userAgent || ''
@@ -69,7 +84,7 @@ export default function LoginPage() {
 
     const supabase = createClient()
 
-    const handleSocialLogin = async (provider: 'google' | 'kakao', nextOverride?: string | null) => {
+    const handleSocialLogin = async (provider: 'google' | 'kakao' | 'apple', nextOverride?: string | null) => {
         const goNext = nextOverride ?? nextPath
         // 체크 칸 대신 단추 아래 안내문으로 동의(고지 동의). 시각은 그대로 콜백까지 들고 간다 → users.terms_agreed_at·온보딩 표에 남는다
         localStorage.setItem('curi_terms_agreed', 'true')
@@ -86,11 +101,16 @@ export default function LoginPage() {
                     scopes:
                         provider === 'kakao'
                             ? 'account_email profile_nickname profile_image name gender birthday birthyear phone_number'
-                            : undefined,
+                            : provider === 'apple'
+                                ? 'name email'
+                                : undefined,
+                    // 애플은 prompt 값을 받지 않는다
                     queryParams:
-                        provider === 'kakao'
-                            ? { prompt: 'login' }
-                            : { prompt: 'select_account' },
+                        provider === 'apple'
+                            ? undefined
+                            : provider === 'kakao'
+                                ? { prompt: 'login' }
+                                : { prompt: 'select_account' },
                 },
             })
             if (error) throw error
@@ -285,6 +305,50 @@ export default function LoginPage() {
                             </div>
                         )}
                     </div>
+
+                    {/* Apple: 앱스토어 심사(4.8)는 다른 소셜 로그인이 있으면 애플도 같은 크기로 두라고 한다. 설정이 열렸을 때만 보인다 */}
+                    {appleReady && (
+                        <button
+                            type="button"
+                            data-testid="login-apple"
+                            onClick={() => handleSocialLogin('apple')}
+                            disabled={isLoading !== null}
+                            style={{
+                                width: '100%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+                                padding: '14px 24px', fontSize: 18, fontWeight: 600,
+                                borderRadius: 8,
+                                minHeight: 56,
+                                background: '#000',
+                                color: '#fff',
+                                border: wantProvider === 'apple' ? '2px solid var(--color-neutral-500)' : 'none',
+                                cursor: 'pointer',
+                                transition: 'all 200ms',
+                                opacity: isLoading !== null ? 0.5 : 1,
+                            }}
+                        >
+                            {isLoading === 'apple' ? (
+                                <div style={{
+                                    width: 20, height: 20, borderRadius: '50%',
+                                    border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff',
+                                    animation: 'spin 0.8s linear infinite',
+                                }} />
+                            ) : (
+                                <AppleMark />
+                            )}
+                            Apple로 시작하기
+                            {lastProvider === 'apple' && (
+                                <span style={{
+                                    background: '#fff', color: '#000',
+                                    fontSize: 13, fontWeight: 600,
+                                    padding: '2px 6px', borderRadius: 4,
+                                    marginLeft: 4, whiteSpace: 'nowrap',
+                                }}>
+                                    최근 사용
+                                </span>
+                            )}
+                        </button>
+                    )}
                 </div>
 
 

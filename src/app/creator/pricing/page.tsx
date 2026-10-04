@@ -3,6 +3,8 @@
 // 리더(크리에이터) 구독 화면 — 자기 AI 를 만들어 운영하는 값을 낸다.
 // 대표 확정 2026-09-14 = 「리더도 구독제로 가. 수수료는 1.5%만.」
 // ⚠️ 값은 domains/subscription 한 곳에서만 가져온다. 화면에 숫자를 적어두지 않는다.
+import { useIosApp } from '@/hooks/useIosApp'
+import { APP_PLAN_NOTE } from '@/lib/app-shell'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -23,6 +25,7 @@ export default function CreatorPricingPage() {
     const [userId, setUserId] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
+    const iosApp = useIosApp()   // 아이폰 앱 안에서는 웹 카드결제를 보이지 않는다(앱스토어 3.1.1)
 
     useEffect(() => {
         const supabase = createClient()
@@ -54,6 +57,14 @@ export default function CreatorPricingPage() {
             setErrorMsg(msg)
             setLoading(false)
         }
+    }
+
+    if (iosApp !== false) {
+        return (
+            <main style={{ minHeight: '100dvh', background: '#fff', padding: '40px 20px' }}>
+                {iosApp === true && <p style={{ fontSize: 17, color: 'var(--color-neutral-700)', textAlign: 'center' }} data-testid="app-plan-note">{APP_PLAN_NOTE}</p>}
+            </main>
+        )
     }
 
     const plan = CREATOR_PLANS.pro

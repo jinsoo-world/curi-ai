@@ -17,6 +17,7 @@ import {
 import { isUsageLike, usageTone, withComma, type UsageLike } from '@/domains/os/usage'
 import { isLowClover } from '@/domains/credit/charge-flow'
 import { useLocale, paintTheme } from '@/components/os/LocaleProvider'
+import { useIosApp } from '@/hooks/useIosApp'
 import NotificationSettings, { Toggle } from '@/components/os/NotificationSettings'
 import { RingSvg } from '@/components/os/UsageRing'
 import InstallPrompt from '@/components/pwa/InstallPrompt'
@@ -307,6 +308,7 @@ function GeneralTab({ localeChoice, setLocaleChoice }: { localeChoice: LocaleCho
 type UsageState = { kind: 'loading' } | { kind: 'guest' } | { kind: 'fail' } | { kind: 'ok'; data: UsageLike }
 
 function UsageTab() {
+    const iosApp = useIosApp()   // 아이폰 앱 안에서는 요금제 관리 단추를 숨긴다(앱스토어 3.1.1)
     const { t, locale } = useLocale()
     const [usage, setUsage] = useState<UsageState>({ kind: 'loading' })
     const [extra, setExtra] = useState<ExtraUsage>({ mode: 'none', amount: 0 })
@@ -403,9 +405,11 @@ function UsageTab() {
                         <input type="checkbox" checked={cloverAuto} onChange={e => 이어쓰기바꾸기(e.target.checked)} style={{ width: 22, height: 22 }} />
                     </label>
                 )}
-                <div className="os-set-actions">
-                    <Link href="/os/charge?from=/os/settings" className="os-btn primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>{t('plan.manage')}</Link>
-                </div>
+                {iosApp === false && (
+                    <div className="os-set-actions">
+                        <Link href="/os/charge?from=/os/settings" className="os-btn primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>{t('plan.manage')}</Link>
+                    </div>
+                )}
             </div>
         </>
     )

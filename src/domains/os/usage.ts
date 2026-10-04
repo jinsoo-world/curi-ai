@@ -107,7 +107,9 @@ export function usageLine(v: { pct: number; resetAt: Date }): string {
 }
 
 /** 한도에 닿았을 때 대화 자리에 보내는 말 */
-export function limitReachedMessage(resetAt: Date): string {
+export function limitReachedMessage(resetAt: Date, opts: { iosApp?: boolean } = {}): string {
+    // 아이폰 앱 안에서는 요금제를 올리라는 말을 하지 않는다(앱스토어 3.1.1)
+    if (opts.iosApp) return `이번 달 사용 한도에 닿았어요. ${kstDateHourText(resetAt)}에 다시 채워져요.`
     return `이번 달 사용 한도에 닿았어요. ${kstDateHourText(resetAt)}에 다시 채워져요. 더 쓰려면 요금제를 올려 보세요.`
 }
 

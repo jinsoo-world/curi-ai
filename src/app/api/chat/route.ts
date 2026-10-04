@@ -25,6 +25,9 @@ import {
 import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
 import { applySkills, skillsForMentor } from '@/domains/os/skills'
 // 🎛 답변 설정(목적·지침·말투·길이·창의성·출처·안내문·최신성). 트윈·리더 봇(마켓 공개봇)=Strict, 내 팀 봇=Adaptive 기본값 (domains/os/response-settings)
+import { isIosAppUserAgent } from '@/lib/app-shell'
+import { detectSmallTalk, smallTalkPrompt } from '@/domains/chat/small-talk'
+import { createServerSession } from '@/domains/chat/server-session'
 import { loadResponseSettingsForChat, applyResponseSettingsToPrompt, shouldAnswerFromKnowledge, STRICT_MIN_SIMILARITY } from '@/domains/os/response-settings'
 import { semanticCacheEnabled, cacheEligibility, cacheScopeKey, botVersion, knowledgeVersion, lookupCachedAnswer, storeCachedAnswer, isStorableAnswer, cachedAnswerStream, cacheAllowsGemini } from '@/domains/chat/semantic-cache'
 import { logLlmUsage, keepAliveAfterResponse } from '@/domains/llm/usage-log'
@@ -105,7 +108,10 @@ export async function POST(req: Request) {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
 
-        const { messages, mentorId, sessionId, guestMessageCount, inputMethod, visitorId, imageUrl, imageUrls, cloverOk } = await req.json()
+        const body = await req.json()
+        const { messages, mentorId, guestMessageCount, inputMethod, visitorId, imageUrl, imageUrls, cloverOk } = body
+        // 대화방 번호는 아래에서 바뀔 수 있다(번호 없이 오거나 내 것이 아니면 서버가 새로 만든다). 사용량은 대화방에 저장된 말로 세기 때문이다
+        let sessionId: string | undefined = body.sessionId
         // 요청 횟수 제한(보안 C-1 9번): 사용자/방문자 분당 20
         const rl = await checkRateLimit(createAdminClient(), rateLimitKey('chat', user?.id, visitorId, req), 20, 60)
         if (!rl.allowed) return Response.json({ error: rateLimitMessage('대화') }, { status: 429 })
@@ -292,6 +298,7 @@ export async function POST(req: Request) {
         // 없으면 대화방 번호만 알면 남의 방에 아무 글이나 심을 수 있었다.
         // 고객이 화면 주소를 캡처해 문의하거나 공유하면 그 번호가 그대로 드러난다.
         let sessionOwned = false
+        let newSessionId: string | null = null
         if (user && sessionId && !String(sessionId).startsWith('guest-')) {
             const ownerDb = createAdminClient()
             const { data: sessionRow } = await ownerDb
@@ -357,7 +364,7 @@ export async function POST(req: Request) {
             }
             if (usage.blocked && !overagePaid) {
                 const ask = CLOVER_OVERAGE_ENABLED && cloverOk !== true
-                const msg = CLOVER_OVERAGE_ENABLED && cloverOk === true ? OVERAGE_COPY.short : limitReachedMessage(usage.resetAt)
+                const msg = CLOVER_OVERAGE_ENABLED && cloverOk === true ? OVERAGE_COPY.short : limitReachedMessage(usage.resetAt, { iosApp: isIosAppUserAgent(ua) })
                 const enc = new TextEncoder()
                 const limitStream = new ReadableStream({
                     start(controller) {
@@ -371,6 +378,7 @@ export async function POST(req: Request) {
             // 대화는 월간 한도로 센다. 일일 무료 횟수는 쓰지 않는다.
             isFreeTrial = true
         }
+
 
         // 시스템 프롬프트 조립 (domains/mentor)
         let systemPrompt = buildSystemPrompt(
@@ -449,11 +457,19 @@ export async function POST(req: Request) {
         // 유튜브 자막이 막히면(Vercel) Gemini 정리를 쓴다. 누가 불렀는지로 하루 한도를 센다 (youtube-gemini.ts)
         const 링크읽기 = 링크차례.text ? readUrlsInText(링크차례.text, undefined, { gemini: { userId: user?.id ?? null } }).catch(() => []) : Promise.resolve([])
 
+        // 💬 인사, 자기소개 질문 (「안녕하세요」 「넌 누구야?」): 자료가 없어도 거절하지 않고 봇 자신의 이름과 말투로 답한다
+        const smallTalk = detectSmallTalk(String(lastUserMessage))
+        if (smallTalk) {
+            const m = mentor as { name?: string | null; title?: string | null; description?: string | null }
+            systemPrompt = `${systemPrompt}${smallTalkPrompt(smallTalk, { name: m.name, title: m.title, description: m.description })}`
+        }
+
         // 📚 RAG 지식 검색 (멘토별 지식 베이스)
         try {
             // ⚡ 자료가 하나도 없는 봇은 검색(임베딩 호출)을 건너뛴다 — 첫 글자가 0.3~0.6초 빨라진다 (대표 「너무 느리다」 0923)
             const { count: sourceCount } = await createAdminClient().from('knowledge_sources').select('id', { count: 'exact', head: true }).eq('mentor_id', mentorId)
-            const hasSources = (sourceCount ?? 0) > 0
+            // 인사, 자기소개는 자료에서 찾지 않는다(검색 비용도 아낀다)
+            const hasSources = (sourceCount ?? 0) > 0 && !smallTalk
             console.log('[Chat RAG] sources:', sourceCount ?? 0, 'msg length:', lastUserMessage.length)
             const embedding = hasSources ? await generateEmbedding(lastUserMessage, { route: '/api/chat', userId: user?.id ?? null, mentorId }) : []
             console.log('[Chat RAG] Embedding length:', embedding.length)
@@ -567,7 +583,7 @@ export async function POST(req: Request) {
 
         // 🎛 Strict 인데 자료가 없거나 관련도가 낮으면 — 모델을 부르지 않고 바로 no-answer 문구를 돌려준다(비용 절약 + 지어낸 답 방지)
         // 방금 읽은 링크가 있으면 그 글이 이번 답의 자료다 = 모르는 척하지 않고 답한다
-        if (!링크읽음 && !shouldAnswerFromKnowledge(responseSettings.settings, ragMatches)) {
+        if (!링크읽음 && !smallTalk && !shouldAnswerFromKnowledge(responseSettings.settings, ragMatches)) {
             const encoder = new TextEncoder()
             const text = responseSettings.noAnswerText
             const noAnswerStream = new ReadableStream({
@@ -579,6 +595,20 @@ export async function POST(req: Request) {
             return new Response(noAnswerStream, {
                 headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
             })
+        }
+
+        // 🔒 사용량 우회 막기: 월간 한도는 대화방(chat_sessions)에 저장된 사용자 말 수로 센다.
+        //    대화방 번호 없이(또는 없는 번호, guest- 번호로) 부르면 말이 저장되지 않아 한도에 안 잡혔다.
+        //    로그인 회원이 유효한 내 대화방 없이 부르면 서버가 대화방을 새로 만들어 이번 말부터 센다.
+        if (user && !sessionOwned) {
+            const created = await createServerSession(createAdminClient(), user.id, String((mentor as { id: string }).id), lastUserMessage)
+            if (!created) {
+                // 세지 못하면 한도를 지킬 수 없으므로 답하지 않는다
+                return Response.json({ error: '대화를 시작하지 못했어요. 잠시 뒤 다시 시도해 주세요.' }, { status: 503 })
+            }
+            sessionId = created
+            sessionOwned = true
+            newSessionId = created
         }
 
         // 🔌 노션에서 찾아 읽기 — 「노션에서 ○○ 찾아줘」 처럼 노션을 부를 때만.
@@ -924,7 +954,7 @@ export async function POST(req: Request) {
                     }
 
                     controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ text: '', done: true, fullResponse, sources: responseSettings.citationsOn ? usedSources : [], readUrls, ...(overageLeft !== null ? { cloverBalance: overageLeft } : {}), ...(overageCharge ? { cloverSpent: overageCharge.amount } : {}) })}\n\n`)
+                        encoder.encode(`data: ${JSON.stringify({ text: '', done: true, fullResponse, ...(newSessionId ? { sessionId: newSessionId } : {}), sources: responseSettings.citationsOn ? usedSources : [], readUrls, ...(overageLeft !== null ? { cloverBalance: overageLeft } : {}), ...(overageCharge ? { cloverSpent: overageCharge.amount } : {}) })}\n\n`)
                     )
                 } catch (error) {
                     await returnOverageClovers(overageCharge)

@@ -3,7 +3,8 @@
 // 필요한 열쇠(대표 애플 개발자 계정에서 만들어 Vercel 환경변수로 넣는다. 지금은 없다):
 //   APPLE_SIWA_KEY_ID        Apple Developer → Keys → Sign in with Apple 로 만든 열쇠의 Key ID
 //   APPLE_SIWA_TEAM_ID       2NS5S224QL
-//   APPLE_SIWA_CLIENT_ID     com.missiondriven.curiai
+//   APPLE_SIWA_CLIENT_ID     com.missiondriven.curiai   (앱 번들 ID. 앱에서 애플 로그인한 사람용)
+//   APPLE_SIWA_WEB_CLIENT_ID 웹 로그인용 Services ID (예: com.missiondriven.curiai.web). 웹으로 애플 로그인한 사람의 연결을 끊을 때 쓴다. 없으면 위 번들 ID
 //   APPLE_SIWA_PRIVATE_KEY   그 열쇠의 .p8 파일 내용 (줄바꿈은 \n 으로 적어도 된다)
 // 넷 중 하나라도 없으면 건너뛰고 기록만 남긴다(탈퇴 자체는 막지 않는다).
 //
@@ -48,6 +49,27 @@ function clientSecret(cfg: AppleConfig, nowSec = Math.floor(Date.now() / 1000)):
 
 const form = (o: Record<string, string>) => new URLSearchParams(o).toString()
 const HEADERS = { 'Content-Type': 'application/x-www-form-urlencoded' }
+
+/** 웹 로그인 때 보관해 둔 refresh token 으로 바로 끊는다(인증 코드 교환 단계 없음). clientId 는 그 토큰을 받을 때 쓴 ID */
+export async function revokeStoredAppleToken(
+    refreshToken: string,
+    clientId: string,
+    deps: { config?: AppleConfig | null; fetchFn?: FetchFn } = {},
+): Promise<RevokeResult> {
+    const base = deps.config === undefined ? appleConfigFromEnv() : deps.config
+    if (!base) return { revoked: false, reason: 'not_configured' }
+    const cfg = { ...base, clientId }
+    const fetchFn: FetchFn = deps.fetchFn ?? (fetch as unknown as FetchFn)
+    const rv = await fetchFn('https://appleid.apple.com/auth/revoke', {
+        method: 'POST', headers: HEADERS,
+        body: form({ client_id: cfg.clientId, client_secret: clientSecret(cfg), token: refreshToken, token_type_hint: 'refresh_token' }),
+    })
+    if (!rv.ok) {
+        console.warn('[account-delete] 애플 보관 토큰 취소 실패', rv.status)
+        return { revoked: false, reason: 'revoke_failed' }
+    }
+    return { revoked: true }
+}
 
 export async function revokeAppleTokens(
     authorizationCode: string | undefined,

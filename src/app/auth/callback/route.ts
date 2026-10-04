@@ -5,6 +5,7 @@ import { onboardingPathWithNext } from '@/domains/share/guestSignup'
 import { cookies } from 'next/headers'
 import { TERMS_COOKIE, parseTermsCookie } from '@/domains/os/onboarding'
 import { runAfterLogin, adminDbOr } from '@/domains/auth/after-login'
+import { saveAppleRefreshToken } from '@/domains/account/apple-token'
 
 /** 새 가입자가 먼저 가는 온보딩 화면 (대표 승인 0928) */
 const ONBOARDING_PATH = '/os/start'
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
 
     if (code) {
         const supabase = await createClient()
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        const { data: exchanged, error } = await supabase.auth.exchangeCodeForSession(code)
 
         if (!error) {
             const {
@@ -31,6 +32,10 @@ export async function GET(request: Request) {
             } = await supabase.auth.getUser()
 
             if (user) {
+                // 애플로 로그인했으면, 그때 한 번만 받는 애플 연결 열쇠를 잠가 둔다(탈퇴 때 애플 쪽 연결을 끊는 데 쓴다). 실패해도 로그인은 그대로
+                if (user.app_metadata?.provider === 'apple') {
+                    await saveAppleRefreshToken(adminDbOr(supabase), user.id, exchanged?.session?.provider_refresh_token)
+                }
                 // 로그인 직후 일(가입 선물·온보딩·회원 행·카카오 정보)은 앱과 같이 쓰는 runAfterLogin 이 한다 (2026-10-01 분리, 동작 같음)
                 const db = adminDbOr(supabase)
                 const cookieStore = await cookies()

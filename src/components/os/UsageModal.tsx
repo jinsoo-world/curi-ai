@@ -10,6 +10,7 @@ import { usageTone, withComma, type UsageLike } from '@/domains/os/usage'
 import { cloverChats } from '@/domains/os/usage-config'
 import { planNameL, usageDetailL } from '@/domains/os/i18n'
 import { useLocale } from './LocaleProvider'
+import { useIosApp } from '@/hooks/useIosApp'
 import { RingSvg } from './UsageRing'
 
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -19,6 +20,7 @@ export default function UsageModal({ data, onClose }: { data: UsageLike; onClose
     const [clover, setClover] = useState<number | null>(null)
     const [now] = useState(() => new Date())
     const { t, locale } = useLocale()
+    const iosApp = useIosApp()   // 아이폰 앱 안에서는 요금제 보기 링크를 숨긴다(앱스토어 3.1.1)
     const d = usageDetailL(locale, data, now)
 
     useEffect(() => {
@@ -76,7 +78,7 @@ export default function UsageModal({ data, onClose }: { data: UsageLike; onClose
 
                 <section className="os-usage-sec os-usage-plan" aria-label={t('plan.label')}>
                     <span>{t('plan.current')}: <b>{planNameL(locale, data.plan)}</b></span>
-                    <Link href="/os/charge" className="os-usage-plan-link">{t('usage.planView')}</Link>
+                    {iosApp === false && <Link href="/os/charge" className="os-usage-plan-link">{t('usage.planView')}</Link>}
                 </section>
 
                 <div className="os-sheet-foot" style={{ justifyContent: 'flex-end' }}>
