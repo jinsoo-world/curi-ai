@@ -36,10 +36,14 @@ export function createSupabasePushStore(db: Db): PushStore {
         },
 
         async hasMarketingConsent(userId) {
-            // 큐리AI 광고 수신 동의 = users.marketing_consent (가입 화면·내 정보에서 켬, 기본 false). 못 읽으면 동의 없음으로 본다
-            const { data, error } = await db.from('users').select('marketing_consent').eq('id', userId).maybeSingle()
-            if (error) return false
-            return (data as { marketing_consent?: boolean | null } | null)?.marketing_consent === true
+            // 앱 광고 수신 동의 = users.ad_consent_app_push (메시지엔진 1차에서 채널별로 나눴다. 옛 marketing_consent 를 옮겨 담았다).
+            // 칸이 아직 없으면(마이그레이션 전) 옛 칸을 본다. 못 읽으면 동의 없음으로 본다
+            const { data, error } = await db.from('users').select('ad_consent_app_push').eq('id', userId).maybeSingle()
+            if (!error) return (data as { ad_consent_app_push?: boolean | null } | null)?.ad_consent_app_push === true
+            if (error.code !== '42703' && error.code !== 'PGRST204') return false
+            const old = await db.from('users').select('marketing_consent').eq('id', userId).maybeSingle()
+            if (old.error) return false
+            return (old.data as { marketing_consent?: boolean | null } | null)?.marketing_consent === true
         },
 
         async getPrefs(userId) {

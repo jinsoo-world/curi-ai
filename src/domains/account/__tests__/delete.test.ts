@@ -187,7 +187,15 @@ describe('deleteAccount', () => {
     it('정산 정보가 없으면 보관함에 아무것도 넣지 않는다', async () => {
         const { db, calls } = fakeDb({ payout: null })
         await deleteAccount(db, user)
-        expect(calls.some(c => c.kind === 'upsert')).toBe(false)
+        expect(calls.some(c => c.kind === 'upsert' && c.target === 'retained_payout_profiles')).toBe(false)
+    })
+
+    it('받지 않을 사람 명단에 메일 지문만 남긴다(원래 주소는 남기지 않는다)', async () => {
+        const { db, calls } = fakeDb({ payout: null })
+        await deleteAccount(db, user)
+        const add = calls.find(c => c.kind === 'upsert' && c.target === 'message_suppressions')
+        expect(add).toBeTruthy()
+        expect(JSON.stringify(add?.detail ?? '')).not.toContain('@')
     })
 
     it('보관함 옮기기가 실패하면 정산 정보와 계정을 지우지 않고 중단', async () => {
