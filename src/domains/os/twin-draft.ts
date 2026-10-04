@@ -6,6 +6,7 @@
 // 인스타그램, 페이스북, 스레드, X, 틱톡은 읽지 않고 「못 읽은 링크」로 이유와 함께 돌려준다.
 
 import { classifySnsLink } from './sns-link'
+import { enoughText, failCodeOfReason, isLinkFailCode, type UnreadLink } from './link-rules'
 import { FETCHERS } from './feeds'
 import type { KnowledgeFeed } from './feeds'
 import { readUrl, youtubeVideoId } from './readers'
@@ -20,7 +21,6 @@ import {
 
 /** 기존 저가 모델 (유튜브 정리와 같은 것). 설정으로만 바꾼다 */
 export const TWIN_DRAFT_MODEL = 'gemini-3.5-flash-lite'
-const PASTE_MIN = 30
 const PASTE_MAX = 8_000
 // 자료 한 편 2,000자, 합계 12,000자 (예전 1,500 / 9,000). 앞부분만이 아니라 숫자, 경험담 문장을 골라 보여 준다(pickDetailSentences)
 const PER_SOURCE_CHARS = 2_000
@@ -37,7 +37,7 @@ export interface DraftText {
 }
 
 export { postUrlOf }
-export interface DraftSources { texts: DraftText[]; unread: { url: string; reason: string }[] }
+export interface DraftSources { texts: DraftText[]; unread: UnreadLink[] }
 
 export const UNREAD_REASON = {
     linkOnly: '이 곳은 지금 글을 읽지 않고 링크만 저장돼요',
@@ -47,13 +47,18 @@ export const UNREAD_REASON = {
     market: '큰 장터 상품은 상품 설명을 붙여 넣어 주세요',
 } as const
 
+/** 못 읽은 링크 한 줄 만들기 (이유 글에서 갈래를 가린다) */
+function unreadOf(url: string, reason: string, code?: string): UnreadLink {
+    return { url, reason, code: isLinkFailCode(code) ? code : failCodeOfReason(reason) }
+}
+
 /** 붙여넣은 글 정리: 빈 것, 너무 짧은 것 빼고 3편까지 */
 export function cleanDraftPastes(raw: unknown): string[] {
     const list = Array.isArray(raw) ? raw : []
     const out: string[] = []
     for (const v of list.slice(0, TWIN_DRAFT_MAX_PASTES * 2)) {
         const t = String(v ?? '').replace(/\r\n/g, '\n').trim().slice(0, PASTE_MAX)
-        if (t.replace(/\s+/g, '').length < PASTE_MIN) continue
+        if (!enoughText(t)) continue
         out.push(t)
         if (out.length >= TWIN_DRAFT_MAX_PASTES) break
     }
@@ -80,46 +85,47 @@ function fakeFeed(kind: KnowledgeFeed['kind'], handleOrUrl: string): KnowledgeFe
 }
 
 /** 링크 하나 읽기 (저장 안 함) */
-export async function readOneLink(link: string, hasPaste: boolean, deadline: number, userId: string | null, maxChars = READ_CHARS): Promise<{ texts: DraftText[]; unread?: { url: string; reason: string } }> {
+export async function readOneLink(link: string, hasPaste: boolean, deadline: number, userId: string | null, maxChars = READ_CHARS): Promise<{ texts: DraftText[]; unread?: UnreadLink }> {
+    // 유튜브 영상 하나 주소는 채널이 아니어도 읽는다(공식 oEmbed, Data API 설명만). 설정 창구와 같은 규칙 (1005)
+    if (youtubeVideoId(link)) {
+        const left = deadline - Date.now()
+        if (left < 3_000) return { texts: [], unread: unreadOf(link, UNREAD_REASON.time, 'timeout') }
+        // 영상 속 말까지: 무료 자막 먼저, 막히면 Gemini 저가 모델로 한 번 요약해 저장(영상당 한 번, 하루 한도 그대로)
+        const r = await readUrl(link, { timeoutMs: Math.min(45_000, left - 1_000), maxChars, gemini: { userId, waitMs: Math.max(0, Math.min(40_000, left - 3_000)) } })
+        return r.ok ? { texts: [{ title: r.title || '유튜브 영상', url: link, text: r.text }] } : { texts: [], unread: unreadOf(link, r.reason, r.code) }
+    }
     let t
     try {
         t = classifySnsLink(link)
     } catch (e) {
-        // 유튜브 영상 주소 하나는 채널이 아니어도 읽는다(공식 oEmbed, Data API 설명만. Gemini 안 부름)
-        if (youtubeVideoId(link)) {
-            const left = deadline - Date.now()
-            if (left < 3_000) return { texts: [], unread: { url: link, reason: UNREAD_REASON.time } }
-            // 영상 속 말까지: 무료 자막 먼저, 막히면 Gemini 저가 모델로 한 번 요약해 저장(영상당 한 번, 하루 한도 그대로)
-            const r = await readUrl(link, { timeoutMs: Math.min(45_000, left - 1_000), maxChars, gemini: { userId, waitMs: Math.max(0, Math.min(40_000, left - 3_000)) } })
-            return r.ok ? { texts: [{ title: r.title || '유튜브 영상', url: link, text: r.text }] } : { texts: [], unread: { url: link, reason: r.reason } }
-        }
-        return { texts: [], unread: { url: link, reason: e instanceof Error ? e.message : '주소를 확인해 주세요' } }
+        return { texts: [], unread: unreadOf(link, e instanceof Error ? e.message : '주소를 확인해 주세요', 'bad_url') }
     }
     if (t.platform === 'instagram' || t.platform === 'threads') {
         // readUrl 이 인스타 = readInstagram, 스레드 = readThreads(소개 포함) 로 보낸다. 같은 함수라 자료 저장 때 다시 쓸 수 있다
         const left = deadline - Date.now()
-        if (left < 3_000) return { texts: [], unread: { url: t.url, reason: UNREAD_REASON.time } }
-        const r = await readUrl(t.url, { timeoutMs: Math.min(10_000, left - 1_000), maxChars: maxChars })
-        if (r.ok && r.text.trim()) return { texts: [{ title: t.platform === 'instagram' ? '인스타그램' : '스레드', url: t.url, count: Math.max(1, r.text.split(/\n-{3,}\n/).length), text: r.text }] }
-        return hasPaste ? { texts: [] } : { texts: [], unread: { url: t.url, reason: UNREAD_REASON.paste } }
+        if (left < 3_000) return hasPaste ? { texts: [] } : { texts: [], unread: unreadOf(t.url, UNREAD_REASON.time, 'timeout') }
+        const r = await readUrl(t.url, { timeoutMs: Math.min(12_000, left - 1_000), maxChars: maxChars })
+        if (r.ok && enoughText(r.text)) return { texts: [{ title: t.platform === 'instagram' ? '인스타그램' : '스레드', url: t.url, count: Math.max(1, r.text.split(/\n-{3,}\n/).length), text: r.text }] }
+        // 못 읽었다: 붙여넣은 글이 있으면 그걸 쓰고, 없으면 이유를 돌려준다 (조용히 버리지 않는다)
+        return hasPaste ? { texts: [] } : { texts: [], unread: r.ok ? unreadOf(t.url, UNREAD_REASON.empty, 'empty') : unreadOf(t.url, r.reason, r.code) }
     }
-    if (t.paste && !t.feed) return hasPaste ? { texts: [] } : { texts: [], unread: { url: t.url, reason: UNREAD_REASON.paste } }
-    if (!t.feed) return { texts: [], unread: { url: t.url, reason: t.platform === 'market' ? UNREAD_REASON.market : UNREAD_REASON.linkOnly } }
+    if (t.paste && !t.feed) return hasPaste ? { texts: [] } : { texts: [], unread: unreadOf(t.url, UNREAD_REASON.paste, 'paste') }
+    if (!t.feed) return { texts: [], unread: unreadOf(t.url, t.platform === 'market' ? UNREAD_REASON.market : UNREAD_REASON.linkOnly, t.platform === 'market' ? 'paste' : 'link_only') }
     // 일반 웹의 글 하나, 상품 하나, 블로그 글 하나 주소는 그 쪽만 읽는다 (사이트 전체 목차를 돌지 않는다)
     const post = postUrlOf(link)
     if (post || (t.feed.kind === 'website' && new URL(t.url).pathname.replace(/\/+$/, '') !== '')) {
         const left = deadline - Date.now()
-        if (left < 3_000) return { texts: [], unread: { url: t.url, reason: UNREAD_REASON.time } }
+        if (left < 3_000) return { texts: [], unread: unreadOf(t.url, UNREAD_REASON.time, 'timeout') }
         const target = post ?? t.url
         const r = await readUrl(target, { timeoutMs: Math.min(12_000, left - 1_000), maxChars })
-        return r.ok ? { texts: [{ title: r.title || target, url: target, text: r.text }] } : { texts: [], unread: { url: target, reason: r.reason } }
+        return r.ok ? { texts: [{ title: r.title || target, url: target, text: r.text }] } : { texts: [], unread: unreadOf(target, r.reason, r.code) }
     }
     try {
         const r = await FETCHERS[t.feed.kind](fakeFeed(t.feed.kind, t.feed.handleOrUrl), null, { maxItems: 3, deadline })
         const texts = r.items.filter(i => (i.text ?? '').trim().length > 0).map(i => ({ title: i.title || t.url, url: i.url, text: i.text as string, ...(i.publishedAt ? { publishedAt: i.publishedAt } : {}) }))
-        return texts.length > 0 ? { texts } : { texts, unread: { url: t.url, reason: r.note || UNREAD_REASON.empty } }
+        return texts.length > 0 ? { texts } : { texts, unread: unreadOf(t.url, r.note || UNREAD_REASON.empty) }
     } catch (e) {
-        return { texts: [], unread: { url: t.url, reason: e instanceof Error ? e.message.slice(0, 120) : UNREAD_REASON.empty } }
+        return { texts: [], unread: unreadOf(t.url, e instanceof Error ? e.message.slice(0, 120) : UNREAD_REASON.empty) }
     }
 }
 

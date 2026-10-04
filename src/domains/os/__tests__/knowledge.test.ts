@@ -107,25 +107,27 @@ describe('assertBotOwned — 내가 만든 봇만 자료를 넣고 고친다', (
     })
 })
 
-describe('assertRoomForMore — 쓸 수 있는 자료만 자리를 차지한다', () => {
-    type Row = { processing_status: string; chunk_count: number }
+describe('assertRoomForMore — 쓸 수 있는 자료만, 출처 단위로 자리를 차지한다', () => {
+    type Row = { id?: string; processing_status: string; chunk_count: number; feed_id?: string | null; original_url?: string | null }
     // .or(USABLE_SOURCE_FILTER) 가 걸렸을 때만 실패, 빈 자료를 빼고 센다 (진짜 PostgREST 를 흉내)
     function fakeDb(rows: Row[]) {
         const calls: string[] = []
         const q: any = {
             select: () => q,
             eq: () => q,
+            limit: () => q,
             or: (f: string) => { calls.push(f); return q },
             then: (res: (v: unknown) => void) => {
-                const usable = calls.includes(USABLE_SOURCE_FILTER)
+                const usable = (calls.includes(USABLE_SOURCE_FILTER)
                     ? rows.filter(r => ['pending', 'processing'].includes(r.processing_status) || (r.processing_status === 'completed' && r.chunk_count > 0))
-                    : rows
-                res({ count: usable.length, error: null })
+                    : rows).map((r, i) => ({ id: r.id ?? `r${i}`, feed_id: r.feed_id ?? null, original_url: r.original_url ?? null }))
+                res({ count: usable.length, data: usable, error: null })
             },
         }
         return { db: { from: () => q } as unknown as SupabaseClient, calls }
     }
     const ok = (n: number): Row[] => Array.from({ length: n }, () => ({ processing_status: 'completed', chunk_count: 3 }))
+    const blogPosts = (n: number, id = 'ranto28'): Row[] => Array.from({ length: n }, (_, i) => ({ processing_status: 'completed', chunk_count: 3, original_url: `https://blog.naver.com/${id}/${1000 + i}` }))
 
     it('실패한 자료, 조각 0개 자료는 세지 않는다', async () => {
         const { db, calls } = fakeDb([...ok(8), { processing_status: 'failed', chunk_count: 0 }, { processing_status: 'completed', chunk_count: 0 }])
@@ -134,11 +136,21 @@ describe('assertRoomForMore — 쓸 수 있는 자료만 자리를 차지한다'
     })
     it('처리 중인 자료는 센다 (한꺼번에 올려서 한도를 넘지 못하게)', async () => {
         const { db } = fakeDb([...ok(MAX_SOURCES_PER_BOT - 1), { processing_status: 'processing', chunk_count: 0 }])
-        await expect(assertRoomForMore(db, 'm1')).rejects.toThrow(`${MAX_SOURCES_PER_BOT}개`)
-    })
-    it('쓸 수 있는 자료가 10개면 막는다', async () => {
-        const { db } = fakeDb(ok(MAX_SOURCES_PER_BOT))
         await expect(assertRoomForMore(db, 'm1')).rejects.toThrow()
+    })
+    it('쓸 수 있는 자료가 칸마다 하나씩 10개면 막는다 (숫자는 문구에 없다)', async () => {
+        const { db } = fakeDb(ok(MAX_SOURCES_PER_BOT))
+        await expect(assertRoomForMore(db, 'm1')).rejects.toThrow(/가득/)
+        await expect(assertRoomForMore(db, 'm1')).rejects.not.toThrow(/\d/)
+    })
+    it('블로그 한 곳의 글 10편은 한 칸이다 (다른 자료를 더 넣을 수 있다)', async () => {
+        const { db } = fakeDb(blogPosts(10))
+        await expect(assertRoomForMore(db, 'm1', { url: 'https://example.com/a' })).resolves.toBeUndefined()
+    })
+    it('칸이 다 찼어도 이미 있는 블로그의 글은 더 넣을 수 있다', async () => {
+        const { db } = fakeDb([...blogPosts(5), ...ok(9)])
+        await expect(assertRoomForMore(db, 'm1', { url: 'https://example.com/a' })).rejects.toThrow(/가득/)
+        await expect(assertRoomForMore(db, 'm1', { url: 'https://blog.naver.com/ranto28/9999' })).resolves.toBeUndefined()
     })
 })
 

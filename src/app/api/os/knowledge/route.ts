@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
     assertBotOwned, assertRoomForMore, listBotSources, addLinkSource, addTextSource, addQaSource,
-    updateBotSourceMeta, removeBotSource, retryBotSource, BotNotMine,
+    updateBotSourceMeta, removeBotSource, retryBotSource, BotNotMine, LinkReadError,
 } from '@/domains/os/knowledge'
 import { addSnsCaptureSource } from '@/domains/os/sns-capture'
 import { understandSource, saveUnderstanding, dropUnderstanding } from '@/domains/os/understand'
@@ -29,7 +29,8 @@ function 오류응답(e: unknown) {
     if (e instanceof BotNotMine) return NextResponse.json({ error: '권한이 없어요' }, { status: 403 })
     const message = e instanceof Error ? e.message : '자료를 다루지 못했어요'
     console.error('[os/knowledge]', message)
-    return NextResponse.json({ error: message }, { status: 400 })
+    // 링크를 못 읽었으면 이유 갈래(code)를 같이 준다: 화면이 「다시 시도」, 붙여넣기를 가른다
+    return NextResponse.json({ error: message, ...(e instanceof LinkReadError && e.code ? { code: e.code } : {}) }, { status: 400 })
 }
 
 export async function GET(req: NextRequest) {
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
         if (kind === 'understand-save') {
             return NextResponse.json(await saveUnderstanding(db, user.id, mentorId, String(body.sourceId ?? ''), body.understanding))
         }
-        await assertRoomForMore(db, mentorId)
+        await assertRoomForMore(db, mentorId, { url: typeof body.url === 'string' ? body.url : undefined })
         // 자료를 넣는 데 성공하면: 공개 중인(또는 확인 대기 중인) 봇은 새 자료까지 AI 가 다시 본다 (응답 뒤)
         const added = (source: unknown) => {
             after(() => recheckAfterKnowledge(db, { mentorId, actorUserId: user.id }))
@@ -78,8 +79,11 @@ export async function POST(req: NextRequest) {
             return added(source)
         }
         if (kind === 'url') {
-            const source = await addLinkSource(db, mentorId, String(body.url ?? ''), { userId: user.id })
-            return added(source)
+            const source = await addLinkSource(db, mentorId, String(body.url ?? ''), { userId: user.id }) as { id: string; title?: string; deduped?: boolean; accountCount?: number }
+            // 읽은 결과를 같이 돌려준다: 화면이 「제목, 몇 글자 읽었어요」를 보여 준다 (1005)
+            const content = await db.from('knowledge_sources').select('title, char_count, chunk_count').eq('id', source.id).maybeSingle()
+            after(() => recheckAfterKnowledge(db, { mentorId, actorUserId: user.id }))
+            return NextResponse.json({ source: { id: source.id }, read: { title: String(content.data?.title ?? source.title ?? ''), chars: Number(content.data?.char_count ?? 0), already: !!source.deduped, posts: source.accountCount ?? 1 } })
         }
         if (kind === 'text') {
             const sourceKind = typeof body.sourceKind === 'string' ? body.sourceKind : 'text'

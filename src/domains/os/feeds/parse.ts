@@ -52,6 +52,8 @@ export interface ParsedFeedEntry {
     /** 본문 전체(RSS content:encoded, Atom content). Substack 은 여기에 글 전체가 있다 */
     content: string
     publishedAt?: string
+    /** 소리, 영상 파일이 달린 글인가 (팟캐스트 회차). 블로그 글은 false */
+    hasMedia?: boolean
 }
 
 /** 이 글이 RSS 나 Atom 피드인가 */
@@ -85,6 +87,7 @@ export function parseFeed(xml: string): ParsedFeedEntry[] {
             description: tagText(b, 'description') || tagText(b, 'itunes:summary'),
             content: tagText(b, 'content:encoded'),
             publishedAt: toIso(tagText(b, 'pubDate') || tagText(b, 'dc:date')),
+            hasMedia: /<enclosure\b[^>]*type="(?:audio|video)\//i.test(b),
         })
     }
     if (out.length > 0) return out.filter(e => e.url)

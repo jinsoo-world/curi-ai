@@ -3,14 +3,15 @@
 // 유튜브 채널, 네이버 블로그, 브런치, 티스토리, RSS, 일반 웹은 읽는다(대표 결정 0929). 못 읽으면 대표 글 붙여넣기를 연다.
 // 인스타그램, 페이스북, 스레드, X, 틱톡은 링크만 저장한다(준비 중).
 import { useCallback, useEffect, useState } from 'react'
-import { SNS_HINT, SNS_PASTE_MAX_POSTS as PASTE_MAX_POSTS, SNS_PASTE_MIN_CHARS as PASTE_MIN_CHARS } from '@/domains/os/onboarding'
+import { SNS_HINT } from '@/domains/os/onboarding'
+import { MAX_PASTE_POSTS as PASTE_MAX_POSTS, PASTE_HELP_LINE, RETRY_LABEL, TOO_SHORT_LINE, enoughText } from '@/domains/os/link-rules'
 import { 클로버알림 } from '@/lib/clover-bus'
 import { shrinkImage } from '@/lib/image-shrink'
 
 type Link = { id: string; url: string; platform: string; status: 'read' | 'pending' | 'failed'; added_count: number; note: string | null }
 const STATUS: Record<Link['status'], string> = { read: '읽음', pending: '준비 중', failed: '못 읽음' }
 /** 대표 글 붙여넣기를 받는 곳 (서버 classifySnsLink 의 paste 와 같다) */
-const PASTE_PLATFORMS = ['naver_blog', 'brunch', 'instagram', 'facebook', 'threads']
+const PASTE_PLATFORMS = ['naver_blog', 'brunch', 'instagram', 'facebook', 'threads', 'youtube']
 
 export default function SnsLinkCard() {
     const [links, setLinks] = useState<Link[]>([])
@@ -46,11 +47,12 @@ export default function SnsLinkCard() {
         if (!u || busy) return
         setBusy(true)
         setRetryId(target ? (links.find(l => l.url === target)?.id ?? null) : null)
-        setMsg('읽는 중이에요. 30초쯤 걸릴 수 있어요')
+        setMsg('읽는 중이에요. 잠시만 기다려 주세요')
         try {
             const r = await fetch('/api/os/sns-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: u, source: 'settings' }) })
             const d = await r.json().catch(() => ({}))
-            setMsg(d.error || d.message || '')
+            // 읽었으면 「인스타그램 글 5개를 읽었어요」, 못 읽었으면 이유 한 줄 (같은 자리에 글 붙여넣기 칸이 열린다)
+            setMsg(d.error || [d.summary, d.message].filter(Boolean).join('. ') || '')
             if (typeof d.balance === 'number') 클로버알림(d.balance)
             if (r.ok && d.status === 'paste') setPasteUrl(u)
             if (r.ok) { if (!target) setUrl(''); void load() }
@@ -69,7 +71,7 @@ export default function SnsLinkCard() {
         try {
             const r = await fetch('/api/os/sns-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'paste', url: pasteUrl, posts, images: shots }) })
             const d = await r.json().catch(() => ({}))
-            setMsg(d.error || d.message || '')
+            setMsg(d.error || [d.summary, d.message].filter(Boolean).join('. ') || '')
             if (typeof d.balance === 'number') 클로버알림(d.balance)
             if (r.ok) { setPasteUrl(null); setPosts(Array(PASTE_MAX_POSTS).fill('')); setShots([]); void load() }
         } catch {
@@ -92,7 +94,7 @@ export default function SnsLinkCard() {
                 {msg && <div className="os-set-sub" role="status">{msg}</div>}
                 {pasteUrl && (
                     <div className="os-set-paste" style={{ display: 'grid', gap: 8, marginTop: 8 }}>
-                        <div className="os-set-sub">대표 글을 붙여넣거나 화면 캡처를 올려 주세요. 한 편에 {PASTE_MIN_CHARS}자 이상</div>
+                        <div className="os-set-sub">{PASTE_HELP_LINE}</div>
                         <label className="os-btn" style={{ justifySelf: 'start', cursor: 'pointer' }}>
                             화면 캡처 올리기{shots.length > 0 ? ' (더 올리기)' : ''}
                             <input type="file" accept="image/png,image/jpeg,image/webp" multiple style={{ display: 'none' }} onChange={e => { void pickShots(e.target.files); e.target.value = '' }} />
@@ -102,9 +104,10 @@ export default function SnsLinkCard() {
                             <textarea key={i} value={p} rows={4} maxLength={20000} placeholder={`글 ${i + 1}`} onChange={e => setPosts(prev => prev.map((x, j) => j === i ? e.target.value : x))}
                                 style={{ width: '100%', fontSize: 16, padding: 10, borderRadius: 12, border: '1px solid var(--os-선)', background: 'var(--os-말풍선)', color: 'var(--os-글)', resize: 'vertical' }} />
                         ))}
+                        {posts.some(p => p.trim()) && !posts.some(p => enoughText(p)) && shots.length === 0 && <div className="os-set-sub">{TOO_SHORT_LINE}</div>}
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                             <button type="button" className="os-btn" onClick={() => setPasteUrl(null)}>닫기</button>
-                            <button type="button" className="os-btn primary" disabled={busy || (posts.every(p => !p.trim()) && shots.length === 0)} onClick={() => void savePaste()}>{busy ? '저장 중' : '글 저장하기'}</button>
+                            <button type="button" className="os-btn primary" disabled={busy || (!posts.some(p => enoughText(p)) && shots.length === 0)} onClick={() => void savePaste()}>{busy ? '저장 중' : '글 저장하기'}</button>
                         </div>
                     </div>
                 )}
@@ -113,7 +116,7 @@ export default function SnsLinkCard() {
                         <div className="os-set-line">
                             <div className="os-set-text" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.url}</div>
                             {l.status === 'failed'
-                                ? <button type="button" className="os-btn" disabled={busy} onClick={() => void add(l.url)}>{retryId === l.id ? '읽는 중' : '다시 시도'}</button>
+                                ? <button type="button" className="os-btn" disabled={busy} onClick={() => void add(l.url)}>{retryId === l.id ? '읽는 중' : RETRY_LABEL}</button>
                                 : l.status === 'pending' && PASTE_PLATFORMS.includes(l.platform)
                                 ? <button type="button" className="os-btn" onClick={() => setPasteUrl(l.url)}>글 붙여넣기</button>
                                 : <span className="os-set-value">{STATUS[l.status]}</span>}

@@ -22,6 +22,9 @@ import {
     draftStepAt, draftSourceChips, draftSourceKind,
 } from '@/domains/os/twin-draft-shared'
 import { clearHomeDraft, readHomeDraft, type HomeDraft } from '@/domains/home/draft-store'
+import type { UnreadLink } from '@/domains/os/link-rules'
+import LinkReadReport from './LinkReadReport'
+import { retryLinkRead } from './link-retry'
 
 interface Props {
     guest: boolean
@@ -444,7 +447,8 @@ function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => v
     const [pastes, setPastes] = useState<string[]>(() => Array.from({ length: TWIN_DRAFT_MAX_PASTES }, (_, i) => initial?.pastes[i] ?? ''))
     const [busy, setBusy] = useState(false)
     const [err, setErr] = useState<string | null>(null)
-    const [unreadOnly, setUnreadOnly] = useState<{ url: string; reason: string }[]>([])
+    const [unreadOnly, setUnreadOnly] = useState<UnreadLink[]>([])
+    const [retrying, setRetrying] = useState<string | null>(null)
     const [draft, setDraft] = useState<TwinDraft | null>(null)
     const [stepText, setStepText] = useState(() => draftStepAt(0))
     // 기다리는 동안 단계 문구를 시간에 따라 바꾼다 (숫자는 안 보여 줌)
@@ -464,9 +468,19 @@ function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => v
     const [color, setColor] = useState<BotColor>('orange')
 
     const filled = links.map(l => l.trim()).filter(Boolean)
-    const needPaste = filled.some(l => draftLinkKind(l) === 'paste')
+    // 붙여넣기 칸: 붙여넣기로 받는 곳이거나, 읽다가 못 읽은 링크가 있을 때 (같은 화면에서 바로)
+    const needPaste = filled.some(l => draftLinkKind(l) === 'paste') || unreadOnly.length > 0
     const canDraft = agree.every(Boolean) && (filled.length > 0 || pastes.some(p => p.trim())) && !busy
     const guess = (f: DraftField) => draft?.guessed.includes(f) ? <span className="os-draft-guess" style={{ marginLeft: 6, fontSize: 12, padding: '1px 6px', borderRadius: 8, background: 'var(--os-말풍선)', color: 'var(--os-글-흐림)' }}>{TWIN_DRAFT_COPY.guess}</span> : null
+
+    /** 못 읽은 링크 하나 「다시 시도」: 읽히면 목록에서 빼고 안내한다 */
+    const retryHere = async (url: string) => {
+        setRetrying(url)
+        const r = await retryLinkRead(url)
+        setRetrying(null)
+        if (r.ok) { setUnreadOnly(cur => cur.filter(u => u.url !== url)); setErr(r.line) }
+        else setUnreadOnly(cur => [...cur.filter(u => u.url !== url), r.unread])
+    }
 
     const makeDraft = async () => {
         setBusy(true); setErr(null); setUnreadOnly([])
@@ -561,7 +575,7 @@ function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => v
             )}
             {busy && <div className="os-step" role="status" aria-live="polite">{stepText}</div>}
             {err && <div className="os-notice" style={{ margin: '14px 0 0' }}>{err}</div>}
-            {unreadOnly.length > 0 && <UnreadList items={unreadOnly} />}
+            {unreadOnly.length > 0 && <LinkReadReport unread={unreadOnly} retrying={retrying} onRetry={u => void retryHere(u)} disabled={busy} />}
             <div className="os-sheet-foot">
                 <button type="button" className="os-btn" onClick={onClose} disabled={busy}>닫기</button>
                 <button type="button" className="os-btn primary" onClick={() => void makeDraft()} disabled={!canDraft}>{busy ? '만드는 중' : TWIN_DRAFT_COPY.make}</button>
@@ -632,7 +646,7 @@ function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => v
                     {draftSourceChips(draft.counts ?? countKinds(draft)).map(c => <span key={c} className="os-chipbtn" style={{ cursor: 'default' }}>{c}</span>)}
                 </div>
             </div>
-            {draft.unread.length > 0 && <UnreadList items={draft.unread} />}
+            {draft.unread.length > 0 && <LinkReadReport unread={draft.unread} />}
             {err && <div className="os-notice" style={{ margin: '14px 0 0' }}>{err}</div>}
             <div className="os-sheet-foot">
                 <button type="button" className="os-btn" onClick={() => setDraft(null)} disabled={busy}>이전</button>
@@ -650,15 +664,4 @@ function countKinds(d: TwinDraft) {
 }
 function learnedKinds(d: TwinDraft): string[] {
     return Object.entries(d.counts ?? countKinds(d)).filter(([, n]) => (n ?? 0) > 0).map(([k]) => k)
-}
-
-function UnreadList({ items }: { items: { url: string; reason: string }[] }) {
-    return (
-        <div className="os-field">
-            <div className="os-field-label">{TWIN_DRAFT_COPY.unread}</div>
-            <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--os-글-흐림)' }}>
-                {items.map((u, i) => <div key={i} style={{ wordBreak: 'break-all' }}>{u.url}: {u.reason}</div>)}
-            </div>
-        </div>
-    )
 }

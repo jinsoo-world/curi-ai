@@ -4,6 +4,7 @@
 // 주인이 고친 뒤 「만들기」를 눌러야 봇이 생긴다. 근거가 없는 칸은 「추정」으로 표시한다.
 
 import { isMarketHost } from '@/domains/home/link-guide'
+import type { UnreadLink } from './link-rules'
 
 /** 초안 요청 한도 (설정값). 사용자 하루 5번, 전체 하루 500번 */
 export const TWIN_DRAFT_USER_DAILY = 5
@@ -50,7 +51,9 @@ export function draftLinkKind(raw: string): DraftLinkKind {
     if (!/^https?:$/.test(u.protocol) || !u.hostname.includes('.')) return 'bad'
     const host = u.hostname.replace(/^(www|m)\./, '').toLowerCase()
     const is = (h: string) => host === h || host.endsWith(`.${h}`)
-    if (is('instagram.com') || is('threads.net') || is('threads.com') || is('facebook.com') || is('fb.com')) return 'paste'
+    // 인스타그램, 스레드는 공개 글이면 읽는다 (못 읽으면 이유와 붙여넣기 칸이 같은 화면에 뜬다)
+    if (is('instagram.com') || is('threads.net') || is('threads.com')) return 'read'
+    if (is('facebook.com') || is('fb.com')) return 'paste'
     if (is('x.com') || is('twitter.com') || is('tiktok.com')) return 'link'
     if (isMarketHost(host)) return 'paste'
     return 'read'
@@ -81,7 +84,7 @@ export interface TwinDraft {
     sources: { title: string; url: string; kind?: DraftSourceKind }[]
     /** 종류별로 읽은 개수 (화면 표시, 첫 인사용) */
     counts?: Partial<Record<DraftSourceKind, number>>
-    unread: { url: string; reason: string }[]
+    unread: UnreadLink[]
 }
 export type DraftField = 'names' | 'oneLiner' | 'greeting' | 'audience' | 'topics' | 'voiceRules' | 'limits' | 'chips' | 'example'
 export const DRAFT_FIELDS: readonly DraftField[] = ['names', 'oneLiner', 'greeting', 'audience', 'topics', 'voiceRules', 'limits', 'chips', 'example']

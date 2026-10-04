@@ -62,7 +62,8 @@ export function homeLinkGuide(raw: string): HomeLinkGuide {
     const host = u.hostname.replace(/^(www|m)\./, '').toLowerCase()
     const is = (h: string) => host === h || host.endsWith(`.${h}`)
 
-    if (CAPTURE.some(is)) return g('capture', url, true)
+    // 인스타그램, 스레드는 읽는다. 못 읽었을 때의 붙여넣기 칸은 만들기 화면이 이유와 함께 연다
+    if (CAPTURE.some(is)) return g('capture', url, !(is('instagram.com') || is('threads.net') || is('threads.com')))
     if (host === 'blog.naver.com' || host === 'rss.blog.naver.com' || is('brunch.co.kr')) return g('feed', url)
     if (isMarketHost(host)) return g('market', url, true)
     if (host === 'youtube.com' || host === 'youtu.be') return g('youtube', url)

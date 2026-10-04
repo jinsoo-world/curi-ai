@@ -11,7 +11,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { addKnowledgeSource } from '@/domains/knowledge'
 import { markInjectionPatterns } from '@/domains/chat/injection'
-import { MAX_SOURCES_PER_BOT, isUnusableSource } from '@/domains/os/knowledge'
+import { MAX_SOURCES_PER_BOT, MAX_ITEMS_PER_ACCOUNT, isUnusableSource, slotKeyOf } from '@/domains/os/knowledge'
+import { accountKeyOf } from '@/domains/os/link-rules'
 import type { FeedKind, FeedStatus, FetchNewItems, FetchNewItemsResult, KnowledgeFeed } from './types'
 import { isSocialStubKind } from './types'
 import { fetchYoutubeItems } from './youtube'
@@ -23,7 +24,7 @@ const TABLE_MISSING = '42P01'
 const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 const COLUMN_MISSING = '42703'
 
-export const FEED_CAP_FULL_NOTE = `자료 칸이 다 찼어요(${MAX_SOURCES_PER_BOT}개). 자료를 빼야 더 가져와요`
+export const FEED_CAP_FULL_NOTE = '자료 칸이 가득 찼어요. 안 쓰는 자료를 빼면 더 가져와요'
 /**
  * 지난번 시각보다 조금 앞부터 다시 본다. 시간이 모자라 못 가져온 글을 다음 날 놓치지 않게.
  * 겹치는 글은 주소로 거르니 두 번 들어가지 않는다.
@@ -68,18 +69,24 @@ function msg(e: unknown, fallback: string): string {
     return e instanceof Error && e.message ? e.message : fallback
 }
 
-/** 이 봇의 자료 수 + 이미 있는 원래 주소들 */
 /**
- * 자료 칸 수(count)와 이미 있는 주소(urls).
+ * 칸 수(count)와 이미 있는 주소(urls), 칸마다 글 수(perKey).
+ * 칸은 「출처」 단위: 같은 블로그, 채널에서 가져온 글은 몇 편이든 칸 하나다 (slotKeyOf, 1005).
  * count = 쓸 수 있는 자료만 (못 읽음, 조각 0개는 칸을 안 차지. assertRoomForMore 와 같은 기준).
  * urls = 못 읽은 것까지 전부 (같은 주소를 또 넣지 않는다. 못 읽은 건 「다시 시도」로)
  */
-export async function loadExistingSources(db: SupabaseClient, mentorId: string): Promise<{ count: number; urls: Set<string> }> {
-    const { data, error } = await db.from('knowledge_sources').select('id, original_url, processing_status, chunk_count').eq('mentor_id', mentorId)
-    if (error) throw new Error(error.message)
-    const rows = (data ?? []) as { id: string; original_url: string | null; processing_status?: string | null; chunk_count?: number | null }[]
-    const count = rows.filter(r => !isUnusableSource(String(r.processing_status ?? ''), r.chunk_count)).length
-    return { count, urls: new Set(rows.map(r => r.original_url).filter((u): u is string => !!u)) }
+export async function loadExistingSources(db: SupabaseClient, mentorId: string): Promise<{ count: number; urls: Set<string>; perKey: Map<string, number> }> {
+    let res = await db.from('knowledge_sources').select('id, original_url, processing_status, chunk_count, feed_id').eq('mentor_id', mentorId)
+    if (res.error?.code === COLUMN_MISSING) res = (await db.from('knowledge_sources').select('id, original_url, processing_status, chunk_count').eq('mentor_id', mentorId)) as unknown as typeof res
+    if (res.error) throw new Error(res.error.message)
+    const rows = (res.data ?? []) as { id: string; original_url: string | null; feed_id?: string | null; processing_status?: string | null; chunk_count?: number | null }[]
+    const perKey = new Map<string, number>()
+    for (const r of rows) {
+        if (isUnusableSource(String(r.processing_status ?? ''), r.chunk_count)) continue
+        const k = slotKeyOf(r)
+        perKey.set(k, (perKey.get(k) ?? 0) + 1)
+    }
+    return { count: perKey.size, perKey, urls: new Set(rows.map(r => r.original_url).filter((u): u is string => !!u)) }
 }
 
 async function updateFeed(db: SupabaseClient, feedId: string, patch: Record<string, unknown>): Promise<void> {
@@ -112,8 +119,11 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
         }
 
         const existing = await loadExistingSources(db, feed.mentorId)
-        const room = MAX_SOURCES_PER_BOT - existing.count
-        if (room <= 0) {
+        // 이 연결의 글은 칸 하나만 쓴다. 이미 이 연결의 글이 있으면 칸이 다 차도 더 가져온다
+        const feedKey = accountKeyOf(feed.handleOrUrl) ?? `feed:${feed.id}`
+        const own = Math.max(existing.perKey.get(feedKey) ?? 0, existing.perKey.get(`feed:${feed.id}`) ?? 0)
+        const room = own === 0 && existing.count >= MAX_SOURCES_PER_BOT ? 0 : MAX_ITEMS_PER_ACCOUNT - own
+        if (room <= 0 && own === 0) {
             await updateFeed(db, feed.id, { status: 'connected', last_error: FEED_CAP_FULL_NOTE, last_synced_at: nowIso() })
             return { ...base, ok: true, status: 'connected', lastError: FEED_CAP_FULL_NOTE, note: FEED_CAP_FULL_NOTE }
         }
@@ -130,11 +140,13 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
             return { ...base, ok: false, status: 'error', lastError: why, note: why }
         }
 
-        let added = 0, skipped = 0, failed = 0, cut = false
+        let added = 0, skipped = 0, failed = 0, cut = false, slotFull = false
         const reasons: string[] = []
         for (const item of fetched.items) {
             if (existing.urls.has(item.url)) { skipped++; continue }           // 🔁 같은 주소는 두 번 넣지 않는다
-            if (added >= room) break                                           // 자료 칸 한도
+            if (added >= room) break                                           // 한 곳에서 가져오는 글 수 한도
+            const k = accountKeyOf(item.url) ?? `feed:${feed.id}`
+            if ((existing.perKey.get(k) ?? 0) === 0 && existing.count >= MAX_SOURCES_PER_BOT) { slotFull = true; break }   // 새 칸이 필요한데 칸이 다 찼다
             if (opts.deadline && Date.now() > opts.deadline) { cut = true; break }
             const text = String(item.text ?? '').trim()
             if (text.length < MIN_ITEM_CHARS) { failed++; reasons.push('읽을 글이 너무 짧아요'); continue }
@@ -145,6 +157,8 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
                 const title = (item.title || item.url).slice(0, 120)
                 const source = await addKnowledgeSource(db, feed.mentorId, title, marked, feed.kind === 'youtube' ? 'youtube' : 'url', item.url)
                 existing.urls.add(item.url)
+                if ((existing.perKey.get(k) ?? 0) === 0) existing.count++
+                existing.perKey.set(k, (existing.perKey.get(k) ?? 0) + 1)
                 added++
                 const id = (source as { id?: string } | null)?.id
                 if (id) await tagSource(db, feed.mentorId, id, feed.id)
@@ -154,7 +168,7 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
             }
         }
 
-        const capHit = existing.count + added >= MAX_SOURCES_PER_BOT
+        const capHit = slotFull
         const counted = await countFeedSources(db, feed.mentorId, feed.id)
         const itemCount = counted ?? feed.itemCount + added
         const notes = [fetched.note, cut ? '시간이 모자라 나머지는 다음에 가져와요' : undefined].filter(Boolean) as string[]

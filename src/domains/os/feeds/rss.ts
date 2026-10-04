@@ -95,25 +95,49 @@ export function timeLeft(opts: FetchOptions = {}): number {
     return opts.deadline - Date.now()
 }
 
+/** 글 주소 꼬리표 떼기 (RSS 로 들어온 표시, 광고 표시). 같은 글이 주소 모양 때문에 두 번 들어가지 않게 */
+export function cleanPostUrl(raw: string): string {
+    try {
+        const u = new URL(raw)
+        for (const k of [...u.searchParams.keys()]) if (/^(fromRss|trackingCode|utm_.*|ref|source)$/i.test(k)) u.searchParams.delete(k)
+        return u.toString().replace(/\?$/, '')
+    } catch { return raw }
+}
+
+/** 한꺼번에 읽는 글 수 (글마다 1~3초라 셋씩 읽으면 열 편도 서버 한도 안에 든다) */
+const READ_CONCURRENCY = 3
+
 /**
  * 후보 글마다 기존 읽기 함수(readUrl)로 본문을 채운다. 유튜브면 자막, 웹이면 본문 추출.
- * 못 읽은 글은 뺀다(지어내지 않는다). 시간이 모자라면 거기서 멈춘다.
+ * 못 읽은 글은 뺀다(지어내지 않는다). 시간이 모자라면 거기서 멈춘다. 셋씩 나눠 읽고 순서는 그대로 지킨다.
+ * unread = 못 읽었거나 시간이 모자라 건너뛴 후보 (부르는 쪽이 요약만이라도 쓸지 정한다)
  */
-export async function fillTextByReading(cands: FeedItem[], opts: FetchOptions = {}): Promise<{ items: FeedItem[]; failed: string[]; cut: boolean }> {
-    const items: FeedItem[] = []
+export async function fillTextByReading(cands: FeedItem[], opts: FetchOptions = {}): Promise<{ items: FeedItem[]; failed: string[]; cut: boolean; unread: FeedItem[] }> {
+    const done: (FeedItem | null)[] = cands.map(() => null)
     const failed: string[] = []
-    for (const c of cands) {
-        const left = timeLeft(opts)
-        if (left < MIN_READ_MS) return { items, failed, cut: true }
-        const r = await readUrl(c.url, {
-            ...KNOWLEDGE_READ_OPTIONS,
-            timeoutMs: Math.min(KNOWLEDGE_READ_OPTIONS.timeoutMs, left - 1_000),
-            maxChars: FEED_ITEM_MAX_CHARS,
-        })
-        if (!r.ok) { failed.push(r.reason); continue }
-        items.push({ title: (c.title || r.title).slice(0, 120), url: c.url, text: r.text, publishedAt: c.publishedAt })
+    let cut = false
+    let next = 0
+    const worker = async () => {
+        while (next < cands.length) {
+            const i = next++
+            const c = cands[i]
+            const left = timeLeft(opts)
+            if (left < MIN_READ_MS) { cut = true; return }
+            const r = await readUrl(c.url, {
+                ...KNOWLEDGE_READ_OPTIONS,
+                timeoutMs: Math.min(KNOWLEDGE_READ_OPTIONS.timeoutMs, left - 1_000),
+                maxChars: FEED_ITEM_MAX_CHARS,
+            })
+            if (!r.ok) { failed.push(r.reason); continue }
+            done[i] = { title: (c.title || r.title).slice(0, 120), url: c.url, text: r.text, publishedAt: c.publishedAt }
+        }
     }
-    return { items, failed, cut: false }
+    await Promise.all(Array.from({ length: Math.min(READ_CONCURRENCY, cands.length) }, worker))
+    return {
+        items: done.filter((x): x is FeedItem => !!x),
+        failed, cut,
+        unread: cands.filter((_, i) => !done[i]),
+    }
 }
 
 /** 결과 한 줄 안내 (못 읽은 것, 시간이 모자란 것) */

@@ -6,7 +6,7 @@ const addKnowledgeSource = vi.fn(async () => ({ id: 'src1' }))
 const addLinkSource = vi.fn(async () => ({ id: 'link1' }))
 vi.mock('../readers', () => ({ readUrl: (...a: unknown[]) => readUrl(...a), KNOWLEDGE_READ_OPTIONS: { maxBytes: 1, timeoutMs: 45_000, maxChars: 100_000 } }))
 vi.mock('@/domains/knowledge', () => ({ addKnowledgeSource: (...a: unknown[]) => addKnowledgeSource(...(a as [])) }))
-vi.mock('../knowledge', () => ({ MAX_SOURCES_PER_BOT: 50, addTextSource: vi.fn(), assertRoomForMore: vi.fn(async () => {}), addLinkSource: (...a: unknown[]) => addLinkSource(...(a as [])) }))
+vi.mock('../knowledge', async orig => ({ ...(await orig<typeof import('../knowledge')>()), MAX_SOURCES_PER_BOT: 50, addTextSource: vi.fn(), assertRoomForMore: vi.fn(async () => {}), addLinkSource: (...a: unknown[]) => addLinkSource(...(a as [])) }))
 vi.mock('../team', () => ({ bootstrapDefaultTeam: vi.fn(async () => ({ team: [{ mentorId: 'bot1', oneLiner: 'x' }] })) }))
 vi.mock('../screenshot-read', () => ({ parseScreenshotImages: () => [], readScreenshots: vi.fn(async () => []) }))
 
@@ -35,16 +35,16 @@ describe('classifyUrl', () => {
 
 describe('connectSnsLink 인스타그램, 스레드', () => {
     it('공개 계정 = 자동으로 읽어 저장하고 보너스를 준다', async () => {
-        readUrl.mockResolvedValue({ ok: true, url: 'u', requestedUrl: 'u', title: '인스타그램', text: '오늘 강의에서 나눈 이야기를 정리해 봤어요. 아주 길게.', kind: 'web' })
+        readUrl.mockResolvedValue({ ok: true, url: 'u', requestedUrl: 'u', title: '인스타그램', text: '오늘 강의에서 나눈 이야기를 정리해 봤어요. 아주 길게 써서 서른 글자를 넘깁니다. 수강생들이 가장 많이 물어본 것은 시작하는 방법이었습니다.', kind: 'web' })
         const { db, rpc } = fakeDb(150)
         const r = await connectSnsLink(db, { userId: 'u1', displayName: '진', url: 'https://www.instagram.com/me/', source: 'onboarding' })
-        expect(r.status).toBe('read')
+        console.log(JSON.stringify(r)); expect(r.status).toBe('read')
         expect(r.bonus).toBe(50)
         expect(addKnowledgeSource).toHaveBeenCalledOnce()
         expect(rpc).toHaveBeenCalledWith('grant_sns_link_bonus_keyed', expect.objectContaining({ p_key: 'instagram:instagram.com/me' }))
     })
     it('같은 주소를 다른 계정이 이미 받았으면 보너스 없음', async () => {
-        readUrl.mockResolvedValue({ ok: true, url: 'u', requestedUrl: 'u', title: '스레드', text: '스레드에 올린 글 하나를 여기 적어 둡니다. 충분히 길게.', kind: 'web' })
+        readUrl.mockResolvedValue({ ok: true, url: 'u', requestedUrl: 'u', title: '스레드', text: '스레드에 올린 글 하나를 여기 적어 둡니다. 충분히 길게 써서 서른 글자를 넘깁니다. 오늘은 아침 루틴에 대해 적었습니다.', kind: 'web' })
         const { db } = fakeDb(-1)
         const r = await connectSnsLink(db, { userId: 'u2', displayName: '진', url: 'https://www.threads.net/@me', source: 'settings' })
         expect(r.bonus).toBe(0)
@@ -53,8 +53,12 @@ describe('connectSnsLink 인스타그램, 스레드', () => {
     it('비공개(못 읽음) = 저장도 보너스도 없이 캡처/붙여넣기로', async () => {
         readUrl.mockResolvedValue({ ok: false, requestedUrl: 'u', reason: '공개된 게시물 글을 찾지 못했어요' })
         const { db, rpc } = fakeDb(150)
+        readUrl.mockResolvedValue({ ok: false, requestedUrl: 'u', reason: '인스타그램에서 글을 읽지 못했어요. 비공개 계정이거나 주소가 달라요', code: 'not_public' })
         const r = await connectSnsLink(db, { userId: 'u1', displayName: '진', url: 'https://www.instagram.com/secret/', source: 'onboarding' })
         expect(r.status).toBe('paste')
+        expect(r.code).toBeTruthy()          // 이유 갈래를 화면에 알린다 (조용히 버리지 않는다)
+        expect(r.message).toMatch(/\S/)
+        expect(r.retry).toBeDefined()
         expect(r.bonus).toBe(0)
         expect(addKnowledgeSource).not.toHaveBeenCalled()
         expect(rpc).not.toHaveBeenCalled()

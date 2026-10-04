@@ -505,8 +505,25 @@ describe('readUrl 인스타그램, 스레드 (0929)', () => {
         if (!r.ok) expect(r.reason).toMatch(/비공개/)
     })
     it('스레드 공개 프로필을 읽는다', async () => {
-        routes['https://www.threads.net/@me'] = { body: '<meta property="og:description" content="소개글">"text":"스레드에 올린 글 하나를 여기 적어 둡니다"' }
+        routes['https://www.threads.com/@me'] = { body: '<meta property="og:description" content="소개글">"text":"스레드에 올린 글 하나를 여기 적어 둡니다"' }
         const r = await readUrl('https://www.threads.net/@me')
         expect(r.ok && r.source).toBe('threads')
+    })
+    it('스레드 계정이 소개만 보이면 이유와 코드를 준다 (조용히 버리지 않는다)', async () => {
+        routes['https://www.threads.com/@me'] = { body: '<meta property="og:description" content="팔로워 1만명 소개글입니다">' }
+        const r = await readUrl('https://www.threads.net/@me')
+        expect(r.ok).toBe(false)
+        if (!r.ok) { expect(r.reason).toMatch(/소개만/); expect((r as { code?: string }).code).toBe('profile_only') }
+    })
+    it('스레드 글 하나 = 글을 읽는다', async () => {
+        routes['https://www.threads.com/@me/post/ABC123'] = { body: '<meta property="og:description" content="오늘 정리한 이야기를 한 편 올립니다 읽어 주세요">' }
+        const r = await readUrl('https://www.threads.com/@me/post/ABC123')
+        expect(r.ok && r.source).toBe('threads')
+        if (r.ok) expect(r.text).toContain('오늘 정리한 이야기')
+    })
+    it('스레드 로그인 안내 문구는 글로 치지 않는다', async () => {
+        routes['https://www.threads.com/@me/post/NOPE'] = { body: '<meta property="og:description" content="Join Threads to share ideas, ask questions, post random thoughts, find your people and more.">' }
+        const r = await readUrl('https://www.threads.com/@me/post/NOPE')
+        expect(r.ok).toBe(false)
     })
 })

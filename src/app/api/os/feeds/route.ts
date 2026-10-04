@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { assertBotOwned, BotNotMine, MAX_SOURCES_PER_BOT } from '@/domains/os/knowledge'
+import { accountKeyOf, FULL_LINE } from '@/domains/os/link-rules'
 import {
     listFeeds, createFeed, deleteFeed, syncFeed, loadExistingSources, isFeedKind, isSocialStubKind, FeedTableMissing,
 } from '@/domains/os/feeds'
@@ -63,9 +64,11 @@ export async function POST(req: NextRequest) {
         if (!isFeedKind(kind)) return NextResponse.json({ error: '연결할 곳을 골라 주세요' }, { status: 400 })
 
         if (!isSocialStubKind(kind)) {
-            const { count } = await loadExistingSources(db, mentorId)
-            if (count >= MAX_SOURCES_PER_BOT) {
-                return NextResponse.json({ error: `자료 칸이 다 찼어요(${MAX_SOURCES_PER_BOT}개). 자료를 빼야 계정을 연결할 수 있어요` }, { status: 400 })
+            const { count, perKey } = await loadExistingSources(db, mentorId)
+            // 칸이 다 찼어도 글이 이미 들어 있는 블로그, 채널이면 더 연결할 수 있다 (한 곳은 칸 하나)
+            const key = accountKeyOf(handleOrUrl)
+            if (count >= MAX_SOURCES_PER_BOT && !(key && (perKey.get(key) ?? 0) > 0)) {
+                return NextResponse.json({ error: FULL_LINE }, { status: 400 })
             }
         }
 

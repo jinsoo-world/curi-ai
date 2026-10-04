@@ -41,7 +41,7 @@ describe('addDraftSources: 소스별로 초안과 같은 길로 읽어 편마다
             { title: '둘째 글', url: 'https://blog.naver.com/me/2', text: long('수강생 37명과 함께했어요.'), publishedAt: '2026-09-02T00:00:00.000Z' },
         ] })
         const r = await addDraftSources(fakeDb(), 'm1', { links: ['https://blog.naver.com/me'], pastes: [] })
-        expect(r).toEqual({ added: 2, failed: 0 })
+        expect(r).toEqual({ added: 2, failed: 0, failures: [] })
         expect(fetchPodcast.mock.calls[0][0]).toMatchObject({ kind: 'podcast', handleOrUrl: 'https://rss.blog.naver.com/me.xml' })
         expect(readUrl).not.toHaveBeenCalled()
         const first = addKnowledgeSource.mock.calls[0]
@@ -85,7 +85,9 @@ describe('addDraftSources: 소스별로 초안과 같은 길로 읽어 편마다
 
     it('가져오기가 고장 나도 던지지 않고 실패로 센다', async () => {
         fetchPodcast.mockRejectedValue(new Error('RSS 를 못 열었어요'))
-        const r = await addDraftSources(fakeDb(), 'm1', { links: ['https://me.tistory.com'], pastes: ['붙여넣은 글이 충분히 길어요. 열 글자 넘게.'] })
-        expect(r).toEqual({ added: 1, failed: 1 })
+        const r = await addDraftSources(fakeDb(), 'm1', { links: ['https://me.tistory.com'], pastes: ['붙여넣은 글이 충분히 길어요. 서른 글자를 넘기려고 조금 더 길게 적었습니다.'] })
+        expect(r.added).toBe(1)
+        expect(r.failed).toBe(1)
+        expect(r.failures[0]).toMatchObject({ url: 'https://me.tistory.com' })   // 못 읽은 링크는 이유와 함께 돌려준다
     })
 })

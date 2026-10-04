@@ -35,7 +35,8 @@ describe('homeLinkGuide', () => {
     })
     it('asks for paste on paste, capture, market', () => {
         expect(homeLinkGuide('blog.naver.com/a').needPaste).toBe(false)   // 대표 결정 0929: 네이버 블로그는 다시 자동으로 읽는다
-        expect(homeLinkGuide('instagram.com/a').needPaste).toBe(true)
+        expect(homeLinkGuide('instagram.com/a').needPaste).toBe(false)   // 1005: 인스타그램, 스레드도 공개 글은 읽는다 (못 읽으면 같은 화면에 붙여넣기 칸)
+        expect(homeLinkGuide('facebook.com/a').needPaste).toBe(true)
         expect(homeLinkGuide('coupang.com/vp/1').needPaste).toBe(true)
         expect(homeLinkGuide('youtube.com/@a').needPaste).toBe(false)
     })

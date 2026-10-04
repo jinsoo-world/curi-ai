@@ -13,16 +13,18 @@ import { HOME_COPY } from '@/domains/home/copy'
 import { BARE_ID_PLACES, homeLinkGuide } from '@/domains/home/link-guide'
 import { HOME_TAB_OF, homeLinkFallbackTitle, homeLinkPlatform, looksLikeLink, splitLinks } from '@/domains/home/link-chip'
 import { clearHomeDraft, readHomeDraft, saveHomeDraft } from '@/domains/home/draft-store'
-import { TWIN_DRAFT_CONSENTS, TWIN_DRAFT_MAX_LINKS, draftSourceKind, draftStepAt, type TwinDraft } from '@/domains/os/twin-draft-shared'
+import { TWIN_DRAFT_CONSENTS, TWIN_DRAFT_MAX_LINKS, draftSourceChips, draftSourceKind, draftStepAt, type TwinDraft } from '@/domains/os/twin-draft-shared'
+import { enoughText, readSummaryLine, type UnreadLink } from '@/domains/os/link-rules'
 import { osTrack } from '@/domains/os/events'
 import { 센다 } from '@/lib/track'
 import type { TeamBot } from '@/domains/os/types'
 import { HomeCloseIcon, HomeSourceIcon, type HomeIconKind } from '@/components/home/HomeIcons'
 import { useOsTeam } from './OsShell'
+import LinkReadReport from './LinkReadReport'
+import { retryLinkRead } from './link-retry'
 import './make.css'
 
-const PASTE_MIN = 30
-const longEnough = (t: string) => t.replace(/\s+/g, '').length >= PASTE_MIN
+const longEnough = enoughText   // 붙여넣기 최소 글자는 어느 입구든 같다 (link-rules.ts)
 const TAB_ICON: Record<string, HomeIconKind> = { instagram: 'instagram', blog: 'blog', youtube: 'youtube', threads: 'threads', shop: 'shop', file: 'file' }
 /** 손님이 로그인한 뒤 돌아올 곳 */
 export const OS_MAKE_PATH = '/os/make'
@@ -33,7 +35,9 @@ function learnedKinds(d: TwinDraft): string[] {
     return Object.entries(counts).filter(([, n]) => (n ?? 0) > 0).map(([k]) => k)
 }
 
-type Phase = 'idle' | 'working' | 'error'
+type Phase = 'idle' | 'working' | 'error' | 'report'
+/** 읽은 결과를 보여 주는 중간 화면 (못 읽은 링크가 있을 때만). draft 가 없으면 읽힌 글이 하나도 없었다 */
+interface ReadReport { draft: TwinDraft | null; links: string[]; pastes: string[]; unread: UnreadLink[]; lines: string[] }
 
 export default function OsMake() {
     const c = HOME_COPY
@@ -52,6 +56,9 @@ export default function OsMake() {
     const [stepText, setStepText] = useState(() => draftStepAt(0))
     const [err, setErr] = useState<string | null>(null)
     const [working, setWorking] = useState<string[]>([])
+    const [report, setReport] = useState<ReadReport | null>(null)
+    const [reportPaste, setReportPaste] = useState('')
+    const [retrying, setRetrying] = useState<string | null>(null)
     const input = useRef<HTMLInputElement>(null)
     const asked = useRef(new Set<string>())
     const resumed = useRef(false)
@@ -89,23 +96,14 @@ export default function OsMake() {
         return true
     }
 
-    /** 로그인한 사람: 읽고 → 바로 저장 → 대화방. 실패하면 이유를 보여 주고, 저장 기준 미달이면 고치기 창으로 */
-    const build = useCallback(async (all: string[], pastes: string[]) => {
-        const consents = TWIN_DRAFT_CONSENTS.map(() => true)   // 동의 체크 없앰 (대표 지시 0929, /home 과 같다)
+    /** 초안으로 봇을 만들고 그 대화방으로 간다 */
+    const finish = useCallback(async (draft: TwinDraft, all: string[], pastes: string[]) => {
         setPhase('working'); setErr(null); setWorking(all)
-        osTrack('os_make_started', { links: all.length, pastes: pastes.length })
         try {
-            const r1 = await fetch('/api/os/twin-draft', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ links: all, pastes, consents }),
-            })
-            const d1 = await r1.json().catch(() => ({}))
-            if (!r1.ok) { setErr(d1.error || '초안을 만들지 못했어요'); setPhase('error'); return }
-            const draft = d1.draft as TwinDraft
             const name = (draft.name || '').trim().slice(0, 20)
             if (!name || (draft.prompt || '').trim().length < 20) {
                 // 저장 기준에 못 미침 = 옛 고치기 창에서 사람이 채운다 (같은 보관분을 읽는다)
-                saveHomeDraft(window.localStorage, { links: all, pastes, consents })
+                saveHomeDraft(window.localStorage, { links: all, pastes, consents: TWIN_DRAFT_CONSENTS.map(() => true) })
                 setPhase('idle'); setWorking([])
                 openNewBot('link')
                 return
@@ -127,6 +125,58 @@ export default function OsMake() {
             setErr('연결이 잠깐 끊겼어요. 다시 눌러 주세요'); setPhase('error')
         }
     }, [openNewBot, refresh, router])
+
+    /** 로그인한 사람: 읽고 → (못 읽은 링크가 있으면 결과를 보여 주고) → 저장 → 대화방. 못 읽은 링크를 조용히 버리지 않는다 (1005) */
+    const build = useCallback(async (all: string[], pastes: string[]) => {
+        const consents = TWIN_DRAFT_CONSENTS.map(() => true)   // 동의 체크 없앰 (대표 지시 0929, /home 과 같다)
+        setPhase('working'); setErr(null); setWorking(all); setReport(null); setReportPaste('')
+        osTrack('os_make_started', { links: all.length, pastes: pastes.length })
+        try {
+            const r1 = await fetch('/api/os/twin-draft', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ links: all, pastes, consents }),
+            })
+            const d1 = await r1.json().catch(() => ({}))
+            if (!r1.ok) {
+                // 읽힌 글이 하나도 없음 = 이유와 붙여넣기 칸을 같은 화면에서
+                if (Array.isArray(d1.unread) && d1.unread.length > 0) {
+                    setReport({ draft: null, links: all, pastes, unread: d1.unread as UnreadLink[], lines: [] }); setPhase('report'); return
+                }
+                setErr(d1.error || '초안을 만들지 못했어요'); setPhase('error'); return
+            }
+            const draft = d1.draft as TwinDraft
+            if (Array.isArray(draft.unread) && draft.unread.length > 0) {
+                // 일부만 읽힘 = 읽은 것과 못 읽은 것을 보여 주고 고르게 한다
+                const lines = draftSourceChips(draft.counts ?? {})
+                setReport({ draft, links: all, pastes, unread: draft.unread, lines: lines.length ? [readSummaryLine(lines)] : [] }); setPhase('report'); return
+            }
+            await finish(draft, all, pastes)
+        } catch {
+            setErr('연결이 잠깐 끊겼어요. 다시 눌러 주세요'); setPhase('error')
+        }
+    }, [finish])
+
+    /** 못 읽은 링크 하나 「다시 시도」 */
+    const retryOne = async (url: string) => {
+        if (!report || retrying) return
+        setRetrying(url)
+        const r = await retryLinkRead(url)
+        setRetrying(null)
+        setReport(cur => {
+            if (!cur) return cur
+            const rest = cur.unread.filter(u => u.url !== url)
+            if (r.ok) return { ...cur, unread: rest, lines: [...cur.lines, r.line] }
+            return { ...cur, unread: [...rest, r.unread] }
+        })
+    }
+
+    /** 결과 화면에서 이어 만들기: 읽은 것이 있으면 그대로 저장, 없으면 붙여넣은 글로 처음부터 */
+    const continueFromReport = () => {
+        if (!report) return
+        const extra = longEnough(reportPaste) ? [reportPaste.trim(), ...report.pastes] : report.pastes
+        if (report.draft) void finish(report.draft, report.links, extra)
+        else void build(report.links, extra)
+    }
 
     const go = (all: string[], pastes: string[]) => {
         if (all.length === 0 && pastes.length === 0) { input.current?.focus(); return }
@@ -207,7 +257,27 @@ export default function OsMake() {
                 <h1 id="os-make-title" className="os-make-title">{c.title}</h1>
                 <p className="os-make-sub">{c.sub}</p>
 
-                {busy ? (
+                {phase === 'report' && report ? (
+                    <div className="os-make-progress" style={{ gap: 14 }}>
+                        <strong>{report.unread.length > 0 && report.lines.length === 0 ? '글을 읽지 못했어요' : '읽은 결과예요'}</strong>
+                        <LinkReadReport
+                            summary={report.lines.join('. ')}
+                            unread={report.unread}
+                            retrying={retrying}
+                            onRetry={url => void retryOne(url)}
+                            pasteValue={reportPaste}
+                            onPasteChange={setReportPaste}
+                        />
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                            <button type="button" className="os-btn" onClick={() => { setPhase('idle'); setReport(null) }}>처음으로</button>
+                            {(report.draft || report.lines.length > 0 || longEnough(reportPaste)) && (
+                                <button type="button" className="os-btn primary" onClick={continueFromReport} disabled={retrying !== null}>
+                                    내 봇 만들기
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                ) : busy ? (
                     <div className="os-make-progress" role="status" aria-live="polite">
                         <div className="os-make-dots" aria-hidden><span /><span /><span /></div>
                         <strong>{stepText}</strong>

@@ -51,11 +51,11 @@ describe('FIX 1 — 링크로 만든 봇은 읽은 링크와 붙여넣은 글을
         const { db } = fakeDb({ knowledge_sources: { count: 0, error: null } })
         const r = await addDraftSources(db, 'm1', {
             links: ['https://blog.example.com/a', 'https://www.instagram.com/me/'],
-            pastes: ['인스타에 올린 글을 붙여넣었어요. 오늘도 수강생과 이야기했어요.'],
+            pastes: ['인스타에 올린 글을 붙여넣었어요. 오늘도 수강생과 이야기했어요. 서른 글자를 넘기려고 조금 더 적어요.'],
             userId: 'u1',
         })
         // 1003 변경: 초안이 인스타그램 공개 계정을 읽으므로 봇 자료에도 넣는다 (예전엔 버려서 봇이 인스타 글을 못 찾았다)
-        expect(r).toEqual({ added: 3, failed: 0 })
+        expect(r).toEqual({ added: 3, failed: 0, failures: [] })
         expect(readUrl).toHaveBeenCalledTimes(2)
         const types = addKnowledgeSource.mock.calls.map(c => c[4])
         expect(types.sort()).toEqual(['text', 'url', 'url'])
@@ -67,23 +67,27 @@ describe('FIX 1 — 링크로 만든 봇은 읽은 링크와 붙여넣은 글을
         readUrl.mockResolvedValueOnce({ ok: true, url: 'https://b.example.com', title: 'b', text: '읽을 글이 충분히 긴 본문입니다. '.repeat(5), kind: 'web' })
         const { db } = fakeDb({ knowledge_sources: { count: 0, error: null } })
         const r = await addDraftSources(db, 'm1', { links: ['https://a.example.com', 'https://b.example.com'], pastes: [] })
-        expect(r).toEqual({ added: 1, failed: 1 })
+        expect(r.added).toBe(1)
+        expect(r.failed).toBe(1)
+        expect(r.failures).toHaveLength(1)                       // 못 읽은 링크는 이유와 함께 돌려준다 (조용히 버리지 않는다)
+        expect(r.failures[0]).toMatchObject({ url: 'https://a.example.com', reason: '못 읽었어요' })
     })
 
-    it('자료 자리(봇 하나당 10개)가 꽉 차면 넣지 않는다', async () => {
-        const { db } = fakeDb({ knowledge_sources: { count: 10, error: null } })
-        const r = await addDraftSources(db, 'm1', { links: ['https://a.example.com'], pastes: ['붙여넣은 글이 충분히 길어요. 열 글자 넘게.'] })
+    it('자료 칸이 꽉 차면 넣지 않는다 (새 출처가 필요한 링크와 글 모두)', async () => {
+        const rows = Array.from({ length: 10 }, (_, i) => ({ id: `s${i}`, original_url: `https://x.com/${i}` }))
+        const { db } = fakeDb({ knowledge_sources: { count: 10, data: rows, error: null } })
+        const r = await addDraftSources(db, 'm1', { links: ['https://a.example.com'], pastes: ['붙여넣은 글이 충분히 길어요. 서른 글자를 넘기려고 조금 더 길게 적었습니다.'] })
         expect(r.added).toBe(0)
         expect(addKnowledgeSource).not.toHaveBeenCalled()
     })
 
-    it('느린 링크 읽기를 붙여넣은 글보다 먼저 시작한다', async () => {
+    it('링크 읽기와 붙여넣은 글 넣기를 함께 진행한다', async () => {
         const order: string[] = []
         readUrl.mockImplementation(async () => { order.push('link'); return { ok: true, url: 'https://a.example.com', title: 'a', text: '충분히 긴 본문 글입니다. '.repeat(6), kind: 'web' } })
         addKnowledgeSource.mockImplementation(async (...a: unknown[]) => { if (a[4] === 'text') order.push('paste'); return { id: 'src1' } })
         const { db } = fakeDb({ knowledge_sources: { count: 0, error: null } })
-        await addDraftSources(db, 'm1', { links: ['https://a.example.com'], pastes: ['붙여넣은 글이 충분히 길어요. 열 글자 넘게.'] })
-        expect(order[0]).toBe('link')
+        await addDraftSources(db, 'm1', { links: ['https://a.example.com'], pastes: ['붙여넣은 글이 충분히 길어요. 서른 글자를 넘기려고 조금 더 길게 적었습니다.'] })
+        expect([...order].sort()).toEqual(['link', 'paste'])     // 링크 읽기와 붙여넣은 글 넣기를 함께 진행한다
         addKnowledgeSource.mockImplementation(async () => ({ id: 'src1' }))
     })
 

@@ -29,15 +29,17 @@ describe('classifySnsLink', () => {
     it('붙여넣은 글: 짧은 글은 빼고, 같은 글은 한 번, 최대 3편', () => {
         const long = (n: number) => `${n} `.repeat(200)
         expect(cleanPastedPosts(['짧아요', long(1)]).posts.length).toBe(1)
+        expect(cleanPastedPosts(['가나다라마바사아자차카타파하 '.repeat(3)]).posts.length).toBe(1)   // 어느 입구든 30자부터
         expect(cleanPastedPosts(['짧아요']).tooShort).toBe(1)
         expect(cleanPastedPosts([long(1), long(1)]).posts.length).toBe(1)
         expect(cleanPastedPosts([long(1), long(2), long(3), long(4)]).posts.length).toBe(3)
         expect(cleanPastedPosts('x').posts.length).toBe(0)
-        expect(PASTE_MIN_CHARS).toBe(300)
+        expect(PASTE_MIN_CHARS).toBe(30)
     })
     it('유튜브는 채널 주소만', () => {
         expect(classifySnsLink('https://www.youtube.com/@curi').feed?.kind).toBe('youtube')
-        expect(() => classifySnsLink('https://www.youtube.com/watch?v=abc')).toThrow('채널')
+        // 영상 하나 주소도 같은 규칙으로 받는다 (자료 넣기, 봇 만들기와 같다)
+        expect(classifySnsLink('https://www.youtube.com/watch?v=abcdefghijk').single).toBe(true)
     })
     it('인스타그램, 스레드, X, 틱톡은 링크만 저장 (준비 중)', () => {
         for (const u of ['instagram.com/me', 'https://www.threads.net/@me', 'https://x.com/me', 'twitter.com/me', 'https://www.tiktok.com/@me']) {

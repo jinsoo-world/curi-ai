@@ -6,6 +6,7 @@ import { useRef, useState } from 'react'
 import { 올릴수있는파일, 고르기필터, 안내문구 } from '@/domains/knowledge/files'
 import { osTrack } from '@/domains/os/events'
 import { splitUrls } from '@/domains/os/settings'
+import { PASTE_HELP_LINE, RETRY_LABEL, TOO_SHORT_LINE, enoughText } from '@/domains/os/link-rules'
 import { parseQaCsv } from '@/domains/os/csv'
 import FolderSync from './FolderSync'
 import { DocSpaceLine, DocSpaceCard, readDocSpaceBlock, type DocSpaceBlock } from './DocSpace'
@@ -31,6 +32,9 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
     /** 링크 칸 여러 개. 붙여 넣은 글에 주소가 여러 개면 자동으로 칸이 늘어난다 */
     const [urls, setUrls] = useState<string[]>([''])
     const [title, setTitle] = useState('')
+    /** 링크를 못 읽었을 때 같은 화면에서 붙여넣는 글 */
+    const [linkPaste, setLinkPaste] = useState('')
+    const [readLines, setReadLines] = useState<string[]>([])
     const [text, setText] = useState('')
     // Q&A 직접 쓰기
     const [qaQuestion, setQaQuestion] = useState('')
@@ -142,13 +146,15 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
     /** 링크 여러 개를 차례로 넣는다. 실패한 주소만 칸에 남겨 다시 시도할 수 있게 한다 */
     const 링크넣기 = async () => {
         const 목록 = splitUrls(urls.join('\n'))
-        if (목록.length === 0) return
-        setBusy(true); setErr(null)
+        const 붙임 = enoughText(linkPaste) ? linkPaste.trim() : ''
+        if (목록.length === 0 && !붙임) return
+        setBusy(true); setErr(null); setReadLines([])
         const 실패: { url: string; why: string }[] = []
+        const 읽음: string[] = []
         let 성공 = 0
         let 마지막: string | null = null
         for (const [i, u] of 목록.entries()) {
-            setMsg(목록.length > 1 ? `${목록.length}개 중 ${i + 1}번째를 봇이 읽는 중이에요…` : '봇이 읽는 중이에요…')
+            setMsg(목록.length > 1 ? `${목록.length}개 중 ${i + 1}번째를 봇이 읽는 중이에요` : '봇이 읽는 중이에요')
             try {
                 const res = await fetch('/api/os/knowledge', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -158,22 +164,50 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                 if (!res.ok) throw new Error(data.error || '넣지 못했어요')
                 성공 += 1
                 마지막 = data.source?.id ?? 마지막
+                // 읽은 결과 한 줄: 「제목」 글 N개 / N글자
+                const rd = data.read as { title?: string; chars?: number; already?: boolean; posts?: number } | undefined
+                if (rd) {
+                    const name = (rd.title || '').trim().slice(0, 24)
+                    const amount = rd.already ? '이미 넣어 둔 자료예요' : rd.posts && rd.posts > 1 ? `글 ${rd.posts}개를 읽었어요` : rd.chars ? `${rd.chars.toLocaleString('ko-KR')}자를 읽었어요` : '읽었어요'
+                    읽음.push(name ? `${name}, ${amount}` : amount)
+                }
                 osTrack('os_knowledge_added', { mentor_id: mentorId, kind: 'url' })
             } catch (e) {
                 실패.push({ url: u, why: e instanceof Error ? e.message : '넣지 못했어요' })
             }
         }
+        // 못 읽은 링크 대신 붙여넣은 글이 있으면 그것을 자료로
+        if (붙임) {
+            try {
+                const host = (() => { try { return new URL(실패[0]?.url || 목록[0] || '').hostname.replace(/^www\./, '') } catch { return '' } })()
+                const res = await fetch('/api/os/knowledge', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mentorId, kind: 'text', title: host ? `${host} 붙여넣은 글` : '붙여넣은 글', text: 붙임 }),
+                })
+                const data = await res.json().catch(() => ({}))
+                if (!res.ok) throw new Error(data.error || '넣지 못했어요')
+                성공 += 1
+                마지막 = data.source?.id ?? 마지막
+                읽음.push('붙여넣은 글을 넣었어요')
+                setLinkPaste('')
+                osTrack('os_knowledge_added', { mentor_id: mentorId, kind: 'text' })
+            } catch (e) {
+                실패.push({ url: '', why: e instanceof Error ? e.message : '넣지 못했어요' })
+            }
+        }
         if (성공 > 0) await onAdded()
         setBusy(false)
+        setReadLines(읽음)
+        const 남은주소 = 실패.filter(f => f.url)
         if (실패.length === 0) {
             setMsg('다 읽었어요')
             if (마지막) setUnderstandId(마지막)
             else setTimeout(onClose, 700)
             return
         }
-        setUrls(실패.map(f => f.url))
+        setUrls(남은주소.length ? 남은주소.map(f => f.url) : [''])
         setMsg(성공 > 0 ? '나머지는 넣었어요' : null)
-        // 못 읽은 주소만 칸에 남기고 이유 한 줄. 아래 단추가 「다시 시도」로 바뀐다
+        // 못 읽은 주소만 칸에 남기고 이유 한 줄. 아래 단추가 「다시 시도」로 바뀌고, 같은 화면에 붙여넣기 칸이 열린다
         setErr(`못 읽었어요. ${실패[0].why}`)
     }
 
@@ -325,8 +359,8 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
     }
 
     const 주소개수 = splitUrls(urls.join('\n')).length
-    const 넣을수있나 = tab === 'link' ? 주소개수 > 0
-        : tab === 'sns' ? shots.length > 0 || snsText.trim().length >= 10 || /(instagram\.com|threads\.(net|com))/i.test(snsUrl)
+    const 넣을수있나 = tab === 'link' ? 주소개수 > 0 || enoughText(linkPaste)
+        : tab === 'sns' ? shots.length > 0 || enoughText(snsText) || /(instagram\.com|threads\.(net|com))/i.test(snsUrl)
         : tab === 'qa' ? qaQuestion.trim().length >= 2 && qaAnswer.trim().length >= 1
         : tab === 'note' ? noteText.trim().length >= 5
         : text.trim().length >= 10
@@ -374,7 +408,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                         {urls.map((u, i) => (
                             <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                                 <input type="text" value={u} onChange={e => 링크칸바꾸기(i, e.target.value)} disabled={busy}
-                                    placeholder="https://… (웹페이지나 유튜브 주소)" aria-label={`링크 주소 ${i + 1}`} style={{ flex: 1, minWidth: 0 }} />
+                                    placeholder="웹페이지, 블로그, 유튜브, 인스타그램, 스레드 주소" aria-label={`링크 주소 ${i + 1}`} style={{ flex: 1, minWidth: 0 }} />
                                 {urls.length > 1 && (
                                     <button type="button" className="os-source-x" aria-label={`주소 ${i + 1} 빼기`} disabled={busy}
                                         onClick={() => setUrls(prev => prev.filter((_, j) => j !== i))}>✕</button>
@@ -386,6 +420,17 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                         <div style={{ color: 'var(--os-글-흐림)', fontSize: 13, lineHeight: 1.5 }}>
                             주소를 여러 줄 붙여 넣으면 알아서 나눠요. 유튜브는 자막과 설명을 읽어요.
                         </div>
+                        {readLines.length > 0 && (
+                            <div role="status" style={{ fontSize: 13, lineHeight: 1.5 }}>{readLines.join('. ')}</div>
+                        )}
+                        {err && (
+                            <>
+                                <div style={{ color: 'var(--os-글-흐림)', fontSize: 13 }}>{PASTE_HELP_LINE}</div>
+                                <textarea className="os-textarea" value={linkPaste} onChange={e => setLinkPaste(e.target.value)} disabled={busy}
+                                    rows={4} placeholder="내 글을 복사해 붙여넣기" aria-label="붙여넣을 글" />
+                                {linkPaste.trim() && !enoughText(linkPaste) && <div style={{ color: 'var(--os-글-흐림)', fontSize: 13 }}>{TOO_SHORT_LINE}</div>}
+                            </>
+                        )}
                     </div>
                 )}
 
@@ -486,7 +531,7 @@ export default function AddKnowledgeSheet({ mentorId, onClose, onAdded }: Props)
                     <button className="os-btn" onClick={onClose} disabled={busy}>닫기</button>
                     {!understandId && tab !== 'file' && tab !== 'csv' && tab !== 'folder' && tab !== 'cloud' && tab !== 'feed' && (
                         <button className="os-btn primary" onClick={넣기} disabled={busy || !넣을수있나}>
-                            {busy ? '넣는 중…' : err && tab === 'link' ? '다시 시도' : tab === 'link' && 주소개수 > 1 ? `${주소개수}개 넣기` : '넣기'}
+                            {busy ? '넣는 중…' : err && tab === 'link' ? (enoughText(linkPaste) ? '넣기' : RETRY_LABEL) : tab === 'link' && 주소개수 > 1 ? `${주소개수}개 넣기` : '넣기'}
                         </button>
                     )}
                 </div>

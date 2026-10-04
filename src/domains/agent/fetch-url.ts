@@ -237,6 +237,8 @@ export interface ReadFail {
     requestedUrl: string
     /** 사람에게 그대로 보여 줄 한 줄 이유 */
     reason: string
+    /** 이유 갈래 (domains/os/link-rules.ts LinkFailCode). 화면이 「다시 시도」, 붙여넣기를 가르는 데 쓴다. 없을 수 있다 */
+    code?: string
 }
 export type ReadResult = ReadPage | ReadFail
 

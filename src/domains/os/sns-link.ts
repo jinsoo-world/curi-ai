@@ -8,24 +8,26 @@
 //   (DB 함수 grant_sns_link_bonus_keyed 가 계정 중복과 주소 중복을 막는다).
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { resolveChannelInput } from './feeds/youtube'
+import { youtubeVideoId } from './readers/youtube'
+import { MIN_TEXT_CHARS, MAX_PASTE_CHARS, MAX_PASTE_POSTS, TOO_SHORT_LINE, FULL_LINE, accountKeyOf, enoughText, failCodeOfReason, isLinkFailCode, canRetry, type LinkFailCode } from './link-rules'
 import { isMarketHost } from '@/domains/home/link-guide'
 import { createFeed, listFeeds, syncFeed, loadExistingSources, type FeedKind } from './feeds'
 import { isSafeFetchUrl } from '@/domains/agent/fetch-url'
 import { readUrl, KNOWLEDGE_READ_OPTIONS } from './readers'
 import { addKnowledgeSource } from '@/domains/knowledge'
-import { MAX_SOURCES_PER_BOT, addTextSource, assertRoomForMore } from './knowledge'
+import { MAX_SOURCES_PER_BOT, addTextSource, addLinkSource, assertRoomForMore } from './knowledge'
 import { parseScreenshotImages, readScreenshots } from './screenshot-read'
 import { snsLabelOf } from './sns-capture'
 import { bootstrapDefaultTeam } from './team'
 import { JOBS } from './presets'
-import { firstJobFor, SNS_BONUS_CLOVERS, SNS_KEY_TAKEN_LINE, SNS_PASTE_LINE, SNS_CAPTURE_LINE, SNS_PASTE_MAX_POSTS, SNS_PASTE_MIN_CHARS, SNS_PENDING_LINE, SNS_READ_LINE, SNS_SUCCESS_LINE } from './onboarding'
+import { firstJobFor, SNS_BONUS_CLOVERS, SNS_KEY_TAKEN_LINE, SNS_PASTE_LINE, SNS_CAPTURE_LINE, SNS_PENDING_LINE, SNS_READ_LINE, SNS_SUCCESS_LINE } from './onboarding'
 
 export type SnsPlatform = 'youtube' | 'naver_blog' | 'brunch' | 'tistory' | 'substack' | 'rss' | 'website' | 'instagram' | 'threads' | 'x' | 'tiktok' | 'facebook' | 'market'
 
-/** 붙여넣기 한 편 최소 글자, 최대 편수 (화면과 같이 쓰도록 onboarding.ts에 둔다) */
-export const PASTE_MIN_CHARS = SNS_PASTE_MIN_CHARS
-export const PASTE_MAX_POSTS = SNS_PASTE_MAX_POSTS
-export const PASTE_MAX_CHARS = 20_000
+/** 붙여넣기 한 편 최소 글자, 최대 편수. 어느 입구든 같은 값 (link-rules.ts, 1005) */
+export const PASTE_MIN_CHARS = MIN_TEXT_CHARS
+export const PASTE_MAX_POSTS = MAX_PASTE_POSTS
+export const PASTE_MAX_CHARS = MAX_PASTE_CHARS
 
 export interface SnsTarget {
     url: string
@@ -34,6 +36,8 @@ export interface SnsTarget {
     feed: { kind: FeedKind; handleOrUrl: string } | null
     /** 대표 글 붙여넣기를 받을 수 있는 곳. feed 가 있으면 자동으로 읽고, 못 읽었을 때만 붙여넣기를 연다 */
     paste?: boolean
+    /** 글, 영상 하나를 그 자리에서 읽는 곳 (인스타그램, 스레드, 유튜브 영상 하나). 계정 연결(feed)이 아니다 */
+    single?: boolean
 }
 
 /** 링크 모양으로 어디인지, 읽을 수 있는지 가린다. 모양이 틀리면 사람 말로 던진다 */
@@ -50,14 +54,16 @@ export function classifySnsLink(raw: unknown): SnsTarget {
     const is = (h: string) => host === h || host.endsWith(`.${h}`)
 
     // 인스타그램, 스레드 = 공개 계정은 자동으로 읽고(connectSnsLink), 못 읽으면 캡처나 붙여넣기. 페이스북 = 캡처나 붙여넣기
-    if (is('instagram.com')) return { url, platform: 'instagram', feed: null, paste: true }
-    if (is('threads.net') || is('threads.com')) return { url, platform: 'threads', feed: null, paste: true }
+    if (is('instagram.com')) return { url, platform: 'instagram', feed: null, paste: true, single: true }
+    if (is('threads.net') || is('threads.com')) return { url, platform: 'threads', feed: null, paste: true, single: true }
     if (is('x.com') || is('twitter.com')) return { url, platform: 'x', feed: null }
     if (is('tiktok.com')) return { url, platform: 'tiktok', feed: null }
     if (is('facebook.com') || is('fb.com')) return { url, platform: 'facebook', feed: null, paste: true }
 
-    if (host === 'youtube.com' || host === 'youtu.be') {
-        if (!resolveChannelInput(url)) throw new Error('유튜브는 채널 주소(@핸들)를 넣어 주세요')
+    if (host === 'youtube.com' || host === 'youtu.be' || host === 'm.youtube.com') {
+        // 영상 하나 주소도 받는다 (초안 길과 같은 규칙, 1005). 채널 주소는 최근 영상을 읽는다
+        if (youtubeVideoId(url)) return { url, platform: 'youtube', feed: null, single: true, paste: true }
+        if (!resolveChannelInput(url)) throw new Error('유튜브 영상이나 채널(@핸들) 주소를 넣어 주세요')
         return { url, platform: 'youtube', feed: { kind: 'youtube', handleOrUrl: url } }
     }
     if (host === 'blog.naver.com' || host === 'rss.blog.naver.com') {
@@ -90,6 +96,7 @@ export function snsCanonicalKey(t: SnsTarget): string {
     if (t.platform === 'brunch') return `brunch:${path.split('/')[1] || ''}`
     if (t.platform === 'tistory' || t.platform === 'substack') return `${t.platform}:${host}`
     if (t.platform === 'youtube') {
+        if (t.single) return `youtube:video:${youtubeVideoId(t.url) ?? t.url}`
         const r = resolveChannelInput(t.url)
         if (r) return `youtube:${'channelId' in r ? r.channelId : decodeURIComponent(new URL(r.pageUrl).pathname).toLowerCase()}`
     }
@@ -106,6 +113,12 @@ export interface SnsConnectResult {
     keyTaken?: boolean
     message: string
     balance?: number
+    /** 못 읽은 이유 갈래 (화면이 「다시 시도」, 붙여넣기를 가른다) */
+    code?: LinkFailCode
+    /** 「다시 시도」가 도움이 되는 실패인가 */
+    retry?: boolean
+    /** 읽은 결과 한 줄 (예: 인스타그램 글 5개를 읽었어요) */
+    summary?: string
 }
 
 type Db = SupabaseClient
@@ -129,11 +142,8 @@ export async function connectSnsLink(db: Db, a: { userId: string; displayName: s
     if (linkErr || !link) throw new Error('링크를 저장하지 못했어요')
     const base = { platform: target.platform, added: 0, bonus: 0, alreadyGranted: false }
 
-    // 인스타그램, 스레드: 공개 계정이면 먼저 자동으로 읽는다. 실제로 글이 저장됐을 때만 보너스
-    if (target.platform === 'instagram' || target.platform === 'threads') {
-        const auto = await readSnsAuto(db, a, target, link)
-        if (auto) return auto
-    }
+    // 인스타그램, 스레드, 유튜브 영상 하나: 그 자리에서 읽는다. 읽은 글이 저장됐을 때만 보너스. 못 읽으면 이유와 함께 알린다(조용히 버리지 않는다)
+    if (target.single) return readSnsSingle(db, a, target, link)
     if (target.paste && !target.feed) {
         await db.from('user_sns_links').update({ status: 'pending', note: '캡처나 글 붙여넣기', updated_at: now() }).eq('id', link.id)
         return { ...base, status: 'paste', message: SNS_CAPTURE_LINE }
@@ -155,8 +165,10 @@ export async function connectSnsLink(db: Db, a: { userId: string; displayName: s
     try {
         const feeds = await listFeeds(db, mentorId)
         const same = feeds.find(f => f.kind === target.feed!.kind && f.handleOrUrl.trim().toLowerCase() === target.feed!.handleOrUrl.trim().toLowerCase())
-        const { count } = await loadExistingSources(db, mentorId)
-        if (!same && count >= MAX_SOURCES_PER_BOT) throw new Error(`자료 칸이 다 찼어요(${MAX_SOURCES_PER_BOT}개). 자료를 빼고 다시 해 주세요`)
+        const { count, perKey } = await loadExistingSources(db, mentorId)
+        const key = accountKeyOf(target.feed.handleOrUrl)
+        // 칸이 다 찼어도 이미 글이 들어 있는 블로그, 채널이면 더 가져온다 (한 곳은 칸 하나)
+        if (!same && count >= MAX_SOURCES_PER_BOT && !(key && (perKey.get(key) ?? 0) > 0)) throw new Error(FULL_LINE)
         const feed = same ?? await createFeed(db, { userId: a.userId, mentorId, kind: target.feed.kind, handleOrUrl: target.feed.handleOrUrl })
         feedId = feed.id
         const sync = await syncFeed(db, feed, { deadline: a.deadline })
@@ -172,34 +184,58 @@ export async function connectSnsLink(db: Db, a: { userId: string; displayName: s
         status, mentor_id: mentorId, feed_id: feedId, added_count: total, note: added > 0 ? null : note, updated_at: now(),
     }).eq('id', link.id)
     // 자동으로 못 읽었고 붙여넣기를 받는 곳이면 붙여넣기 칸을 연다 (링크는 실패로 남아 다시 시도할 수 있다)
-    if (status !== 'read' && target.paste) return { ...base, status: 'paste', message: SNS_PASTE_LINE }
-    if (status !== 'read') return { ...base, status, message: note || '읽지 못했어요' }
+    const code = failCodeOfReason(note || '')
+    if (status !== 'read' && target.paste) return { ...base, status: 'paste', message: note || SNS_PASTE_LINE, code, retry: canRetry(code) }
+    if (status !== 'read') return { ...base, status, message: note || '읽지 못했어요', code, retry: canRetry(code) }
 
-    return grantBonus(db, a.userId, link.id, target, { ...base, status, added, message: SNS_READ_LINE })
+    return grantBonus(db, a.userId, link.id, target, { ...base, status, added, message: SNS_READ_LINE, summary: `${snsLabelOf(target.url)} 글 ${added}개를 읽었어요` })
+}
+
+/** 읽은 글 묶음의 편 수 (인스타그램, 스레드는 글 사이에 --- 줄을 둔다) */
+function countPosts(text: string): number {
+    return Math.max(1, text.split(/\n-{3,}\n/).filter(t => t.trim()).length)
 }
 
 /**
- * 인스타그램, 스레드 공개 계정 자동 읽기. 글이 저장되면 결과(보너스 포함), 못 읽으면 null(= 캡처, 붙여넣기로).
+ * 글, 영상 하나(인스타그램, 스레드, 유튜브 영상)를 읽어 자료로 넣는다. 항상 결과를 돌려준다.
+ * 글이 저장되면 보너스까지, 못 읽으면 이유 한 줄과 갈래(code)를 돌려주고 링크는 「못 읽음」으로 남긴다.
  */
-async function readSnsAuto(db: Db, a: { userId: string; displayName: string; deadline?: number }, target: SnsTarget, link: { id: string; added_count: number | null }): Promise<SnsConnectResult | null> {
+async function readSnsSingle(db: Db, a: { userId: string; displayName: string; deadline?: number }, target: SnsTarget, link: { id: string; added_count: number | null }): Promise<SnsConnectResult> {
     const now = () => new Date().toISOString()
-    const left = (a.deadline ?? Date.now() + 20_000) - Date.now()
-    if (left < 3_000) return null
-    const read = await readUrl(target.url, { ...KNOWLEDGE_READ_OPTIONS, timeoutMs: Math.min(15_000, left - 1_000) })
-    if (!read.ok || read.text.trim().length < 20) return null
-    const mentorId = await pickBot(db, a.userId, a.displayName)
-    if (!mentorId) return null
-    try {
-        await assertRoomForMore(db, mentorId)
-        const label = snsLabelOf(target.url)
-        await addKnowledgeSource(db, mentorId, `내 ${label} 글`, `출처: ${target.url}\n\n${read.text}`, 'url', target.url)
-    } catch (e) {
-        await db.from('user_sns_links').update({ status: 'failed', mentor_id: mentorId, note: e instanceof Error ? e.message : '저장하지 못했어요', updated_at: now() }).eq('id', link.id)
-        return null
+    const base = { platform: target.platform, added: 0, bonus: 0, alreadyGranted: false }
+    const failWith = async (reason: string, code: LinkFailCode, mentorId?: string): Promise<SnsConnectResult> => {
+        await db.from('user_sns_links').update({ status: 'failed', ...(mentorId ? { mentor_id: mentorId } : {}), note: reason.slice(0, 200), updated_at: now() }).eq('id', link.id)
+        return { ...base, status: 'paste', message: reason, code, retry: canRetry(code) }
     }
-    const total = (link.added_count ?? 0) + 1
+    const left = (a.deadline ?? Date.now() + 40_000) - Date.now()
+    if (left < 3_000) return failWith('시간이 모자라 못 읽었어요', 'timeout')
+    const mentorId = await pickBot(db, a.userId, a.displayName)
+    if (!mentorId) return failWith('봇을 먼저 만들어 주세요', 'unknown')
+    const label = snsLabelOf(target.url)
+    let added = 1
+    try {
+        await assertRoomForMore(db, mentorId, { url: target.url })
+        if (target.platform === 'youtube') {
+            await addLinkSource(db, mentorId, target.url, { userId: a.userId })
+        } else {
+            const read = await readUrl(target.url, { ...KNOWLEDGE_READ_OPTIONS, timeoutMs: Math.min(15_000, left - 1_000) })
+            if (!read.ok) return failWith(read.reason, isLinkFailCode(read.code) ? read.code : failCodeOfReason(read.reason), mentorId)
+            if (!enoughText(read.text)) return failWith('읽은 글이 너무 짧았어요', 'empty', mentorId)
+            added = countPosts(read.text)
+            await addKnowledgeSource(db, mentorId, `내 ${label} 글`, `출처: ${target.url}\n\n${read.text}`, 'url', target.url, {
+                meta: { sourceKind: target.platform, citationUrl: target.url, authorIsMe: true, fetchedAt: now() },
+                ingest: { dedupe: true },
+            })
+        }
+    } catch (e) {
+        const reason = e instanceof Error ? e.message : '저장하지 못했어요'
+        const code = e instanceof Error && 'code' in e && isLinkFailCode((e as { code?: unknown }).code) ? (e as { code: LinkFailCode }).code : reason === FULL_LINE ? 'full' : failCodeOfReason(reason)
+        return failWith(reason, code, mentorId)
+    }
+    const total = (link.added_count ?? 0) + added
     await db.from('user_sns_links').update({ status: 'read', mentor_id: mentorId, added_count: total, note: null, updated_at: now() }).eq('id', link.id)
-    return grantBonus(db, a.userId, link.id, target, { platform: target.platform, added: 1, bonus: 0, alreadyGranted: false, status: 'read', message: SNS_READ_LINE })
+    const summary = target.platform === 'youtube' ? '유튜브 영상 1개를 읽었어요' : `${label} 글 ${added}개를 읽었어요`
+    return grantBonus(db, a.userId, link.id, target, { ...base, added, status: 'read', message: SNS_READ_LINE, summary })
 }
 
 /** 자료가 저장된 링크만 보너스. 계정당 한 번, 같은 주소로는 한 계정만 */
@@ -226,7 +262,7 @@ export function cleanPastedPosts(raw: unknown): { posts: string[]; tooShort: num
         const key = t.replace(/\s+/g, ' ')
         if (seen.has(key)) continue
         seen.add(key)
-        if (key.length < PASTE_MIN_CHARS) { tooShort++; continue }
+        if (!enoughText(t)) { tooShort++; continue }
         posts.push(t)
         if (posts.length >= PASTE_MAX_POSTS) break
     }
@@ -248,7 +284,7 @@ export async function pasteSnsPosts(db: Db, a: { userId: string; displayName: st
     }
     const pastedList = [...(Array.isArray(a.posts) ? a.posts : []), ...(fromImages.length ? [fromImages.join('\n\n')] : [])]
     const { posts, tooShort } = cleanPastedPosts(pastedList)
-    if (posts.length === 0) throw new Error(tooShort > 0 ? `글이 너무 짧아요. 한 편에 ${PASTE_MIN_CHARS}자 이상 넣어 주세요` : '글을 붙여넣어 주세요')
+    if (posts.length === 0) throw new Error(tooShort > 0 ? TOO_SHORT_LINE : '글을 붙여넣어 주세요')
     const now = () => new Date().toISOString()
     const { data: link, error: linkErr } = await db.from('user_sns_links')
         .upsert({ user_id: a.userId, url: target.url, platform: target.platform, source: 'settings', updated_at: now() }, { onConflict: 'user_id,url' })

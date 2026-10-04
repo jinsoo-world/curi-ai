@@ -1,50 +1,46 @@
-// 임시 진단 창구 (대표 지시 1005: 인스타그램, 스레드 읽기 점검). 진단이 끝나면 지운다.
-// 열쇠(해시 비교)가 맞을 때만 열린다. 공개 페이지를 고정된 주소로만 읽는다.
+// 임시 점검 창구 (대표 지시 1005: 인스타그램, 스레드, 블로그 읽기 실측). 점검이 끝나면 지운다.
+// 열쇠(해시 비교)가 맞을 때만 열린다. 읽기는 공개 주소만, 저장은 임시 점검용 봇 한 개에만 한다.
 import { NextResponse } from 'next/server'
 import { createHash } from 'node:crypto'
-import { readInstagram } from '@/domains/os/readers/instagram'
-import { readThreads } from '@/domains/os/readers/threads'
+import { readUrl, KNOWLEDGE_READ_OPTIONS } from '@/domains/os/readers'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { addDraftSources, addLinkSource, loadSlotUsage } from '@/domains/os/knowledge'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 120
 
 const HASH = 'd34a2728942504e65e7f83aca54a7ae48f34279da4c9878255f784777593eef0'
-const UAS: Record<string, string> = {
-    chrome: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36',
-    fb: 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
-    google: 'Googlebot/2.1 (+http://www.google.com/bot.html)',
-    bing: 'Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)',
-}
-const URLS = [
-    'https://www.instagram.com/nasa/', 'https://www.instagram.com/natgeo/', 'https://www.instagram.com/instagram/',
-    'https://www.instagram.com/nasa/embed/',
-    'https://www.instagram.com/p/DeCNJEyOkpq/', 'https://www.instagram.com/p/DeCNJEyOkpq/embed/captioned/',
-    'https://www.threads.com/@nasa', 'https://www.threads.com/@zuck', 'https://www.threads.com/@natgeo',
-    'https://www.threads.com/@nasa/post/Dd6o9h3ERXF',
-]
+const TEST_MENTOR = '64cfe556-333c-4ff0-b176-57b1735bb37f'
 
 export async function POST(req: Request) {
-    const b = await req.json().catch(() => ({})) as { key?: string }
+    const b = await req.json().catch(() => ({})) as { key?: string; action?: string; urls?: string[] }
     if (createHash('sha256').update(String(b.key ?? '')).digest('hex') !== HASH) return NextResponse.json({ error: 'no' }, { status: 404 })
-    const rows = await Promise.all(URLS.flatMap(url => Object.entries(UAS).map(async ([ua, agent]) => {
+    const urls = (b.urls ?? []).slice(0, 12).map(String)
+    const ip = await fetch('https://api64.ipify.org?format=json').then(r => r.text()).catch(() => '')
+    const region = process.env.VERCEL_REGION
+    if (b.action === 'read') {
+        const rows = await Promise.all(urls.map(async url => {
+            const t0 = Date.now()
+            const r = await readUrl(url, { ...KNOWLEDGE_READ_OPTIONS, timeoutMs: 20_000 })
+            return r.ok
+                ? { url, ok: true, source: r.source, chars: r.text.length, posts: r.text.split(/\n-{3,}\n/).length, head: r.text.slice(0, 90), ms: Date.now() - t0 }
+                : { url, ok: false, code: (r as { code?: string }).code, reason: r.reason, ms: Date.now() - t0 }
+        }))
+        return NextResponse.json({ ip, region, rows })
+    }
+    const db = createAdminClient()
+    if (b.action === 'ingest') {
+        const t0 = Date.now()
+        const r = await addDraftSources(db, TEST_MENTOR, { links: urls, pastes: [], deadline: Date.now() + 100_000 })
+        const slots = await loadSlotUsage(db, TEST_MENTOR)
+        return NextResponse.json({ ip, region, result: r, slots: slots.slots, perKey: Object.fromEntries(slots.perKey), ms: Date.now() - t0 })
+    }
+    if (b.action === 'link') {
         const t0 = Date.now()
         try {
-            const r = await fetch(url, { headers: { 'User-Agent': agent, 'Accept-Language': 'ko-KR,ko;q=0.9' }, redirect: 'follow', signal: AbortSignal.timeout(15_000) })
-            const h = await r.text()
-            return {
-                url, ua, status: r.status, final: r.url.slice(0, 80), bytes: h.length, ms: Date.now() - t0,
-                title: (h.match(/<title[^>]*>([^<]{0,80})/)?.[1] ?? ''),
-                ogd: (h.match(/og:description" content="([^"]{0,100})/)?.[1] ?? ''),
-                captions: (h.match(/"caption":\{/g) ?? []).length + (h.match(/\\"text\\":/g) ?? []).length,
-                texts: (h.match(/"text":"/g) ?? []).length,
-                login: /login_required|accounts\/login|checkpoint/i.test(h.slice(0, 20_000)),
-            }
-        } catch (e) { return { url, ua, error: String(e).slice(0, 80), ms: Date.now() - t0 } }
-    })))
-    const old = await Promise.all([
-        readInstagram('https://www.instagram.com/nasa/'), readInstagram('https://www.instagram.com/p/DeCNJEyOkpq/'),
-        readThreads('https://www.threads.com/@nasa'), readThreads('https://www.threads.com/@nasa/post/Dd6o9h3ERXF'),
-    ])
-    const ip = await fetch('https://api64.ipify.org?format=json').then(r => r.text()).catch(() => '')
-    return NextResponse.json({ ip, region: process.env.VERCEL_REGION, rows, old: old.map(o => o.ok ? { ok: true, n: o.posts.length } : o) })
+            const s = await addLinkSource(db, TEST_MENTOR, urls[0]) as { id: string; accountCount?: number }
+            return NextResponse.json({ ip, region, ok: true, id: s.id, accountCount: s.accountCount, ms: Date.now() - t0 })
+        } catch (e) { return NextResponse.json({ ip, region, ok: false, reason: e instanceof Error ? e.message : String(e), code: (e as { code?: string }).code, ms: Date.now() - t0 }) }
+    }
+    return NextResponse.json({ ip, region })
 }

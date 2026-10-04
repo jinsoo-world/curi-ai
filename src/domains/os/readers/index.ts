@@ -125,12 +125,12 @@ async function routeRead(requestedUrl: string, o: Opts): Promise<ReadResult> {
 
     if (kind === 'instagram') {
         const r = await readInstagram(requestedUrl, { timeoutMs: Math.min(o.timeoutMs, 10_000), max: 5 })
-        if (!r.ok) return { ok: false, requestedUrl, reason: `${r.reason}. 비공개 계정이면 글을 붙여넣거나 화면 캡처를 올려 주세요` }
+        if (!r.ok) return { ok: false, requestedUrl, reason: r.reason, code: r.code }
         return ok(requestedUrl, requestedUrl, '인스타그램', r.posts.map(p => p.text).join('\n\n---\n\n'), o.maxChars, 'sns', 'instagram')
     }
     if (kind === 'threads') {
         const r = await readThreads(requestedUrl, { timeoutMs: Math.min(o.timeoutMs, 10_000), max: 5 })
-        if (!r.ok) return { ok: false, requestedUrl, reason: `${r.reason}. 비공개 계정이면 글을 붙여넣거나 화면 캡처를 올려 주세요` }
+        if (!r.ok) return { ok: false, requestedUrl, reason: r.reason, code: r.code }
         const head = r.bio ? `소개: ${r.bio}\n\n` : ''
         return ok(requestedUrl, requestedUrl, '스레드', head + r.posts.map(p => p.text).join('\n\n---\n\n'), o.maxChars, 'sns', 'threads')
     }
@@ -206,7 +206,8 @@ async function readWeb(requestedUrl: string, o: Opts, kind: LinkKind): Promise<R
             const fp = await fetchPageSafely(feedLink, { maxBytes: o.maxBytes, timeoutMs: left() })
             const f = fp.ok && looksLikeFeed(fp.body) ? feedToText(fp.body, fp.url) : null
             if (f) {
-                const first = article ? `\n\n[첫 화면 글]\n${article.text.slice(0, 2_000)}` : ''
+                // 목록에 이미 앞부분이 있는 글을 첫 화면 글로 또 붙이지 않는다 (같은 글이 요약과 전문으로 두 번 들어가던 것, 1005)
+                const first = article && !duplicatesFeed(article.title, article.text, f.text) ? `\n\n[첫 화면 글]\n${article.text.slice(0, 2_000)}` : ''
                 return ok(requestedUrl, page.url, article?.title || f.title, `${f.text}${first}`, o.maxChars, 'feed', 'feed')
             }
         }
@@ -214,6 +215,16 @@ async function readWeb(requestedUrl: string, o: Opts, kind: LinkKind): Promise<R
 
     if (!article) return fail('그 주소에서 읽을 글을 못 찾았어요(로그인이 필요하거나 화면이 프로그램으로만 그려지는 쪽일 수 있어요)')
     return ok(requestedUrl, page.url, article.title, header ? `${header}\n\n${article.text}` : article.text, o.maxChars, article.method, kind === 'naver-news' ? 'naver-news' : kind === 'naver-blog' ? 'naver-blog' : 'web')
+}
+
+/** 첫 화면 글이 피드 목록 글에 이미 들어 있나 (제목이 목록에 있거나, 본문 앞부분이 목록 요약에 있다) */
+export function duplicatesFeed(title: string, articleText: string, feedText: string): boolean {
+    const squash = (v: string) => v.replace(/\s+/g, '')
+    const feed = squash(feedText)
+    const t = squash(title || '')
+    if (t.length >= 6 && feed.includes(t.slice(0, 30))) return true
+    const head = squash(articleText).slice(0, 40)
+    return head.length >= 20 && feed.includes(head)
 }
 
 function fromBlogOrArticle(requestedUrl: string, url: string, html: string, maxChars: number): ReadPage | null {

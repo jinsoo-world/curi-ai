@@ -34,15 +34,16 @@ describe('S1 동의와 링크 판별', () => {
             ['https://example.com/blog', 'read'],
             ['https://blog.naver.com/curi', 'read'],
             ['https://brunch.co.kr/@curi', 'read'],
-            ['https://www.instagram.com/curi', 'paste'],
+            ['https://www.instagram.com/curi', 'read'],
             ['https://www.facebook.com/curi', 'paste'],
-            ['https://www.threads.net/@curi', 'paste'],
+            ['https://www.threads.net/@curi', 'read'],
             ['https://www.tiktok.com/@curi', 'link'],
         ]
         for (const [url, kind] of cases) {
             expect(draftLinkKind(url)).toBe(kind)
             const t = classifySnsLink(url)
-            const server = t.feed ? 'read' : t.paste ? 'paste' : 'link'
+            // 인스타그램, 스레드는 글 하나씩 읽는 길(single)이라 서버에서는 feed 가 없다
+            const server = t.feed || t.single ? 'read' : t.paste ? 'paste' : 'link'
             expect(server).toBe(kind)
         }
         expect(draftLinkKind('')).toBe('bad')
@@ -66,7 +67,7 @@ describe('S3 읽기 (저장 안 함, 인터넷 안 쓰는 경우)', () => {
     it('링크만 저장되는 곳은 이유와 함께 못 읽은 링크로', async () => {
         const r = await collectDraftSources(['https://www.tiktok.com/@curi'], [], Date.now() + 5_000)
         expect(r.texts).toEqual([])
-        expect(r.unread).toEqual([{ url: 'https://www.tiktok.com/@curi', reason: UNREAD_REASON.linkOnly }])
+        expect(r.unread).toEqual([{ url: 'https://www.tiktok.com/@curi', reason: UNREAD_REASON.linkOnly, code: 'link_only' }])
     })
     it('붙여넣은 글은 자료가 된다', async () => {
         const post = '저는 매일 아침 글을 씁니다. '.repeat(5)

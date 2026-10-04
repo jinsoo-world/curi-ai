@@ -9,6 +9,7 @@ vi.mock('@/domains/knowledge', () => ({
 }))
 
 const { syncFeed, FEED_CAP_FULL_NOTE } = await import('../sync')
+const { MAX_ITEMS_PER_ACCOUNT } = await import('@/domains/os/knowledge')
 const { deleteFeed } = await import('../store')
 const { SOCIAL_STUB_NOTE } = await import('../social-stub')
 
@@ -83,7 +84,7 @@ describe('syncFeed = 같은 주소는 두 번 넣지 않는다', () => {
     })
 })
 
-describe('syncFeed = 자료 10개 한도', () => {
+describe('syncFeed = 자료 칸 한도 (칸은 출처 하나가 한 칸)', () => {
     it('칸이 다 찼으면 밖에 나가지 않고 이유를 적는다(시각은 적어서 헛돌지 않는다)', async () => {
         const sources = Array.from({ length: 10 }, (_, i) => ({ id: `s${i}`, mentor_id: M, original_url: `https://x.com/${i}` }))
         const fake = makeFakeDb({ knowledge_feeds: [feedRow()], knowledge_sources: sources })
@@ -95,16 +96,28 @@ describe('syncFeed = 자료 10개 한도', () => {
         expect(fake.tables.knowledge_feeds[0].last_synced_at).toBeTruthy()
     })
 
-    it('남은 칸만큼만 넣고 멈춘다', async () => {
+    it('한 연결의 글은 칸 하나만 쓴다 (칸이 8개 차 있어도 글 3편을 다 넣는다)', async () => {
         const sources = Array.from({ length: 8 }, (_, i) => ({ id: `s${i}`, mentor_id: M, original_url: `https://x.com/${i}` }))
         const fake = makeFakeDb({ knowledge_feeds: [feedRow()], knowledge_sources: sources })
         wireAdd(fake.tables)
         let maxItems: number | undefined
         const fetcher: FetchNewItems = async (_f, _s, opts) => { maxItems = opts?.maxItems; return { items: [글(1), 글(2), 글(3)] } }
         const r = await syncFeed(fake.db, feedOf(feedRow()), { fetchers: { website: fetcher } })
-        expect(maxItems).toBe(2)
+        expect(maxItems).toBe(MAX_ITEMS_PER_ACCOUNT)
+        expect(r.added).toBe(3)
+        expect(r.lastError).toBeNull()
+    })
+
+    it('칸이 10개 다 찬 뒤엔, 이미 있는 연결의 새 글만 더 들어온다', async () => {
+        const sources = [
+            ...Array.from({ length: 9 }, (_, i) => ({ id: `s${i}`, mentor_id: M, original_url: `https://x.com/${i}` })),
+            { id: 'mine', mentor_id: M, original_url: 'https://a.com/post/0', feed_id: 'feed-1' },
+        ]
+        const fake = makeFakeDb({ knowledge_feeds: [feedRow()], knowledge_sources: sources })
+        wireAdd(fake.tables)
+        const fetcher: FetchNewItems = async () => ({ items: [글(1), 글(2)] })
+        const r = await syncFeed(fake.db, feedOf(feedRow()), { fetchers: { website: fetcher } })
         expect(r.added).toBe(2)
-        expect(r.lastError).toBe(FEED_CAP_FULL_NOTE)
     })
 
     it('못 읽은 자료와 조각 0개 자료는 칸을 안 차지한다 (못 읽은 주소는 다시 넣지 않음)', async () => {
@@ -120,7 +133,7 @@ describe('syncFeed = 자료 10개 한도', () => {
             return { items: [{ url: 'https://x.com/0', title: '못 읽었던 글', text: '가'.repeat(400) }, 글(1)] }
         }
         const r = await syncFeed(fake.db, feedOf(feedRow()), { fetchers: { website: fetcher } })
-        expect(maxItems).toBe(3)
+        expect(maxItems).toBe(MAX_ITEMS_PER_ACCOUNT)
         expect(r.added).toBe(1)
         expect(r.skipped).toBe(1)
     })
