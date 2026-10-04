@@ -883,7 +883,7 @@ export default function OsChat({ mentorId, freshStart = false }: { mentorId: str
                     <MsgMetaProvider>
                     {/* 첫 봇 만든 분께 한 번만: 내 봇 링크 공유 안내 */}
                     {!guest && bot && !bot.id.startsWith('demo-') && <FirstBotShareCard botId={mentorId} botName={name} />}
-                    {!guest && bot && <TwinStartCard guest={guest} demo={bot.id.startsWith('demo-')} onOpen={() => openNewBot('link')} />}
+                    {!guest && bot && <TwinStartCard guest={guest} demo={bot.id.startsWith('demo-')} onOpen={() => router.push('/os/make')} />}
                     {!historyReady && messages.length === 0 && (
                         <div className="os-chat-pending" aria-busy="true" aria-label="대화 불러오는 중">
                             <div className="os-chat-pending-bar" />

@@ -8,9 +8,9 @@ const shell = readFileSync('src/components/os/OsShell.tsx', 'utf8')
 const first = readFileSync('src/app/os/page.tsx', 'utf8')
 
 describe('/os/make', () => {
-    it('대표가 준 문구 그대로', () => {
+    it('대표가 준 문구 (1005 03:02에 파일 안내만 바꿈)', () => {
         expect(HOME_COPY.title).toBe('내 SNS 주소만 넣으면, 나처럼 말하는 AI가 생겨요')
-        expect(HOME_COPY.sub).toBe('블로그, 유튜브, 인스타, 스레드, 파는 상품 주소를 넣어 보세요. 파일을 올려도 돼요.')
+        expect(HOME_COPY.sub).toBe('블로그, 유튜브, 인스타, 스레드, 파는 상품 주소를 넣어 보세요. 파일은 가입한 뒤 자료 넣기에서 올려요.')
         expect(HOME_COPY.chips.map(c => c.label)).toEqual(['블로그', '유튜브', '인스타그램', '스레드', '상품', '파일'])
         expect(HOME_COPY.multi).toBe('여러 자료 입력 가능')
         expect(HOME_COPY.make).toBe('내 AI 만들기')

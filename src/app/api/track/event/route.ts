@@ -24,6 +24,11 @@ const 아는행동 = new Set([
     'photo_login_prompt',  // 로그인하라고 띄움
     'photo_share',         // 공유 누름
     'charge_open',         // 충전 창 열기
+    'login_start',         // 로그인 단추 누름
+    'onboarding_step',     // 온보딩 화면 보임 (extra.step)
+    'onboarding_skipped',  // 주소를 넣어 와서 온보딩 건너뜀
+    'make_view',           // /os/make 화면 보임
+    'make_submit',         // 내 AI 만들기 누름 (extra.platform)
 ])
 
 function 자르기(v: unknown, n = 80): string | null {

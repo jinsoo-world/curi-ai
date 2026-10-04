@@ -45,8 +45,23 @@ describe('sanitizeStep', () => {
         const r = sanitizeStep('profile', { age_band: '50s', gender: 'x' })
         expect('step' in r && r.fields).toEqual({ age_band: '50s', gender: null, occupation: null, marketing: false })
     })
-    it('약관 화면은 온보딩 순서에서 빠졌다', () => {
-        expect(STEP_ORDER).toEqual(['source', 'uses', 'profile', 'leader', 'done'])
+    it('온보딩은 질문 한 장 + 마침 두 화면이다 (예전 단계 이름은 받기만 한다)', () => {
+        expect(STEP_ORDER).toEqual(['intro', 'done'])
+        expect('step' in sanitizeStep('source', { acquisition_source: 'search' })).toBe(true)
+    })
+    it('intro = 알게 된 경로와 맡길 일을 한 번에, 둘 다 있어야 한다', () => {
+        const ok = sanitizeStep('intro', { acquisition_source: 'friend', leader_code_entered: 'ab12cd', use_cases: ['promo', 'x'], marketing: true })
+        expect('step' in ok && ok.step).toBe('intro')
+        expect('step' in ok && ok.fields).toEqual({ acquisition_source: 'friend', acquisition_detail: null, leader_code_entered: 'AB12CD', use_cases: ['promo'], marketing: true })
+        expect('error' in sanitizeStep('intro', { use_cases: ['promo'] })).toBe(true)
+        expect('error' in sanitizeStep('intro', { acquisition_source: 'search', use_cases: [] })).toBe(true)
+        const noMkt = sanitizeStep('intro', { acquisition_source: 'search', use_cases: ['docs'] })
+        expect('step' in noMkt && noMkt.fields.marketing).toBe(false)
+    })
+    it('skip = 질문 없이 건너뛰기(주소를 넣어 온 분)', () => {
+        const r = sanitizeStep('skip', {})
+        expect('step' in r && r.step).toBe('skip')
+        expect('step' in r && r.fields).toEqual({})
     })
     it('아니요면 리더 칸을 비운다', () => {
         const r = sanitizeStep('leader', { runs_class_or_group: 'none', org_name: 'a', leader_contact_ok: true })
@@ -110,7 +125,7 @@ describe('관리자 온보딩 집계', () => {
     ]
     it('흐름과 나눔', () => {
         const s = summarizeOnboarding(users, [base, { ...base, user_id: 'zzz' }], new Set(['a', 'b']), new Set(['a']))
-        expect(s.funnel).toEqual({ signups: 2, started: 1, done: 1, firstBot: 2, firstMessage: 1 })
+        expect(s.funnel).toEqual({ signups: 2, started: 1, done: 1, skipped: 0, firstBot: 2, firstMessage: 1 })
         expect(s.bySource[0]).toMatchObject({ key: 'ai_chatbot', count: 1 })
         expect(s.byUseCase.map(x => x.key).sort()).toEqual(['customer', 'promo'])
         expect(s.byShell[0].label).toBe('아이폰 앱')

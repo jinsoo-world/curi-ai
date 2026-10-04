@@ -25,6 +25,14 @@ export type 사진사건 =
     | 'photo_login_prompt'
     | 'photo_share'
 
+/** 가입에서 첫 봇까지 어디서 멈추는지 보는 흐름 기록 (대표 승인 1005 03:02) */
+export type 흐름사건 =
+    | 'login_start'        // 로그인 단추 누름 (extra.provider)
+    | 'onboarding_step'    // 온보딩 화면 보임 (extra.step = 1, 2)
+    | 'onboarding_skipped' // 주소를 넣어 와서 온보딩을 건너뜀
+    | 'make_view'          // /os/make 화면 보임
+    | 'make_submit'        // 「내 AI 만들기」 누름 (extra.platform)
+
 /** 이 브라우저를 가리키는 표식 — 누구인지는 모르고, 같은 사람인지만 안다 */
 function 표식(): string {
     try {
@@ -34,7 +42,7 @@ function 표식(): string {
     } catch { return '' }
 }
 
-export function 센다(사건: 사진사건, 값들: 값 = {}) {
+export function 센다(사건: 사진사건 | 흐름사건, 값들: 값 = {}) {
     // ① 우리 표에 남긴다(정본)
     try {
         const { tool, ...나머지 } = 값들 as Record<string, unknown>

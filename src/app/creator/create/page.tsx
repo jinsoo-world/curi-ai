@@ -64,13 +64,10 @@ export default function CreatorCreatePage() {
     // 미리보기 디바이스 모드
     const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
 
-    // 3단계 마법사 탭: 기본정보(프롬프트 포함) / 파일학습 / 고급설정
+    // 3단계 탭: 기본정보(프롬프트 포함) / 파일학습 / 고급설정
     const [creatorTab, setCreatorTab] = useState<'basic' | 'files' | 'advanced'>('basic')
 
-    // 클로버 잔액 (파일학습 유료 게이팅용)
-    const [cloverBalance, setCloverBalance] = useState<number | null>(null)
-
-    // 채팅방 테마 색상 (고급설정 유료 기능)
+    // 채팅방 테마 색상
     const [chatThemeColor, setChatThemeColor] = useState<string | null>(null)
 
     // 프리미엄 설정 상태
@@ -170,17 +167,8 @@ export default function CreatorCreatePage() {
 
     useEffect(() => {
         const supabase = createClient()
-        supabase.auth.getSession().then(async ({ data: { session } }) => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
             setIsLoggedIn(!!session?.user)
-            // 클로버 잔액 가져오기 (파일학습 유료 게이팅용)
-            if (session?.user) {
-                const { data: userData } = await supabase
-                    .from('users')
-                    .select('clovers')
-                    .eq('id', session.user.id)
-                    .single()
-                setCloverBalance(userData?.clovers ?? 0)
-            }
         })
     }, [])
 
@@ -1362,24 +1350,8 @@ export default function CreatorCreatePage() {
                         </div>
                         </>)}
 
-                        {/* Step 3: 고급설정 (유료 기능) */}
+                        {/* Step 3: 고급설정 */}
                         {creatorTab === 'advanced' && (<>
-                        {/* 유료 기능 안내 */}
-                        <div style={{
-                            background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 14,
-                            padding: '14px 16px', marginBottom: 16,
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                                <span style={{ fontSize: 20 }}>💎</span>
-                                <span style={{ fontSize: 15, fontWeight: 800, color: '#92400e' }}>유료 기능</span>
-                            </div>
-                            <p style={{ fontSize: 15, color: '#78350f', margin: 0, lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                                고급 설정은 클로버 50개가 필요합니다. 무료로 기본정보만으로도 AI를 만들 수 있어요. {cloverBalance !== null && cloverBalance < 50 && (
-                                    <>현재 클로버: {cloverBalance}개.</>
-                                )}
-                            </p>
-                        </div>
-
                         {/* 채팅방 색깔 선택 */}
                         <div style={styles.card}>
                             <div style={styles.field}>

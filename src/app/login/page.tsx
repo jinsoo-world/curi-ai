@@ -10,6 +10,7 @@ import { safeNextPath } from '@/lib/safe-next'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { TERMS_COOKIE, TERMS_VERSION } from '@/domains/os/onboarding'
+import { 센다 } from '@/lib/track'
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState<string | null>(null)
@@ -90,6 +91,7 @@ export default function LoginPage() {
         localStorage.setItem('curi_terms_agreed', 'true')
         document.cookie = `${TERMS_COOKIE}=${TERMS_VERSION}:${Date.now()}; path=/; max-age=3600; samesite=lax${location.protocol === 'https:' ? '; secure' : ''}`
         localStorage.setItem('curi_last_provider', provider)
+        센다('login_start', { tool: 'login', provider })
         setIsLoading(provider)
         setError('')
         try {

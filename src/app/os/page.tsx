@@ -9,7 +9,7 @@ import BotAvatar from '@/components/os/BotAvatar'
 import { readHomeDraft } from '@/domains/home/draft-store'
 
 export default function OsHome() {
-    const { team, loading, guest, openNewBot } = useOsTeam()
+    const { team, loading, guest } = useOsTeam()
     const router = useRouter()
     const first = team.find(b => !b.hidden)
 
@@ -45,7 +45,7 @@ export default function OsHome() {
                 <div style={{ marginTop: 6 }}>봇 하나에 일 하나. 첫 봇은 「내가 매일 말하는 한 명」이면 좋아요.</div>
                 {guest
                     ? <Link href="/login?next=/os" className="os-cta" style={{ textDecoration: 'none' }}>로그인하고 팀 만들기</Link>
-                    : <button className="os-cta" onClick={() => openNewBot()}>＋ 첫 봇 만들기</button>}
+                    : <button className="os-cta" onClick={() => router.push('/os/make')}>＋ 첫 봇 만들기</button>}
             </div>
         </div>
     )

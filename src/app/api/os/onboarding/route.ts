@@ -1,4 +1,4 @@
-// /api/os/onboarding = 가입 온보딩 6화면 (대표 승인 0928 23:15)
+// /api/os/onboarding = 가입 온보딩 (대표 승인 0928 23:15, 1005 03:02에 2화면으로 줄임. 주소를 넣어 온 분은 skip)
 // GET  = 띄울지(show), 이어서 채울 답, 로그인 때 동의한 약관, 미리 채울 초대 코드, 이름
 // POST = 화면 하나의 답 저장 { step, ...답 }. 들어온 길(기기, 운영체제, 앱 여부, utm, referrer)은 서버가 채운다.
 // 추천 보상(클로버)은 주지 않는다. 귀속 기록만 남긴다.
@@ -88,9 +88,10 @@ export async function POST(req: NextRequest) {
 
     const update: Record<string, unknown> = {
         updated_at: now,
-        step: STEP_ORDER.indexOf(step) + 1,
         user_agent: ua.slice(0, 300) || null,
     }
+    // 화면 번호는 새 화면(intro, done)만 적는다. 예전 단계 이름은 번호를 건드리지 않는다
+    if (STEP_ORDER.indexOf(step) >= 0) update.step = STEP_ORDER.indexOf(step) + 1
     // 들어온 길 칸은 브라우저가 처음 들어온 순간을 적어 보낸 줄(first_touch_at)이면 덮어쓰지 않는다 (2026-10-05).
     // 그 줄이 아직 없을 때만 이 요청의 기기와 방문 기록 첫 줄로 채운다 (아래 별도 쓰기).
     const pathFields: Record<string, unknown> = {
@@ -122,7 +123,12 @@ export async function POST(req: NextRequest) {
         if (marketing) {
             await db.from('users').update({ marketing_agreed: true, marketing_consent: true, marketing_agreed_at: now }).eq('id', user.id)
         }
-    } else if (step === 'profile') {
+    } else if (step === 'skip') {
+        // 홈에서 주소를 넣어 온 분 = 질문 없이 바로 만들기로. 이미 마친(done) 행은 되돌리지 않는다. 들어온 길(utm 등)은 아래에서 똑같이 채운다
+        if (existing.status !== 'started') return NextResponse.json({ ok: true, skipped: false })
+        Object.assign(update, { status: 'skipped', completed_at: now })
+        await db.from('users').update({ onboarding_completed: true }).eq('id', user.id)
+    } else if (step === 'profile' || step === 'intro') {
         const { marketing, ...rest } = fields
         Object.assign(update, rest)
         if (marketing === true) {
@@ -131,7 +137,7 @@ export async function POST(req: NextRequest) {
         }
         // users.gender 는 'male' | 'female' | 'other' 만 받는다 (DB 검사 규칙)
         const g = fields.gender === 'female' || fields.gender === 'male' ? fields.gender : null
-        if (g) await db.from('users').update({ gender: g }).eq('id', user.id).is('gender', null)
+        if (step === 'profile' && g) await db.from('users').update({ gender: g }).eq('id', user.id).is('gender', null)
     } else if (step === 'done') {
         Object.assign(update, { status: 'done', completed_at: now, first_bot_mentor_id: cut(body.firstBotMentorId, 40)?.match(/^[0-9a-f-]{36}$/i)?.[0] ?? null })
         await db.from('users').update({ onboarding_completed: true }).eq('id', user.id)
@@ -154,9 +160,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: '저장하지 못했어요. 다시 눌러 주세요.' }, { status: 500 })
     }
     // 초대 코드 직접 입력 = 링크로 이미 귀속됐으면 덮어쓰지 않는다
-    if (step === 'source' && fields.leader_code_entered) {
+    if ((step === 'source' || step === 'intro') && fields.leader_code_entered) {
         refOk = (await attributeReferral(db, user.id, fields.leader_code_entered, 'code')).ok
     }
-    const useCases = step === 'uses' ? (fields.use_cases as string[]) : (existing.use_cases as string[] | null)
+    const useCases = step === 'uses' || step === 'intro' ? (fields.use_cases as string[]) : (existing.use_cases as string[] | null)
     return NextResponse.json({ ok: true, refOk, firstJob: firstJobFor(useCases) })
 }

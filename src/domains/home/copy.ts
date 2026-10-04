@@ -13,7 +13,7 @@ export const HOME_COPY = {
         me: '내 정보',
     },
     title: '내 SNS 주소만 넣으면, 나처럼 말하는 AI가 생겨요',
-    sub: '블로그, 유튜브, 인스타, 스레드, 파는 상품 주소를 넣어 보세요. 파일을 올려도 돼요.',
+    sub: '블로그, 유튜브, 인스타, 스레드, 파는 상품 주소를 넣어 보세요. 파일은 가입한 뒤 자료 넣기에서 올려요.',
     chips: [
         { id: 'blog', label: '블로그', example: '내이름.tistory.com' },
         { id: 'youtube', label: '유튜브', example: 'youtube.com/@내채널' },

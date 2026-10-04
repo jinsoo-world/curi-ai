@@ -15,6 +15,7 @@ import { HOME_TAB_OF, homeLinkFallbackTitle, homeLinkPlatform, looksLikeLink, sp
 import { clearHomeDraft, readHomeDraft, saveHomeDraft } from '@/domains/home/draft-store'
 import { TWIN_DRAFT_CONSENTS, TWIN_DRAFT_MAX_LINKS, draftSourceKind, draftStepAt, type TwinDraft } from '@/domains/os/twin-draft-shared'
 import { osTrack } from '@/domains/os/events'
+import { 센다 } from '@/lib/track'
 import type { TeamBot } from '@/domains/os/types'
 import { HomeCloseIcon, HomeSourceIcon, type HomeIconKind } from '@/components/home/HomeIcons'
 import { useOsTeam } from './OsShell'
@@ -130,6 +131,8 @@ export default function OsMake() {
     const go = (all: string[], pastes: string[]) => {
         if (all.length === 0 && pastes.length === 0) { input.current?.focus(); return }
         if (phase === 'working') return
+        // 어디서 멈추는지 보려고 센다. platform = 첫 주소의 갈래, 주소가 없으면 직접 설명
+        센다('make_submit', { tool: 'os_make', platform: all[0] ? homeLinkPlatform(all[0]) : 'direct', links: all.length, guest })
         if (guest) {
             // 손님: 저장 직전까지는 로그인 없이. 저장할 때 카카오(로그인 화면)로 갔다가 여기로 돌아와 이어 만든다
             saveHomeDraft(window.localStorage, { links: all, pastes, consents: TWIN_DRAFT_CONSENTS.map(() => true) })
@@ -138,6 +141,14 @@ export default function OsMake() {
         }
         void build(all, pastes)
     }
+
+    // 화면이 보인 것 한 번 (로그인 여부와 함께)
+    const viewed = useRef(false)
+    useEffect(() => {
+        if (loading || viewed.current) return
+        viewed.current = true
+        센다('make_view', { tool: 'os_make', guest })
+    }, [loading, guest])
 
     // 로그인하고 돌아온 손님(또는 /home 에서 넣고 온 분): 보관분으로 한 번만 이어 만든다
     useEffect(() => {

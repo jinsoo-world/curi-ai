@@ -202,9 +202,13 @@ export function cleanRefCode(v: unknown): string | null {
     return s.length >= 4 ? s : null
 }
 
-export type OnboardingStep = 'terms' | 'source' | 'uses' | 'profile' | 'leader' | 'done'
+export type OnboardingStep = 'terms' | 'source' | 'uses' | 'profile' | 'leader' | 'intro' | 'skip' | 'done'
 // 약관 화면은 뺐다 (대표 0929 「동의는 받지마」): 로그인 단추 아래 안내문으로 동의를 남긴다. 'terms' 는 예전 화면 호환으로만 받는다
-export const STEP_ORDER: OnboardingStep[] = ['source', 'uses', 'profile', 'leader', 'done']
+// 대표 승인 1005 03:02 「가입에서 내 봇 보기까지 화면 줄이기」: 5화면 → 2화면(질문 한 장 + 마침).
+//  - 'intro' = 알게 된 경로 + 맡길 일 (+선택 소식 받기)를 한 번에 저장
+//  - 'skip'  = 홈에서 주소를 넣어 둔 분은 온보딩을 건너뛴다 (user_onboarding.status = 'skipped', DB 검사 규칙이 이미 허용)
+//  - 'source' 'uses' 'profile' 'leader' 는 예전 화면(캐시된 앱)이 보내도 받도록 남겨 둔다. 나이대, 성별, 업종, 강의 운영 질문은 더 묻지 않는다
+export const STEP_ORDER: OnboardingStep[] = ['intro', 'done']
 
 /** 화면별로 받은 답을 정해진 값으로만 거른다. 필수 답이 없으면 error */
 export function sanitizeStep(step: unknown, body: unknown): { step: OnboardingStep; fields: Record<string, unknown>; error?: string } | { error: string } {
@@ -250,6 +254,15 @@ export function sanitizeStep(step: unknown, body: unknown): { step: OnboardingSt
                 },
             }
         }
+        case 'intro': {
+            const src = sanitizeStep('source', body)
+            if (!('step' in src)) return { error: src.error }
+            const use = sanitizeStep('uses', body)
+            if (!('step' in use)) return { error: use.error }
+            return { step, fields: { ...src.fields, ...use.fields, marketing: b.marketing === true } }
+        }
+        case 'skip':
+            return { step, fields: {} }
         case 'done':
             return { step, fields: {} }
         default:

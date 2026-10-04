@@ -33,7 +33,7 @@ export interface OnbRow {
 }
 export interface SignupUser { id: string; email: string | null; display_name: string | null; created_at: string }
 
-export interface Funnel { signups: number; started: number; done: number; firstBot: number; firstMessage: number }
+export interface Funnel { signups: number; started: number; done: number; skipped: number; firstBot: number; firstMessage: number }
 export type Breakdown = { key: string; label: string; count: number }[]
 export interface OnbSummary {
     funnel: Funnel
@@ -70,6 +70,7 @@ export function summarizeOnboarding(users: SignupUser[], rows: OnbRow[], botOwne
             signups: users.length,
             started: mine.length,
             done: mine.filter(r => r.status === 'done').length,
+            skipped: mine.filter(r => r.status === 'skipped').length,
             firstBot: users.filter(u => botOwners.has(u.id)).length,
             firstMessage: users.filter(u => chatUsers.has(u.id)).length,
         },
@@ -162,7 +163,7 @@ export async function loadOnboarding(db: SupabaseClient, startIso: string, endIs
         const part = ids.slice(i, i + 100)
         const [r, b, c, l, g] = await Promise.all([
             db.from('user_onboarding').select('*').in('user_id', part),
-            db.from('team_bots').select('user_id').in('user_id', part),
+            db.from('app_events').select('user_id').eq('name', 'os_bot_created').or('tool.is.null,tool.neq.onboarding').in('user_id', part),
             db.from('chat_sessions').select('user_id').in('user_id', part).gt('message_count', 0),
             db.from('user_sns_links').select('user_id, status').in('user_id', part),
             db.from('sns_link_bonuses').select('user_id').in('user_id', part),

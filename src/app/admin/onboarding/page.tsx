@@ -45,7 +45,7 @@ export default async function OnboardingAdminPage({ searchParams }: { searchPara
     }
     const s = summarizeOnboarding(d.users, d.rows, d.botOwners, d.chatUsers)
     const f = s.funnel
-    const steps: [string, number][] = [['가입', f.signups], ['온보딩 시작', f.started], ['온보딩 완료', f.done], ['첫 봇', f.firstBot], ['첫 메시지', f.firstMessage]]
+    const steps: [string, number][] = [['가입', f.signups], ['온보딩 시작', f.started], ['온보딩 완료', f.done], ['온보딩 건너뜀', f.skipped], ['첫 봇', f.firstBot], ['첫 메시지', f.firstMessage]]
     const byId = new Map(d.rows.map(r => [r.user_id, r]))
     const q = `from=${range.from}&to=${range.to}`
 
@@ -63,7 +63,7 @@ export default async function OnboardingAdminPage({ searchParams }: { searchPara
             </form>
             {error && <div style={{ ...card, color: '#c00', marginBottom: 16 }}>읽기 오류: {error}</div>}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 20 }}>
                 {steps.map(([label, n], i) => (
                     <div key={label} style={card}>
                         <div style={{ color: '#666', fontSize: 13 }}>{label}</div>
