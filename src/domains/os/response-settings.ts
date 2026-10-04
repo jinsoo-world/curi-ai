@@ -124,7 +124,8 @@ export function defaultResponseSettings(kind: BotKind): ResponseSettings {
         creativity: kind === 'public' ? 'strict' : 'adaptive',
         citationsOn: true,
         disclaimer: null,
-        recencyOn: true,
+        // 기본 꺼짐: 켜면 유료 구글 검색이 붙는다. 켜는 건 리더 선택 (대표 승인 1005 03:23)
+        recencyOn: false,
     }
 }
 
