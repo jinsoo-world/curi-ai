@@ -64,6 +64,6 @@ describe('classifySnsLink', () => {
     })
     it('성공 안내 한 줄', () => {
         expect(SNS_BONUS_CLOVERS).toBe(50)
-        expect(SNS_SUCCESS_LINE).toBe('내 글로 봇이 배웠어요. 모아 둔 대화 10번을 드렸어요')
+        expect(SNS_SUCCESS_LINE).toBe('내 글로 봇이 배웠어요. 모아 둔 대화를 드렸어요')
     })
 })

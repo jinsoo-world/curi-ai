@@ -2,7 +2,6 @@
 // 화면(/os/start), 서버(/api/os/onboarding, 로그인 콜백), 첫 대화(칩과 예시), 관리자 표가 같이 쓰는 한 곳.
 // 화면에서도 불러 쓰므로 서버 전용 코드는 넣지 않는다.
 
-import { cloverChats } from './usage-config'
 
 export const ONBOARDING_TITLE = '나만의 AI 팀을 만들어보세요'
 export const TERMS_VERSION = 'v1-2026-09'
@@ -319,7 +318,7 @@ export function parseTermsCookie(v: string | null | undefined, now = Date.now())
 /** SNS, 블로그 링크 연동 보너스 (대표 승인 0928 23:29). 클로버로 준다 (월 한도와 별개). 계정당 한 번
  *  클로버 판매 끝(대표 결정 1002): 화면에는 클로버 대신 「모아 둔 대화 N번」으로 적는다. 주는 양(클로버 50개)은 그대로 */
 export const SNS_BONUS_CLOVERS = 50
-export const SNS_SUCCESS_LINE = `내 글로 봇이 배웠어요. 모아 둔 대화 ${cloverChats(SNS_BONUS_CLOVERS)}번을 드렸어요`
+export const SNS_SUCCESS_LINE = `내 글로 봇이 배웠어요. 모아 둔 대화를 드렸어요`
 export const SNS_READ_LINE = '내 글로 봇이 배웠어요'
 export const SNS_PENDING_LINE = '이 곳은 아직 읽을 수 없어 링크만 저장했어요 (준비 중)'
 /** 붙여넣기 한 편 최소 글자 (너무 짧은 글로 보너스를 받는 남용 방지)와 최대 편수 */
@@ -331,7 +330,7 @@ export const SNS_CAPTURE_LINE = '자동으로 못 읽었어요(비공개 계정�
 /** 온보딩에서 자동으로 못 읽었을 때 (붙여넣기는 설정에서) */
 export const SNS_PASTE_LATER_LINE = '자동으로 못 읽었어요. 설정에서 글을 붙여넣을 수 있어요'
 export const SNS_KEY_TAKEN_LINE = '내 글로 봇이 배웠어요. 이 주소는 다른 계정이 이미 보너스를 받았어요'
-export const SNS_HINT = `유튜브, 블로그, 인스타그램, 스레드(공개 계정) 주소를 넣으면 봇이 내 글을 배우고 처음 한 번 대화 ${cloverChats(SNS_BONUS_CLOVERS)}번을 더 드려요`
+export const SNS_HINT = `유튜브, 블로그, 인스타그램, 스레드(공개 계정) 주소를 넣으면 봇이 내 글을 배우고 처음 한 번 모아 둔 대화를 더 드려요`
 
 // 화면 쪽 저장 (첫 대화 칩과 예시 대화가 읽는다)
 export const SURVEY_LOCAL_KEY = 'curi:survey-help'
