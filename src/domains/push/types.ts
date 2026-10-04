@@ -88,7 +88,7 @@ export interface PushStore {
     countSentBatches(userId: string, since: Date, category?: PushCategory): Promise<number>
     /** 같은 type + key 로 「보냄」이 있나(since 가 있으면 그 뒤로만). 실패·막힘은 안 센다 */
     hasSent(userId: string, type: string, key: string, since: Date | null): Promise<boolean>
-    /** users.marketing_consent */
+    /** users.ad_consent_app_push (칸이 없으면 옛 users.marketing_consent) */
     hasMarketingConsent(userId: string): Promise<boolean>
     /** notification_prefs (없으면 push 켬, 22:00~08:00) */
     getPrefs(userId: string): Promise<{ push: boolean; quietFrom: string | null; quietTo: string | null }>

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
 import { createEmailDriver } from '@/domains/messaging/drivers/email'
+import { isTypeOn } from '@/domains/messaging'
 import { validateInquiry, notificationText, safeReplyTo, SUPPORT_EMAIL, NOTIFY_CAP_PER_HOUR } from '@/domains/support/inquiry'
 
 export const dynamic = 'force-dynamic'
@@ -43,8 +44,11 @@ export async function POST(req: Request) {
 
     // 알림 메일은 덤이다. 실패해도 문의는 이미 표에 있다. 경고에는 개인정보를 싣지 않는다
     try {
+        // 회사 메일함으로 가는 내부 알림이라 관문 대신 그 자리에서 보낸다. 유형 장부(SUPPORT_NOTIFY)의 켬/끔은 본다
         const mail = createEmailDriver()
-        if (!mail.ready()) {
+        if (!(await isTypeOn(db, 'SUPPORT_NOTIFY'))) {
+            console.warn('[support/inquiry] 알림 메일 건너뜀: 유형 장부에서 꺼짐(SUPPORT_NOTIFY)')
+        } else if (!mail.ready()) {
             console.warn('[support/inquiry] 알림 메일 건너뜀: 메일 열쇠가 연결되지 않음')
         } else {
             const since = new Date(Date.now() - 3600_000).toISOString()

@@ -17,6 +17,7 @@ const navItems = [
     { href: '/admin/os', label: '🤝 봇 OS', id: 'os' },
     { href: '/admin/os/bot-reviews', label: '🔎 봇 공개 확인', id: 'bot-reviews' },
     { href: '/admin/os/inquiries', label: '📮 고객센터 문의', id: 'inquiries' },
+    { href: '/admin/os/messages', label: '📨 메시지 엔진', id: 'messages' },
     { href: '/admin/os/reports', label: '🚩 봇 신고', id: 'bot-reports' },
 ]
 

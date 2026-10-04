@@ -3,7 +3,7 @@
 // 앱 푸시 전용 규칙(하루 3번·광고 규칙·겹침·기록)은 드라이버 자리의 sendPush(send.ts)가 지킨다.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { dispatchWith, type DispatchOutcome } from '@/domains/messaging'
+import { dispatchWith, type DispatchInput, type DispatchOutcome } from '@/domains/messaging'
 import { pushConfigured } from './live'
 import type { PushInput } from './types'
 
@@ -18,11 +18,14 @@ export * from './rules'
 export type * from './types'
 
 /** 앱 알림 한 건을 messaging 관문(dispatch)에 넣는 모양으로 바꾼다 */
-export function toDispatchInput(p: PushInput) {
+export function toDispatchInput(p: PushInput): DispatchInput {
     return {
-        message: { channel: 'push' as const, userId: p.userId, subject: p.title, body: p.body, url: p.deeplink ?? undefined },
-        audience: 'self' as const,
-        appPush: { type: p.type, category: p.category, deeplink: p.deeplink ?? null, dedupe: p.dedupe, ignoreLimits: p.ignoreLimits },
+        message: { channel: 'push', userId: p.userId, subject: p.title, body: p.body, url: p.deeplink ?? undefined },
+        audience: 'self',
+        type: p.type,
+        dedupe: p.dedupe,
+        test: p.ignoreLimits === true || undefined,
+        appPush: { deeplink: p.deeplink ?? null },
     }
 }
 

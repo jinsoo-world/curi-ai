@@ -58,6 +58,7 @@ export async function POST(req: Request) {
     try {
         const outcome = await dispatchWith(db, {
             audience: 'other',
+            type: 'BOT_OUTBOUND',
             permissionRequestId,
             approvalMode: MODES.has(String(b.approvalMode)) ? (b.approvalMode as 'always_ask' | 'draft_only' | 'auto_safe') : undefined,
             message: {

@@ -15,6 +15,7 @@ import { createHash } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { revokeAppleTokens, type RevokeResult } from './apple-revoke'
 import { planSource, resolvePlan } from '@/domains/os/plan'
+import { addSuppressions } from '@/domains/messaging/suppressions'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = SupabaseClient<any, any, any>
@@ -217,6 +218,20 @@ export async function deleteAccount(
             { onConflict: 'deleted_user_ref', ignoreDuplicates: true },
         )
         if (error) fail('정산 정보 보관', error)
+    }
+
+    // 3-2) 받지 않을 사람 명단에 지문만 남긴다(메시지엔진 1차 4번). 같은 메일·번호로 다시 가입해도
+    //      본인이 광고에 다시 동의하기 전까지 광고가 가지 않게. 원래 주소는 남기지 않는다. 실패해도 탈퇴는 계속한다
+    try {
+        const { data: contact } = await db.from('users').select('email, phone').eq('id', uid).maybeSingle()
+        const c = (contact ?? {}) as { email?: string | null; phone?: string | null }
+        const email = c.email ?? user.email ?? null
+        await addSuppressions(db, [
+            ...(email ? [{ kind: 'email' as const, address: email, channel: 'all' as const, reason: 'deleted_account' as const, source: 'account_delete' }] : []),
+            ...(c.phone ? [{ kind: 'phone' as const, address: c.phone, channel: 'all' as const, reason: 'deleted_account' as const, source: 'account_delete' }] : []),
+        ])
+    } catch (e) {
+        console.warn('[account-delete] 받지 않을 사람 명단 기록 실패', e instanceof Error ? e.message : e)
     }
 
     // 4) 저장소 파일

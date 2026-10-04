@@ -6,7 +6,7 @@
 // 고르는 순서:
 //   1. 꺼지지 않은 기기 중 마지막 접속이 3일 이상 4일 미만 전인 사람 (4일 창 = 매일 한 번 돌면 한 사람이 한 번만 걸린다)
 //   2. 3일 안에 직접 말한 사람은 뺀다(웹 대화 messages.role=user, 단체방 channel_messages.author_kind=user) = 앱만 안 열었을 뿐 쓰고 있다
-//   3. 광고 수신 동의(users.marketing_consent = true)한 사람만
+//   3. 앱 광고 수신 동의(users.ad_consent_app_push = true)한 사람만
 //   4. 7일 안에 P089 를 이미 받은 사람은 뺀다 (sendPush 의 겹침 막기가 한 번 더 지킨다)
 //   5. 한 번에 최대 500명
 // 보내기는 messaging 관문(dispatch) → sendPush 를 지난다 = 광고 규칙(「(광고)」·21~08시 금지·동의)·하루 3번·광고 하루 1번·주 3번이 그대로 걸린다.
@@ -157,8 +157,11 @@ export function createSupabaseP089Reader(db: SupabaseClient): P089Reader {
             return out
         },
         async consented(userIds) {
-            const rows = must(await db.from('users').select('id').in('id', userIds).eq('marketing_consent', true), '광고 동의') as { id: string }[]
-            return new Set(rows.map(r => r.id))
+            // 앱 광고 동의 칸(메시지엔진 1차). 칸이 아직 없으면 옛 marketing_consent
+            let r = await db.from('users').select('id').in('id', userIds).eq('ad_consent_app_push', true)
+            if (r.error && (r.error.code === '42703' || r.error.code === 'PGRST204')) r = await db.from('users').select('id').in('id', userIds).eq('marketing_consent', true)
+            const rows = must(r, '광고 동의') as { id: string }[]
+            return new Set(rows.map(x => x.id))
         },
         async sentP089Since(userIds, since) {
             const rows = must(await db.from('push_sends').select('user_id').eq('push_type', 'P089').eq('status', 'sent')
