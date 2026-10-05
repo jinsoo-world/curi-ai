@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import {
     TWIN_DRAFT_CONSENTS, TWIN_DRAFT_COPY, DRAFT_LINK_LABEL, TWIN_DRAFT_USER_DAILY, TWIN_DRAFT_GLOBAL_DAILY,
-    draftLinkKind, tidyLine,
+    consentsAccepted, draftLinkKind, tidyLine,
 } from '../twin-draft-shared'
 import {
     cleanDraftLinks, cleanDraftPastes, collectDraftSources, parseDraftAnswer, draftPrompt, ensureHardLimits, draftAsk, UNREAD_REASON,
@@ -25,6 +25,15 @@ describe('S1 동의와 링크 판별', () => {
     it('한도는 설정값 (사용자 하루 5, 전체 500)', () => {
         expect(TWIN_DRAFT_USER_DAILY).toBe(5)
         expect(TWIN_DRAFT_GLOBAL_DAILY).toBe(500)
+    })
+
+    it('필수 동의는 전부 true 일 때만 통과 (기본 false)', () => {
+        expect(consentsAccepted(undefined)).toBe(false)
+        expect(consentsAccepted([])).toBe(false)
+        expect(consentsAccepted([true])).toBe(false)
+        expect(consentsAccepted([true, false])).toBe(false)
+        expect(consentsAccepted([false, false])).toBe(false)
+        expect(consentsAccepted([true, true])).toBe(true)
     })
 
     it('화면 판별이 서버 판별과 같다', () => {

@@ -442,7 +442,7 @@ function MarketTab({ guest, onClose, onLinked }: { guest: boolean; onClose: () =
 
 /** 「내 링크로 만들기」 = 동의 2개, 링크 3개, 붙여넣기 → 저장 없는 초안 → 편집 칸과 같은 칸으로 고치고 만들기 */
 function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => void; onCreated: (bot: TeamBot) => void | Promise<void>; initial?: HomeDraft | null }) {
-    const [agree] = useState<boolean[]>(() => TWIN_DRAFT_CONSENTS.map(() => true))  // 동의 체크 없앰 (대표 지시 0929)
+    const [agree, setAgree] = useState<boolean[]>(() => TWIN_DRAFT_CONSENTS.map((_, i) => initial?.consents[i] === true))
     const [links, setLinks] = useState<string[]>(() => Array.from({ length: TWIN_DRAFT_MAX_LINKS }, (_, i) => initial?.links[i] ?? ''))
     const [pastes, setPastes] = useState<string[]>(() => Array.from({ length: TWIN_DRAFT_MAX_PASTES }, (_, i) => initial?.pastes[i] ?? ''))
     const [busy, setBusy] = useState(false)
@@ -576,6 +576,21 @@ function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => v
             {busy && <div className="os-step" role="status" aria-live="polite">{stepText}</div>}
             {err && <div className="os-notice" style={{ margin: '14px 0 0' }}>{err}</div>}
             {unreadOnly.length > 0 && <LinkReadReport unread={unreadOnly} retrying={retrying} onRetry={u => void retryHere(u)} disabled={busy} />}
+            <div className="os-field" style={{ display: 'grid', gap: 8, marginTop: 14 }}>
+                {TWIN_DRAFT_CONSENTS.map((c, i) => (
+                    <label key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 14, lineHeight: 1.5 }}>
+                        <input type="checkbox" checked={agree[i]} disabled={busy}
+                            onChange={e => setAgree(prev => prev.map((x, j) => j === i ? e.target.checked : x))}
+                            style={{ width: 20, height: 20, marginTop: 1 }} />
+                        <span>{c}</span>
+                    </label>
+                ))}
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--os-글-흐림)' }}>
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer">개인정보 처리방침</a>
+                    {', '}
+                    <a href="/terms" target="_blank" rel="noopener noreferrer">이용약관</a>
+                </p>
+            </div>
             <div className="os-sheet-foot">
                 <button type="button" className="os-btn" onClick={onClose} disabled={busy}>닫기</button>
                 <button type="button" className="os-btn primary" onClick={() => void makeDraft()} disabled={!canDraft}>{busy ? '만드는 중' : TWIN_DRAFT_COPY.make}</button>

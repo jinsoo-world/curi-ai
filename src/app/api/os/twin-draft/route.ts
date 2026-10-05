@@ -8,7 +8,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { cleanDraftLinks, cleanDraftPastes, collectDraftSources, countDraftSources, makeTwinDraft } from '@/domains/os/twin-draft'
 import { recordDraftEvent } from '@/domains/os/bot-events'
-import { TWIN_DRAFT_COPY, TWIN_DRAFT_GLOBAL_DAILY, TWIN_DRAFT_USER_DAILY, draftSourceKind } from '@/domains/os/twin-draft-shared'
+import { TWIN_DRAFT_COPY, TWIN_DRAFT_GLOBAL_DAILY, TWIN_DRAFT_USER_DAILY, consentsAccepted, draftSourceKind } from '@/domains/os/twin-draft-shared'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120   // 유튜브 영상 요약(최대 약 40초) + 초안 쓰기
@@ -21,7 +21,10 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: '로그인이 필요해요' }, { status: 401 })
 
     const body = await req.json().catch(() => ({})) as { links?: unknown; pastes?: unknown; consents?: unknown; readOnly?: unknown }
-    // 동의 체크 없앰 (대표 지시 0929): consents 는 받아도 확인하지 않는다
+    // 초안 만들기만 필수 동의 확인. 「다시 시도」(readOnly)는 이미 동의한 뒤라 생략
+    if (body.readOnly !== true && !consentsAccepted(body.consents)) {
+        return NextResponse.json({ error: '필수 확인 2개를 눌러 주세요' }, { status: 400 })
+    }
     const links = cleanDraftLinks(body.links)
     const pastes = cleanDraftPastes(body.pastes)
     if (links.length === 0 && pastes.length === 0) return NextResponse.json({ error: '링크를 하나 이상 넣어 주세요' }, { status: 400 })

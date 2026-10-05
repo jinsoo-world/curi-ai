@@ -19,6 +19,12 @@ export const TWIN_DRAFT_CONSENTS = [
     '(필수) 큐리AI가 이 계정의 공개된 글과 영상만 읽어 제 봇의 자료와 소개 초안을 만드는 데 동의합니다.',
 ] as const
 
+/** 필수 동의 전부 true 인지 (화면과 서버 공통) */
+export function consentsAccepted(consents: unknown): boolean {
+    if (!Array.isArray(consents) || consents.length < TWIN_DRAFT_CONSENTS.length) return false
+    return consents.every(c => c === true)
+}
+
 export const TWIN_DRAFT_COPY = {
     tab: '내 링크로 만들기',
     intro: '내 SNS, 블로그 링크로 나를 닮은 봇 초안을 만들어요',

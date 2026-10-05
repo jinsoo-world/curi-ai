@@ -72,3 +72,10 @@
 @media (prefers-reduced-motion: reduce) {
     .os-make-dots span { animation: none; opacity: .8; }
 }
+
+/* 필수 동의 체크 (대표 지시 1005: 숨은 자동 동의 제거) */
+.os-make-consents { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 0; text-align: left; }
+.os-make-consent { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.5; color: var(--os-글); cursor: pointer; }
+.os-make-consent input { width: 20px; height: 20px; margin: 1px 0 0; flex-shrink: 0; accent-color: var(--os-클로버); }
+.os-make-legal { font-size: 13px; line-height: 1.5; color: var(--os-글-흐림); margin: 8px 0 0; }
+.os-make-legal a { color: var(--os-글-연); text-decoration: underline; text-underline-offset: 2px; }

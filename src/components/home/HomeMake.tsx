@@ -27,7 +27,7 @@ export default function HomeMake() {
     const [direct, setDirect] = useState(false)
     const [desc, setDesc] = useState('')
     const [descUrl, setDescUrl] = useState('')
-    const [agree] = useState<boolean[]>(() => TWIN_DRAFT_CONSENTS.map(() => true))  // 동의 체크 없앰 (대표 지시 0929)
+    const [agree, setAgree] = useState<boolean[]>(() => TWIN_DRAFT_CONSENTS.map(() => false))
     const [placeholder, setPlaceholder] = useState<string>(c.multi)
     const [fileNote, setFileNote] = useState(false)
     const [panel, setPanel] = useState(false)
@@ -111,6 +111,7 @@ export default function HomeMake() {
         }
         const all = [...new Set([...links, ...extra])].slice(0, TWIN_DRAFT_MAX_LINKS)
         if (all.length === 0 && pastes.length === 0) { input.current?.focus(); return }
+        if (!agree.every(Boolean)) { setPanel(true); return }
         if (going) return
         setGoing(true)
         saveHomeDraft(window.localStorage, { links: all, pastes, consents: agree })
@@ -175,7 +176,7 @@ export default function HomeMake() {
                         />
                     )}
                 </div>
-                <button type="submit" className="hm-btn">{c.make}</button>
+                <button type="submit" className="hm-btn" disabled={!agree.every(Boolean) || going}>{c.make}</button>
             </form>
 
             {guide?.kind === 'bareId' && (
@@ -201,6 +202,15 @@ export default function HomeMake() {
             )}
 
             <p className="hm-safe">{c.safe}</p>
+            <div className="hm-block" style={{ marginTop: 12 }}>
+                {TWIN_DRAFT_CONSENTS.map((txt, i) => (
+                    <label key={i} className="hm-consent">
+                        <input type="checkbox" checked={agree[i]} onChange={e => setAgree(a => a.map((v, j) => j === i ? e.target.checked : v))} />
+                        <span>{txt}</span>
+                    </label>
+                ))}
+                <p className="hm-hint"><a href="/privacy">개인정보 처리방침</a>, <a href="/terms">이용약관</a></p>
+            </div>
             <button type="button" className="hm-direct" onClick={() => { setDirect(true); setPanel(true); window.setTimeout(() => descBox.current?.focus(), 50) }}>{c.direct}</button>
 
             {panel && (

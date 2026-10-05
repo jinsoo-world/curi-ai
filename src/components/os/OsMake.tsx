@@ -13,7 +13,7 @@ import { HOME_COPY } from '@/domains/home/copy'
 import { BARE_ID_PLACES, homeLinkGuide } from '@/domains/home/link-guide'
 import { HOME_TAB_OF, homeLinkFallbackTitle, homeLinkPlatform, looksLikeLink, splitLinks } from '@/domains/home/link-chip'
 import { clearHomeDraft, readHomeDraft, saveHomeDraft } from '@/domains/home/draft-store'
-import { TWIN_DRAFT_CONSENTS, TWIN_DRAFT_MAX_LINKS, draftSourceChips, draftSourceKind, draftStepAt, type TwinDraft } from '@/domains/os/twin-draft-shared'
+import { TWIN_DRAFT_CONSENTS, TWIN_DRAFT_MAX_LINKS, consentsAccepted, draftSourceChips, draftSourceKind, draftStepAt, type TwinDraft } from '@/domains/os/twin-draft-shared'
 import { enoughText, readSummaryLine, type UnreadLink } from '@/domains/os/link-rules'
 import { osTrack } from '@/domains/os/events'
 import { 센다 } from '@/lib/track'
@@ -59,6 +59,7 @@ export default function OsMake() {
     const [report, setReport] = useState<ReadReport | null>(null)
     const [reportPaste, setReportPaste] = useState('')
     const [retrying, setRetrying] = useState<string | null>(null)
+    const [agree, setAgree] = useState<boolean[]>(() => TWIN_DRAFT_CONSENTS.map(() => false))
     const input = useRef<HTMLInputElement>(null)
     const asked = useRef(new Set<string>())
     const resumed = useRef(false)
@@ -103,7 +104,7 @@ export default function OsMake() {
             const name = (draft.name || '').trim().slice(0, 20)
             if (!name || (draft.prompt || '').trim().length < 20) {
                 // 저장 기준에 못 미침 = 옛 고치기 창에서 사람이 채운다 (같은 보관분을 읽는다)
-                saveHomeDraft(window.localStorage, { links: all, pastes, consents: TWIN_DRAFT_CONSENTS.map(() => true) })
+                saveHomeDraft(window.localStorage, { links: all, pastes, consents: agree })
                 setPhase('idle'); setWorking([])
                 openNewBot('link')
                 return
@@ -124,11 +125,13 @@ export default function OsMake() {
         } catch {
             setErr('연결이 잠깐 끊겼어요. 다시 눌러 주세요'); setPhase('error')
         }
-    }, [openNewBot, refresh, router])
+    }, [agree, openNewBot, refresh, router])
 
     /** 로그인한 사람: 읽고 → (못 읽은 링크가 있으면 결과를 보여 주고) → 저장 → 대화방. 못 읽은 링크를 조용히 버리지 않는다 (1005) */
-    const build = useCallback(async (all: string[], pastes: string[]) => {
-        const consents = TWIN_DRAFT_CONSENTS.map(() => true)   // 동의 체크 없앰 (대표 지시 0929, /home 과 같다)
+    const build = useCallback(async (all: string[], pastes: string[], consents: boolean[]) => {
+        if (!consentsAccepted(consents)) {
+            setErr('필수 확인 2개를 눌러 주세요'); setPhase('error'); return
+        }
         setPhase('working'); setErr(null); setWorking(all); setReport(null); setReportPaste('')
         osTrack('os_make_started', { links: all.length, pastes: pastes.length })
         try {
@@ -173,23 +176,25 @@ export default function OsMake() {
     /** 결과 화면에서 이어 만들기: 읽은 것이 있으면 그대로 저장, 없으면 붙여넣은 글로 처음부터 */
     const continueFromReport = () => {
         if (!report) return
+        if (!consentsAccepted(agree)) { setErr('필수 확인 2개를 눌러 주세요'); return }
         const extra = longEnough(reportPaste) ? [reportPaste.trim(), ...report.pastes] : report.pastes
         if (report.draft) void finish(report.draft, report.links, extra)
-        else void build(report.links, extra)
+        else void build(report.links, extra, agree)
     }
 
     const go = (all: string[], pastes: string[]) => {
         if (all.length === 0 && pastes.length === 0) { input.current?.focus(); return }
         if (phase === 'working') return
+        if (!consentsAccepted(agree)) { setErr('필수 확인 2개를 눌러 주세요'); return }
         // 어디서 멈추는지 보려고 센다. platform = 첫 주소의 갈래, 주소가 없으면 직접 설명
         센다('make_submit', { tool: 'os_make', platform: all[0] ? homeLinkPlatform(all[0]) : 'direct', links: all.length, guest })
         if (guest) {
             // 손님: 저장 직전까지는 로그인 없이. 저장할 때 카카오(로그인 화면)로 갔다가 여기로 돌아와 이어 만든다
-            saveHomeDraft(window.localStorage, { links: all, pastes, consents: TWIN_DRAFT_CONSENTS.map(() => true) })
+            saveHomeDraft(window.localStorage, { links: all, pastes, consents: agree })
             window.location.assign(`/login?next=${encodeURIComponent(OS_MAKE_PATH)}&provider=kakao`)
             return
         }
-        void build(all, pastes)
+        void build(all, pastes, agree)
     }
 
     // 화면이 보인 것 한 번 (로그인 여부와 함께)
@@ -200,7 +205,7 @@ export default function OsMake() {
         센다('make_view', { tool: 'os_make', guest })
     }, [loading, guest])
 
-    // 로그인하고 돌아온 손님(또는 /home 에서 넣고 온 분): 보관분으로 한 번만 이어 만든다
+    // 로그인하고 돌아온 손님(또는 /home 에서 넣고 온 분): 보관한 뒤 동의한 것만 한 번 이어 만든다
     useEffect(() => {
         if (loading || guest || resumed.current) return
         resumed.current = true
@@ -208,7 +213,9 @@ export default function OsMake() {
         if (!d) return
         clearHomeDraft(window.localStorage)
         setLinks(d.links)
-        void build(d.links, d.pastes)
+        setAgree(TWIN_DRAFT_CONSENTS.map((_, i) => d.consents[i] === true))
+        if (consentsAccepted(d.consents)) void build(d.links, d.pastes, d.consents)
+        else if (d.pastes.length) { setDirect(true); setDesc(d.pastes[0] ?? '') }
     }, [loading, guest, build])
 
     const onPaste = (e: ClipboardEvent<HTMLInputElement>) => {
@@ -327,7 +334,7 @@ export default function OsMake() {
                                     />
                                 )}
                             </div>
-                            <button type="submit" className="os-btn primary os-make-btn">{c.make}</button>
+                            <button type="submit" className="os-btn primary os-make-btn" disabled={!agree.every(Boolean)}>{c.make}</button>
                         </form>
 
                         {guide?.kind === 'bareId' && (
@@ -352,6 +359,21 @@ export default function OsMake() {
                             </div>
                         )}
                         {err && <div className="os-notice os-make-err" role="alert">{err}</div>}
+
+                        <div className="os-make-consents">
+                            {TWIN_DRAFT_CONSENTS.map((txt, i) => (
+                                <label key={i} className="os-make-consent">
+                                    <input type="checkbox" checked={agree[i]}
+                                        onChange={e => setAgree(a => a.map((v, j) => j === i ? e.target.checked : v))} />
+                                    <span>{txt}</span>
+                                </label>
+                            ))}
+                            <p className="os-make-legal">
+                                <a href="/privacy" target="_blank" rel="noopener noreferrer">개인정보 처리방침</a>
+                                {', '}
+                                <a href="/terms" target="_blank" rel="noopener noreferrer">이용약관</a>
+                            </p>
+                        </div>
 
                         <p className="os-make-safe">{c.safe}</p>
                         {!direct ? (
