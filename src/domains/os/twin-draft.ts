@@ -5,7 +5,7 @@
 // 봇 설명은 twin.ts(금지선 포함)로 조립하고, voice.ts 말투 규칙에 모델이 읽은 말투 초안을 덧붙인다(지우지 않음).
 // 인스타그램, 페이스북, 스레드, X, 틱톡은 읽지 않고 「못 읽은 링크」로 이유와 함께 돌려준다.
 
-import { classifySnsLink } from './sns-link'
+import { classifySnsLink, refineSnsTarget, BLOG_POST_PLATFORMS } from './sns-link'
 import { enoughText, failCodeOfReason, isLinkFailCode, type UnreadLink } from './link-rules'
 import { FETCHERS } from './feeds'
 import type { KnowledgeFeed } from './feeds'
@@ -109,11 +109,19 @@ export async function readOneLink(link: string, hasPaste: boolean, deadline: num
         // 못 읽었다: 붙여넣은 글이 있으면 그걸 쓰고, 없으면 이유를 돌려준다 (조용히 버리지 않는다)
         return hasPaste ? { texts: [] } : { texts: [], unread: r.ok ? unreadOf(t.url, UNREAD_REASON.empty, 'empty') : unreadOf(t.url, r.reason, r.code) }
     }
+    // 블로그 글 하나 주소 (브런치 /@작가/번호, 미디엄 글, 일반 사이트 글)는 그 글만 읽는다
+    if (t.feed?.kind === 'website' && !t.single) t = await refineSnsTarget(t)
+    if (t.single && BLOG_POST_PLATFORMS.includes(t.platform)) {
+        const left = deadline - Date.now()
+        if (left < 3_000) return { texts: [], unread: unreadOf(t.url, UNREAD_REASON.time, 'timeout') }
+        const r = await readUrl(t.url, { timeoutMs: Math.min(12_000, left - 1_000), maxChars, single: true })
+        return r.ok ? { texts: [{ title: r.title || t.url, url: t.url, text: r.text }] } : hasPaste ? { texts: [] } : { texts: [], unread: unreadOf(t.url, r.reason, r.code) }
+    }
     if (t.paste && !t.feed) return hasPaste ? { texts: [] } : { texts: [], unread: unreadOf(t.url, UNREAD_REASON.paste, 'paste') }
     if (!t.feed) return { texts: [], unread: unreadOf(t.url, t.platform === 'market' ? UNREAD_REASON.market : UNREAD_REASON.linkOnly, t.platform === 'market' ? 'paste' : 'link_only') }
     // 일반 웹의 글 하나, 상품 하나, 블로그 글 하나 주소는 그 쪽만 읽는다 (사이트 전체 목차를 돌지 않는다)
     const post = postUrlOf(link)
-    if (post || (t.feed.kind === 'website' && new URL(t.url).pathname.replace(/\/+$/, '') !== '')) {
+    if (post || (t.feed.kind === 'website' && !['brunch', 'wordpress'].includes(t.platform) && new URL(t.url).pathname.replace(/\/+$/, '') !== '')) {
         const left = deadline - Date.now()
         if (left < 3_000) return { texts: [], unread: unreadOf(t.url, UNREAD_REASON.time, 'timeout') }
         const target = post ?? t.url

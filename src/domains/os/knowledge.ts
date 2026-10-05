@@ -327,7 +327,7 @@ export async function updateBotSourceMeta(
 }
 
 /** 블로그, 채널 한 곳의 최근 글을 읽어 오는 종류 */
-const FEED_PLATFORMS = new Set(['youtube', 'naver_blog', 'tistory', 'substack', 'rss'])
+const FEED_PLATFORMS = new Set(['youtube', 'naver_blog', 'tistory', 'substack', 'rss', 'medium', 'brunch', 'wordpress'])
 /** 글 모아 읽기 한 번에 넣는 글 수 (블로그 / 그 밖 = 영상처럼 칸을 하나씩 쓰는 곳) */
 const ACCOUNT_BATCH_BLOG = 10
 const ACCOUNT_BATCH_OTHER = 5
@@ -340,7 +340,7 @@ async function accountTargetOf(rawUrl: string): Promise<AccountTarget | null> {
     const { classifySnsLink } = await import('./sns-link')
     let t: ReturnType<typeof classifySnsLink>
     try { t = classifySnsLink(rawUrl) } catch { return null }
-    if (!t.feed || !FEED_PLATFORMS.has(t.platform) || postUrlOf(rawUrl)) return null
+    if (!t.feed || t.single || !FEED_PLATFORMS.has(t.platform) || postUrlOf(rawUrl)) return null
     return { platform: t.platform, feed: t.feed }
 }
 

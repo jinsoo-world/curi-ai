@@ -54,7 +54,9 @@ export function draftLinkKind(raw: string): DraftLinkKind {
     // 인스타그램, 스레드는 공개 글이면 읽는다 (못 읽으면 이유와 붙여넣기 칸이 같은 화면에 뜬다)
     if (is('instagram.com') || is('threads.net') || is('threads.com')) return 'read'
     if (is('facebook.com') || is('fb.com')) return 'paste'
-    if (is('x.com') || is('twitter.com') || is('tiktok.com')) return 'link'
+    // X, 링크드인은 읽지 않고 글 붙여넣기 안내만
+    if (is('x.com') || is('twitter.com') || is('linkedin.com') || is('lnkd.in')) return 'paste'
+    if (is('tiktok.com')) return 'link'
     if (isMarketHost(host)) return 'paste'
     return 'read'
 }
@@ -135,7 +137,7 @@ export function draftSourceKind(url: string): DraftSourceKind {
     if (is('youtube.com') || is('youtu.be')) return 'youtube'
     if (is('instagram.com')) return 'instagram'
     if (is('threads.net') || is('threads.com')) return 'threads'
-    if (is('blog.naver.com') || is('tistory.com') || is('brunch.co.kr') || is('velog.io') || host.startsWith('blog.')) return 'blog'
+    if (is('blog.naver.com') || is('tistory.com') || is('brunch.co.kr') || is('velog.io') || is('medium.com') || is('wordpress.com') || is('substack.com') || host.startsWith('blog.')) return 'blog'
     return 'web'
 }
 
@@ -180,6 +182,14 @@ export function postUrlOf(raw: string): string | null {
         const path = u.pathname.replace(/\/+$/, '')
         if (!path || /^\/(rss|feed|category|tag|guestbook|notice)(\/|$)/i.test(path)) return null
         return raw
+    }
+    // 브런치 글 하나 (/@작가/번호), 미디엄 글 하나 (끝 칸이 제목-12자리)
+    if (host === 'brunch.co.kr') return /^\/@[^/]+\/\d+\/?$/.test(u.pathname) ? raw : null
+    if (host === 'medium.com' || host.endsWith('.medium.com')) {
+        const parts = u.pathname.split('/').filter(Boolean)
+        if (parts[0] === 'p' && parts[1]) return raw
+        const last = parts[parts.length - 1] ?? ''
+        return parts.length >= (host === 'medium.com' ? 2 : 1) && /-[0-9a-f]{10,12}$/i.test(last) ? raw : null
     }
     return null
 }

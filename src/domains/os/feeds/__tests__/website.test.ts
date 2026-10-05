@@ -45,7 +45,7 @@ describe('fetchWebsiteItems', () => {
         expect(readUrl).toHaveBeenCalledTimes(1)
         expect(readUrl.mock.calls[0][0]).toBe('https://a.com/post/2')
         // 모든 요청이 안전한 가져오기를 지났다
-        expect(fetchPageSafely.mock.calls.map(c => c[0])).toEqual(['https://a.com/robots.txt', 'https://a.com/sitemap.xml', 'https://a.com/s-posts.xml'])
+        expect(fetchPageSafely.mock.calls.map(c => c[0])).toEqual(['https://a.com/robots.txt', 'https://a.com/', 'https://a.com/sitemap.xml', 'https://a.com/s-posts.xml'])
     })
 
     it('robots.txt 가 전부 막으면 글을 하나도 열지 않고 이유를 던진다', async () => {

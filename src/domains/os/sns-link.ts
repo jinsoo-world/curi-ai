@@ -14,6 +14,9 @@ import { isMarketHost } from '@/domains/home/link-guide'
 import { createFeed, listFeeds, syncFeed, loadExistingSources, type FeedKind } from './feeds'
 import { isSafeFetchUrl } from '@/domains/agent/fetch-url'
 import { readUrl, KNOWLEDGE_READ_OPTIONS } from './readers'
+import { isMediumHost, isMediumPostUrl, mediumFeedUrl } from './readers/medium'
+import { detectBlogKind } from './feeds/blog'
+import { markInjectionPatterns } from '@/domains/chat/injection'
 import { addKnowledgeSource } from '@/domains/knowledge'
 import { saveSocialPosts } from './social-store'
 import { MAX_SOURCES_PER_BOT, addTextSource, addLinkSource, assertRoomForMore } from './knowledge'
@@ -21,9 +24,9 @@ import { parseScreenshotImages, readScreenshots } from './screenshot-read'
 import { snsLabelOf } from './sns-capture'
 import { bootstrapDefaultTeam } from './team'
 import { JOBS } from './presets'
-import { firstJobFor, SNS_BONUS_CLOVERS, SNS_KEY_TAKEN_LINE, SNS_PASTE_LINE, SNS_CAPTURE_LINE, SNS_PENDING_LINE, SNS_READ_LINE, SNS_SUCCESS_LINE } from './onboarding'
+import { firstJobFor, SNS_BONUS_CLOVERS, SNS_KEY_TAKEN_LINE, SNS_PASTE_LINE, SNS_CAPTURE_LINE, SNS_NO_READ_LINE, SNS_PENDING_LINE, SNS_READ_LINE, SNS_SUCCESS_LINE } from './onboarding'
 
-export type SnsPlatform = 'youtube' | 'naver_blog' | 'brunch' | 'tistory' | 'substack' | 'rss' | 'website' | 'instagram' | 'threads' | 'x' | 'tiktok' | 'facebook' | 'market'
+export type SnsPlatform = 'youtube' | 'naver_blog' | 'brunch' | 'tistory' | 'substack' | 'medium' | 'wordpress' | 'rss' | 'website' | 'linkedin' | 'instagram' | 'threads' | 'x' | 'tiktok' | 'facebook' | 'market'
 
 /** 붙여넣기 한 편 최소 글자, 최대 편수. 어느 입구든 같은 값 (link-rules.ts, 1005) */
 export const PASTE_MIN_CHARS = MIN_TEXT_CHARS
@@ -57,7 +60,9 @@ export function classifySnsLink(raw: unknown): SnsTarget {
     // 인스타그램, 스레드 = 공개 계정은 자동으로 읽고(connectSnsLink), 못 읽으면 캡처나 붙여넣기. 페이스북 = 캡처나 붙여넣기
     if (is('instagram.com')) return { url, platform: 'instagram', feed: null, paste: true, single: true }
     if (is('threads.net') || is('threads.com')) return { url, platform: 'threads', feed: null, paste: true, single: true }
-    if (is('x.com') || is('twitter.com')) return { url, platform: 'x', feed: null }
+    // X, 링크드인 = 글을 읽지 않는다 (로그인 없이 읽는 안전한 길이 없다). 글 붙여넣기, 캡처 안내만
+    if (is('x.com') || is('twitter.com')) return { url, platform: 'x', feed: null, paste: true }
+    if (is('linkedin.com') || is('lnkd.in')) return { url, platform: 'linkedin', feed: null, paste: true }
     if (is('tiktok.com')) return { url, platform: 'tiktok', feed: null }
     if (is('facebook.com') || is('fb.com')) return { url, platform: 'facebook', feed: null, paste: true }
 
@@ -73,16 +78,51 @@ export function classifySnsLink(raw: unknown): SnsTarget {
         // 공개 RSS 로 읽는다(대표 결정 0929). 못 읽으면 붙여넣기
         return { url: `https://blog.naver.com/${id}`, platform: 'naver_blog', feed: { kind: 'podcast', handleOrUrl: `https://rss.blog.naver.com/${id}.xml` }, paste: true }
     }
-    // 브런치는 일반 웹처럼 읽는다(예전 그대로). 못 읽으면 붙여넣기
-    if (is('brunch.co.kr')) return { url, platform: 'brunch', feed: { kind: 'website', handleOrUrl: url }, paste: true }
+    // 브런치: 작가 화면에 숨은 RSS 링크(link rel=alternate)를 찾아 읽는다(website 읽기). 글 하나 주소(/@작가/번호)는 그 글만. 못 읽으면 붙여넣기
+    if (is('brunch.co.kr')) {
+        const parts = u.pathname.split('/').filter(Boolean)
+        if (parts[0] === 'rss' || parts[0] === 'atom') return { url, platform: 'brunch', feed: { kind: 'podcast', handleOrUrl: url }, paste: true }
+        if (parts[0]?.startsWith('@') && /^\d+$/.test(parts[1] ?? '')) return { url, platform: 'brunch', feed: null, paste: true, single: true }
+        return { url, platform: 'brunch', feed: { kind: 'website', handleOrUrl: url }, paste: true }
+    }
+    // 미디엄: 계정, 매체는 공식 RSS (medium.com/feed/@계정). 글 하나는 그 글만 (막히면 RSS 안에서 찾는다)
+    if (isMediumHost(host)) {
+        if (isMediumPostUrl(url)) return { url, platform: 'medium', feed: null, paste: true, single: true }
+        const feedUrl = mediumFeedUrl(url)
+        if (!feedUrl) throw new Error('미디엄 계정이나 매체 주소를 넣어 주세요. 예: medium.com/@계정')
+        return { url, platform: 'medium', feed: { kind: 'podcast', handleOrUrl: feedUrl }, paste: true }
+    }
     // 큰 장터 상품(스마트스토어, 쿠팡 등)은 약관 확인 전까지 자동으로 읽지 않는다. 링크만 저장 (보너스 없음)
     if (isMarketHost(host)) return { url, platform: 'market', feed: null }
     // 티스토리는 주인이 켠 공식 RSS(/rss). robots.txt 도 막지 않는다
-    if (is('tistory.com') && host !== 'tistory.com') return { url, platform: 'tistory', feed: { kind: 'podcast', handleOrUrl: `https://${u.hostname.toLowerCase()}/rss` } }
-    if (is('substack.com')) return { url, platform: 'substack', feed: { kind: 'substack', handleOrUrl: url } }
+    if (is('tistory.com') && host !== 'tistory.com') return { url, platform: 'tistory', feed: { kind: 'podcast', handleOrUrl: `https://${u.hostname.toLowerCase()}/rss` }, paste: true }
+    if (is('substack.com')) return { url, platform: 'substack', feed: { kind: 'substack', handleOrUrl: url }, paste: true }
     if (!isSafeFetchUrl(url)) throw new Error('열 수 없는 주소예요. 공개된 주소만 넣어 주세요')
-    if (/(\/(rss|feed|atom)(\.xml)?\/?$)|(\.xml$)/i.test(u.pathname)) return { url, platform: 'rss', feed: { kind: 'podcast', handleOrUrl: url } }
-    return { url, platform: 'website', feed: { kind: 'website', handleOrUrl: url } }
+    if (/(\/(rss|feed|atom)(\.xml)?\/?$)|(\.xml$)/i.test(u.pathname)) return { url, platform: 'rss', feed: { kind: 'podcast', handleOrUrl: url }, paste: true }
+    // 워드프레스닷컴 블로그, 그 밖의 블로그, 사이트 = website 읽기 (워드프레스 REST, 표준 RSS 자동 찾기, 사이트맵 순서). 글 하나인지는 connectSnsLink 가 주소와 화면을 보고 가린다
+    if (accountKeyOf(url)?.startsWith('wordpress:')) return { url, platform: 'wordpress', feed: { kind: 'website', handleOrUrl: url }, paste: true }
+    return { url, platform: 'website', feed: { kind: 'website', handleOrUrl: url }, paste: true }
+}
+
+/** 화면, 자료 이름에 쓸 곳 이름. 이름을 모르는 일반 사이트는 사이트 주소 */
+export function targetLabel(t: SnsTarget): string {
+    const l = snsLabelOf(t.url)
+    if (l !== 'SNS') return l
+    try { return new URL(t.url).hostname.replace(/^(www|m)\./, '') || l } catch { return l }
+}
+
+/** 블로그 글 하나를 그 자리에서 읽는 곳 (글 하나 주소) */
+export const BLOG_POST_PLATFORMS: readonly SnsPlatform[] = ['website', 'wordpress', 'medium', 'brunch']
+
+/**
+ * 주소 모양만으로 모르는 블로그 주소가 글 하나인지 목록인지 가려 target 을 고친다.
+ * 일반 사이트, 워드프레스닷컴 주소만. 글 하나면 그 글만 읽는다(사이트 전체를 돌지 않는다). 못 가리면 그대로(목록).
+ */
+export async function refineSnsTarget(t: SnsTarget): Promise<SnsTarget> {
+    if ((t.platform !== 'website' && t.platform !== 'wordpress') || t.single || t.feed?.kind !== 'website') return t
+    let kind: 'post' | 'account' = 'account'
+    try { kind = await detectBlogKind(t.url) } catch { /* 못 열면 목록으로 본다 */ }
+    return kind === 'post' ? { ...t, feed: null, single: true, paste: true } : t
 }
 
 /**
@@ -96,6 +136,8 @@ export function snsCanonicalKey(t: SnsTarget): string {
     if (t.platform === 'naver_blog') return `naver:${(path.split('/')[1] || '').toLowerCase()}`
     if (t.platform === 'brunch') return `brunch:${path.split('/')[1] || ''}`
     if (t.platform === 'tistory' || t.platform === 'substack') return `${t.platform}:${host}`
+    // 미디엄, 워드프레스닷컴은 계정(매체) 하나 = 열쇠 하나 (글 하나 주소도 같은 열쇠)
+    if (t.platform === 'medium' || t.platform === 'wordpress') { const k = accountKeyOf(t.url); if (k) return k }
     if (t.platform === 'youtube') {
         if (t.single) return `youtube:video:${youtubeVideoId(t.url) ?? t.url}`
         const r = resolveChannelInput(t.url)
@@ -135,7 +177,7 @@ async function pickBot(db: Db, userId: string, displayName: string): Promise<str
 }
 
 export async function connectSnsLink(db: Db, a: { userId: string; displayName: string; url: unknown; source: 'onboarding' | 'settings'; deadline?: number }): Promise<SnsConnectResult> {
-    const target = classifySnsLink(a.url)
+    const target = await refineSnsTarget(classifySnsLink(a.url))
     const now = () => new Date().toISOString()
     const { data: link, error: linkErr } = await db.from('user_sns_links')
         .upsert({ user_id: a.userId, url: target.url, platform: target.platform, source: a.source, updated_at: now() }, { onConflict: 'user_id,url' })
@@ -146,6 +188,11 @@ export async function connectSnsLink(db: Db, a: { userId: string; displayName: s
     // 인스타그램, 스레드, 유튜브 영상 하나: 그 자리에서 읽는다. 읽은 글이 저장됐을 때만 보너스. 못 읽으면 이유와 함께 알린다(조용히 버리지 않는다)
     if (target.single) return readSnsSingle(db, a, target, link)
     if (target.paste && !target.feed) {
+        // X, 링크드인 = 읽지 않고 붙여넣기 안내만
+        if (target.platform === 'x' || target.platform === 'linkedin') {
+            await db.from('user_sns_links').update({ status: 'pending', note: '글 붙여넣기', updated_at: now() }).eq('id', link.id)
+            return { ...base, status: 'paste', message: SNS_NO_READ_LINE, code: 'paste', retry: false }
+        }
         await db.from('user_sns_links').update({ status: 'pending', note: '캡처나 글 붙여넣기', updated_at: now() }).eq('id', link.id)
         return { ...base, status: 'paste', message: SNS_CAPTURE_LINE }
     }
@@ -189,7 +236,7 @@ export async function connectSnsLink(db: Db, a: { userId: string; displayName: s
     if (status !== 'read' && target.paste) return { ...base, status: 'paste', message: note || SNS_PASTE_LINE, code, retry: canRetry(code) }
     if (status !== 'read') return { ...base, status, message: note || '읽지 못했어요', code, retry: canRetry(code) }
 
-    return grantBonus(db, a.userId, link.id, target, { ...base, status, added, message: SNS_READ_LINE, summary: `${snsLabelOf(target.url)} 글 ${added}개를 읽었어요` })
+    return grantBonus(db, a.userId, link.id, target, { ...base, status, added, message: SNS_READ_LINE, summary: `${targetLabel(target)} 글 ${added}개를 읽었어요` })
 }
 
 /** 읽은 글 묶음의 편 수 (인스타그램, 스레드는 글 사이에 --- 줄을 둔다) */
@@ -212,22 +259,32 @@ async function readSnsSingle(db: Db, a: { userId: string; displayName: string; d
     if (left < 3_000) return failWith('시간이 모자라 못 읽었어요', 'timeout')
     const mentorId = await pickBot(db, a.userId, a.displayName)
     if (!mentorId) return failWith('봇을 먼저 만들어 주세요', 'unknown')
-    const label = snsLabelOf(target.url)
+    const isBlog = BLOG_POST_PLATFORMS.includes(target.platform)
+    const label = targetLabel(target)
     let added = 1
     try {
         await assertRoomForMore(db, mentorId, { url: target.url })
         if (target.platform === 'youtube') {
             await addLinkSource(db, mentorId, target.url, { userId: a.userId })
         } else {
-            const read = await readUrl(target.url, { ...KNOWLEDGE_READ_OPTIONS, timeoutMs: Math.min(15_000, left - 1_000) })
+            const read = await readUrl(target.url, { ...KNOWLEDGE_READ_OPTIONS, timeoutMs: Math.min(15_000, left - 1_000), ...(isBlog ? { single: true } : {}) })
             if (!read.ok) return failWith(read.reason, isLinkFailCode(read.code) ? read.code : failCodeOfReason(read.reason), mentorId)
             if (!enoughText(read.text)) return failWith('읽은 글이 너무 짧았어요', 'empty', mentorId)
-            added = countPosts(read.text)
-            const saved = await addKnowledgeSource(db, mentorId, `내 ${label} 글`, `출처: ${target.url}\n\n${read.text}`, 'url', target.url, {
-                meta: { sourceKind: target.platform, citationUrl: target.url, authorIsMe: true, fetchedAt: now() },
-                ingest: { dedupe: true },
-            }) as { id?: string; deduped?: boolean }
-            if (read.social && !saved.deduped) await saveSocialPosts(db, mentorId, saved.id, read.social)
+            if (isBlog) {
+                // 블로그 글 하나 = 글 제목 그대로, 한 편. 글 속 「이전 지시 무시」류 문장에는 표식을 붙인다
+                const { text } = markInjectionPatterns(read.text)
+                await addKnowledgeSource(db, mentorId, (read.title || `내 ${label} 글`).slice(0, 120), `출처: ${target.url}\n\n${text}`, 'url', target.url, {
+                    meta: { sourceKind: target.platform, citationUrl: target.url, authorIsMe: true, fetchedAt: now() },
+                    ingest: { dedupe: true },
+                })
+            } else {
+                added = countPosts(read.text)
+                const saved = await addKnowledgeSource(db, mentorId, `내 ${label} 글`, `출처: ${target.url}\n\n${read.text}`, 'url', target.url, {
+                    meta: { sourceKind: target.platform, citationUrl: target.url, authorIsMe: true, fetchedAt: now() },
+                    ingest: { dedupe: true },
+                }) as { id?: string; deduped?: boolean }
+                if (read.social && !saved.deduped) await saveSocialPosts(db, mentorId, saved.id, read.social)
+            }
         }
     } catch (e) {
         const reason = e instanceof Error ? e.message : '저장하지 못했어요'
@@ -295,7 +352,7 @@ export async function pasteSnsPosts(db: Db, a: { userId: string; displayName: st
     const mentorId = await pickBot(db, a.userId, a.displayName)
     if (!mentorId) throw new Error('봇을 먼저 만들어 주세요')
     await assertRoomForMore(db, mentorId)
-    const label = snsLabelOf(target.url)
+    const label = targetLabel(target)
     const body = posts.map((p, i) => `[글 ${i + 1}]\n${p}`).join('\n\n')
     await addTextSource(db, mentorId, `내 ${label} 대표 글 ${posts.length}편`, `출처: ${target.url}\n\n${body}`, 'sns_paste')
     const total = (link.added_count ?? 0) + posts.length

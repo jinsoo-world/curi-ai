@@ -326,6 +326,8 @@ export const SNS_PASTE_MIN_CHARS = 300
 export const SNS_PASTE_MAX_POSTS = 3
 export const SNS_PASTE_LINE = '자동으로 못 읽었어요. 대표 글을 붙여넣어 주세요'
 /** 자동으로 못 읽은 인스타그램, 스레드(비공개 계정)와 페이스북 = 캡처 올리기나 글 붙여넣기 */
+/** X, 링크드인: 글을 읽지 않는다. 붙여넣기, 캡처 안내만 */
+export const SNS_NO_READ_LINE = '이 곳은 글을 읽지 않아요. 글을 붙여넣거나 화면 캡처를 올려 주세요'
 export const SNS_CAPTURE_LINE = '자동으로 못 읽었어요(비공개 계정일 수 있어요). 화면 캡처를 올리거나 글을 붙여넣어 주세요'
 /** 온보딩에서 자동으로 못 읽었을 때 (붙여넣기는 설정에서) */
 export const SNS_PASTE_LATER_LINE = '자동으로 못 읽었어요. 설정에서 글을 붙여넣을 수 있어요'

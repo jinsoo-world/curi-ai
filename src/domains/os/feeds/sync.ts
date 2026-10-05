@@ -121,7 +121,9 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
         const existing = await loadExistingSources(db, feed.mentorId)
         // 이 연결의 글은 칸 하나만 쓴다. 이미 이 연결의 글이 있으면 칸이 다 차도 더 가져온다
         const feedKey = accountKeyOf(feed.handleOrUrl) ?? `feed:${feed.id}`
-        const own = Math.max(existing.perKey.get(feedKey) ?? 0, existing.perKey.get(`feed:${feed.id}`) ?? 0)
+        // 이 연결로 이미 넣은 글 수도 함께 본다. 주소 열쇠가 달라도(브런치 아이디와 @이름, 블로그 글 주소가 다른 도메인) 한 곳 상한을 지킨다
+        const ownByFeed = (await countFeedSources(db, feed.mentorId, feed.id)) ?? 0
+        const own = Math.max(existing.perKey.get(feedKey) ?? 0, existing.perKey.get(`feed:${feed.id}`) ?? 0, ownByFeed)
         const room = own === 0 && existing.count >= MAX_SOURCES_PER_BOT ? 0 : MAX_ITEMS_PER_ACCOUNT - own
         if (room <= 0 && own === 0) {
             await updateFeed(db, feed.id, { status: 'connected', last_error: FEED_CAP_FULL_NOTE, last_synced_at: nowIso() })

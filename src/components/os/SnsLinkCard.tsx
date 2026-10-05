@@ -1,7 +1,7 @@
 'use client'
 // 설정 > 일반 「내 SNS, 블로그」 (대표 승인 0928 23:29). 링크를 넣으면 공개 글을 읽어 내 봇 자료에 넣는다.
-// 유튜브 채널, 네이버 블로그, 브런치, 티스토리, RSS, 일반 웹은 읽는다(대표 결정 0929). 못 읽으면 대표 글 붙여넣기를 연다.
-// 인스타그램, 페이스북, 스레드, X, 틱톡은 링크만 저장한다(준비 중).
+// 유튜브 채널, 네이버 블로그, 브런치, 티스토리, 미디엄, 워드프레스, RSS, 일반 웹은 읽는다(대표 결정 0929, 1005 블로그 확장). 못 읽으면 대표 글 붙여넣기를 연다.
+// X, 링크드인은 읽지 않고 글 붙여넣기만 안내한다. 틱톡은 링크만 저장한다(준비 중).
 import { useCallback, useEffect, useState } from 'react'
 import { SNS_HINT } from '@/domains/os/onboarding'
 import { MAX_PASTE_POSTS as PASTE_MAX_POSTS, PASTE_HELP_LINE, RETRY_LABEL, TOO_SHORT_LINE, enoughText } from '@/domains/os/link-rules'
@@ -11,7 +11,7 @@ import { shrinkImage } from '@/lib/image-shrink'
 type Link = { id: string; url: string; platform: string; status: 'read' | 'pending' | 'failed'; added_count: number; note: string | null }
 const STATUS: Record<Link['status'], string> = { read: '읽음', pending: '준비 중', failed: '못 읽음' }
 /** 대표 글 붙여넣기를 받는 곳 (서버 classifySnsLink 의 paste 와 같다) */
-const PASTE_PLATFORMS = ['naver_blog', 'brunch', 'instagram', 'facebook', 'threads', 'youtube']
+const PASTE_PLATFORMS = ['naver_blog', 'brunch', 'tistory', 'substack', 'medium', 'wordpress', 'rss', 'website', 'instagram', 'facebook', 'threads', 'youtube', 'x', 'linkedin']
 
 export default function SnsLinkCard() {
     const [links, setLinks] = useState<Link[]>([])

@@ -85,8 +85,19 @@ export function accountKeyOf(raw: string | null | undefined): string | null {
     if (host.endsWith('.tistory.com') && host !== 'tistory.com') return `tistory:${host}`
     if (host.endsWith('.substack.com') && host !== 'substack.com') return `substack:${host}`
     if ((host === 'brunch.co.kr' || host === 'velog.io' || host === 'medium.com') && parts[0]?.startsWith('@')) return `${host.split('.')[0]}:${clean(parts[0])}`
+    // 브런치 RSS 주소(/rss/@@아이디, /atom/@@아이디)와 그 글 주소(/@@아이디/번호)는 같은 작가
+    if (host === 'brunch.co.kr' && (parts[0] === 'rss' || parts[0] === 'atom') && parts[1]?.startsWith('@')) return `brunch:${clean(parts[1])}`
+    // 미디엄: 피드 주소(/feed/@계정, /feed/매체), 매체 주소(medium.com/매체/글), 하위 주소(이름.medium.com)
+    if (host === 'medium.com' && parts[0] === 'feed' && parts[1]) return `medium:${clean(parts[1])}`
+    if (host === 'medium.com' && parts[0] && !MEDIUM_RESERVED.has(parts[0].toLowerCase())) return `medium:${clean(parts[0])}`
+    if (host.endsWith('.medium.com') && !/^(api|cdn-images-\d+|miro|help|policy|speechify)\./.test(host)) return `medium:${host.slice(0, -'.medium.com'.length)}`
+    // 워드프레스닷컴 블로그는 주소 이름이 곧 블로그
+    if (host.endsWith('.wordpress.com') && host !== 'wordpress.com' && !/^(public-api|en|ko|developer|learn|support|wordpress)\./.test(host)) return `wordpress:${host}`
     return null
 }
+
+/** 미디엄 주소 첫 칸이 계정, 매체 이름이 아닌 것 */
+const MEDIUM_RESERVED = new Set(['p', 'm', 'me', 'feed', 'topics', 'topic', 'tag', 'search', 'plans', 'membership', 'creators', 'jobs', 'about', 'new-story', 'new', 'policy', 'help', 'business', 'partner-program', 'sitemap', 'tm', 'media', 'r', 'trending', 'following', 'lists', 'notifications', 'library', 'stories', 'settings', 'signin', 'login', 'verify', 'subscribe', 'gift'])
 
 /** 주소 → 곳 이름 (화면용, 서버 코드 없이). 모르면 사이트 이름 */
 export function linkLabelOf(raw: string): string {
@@ -99,6 +110,10 @@ export function linkLabelOf(raw: string): string {
     if (is('blog.naver.com') || is('naver.com')) return '네이버 블로그'
     if (is('tistory.com')) return '티스토리'
     if (is('brunch.co.kr')) return '브런치'
+    if (is('medium.com')) return '미디엄'
+    if (is('wordpress.com')) return '워드프레스'
+    if (is('linkedin.com')) return '링크드인'
+    if (is('x.com') || is('twitter.com')) return 'X'
     if (is('facebook.com') || is('fb.com')) return '페이스북'
     return host || '링크'
 }

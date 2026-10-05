@@ -39,7 +39,7 @@ export const BARE_ID_PLACES = [
 
 /** 약관 확인 전까지 자동으로 읽지 않는 큰 장터 */
 const MARKETS = ['smartstore.naver.com', 'brand.naver.com', 'shopping.naver.com', 'coupang.com', '11st.co.kr', 'gmarket.co.kr', 'auction.co.kr', 'kream.co.kr', 'musinsa.com', 'idus.com', 'ohou.se', 'amazon.com', 'aliexpress.com', 'kurly.com', 'ssg.com', 'lotteon.com', 'tmon.co.kr', 'wemakeprice.com']
-const CAPTURE = ['instagram.com', 'threads.net', 'threads.com', 'facebook.com', 'fb.com', 'x.com', 'twitter.com', 'tiktok.com']
+const CAPTURE = ['instagram.com', 'threads.net', 'threads.com', 'facebook.com', 'fb.com', 'x.com', 'twitter.com', 'tiktok.com', 'linkedin.com', 'lnkd.in']
 
 export function isMarketHost(host: string): boolean {
     const h = host.toLowerCase().replace(/^(www|m)\./, '')

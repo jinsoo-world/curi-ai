@@ -61,6 +61,17 @@ export function isPrivateIp(ip: string): boolean {
     // IPv6 가 IPv4 를 품은 모양(::ffff:10.0.0.1)은 뒤의 IPv4 로 본다
     const mapped = addr.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/)
     if (mapped) return isPrivateIp(mapped[1])
+    // 같은 것을 16진수로 쓴 모양(::ffff:7f00:1, URL 해석기가 이렇게 바꿔 준다), NAT64(64:ff9b::/96), 6to4(2002::/16)도 품은 IPv4 로 본다
+    const hexMapped = addr.match(/^(?:::ffff:|64:ff9b::|0:0:0:0:0:ffff:)([0-9a-f]{1,4}):([0-9a-f]{1,4})$/)
+    if (hexMapped) {
+        const hi = parseInt(hexMapped[1], 16), lo = parseInt(hexMapped[2], 16)
+        return isPrivateIp(`${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`)
+    }
+    const sixToFour = addr.match(/^2002:([0-9a-f]{1,4}):([0-9a-f]{1,4}):/)
+    if (sixToFour) {
+        const hi = parseInt(sixToFour[1], 16), lo = parseInt(sixToFour[2], 16)
+        return isPrivateIp(`${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`)
+    }
 
     const v4 = addr.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
     if (v4) {
@@ -70,6 +81,10 @@ export function isPrivateIp(ip: string): boolean {
         if (a === 172 && b >= 16 && b <= 31) return true
         if (a === 192 && b === 168) return true
         if (a === 100 && b >= 64 && b <= 127) return true   // 통신사 공유 대역
+        if (a === 192 && b === 0 && (Number(v4[3]) === 0 || Number(v4[3]) === 2)) return true   // 192.0.0.0/24, 192.0.2.0/24 (예약, 문서용)
+        if (a === 198 && (b === 18 || b === 19)) return true // 198.18.0.0/15 (시험용)
+        if (a === 198 && b === 51 && Number(v4[3]) === 100) return true   // 198.51.100.0/24
+        if (a === 203 && b === 0 && Number(v4[3]) === 113) return true    // 203.0.113.0/24
         if (a >= 224) return true                     // 멀티캐스트, 예약
         return false
     }
@@ -280,9 +295,16 @@ async function readLimitedText(res: Response, contentType: string, maxBytes: num
     } finally {
         try { await reader.cancel() } catch { /* 이미 닫혔으면 그만 */ }
     }
-    const buf = new Uint8Array(total)
+    // 덩어리 하나가 한도를 넘게 와도 한도까지만 쓴다
+    const used = Math.min(total, maxBytes)
+    const buf = new Uint8Array(used)
     let at = 0
-    for (const c of chunks) { buf.set(c.subarray(0, Math.min(c.length, total - at)), at); at += c.length }
+    for (const c of chunks) {
+        if (at >= used) break
+        const part = c.subarray(0, Math.min(c.length, used - at))
+        buf.set(part, at)
+        at += part.length
+    }
     // 머리말에 글자 인코딩이 없으면 앞부분의 <meta charset> 을 본다 (한국 옛 신문사는 euc-kr 이 많다)
     const head = /charset=/i.test(contentType) ? '' : new TextDecoder('latin1').decode(buf.subarray(0, 4_096))
     const charset = pickCharset(contentType, head)

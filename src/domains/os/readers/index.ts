@@ -32,6 +32,7 @@ import { cacheGet, cacheSet } from './cache'
 import { readInstagram } from './instagram'
 import { formatSocialText } from './social-post'
 import { readThreads } from './threads'
+import { isMediumHost, isMediumPostUrl, readMediumFromFeed } from './medium'
 
 export type { ReadResult, ReadPage, ReadFail } from '@/domains/agent/fetch-url'
 export { extractArticle } from './article'
@@ -55,12 +56,14 @@ export interface ReadOptions {
     maxChars?: number
     /** 유튜브 자막이 막혔을 때 Gemini 정리를 쓴다 (누가 부르는지 = 하루 한도). 안 주면 안 쓴다(자동 가져오기 등) */
     gemini?: { userId: string | null; waitMs?: number }
+    /** 블로그 글 하나를 읽는 중이다. 본문이 짧아도 최근 글 목록(RSS)으로 바꿔 치지 않는다 */
+    single?: boolean
 }
 
 /** 자료로 저장할 때 쓰는 한도 = 20MB, 45초 (서버 실행 한도 60초 안에서 저장까지 끝나야 한다) */
-export const KNOWLEDGE_READ_OPTIONS: Required<Omit<ReadOptions, 'gemini'>> = { maxBytes: 20 * 1024 * 1024, timeoutMs: 45_000, maxChars: 100_000 }
+export const KNOWLEDGE_READ_OPTIONS: Required<Omit<ReadOptions, 'gemini' | 'single'>> = { maxBytes: 20 * 1024 * 1024, timeoutMs: 45_000, maxChars: 100_000 }
 /** 대화 중 바로 읽을 때 쓰는 한도 = 2MB, 8초, 1만 2천 자 (답이 늦어지면 안 된다) */
-export const CHAT_READ_OPTIONS: Required<Omit<ReadOptions, 'gemini'>> = { maxBytes: MAX_FETCH_BYTES, timeoutMs: FETCH_TIMEOUT_MS, maxChars: MAX_PAGE_CHARS }
+export const CHAT_READ_OPTIONS: Required<Omit<ReadOptions, 'gemini' | 'single'>> = { maxBytes: MAX_FETCH_BYTES, timeoutMs: FETCH_TIMEOUT_MS, maxChars: MAX_PAGE_CHARS }
 
 /** 이보다 짧은 본문은 「얇다」로 본다 (첫 화면, 목록 페이지). 얇으면 RSS 링크를 찾아 본다 */
 const THIN_ARTICLE_CHARS = 400
@@ -86,7 +89,7 @@ export async function readUrl(rawUrl: string, opts: ReadOptions = {}): Promise<R
     // 🛡 어디로 가든 첫 줄은 안전 검사다 (유튜브 흉내 주소도 여기서 걸린다)
     if (!isSafeFetchUrl(requestedUrl)) return fail('열 수 없는 주소예요(공개된 http, https 주소만 읽을 수 있어요)')
 
-    const key = `${o.maxChars}|${requestedUrl}`
+    const key = `${o.maxChars}|${o.single ? 's|' : ''}${requestedUrl}`
     const hit = cacheGet(key)
     if (hit) return hit
 
@@ -101,7 +104,7 @@ export async function readUrl(rawUrl: string, opts: ReadOptions = {}): Promise<R
     return r
 }
 
-type Opts = Required<Omit<ReadOptions, 'gemini'>> & Pick<ReadOptions, 'gemini'>
+type Opts = Required<Omit<ReadOptions, 'gemini' | 'single'>> & Pick<ReadOptions, 'gemini' | 'single'>
 
 async function routeRead(requestedUrl: string, o: Opts): Promise<ReadResult> {
     const kind = classifyUrl(requestedUrl)
@@ -164,6 +167,12 @@ async function readWeb(requestedUrl: string, o: Opts, kind: LinkKind): Promise<R
             const m = await fetchPageSafely(mobile, { maxBytes: o.maxBytes, timeoutMs: left(), normalize: false })
             if (m.ok) return fromBlogOrArticle(requestedUrl, m.url, m.body, o.maxChars) ?? fail('그 블로그 글에서 본문을 못 찾았어요(비공개 글일 수 있어요)')
         }
+        // 미디엄 글 화면은 서버에서 막힐 때가 많아서, 막히면 그 계정의 공식 RSS 안에서 같은 글을 찾는다
+        if (isMediumHost(hostOf(requestedUrl)) && isMediumPostUrl(requestedUrl) && left() > 1_500) {
+            const viaFeed = await readMediumFromFeed(requestedUrl, { timeoutMs: left(), maxBytes: o.maxBytes, maxChars: o.maxChars })
+            if (viaFeed?.ok) return viaFeed
+            return { ...page, reason: '미디엄에서 글 읽기를 막고 있어요. 다시 시도하거나 글을 붙여넣어 주세요', code: 'blocked' }
+        }
         return page
     }
 
@@ -203,7 +212,7 @@ async function readWeb(requestedUrl: string, o: Opts, kind: LinkKind): Promise<R
     // 5) 글이 얇거나 사이트 첫 화면이면 RSS 링크를 찾아 최근 글 목록을 더한다
     let isHome = false
     try { isHome = new URL(page.url).pathname.replace(/\/+$/, '') === '' } catch { /* 모양이 이상하면 아님 */ }
-    if ((!article || article.text.length < THIN_ARTICLE_CHARS || isHome) && left() > 1_500) {
+    if (!o.single && (!article || article.text.length < THIN_ARTICLE_CHARS || isHome) && left() > 1_500) {
         const feedLink = discoverFeedLinks(page.body, page.url)[0]
         if (feedLink) {
             const fp = await fetchPageSafely(feedLink, { maxBytes: o.maxBytes, timeoutMs: left() })

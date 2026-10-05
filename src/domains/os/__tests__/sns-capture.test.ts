@@ -6,13 +6,18 @@ import { classifySnsLink } from '../sns-link'
 const png = 'data:image/png;base64,' + 'A'.repeat(100)
 
 describe('SNS 캡처 받기 (대표 결정 0929)', () => {
-    it('인스타그램, 페이스북, 스레드는 캡처나 붙여넣기로 받는다. X, 틱톡은 링크만', () => {
+    it('인스타그램, 페이스북, 스레드는 캡처나 붙여넣기로 받는다. X, 링크드인은 읽지 않고 붙여넣기 안내만. 틱톡은 링크만', () => {
         for (const u of ['https://www.instagram.com/curi', 'https://www.facebook.com/curi', 'https://www.threads.net/@curi']) {
             const t = classifySnsLink(u)
             expect(t.feed).toBeNull()
             expect(t.paste).toBe(true)
         }
-        expect(classifySnsLink('https://x.com/curi').paste).toBeFalsy()
+        for (const u of ['https://x.com/curi', 'https://www.linkedin.com/in/curi']) {
+            const t = classifySnsLink(u)
+            expect(t.feed).toBeNull()
+            expect(t.paste).toBe(true)
+        }
+        expect(classifySnsLink('https://www.tiktok.com/@curi').paste).toBeFalsy()
     })
     it('사진 모양 검사: PNG, JPG, WEBP 만, 5장까지', () => {
         expect(parseScreenshotImages([png])).toEqual([{ mimeType: 'image/png', data: 'A'.repeat(100) }])
