@@ -148,8 +148,9 @@ test('큐리 초록: 로그인 화면 캐릭터와 글자가 검정이 아니다
     await settle(page)
     const body = await page.locator('.bot-avatar circle[r="22"]').first().evaluate(e => getComputedStyle(e).fill)
     expect(body).toBe('rgb(34, 197, 94)')
+    // 글자 = 브랜드 초록 --연두(--color-primary-500 = 큐리어스 #03C124, #36 디자인 시스템). 캐릭터 몸통(--봇-green #22C55E)과 다르다
     const word = await page.getByRole('heading', { name: '큐리 AI' }).evaluate(e => getComputedStyle(e).color)
-    expect(word).toBe('rgb(34, 197, 94)')
+    expect(word).toBe('rgb(3, 193, 36)')
     await expect(page.getByRole('button', { name: /카카오로 시작하기/ }).locator('svg')).toHaveCount(1)
 })
 
