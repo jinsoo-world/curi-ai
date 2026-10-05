@@ -18,7 +18,7 @@ export function isSocialStubKind(kind: FeedKind): boolean {
     return SOCIAL_STUB_KINDS.includes(kind)
 }
 
-export interface FeedItem { title: string; url: string; text?: string; publishedAt?: string }
+export interface FeedItem { title: string; url: string; text?: string; publishedAt?: string; /** 글의 대표 사진 주소 (og:image). 사진 설명용 */ image?: string }
 
 export interface KnowledgeFeed {
     id: string; mentorId: string; userId: string

@@ -129,7 +129,7 @@ export async function fillTextByReading(cands: FeedItem[], opts: FetchOptions = 
                 maxChars: FEED_ITEM_MAX_CHARS,
             })
             if (!r.ok) { failed.push(r.reason); continue }
-            done[i] = { title: (c.title || r.title).slice(0, 120), url: c.url, text: r.text, publishedAt: c.publishedAt }
+            done[i] = { title: (c.title || r.title).slice(0, 120), url: c.url, text: r.text, publishedAt: c.publishedAt, ...(r.image ? { image: r.image } : {}) }
         }
     }
     await Promise.all(Array.from({ length: Math.min(READ_CONCURRENCY, cands.length) }, worker))

@@ -17,6 +17,8 @@ export const MODEL_PRICES_USD_PER_M: Record<string, ModelPrice> = {
     'gemini-3.8-flash': { inputUsd: 0.75, outputUsd: 3.75 },
     'gemini-3.5-flash-lite': { inputUsd: 0.30, outputUsd: 2.50 },
     'gemini-3.1-flash-lite': { inputUsd: 0.25, outputUsd: 1.50 },
+    // 사진 설명용 가장 싼 이미지 모델 (ai.google.dev/gemini-api/docs/pricing 2026-10-01, 입력 글자, 사진, 영상 같은 값)
+    'gemini-2.5-flash-lite': { inputUsd: 0.10, outputUsd: 0.40 },
     'gemini-embedding-001': { inputUsd: 0.15, outputUsd: 0 },
     // 답 저장소(의미 캐시)에서 꺼낸 답은 모델을 안 부른다
     cache: { inputUsd: 0, outputUsd: 0 },

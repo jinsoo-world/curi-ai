@@ -79,6 +79,10 @@ function mediaToPost(m: Rec): InstagramPost | null {
     add(m.display_url)
     const kids = asRec(m.edge_sidecar_to_children)?.edges
     if (Array.isArray(kids)) for (const k of kids) add(asRec(asRec(k)?.node)?.display_url)
+    // 사진 설명용 작은 판 (가로 480px 이상 중 가장 작은 것. 없으면 가장 작은 것)
+    const res = Array.isArray(m.display_resources) ? m.display_resources.map(asRec).filter((r): r is Rec => !!r && !!asStr(r.src)) : []
+    res.sort((a, b) => (asNum(a.config_width) ?? 0) - (asNum(b.config_width) ?? 0))
+    const thumb = res.find(r => (asNum(r.config_width) ?? 0) >= 480) ?? res[0]
     const product = asStr(m.product_type)
     const hidden = m.like_and_view_counts_disabled === true
     const ts = asNum(m.taken_at_timestamp)
@@ -91,7 +95,7 @@ function mediaToPost(m: Rec): InstagramPost | null {
         comments: asNum(asRec(m.edge_media_to_comment)?.count),
         views: asNum(m.video_view_count) ?? asNum(m.video_play_count),
         mediaType, isReel: mediaType === 'video' && (product === 'clips' || product === ''),
-        imageUrls: images.slice(0, 10), imageExpiresAt: images[0] ? imageExpiry(images[0]) : undefined,
+        imageUrls: images.slice(0, 10), thumbUrl: thumb ? asStr(thumb.src) : undefined, imageExpiresAt: images[0] ? imageExpiry(images[0]) : undefined,
     }
 }
 

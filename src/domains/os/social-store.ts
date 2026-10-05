@@ -23,6 +23,7 @@ export function toSocialRows(mentorId: string, sourceId: string, platform: 'inst
         is_reel: p.isReel === true,
         image_urls: p.imageUrls.slice(0, 10),
         image_expires_at: p.imageExpiresAt ?? null,
+        image_note: p.imageNote ? [p.imageNote.description, p.imageNote.text ? `사진 속 글자: ${p.imageNote.text}` : ''].filter(Boolean).join('\n') || null : null,
     }))
 }
 

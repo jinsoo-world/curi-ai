@@ -33,6 +33,10 @@ export interface SocialPost {
     /** 사진 주소 (대표 한 장 + 여러 장 글의 나머지). 인스타그램 사진 주소는 며칠 뒤 만료된다 */
     imageUrls: string[]
     imageExpiresAt?: string
+    /** 사진 설명용 작은 사진 주소 (인스타그램 640px 판). 없으면 imageUrls[0] */
+    thumbUrl?: string
+    /** 대표 사진 한 장의 설명과 사진 속 글자 (domains/knowledge/image-note) */
+    imageNote?: { description: string; text: string }
 }
 
 export function extractHashtags(text: string): string[] {
@@ -83,7 +87,9 @@ export function formatSocialPost(p: SocialPost): string {
     const label = p.platform === 'instagram' ? '인스타그램 글' : '스레드 글'
     const head = `[${label}${parts.length ? ' ' + parts.join(', ') : ''}]`
     const tags = p.hashtags.length ? `\n해시태그: ${p.hashtags.map(t => '#' + t).join(' ')}` : ''
-    return `${head}${tags}\n${p.text}`.trim()
+    const n = p.imageNote
+    const photo = n ? [n.description ? `\n사진 설명: ${n.description}` : '', n.text ? `\n사진 속 글자: ${n.text}` : ''].join('') : ''
+    return `${head}${photo}${tags}\n${p.text}`.trim()
 }
 
 /** 올리는 간격 (글 사이 평균 일수). 시각이 둘 이상 있어야 한다 */

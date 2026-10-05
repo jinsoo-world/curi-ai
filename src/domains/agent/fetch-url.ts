@@ -246,6 +246,8 @@ export interface ReadPage {
     method?: 'readability' | 'plain' | 'captions' | 'gemini' | 'meta' | 'feed' | 'github' | 'naver' | 'sns'
     /** 어느 길로 읽었나 (readers/router.ts 의 classifyUrl) */
     source?: 'youtube' | 'github' | 'naver-blog' | 'naver-news' | 'instagram' | 'threads' | 'feed' | 'web'
+    /** 글의 대표 사진 주소 (og:image). 사진 설명을 붙일 때 쓴다 */
+    image?: string
     /** 인스타그램처럼 글마다 사진, 좋아요, 올린 시각이 있는 곳: 읽은 글의 구조 (저장은 domains/os/knowledge) */
     social?: { platform: 'instagram' | 'threads'; profile?: import('@/domains/os/readers/social-post').SocialProfile; posts: import('@/domains/os/readers/social-post').SocialPost[] }
 }

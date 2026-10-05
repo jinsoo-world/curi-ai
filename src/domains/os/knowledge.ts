@@ -13,6 +13,7 @@ import { failureMessage, FAILURE_REASONS } from '@/domains/knowledge/failure-rea
 import { readUrl, KNOWLEDGE_READ_OPTIONS } from '@/domains/os/readers'
 import { markInjectionPatterns } from '@/domains/chat/injection'
 import { saveSocialPosts } from './social-store'
+import { addImageNotes, imageNotesForItems } from './image-enrich'
 import { draftLinkKind, draftSourceKind, postUrlOf } from '@/domains/os/twin-draft-shared'
 import { TOO_SHORT_LINE, FULL_LINE, accountKeyOf, enoughText, failCodeOfReason, isLinkFailCode, type UnreadLink } from '@/domains/os/link-rules'
 
@@ -390,9 +391,13 @@ export async function addAccountSources(
         out.code = 'blocked'
         return out
     }
+    // 사진 설명: 새로 넣을 글마다 대표 사진 한 장, 이 출처에서 한 번에 최대 10장. 실패하면 글만 저장
+    const fresh = fetched.items.filter(it => !known.has(it.url) && enoughText(String(it.text ?? '').trim()))
+    const photoLines = await imageNotesForItems(fresh, { route: 'os/knowledge/account', userId: input.userId, mentorId }, Math.min(15_000, deadline - Date.now() - 10_000))
     for (const it of fetched.items) {
-        const body = String(it.text ?? '').trim()
-        if (known.has(it.url) || !enoughText(body)) continue
+        const raw = String(it.text ?? '').trim()
+        if (known.has(it.url) || !enoughText(raw)) continue
+        const body = photoLines.get(it.url) ? `${raw}\n\n${photoLines.get(it.url)}` : raw
         try {
             await assertRoomForMore(db, mentorId, { url: it.url })
             const { text } = markInjectionPatterns(body)
@@ -423,22 +428,24 @@ export async function addAccountSources(
  *   웹 = 본문 추출(readability). 유튜브 = 자막(한국어 우선) + 제목 + 채널. 없으면 제목과 설명만.
  * 못 읽으면 이유를 사람 말로 던진다(지어내지 않는다). 20MB, 45초를 넘으면 중단한다.
  */
-export async function addLinkSource(db: SupabaseClient, mentorId: string, rawUrl: string, opts: { userId?: string } = {}) {
+export async function addLinkSource(db: SupabaseClient, mentorId: string, rawUrl: string, opts: { userId?: string; deadline?: number } = {}) {
     const url = (rawUrl ?? '').trim()
     if (!isSafeExternalUrl(url)) throw new Error('열 수 없는 주소예요. http 나 https 로 시작하는 공개 주소만 넣을 수 있어요')
 
     // 블로그, 채널 주소(계정)는 글을 편마다 전체로 넣는다. 첫 화면 목록(글마다 앞 200자)만 저장하지 않는다 (1005)
     const account = await accountTargetOf(url)
     if (account) {
-        const r = await addAccountSources(db, mentorId, account, url, { userId: opts.userId })
+        const r = await addAccountSources(db, mentorId, account, url, { userId: opts.userId, deadline: opts.deadline })
         if (r.already) return { id: r.already.id, deduped: true, accountCount: 0 }     // 이미 다 들어 있음 = 실패 아님
         if (r.sources.length === 0) throw new LinkReadError(r.reason || '그 주소에서 읽을 글을 못 찾았어요', r.code)
         return { ...r.sources[r.sources.length - 1], accountCount: r.sources.length }
     }
 
     // 유튜브 자막이 막히면 Gemini 정리 (넣은 사람 하루 한도로 센다, 35초까지 기다린다)
-    const read = await readUrl(url, { ...KNOWLEDGE_READ_OPTIONS, maxChars: MAX_TEXT_CHARS, gemini: opts.userId ? { userId: opts.userId, waitMs: 35_000 } : undefined })
-    if (!read.ok) throw new LinkReadError(read.reason, read.code)
+    const first = await readUrl(url, { ...KNOWLEDGE_READ_OPTIONS, maxChars: MAX_TEXT_CHARS, gemini: opts.userId ? { userId: opts.userId, waitMs: 35_000 } : undefined })
+    if (!first.ok) throw new LinkReadError(first.reason, first.code)
+    // 사진 설명 (인스타그램 글마다 한 장, 블로그와 웹 글은 대표 사진 한 장). 실패하거나 시간이 모자라면 글만 저장
+    const read = first.kind === 'youtube' ? first : await addImageNotes(first, { route: 'os/knowledge/link', userId: opts.userId, mentorId }, Math.min(15_000, (opts.deadline ?? Date.now() + 40_000) - Date.now() - 8_000))
 
     // 🛡 링크 글 속 명령문에도 표식을 붙인다
     const { text, marked } = markInjectionPatterns(read.text)
@@ -521,9 +528,10 @@ export async function addDraftSources(
 
         // 인스타그램, 스레드 = 읽은 글 묶음 한 자료. 못 읽으면 이유를 남긴다
         if (target && (target.platform === 'instagram' || target.platform === 'threads')) {
-            const read = await readUrl(url, { ...KNOWLEDGE_READ_OPTIONS, timeoutMs: 15_000 })
-            if (!read.ok) { await fail(url, read.reason, read.code); return }
-            if (!enoughText(read.text)) { await fail(url, '읽을 글이 너무 짧았어요', 'empty'); return }
+            const first = await readUrl(url, { ...KNOWLEDGE_READ_OPTIONS, timeoutMs: 15_000 })
+            if (!first.ok) { await fail(url, first.reason, first.code); return }
+            if (!enoughText(first.text)) { await fail(url, '읽을 글이 너무 짧았어요', 'empty'); return }
+            const read = await addImageNotes(first, { route: 'os/knowledge/draft', userId: input.userId, mentorId }, Math.min(15_000, deadline - Date.now() - 10_000))
             const { text } = markInjectionPatterns(read.text)
             await tryAdd(target.platform, async () => {
                 const saved = await addKnowledgeSource(db, mentorId, `내 ${target.platform === 'instagram' ? '인스타그램' : '스레드'} 글`, `출처: ${url}\n\n${text}`, 'url', url, {
@@ -548,7 +556,7 @@ export async function addDraftSources(
         // 그 밖 = 글 하나 (블로그 글 하나 주소면 그 글)
         try {
             await assertRoomForMore(db, mentorId, { url: post ?? url })
-            await addLinkSource(db, mentorId, post ?? url, { userId: input.userId })
+            await addLinkSource(db, mentorId, post ?? url, { userId: input.userId, deadline })
             added++
         } catch (e) {
             await fail(url, e instanceof Error ? e.message : '읽지 못했어요', e instanceof LinkReadError ? e.code : undefined)

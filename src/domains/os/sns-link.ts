@@ -19,6 +19,7 @@ import { detectBlogKind } from './feeds/blog'
 import { markInjectionPatterns } from '@/domains/chat/injection'
 import { addKnowledgeSource } from '@/domains/knowledge'
 import { saveSocialPosts } from './social-store'
+import { addImageNotes } from './image-enrich'
 import { MAX_SOURCES_PER_BOT, addTextSource, addLinkSource, assertRoomForMore } from './knowledge'
 import { parseScreenshotImages, readScreenshots } from './screenshot-read'
 import { snsLabelOf } from './sns-capture'
@@ -267,9 +268,11 @@ async function readSnsSingle(db: Db, a: { userId: string; displayName: string; d
         if (target.platform === 'youtube') {
             await addLinkSource(db, mentorId, target.url, { userId: a.userId })
         } else {
-            const read = await readUrl(target.url, { ...KNOWLEDGE_READ_OPTIONS, timeoutMs: Math.min(15_000, left - 1_000), ...(isBlog ? { single: true } : {}) })
-            if (!read.ok) return failWith(read.reason, isLinkFailCode(read.code) ? read.code : failCodeOfReason(read.reason), mentorId)
-            if (!enoughText(read.text)) return failWith('읽은 글이 너무 짧았어요', 'empty', mentorId)
+            const first = await readUrl(target.url, { ...KNOWLEDGE_READ_OPTIONS, timeoutMs: Math.min(15_000, left - 1_000), ...(isBlog ? { single: true } : {}) })
+            if (!first.ok) return failWith(first.reason, isLinkFailCode(first.code) ? first.code : failCodeOfReason(first.reason), mentorId)
+            if (!enoughText(first.text)) return failWith('읽은 글이 너무 짧았어요', 'empty', mentorId)
+            // 사진 설명 (글마다 대표 사진 한 장). 시간이 모자라거나 실패하면 글만 저장
+            const read = await addImageNotes(first, { route: '/api/os/sns-link', userId: a.userId, mentorId }, Math.min(12_000, (a.deadline ?? Date.now() + 40_000) - Date.now() - 6_000))
             if (isBlog) {
                 // 블로그 글 하나 = 글 제목 그대로, 한 편. 글 속 「이전 지시 무시」류 문장에는 표식을 붙인다
                 const { text } = markInjectionPatterns(read.text)

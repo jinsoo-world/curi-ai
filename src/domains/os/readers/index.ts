@@ -153,6 +153,18 @@ function ok(requestedUrl: string, url: string, title: string, text: string, maxC
     return { ok: true, url, requestedUrl, title: (title || hostOf(url) || url).slice(0, 120), text: text.slice(0, maxChars), kind: 'web', method, source }
 }
 
+/** 글의 대표 사진(og:image) 주소를 붙인다. 사진 설명은 저장할 때 (domains/knowledge/image-note) */
+export function withImage(page: ReadPage, html: string): ReadPage {
+    const raw = decodeHtmlAttr(pickMeta(html, 'og:image') || pickMeta(html, 'twitter:image'))
+    if (!raw) return page
+    try {
+        const u = new URL(raw, page.url)
+        if ((u.protocol === 'https:' || u.protocol === 'http:') && isSafeFetchUrl(u.toString())) return { ...page, image: u.toString() }
+    } catch { /* 주소가 이상하면 사진 없음 */ }
+    return page
+}
+const decodeHtmlAttr = (v: string) => String(v ?? '').trim().replace(/&amp;/g, '&')
+
 /** 웹페이지 (기사, 블로그, 피드) 읽기 */
 async function readWeb(requestedUrl: string, o: Opts, kind: LinkKind): Promise<ReadResult> {
     const fail = (reason: string): ReadFail => ({ ok: false, requestedUrl, reason })
@@ -188,13 +200,13 @@ async function readWeb(requestedUrl: string, o: Opts, kind: LinkKind): Promise<R
     // 2) 네이버 뉴스
     if (host === 'n.news.naver.com' || host === 'news.naver.com' || host === 'm.news.naver.com') {
         const a = extractNaverNews(page.body)
-        if (a) return ok(requestedUrl, page.url, a.title, a.text, o.maxChars, 'naver', 'naver-news')
+        if (a) return withImage(ok(requestedUrl, page.url, a.title, a.text, o.maxChars, 'naver', 'naver-news'), page.body)
     }
 
     // 3) 네이버 블로그 (PostView 에 본문이 없으면 모바일 글로 한 번 더)
     if (host === 'blog.naver.com' || host === 'm.blog.naver.com') {
         const a = extractNaverBlog(page.body)
-        if (a) return ok(requestedUrl, page.url, a.title, a.text, o.maxChars, 'naver', 'naver-blog')
+        if (a) return withImage(ok(requestedUrl, page.url, a.title, a.text, o.maxChars, 'naver', 'naver-blog'), page.body)
         const mobile = naverBlogMobileUrl(page.url)
         if (mobile && mobile !== page.url && left() > 1_500) {
             const m = await fetchPageSafely(mobile, { maxBytes: o.maxBytes, timeoutMs: left(), normalize: false })
@@ -226,7 +238,7 @@ async function readWeb(requestedUrl: string, o: Opts, kind: LinkKind): Promise<R
     }
 
     if (!article) return fail('그 주소에서 읽을 글을 못 찾았어요(로그인이 필요하거나 화면이 프로그램으로만 그려지는 쪽일 수 있어요)')
-    return ok(requestedUrl, page.url, article.title, header ? `${header}\n\n${article.text}` : article.text, o.maxChars, article.method, kind === 'naver-news' ? 'naver-news' : kind === 'naver-blog' ? 'naver-blog' : 'web')
+    return withImage(ok(requestedUrl, page.url, article.title, header ? `${header}\n\n${article.text}` : article.text, o.maxChars, article.method, kind === 'naver-news' ? 'naver-news' : kind === 'naver-blog' ? 'naver-blog' : 'web'), page.body)
 }
 
 /** 첫 화면 글이 피드 목록 글에 이미 들어 있나 (제목이 목록에 있거나, 본문 앞부분이 목록 요약에 있다) */
@@ -241,9 +253,9 @@ export function duplicatesFeed(title: string, articleText: string, feedText: str
 
 function fromBlogOrArticle(requestedUrl: string, url: string, html: string, maxChars: number): ReadPage | null {
     const b = extractNaverBlog(html)
-    if (b) return ok(requestedUrl, url, b.title, b.text, maxChars, 'naver', 'naver-blog')
+    if (b) return withImage(ok(requestedUrl, url, b.title, b.text, maxChars, 'naver', 'naver-blog'), html)
     const a = extractArticle(html, url)
-    return a ? ok(requestedUrl, url, a.title.replace(/\s*:\s*네이버 블로그\s*$/, ''), a.text, maxChars, a.method, 'naver-blog') : null
+    return a ? withImage(ok(requestedUrl, url, a.title.replace(/\s*:\s*네이버 블로그\s*$/, ''), a.text, maxChars, a.method, 'naver-blog'), html) : null
 }
 
 /** 기사 머리 (언론사, 날짜). 둘 다 없으면 빈 글 = 본문만 넣는다 */
