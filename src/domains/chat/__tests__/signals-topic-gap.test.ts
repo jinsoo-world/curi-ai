@@ -57,7 +57,7 @@ describe('대화 경로 연결 (코드 모양)', () => {
         const { readFileSync } = await import('node:fs')
         const src = readFileSync('src/app/api/chat/route.ts', 'utf8')
         expect(src).toContain("import { recordTopicGap } from '@/domains/chat/signals'")
-        expect(src.match(/keepAliveAfterResponse\(recordTopicGap\(/g)?.length).toBe(2)
+        expect(src.match(/keepAliveAfterResponse\(recordTopicGap\(/g)?.length).toBe(1) // 1005: 모델 안 부르던 자리를 없애 답 뒤 한 곳만 남음
         expect(src).not.toMatch(/await recordTopicGap/)
     })
 })

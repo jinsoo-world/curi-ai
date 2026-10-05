@@ -17,6 +17,7 @@ import {
     resolveMaxOutputTokens,
     sanitizeResponseSettingsInput,
     shouldAnswerFromKnowledge,
+    weakKnowledgePrompt,
     solarMaxOutputTokens,
 } from '../response-settings'
 
@@ -268,9 +269,32 @@ describe('자료 없는 봇의 「자료 안에서만」 (대표 승인 1005)', 
         const r = await loadResponseSettingsForChat(fakeDb(null, 3), 'm1', { creator_id: null }, null)
         expect(r.settings.creativity).toBe('strict')
     })
-    it('자료만 설정의 프롬프트는 일반 지식 답을 막고 짧게 모른다고 하게 한다', () => {
+    it('자료만 설정의 프롬프트는 자료에 없는 사실을 일반 지식으로 채우지 못하게 한다', () => {
         const s = defaultResponseSettings('public')
         const out = applyResponseSettingsToPrompt('기본', { settings: s })
-        expect(out).toContain('일반 지식으로 답하지 말고')
+        expect(out).toContain('일반 지식으로 채우지도 마라')
+    })
+})
+
+describe('weakKnowledgePrompt — 자료가 약해도 모델은 부르고, 사실만 지어내지 않게 (1005)', () => {
+    it('Strict 가 아니면 빈 문자열', () => {
+        expect(weakKnowledgePrompt({ creativity: 'adaptive', noAnswerText: '몰라요' }, [])).toBe('')
+    })
+    it('Strict 인데 맞는 자료가 있으면 빈 문자열', () => {
+        expect(weakKnowledgePrompt({ creativity: 'strict', noAnswerText: '몰라요' }, [{ similarity: STRICT_MIN_SIMILARITY }])).toBe('')
+    })
+    it('Strict 인데 자료가 약하면 리더가 정한 문구와 「일상 대화는 자연스럽게」 를 함께 넣는다', () => {
+        const p = weakKnowledgePrompt({ creativity: 'strict', noAnswerText: '그건 상세페이지를 봐 주세요' }, [{ similarity: 0.4 }])
+        expect(p).toContain('그건 상세페이지를 봐 주세요')
+        expect(p).toContain('일상')
+        expect(p).toMatch(/지어내지/)
+    })
+})
+
+describe('Strict 지시문 — 모든 말을 거절하지 않는다 (1005)', () => {
+    it('사실은 자료 안에서만, 대화는 말투대로', () => {
+        const p = applyResponseSettingsToPrompt('기본', { settings: { ...defaultResponseSettings('public') } })
+        expect(p).not.toContain('짧게 한 줄로 모르겠다고만 말하라')
+        expect(p).toContain('일상')
     })
 })

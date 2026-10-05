@@ -28,7 +28,8 @@ import { applySkills, skillsForMentor } from '@/domains/os/skills'
 import { isIosAppUserAgent } from '@/lib/app-shell'
 import { detectSmallTalk, smallTalkPrompt } from '@/domains/chat/small-talk'
 import { createServerSession } from '@/domains/chat/server-session'
-import { loadResponseSettingsForChat, applyResponseSettingsToPrompt, shouldAnswerFromKnowledge, STRICT_MIN_SIMILARITY } from '@/domains/os/response-settings'
+import { loadResponseSettingsForChat, applyResponseSettingsToPrompt, weakKnowledgePrompt, STRICT_MIN_SIMILARITY } from '@/domains/os/response-settings'
+import { identityGuardPrompt } from '@/domains/chat/identity'
 import { semanticCacheEnabled, cacheEligibility, cacheScopeKey, botVersion, knowledgeVersion, lookupCachedAnswer, storeCachedAnswer, isStorableAnswer, cachedAnswerStream, cacheAllowsGemini } from '@/domains/chat/semantic-cache'
 import { logLlmUsage, keepAliveAfterResponse } from '@/domains/llm/usage-log'
 import { SOLAR_CHAT_MODEL } from '@/domains/llm/constants'
@@ -582,30 +583,12 @@ export async function POST(req: Request) {
             // 링크를 못 읽어도 대화는 그대로 간다
         }
 
-        // 🎛 Strict 인데 자료가 없거나 관련도가 낮으면 — 모델을 부르지 않고 바로 no-answer 문구를 돌려준다(비용 절약 + 지어낸 답 방지)
-        // 방금 읽은 링크가 있으면 그 글이 이번 답의 자료다 = 모르는 척하지 않고 답한다
-        if (!링크읽음 && !smallTalk && !shouldAnswerFromKnowledge(responseSettings.settings, ragMatches)) {
-            const encoder = new TextEncoder()
-            const text = responseSettings.noAnswerText
-            // 📌 답 못 한 질문 기록 (기다리지 않고, 실패해도 대화에 영향 없음). 모델을 안 불렀으니 말투와 상관없이 남긴다
-            keepAliveAfterResponse(recordTopicGap(createAdminClient(), {
-                sessionId: sessionOwned ? (sessionId ?? null) : null,
-                mentorId: (mentor as { id: string }).id,
-                userId: user?.id ?? null,
-                question: String(lastUserMessage),
-                answer: text,
-                forced: true,
-            }))
-            const noAnswerStream = new ReadableStream({
-                start(controller) {
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text, done: true, fullResponse: text })}\n\n`))
-                    controller.close()
-                },
-            })
-            return new Response(noAnswerStream, {
-                headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
-            })
-        }
+        // 🎛 Strict 인데 이번 말과 맞는 자료를 못 찾았나. 안내문은 노션, 큐리어스, 검색까지 본 뒤 아래(정체 안내 앞)에서 붙인다.
+        //    예전(1005 03:19)엔 여기서 모델을 안 부르고 「자료에 없어서 잘 모르겠어요」 만 돌려줘 말투, 지침이 전혀 안 먹었다(대표 1005 15:31).
+        // 방금 읽은 링크가 있으면 그 글이 이번 답의 자료다
+        const 약한자료 = !링크읽음 && !smallTalk ? weakKnowledgePrompt(responseSettings.settings, ragMatches) : ''
+        // 노션, 큐리어스에서 읽은 글이 있으면 그것도 이번 답의 자료다
+        let 연결자료읽음 = false
 
         // 🔒 사용량 우회 막기: 월간 한도는 대화방(chat_sessions)에 저장된 사용자 말 수로 센다.
         //    대화방 번호 없이(또는 없는 번호, guest- 번호로) 부르면 말이 저장되지 않아 한도에 안 잡혔다.
@@ -632,6 +615,7 @@ export async function POST(req: Request) {
                     await markConnector(createAdminClient(), user.id, 연결.id, 'connected')
                     if (hits.length > 0) {
                         const 울타리 = fenceKnowledge(hits.map(h => `${h.title}\n${h.text || '(본문을 읽지 못했어요 — 노션에서 이 문서를 통합에 공유해 주세요)'}`))
+                        연결자료읽음 = true
                         systemPrompt = `[🔌 내 노션에서 찾은 문서]\n사용자의 노션에서 찾은 문서입니다. 아래 내용으로만 답하세요.\n\n${울타리}\n\n${systemPrompt}`
                         usedSources = [...usedSources, ...hits.map(h => ({ id: `notion:${h.id}`, title: `노션 · ${h.title}` }))]
                     }
@@ -659,6 +643,7 @@ export async function POST(req: Request) {
                     const 조각 = [curiousStudiesToText(studies)]
                     if (posts.length > 0) 조각.push(curiousPostsToText(posts))
                     const 울타리 = fenceKnowledge(조각)
+                    연결자료읽음 = true
                     systemPrompt = `[🔌 내 큐리어스에서 읽은 것]\n사용자 본인의 큐리어스 계정에서 읽은 어울림과 글입니다. 아래 내용으로만 답하고, 없는 숫자는 지어내지 마세요.\n\n${울타리}\n\n${systemPrompt}`
                     usedSources = [...usedSources, ...studies.map(st => ({ id: `curious:study:${st.id}`, title: `큐리어스: ${st.title}` }))]
                     console.log('[Chat Curious] 어울림:', studies.length, '글:', posts.length)
@@ -728,11 +713,16 @@ export async function POST(req: Request) {
         }
         // 🛡 카나리 = 요청마다 다른 비밀 문자열을 지침 맨 끝에 넣는다. 답에 이 문자열이 나오면 지침이 새는 중이라 보고 끊는다(아래 outputGuard).
         const canary = makeCanary()
-        systemPrompt = `${systemPrompt}\n\n${confidentialityPrompt(canary)}`
-
         // 🔍 검색을 부탁한 말이면 이번 한 번은 구글 검색이 되는 Gemini 가 답한다 (domains/chat/search-intent)
         const webSearch = !attachedImage && responseSettings.recencyOn !== false && wantsWebSearch(lastUserMessage)
         const canSearch = !attachedImage && responseSettings.recencyOn !== false && !!process.env.GEMINI_API_KEY
+        // 📚 자료가 약할 때 안내: 사실은 지어내지 말고, 대화는 자연스럽게 (response-settings weakKnowledgePrompt). 연결 글이나 검색이 있으면 붙이지 않는다
+        const 약한자료적용 = !!약한자료 && !연결자료읽음 && !webSearch
+        if (약한자료적용) systemPrompt = `${systemPrompt}\n\n${약한자료}`
+        // 🪪 정체 = 「무슨 AI야」 에 모델, 회사 이름을 말하지 않게 (1005 「업스테이지 솔라 4입니다」). 답 필터도 한 번 더 가린다(identity.ts)
+        systemPrompt = `${systemPrompt}\n\n${identityGuardPrompt((mentor as { name?: string | null }).name)}`
+        systemPrompt = `${systemPrompt}\n\n${confidentialityPrompt(canary)}`
+
         if (webSearch && canSearch) systemPrompt = `${systemPrompt}\n\n${WEB_SEARCH_PROMPT}`
         else if (canSearch) systemPrompt = `${systemPrompt}\n\n${SEARCH_OFFER_PROMPT}`
 
@@ -941,6 +931,8 @@ export async function POST(req: Request) {
                             userId: user?.id ?? null,
                             question: String(lastUserMessage),
                             answer: fullResponse,
+                            // 자료가 약한데 짧게 답했으면, 리더가 정한 문구를 바꿔 말했어도 답 못 한 질문으로 남긴다 (1005)
+                            forced: 약한자료적용 && (fullResponse.includes(responseSettings.noAnswerText) || fullResponse.length <= 200),
                         }))
                     }
 

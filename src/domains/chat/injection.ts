@@ -11,6 +11,7 @@
 //
 // 전부 「셈만 하는」 함수다. DB, 네트워크를 만지지 않아서 시험이 쉽다.
 
+import { scrubModelNames } from './identity'
 import { randomBytes } from 'crypto'
 
 /* ────────────────────────── ④ 요청 크기 한도 ────────────────────────── */
@@ -196,6 +197,7 @@ export interface OutputGuardOptions {
  * 응답 스트림 필터. 하는 일 두 가지:
  *  1. 카나리가 나오면 끊는다. 첫 글자도 안 나갔으면 답 전체를 거절문으로 바꾸고, 이미 나갔으면 뒤를 잘라 거절문을 붙인다.
  *  2. 내부 이름(표, 환경변수, 경로)을 가린다.
+ *  3. 새어 나온 모델, 회사 이름(솔라, 업스테이지, 제미나이 등)을 「큐리AI」 로 바꾼다 (identity.ts, 1005).
  * 누적 글을 받아 「안전한 앞부분」만 내보내는 구조라, 가리기가 이미 보낸 글을 바꾸는 일이 없다.
  */
 export function createOutputGuard(opts: OutputGuardOptions): OutputGuard {
@@ -213,7 +215,7 @@ export function createOutputGuard(opts: OutputGuardOptions): OutputGuard {
     }
 
     function safePrefix(cumulative: string, keep: number): string {
-        const masked = maskInternalNames(cumulative)
+        const masked = scrubModelNames(maskInternalNames(cumulative))
         const cut = Math.max(0, masked.length - keep)
         // 이미 보낸 것보다 짧아지면(모델이 앞을 고쳐 쓰는 일은 없지만 방어) 그대로 둔다
         return cut > emitted.length ? masked.slice(0, cut) : masked.slice(0, emitted.length)
@@ -233,7 +235,7 @@ export function createOutputGuard(opts: OutputGuardOptions): OutputGuard {
             if (tripped) return ''
             const raw = String(cumulative ?? '')
             if (raw.includes(canary)) return trip()
-            const whole = maskInternalNames(raw)
+            const whole = scrubModelNames(maskInternalNames(raw))
             const delta = whole.length > emitted.length ? whole.slice(emitted.length) : ''
             emitted = whole.length > emitted.length ? whole : emitted
             return delta

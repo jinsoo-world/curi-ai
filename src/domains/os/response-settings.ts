@@ -240,7 +240,8 @@ function lengthInstruction(settings: ResponseSettings): string {
 function creativityInstruction(settings: ResponseSettings): string {
     switch (settings.creativity) {
         case 'strict':
-            return '반드시 위에서 준 자료 안의 내용만 근거로 답하라. 자료에 없는 내용은 추측하거나 지어내지 말고, 자료에 없으면 일반 지식으로 답하지 말고, 짧게 한 줄로 모르겠다고만 말하라.'
+            // 1005: 「모든 말에 모르겠다」 가 되던 것을 고침. 사실만 자료 안에서, 인사·일상 대화·공감은 지침의 말투대로
+            return '사실(숫자, 가격, 일정, 경력, 사건, 전문 정보)은 반드시 위에서 준 자료 안의 내용만 근거로 말하라. 자료에 없는 사실은 추측하거나 지어내지 말고 일반 지식으로 채우지도 마라. 다만 인사, 일상 대화, 공감, 지침에 적힌 성격과 말투로 할 수 있는 말은 자료가 없어도 자연스럽게 하라.'
         case 'creative':
             return '자료를 참고하되, 자료에 없는 내용도 자유롭게 상상하거나 일반 지식으로 보태 답해도 좋다.'
         case 'adaptive':
@@ -276,7 +277,7 @@ export const STRICT_MIN_SIMILARITY = 0.72
 /**
  * 모델을 불러도 되는가.
  * Strict 가 아니면 항상 true. Strict 인데 자료가 하나도 없거나(봇에 자료가 없거나 전부 문턱 미만) 전부 관련도가 낮으면 false —
- * 이때는 모델을 부르지 않고 noAnswerText 를 그대로 돌려준다(비용도 아끼고, 지어낸 답도 막는다).
+ * 이때 대화 경로는 weakKnowledgePrompt 로 「사실은 지어내지 말라」 안내를 붙여 모델을 부른다 (1005 전에는 모델을 안 부르고 noAnswerText 만 돌려줬다).
  */
 export function shouldAnswerFromKnowledge(
     settings: Pick<ResponseSettings, 'creativity'>,
@@ -285,6 +286,23 @@ export function shouldAnswerFromKnowledge(
     if (settings.creativity !== 'strict') return true
     if (!matches || matches.length === 0) return false
     return matches.some(m => (m.similarity ?? 0) >= STRICT_MIN_SIMILARITY)
+}
+
+/**
+ * Strict 인데 이번 질문과 맞는 자료를 못 찾았을 때 지침 끝에 붙이는 안내. 아니면 빈 문자열.
+ * 예전(1005 03:19)에는 이때 모델을 아예 부르지 않고 noAnswerText 만 돌려줬다. 그러자 말투, 지침이 전혀 안 먹고
+ * 「그럼 어떻게 해요?」 같은 이어 묻기까지 전부 「자료에 없어서 잘 모르겠어요」 가 됐다(대표 1005 15:31 지적).
+ * 이제 모델은 항상 부르고, 사실을 지어내지 말라는 안내와 리더가 정한 문구를 준다.
+ */
+export function weakKnowledgePrompt(
+    settings: Pick<ResponseSettings, 'creativity' | 'noAnswerText'>,
+    matches: { similarity?: number | null }[] | null | undefined,
+): string {
+    if (shouldAnswerFromKnowledge(settings, matches)) return ''
+    return `[📚 자료 확인]
+이번 말과 딱 맞는 자료를 찾지 못했다.
+- 자료에 있어야 답할 수 있는 사실(숫자, 가격, 일정, 경력, 사건, 전문 정보)을 묻는 말이면 지어내지 말고 「${settings.noAnswerText}」 라는 뜻으로 짧게 답한 뒤, 무엇을 도와줄 수 있는지 한 줄 덧붙여라.
+- 인사, 일상 대화, 공감, 앞 대화에 이어 묻는 말, 지침의 성격과 말투로 할 수 있는 말이면 거절하지 말고 자연스럽게 답하라.`
 }
 
 /* ────────────────────────── DB 읽기·쓰기 (서버에서만 부른다) ────────────────────────── */
