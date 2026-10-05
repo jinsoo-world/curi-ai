@@ -58,7 +58,8 @@ describe('사진 설명 공용 함수', () => {
     it('키가 없거나 꺼 두면 부르지 않는다', () => {
         expect(imageNoteConfig({}).enabled).toBe(false)
         expect(imageNoteConfig({ GEMINI_API_KEY: 'x', IMAGE_NOTE_ENABLED: 'false' }).enabled).toBe(false)
-        expect(imageNoteConfig({ GEMINI_API_KEY: 'x' })).toMatchObject({ enabled: true, perUser: 60, global: 3000, resolution: 'MEDIA_RESOLUTION_MEDIUM' })
+        expect(imageNoteConfig({ GEMINI_API_KEY: 'x' })).toMatchObject({ enabled: true, perUser: 60, global: 3000, resolution: 'MEDIA_RESOLUTION_LOW' })
+        expect(imageNoteConfig({ GEMINI_API_KEY: 'x', IMAGE_NOTE_RESOLUTION: 'medium' }).resolution).toBe('MEDIA_RESOLUTION_MEDIUM')
     })
     it('모델 답 정리', () => {
         expect(parseImageNote('```json\n{"설명":"커피 잔","글자":"없음"}\n```')).toEqual({ description: '커피 잔', text: '' })

@@ -3,7 +3,7 @@
 //
 // 고른 까닭 (/workspace/research/2026-10-05_image-parser-candidates.md): Vercel 에서 무료로 도는 오픈소스는 tesseract.js 뿐인데
 // 사진 설명을 못 하고 사진 속 한국어 글자도 약하다. 한국어 설명이 되는 오픈소스는 GPU 서버가 필요하다.
-// → 이미 쓰는 유료 Gemini 키로 가장 싼 이미지 모델을 낮은 해상도로 한 번 불러 설명과 글자를 같이 얻는다 (장당 1원 미만).
+// → 이미 쓰는 유료 Gemini 키로 가장 싼 이미지 모델을 낮은 해상도(low)로 한 번 불러 설명과 글자를 같이 얻는다 (장당 1원 미만).
 //
 // 지키는 것
 //   - 원본 사진은 저장하지 않는다. 메모리에서 모델로 보내고 버린다.
@@ -46,14 +46,14 @@ function intEnv(v: string | undefined, fallback: number): number {
 
 export function imageNoteConfig(env: Record<string, string | undefined> = process.env) {
     const models = String(env.IMAGE_NOTE_MODEL ?? '').split(',').map(s => s.trim()).filter(Boolean)
-    const res = String(env.IMAGE_NOTE_RESOLUTION ?? 'medium').toLowerCase()
+    const res = String(env.IMAGE_NOTE_RESOLUTION ?? 'low').toLowerCase()
     return {
         enabled: String(env.IMAGE_NOTE_ENABLED ?? 'true').toLowerCase() !== 'false' && !!env.GEMINI_API_KEY,
         perUser: intEnv(env.IMAGE_NOTE_DAILY_PER_USER, IMAGE_NOTE_DAILY_PER_USER_DEFAULT),
         global: intEnv(env.IMAGE_NOTE_DAILY_GLOBAL, IMAGE_NOTE_DAILY_GLOBAL_DEFAULT),
         models: models.length ? models : IMAGE_NOTE_MODELS_DEFAULT,
-        // low = 64 토큰 (글자를 거의 못 읽음), medium = 약 256 토큰 (기본, 글자도 읽힘), high = 원래 크기
-        resolution: res === 'low' ? MediaResolution.MEDIA_RESOLUTION_LOW : res === 'high' ? MediaResolution.MEDIA_RESOLUTION_HIGH : MediaResolution.MEDIA_RESOLUTION_MEDIUM,
+        // low = 사진 64 토큰 (기본. 실측 1005: 사진 속 큰 글자까지 medium 과 거의 같게 읽고 입력 토큰은 절반), medium = 약 256 토큰, high = 원래 크기
+        resolution: res === 'medium' ? MediaResolution.MEDIA_RESOLUTION_MEDIUM : res === 'high' ? MediaResolution.MEDIA_RESOLUTION_HIGH : MediaResolution.MEDIA_RESOLUTION_LOW,
     }
 }
 
