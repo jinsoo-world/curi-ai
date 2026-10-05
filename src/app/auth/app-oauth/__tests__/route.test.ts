@@ -47,6 +47,11 @@ describe('GET /auth/app-oauth', () => {
         expect(loc.searchParams.has('skip_http_redirect')).toBe(false)
     })
 
+    it('code_challenge 가 없으면 400', async () => {
+        const res = await call('provider=kakao&redirect_to=' + encodeURIComponent('curiai://login-callback'))
+        expect(res.status).toBe(400)
+    })
+
     it('supabase 주소 설정이 없으면 500', async () => {
         delete process.env.NEXT_PUBLIC_SUPABASE_URL
         expect((await call(`provider=kakao&${base}`)).status).toBe(500)

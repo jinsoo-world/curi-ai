@@ -162,7 +162,7 @@ export async function POST(req: Request) {
             
             if (actualUsed >= MAX_DAILY_FREE_GUEST) {
                 const encoder = new TextEncoder()
-                const guestLimitMsg = '오늘 무료 대화를 다 썼어요.\n\n로그인하면 두 배로 더 대화할 수 있어요.'
+                const guestLimitMsg = '오늘 무료 대화를 다 썼어요.\n\n로그인하면 더 많이 대화할 수 있어요.'
                 const limitStream = new ReadableStream({
                     start(controller) {
                         controller.enqueue(

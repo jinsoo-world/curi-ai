@@ -15,6 +15,9 @@ export async function GET(request: Request) {
     if (!PROVIDERS.has(provider)) return new NextResponse('invalid provider', { status: 400 })
     if (searchParams.get('redirect_to') !== APP_REDIRECT) return new NextResponse('invalid redirect_to', { status: 400 })
 
+    // 확인 코드(PKCE)가 없으면 supabase 가 토큰을 주소 끝에 붙여 돌려줘 앱 로그인이 실패한다
+    if (!searchParams.get('code_challenge')) return new NextResponse('missing code_challenge', { status: 400 })
+
     const base = process.env.NEXT_PUBLIC_SUPABASE_URL
     if (!base) return new NextResponse('not configured', { status: 500 })
 
