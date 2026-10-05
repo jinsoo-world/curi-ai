@@ -30,6 +30,7 @@ import { extractNaverBlog, extractNaverNews, naverBlogMobileUrl } from './naver'
 import { feedToText, looksLikeFeed, discoverFeedLinks, kstStamp } from './feed'
 import { cacheGet, cacheSet } from './cache'
 import { readInstagram } from './instagram'
+import { formatSocialText } from './social-post'
 import { readThreads } from './threads'
 
 export type { ReadResult, ReadPage, ReadFail } from '@/domains/agent/fetch-url'
@@ -124,9 +125,11 @@ async function routeRead(requestedUrl: string, o: Opts): Promise<ReadResult> {
     }
 
     if (kind === 'instagram') {
-        const r = await readInstagram(requestedUrl, { timeoutMs: Math.min(o.timeoutMs, 10_000), max: 5 })
+        const r = await readInstagram(requestedUrl, { timeoutMs: Math.min(o.timeoutMs, 10_000) })
         if (!r.ok) return { ok: false, requestedUrl, reason: r.reason, code: r.code }
-        return ok(requestedUrl, requestedUrl, '인스타그램', r.posts.map(p => p.text).join('\n\n---\n\n'), o.maxChars, 'sns', 'instagram')
+        // 글 + 올린 날, 좋아요, 댓글, 해시태그, 영상 여부, 계정 요약까지 봇이 읽을 글로. 구조는 social 로 같이 돌려준다 (사진 주소 포함)
+        const page = ok(requestedUrl, requestedUrl, '인스타그램', formatSocialText(r.profile, r.posts), o.maxChars, 'sns', 'instagram')
+        return { ...page, social: { platform: 'instagram', profile: r.profile, posts: r.posts } }
     }
     if (kind === 'threads') {
         const r = await readThreads(requestedUrl, { timeoutMs: Math.min(o.timeoutMs, 10_000), max: 5 })

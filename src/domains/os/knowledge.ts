@@ -12,6 +12,7 @@ import { failReasonLine, FAIL_REASON_COL, LEGACY_FAIL_REASON_COL } from '@/domai
 import { failureMessage, FAILURE_REASONS } from '@/domains/knowledge/failure-reasons'
 import { readUrl, KNOWLEDGE_READ_OPTIONS } from '@/domains/os/readers'
 import { markInjectionPatterns } from '@/domains/chat/injection'
+import { saveSocialPosts } from './social-store'
 import { draftLinkKind, draftSourceKind, postUrlOf } from '@/domains/os/twin-draft-shared'
 import { TOO_SHORT_LINE, FULL_LINE, accountKeyOf, enoughText, failCodeOfReason, isLinkFailCode, type UnreadLink } from '@/domains/os/link-rules'
 
@@ -447,10 +448,12 @@ export async function addLinkSource(db: SupabaseClient, mentorId: string, rawUrl
         throw new Error('그 주소에서 읽을 글을 못 찾았어요. 다른 주소를 넣거나 글을 붙여 넣어 주세요')
     }
     console.log('[os/knowledge] 링크 읽음', { kind: read.kind, method: read.method, chars: text.length })
-    return addKnowledgeSource(db, mentorId, read.title, text, read.kind === 'youtube' ? 'youtube' : 'url', read.url, {
+    const saved = await addKnowledgeSource(db, mentorId, read.title, text, read.kind === 'youtube' ? 'youtube' : 'url', read.url, {
         meta: { sourceKind: read.kind === 'youtube' ? 'youtube' : 'url', fetchedAt: new Date().toISOString() },
         ingest: { dedupe: true },
-    })
+    }) as { id?: string; deduped?: boolean }
+    if (read.social && !saved.deduped) await saveSocialPosts(db, mentorId, saved.id, read.social)
+    return saved
 }
 
 /**
@@ -522,10 +525,13 @@ export async function addDraftSources(
             if (!read.ok) { await fail(url, read.reason, read.code); return }
             if (!enoughText(read.text)) { await fail(url, '읽을 글이 너무 짧았어요', 'empty'); return }
             const { text } = markInjectionPatterns(read.text)
-            await tryAdd(target.platform, () => addKnowledgeSource(db, mentorId, `내 ${target.platform === 'instagram' ? '인스타그램' : '스레드'} 글`, `출처: ${url}\n\n${text}`, 'url', url, {
-                meta: { sourceKind: target.platform, citationUrl: url, authorIsMe: true, fetchedAt: new Date().toISOString() },
-                ingest: { dedupe: true },
-            }), url)
+            await tryAdd(target.platform, async () => {
+                const saved = await addKnowledgeSource(db, mentorId, `내 ${target.platform === 'instagram' ? '인스타그램' : '스레드'} 글`, `출처: ${url}\n\n${text}`, 'url', url, {
+                    meta: { sourceKind: target.platform, citationUrl: url, authorIsMe: true, fetchedAt: new Date().toISOString() },
+                    ingest: { dedupe: true },
+                }) as { id?: string; deduped?: boolean }
+                if (read.social && !saved.deduped) await saveSocialPosts(db, mentorId, saved.id, read.social)
+            }, url)
             return
         }
 

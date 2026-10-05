@@ -15,6 +15,7 @@ import { createFeed, listFeeds, syncFeed, loadExistingSources, type FeedKind } f
 import { isSafeFetchUrl } from '@/domains/agent/fetch-url'
 import { readUrl, KNOWLEDGE_READ_OPTIONS } from './readers'
 import { addKnowledgeSource } from '@/domains/knowledge'
+import { saveSocialPosts } from './social-store'
 import { MAX_SOURCES_PER_BOT, addTextSource, addLinkSource, assertRoomForMore } from './knowledge'
 import { parseScreenshotImages, readScreenshots } from './screenshot-read'
 import { snsLabelOf } from './sns-capture'
@@ -222,10 +223,11 @@ async function readSnsSingle(db: Db, a: { userId: string; displayName: string; d
             if (!read.ok) return failWith(read.reason, isLinkFailCode(read.code) ? read.code : failCodeOfReason(read.reason), mentorId)
             if (!enoughText(read.text)) return failWith('읽은 글이 너무 짧았어요', 'empty', mentorId)
             added = countPosts(read.text)
-            await addKnowledgeSource(db, mentorId, `내 ${label} 글`, `출처: ${target.url}\n\n${read.text}`, 'url', target.url, {
+            const saved = await addKnowledgeSource(db, mentorId, `내 ${label} 글`, `출처: ${target.url}\n\n${read.text}`, 'url', target.url, {
                 meta: { sourceKind: target.platform, citationUrl: target.url, authorIsMe: true, fetchedAt: now() },
                 ingest: { dedupe: true },
-            })
+            }) as { id?: string; deduped?: boolean }
+            if (read.social && !saved.deduped) await saveSocialPosts(db, mentorId, saved.id, read.social)
         }
     } catch (e) {
         const reason = e instanceof Error ? e.message : '저장하지 못했어요'
