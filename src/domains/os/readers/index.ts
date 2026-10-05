@@ -12,6 +12,7 @@
 //   naver-news → naver.ts   (기사 본문 칸)
 //   instagram  → instagram.ts (공개 계정, 게시물 퍼가기 화면. 비공개면 못 읽는다)
 //   threads    → threads.ts (공개 프로필)
+//   curious    → domains/knowledge/curious-reader.ts (큐리어스 화면이 부르는 공개 창구 /api/v2, 요청은 fetchPageSafely 로)
 //   feed       → feed.ts    (RSS, Atom 최근 글 목록. 주소 모양이 아니어도 내용이 피드면 여기로)
 //   web        → article.ts (readability 본문 추출. 글이 얇거나 첫 화면이면 RSS 링크를 찾아 목록을 더한다)
 // 한도: 크기 maxBytes(대화 2MB, 자료 20MB), 시간 timeoutMs(대화 8초, 자료 45초), 글자 maxChars.
@@ -33,6 +34,8 @@ import { readInstagram } from './instagram'
 import { formatSocialText } from './social-post'
 import { readThreads } from './threads'
 import { isMediumHost, isMediumPostUrl, readMediumFromFeed } from './medium'
+import { readCurious } from '@/domains/knowledge/curious-reader'
+import type { CuriousGetJson } from '@/domains/knowledge/curious-reader'
 
 export type { ReadResult, ReadPage, ReadFail } from '@/domains/agent/fetch-url'
 export { extractArticle } from './article'
@@ -141,7 +144,35 @@ async function routeRead(requestedUrl: string, o: Opts): Promise<ReadResult> {
         return ok(requestedUrl, requestedUrl, '스레드', head + r.posts.map(p => p.text).join('\n\n---\n\n'), o.maxChars, 'sns', 'threads')
     }
 
+    if (kind === 'curious') return readCuriousPage(requestedUrl, o)
+
     return readWeb(requestedUrl, o, kind)
+}
+
+/**
+ * 큐리어스 화면 = 화면이 부르는 공개 창구(로그인 없는 GET)를 읽는다. 창구 요청도 전부 fetchPageSafely 를 지난다.
+ * 못 읽으면 이유와 갈래(code)를 돌려준다 (화면이 「다시 시도」, 붙여넣기 칸을 연다). 일반 웹 읽기로 되돌아가지 않는다:
+ * 서버 HTML 에는 제목과 한 줄 설명뿐이라 얇은 자료가 들어가 버린다.
+ */
+async function readCuriousPage(requestedUrl: string, o: Opts): Promise<ReadResult> {
+    const started = Date.now()
+    const getJson: CuriousGetJson = async (apiUrl) => {
+        const left = o.timeoutMs - (Date.now() - started)
+        if (left < 300) return { ok: false, timeout: true }
+        const r = await fetchPageSafely(apiUrl, { timeoutMs: left, maxBytes: o.maxBytes, headers: { Accept: 'application/json' }, normalize: false })
+        if (!r.ok) {
+            const status = Number(/응답 (\d{3})/.exec(r.reason)?.[1] ?? 0) || undefined
+            return { ok: false, status, timeout: /느려|응답이 없/.test(r.reason) }
+        }
+        try { return { ok: true, data: JSON.parse(r.body) } } catch { return { ok: false } }
+    }
+    const r = await readCurious(requestedUrl, { getJson, timeoutMs: o.timeoutMs, maxBytes: o.maxBytes, maxChars: o.maxChars })
+    if (!r.ok) return { ok: false, requestedUrl, reason: r.reason, code: r.code }
+    // 🖼 사진: 모은 주소는 images 와 글 끝 [이미지] 칸에. 첫 장(멤버십 배너, 어울림 표지, 리더 사진 등)은 image 로 넘겨
+    //   저장할 때 사진 설명이 붙는다 (os/image-enrich.ts addImageNotes, 대화 중 읽기에는 안 붙는다)
+    const page = ok(requestedUrl, r.doc.url, r.doc.title, r.doc.text, o.maxChars, 'curious', 'curious')
+    const image = r.doc.images.map(i => i.url).find(u => isSafeFetchUrl(u))
+    return { ...page, images: r.doc.images, ...(image ? { image } : {}) }
 }
 
 function hostOf(url: string): string {

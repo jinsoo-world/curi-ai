@@ -11,7 +11,7 @@ import { shrinkImage } from '@/lib/image-shrink'
 type Link = { id: string; url: string; platform: string; status: 'read' | 'pending' | 'failed'; added_count: number; note: string | null }
 const STATUS: Record<Link['status'], string> = { read: '읽음', pending: '준비 중', failed: '못 읽음' }
 /** 대표 글 붙여넣기를 받는 곳 (서버 classifySnsLink 의 paste 와 같다) */
-const PASTE_PLATFORMS = ['naver_blog', 'brunch', 'tistory', 'substack', 'medium', 'wordpress', 'rss', 'website', 'instagram', 'facebook', 'threads', 'youtube', 'x', 'linkedin']
+const PASTE_PLATFORMS = ['naver_blog', 'brunch', 'tistory', 'substack', 'medium', 'wordpress', 'rss', 'website', 'instagram', 'facebook', 'threads', 'youtube', 'x', 'linkedin', 'curious']
 
 export default function SnsLinkCard() {
     const [links, setLinks] = useState<Link[]>([])

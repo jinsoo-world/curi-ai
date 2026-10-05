@@ -9,12 +9,14 @@
 //   web        = 그 밖의 웹페이지, 신문 기사 (readability 본문 추출)
 //   instagram  = 인스타그램 공개 계정, 게시물 (퍼가기 화면, 0929)
 //   threads    = 스레드 공개 프로필 (0929)
+//   curious    = 큐리어스(curious-500.com) 멤버십, 어울림, 리더, 디지털콘텐츠, 커뮤니티 (1005, 화면이 부르는 공개 창구)
 // X, 레딧, 링크드인, 페이스북처럼 로그인해야 보이는 곳은 web 으로 떨어지고,
 // 거기서 글을 못 찾으면 「못 읽었어요」로 끝난다(몰래 로그인하지 않는다).
 
 import { youtubeVideoId } from './youtube'
+import { parseCuriousUrl } from '@/domains/knowledge/curious-reader'
 
-export type LinkKind = 'youtube' | 'github' | 'naver-blog' | 'naver-news' | 'instagram' | 'threads' | 'feed' | 'web'
+export type LinkKind = 'youtube' | 'github' | 'naver-blog' | 'naver-news' | 'instagram' | 'threads' | 'curious' | 'feed' | 'web'
 
 /** GitHub 주소 첫 칸이 사람, 단체 이름이 아닌 것 (github.com/settings 같은 화면) */
 const GITHUB_RESERVED = new Set([
@@ -39,6 +41,8 @@ export function classifyUrl(raw: string): LinkKind {
     if (host === 'n.news.naver.com' || host === 'news.naver.com' || host === 'm.news.naver.com') return 'naver-news'
     if (host === 'instagram.com' || host.endsWith('.instagram.com')) return 'instagram'
     if (host === 'threads.net' || host === 'threads.com' || host.endsWith('.threads.net') || host.endsWith('.threads.com')) return 'threads'
+    // 큐리어스 화면은 본문을 브라우저에서 따로 불러 그린다. 아는 화면(멤버십, 어울림 등)만 공개 창구로, 나머지는 web
+    if (parseCuriousUrl(u.toString())) return 'curious'
     if (looksLikeFeedUrl(u)) return 'feed'
     return 'web'
 }

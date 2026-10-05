@@ -115,5 +115,6 @@ export function linkLabelOf(raw: string): string {
     if (is('linkedin.com')) return '링크드인'
     if (is('x.com') || is('twitter.com')) return 'X'
     if (is('facebook.com') || is('fb.com')) return '페이스북'
+    if (is('curious-500.com')) return '큐리어스'
     return host || '링크'
 }

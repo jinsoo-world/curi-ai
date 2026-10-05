@@ -27,7 +27,7 @@ import { bootstrapDefaultTeam } from './team'
 import { JOBS } from './presets'
 import { firstJobFor, SNS_BONUS_CLOVERS, SNS_KEY_TAKEN_LINE, SNS_PASTE_LINE, SNS_CAPTURE_LINE, SNS_NO_READ_LINE, SNS_PENDING_LINE, SNS_READ_LINE, SNS_SUCCESS_LINE } from './onboarding'
 
-export type SnsPlatform = 'youtube' | 'naver_blog' | 'brunch' | 'tistory' | 'substack' | 'medium' | 'wordpress' | 'rss' | 'website' | 'linkedin' | 'instagram' | 'threads' | 'x' | 'tiktok' | 'facebook' | 'market'
+export type SnsPlatform = 'youtube' | 'naver_blog' | 'brunch' | 'tistory' | 'substack' | 'medium' | 'wordpress' | 'rss' | 'website' | 'linkedin' | 'instagram' | 'threads' | 'x' | 'tiktok' | 'facebook' | 'market' | 'curious'
 
 /** 붙여넣기 한 편 최소 글자, 최대 편수. 어느 입구든 같은 값 (link-rules.ts, 1005) */
 export const PASTE_MIN_CHARS = MIN_TEXT_CHARS
@@ -93,6 +93,9 @@ export function classifySnsLink(raw: unknown): SnsTarget {
         if (!feedUrl) throw new Error('미디엄 계정이나 매체 주소를 넣어 주세요. 예: medium.com/@계정')
         return { url, platform: 'medium', feed: { kind: 'podcast', handleOrUrl: feedUrl }, paste: true }
     }
+    // 큐리어스(같은 회사 서비스): 멤버십, 어울림, 리더, 디지털콘텐츠, 커뮤니티 화면 하나를 그 자리에서 읽는다 (readers 의 curious 길, 1005).
+    // 화면 하나 = 자료 칸 하나. 못 읽으면 이유와 다시 시도, 붙여넣기
+    if (is('curious-500.com')) return { url, platform: 'curious', feed: null, paste: true, single: true }
     // 큰 장터 상품(스마트스토어, 쿠팡 등)은 약관 확인 전까지 자동으로 읽지 않는다. 링크만 저장 (보너스 없음)
     if (isMarketHost(host)) return { url, platform: 'market', feed: null }
     // 티스토리는 주인이 켠 공식 RSS(/rss). robots.txt 도 막지 않는다
@@ -112,8 +115,8 @@ export function targetLabel(t: SnsTarget): string {
     try { return new URL(t.url).hostname.replace(/^(www|m)\./, '') || l } catch { return l }
 }
 
-/** 블로그 글 하나를 그 자리에서 읽는 곳 (글 하나 주소) */
-export const BLOG_POST_PLATFORMS: readonly SnsPlatform[] = ['website', 'wordpress', 'medium', 'brunch']
+/** 블로그 글 하나를 그 자리에서 읽는 곳 (글 하나 주소). 큐리어스 화면 하나도 같은 길 (제목 그대로, 한 편) */
+export const BLOG_POST_PLATFORMS: readonly SnsPlatform[] = ['website', 'wordpress', 'medium', 'brunch', 'curious']
 
 /**
  * 주소 모양만으로 모르는 블로그 주소가 글 하나인지 목록인지 가려 target 을 고친다.

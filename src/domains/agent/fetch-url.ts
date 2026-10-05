@@ -243,11 +243,16 @@ export interface ReadPage {
      * 어떻게 읽었나 = readability(본문 추출기) / plain(태그만 걷어냄) / captions(자막) / meta(제목과 설명만)
      * / feed(RSS, Atom 글 목록) / github(GitHub 공개 API) / naver(네이버 뉴스, 블로그 본문 칸)
      */
-    method?: 'readability' | 'plain' | 'captions' | 'gemini' | 'meta' | 'feed' | 'github' | 'naver' | 'sns'
+    method?: 'readability' | 'plain' | 'captions' | 'gemini' | 'meta' | 'feed' | 'github' | 'naver' | 'sns' | 'curious'
     /** 어느 길로 읽었나 (readers/router.ts 의 classifyUrl) */
-    source?: 'youtube' | 'github' | 'naver-blog' | 'naver-news' | 'instagram' | 'threads' | 'feed' | 'web'
+    source?: 'youtube' | 'github' | 'naver-blog' | 'naver-news' | 'instagram' | 'threads' | 'curious' | 'feed' | 'web'
     /** 글의 대표 사진 주소 (og:image). 사진 설명을 붙일 때 쓴다 */
     image?: string
+    /**
+     * 그 화면의 사진 주소 여러 장 (큐리어스 멤버십, 어울림, 리더, 디지털콘텐츠 사진). 글 끝 [이미지] 칸에도 적는다.
+     * 사진 설명은 첫 장(image)만 붙인다 (os/image-enrich.ts addImageNotes)
+     */
+    images?: { url: string; label: string }[]
     /** 인스타그램처럼 글마다 사진, 좋아요, 올린 시각이 있는 곳: 읽은 글의 구조 (저장은 domains/os/knowledge) */
     social?: { platform: 'instagram' | 'threads'; profile?: import('@/domains/os/readers/social-post').SocialProfile; posts: import('@/domains/os/readers/social-post').SocialPost[] }
 }

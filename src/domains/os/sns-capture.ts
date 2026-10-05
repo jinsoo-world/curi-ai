@@ -13,6 +13,7 @@ const LABEL: Record<string, string> = {
     'threads.net': '스레드', 'threads.com': '스레드', 'x.com': 'X', 'twitter.com': 'X', 'tiktok.com': '틱톡',
     'blog.naver.com': '네이버 블로그', 'brunch.co.kr': '브런치',
     'tistory.com': '티스토리', 'medium.com': '미디엄', 'wordpress.com': '워드프레스', 'substack.com': '서브스택', 'linkedin.com': '링크드인',
+    'curious-500.com': '큐리어스',
 }
 
 /** 주소 → 곳 이름 (모르면 'SNS') */
