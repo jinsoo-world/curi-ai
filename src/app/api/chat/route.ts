@@ -23,6 +23,7 @@ import {
     CuriousAuthExpired, curiousMyPosts, curiousMyStudies, curiousPostsToText, curiousStudiesToText, findProvider, providerReady, withCuriousAuth,
 } from '@/domains/connectors'
 import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
+import { runMcpForChat } from '@/domains/mcp/chat'
 import { applySkills, skillsForMentor } from '@/domains/os/skills'
 // 🎛 답변 설정(목적·지침·말투·길이·창의성·출처·안내문·최신성). 트윈·리더 봇(마켓 공개봇)=Strict, 내 팀 봇=Adaptive 기본값 (domains/os/response-settings)
 import { isIosAppUserAgent } from '@/lib/app-shell'
@@ -652,6 +653,22 @@ export async function POST(req: Request) {
                 console.error('[Chat Curious] Error:', curiousErr instanceof Error ? curiousErr.message : 'unknown')
                 const 끊김 = curiousErr instanceof CuriousAuthExpired
                 systemPrompt = `[🔌 큐리어스]\n큐리어스를 열지 못했습니다. 답 첫 줄에 "${끊김 ? '큐리어스 로그인이 끊겼어요(연결 화면에서 다시 연결해 주세요)' : '큐리어스를 읽지 못했어요(잠시 뒤 다시 물어봐 주세요)'}"라고 밝히고 내용을 지어내지 마세요.\n\n${systemPrompt}`
+            }
+        }
+
+        // 🧰 MCP 도구 = 대화하는 회원 본인이 붙인 MCP 서버 중 이 봇에 켜 둔 것만. 모델(솔라)이 필요하다고 고른 도구만 부른다.
+        //    호출 최대 5번·도구 하나 15초·결과 길이 제한·내부망 주소 차단은 domains/mcp 가 지킨다. 결과는 인용 울타리 안에.
+        if (user) {
+            try {
+                const mcp = await runMcpForChat({ db: createAdminClient(), userId: user.id, botId: String((mentor as { id: string }).id), history: messages })
+                if (mcp.hadServers) personalized = true   // 내 도구 결과가 섞인 답은 남과 나눠 쓰는 저장 답에 넣지 않는다
+                if (mcp.prompt) {
+                    연결자료읽음 = true
+                    systemPrompt = `${mcp.prompt}\n\n${systemPrompt}`
+                    usedSources = [...usedSources, ...mcp.sources]
+                }
+            } catch (mcpErr) {
+                console.error('[Chat MCP] Error:', mcpErr instanceof Error ? mcpErr.name : 'unknown')
             }
         }
 
