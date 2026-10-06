@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
     createSubscription,
-    cancelSubscription,
-    renewSubscription,
     expireSubscription,
     savePayment,
 } from '../actions'
