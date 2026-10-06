@@ -1,7 +1,7 @@
 // 사진 만들기 한 번마다 비용 기록 + 하루 한도 (서버 전용)
 //
 // 한도 (대표 결정 0928):
-//   IMAGE_GLOBAL_DAILY (기본 200) = 서비스 전체 하루 장수. 모든 사진 입구에 건다.
+//   IMAGE_GLOBAL_DAILY (기본 30, 2026-10-06 200→30) = 서비스 전체 하루 장수. 모든 사진 입구에 건다. 환경변수로 덮어쓴다.
 //   IMAGE_ADMIN_DAILY  (기본 30)  = 어드민 사진 만들기(/api/image/generate) 하루 장수.
 //   날짜는 한국 시간. llm_usage 에 성공으로 남은 kind image 줄의 장수를 센다.
 // 기록: llm_usage 에 kind image, 모델, 사람(없으면 손님), 장수, 추정 원화(prices.ts 사진 가격표).
@@ -16,12 +16,16 @@ export const IMAGE_CAP_TEXT_GLOBAL = '오늘 사진 만들기가 다 찼어요. 
 export const IMAGE_CAP_TEXT_ADMIN = '오늘 어드민 사진 만들기 한도를 다 썼어요.'
 
 function intEnv(v: string | undefined, fallback: number): number {
+    if (v === undefined || v.trim() === '') return fallback   // 빈 값이 0(전부 막힘)이 되지 않게
     const n = Number(v)
     return Number.isFinite(n) && n >= 0 ? Math.floor(n) : fallback
 }
 
+/** 서비스 전체 하루 사진 장수 기본값 (비용 상한. 환경변수 IMAGE_GLOBAL_DAILY 로 덮어쓴다) */
+export const IMAGE_GLOBAL_DAILY_DEFAULT = 30
+
 export function imageCaps(env: Record<string, string | undefined> = process.env): { global: number; admin: number } {
-    return { global: intEnv(env.IMAGE_GLOBAL_DAILY, 200), admin: intEnv(env.IMAGE_ADMIN_DAILY, 30) }
+    return { global: intEnv(env.IMAGE_GLOBAL_DAILY, IMAGE_GLOBAL_DAILY_DEFAULT), admin: intEnv(env.IMAGE_ADMIN_DAILY, 30) }
 }
 
 /** 한도 판단만 (시험하기 쉽게 따로) */
