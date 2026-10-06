@@ -103,3 +103,41 @@ describe('lib/toss — 빌링키 삭제(deleteBillingKey)', () => {
         await expect(deleteBillingKey('bk_1')).rejects.toThrow('없는 빌링키')
     })
 })
+
+describe('lib/toss — 마감·주문번호 조회·갱신 주문번호', () => {
+    it('모든 토스 호출에 마감(AbortSignal)이 붙는다', async () => {
+        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(가짜응답(true, { paymentKey: 'pk', orderId: 'o', status: 'DONE', totalAmount: 1 }))
+        const { getPayment, getPaymentByOrderId, confirmPayment } = await import('../toss')
+        await chargeBilling('bk', 'ck', 1, 'o', 'n')
+        await issueBillingKey('a', 'c')
+        await deleteBillingKey('bk')
+        await getPayment('pk')
+        await getPaymentByOrderId('o')
+        await confirmPayment('pk', 'o', 1)
+        expect(fetchSpy).toHaveBeenCalledTimes(6)
+        for (const call of fetchSpy.mock.calls) expect((call[1] as RequestInit).signal).toBeInstanceOf(AbortSignal)
+    })
+
+    it('주문번호 조회: 없으면 null, 있으면 결제', async () => {
+        const { getPaymentByOrderId } = await import('../toss')
+        vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({ code: 'NOT_FOUND_PAYMENT' }) } as unknown as Response)
+        expect(await getPaymentByOrderId('o')).toBeNull()
+        vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ paymentKey: 'pk', orderId: 'o', status: 'DONE' }) } as unknown as Response)
+        expect(await getPaymentByOrderId('o')).toMatchObject({ status: 'DONE' })
+    })
+
+    it('결제 승인 실패 오류에 토스 오류 코드가 실린다', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(가짜응답(false, { code: 'ALREADY_PROCESSED_PAYMENT', message: '이미 처리된 결제' }))
+        await expect(chargeBilling('bk', 'ck', 1, 'o', 'n')).rejects.toMatchObject({ code: 'ALREADY_PROCESSED_PAYMENT' })
+    })
+
+    it('갱신 주문번호는 구독 번호 + 기간 끝 날짜(같은 기간이면 같은 번호), 토스 규칙(64자·영숫자-_) 안', async () => {
+        const { renewOrderId } = await import('../toss')
+        const id = '11111111-1111-4111-8111-111111111111'
+        const a = renewOrderId(id, '2026-10-05T15:00:00Z')
+        expect(a).toBe(`renew-${id}-2026-10-05`)
+        expect(renewOrderId(id, '2026-10-05T15:00:00.123+00:00')).toBe(a)
+        expect(a.length).toBeLessThanOrEqual(64)
+        expect(a).toMatch(/^[A-Za-z0-9_-]{6,64}$/)
+    })
+})

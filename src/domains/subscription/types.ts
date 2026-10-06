@@ -13,7 +13,7 @@ export interface Subscription {
     id: string
     user_id: string
     plan_type: PlanType
-    status: 'active' | 'canceled' | 'expired' | 'past_due'
+    status: 'active' | 'canceled' | 'expired' | 'past_due' | 'renewing' | 'renew_paid_unsynced'
     billing_key: string
     customer_key: string
     current_period_start: string

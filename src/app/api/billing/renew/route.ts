@@ -1,17 +1,19 @@
-// /api/billing/renew — 정기결제 자동 갱신 (Vercel Cron)
+// /api/billing/renew — 정기결제 자동 갱신 (Vercel Cron, 하루 한 번)
+// 한 바퀴 규칙은 domains/subscription/renew.ts (먼저 잡기 · 정해진 주문번호 · 결제됨+DB실패 구분 · 50건 · 50초).
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendErrorAlert } from '@/lib/slack'
-import { chargeBilling, generateOrderId } from '@/lib/toss'
+import { chargeBilling, getPaymentByOrderId } from '@/lib/toss'
 import {
-    getExpiredSubscriptions,
     renewSubscription,
     savePayment,
     expireSubscription,
-    PLANS,
 } from '@/domains/subscription'
+import { runRenewals, RENEW_BUDGET_MS, type RenewDeps } from '@/domains/subscription/renew'
+import type { Subscription } from '@/domains/subscription'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
 export async function GET(req: Request) {
     // Vercel Cron 인증 (선택)
@@ -29,69 +31,58 @@ export async function GET(req: Request) {
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
     )
+    const deadline = Date.now() + RENEW_BUDGET_MS
+
+    const setStatus = async (sub: Subscription, status: Subscription['status']) => {
+        const { error } = await supabase.from('subscriptions')
+            .update({ status, updated_at: new Date().toISOString() })
+            .eq('id', sub.id).eq('status', 'renewing')
+        if (error) throw new Error(error.message)
+    }
+
+    const deps: RenewDeps = {
+        async listDue(now, limit, staleBefore) {
+            // 기간이 끝난 active + 결제 중 죽어 10분 넘게 renewing 으로 남은 줄
+            const { data, error } = await supabase.from('subscriptions').select('*')
+                .lte('current_period_end', now.toISOString())
+                .or(`status.eq.active,and(status.eq.renewing,updated_at.lt."${staleBefore.toISOString()}")`)
+                .order('current_period_end', { ascending: true })
+                .limit(limit)
+            if (error) throw new Error(error.message)
+            return (data ?? []) as Subscription[]
+        },
+        async claim(sub, now) {
+            // active → renewing 을 바꾼 쪽만 결제한다. renewing 재잡기는 읽은 그 시각(updated_at)일 때만
+            let q = supabase.from('subscriptions').update({ status: 'renewing', updated_at: now.toISOString() }).eq('id', sub.id)
+            q = sub.status === 'renewing' ? q.eq('status', 'renewing').eq('updated_at', sub.updated_at) : q.eq('status', 'active')
+            const { data, error } = await q.select('id')
+            if (error) throw new Error(error.message)
+            return (data ?? []).length > 0
+        },
+        expire: sub => expireSubscription(supabase, sub.id, sub.user_id),
+        charge: (sub, amount, orderId, orderName) => chargeBilling(sub.billing_key, sub.customer_key, amount, orderId, orderName),
+        lookupOrder: orderId => getPaymentByOrderId(orderId),
+        async markRenewed(sub, paid) {
+            await savePayment(supabase, {
+                subscriptionId: sub.id,
+                userId: sub.user_id,
+                tossPaymentKey: paid.paymentKey,
+                tossOrderId: paid.orderId,
+                amount: paid.totalAmount,
+                status: 'done',
+                paidAt: paid.approvedAt,
+                receiptUrl: paid.receipt?.url ?? undefined,
+            })
+            await renewSubscription(supabase, sub.id, sub.plan_type as 'monthly' | 'annual')
+        },
+        markPastDue: sub => setStatus(sub, 'past_due'),
+        markPaidUnsynced: sub => setStatus(sub, 'renew_paid_unsynced'),
+        alert: a => sendErrorAlert(a),
+    }
 
     try {
-        // 만료된 active 구독 조회
-        const expiredSubs = await getExpiredSubscriptions(supabase)
-        console.log(`[Cron] Found ${expiredSubs.length} expired subscriptions`)
-
-        const results = {
-            renewed: 0,
-            expired: 0,
-            failed: 0,
-        }
-
-        for (const sub of expiredSubs) {
-            // canceled 상태면 만료 처리
-            if (sub.status === 'canceled') {
-                await expireSubscription(supabase, sub.id, sub.user_id)
-                results.expired++
-                console.log(`[Cron] Expired subscription ${sub.id}`)
-                continue
-            }
-
-            // active 상태면 자동 갱신 결제 시도
-            try {
-                const plan = PLANS[sub.plan_type as 'monthly' | 'annual']
-                const orderId = generateOrderId(sub.plan_type)
-
-                const paymentResult = await chargeBilling(
-                    sub.billing_key,
-                    sub.customer_key,
-                    plan.price,
-                    orderId,
-                    `큐리AI ${plan.label} 갱신`,
-                )
-
-                // 결제 성공 → 구독 갱신
-                await renewSubscription(supabase, sub.id, sub.plan_type as 'monthly' | 'annual')
-                await savePayment(supabase, {
-                    subscriptionId: sub.id,
-                    userId: sub.user_id,
-                    tossPaymentKey: paymentResult.paymentKey,
-                    tossOrderId: paymentResult.orderId,
-                    amount: paymentResult.totalAmount,
-                    status: 'done',
-                    paidAt: paymentResult.approvedAt,
-                    receiptUrl: paymentResult.receipt?.url,
-                })
-
-                results.renewed++
-                console.log(`[Cron] Renewed subscription ${sub.id}`)
-            } catch (error) {
-                // 결제 실패 → past_due 상태
-                console.error(`[Cron] Failed to renew ${sub.id}:`, error)
-                const errMsg = error instanceof Error ? error.message : '갱신 결제 실패'
-                await sendErrorAlert({ source: 'billing/renew', error: errMsg, userId: sub.user_id, metadata: { subscriptionId: sub.id } })
-                await supabase
-                    .from('subscriptions')
-                    .update({ status: 'past_due', updated_at: new Date().toISOString() })
-                    .eq('id', sub.id)
-
-                results.failed++
-            }
-        }
-
+        const results = await runRenewals(deps, { deadline })
+        console.log('[Cron] renew', JSON.stringify(results))
         return NextResponse.json({
             success: true,
             results,
