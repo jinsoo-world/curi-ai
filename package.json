@@ -27,7 +27,7 @@
     "inngest": "^3.54.2",
     "linkedom": "^0.18.13",
     "mammoth": "^1.11.0",
-    "next": "16.3.4",
+    "next": "16.3.8",
     "pdf-parse": "^2.4.5",
     "posthog-js": "^1.433.0",
     "pptxtojson": "^1.12.1",
