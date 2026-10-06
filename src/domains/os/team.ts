@@ -16,7 +16,7 @@ type Row = {
     id: string; mentor_id: string; role: TeamBot['role']; shape: TeamBot['shape']; color: TeamBot['color']
     one_liner: string | null; approval_mode: TeamBot['approvalMode']; pinned: boolean; hidden: boolean
     sort_order: number; created_at: string; linked_from_market?: boolean | null
-    mentors: { name: string; avatar_url: string | null; greeting_message: string; system_prompt: string | null; is_active?: boolean | null; slug?: string | null } | null
+    mentors: { name: string; avatar_url: string | null; greeting_message: string; system_prompt: string | null; is_active?: boolean | null; slug?: string | null; creator_id?: string | null } | null
 }
 
 /** 손님 시연용 봇 이름표. 마켓에서도 빠지고(getActiveMentors) 공개할 수도 없다 */
@@ -35,7 +35,7 @@ export class TeamTableMissing extends Error {
 export async function listTeam(db: SupabaseClient, userId: string): Promise<TeamBot[]> {
     const { data, error } = await db
         .from('team_bots')
-        .select('id, mentor_id, role, shape, color, one_liner, approval_mode, pinned, hidden, sort_order, created_at, linked_from_market, mentors(name, avatar_url, greeting_message, system_prompt, is_active, slug)')
+        .select('id, mentor_id, role, shape, color, one_liner, approval_mode, pinned, hidden, sort_order, created_at, linked_from_market, mentors(name, avatar_url, greeting_message, system_prompt, is_active, slug, creator_id)')
         .eq('user_id', userId)
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true })
@@ -55,6 +55,11 @@ export async function listTeam(db: SupabaseClient, userId: string): Promise<Team
     const countMap = new Map<string, number>()
     for (const c of (counts ?? []) as { mentor_id: string }[]) countMap.set(c.mentor_id, (countMap.get(c.mentor_id) ?? 0) + 1)
 
+    // 🔒 지시문은 내가 만든 봇만 싣는다. 마켓에서 데려온 남의 봇은 빈 글(지시문 유출 방지)
+    const { data: myCreator } = await db.from('creator_profiles').select('id').eq('user_id', userId).maybeSingle()
+    const myCreatorId = (myCreator as { id: string } | null)?.id ?? null
+    const isMine = (r: Row) => !!myCreatorId && r.mentors?.creator_id === myCreatorId
+
     return rows.map(r => ({
         id: r.id,
         mentorId: r.mentor_id,
@@ -68,7 +73,7 @@ export async function listTeam(db: SupabaseClient, userId: string): Promise<Team
         hidden: r.hidden,
         sortOrder: r.sort_order,
         avatarUrl: r.mentors?.avatar_url ?? null,
-        systemPrompt: r.mentors?.system_prompt ?? '',
+        systemPrompt: isMine(r) ? (r.mentors?.system_prompt ?? '') : '',
         greeting: r.mentors?.greeting_message ?? '',
         knowledgeCount: countMap.get(r.mentor_id) ?? 0,
         createdAt: r.created_at,
