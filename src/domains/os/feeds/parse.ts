@@ -9,10 +9,60 @@ import { htmlToText } from '@/domains/agent/fetch-url'
 
 const XML_ENTITIES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'", '&#39;': "'" }
 
+/** 피드 하나에서 읽는 글 최대 수 (보안 검토 PR #53: 큰 피드로 서버를 붙잡지 못하게) */
+export const MAX_FEED_ENTRIES = 200
+/** 여는 태그 속성 칸 최대 길이 (끝나지 않은 여는 태그가 잔뜩 있어도 멀리 훑지 않게) */
+const MAX_TAG_ATTR = 1_000
+
+/**
+ * 해석기는 전부 「앞으로만 한 번 훑기」다 (보안 검토 PR #53).
+ * 예전 정규식(<item>([\s\S]*?)</item>)은 닫는 태그가 없는 문서에서 여는 태그마다 끝까지 다시 훑어 제곱 시간이 걸렸다(200KB 1.9초, 5MB 수백 초).
+ * 이제 여는 태그 → 그 뒤 닫는 태그를 찾고, 닫는 태그가 없으면 그 뒤로는 블록이 있을 수 없으니 거기서 멈춘다.
+ */
+function openTagRe(name: string): RegExp {
+    return new RegExp(`<${escapeRe(name)}(?:\\s[^<>]{0,${MAX_TAG_ATTR}})?>`, 'gi')
+}
+function closeTagRe(name: string): RegExp {
+    return new RegExp(`</${escapeRe(name)}\\s*>`, 'gi')
+}
+
+/** <name …>안쪽</name> 블록들의 안쪽 (앞에서부터 최대 max 개) */
+function blocksOf(src: string, name: string, max = Infinity): string[] {
+    const open = openTagRe(name), close = closeTagRe(name)
+    const out: string[] = []
+    let pos = 0
+    while (out.length < max) {
+        open.lastIndex = pos
+        const o = open.exec(src)
+        if (!o) break
+        close.lastIndex = o.index + o[0].length
+        const c = close.exec(src)
+        if (!c) break
+        out.push(src.slice(o.index + o[0].length, c.index))
+        pos = c.index + c[0].length
+    }
+    return out
+}
+
+/** CDATA 벗기기 (앞으로만 훑기) */
+function stripCdata(s: string): string {
+    const OPEN = '<![CDATA[', CLOSE = ']]>'
+    let i = s.indexOf(OPEN)
+    if (i < 0) return s
+    let out = '', pos = 0
+    while (i >= 0) {
+        const end = s.indexOf(CLOSE, i + OPEN.length)
+        if (end < 0) break
+        out += s.slice(pos, i) + s.slice(i + OPEN.length, end)
+        pos = end + CLOSE.length
+        i = s.indexOf(OPEN, pos)
+    }
+    return out + s.slice(pos)
+}
+
 /** CDATA 벗기기 + XML 글자 되살리기 (&amp; → &) */
 export function decodeXml(s: string): string {
-    return String(s ?? '')
-        .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    return stripCdata(String(s ?? ''))
         .replace(/&#x([0-9a-f]{1,6});/gi, (_, h) => { try { return String.fromCodePoint(parseInt(h, 16)) } catch { return ' ' } })
         .replace(/&#(\d{1,7});/g, (_, n) => { try { return String.fromCodePoint(Number(n)) } catch { return ' ' } })
         .replace(/&(amp|lt|gt|quot|apos|#39);/g, m => XML_ENTITIES[m] ?? m)
@@ -23,9 +73,17 @@ function escapeRe(s: string): string { return s.replace(/[.*+?^${}()|[\]\\]/g, '
 
 /** <tag ...>안쪽</tag> 의 안쪽 (첫 번째 것). 이름에 콜론(content:encoded) 도 된다 */
 function tagText(block: string, name: string): string {
-    const re = new RegExp(`<${escapeRe(name)}(?:\\s[^>]*)?>([\\s\\S]*?)</${escapeRe(name)}>`, 'i')
-    const m = block.match(re)
-    return m ? decodeXml(m[1]) : ''
+    const b = blocksOf(block, name, 1)
+    return b.length ? decodeXml(b[0]) : ''
+}
+
+/** 여는 태그들 (<link …>, <enclosure …>). 속성 칸은 MAX_TAG_ATTR 까지만 */
+function openTags(src: string, name: string, max = Infinity): string[] {
+    const re = new RegExp(`<${escapeRe(name)}\\b[^<>]{0,${MAX_TAG_ATTR}}>`, 'gi')
+    const out: string[] = []
+    let m: RegExpExecArray | null
+    while (out.length < max && (m = re.exec(src))) out.push(m[0])
+    return out
 }
 
 /** 여는 태그 하나에서 속성 값 하나 */
@@ -68,8 +126,7 @@ export function parseFeed(xml: string): ParsedFeedEntry[] {
     const out: ParsedFeedEntry[] = []
 
     // RSS 2.0 (<item>)
-    for (const m of src.matchAll(/<item(?:\s[^>]*)?>([\s\S]*?)<\/item>/gi)) {
-        const b = m[1]
+    for (const b of blocksOf(src, 'item', MAX_FEED_ENTRIES)) {
         let url = tagText(b, 'link')
         if (!url) {
             // <link> 가 비어 있으면 guid 가 주소인 경우가 있다
@@ -78,7 +135,7 @@ export function parseFeed(xml: string): ParsedFeedEntry[] {
         }
         if (!url) {
             // 팟캐스트는 회차 주소 없이 소리 파일(enclosure)만 있는 경우가 있다. 겹침 확인용 이름표로만 쓴다
-            const enc = b.match(/<enclosure\b[^>]*>/i)?.[0]
+            const enc = openTags(b, 'enclosure', 1)[0]
             if (enc) url = attr(enc, 'url')
         }
         out.push({
@@ -87,18 +144,17 @@ export function parseFeed(xml: string): ParsedFeedEntry[] {
             description: tagText(b, 'description') || tagText(b, 'itunes:summary'),
             content: tagText(b, 'content:encoded'),
             publishedAt: toIso(tagText(b, 'pubDate') || tagText(b, 'dc:date')),
-            hasMedia: /<enclosure\b[^>]*type="(?:audio|video)\//i.test(b),
+            hasMedia: openTags(b, 'enclosure').some(t => /^(audio|video)\//i.test(attr(t, 'type'))),
         })
     }
     if (out.length > 0) return out.filter(e => e.url)
 
     // Atom (<entry>)
-    for (const m of src.matchAll(/<entry(?:\s[^>]*)?>([\s\S]*?)<\/entry>/gi)) {
-        const b = m[1]
+    for (const b of blocksOf(src, 'entry', MAX_FEED_ENTRIES)) {
         let url = ''
-        for (const lm of b.matchAll(/<link\b[^>]*>/gi)) {
-            const rel = attr(lm[0], 'rel')
-            if (!rel || rel === 'alternate') { url = attr(lm[0], 'href'); break }
+        for (const tag of openTags(b, 'link')) {
+            const rel = attr(tag, 'rel')
+            if (!rel || rel === 'alternate') { url = attr(tag, 'href'); break }
         }
         out.push({
             title: htmlToText(tagText(b, 'title')),
@@ -114,8 +170,7 @@ export function parseFeed(xml: string): ParsedFeedEntry[] {
 /** HTML 안의 <link rel="alternate" type="application/rss+xml" href="…"> 에서 피드 주소를 찾는다 */
 export function discoverFeedLinks(html: string, baseUrl: string): string[] {
     const out: string[] = []
-    for (const m of String(html ?? '').matchAll(/<link\b[^>]*>/gi)) {
-        const tag = m[0]
+    for (const tag of openTags(String(html ?? ''), 'link')) {
         if (!/alternate/i.test(attr(tag, 'rel'))) continue
         if (!/application\/(rss|atom)\+xml/i.test(attr(tag, 'type'))) continue
         const href = attr(tag, 'href')
@@ -141,10 +196,10 @@ export function parseSitemap(xml: string): ParsedSitemap {
     const isIndex = /<sitemapindex[\s>]/i.test(src)
     const block = isIndex ? 'sitemap' : 'url'
     const entries: ParsedSitemap['entries'] = []
-    for (const m of src.matchAll(new RegExp(`<${block}(?:\\s[^>]*)?>([\\s\\S]*?)</${block}>`, 'gi'))) {
-        const loc = tagText(m[1], 'loc')
+    for (const b of blocksOf(src, block)) {
+        const loc = tagText(b, 'loc')
         if (!/^https?:\/\//i.test(loc)) continue
-        entries.push({ loc, lastmod: toIso(tagText(m[1], 'lastmod')) })
+        entries.push({ loc, lastmod: toIso(tagText(b, 'lastmod')) })
     }
     const kind = isIndex ? 'index' : /<urlset[\s>]/i.test(src) ? 'urlset' : 'unknown'
     return { kind, entries }

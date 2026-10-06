@@ -52,7 +52,7 @@ function blogText(content: string, description: string): string {
 export const fetchPodcastItems: FetchNewItems = async (feed, since, opts = {}) => {
     const isSubstack = feed.kind === 'substack'
     const start = isSubstack ? substackFeedUrl(feed.handleOrUrl) : withScheme(feed.handleOrUrl)
-    const { entries } = await loadFeedFrom(start)
+    const { entries } = await loadFeedFrom(start, opts.feedMaxBytes)
 
     const all = newestFirst(entries)
     const cands = pickCandidates(newerThan(all, since), opts, since ? RSS_MAX_PER_SYNC : RSS_FIRST_SYNC_MAX)

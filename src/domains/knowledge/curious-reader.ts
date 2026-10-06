@@ -20,6 +20,8 @@
 //   /v2/community  커뮤니티 첫 화면 → /posts/categories, /posts?category_number=0, /posts/popular, 최근 글 몇 개
 //   /v2/community/post/{id}  공개 게시글 → /posts/{id}, /posts/{id}/comments
 
+import { stripHtmlBlocks } from '@/lib/html-strip'
+
 export const CURIOUS_ORIGIN = 'https://curious-500.com'
 export const CURIOUS_API = `${CURIOUS_ORIGIN}/api/v2`
 
@@ -140,13 +142,12 @@ const ENT: Record<string, string> = { '&nbsp;': ' ', '&amp;': '&', '&lt;': '<', 
 
 /** 큐리어스 본문 HTML(에디터 글) → 읽는 글 */
 export function curiousHtmlToText(html: unknown): string {
-    return String(html ?? '')
-        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    // script, style 등은 앞으로만 훑어 지우고, 태그는 다음 < 까지만 본다 (보안 재검토 PR #53: 둘 다 선형)
+    return stripHtmlBlocks(String(html ?? '').slice(0, 300 * 1024))
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<\/(p|div|h[1-6]|li|tr|blockquote)>/gi, '\n')
         .replace(/<li[^>]*>/gi, '- ')
-        .replace(/<[^>]+>/g, '')
+        .replace(/<[^<>]*>/g, '')
         .replace(/&#(\d{1,6});/g, (_, n) => { try { return String.fromCodePoint(Number(n)) } catch { return ' ' } })
         .replace(/&[a-z]+;|&#39;/gi, m => ENT[m.toLowerCase()] ?? ' ')
         .replace(/[ \t\u00a0]{2,}/g, ' ')

@@ -1,0 +1,684 @@
+// 봇 「내 SNS 연결」 (대표 확정 1006). 서버 전용.
+//
+// 봇 주인이 SNS 주소 4칸(인스타그램, 블로그, 유튜브, 큐리어스)을 적으면
+//   ① 봇 소개 화면에 링크로 보인다 = mentors.links (이미 공개 칸. 다른 링크는 그대로 둔다)
+//   ② 「배우기」를 누르면(그리고 하루 1번 자동으로 새 글만) 공개 글을 읽어 그 봇의 자료로 넣는다
+//      = 이미 있는 「계정 연결」(knowledge_feeds + syncFeed)에 sns_slot 칸을 붙여 그 위에서 돈다. 매일 도는 크론도 같은 것(/api/cron/feeds)
+//
+// 칸마다 읽는 길 (공개 글만, 공식 길만. 몰래 긁기 없음)
+//   blog      네이버 블로그 = 공개 RSS https://rss.blog.naver.com/{아이디}.xml, 다른 블로그 = RSS, Atom 주소. 최근 20개
+//   youtube   채널 공개 피드(videos.xml?channel_id=UC…)로 최근 영상 → 영상마다 자막 (대표 지시 1006 「유튜브 자막 넣어야 해」)
+//             자막 읽기와 @핸들 → 채널 번호는 기존 「계정 연결」 유튜브와 같은 코드(0929 대표 결정: readUrl 의 자막 도구, findChannelId)
+//             한국어 자막 우선 → 자동 자막 → 없으면 제목, 설명. 못 읽은 영상도 피드의 제목, 설명으로 넣고 이유를 남긴다
+//   curious   큐리어스 화면이 부르는 공개 창구(/api/v2, GET 만)로 그 화면 하나 (리더 소개, 글, 어울림 소개)
+//             리더 화면이면 그 리더(writer)가 쓴 공개 커뮤니티 글도 최신순 30개까지 (대표 지시 1006). 매일 자동 때는 새 글만
+//   instagram 메타 공식 API(인스타그램 로그인 + 앱 심사)가 있어야 한다. 지금은 주소 저장과 소개 링크까지만 = 「곧 열려요」
+//
+// 지키는 것
+//   - 밖으로 나가는 요청은 전부 fetchPageSafely(사설 주소 차단, 크기와 시간 한도)를 지난다. 주소는 저장 전에 isSafeFetchUrl 로 한 번 더 본다
+//   - 같은 글(주소)은 두 번 넣지 않는다 (syncFeed 가 이미 지킨다)
+//   - 글 하나 최대 SNS_ITEM_MAX_CHARS, 봇 하나 SNS 자료 총량 SNS_LEARN_CAP(요금제별), 한 곳 30개와 자료 칸 10개(기존 규칙)
+//   - 실패는 연결 줄(last_error, status)에 남는다. 던지지 않는다
+
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { isSafeFetchUrl, htmlToText, fetchPageSafely } from '@/domains/agent/fetch-url'
+import { parseCuriousUrl, curiousPageUrl, curiousHtmlToText, unwrap, CURIOUS_API } from '@/domains/knowledge/curious-reader'
+import { 링크정리, type CreatorLink } from '@/domains/creator/links'
+import { readUrl, KNOWLEDGE_READ_OPTIONS } from './readers'
+import { assertBotOwned, BotNotMine } from './knowledge'
+import { linkLabelOf } from './link-rules'
+import { classifySnsLink } from './sns-link'
+import { readPlanId } from './usage-db'
+import { checkRateLimit } from '@/lib/rate-limit'
+import type { PlanId } from './plan'
+import { listFeeds, deleteFeed, validateHandle, MAX_FEEDS_PER_BOT } from './feeds/store'
+import { syncFeed, type SyncResult } from './feeds/sync'
+import { fetchFeed, newerThan, newestFirst, pickCandidates } from './feeds/rss'
+import { fetchPodcastItems } from './feeds/podcast'
+import { resolveChannelInput, channelFeedUrl, findChannelId, listRecentVideos } from './feeds/youtube'
+import type { FeedItem, FeedKind, FetchNewItems, KnowledgeFeed, SnsSlot } from './feeds/types'
+
+export type { SnsSlot }
+
+/** 화면 순서 그대로 */
+export const SNS_SLOTS: readonly SnsSlot[] = ['instagram', 'blog', 'youtube', 'curious']
+/** 배우기가 되는 칸 (인스타그램은 메타 심사 전까지 「곧 열려요」) */
+export const SNS_LEARNABLE: readonly SnsSlot[] = ['blog', 'youtube', 'curious']
+export const SNS_SLOT_LABEL: Record<SnsSlot, string> = { instagram: '인스타그램', blog: '블로그', youtube: '유튜브', curious: '큐리어스' }
+/** mentors.links 의 kind (creator/links.ts LINK_KINDS 와 같은 글자) */
+const LINK_KIND: Record<SnsSlot, string> = { instagram: 'instagram', blog: 'blog', youtube: 'youtube', curious: 'curious' }
+
+/** 봇 하나가 SNS 에서 배운 자료 총량 (요금제별). 한 곳 30개, 자료 칸 10개 규칙은 따로 그대로 */
+export const SNS_LEARN_CAP: Record<PlanId, number> = { free: 20, basic: 60, pro: 90 }
+/** SNS 피드(RSS, Atom) 문서 최대 크기 (보안 검토 PR #53) */
+export const SNS_FEED_MAX_BYTES = 1024 * 1024
+/** 「배우기」 횟수: 봇마다 분당, 하루, 회원마다 하루 (learn 창구와 기존 「지금 가져오기」가 같은 열쇠) */
+export const SNS_LEARN_PER_MIN = 2
+export const SNS_LEARN_PER_DAY = 10
+export const SNS_LEARN_PER_USER_DAY = 30
+/** 블로그 한 번에 읽는 최근 글 수 */
+export const SNS_BLOG_MAX_POSTS = 20
+/** 유튜브 한 번에 보는 최근 영상 수 (공개 피드는 최근 15개까지만 준다) */
+export const SNS_YOUTUBE_MAX_VIDEOS = 20
+/** 큐리어스 리더가 쓴 커뮤니티 글 최대 수 (최신순) */
+export const SNS_CURIOUS_MAX_POSTS = 30
+/** 커뮤니티 글 목록 한 쪽 크기. 공개 목록에 글쓴이 거르기가 없어 최신 글부터 훑는다 */
+const CURIOUS_LIST_PAGE_SIZE = 200
+/** 처음(기준 번호 없음) 훑는 최신 글 수 = 200 × 3쪽 (본체 부담 줄이기, 1006) */
+export const SNS_CURIOUS_FIRST_SCAN = 600
+/** 본체 요청 사이 간격, 한 번 배우기당 최대 요청, 하루 전체(모든 봇 합) 최대 요청 */
+export const SNS_CURIOUS_GAP_MS = 200
+export const SNS_CURIOUS_MAX_CALLS = 40
+export const SNS_CURIOUS_DAILY_CALLS = 2_000
+/** 리더 화면 하나를 읽을 때 본체에 가는 요청 수 (리더, 경력, 후기, 리더 페이지) */
+export const CURIOUS_LEADER_PAGE_CALLS = 4
+/** 한꺼번에 읽는 영상, 글 수 */
+const READ_CONCURRENCY = 3
+/** 글 하나(영상 하나 자막 포함) 최대 글자 */
+export const SNS_ITEM_MAX_CHARS = 20_000
+export const INSTAGRAM_COMING_SOON = '인스타그램 배우기는 곧 열려요. 지금은 소개 화면에 링크로 보여요'
+
+/** 주소가 틀렸을 때. field = 어느 칸인지 (화면이 그 칸에 빨간 글씨를 단다) */
+export class SnsInputError extends Error {
+    constructor(public readonly field: SnsSlot, message: string) { super(message) }
+}
+
+/** sns_slot 칸이 아직 없다(마이그레이션 20261022 전). API 는 「준비 중」으로 바꾼다 */
+export class SnsNotReady extends Error {
+    constructor() { super('SNS 연결은 준비 중이에요. 잠시 후 다시 해 주세요') }
+}
+
+export function isSnsSlot(v: unknown): v is SnsSlot {
+    return typeof v === 'string' && (SNS_SLOTS as readonly string[]).includes(v)
+}
+
+/* ─────────────────────────── 1. 주소 검증 ─────────────────────────── */
+
+export interface SnsNormalized {
+    /** 소개 화면에 걸 주소 */
+    publicUrl: string
+    /** 배우기에 쓰는 연결 (인스타그램은 null) */
+    fetch: { kind: FeedKind; handleOrUrl: string } | null
+}
+
+export interface NormalizeOptions {
+    /** 유튜브 @핸들 → 채널 번호(UC…). 기본 = 기존 계정 연결과 같은 findChannelId (채널 페이지 → 열쇠 있으면 공식 API) */
+    resolveYoutubeHandle?: (pageUrl: string) => Promise<string | null>
+}
+
+async function defaultYoutubeHandle(pageUrl: string): Promise<string | null> {
+    try { return await findChannelId(pageUrl) } catch { return null }
+}
+
+function toUrl(slot: SnsSlot, t: string): URL {
+    if (t.length > 300) throw new SnsInputError(slot, '주소가 너무 길어요')
+    if (/^[a-z][a-z0-9+.-]*:/i.test(t) && !/^https?:\/\//i.test(t)) throw new SnsInputError(slot, 'http, https 주소만 넣을 수 있어요')
+    try { return new URL(/^https?:\/\//i.test(t) ? t : `https://${t}`) } catch { throw new SnsInputError(slot, '주소 모양이 이상해요') }
+}
+
+/**
+ * 적은 것 → 소개 링크 주소 + 배우기 연결. 비면 null(지우기). 틀리면 SnsInputError.
+ * 밖에 나가는 건 유튜브 @핸들을 채널 번호로 풀 때 하나뿐이다.
+ */
+export async function normalizeSnsInput(slot: SnsSlot, raw: unknown, opts: NormalizeOptions = {}): Promise<SnsNormalized | null> {
+    const t = String(raw ?? '').trim()
+    if (!t) return null
+
+    if (slot === 'instagram') {
+        const handle = /^@?[A-Za-z0-9._]{1,30}$/.test(t) && !t.includes('/') ? t.replace(/^@/, '') : (() => {
+            const u = toUrl(slot, t)
+            const host = u.hostname.replace(/^(www|m)\./, '').toLowerCase()
+            if (host !== 'instagram.com') throw new SnsInputError(slot, '인스타그램 주소를 넣어 주세요. 예: instagram.com/아이디')
+            const parts = u.pathname.split('/').filter(Boolean)
+            if (parts.length !== 1 || ['p', 'reel', 'reels', 'stories', 'explore', 'tv'].includes(parts[0].toLowerCase())) {
+                throw new SnsInputError(slot, '글 하나 주소 말고 계정 주소를 넣어 주세요. 예: instagram.com/아이디')
+            }
+            return parts[0]
+        })()
+        if (!/^[A-Za-z0-9._]{1,30}$/.test(handle)) throw new SnsInputError(slot, '인스타그램 아이디를 확인해 주세요')
+        return { publicUrl: `https://www.instagram.com/${handle}/`, fetch: null }
+    }
+
+    if (slot === 'youtube') {
+        const r = resolveChannelInput(t)
+        if (!r) throw new SnsInputError(slot, '유튜브 채널 주소를 넣어 주세요. 예: youtube.com/@채널 (영상 하나 주소는 안 돼요)')
+        if ('channelId' in r) {
+            const url = `https://www.youtube.com/channel/${r.channelId}`
+            return { publicUrl: url, fetch: { kind: 'youtube', handleOrUrl: url } }
+        }
+        const id = await (opts.resolveYoutubeHandle ?? defaultYoutubeHandle)(r.pageUrl)
+        if (!id || !/^UC[A-Za-z0-9_-]{22}$/.test(id)) {
+            throw new SnsInputError(slot, '이 채널을 지금 못 알아봐요. 채널 주소(youtube.com/channel/UC…)로 넣어 주세요')
+        }
+        return { publicUrl: r.pageUrl, fetch: { kind: 'youtube', handleOrUrl: `https://www.youtube.com/channel/${id}` } }
+    }
+
+    if (slot === 'curious') {
+        const u = toUrl(slot, t)
+        const target = parseCuriousUrl(u.toString())
+        if (!target || target.kind === 'community') throw new SnsInputError(slot, '큐리어스 리더 화면이나 글 주소를 넣어 주세요. 예: curious-500.com/v2/creator/번호')
+        const url = curiousPageUrl(target)
+        if (!isSafeFetchUrl(url)) throw new SnsInputError(slot, '열 수 없는 주소예요')
+        return { publicUrl: url, fetch: { kind: 'website', handleOrUrl: url } }
+    }
+
+    // blog: 네이버 블로그, 티스토리, 브런치/미디엄 RSS, Substack, 그리고 RSS, Atom 주소. 이미 있는 링크 가르기(classifySnsLink)를 그대로 쓴다
+    toUrl(slot, t)
+    let target: ReturnType<typeof classifySnsLink>
+    try { target = classifySnsLink(t) } catch (e) { throw new SnsInputError(slot, e instanceof Error ? e.message : '주소를 확인해 주세요') }
+    const feed = target.feed
+    if (!feed || (feed.kind !== 'podcast' && feed.kind !== 'substack')) {
+        throw new SnsInputError(slot, '블로그 RSS 주소를 넣어 주세요. 네이버 블로그는 blog.naver.com/아이디 만 넣으면 돼요')
+    }
+    const fetchUrl = feed.kind === 'podcast' ? feed.handleOrUrl : target.url
+    if (!isSafeFetchUrl(/^https?:\/\//i.test(fetchUrl) ? fetchUrl : `https://${fetchUrl}`)) throw new SnsInputError(slot, '열 수 없는 주소예요. 공개된 주소만 넣어 주세요')
+    return { publicUrl: target.url, fetch: { kind: feed.kind, handleOrUrl: fetchUrl } }
+}
+
+/* ─────────────────────────── 2. 주인 확인 ─────────────────────────── */
+
+/** 팀 칸 번호(team_bots.id) → 봇 번호(mentor_id). 내 팀 칸이고 내가 만든 봇일 때만. 아니면 BotNotMine */
+export async function resolveOwnedBot(db: SupabaseClient, userId: string, teamBotId: string): Promise<string> {
+    if (!userId || !teamBotId) throw new BotNotMine()
+    const { data, error } = await db.from('team_bots').select('mentor_id').eq('id', teamBotId).eq('user_id', userId).maybeSingle()
+    if (error) throw new Error(error.message)
+    const mentorId = (data as { mentor_id?: string } | null)?.mentor_id
+    if (!mentorId) throw new BotNotMine()
+    await assertBotOwned(db, userId, mentorId)
+    return mentorId
+}
+
+/* ─────────────────────────── 3. 가져오기 (칸마다) ─────────────────────────── */
+
+const clip = (items: FeedItem[]): FeedItem[] => items.map(i => ({ ...i, text: (i.text ?? '').slice(0, SNS_ITEM_MAX_CHARS) }))
+
+/** 블로그: 기존 RSS 가져오기. 첫 배우기에도 최근 20개까지 (기존은 첫 연결 10개) */
+const fetchSnsBlog: FetchNewItems = async (feed, since, opts = {}) => {
+    const r = await fetchPodcastItems(feed, since ?? new Date(0), { ...opts, maxItems: Math.min(opts.maxItems ?? Infinity, SNS_BLOG_MAX_POSTS), feedMaxBytes: SNS_FEED_MAX_BYTES })
+    return { ...r, items: clip(r.items) }
+}
+
+/** 남은 시간 안에서 셋씩 차례로 돈다. 시간이 모자라면 남은 건 건너뛴다(cut) */
+async function eachWithDeadline<T>(list: T[], deadline: number | undefined, fn: (x: T, i: number, leftMs: number) => Promise<void>): Promise<boolean> {
+    let next = 0, cut = false
+    const worker = async () => {
+        while (next < list.length) {
+            const i = next++
+            const left = deadline ? deadline - Date.now() : KNOWLEDGE_READ_OPTIONS.timeoutMs + 1_000
+            if (left < 3_000) { cut = true; return }
+            await fn(list[i], i, left)
+        }
+    }
+    await Promise.all(Array.from({ length: Math.min(READ_CONCURRENCY, list.length) }, worker))
+    return cut
+}
+
+/** 채널 「동영상」 화면 HTML → 영상 번호 (나온 순서 = 최신순, 겹침 제거) */
+export function videoIdsFromChannelPage(html: string, max = SNS_YOUTUBE_MAX_VIDEOS): string[] {
+    const out: string[] = []
+    const re = /"videoId":"([A-Za-z0-9_-]{11})"/g
+    let m: RegExpExecArray | null
+    while ((m = re.exec(html)) && out.length < max) if (!out.includes(m[1])) out.push(m[1])
+    return out
+}
+
+/**
+ * 채널의 최근 영상 (제목, 설명 포함).
+ *   1. 공개 피드 두 번 (설명까지 온다)
+ *   2. 기존 목록 함수 (공식 API, 열쇠 있을 때)
+ *   3. 채널 「동영상」 화면 읽기 (0929 대표 결정 「채널 페이지 읽기를 다시 기본으로」와 같은 길. 1006 실측: 공개 피드가 정상 채널에도 404)
+ */
+async function recentVideosWithDescription(channelId: string): Promise<FeedItem[]> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+        const f = await fetchFeed(channelFeedUrl(channelId), SNS_FEED_MAX_BYTES)
+        if (f && 'entries' in f) {
+            return f.entries.map(e => {
+                const desc = htmlToText(e.description || e.content || '')
+                return { title: (e.title || '제목 없는 영상').slice(0, 120), url: e.url, publishedAt: e.publishedAt, text: desc ? `${e.title}\n\n${desc}` : e.title }
+            })
+        }
+    }
+    let why = ''
+    try {
+        return (await listRecentVideos(channelId)).map(v => ({ ...v, text: v.title }))
+    } catch (e) { why = e instanceof Error ? e.message : '' }
+    const page = await fetchPageSafely(`https://www.youtube.com/channel/${channelId}/videos`, { maxBytes: 3 * 1024 * 1024, timeoutMs: 10_000 })
+    const ids = page.ok ? videoIdsFromChannelPage(page.body) : []
+    if (ids.length === 0) throw new Error(why || '유튜브 새 영상 목록을 지금 못 열었어요. 내일 다시 해 볼게요')
+    // 제목은 영상을 읽을 때 채운다(읽기 함수가 공식 oEmbed 로 받는다)
+    return ids.map(id => ({ title: '', url: `https://www.youtube.com/watch?v=${id}`, text: '' }))
+}
+
+/**
+ * 유튜브: 최근 영상마다 자막. 자막 읽기는 기존 계정 연결과 같은 readUrl(자막 도구, 한국어 → 자동 자막 → 제목/설명).
+ * 읽기가 실패하면 피드의 제목, 설명으로 대신 넣는다(버리지 않는다). 몇 개가 자막 없이 들어갔는지 note 에 남긴다.
+ */
+const fetchSnsYoutube: FetchNewItems = async (feed, since, opts = {}) => {
+    const r = resolveChannelInput(feed.handleOrUrl)
+    const channelId = r && 'channelId' in r ? r.channelId : await findChannelId(feed.handleOrUrl)
+    const all = newestFirst(await recentVideosWithDescription(channelId))
+    const cands = pickCandidates(newerThan(all, since), opts, SNS_YOUTUBE_MAX_VIDEOS)
+    if (cands.length === 0) return { items: [] }
+
+    const done: (FeedItem | null)[] = cands.map(() => null)
+    let noCaption = 0, unreadable = 0
+    const reasons: string[] = []
+    const cut = await eachWithDeadline(cands, opts.deadline, async (c, i, left) => {
+        const got = await readUrl(c.url, { ...KNOWLEDGE_READ_OPTIONS, timeoutMs: Math.min(KNOWLEDGE_READ_OPTIONS.timeoutMs, left - 1_000), maxChars: SNS_ITEM_MAX_CHARS })
+        if (got.ok) {
+            if ((got as { method?: string }).method !== 'captions') noCaption++
+            const title = (c.title || got.title.split(' | ')[0] || '유튜브 영상').slice(0, 120)
+            done[i] = { title, url: c.url, publishedAt: c.publishedAt, text: got.text }
+        } else {
+            unreadable++
+            reasons.push(got.reason)
+            if (c.text) done[i] = c        // 피드의 제목, 설명으로 대신 (채널 화면에서 온 영상은 글이 없어 뺀다)
+        }
+    })
+    const items = done.filter((x): x is FeedItem => !!x)
+    const note = [
+        noCaption ? `${noCaption}개 영상은 자막이 없어 제목, 설명만 넣었어요` : '',
+        unreadable ? `${unreadable}개 영상은 못 읽어 제목, 설명만 넣었어요(${reasons[0]})` : '',
+        cut ? '시간이 모자라 나머지 영상은 다음에 배워요' : '',
+    ].filter(Boolean).join('. ') || undefined
+    return { items: clip(items), note }
+}
+
+/**
+ * 큐리어스 본체 공개 창구 요청 예산 (본체 부담 줄이기, 1006)
+ *   - 요청 사이 SNS_CURIOUS_GAP_MS 간격
+ *   - 한 번 배우기당 최대 SNS_CURIOUS_MAX_CALLS 번 (리더 화면 읽기 CURIOUS_LEADER_PAGE_CALLS 번 포함)
+ *   - 하루 전체(모든 봇 합) SNS_CURIOUS_DAILY_CALLS 번 = rate_limits 열쇠 curious-api:day (allowCall). 넘으면 다음 날로
+ */
+class CuriousBudget {
+    calls = 0
+    stopped: 'run' | 'day' | null = null
+    constructor(private readonly d: Required<CuriousFetcherDeps>) {}
+    async take(n = 1): Promise<boolean> {
+        if (this.stopped) return false
+        if (this.calls + n > this.d.maxCalls) { this.stopped = 'run'; return false }
+        for (let i = 0; i < n; i++) if (!(await this.d.allowCall())) { this.stopped = 'day'; return false }
+        if (this.calls > 0) await this.d.sleep(SNS_CURIOUS_GAP_MS)
+        this.calls += n
+        return true
+    }
+    note(): string | undefined {
+        if (this.stopped === 'run') return `큐리어스 요청을 한 번에 ${this.d.maxCalls}번까지만 해서 나머지는 다음에 배워요`
+        if (this.stopped === 'day') return '오늘 큐리어스 요청 한도에 닿아 나머지는 내일 배워요'
+        return undefined
+    }
+}
+
+/** 큐리어스 공개 창구 GET 하나 (fetchPageSafely, 주소는 /api/v2 로 고정). 예산이 없거나 못 읽으면 null */
+async function curiousJson(budget: CuriousBudget, path: string, leftMs: number): Promise<Record<string, unknown> | null> {
+    if (!(await budget.take())) return null
+    const r = await fetchPageSafely(`${CURIOUS_API}${path}`, { timeoutMs: Math.max(1_000, Math.min(8_000, leftMs)), maxBytes: 2 * 1024 * 1024, headers: { Accept: 'application/json' }, normalize: false })
+    if (!r.ok) return null
+    try {
+        const v = unwrap(JSON.parse(r.body))
+        return v && typeof v === 'object' ? v as Record<string, unknown> : null
+    } catch { return null }
+}
+
+/** 공개를 가리는 칸 이름 (회원 전용, 멤버십, 비밀, 유료, 접근 범위). 지금 응답엔 없지만 생기면 공개일 때만 통과 */
+const CURIOUS_GATE_KEY = /member|membership|lounge|private|secret|premium|paid|access|visib|^ispublic$|onlyfor/i
+
+/**
+ * 큐리어스 글 상세가 확실히 공개인가 (보안 재검토 PR #53). 모르면 뺀다.
+ *   - status === 'published' 여야 한다 (1006 실제 응답 GET /api/v2/posts/2788 칸: id, title, content, status, createdAt, updatedAt, writerInfo, likeCount, commentCount, viewCount, isLiked, isOwner, postCategoryNumber)
+ *   - 회원 전용, 멤버십 같은 칸이 있으면 그 값도 공개여야 한다 (isPublic=true, visibility=public, 나머지 참/거짓 칸=false, 번호 칸=비어 있음)
+ */
+export function isCuriousPostPublic(d: Record<string, unknown>): boolean {
+    if (d.status !== 'published') return false
+    for (const [k, v] of Object.entries(d)) {
+        if (!CURIOUS_GATE_KEY.test(k)) continue
+        if (/^ispublic$/i.test(k)) { if (v !== true) return false; continue }
+        if (typeof v === 'string') { if (!/^(public|all|everyone|open|none)$/i.test(v)) return false; continue }
+        if (v === null || v === undefined || v === false || v === 0) continue
+        return false
+    }
+    return true
+}
+
+/** 목록 시각은 꼬리 없는 서울 시각이다(예: 2026-10-06T10:26:07) */
+function curiousTime(v: unknown): number {
+    const t = String(v ?? '')
+    if (!t) return NaN
+    return Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(t) ? t : `${t}+09:00`)
+}
+
+/**
+ * 그 리더(writer)가 쓴 공개 커뮤니티 글 = 공개 목록(/posts, 최신순)을 훑어 글쓴이 번호로 거른다.
+ * 공개 창구에 글쓴이 거르기가 없어서다. 회원 전용, 비공개 글은 공개 목록이 주지 않는다. 상세가 published 가 아니면 또 뺀다.
+ * 멈추는 곳: 지난번 기준 번호(cursor) 이하 글 → 없으면 since 보다 오래된 글 → 처음엔 최신 SNS_CURIOUS_FIRST_SCAN 편.
+ * cursor 는 끝까지 다 봤을 때만 돌려준다(예산, 시간, 한도로 멈췄으면 다음에 같은 자리부터 다시).
+ */
+async function writerPosts(budget: CuriousBudget, writerId: number, since: Date | null, opts: { isKnown?: (url: string) => boolean; max: number; capped: boolean; cursor?: string | null; deadline?: number }): Promise<{ items: FeedItem[]; hidden: number; error?: string; cursor?: string }> {
+    const left = () => (opts.deadline ? opts.deadline - Date.now() : 10_000)
+    const cursorId = opts.cursor && /^\d+$/.test(opts.cursor) ? Number(opts.cursor) : null
+    const found: { id: number; title: string; at: string }[] = []
+    let newest: number | null = null, scanned = 0, done = false, cut = false
+    for (let pg = 1; !done && found.length < opts.max; pg++) {
+        if (scanned >= SNS_CURIOUS_FIRST_SCAN) { done = true; break }
+        if (left() < 3_000) { cut = true; break }
+        const size = Math.min(CURIOUS_LIST_PAGE_SIZE, SNS_CURIOUS_FIRST_SCAN - scanned)
+        const j = await curiousJson(budget, `/posts?category_number=0&sort=created_at&page=${pg}&size=${size}`, left())
+        if (!j) {
+            if (budget.stopped) { cut = true; break }
+            if (pg === 1) return { items: [], hidden: 0, error: '큐리어스 커뮤니티 글 목록을 지금 못 열었어요' }
+            cut = true; break
+        }
+        const list = Array.isArray(j.postList) ? j.postList as Record<string, unknown>[] : []
+        for (const p of list) {
+            scanned++
+            const id = Number(p.id)
+            if (!Number.isInteger(id) || id <= 0) continue
+            if (newest === null) newest = id
+            if (cursorId !== null && id <= cursorId) { done = true; break }
+            const at = curiousTime(p.createdAt)
+            if (since && Number.isFinite(at) && at <= since.getTime()) { done = true; break }
+            const w = (p.writerInfo ?? {}) as Record<string, unknown>
+            if (Number(w.writerId) !== writerId) continue
+            if (opts.isKnown?.(curiousPageUrl({ kind: 'post', id }))) continue
+            found.push({ id, title: String(p.title ?? '').slice(0, 120), at: String(p.createdAt ?? '') })
+            if (found.length >= opts.max) break
+        }
+        if (list.length < size) done = true
+    }
+    // 요금제 상한 때문에 덜 가져왔으면 기준을 옮기지 않는다(남은 새 글을 다음에 건너뛰지 않게)
+    if (found.length >= opts.max && opts.capped) cut = true
+
+    const items: FeedItem[] = []
+    let hidden = 0
+    for (const f of found) {            // 요청 사이 간격을 지키려고 하나씩
+        if (left() < 3_000) { cut = true; break }
+        const d = await curiousJson(budget, `/posts/${f.id}`, left())
+        if (!d) { cut = true; if (budget.stopped) break; continue }
+        if (!isCuriousPostPublic(d)) { hidden++; continue }
+        const body = curiousHtmlToText(d.content)
+        const title = String(d.title ?? f.title ?? '').slice(0, 120) || '제목 없는 글'
+        const at = curiousTime(d.createdAt ?? f.at)
+        items.push({ title, url: curiousPageUrl({ kind: 'post', id: f.id }), text: `${title}\n\n${body}`, ...(Number.isFinite(at) ? { publishedAt: new Date(at).toISOString() } : {}) })
+    }
+    const nextCursor = !cut && newest !== null ? String(Math.max(newest, cursorId ?? 0)) : undefined
+    return { items, hidden, ...(nextCursor ? { cursor: nextCursor } : {}) }
+}
+
+export interface CuriousFetcherDeps {
+    /** 하루 전체 요청 열쇠 (기본: 늘 통과. 서버는 curiousDailyAllow(db)) */
+    allowCall?: () => Promise<boolean>
+    /** 요청 사이 쉬기 (시험에서 바꿔 끼운다) */
+    sleep?: (ms: number) => Promise<void>
+    /** 한 번 배우기당 최대 요청 수 */
+    maxCalls?: number
+}
+
+/** 하루 전체(모든 봇 합) 큐리어스 요청 열쇠. 셀 수 없으면 막는다 */
+export function curiousDailyAllow(db: SupabaseClient, check: typeof checkRateLimit = checkRateLimit): () => Promise<boolean> {
+    return async () => (await check(db, 'curious-api:day', SNS_CURIOUS_DAILY_CALLS, 86_400, { failClosed: true })).allowed
+}
+
+/** 큐리어스: 그 화면 하나(리더 소개 등) + 리더 화면이면 그 사람이 쓴 공개 커뮤니티 글 */
+export function curiousFetcher(deps: CuriousFetcherDeps = {}): FetchNewItems {
+    return async (feed, since, opts = {}) => {
+        const budget = new CuriousBudget({
+            allowCall: deps.allowCall ?? (async () => true),
+            sleep: deps.sleep ?? (ms => new Promise(r => setTimeout(r, ms))),
+            maxCalls: deps.maxCalls ?? SNS_CURIOUS_MAX_CALLS,
+        })
+        const items: FeedItem[] = []
+        const notes: string[] = []
+        let pageError: string | null = null
+        let pageCut = false
+        if (!opts.isKnown?.(feed.handleOrUrl)) {
+            if (await budget.take(CURIOUS_LEADER_PAGE_CALLS)) {
+                const r = await readUrl(feed.handleOrUrl, { ...KNOWLEDGE_READ_OPTIONS, maxChars: SNS_ITEM_MAX_CHARS })
+                if (r.ok) items.push({ title: (r.title || '큐리어스').slice(0, 120), url: feed.handleOrUrl, text: r.text })
+                else pageError = r.reason
+            } else pageCut = true
+        }
+        let cursor: string | undefined
+        const target = parseCuriousUrl(feed.handleOrUrl)
+        if (target?.kind === 'leader' && typeof target.id === 'number') {
+            const room = (opts.maxItems ?? Infinity) - items.length
+            const max = Math.max(0, Math.min(SNS_CURIOUS_MAX_POSTS, room))
+            if (max > 0) {
+                const p = await writerPosts(budget, target.id, since, { isKnown: opts.isKnown, max, capped: room < SNS_CURIOUS_MAX_POSTS, cursor: opts.cursor, deadline: opts.deadline })
+                items.push(...p.items)
+                if (p.hidden) notes.push(`${p.hidden}개 글은 공개 글이 아니라 뺐어요`)
+                if (p.error) notes.push(p.error)
+                if (!pageCut && !pageError) cursor = p.cursor
+            }
+        }
+        const b = budget.note()
+        if (b) notes.push(b)
+        if (pageError) {
+            if (items.length === 0) throw new Error(pageError)
+            notes.unshift(`리더 화면은 못 읽었어요(${pageError})`)
+        }
+        if (pageCut && items.length === 0 && b) throw new Error(b)
+        return { items: clip(items), note: notes.join('. ') || undefined, ...(cursor ? { cursor } : {}) }
+    }
+}
+
+export const SNS_FETCHERS: Record<Exclude<SnsSlot, 'instagram'>, FetchNewItems> = {
+    blog: fetchSnsBlog,
+    youtube: fetchSnsYoutube,
+    curious: curiousFetcher(),
+}
+
+/* ─────────────────────────── 4. 배우기 한 번 ─────────────────────────── */
+
+async function updateFeedRow(db: SupabaseClient, feedId: string, patch: Record<string, unknown>): Promise<void> {
+    const { error } = await db.from('knowledge_feeds').update(patch).eq('id', feedId)
+    if (error) console.error('[os/bot-sns] 연결 줄 고치기 실패', { feedId, message: error.message })
+}
+
+/** 이 봇의 SNS 연결 줄들 */
+async function listSnsFeeds(db: SupabaseClient, mentorId: string): Promise<KnowledgeFeed[]> {
+    return (await listFeeds(db, mentorId)).filter(f => !!f.snsSlot)
+}
+
+/** 연결 하나로 만든 자료 수 */
+async function countFeedItems(db: SupabaseClient, mentorId: string, feedId: string): Promise<number> {
+    const { count, error } = await db.from('knowledge_sources').select('id', { count: 'exact', head: true }).eq('mentor_id', mentorId).eq('feed_id', feedId)
+    if (error) throw new Error(error.message)
+    return count ?? 0
+}
+
+/** 이 봇이 SNS 연결로 배운 자료 수 (연결 줄별) */
+async function countSnsItems(db: SupabaseClient, mentorId: string, feeds: KnowledgeFeed[]): Promise<Map<string, number>> {
+    const out = new Map<string, number>()
+    for (const f of feeds) out.set(f.id, await countFeedItems(db, mentorId, f.id))
+    return out
+}
+
+export function snsCapNote(cap: number): string {
+    return `SNS 자료 한도(${cap}개)에 닿았어요. 요금제를 올리거나 안 쓰는 자료를 빼면 더 배워요`
+}
+
+/**
+ * SNS 연결 하나를 한 번 돌린다 (주인 「배우기」, 매일 크론 둘 다). 던지지 않는다.
+ * 요금제 상한을 먼저 보고, 남은 만큼만 syncFeed 에 넘긴다. 가져오기는 칸별 SNS 가져오기로 바꿔 끼운다.
+ */
+export async function syncSnsFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: { deadline?: number } = {}): Promise<SyncResult> {
+    const slot = feed.snsSlot
+    const base = { feedId: feed.id, added: 0, skipped: 0, failed: 0 }
+    if (!slot || slot === 'instagram') return { ...base, ok: true, status: feed.status, lastError: INSTAGRAM_COMING_SOON, note: INSTAGRAM_COMING_SOON }
+    try {
+        const plan = await readPlanId(db, feed.userId)
+        const cap = SNS_LEARN_CAP[plan]
+        const counts = await countSnsItems(db, feed.mentorId, await listSnsFeeds(db, feed.mentorId))
+        const used = [...counts.values()].reduce((a, b) => a + b, 0)
+        const remaining = cap - used
+        if (remaining <= 0) {
+            const why = snsCapNote(cap)
+            await updateFeedRow(db, feed.id, { status: 'connected', last_error: why, last_synced_at: new Date().toISOString() })
+            return { ...base, ok: true, status: 'connected', lastError: why, note: why }
+        }
+        const label = slot === 'blog' ? linkLabelOf(feed.handleOrUrl) : SNS_SLOT_LABEL[slot]
+        return await syncFeed(db, feed, {
+            deadline: opts.deadline,
+            fetchers: { [feed.kind]: slot === 'curious' ? curiousFetcher({ allowCall: curiousDailyAllow(db) }) : SNS_FETCHERS[slot] },
+            maxNew: remaining,
+            source: { titlePrefix: `[${label}]`, sourceKind: `sns_${slot}` },
+        })
+    } catch (e) {
+        const why = e instanceof Error && e.message ? e.message : '배우지 못했어요'
+        console.error('[os/bot-sns] syncSnsFeed', { feedId: feed.id, why })
+        await updateFeedRow(db, feed.id, { status: 'error', last_error: why, last_synced_at: new Date().toISOString() })
+        return { ...base, ok: false, status: 'error', lastError: why, note: why }
+    }
+}
+
+/* ─────────────────────────── 5. 읽기, 저장, 배우기 ─────────────────────────── */
+
+export type SnsAccountStatus = 'empty' | 'coming_soon' | 'needs_save' | 'ready' | 'learned' | 'error'
+
+export interface SnsAccountView {
+    slot: SnsSlot
+    label: string
+    /** 소개 화면에 보이는 주소 (없으면 null) */
+    url: string | null
+    /** 지금 「배우기」를 누를 수 있나 */
+    canLearn: boolean
+    status: SnsAccountStatus
+    lastLearnedAt: string | null
+    learnedCount: number
+    /** 사람에게 보여 줄 한 줄 (실패 이유, 안내) */
+    lastError: string | null
+}
+
+export interface BotSnsView {
+    accounts: SnsAccountView[]
+    total: { learnedCount: number; cap: number; plan: PlanId }
+}
+
+async function readLinks(db: SupabaseClient, mentorId: string): Promise<CreatorLink[]> {
+    const { data, error } = await db.from('mentors').select('links').eq('id', mentorId).maybeSingle()
+    if (error) throw new Error(error.message)
+    return 링크정리((data as { links?: unknown } | null)?.links)
+}
+
+/** 칸 4개의 주소, 상태, 배운 수 + 요금제 상한 */
+export async function readBotSns(db: SupabaseClient, mentorId: string, plan: PlanId): Promise<BotSnsView> {
+    const [links, feeds] = await Promise.all([readLinks(db, mentorId), listSnsFeeds(db, mentorId)])
+    const counts = await countSnsItems(db, mentorId, feeds)
+    const accounts = SNS_SLOTS.map((slot): SnsAccountView => {
+        const url = links.find(l => l.kind === LINK_KIND[slot])?.url ?? null
+        const feed = feeds.find(f => f.snsSlot === slot)
+        const view = { slot, label: SNS_SLOT_LABEL[slot], url, canLearn: false, lastLearnedAt: null, learnedCount: 0, lastError: null }
+        if (slot === 'instagram') return url ? { ...view, status: 'coming_soon', lastError: INSTAGRAM_COMING_SOON } : { ...view, status: 'empty' }
+        if (!feed) return url ? { ...view, status: 'needs_save', lastError: '주소를 한 번 더 저장하면 배울 수 있어요' } : { ...view, status: 'empty' }
+        const status: SnsAccountStatus = feed.status === 'error' ? 'error' : feed.lastSyncedAt ? 'learned' : 'ready'
+        return { ...view, url: url ?? feed.handleOrUrl, canLearn: true, status, lastLearnedAt: feed.lastSyncedAt ?? null, learnedCount: counts.get(feed.id) ?? 0, lastError: feed.lastError ?? null }
+    })
+    return {
+        accounts,
+        total: { learnedCount: [...counts.values()].reduce((a, b) => a + b, 0), cap: SNS_LEARN_CAP[plan], plan },
+    }
+}
+
+export type SnsInput = Partial<Record<SnsSlot, string | null>>
+
+/**
+ * 주소 저장. input 에 있는 칸만 바꾼다(null, 빈 글자 = 지우기).
+ * 전부 먼저 검증하고(하나라도 틀리면 아무것도 안 바꾼다) → 연결 줄 → 공개 링크 순서.
+ * 지운 칸의 연결 줄은 빼지만 이미 배운 자료는 남는다(deleteFeed 기본).
+ */
+export async function saveBotSns(db: SupabaseClient, a: { userId: string; mentorId: string; input: SnsInput }, opts: NormalizeOptions = {}): Promise<void> {
+    const changes: [SnsSlot, SnsNormalized | null][] = []
+    for (const slot of SNS_SLOTS) {
+        if (!(slot in a.input)) continue
+        changes.push([slot, await normalizeSnsInput(slot, a.input[slot], opts)])
+    }
+    if (changes.length === 0) return
+
+    // 공개 링크: 그 종류의 첫 링크만 바꾼다(리더가 따로 넣은 두 번째 블로그 등은 그대로)
+    const links = await readLinks(db, a.mentorId)
+    for (const [slot, n] of changes) {
+        const i = links.findIndex(l => l.kind === LINK_KIND[slot])
+        if (i >= 0) links.splice(i, 1)
+        if (n) links.push({ kind: LINK_KIND[slot], url: n.publicUrl })
+    }
+    const cleaned = 링크정리(links)
+    if (cleaned.length < links.length) throw new SnsInputError(changes[changes.length - 1][0], '링크는 8개까지 넣을 수 있어요. 소개 화면 링크를 하나 빼 주세요')
+
+    const all = await listFeeds(db, a.mentorId)
+    let feedCount = all.length
+    for (const [slot, n] of changes) {
+        const mine = all.find(f => f.snsSlot === slot)
+        const want = n?.fetch ?? null
+        if (!want) {
+            if (mine) { await deleteFeed(db, a.mentorId, mine.id, false); feedCount-- }
+            continue
+        }
+        const same = (f: KnowledgeFeed) => f.kind === want.kind && f.handleOrUrl.trim().toLowerCase() === want.handleOrUrl.toLowerCase()
+        if (mine && same(mine)) continue
+        // 「계정 연결」로 이미 붙여 둔 같은 곳이면 그 줄을 SNS 칸으로 쓴다(두 번 붙이지 않는다)
+        const adopt = mine ? undefined : all.find(f => !f.snsSlot && same(f))
+        let error: { code?: string; message?: string } | null
+        if (adopt) {
+            ({ error } = await db.from('knowledge_feeds').update({ sns_slot: slot }).eq('id', adopt.id).eq('mentor_id', a.mentorId))
+        } else {
+            if (!mine && feedCount >= MAX_FEEDS_PER_BOT) throw new SnsInputError(slot, `계정은 봇 하나당 ${MAX_FEEDS_PER_BOT}개까지 연결할 수 있어요. 안 쓰는 연결을 하나 빼 주세요`)
+            validateHandle(want.kind, want.handleOrUrl)
+            // 동시에 두 번 눌러도 칸 줄은 하나 = (mentor_id, sns_slot) 고유 색인에 upsert (보안 검토 PR #53)
+            ;({ error } = await db.from('knowledge_feeds').upsert({
+                user_id: a.userId, mentor_id: a.mentorId, sns_slot: slot,
+                kind: want.kind, handle_or_url: want.handleOrUrl,
+                status: 'connected', last_error: null, last_synced_at: null, item_count: 0,
+            }, { onConflict: 'mentor_id,sns_slot' }))
+        }
+        if (error?.code === '42703' || (error && /sns_slot|no unique or exclusion constraint/i.test(error.message ?? ''))) throw new SnsNotReady()
+        if (error) throw new Error(error.message)
+        if (!mine && !adopt) feedCount++
+    }
+
+    const { error } = await db.from('mentors').update({ links: cleaned }).eq('id', a.mentorId)
+    if (error) throw new Error(error.message)
+}
+
+export interface SnsLearnResult {
+    slot: SnsSlot
+    ok: boolean
+    added: number
+    skipped: number
+    failed: number
+    note: string | null
+}
+
+/** 「지금 배우기」: 고른 칸(없으면 배울 수 있는 칸 전부)을 차례로 한 번씩. 시간 한도를 넘기면 남은 칸은 다음에 */
+export async function learnBotSns(db: SupabaseClient, a: { mentorId: string; slots?: SnsSlot[]; deadline?: number }): Promise<SnsLearnResult[]> {
+    const want = (a.slots?.length ? a.slots : SNS_LEARNABLE).filter(s => SNS_LEARNABLE.includes(s))
+    const feeds = (await listSnsFeeds(db, a.mentorId)).filter(f => f.snsSlot && want.includes(f.snsSlot))
+    const out: SnsLearnResult[] = []
+    for (const slot of want) {
+        const feed = feeds.find(f => f.snsSlot === slot)
+        if (!feed) continue
+        if (a.deadline && Date.now() > a.deadline - 5_000) {
+            out.push({ slot, ok: false, added: 0, skipped: 0, failed: 0, note: '시간이 모자라 이 칸은 다음에 배워요' })
+            continue
+        }
+        const r = await syncSnsFeed(db, feed, { deadline: a.deadline })
+        out.push({ slot, ok: r.ok, added: r.added, skipped: r.skipped, failed: r.failed, note: r.note ?? r.lastError ?? null })
+    }
+    return out
+}
+
+/**
+ * 배우기 횟수 열쇠. 돈(임베딩)이 드는 일이라 셀 수 없으면 막는다(failClosed). 통과면 null, 막히면 사람 말과 다시 시도까지 초.
+ * learn 창구와 /api/os/feeds/sync(SNS 줄)가 같은 열쇠를 쓴다 = 다른 문으로 돌아가 한도를 비켜 가지 못한다.
+ */
+export async function checkSnsLearnLimits(
+    db: SupabaseClient, userId: string, mentorId: string, check: typeof checkRateLimit = checkRateLimit,
+): Promise<{ error: string; retryAfterSec: number } | null> {
+    const o = { failClosed: true }
+    if (!(await check(db, `sns-learn:m:${mentorId}`, SNS_LEARN_PER_MIN, 60, o)).allowed) return { error: '방금 배웠어요. 1분 뒤에 다시 눌러 주세요', retryAfterSec: 60 }
+    if (!(await check(db, `sns-learn:d:${mentorId}`, SNS_LEARN_PER_DAY, 86_400, o)).allowed) return { error: `이 봇은 오늘 ${SNS_LEARN_PER_DAY}번 다 배웠어요. 새 글은 하루 1번 자동으로 배워요`, retryAfterSec: 86_400 }
+    if (!(await check(db, `sns-learn:u:${userId}`, SNS_LEARN_PER_USER_DAY, 86_400, o)).allowed) return { error: `오늘은 ${SNS_LEARN_PER_USER_DAY}번 다 배웠어요. 내일 다시 눌러 주세요`, retryAfterSec: 86_400 }
+    return null
+}
+
+/** 이 사람의 요금제 (요금제 상한 보여 주기용) */
+export { readPlanId }

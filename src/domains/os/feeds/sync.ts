@@ -24,6 +24,7 @@ const TABLE_MISSING = '42P01'
 const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 const COLUMN_MISSING = '42703'
 
+export const SYNC_FAIL_NOTE = '새 글을 가져오지 못했어요. 내일 다시 해 볼게요'
 export const FEED_CAP_FULL_NOTE = '자료 칸이 가득 찼어요. 안 쓰는 자료를 빼면 더 가져와요'
 /**
  * 지난번 시각보다 조금 앞부터 다시 본다. 시간이 모자라 못 가져온 글을 다음 날 놓치지 않게.
@@ -61,8 +62,12 @@ export interface SyncResult {
 export interface SyncOptions {
     /** 이 시각(Date.now() 기준 ms)을 넘기면 더 넣지 않는다 */
     deadline?: number
-    /** 시험용: 종류별 가져오기를 바꿔 끼운다 */
+    /** 시험용: 종류별 가져오기를 바꿔 끼운다 (「내 SNS 연결」도 이걸로 SNS 가져오기를 끼운다) */
     fetchers?: Partial<Record<FeedKind, FetchNewItems>>
+    /** 이번에 새로 넣을 최대 개수 (한 곳 상한보다 작을 때만 쓴다. SNS 요금제 상한) */
+    maxNew?: number
+    /** 자료 이름 앞에 붙일 말과 넣은 방식 (SNS: 「[네이버 블로그] 글 제목」, sns_blog). 출처가 자료 목록에 보이게 */
+    source?: { titlePrefix?: string; sourceKind?: string }
 }
 
 function msg(e: unknown, fallback: string): string {
@@ -130,12 +135,13 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
             return { ...base, ok: true, status: 'connected', lastError: FEED_CAP_FULL_NOTE, note: FEED_CAP_FULL_NOTE }
         }
 
+        const want = Math.max(0, Math.min(room, opts.maxNew ?? Infinity))
         const since = feed.lastSyncedAt ? new Date(Date.parse(feed.lastSyncedAt) - SYNC_LOOKBACK_MS) : null
         const fetcher = opts.fetchers?.[feed.kind] ?? FETCHERS[feed.kind]
 
         let fetched: FetchNewItemsResult
         try {
-            fetched = await fetcher(feed, since, { isKnown: u => existing.urls.has(u), maxItems: room, deadline: opts.deadline })
+            fetched = await fetcher(feed, since, { isKnown: u => existing.urls.has(u), maxItems: want, deadline: opts.deadline, cursor: feed.syncCursor ?? null })
         } catch (e) {
             const why = msg(e, '새 글을 가져오지 못했어요')
             await updateFeed(db, feed.id, { status: 'error', last_error: why, last_synced_at: nowIso() })
@@ -146,7 +152,7 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
         const reasons: string[] = []
         for (const item of fetched.items) {
             if (existing.urls.has(item.url)) { skipped++; continue }           // 🔁 같은 주소는 두 번 넣지 않는다
-            if (added >= room) break                                           // 한 곳에서 가져오는 글 수 한도
+            if (added >= want) break                                           // 한 곳에서 가져오는 글 수 한도 (SNS 는 요금제 상한도)
             const k = accountKeyOf(item.url) ?? `feed:${feed.id}`
             if ((existing.perKey.get(k) ?? 0) === 0 && existing.count >= MAX_SOURCES_PER_BOT) { slotFull = true; break }   // 새 칸이 필요한데 칸이 다 찼다
             if (opts.deadline && Date.now() > opts.deadline) { cut = true; break }
@@ -156,8 +162,12 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
             const { text: marked, marked: n } = markInjectionPatterns(text)
             if (n > 0) console.warn('[os/feeds] 자료 속 명령문 표식', { mentorId: feed.mentorId, kind: feed.kind, count: n })
             try {
-                const title = (item.title || item.url).slice(0, 120)
-                const source = await addKnowledgeSource(db, feed.mentorId, title, marked, feed.kind === 'youtube' ? 'youtube' : 'url', item.url)
+                const prefix = opts.source?.titlePrefix ? `${opts.source.titlePrefix} ` : ''
+                const title = `${prefix}${item.title || item.url}`.slice(0, 120)
+                const meta = opts.source?.sourceKind
+                    ? { meta: { sourceKind: opts.source.sourceKind, citationUrl: item.url, authorIsMe: false, fetchedAt: nowIso() } }   // 소유 증명 전이라 「내가 쓴 글」 아님 (보안 검토 PR #53)
+                    : undefined
+                const source = await addKnowledgeSource(db, feed.mentorId, title, marked, feed.kind === 'youtube' ? 'youtube' : 'url', item.url, meta)
                 existing.urls.add(item.url)
                 if ((existing.perKey.get(k) ?? 0) === 0) existing.count++
                 existing.perKey.set(k, (existing.perKey.get(k) ?? 0) + 1)
@@ -181,13 +191,19 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
                 : added === 0 && fetched.note ? fetched.note : null
 
         await updateFeed(db, feed.id, { status: 'connected', last_error: lastError, last_synced_at: nowIso(), item_count: itemCount })
+        // 기준 번호는 가져온 글을 전부 넣었을 때만 옮긴다(못 넣은 글을 다음에 건너뛰지 않게). 칸이 없으면(마이그레이션 전) 조용히 넘어간다
+        if (fetched.cursor && added + skipped === fetched.items.length) {
+            const { error } = await db.from('knowledge_feeds').update({ sync_cursor: fetched.cursor }).eq('id', feed.id)
+            if (error && error.code !== COLUMN_MISSING) console.error('[os/feeds] 기준 번호 저장 실패', { feedId: feed.id, message: error.message })
+        }
         return {
             feedId: feed.id, ok: true, added, skipped, failed, status: 'connected', lastError,
             note: [lastError, ...notes].filter((v, i, a) => v && a.indexOf(v) === i).join('. ') || undefined,
         }
     } catch (e) {
-        const why = msg(e, '새 글을 가져오지 못했어요')
-        console.error('[os/feeds] syncFeed', { feedId: feed.id, why })
+        // 여기까지 온 건 DB 고장 같은 모르는 오류다. 원문은 로그에만, 사람에게(연결 줄, 응답)는 일반 문구 (보안 재검토 PR #53)
+        console.error('[os/feeds] syncFeed', { feedId: feed.id, why: msg(e, '') })
+        const why = SYNC_FAIL_NOTE
         try { await updateFeed(db, feed.id, { status: 'error', last_error: why, last_synced_at: nowIso() }) } catch { /* 기록도 못 하면 로그만 */ }
         return { ...base, ok: false, status: 'error', lastError: why, note: why }
     }

@@ -1,5 +1,5 @@
 // 시험용 가짜 Supabase — 표를 메모리에 두고 우리가 쓰는 만큼만 흉내 낸다.
-// (select/insert/update/delete + eq/neq/order/limit/maybeSingle/single + count head)
+// (select/insert/update/upsert/delete + eq/neq/order/limit/maybeSingle/single + count head)
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 type Row = Record<string, unknown>
@@ -19,7 +19,8 @@ export function makeFakeDb(initial: Tables, opts: { missingTables?: string[] } =
     let seq = 0
 
     function builder(table: string) {
-        let op: 'select' | 'insert' | 'update' | 'delete' = 'select'
+        let op: 'select' | 'insert' | 'update' | 'delete' | 'upsert' = 'select'
+        let conflictCols: string[] = []
         let payload: Row | null = null
         let countMode = false
         let head = false
@@ -34,6 +35,13 @@ export function makeFakeDb(initial: Tables, opts: { missingTables?: string[] } =
             if (opts.missingTables?.includes(table)) return { data: null, error: { code: '42P01', message: 'relation does not exist' }, count: null }
             const rows = (tables[table] ??= [])
             if (op === 'insert') {
+                const row = { id: `id-${++seq}`, created_at: new Date().toISOString(), ...payload }
+                rows.push(row)
+                return { data: single ? row : [row], error: null }
+            }
+            if (op === 'upsert') {
+                const hit = rows.find(r => conflictCols.every(c => r[c] === (payload as Row)[c]))
+                if (hit) { Object.assign(hit, payload); return { data: single ? hit : [hit], error: null } }
                 const row = { id: `id-${++seq}`, created_at: new Date().toISOString(), ...payload }
                 rows.push(row)
                 return { data: single ? row : [row], error: null }
@@ -60,6 +68,7 @@ export function makeFakeDb(initial: Tables, opts: { missingTables?: string[] } =
             select: (_cols?: string, o?: { count?: string; head?: boolean }) => { if (o?.count) countMode = true; if (o?.head) head = true; return b },
             insert: (p: Row) => { op = 'insert'; payload = p; return b },
             update: (p: Row) => { op = 'update'; payload = p; return b },
+            upsert: (p: Row, o?: { onConflict?: string }) => { op = 'upsert'; payload = p; conflictCols = (o?.onConflict ?? 'id').split(',').map(x => x.trim()); return b },
             delete: () => { op = 'delete'; return b },
             eq: (c: string, v: unknown) => { filters.push(['eq', c, v]); return b },
             neq: (c: string, v: unknown) => { filters.push(['neq', c, v]); return b },

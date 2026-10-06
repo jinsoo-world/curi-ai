@@ -5,9 +5,12 @@
 // 한 번에 너무 많이 돌면 60초를 넘긴다 → 개수 한도 + 시간 한도. 남은 것은 다음 날 앞줄에 선다.
 // 연결 하나가 고장 나도 다른 연결은 계속 돈다(syncFeed 는 던지지 않는다).
 // vercel.json: "0 3 * * *" = UTC 3시 = 서울 낮 12시.
+// 봇 「내 SNS 연결」로 만든 연결(sns_slot)은 SNS 규칙(요금제 상한)으로 돈다 = syncSnsFeed.
+// 줄마다 돌기 전에 claimFeedForRun: last_synced_at 을 먼저 찍고(한 줄이 매일 앞줄을 막지 않게), 연결한 사람이 아직 봇 주인인지 다시 본다(아니면 paused).
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { listDueFeeds, syncFeed, FeedTableMissing } from '@/domains/os/feeds'
+import { listDueFeeds, syncFeed, claimFeedForRun, FeedTableMissing } from '@/domains/os/feeds'
+import { syncSnsFeed } from '@/domains/os/bot-sns'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -27,15 +30,16 @@ export async function GET(req: NextRequest) {
     try {
         const db = createAdminClient()
         const feeds = await listDueFeeds(db, MAX_PER_RUN)
-        let ran = 0, 성공 = 0, 실패 = 0, 새자료 = 0
+        let ran = 0, 성공 = 0, 실패 = 0, 새자료 = 0, 멈춤 = 0
         for (const feed of feeds) {
             if (Date.now() > deadline - 5_000) break
-            const r = await syncFeed(db, feed, { deadline })
+            if (!(await claimFeedForRun(db, feed))) { 멈춤++; continue }
+            const r = feed.snsSlot ? await syncSnsFeed(db, feed, { deadline }) : await syncFeed(db, feed, { deadline })
             ran++
             새자료 += r.added
             if (r.ok) 성공++; else 실패++
         }
-        return NextResponse.json({ ok: true, checked: feeds.length, ran, 성공, 실패, 새자료 })
+        return NextResponse.json({ ok: true, checked: feeds.length, ran, 성공, 실패, 새자료, 멈춤 })
     } catch (e) {
         // 표가 아직 없으면 「준비 중」이지 고장이 아니다
         if (e instanceof FeedTableMissing) return NextResponse.json({ ok: true, ran: 0, note: '계정 연결 표 준비 중' })

@@ -82,7 +82,7 @@ export function parseChannelsList(json: string): string | null {
 }
 
 /** 공식 API 로 채널 번호 (열쇠가 있을 때만, 채널 페이지를 못 열었을 때 보탬) */
-async function channelIdByApi(pageUrl: string, key: string): Promise<string | null> {
+export async function channelIdByApi(pageUrl: string, key: string): Promise<string | null> {
     const path = decodeURI(new URL(pageUrl).pathname).replace(/^\//, '')
     const name = path.replace(/^(@|c\/|user\/)/, '')
     const tries = path.startsWith('user/')
@@ -131,7 +131,7 @@ async function listByDataApi(channelId: string, key: string): Promise<FeedItem[]
 }
 
 /** 채널의 최근 영상 목록. 공개 피드 → (한 번 더) → 공식 API 순서 */
-async function listRecentVideos(channelId: string): Promise<FeedItem[]> {
+export async function listRecentVideos(channelId: string): Promise<FeedItem[]> {
     let why = ''
     for (let attempt = 0; attempt < 2; attempt++) {
         const f = await fetchFeed(channelFeedUrl(channelId))

@@ -6,9 +6,9 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isSafeFetchUrl } from '@/domains/agent/fetch-url'
-import { removeBotSource } from '@/domains/os/knowledge'
+import { removeBotSource, assertBotOwned } from '@/domains/os/knowledge'
 import type { FeedKind, FeedStatus, KnowledgeFeed, KnowledgeFeedRow } from './types'
-import { feedFromRow, FEED_COLUMNS, isSocialStubKind } from './types'
+import { feedFromRow, FEED_COLUMNS, FEED_COLUMNS_WITH_SNS, FEED_COLUMNS_FULL, isSocialStubKind } from './types'
 import { resolveChannelInput } from './youtube'
 import { substackFeedUrl } from './podcast'
 import { withScheme } from './rss'
@@ -16,6 +16,7 @@ import { SOCIAL_STUB_NOTE } from './social-stub'
 
 const TABLE_MISSING = '42P01'
 const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
+const COLUMN_MISSING = '42703'
 /** 봇 하나에 붙일 수 있는 계정 수 */
 export const MAX_FEEDS_PER_BOT = 5
 
@@ -28,18 +29,31 @@ function fail(error: { code?: string; message?: string } | null): never {
     throw new Error(error?.message ?? '연결 표를 읽지 못했어요')
 }
 
+type FeedQueryResult = { data: unknown; error: { code?: string; message?: string } | null }
+/**
+ * sns_slot, sync_cursor 칸까지 읽어 보고, 칸이 아직 없으면(마이그레이션 전) 하나씩 빼고 다시.
+ * sync_cursor 만 없을 때 sns_slot 까지 잃으면 SNS 줄이 일반 줄로 돌아 버리니 한 단계씩 뺀다.
+ */
+async function selectWithSns(run: (cols: string) => PromiseLike<FeedQueryResult>): Promise<FeedQueryResult> {
+    for (const cols of [FEED_COLUMNS_FULL, FEED_COLUMNS_WITH_SNS]) {
+        const r = await run(cols)
+        if (r.error?.code !== COLUMN_MISSING) return r
+    }
+    return run(FEED_COLUMNS)
+}
+
 /** 이 봇에 붙은 연결 목록 */
 export async function listFeeds(db: SupabaseClient, mentorId: string): Promise<KnowledgeFeed[]> {
-    const { data, error } = await db.from('knowledge_feeds').select(FEED_COLUMNS)
-        .eq('mentor_id', mentorId).order('created_at', { ascending: false })
+    const { data, error } = await selectWithSns(cols => db.from('knowledge_feeds').select(cols)
+        .eq('mentor_id', mentorId).order('created_at', { ascending: false }))
     if (error) fail(error)
     return ((data ?? []) as unknown as KnowledgeFeedRow[]).map(feedFromRow)
 }
 
 /** 연결 하나 (이 봇 것만) */
 export async function getFeed(db: SupabaseClient, mentorId: string, feedId: string): Promise<KnowledgeFeed> {
-    const { data, error } = await db.from('knowledge_feeds').select(FEED_COLUMNS)
-        .eq('id', feedId).eq('mentor_id', mentorId).maybeSingle()
+    const { data, error } = await selectWithSns(cols => db.from('knowledge_feeds').select(cols)
+        .eq('id', feedId).eq('mentor_id', mentorId).maybeSingle())
     if (error) fail(error)
     if (!data) throw new Error('그 연결을 못 찾았어요')
     return feedFromRow(data as unknown as KnowledgeFeedRow)
@@ -47,10 +61,10 @@ export async function getFeed(db: SupabaseClient, mentorId: string, feedId: stri
 
 /** 매일 크론이 돌릴 연결들. 준비 중(paused)은 빼고, 오래 안 가져온 것부터 */
 export async function listDueFeeds(db: SupabaseClient, limit: number): Promise<KnowledgeFeed[]> {
-    const { data, error } = await db.from('knowledge_feeds').select(FEED_COLUMNS)
+    const { data, error } = await selectWithSns(cols => db.from('knowledge_feeds').select(cols)
         .neq('status', 'paused')
         .order('last_synced_at', { ascending: true, nullsFirst: true })
-        .limit(limit)
+        .limit(limit))
     if (error) fail(error)
     return ((data ?? []) as unknown as KnowledgeFeedRow[]).map(feedFromRow)
 }
@@ -113,4 +127,21 @@ export async function deleteFeed(db: SupabaseClient, mentorId: string, feedId: s
     const { error } = await db.from('knowledge_feeds').delete().eq('id', feedId).eq('mentor_id', mentorId)
     if (error) fail(error)
     return { removedSources }
+}
+
+export const FEED_OWNER_GONE_NOTE = '연결한 사람이 이제 이 봇의 주인이 아니라 멈췄어요'
+
+/**
+ * 매일 크론이 줄 하나를 돌기 전에 (보안 검토 PR #53)
+ *   1. last_synced_at 을 먼저 찍는다 = 그 줄이 멈추거나 오래 걸려도 다음 날 또 맨 앞에 서서 크론 전체를 막지 않는다
+ *   2. 연결한 사람이 아직 봇 주인인지 다시 본다(assertBotOwned). 아니면 paused 로 멈추고 false
+ */
+export async function claimFeedForRun(db: SupabaseClient, feed: KnowledgeFeed): Promise<boolean> {
+    const now = new Date().toISOString()
+    let owned = true
+    try { await assertBotOwned(db, feed.userId, feed.mentorId) } catch { owned = false }
+    const patch = owned ? { last_synced_at: now } : { last_synced_at: now, status: 'paused', last_error: FEED_OWNER_GONE_NOTE }
+    const { error } = await db.from('knowledge_feeds').update(patch).eq('id', feed.id).eq('mentor_id', feed.mentorId)
+    if (error) console.error('[os/feeds] 크론 줄 찍기 실패', { feedId: feed.id, message: error.message })
+    return owned
 }

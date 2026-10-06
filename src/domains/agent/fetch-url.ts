@@ -15,6 +15,7 @@
 //  7. 이 파일은 「안전하게 가져오기」까지만. 글로 바꾸는 일(본문 추출, 유튜브 자막)은 domains/os/readers 에 있다.
 
 import { lookup } from 'dns/promises'
+import { stripHtmlBlocks } from '@/lib/html-strip'
 import { BlockList, isIPv6 } from 'net'
 
 /** 막는 IPv6 대역. 루프백·미지정·사설·링크로컬·멀티캐스트·문서용·터널(테레도)·IPv4 품은 옛 모양 */
@@ -208,16 +209,15 @@ const ENTITIES: Record<string, string> = {
 }
 
 /** 웹페이지 HTML → 사람이 읽는 글만 (스크립트, 스타일, 태그 제거) */
+/** htmlToText 가 보는 입력 최대 크기 (보안 재검토 PR #53: 큰 입력으로 서버를 붙잡지 못하게) */
+export const HTML_TO_TEXT_MAX_INPUT = 300 * 1024
+
 export function htmlToText(html: string): string {
-    return String(html ?? '')
-        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-        .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
-        .replace(/<svg[\s\S]*?<\/svg>/gi, ' ')
-        .replace(/<!--[\s\S]*?-->/g, ' ')
+    // script, style, noscript, svg, 주석은 앞으로만 훑어 지운다. 태그는 다음 < 까지만 본다 (둘 다 선형)
+    return stripHtmlBlocks(String(html ?? '').slice(0, HTML_TO_TEXT_MAX_INPUT), { comments: true })
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<\/(p|div|h[1-6]|li|tr|section|article|header|footer|blockquote)>/gi, '\n')
-        .replace(/<[^>]+>/g, ' ')
+        .replace(/<[^<>]*>/g, ' ')
         .replace(/&#(\d{1,6});/g, (_, n) => { try { return String.fromCodePoint(Number(n)) } catch { return ' ' } })
         .replace(/&[a-z]+;|&#39;/gi, m => ENTITIES[m.toLowerCase()] ?? ' ')
         .replace(/[ \t ]{2,}/g, ' ')
