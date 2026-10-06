@@ -72,7 +72,9 @@ export async function PATCH(req: Request) {
         const db = getDb() || supabase
 
         // domains/user 호출
-        await updateUserProfile(db, user.id, body)
+        // merge: true 면 interests 를 덮어쓰지 않고 기존 것에 합친다(앱용)
+        const { merge, ...fields } = body ?? {}
+        await updateUserProfile(db, user.id, fields, { mergeInterests: merge === true })
 
         return new Response(JSON.stringify({ success: true }), {
             headers: { 'Content-Type': 'application/json' },

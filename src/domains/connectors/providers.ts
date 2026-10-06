@@ -243,6 +243,8 @@ export interface ProviderView {
     id: ProviderId
     name: string
     logo: string
+    /** 앱용 PNG 128px 주소(앱은 SVG 를 못 그린다). public/logos/ 에 같은 이름으로 있다 */
+    logoPng: string
     hint: string
     can: string
     ready: boolean
@@ -254,7 +256,7 @@ export interface ProviderView {
 export function providerView(p: Provider, env: Env = process.env): ProviderView {
     const ready = providerReady(p, env)
     return {
-        id: p.id, name: p.name, logo: p.logo, hint: p.hint, can: p.can, ready,
+        id: p.id, name: p.name, logo: p.logo, logoPng: p.logo.replace(/\.svg$/, '.png'), hint: p.hint, can: p.can, ready,
         comingSoon: !!p.comingSoon,
         missing: ready || p.comingSoon ? null : '준비 중',
     }

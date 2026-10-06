@@ -57,7 +57,18 @@ export async function updateUserProfile(
     db: SupabaseClient,
     userId: string,
     data: ProfileUpdateData,
+    options: { mergeInterests?: boolean } = {},
 ) {
+    // merge: 기존 interests 에 합친다(앱이 하는 일만 보내도 가입 때 고른 관심사가 안 지워진다)
+    if (options.mergeInterests && Array.isArray(data.interests)) {
+        const { data: row } = await db.from('users').select('interests').eq('id', userId).maybeSingle()
+        const old = Array.isArray(row?.interests) ? row.interests as string[] : []
+        // 문자열만, 30자, 최대 30개
+        const incoming = (data.interests as unknown[])
+            .filter((v): v is string => typeof v === 'string')
+            .map(v => v.trim().slice(0, 30)).filter(Boolean).slice(0, 30)
+        data = { ...data, interests: Array.from(new Set([...old, ...incoming])).slice(0, 30) }
+    }
     const updateData: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
     }
