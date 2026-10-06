@@ -9,6 +9,7 @@
 //
 // 승인 카드 = 밖으로 나가는 일이 아니라 **둘 다 내 봇**이고 밖으로 안 나가므로 카드가 필요 없다.
 // 다만 옮기려는 말 자체가 「보내기·게시·구매·이체…」면 기존 승인 카드 경로로 보낸다(아래 ②-1).
+import { withExtraPrompt } from '@/domains/mentor/extra-prompt'
 import { CONVERSATION_RULES } from '@/domains/mentor/answer-rules'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -28,7 +29,7 @@ const CONTEXT_MESSAGES = 20
 
 interface TeamRow {
     mentor_id: string
-    mentors: { name: string | null; system_prompt: string | null; avatar_url: string | null } | null
+    mentors: { name: string | null; system_prompt: string | null; extra_prompt?: string | null; avatar_url: string | null } | null
     shape: string
     color: string
 }
@@ -37,7 +38,7 @@ interface TeamRow {
 async function myTeam(db: SupabaseClient, userId: string): Promise<TeamRow[]> {
     const { data, error } = await db
         .from('team_bots')
-        .select('mentor_id, shape, color, mentors(name, system_prompt, avatar_url)')
+        .select('mentor_id, shape, color, mentors(name, system_prompt, extra_prompt, avatar_url)')
         .eq('user_id', userId)
         .eq('hidden', false)
     if (error) return []
@@ -169,7 +170,7 @@ export async function POST(req: Request) {
         await saveLine(db, toSession, 'user', 옮긴말)
 
         // ④ 대상 봇이 한 번만 답한다
-        const 규칙 = `${to.mentors?.system_prompt || `너는 「${toName}」. 주인의 AI 팀원이다.`}
+        const 규칙 = `${withExtraPrompt(to.mentors?.system_prompt || `너는 「${toName}」. 주인의 AI 팀원이다.`, to.mentors?.extra_prompt)}
 
 ${CONVERSATION_RULES}
 

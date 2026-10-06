@@ -6,6 +6,7 @@
 //
 // 순수 함수(프롬프트 만들기, 답 읽기, 폴백 점수)는 시험 대상이다. 모델 호출은 주입받는다.
 
+import { withExtraPrompt } from '@/domains/mentor/extra-prompt'
 import { CONVERSATION_RULES } from '@/domains/mentor/answer-rules'
 
 /** @ 없이 말했을 때 한 번에 답할 수 있는 봇 수 상한 (대개 1, 드물게 이만큼) */
@@ -18,6 +19,8 @@ export interface RouterBot {
     mentorId: string
     name: string
     systemPrompt?: string | null
+    /** 「추가 프롬프트」(비밀 칸). 그룹방 지시문에도 지시문 바로 뒤에 붙는다 */
+    extraPrompt?: string | null
     oneLiner?: string | null
 }
 
@@ -140,7 +143,7 @@ export type GroupReplyMode = 'mention' | 'routed-first' | 'routed-next'
  * 봇 고유 프롬프트가 주인공이고, 방 규칙은 짧게 덧붙인다. 진행, 정리, 차례 나누기 같은 방장 지시는 없다.
  */
 export function buildGroupSystemPrompt(me: RouterBot, others: RouterBot[], mode: GroupReplyMode): string {
-    const 나 = (me.systemPrompt ?? '').trim() || `너는 「${me.name}」. 주인의 AI 팀원이다.${me.oneLiner ? ` ${me.oneLiner}` : ''}`
+    const 나 = withExtraPrompt((me.systemPrompt ?? '').trim() || `너는 「${me.name}」. 주인의 AI 팀원이다.${me.oneLiner ? ` ${me.oneLiner}` : ''}`, me.extraPrompt)
     const 이름들 = others.map(b => b.name).filter(Boolean).join(', ') || '없음'
     const 줄: string[] = [
         `[그룹 채팅방] 같은 방에 ${이름들}도 있다.`,

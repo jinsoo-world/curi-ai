@@ -19,8 +19,8 @@ import { mentorName, notifyNative, p033Published, p034InReview, p035NeedsFix } f
 /** 손님 시연용 봇 이름표 (공개 금지) */
 const DEMO_SLUG_PREFIX = 'os-demo-'
 
-/** AI 가 검사하는 mentors 칸. 이 중 하나라도 바뀌면 다시 확인 대상 (프로필 사진은 아직 안 본다) */
-export const REVIEWED_FIELDS = ['name', 'title', 'description', 'system_prompt', 'greeting_message', 'sample_questions'] as const
+/** AI 가 검사하는 mentors 칸. 이 중 하나라도 바뀌면 다시 확인 대상 (프로필 사진은 아직 안 본다). extra_prompt = 추가 프롬프트(1006) */
+export const REVIEWED_FIELDS = ['name', 'title', 'description', 'system_prompt', 'extra_prompt', 'greeting_message', 'sample_questions'] as const
 
 /** 바뀐 것 비교용으로 다듬는다: 빈 값(null)은 빈 글, 글은 앞뒤 공백 무시, 목록은 칸마다 다듬고 빈 칸을 뺀다 */
 function normalizeField(v: unknown): unknown {

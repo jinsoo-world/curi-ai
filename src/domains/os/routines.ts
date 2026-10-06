@@ -3,6 +3,7 @@
 // db 는 service_role 이라 RLS 를 우회한다. 그래서 여기 모든 질의에 user_id 를 반드시 건다.
 // 시간 규칙은 전부 schedule.ts(순수)에 있고 여기는 DB 와 모델만 만진다.
 
+import { withExtraPrompt } from '@/domains/mentor/extra-prompt'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isBotBlocked } from './blocks'
 import { solarChatStream } from '@/domains/llm'
@@ -210,13 +211,13 @@ export async function runRoutineOnce(db: SupabaseClient, routine: BotRoutine): P
     try {
         const { data: mentor } = await db
             .from('mentors')
-            .select('name, system_prompt')
+            .select('name, system_prompt, extra_prompt')
             .eq('id', routine.mentorId)
             .single()
         if (!mentor) throw new Error('봇을 찾지 못했어요')
 
         const text = await askBot(
-            (mentor.system_prompt as string) || '',
+            withExtraPrompt((mentor.system_prompt as string) || '', mentor.extra_prompt as string | null),
             buildRoutinePrompt({
                 title: routine.title,
                 instruction: routine.instruction,

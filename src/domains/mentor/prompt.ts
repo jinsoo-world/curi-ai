@@ -1,5 +1,6 @@
 // domains/mentor — 시스템 프롬프트 조립
 
+import { buildExtraPromptBlock } from './extra-prompt'
 import type { User, Mentor } from '@/types'
 import { ANSWER_FORMAT_RULE, ANSWER_HONESTY_RULES, CONVERSATION_RULES } from './answer-rules'
 import { TRUNCATED_NOTE } from '@/domains/chat/constants'
@@ -86,6 +87,8 @@ export function buildSystemPrompt(
         expertise?: string[] | null
         persona_template?: string | null
         system_prompt: string
+        /** 「추가 프롬프트」(비밀 칸). 지시문 다음, 공통 안전 규칙 앞에 울타리로 붙는다 */
+        extra_prompt?: string | null
         greeting_message: string
         style_template?: StyleTemplate | null
         creator_id?: string | null
@@ -133,6 +136,11 @@ export function buildSystemPrompt(
         processedPrompt = processedPrompt.replace(/\{\{user_name\}\}/g, userName)
         parts.push(`\n[📝 크리에이터 지시사항 - 최우선 반영]\n${processedPrompt}`)
     }
+
+    // ── ②-1 추가 프롬프트 (주인이 쓴 참고 자료, 최대 5,000자) ──
+    // 사용자가 쓴 글이므로 아래 공통 안전 규칙보다 앞에 둔다 = 부딪히면 뒤의 공통 규칙이 이긴다
+    const extraBlock = buildExtraPromptBlock(mentor.extra_prompt)
+    if (extraBlock) parts.push(`\n${extraBlock}`)
 
     // ── ③ AI 유형별 기본 행동 지시 ──
     const personaType = mentor.persona_template

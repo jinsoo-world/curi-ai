@@ -12,6 +12,7 @@
 //   - 유사도 0.96 이상, 7일 지나면 버린다
 // 끄기: SEMANTIC_CACHE_ENABLED=false
 
+import { EXTRA_FENCE_RE } from '@/domains/mentor/extra-prompt'
 import { createHash } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -80,9 +81,10 @@ export function cacheScopeKey(kind: 'public' | 'personal' | string, userId: stri
     return userId ? `owner:${userId}` : null
 }
 
-/** 봇 지침 지문. 매 요청 바뀌는 「지금 시각」 줄은 뺀다 */
+/** 봇 지침 지문. 매 요청 바뀌는 「지금 시각」 줄과 추가 자료 울타리 이름은 뺀다 */
 export function botVersion(parts: { systemPrompt: string; settings: unknown; knowledgeVersion: string; model: string }): string {
-    const prompt = parts.systemPrompt.replace(/^오늘은 .* 입니다\.$/m, '')
+    // 추가 자료 울타리(XTRA_무작위)도 매 요청 바뀌니 지운다. 내용이 바뀌면 지문은 바뀐다
+    const prompt = parts.systemPrompt.replace(/^오늘은 .* 입니다\.$/m, '').replace(EXTRA_FENCE_RE, 'XTRA_')
     return createHash('sha256')
         .update(JSON.stringify({ v: CACHE_SCHEMA, prompt, settings: parts.settings ?? null, k: parts.knowledgeVersion, m: parts.model }))
         .digest('hex')
