@@ -496,27 +496,18 @@ export async function POST(req: NextRequest) {
             }
 
         } else if (ext === 'pdf') {
-            // PDF: pdf-parse v2 (PDFParse 클래스). v1 호출(require()(buffer))은 「is not a function」으로 항상 깨졌다.
+            // PDF: unpdf (서버리스용 가벼운 판). 이전 pdf-parse 와 한글 글자 수가 같다(시험으로 확인)
             const buffer = Buffer.from(await fileData.arrayBuffer())
             try {
-                const { PDFParse } = await import('pdf-parse')
-                const parser = new PDFParse({ data: new Uint8Array(buffer) })
-                try {
-                    const pdfData = await parser.getText()
-                    textContent = (pdfData.text || '')
-                        .replace(/\n-- \d+ of \d+ --\n/g, '\n') // v2 페이지 구분 꼬리표 제거
-                        .replace(/\n{3,}/g, '\n\n')
-                        .replace(/[ \t]{2,}/g, ' ')
-                        .trim()
-                    console.log('[Process] PDF parsed with pdf-parse, text length:', textContent.length, 'pages:', pdfData.pages?.length ?? 0)
-                } finally {
-                    await parser.destroy().catch(() => {})
-                }
+                const { parsePdf } = await import('@/domains/knowledge/parsers/pdf')
+                const pdfData = await parsePdf(buffer)
+                textContent = pdfData.text
+                console.log('[Process] PDF parsed with unpdf, text length:', textContent.length, 'pages:', pdfData.pages)
             } catch (pdfErr) {
-                console.error('[Process] pdf-parse error:', pdfErr instanceof Error ? pdfErr.message : pdfErr)
+                console.error('[Process] unpdf error:', pdfErr instanceof Error ? pdfErr.message : pdfErr)
             }
 
-            // pdf-parse로 텍스트 못 읽은 경우 (스캔 PDF) → Upstage OCR fallback
+            // 글자를 200자 못 읽은 경우 (스캔 PDF) → Upstage OCR fallback
             if (textContent.trim().length < 200 && process.env.UPSTAGE_API_KEY && await underUpstageCap(admin)) {
                 console.log('[Process] PDF text too short, falling back to Upstage OCR')
                 try {

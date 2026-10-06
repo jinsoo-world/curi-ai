@@ -112,15 +112,9 @@ export async function countFilePages(ext: string, buf: Buffer): Promise<PageCoun
         if (e === 'csv') return { pages: 1, method: 'csv' }
 
         if (e === 'pdf') {
-            const { PDFParse } = await import('pdf-parse')
-            const parser = new PDFParse({ data: new Uint8Array(buf) })
-            try {
-                const info = await parser.getInfo()
-                const total = Number((info as { total?: number }).total)
-                if (Number.isFinite(total) && total > 0) return { pages: total, method: 'pdf' }
-            } finally {
-                await parser.destroy().catch(() => {})
-            }
+            const { countPdfPages } = await import('./parsers/pdf')
+            const total = await countPdfPages(buf)
+            if (Number.isFinite(total) && total > 0) return { pages: total, method: 'pdf' }
             return { pages: pagesFromBytes(buf.length, 100 * 1024), method: 'pdf-bytes' }
         }
 
