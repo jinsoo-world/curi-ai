@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies, headers } from 'next/headers'
 import { bearerFromHeader, bindBearerToAuth } from './bearer'
+import { timeoutFetch, DB_TIMEOUT_MS } from './timeout-fetch'
 
 export async function createClient() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -26,7 +27,11 @@ export async function createClient() {
 
     const client = createServerClient(supabaseUrl, supabaseAnonKey, {
         // 표시가 있으면 데이터 조회도 그 사용자 권한(RLS)으로 한다
-        ...(bearer ? { global: { headers: { Authorization: `Bearer ${bearer}` } } } : {}),
+        // 모든 요청에 마감: 보통 5초, 로그인 확인(auth.getUser) 3초 (timeout-fetch.ts)
+        global: {
+            fetch: timeoutFetch(DB_TIMEOUT_MS),
+            ...(bearer ? { headers: { Authorization: `Bearer ${bearer}` } } : {}),
+        },
         cookies: {
             getAll() {
                 return cookieStore.getAll()
