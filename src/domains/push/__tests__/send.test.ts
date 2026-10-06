@@ -205,3 +205,17 @@ describe('sendPush — 기기별 보내기와 죽은 기기 끄기', () => {
         expect(t.send.mock.calls[0][1]).toMatchObject({ sendId: rows[0].id, deeplink: 'curiai://bot/m1', type: 'P001' })
     })
 })
+
+describe('기기마다 보내자마자 기록', () => {
+    it('두 번째 기기를 보내기 전에 첫 기기 기록이 이미 들어가 있다(중간에 끊겨도 간 기기는 남는다)', async () => {
+        const inserts: number[] = []
+        const { store } = fakeStore({ devices: [IOS, { ...IOS, id: 'd-ios-2', token: 'tok2' }] })
+        store.insertSends = async r => { inserts.push(r.length) }
+        let seenBeforeSecond = -1
+        let i = 0
+        const t: Transport = { ready: () => true, send: async () => { if (i++ === 1) seenBeforeSecond = inserts.length; return { ok: true } } }
+        await sendPush(INFO, deps(store, kst(12), { ios: t }))
+        expect(seenBeforeSecond).toBe(1)
+        expect(inserts).toEqual([1, 1])
+    })
+})

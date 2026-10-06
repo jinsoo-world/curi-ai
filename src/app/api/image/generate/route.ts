@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     // 요청 횟수 제한(보안 C-1 9번): 시간당 10
     const rl = await checkRateLimit(createAdminClient(), rateLimitKey('image', auth.user?.id), 10, 3600)
     if (!rl.allowed) return NextResponse.json({ error: rateLimitMessage('사진 만들기') }, { status: 429 })
-    // 하루 한도: 어드민 IMAGE_ADMIN_DAILY(기본 30), 전체 IMAGE_GLOBAL_DAILY(기본 200)
+    // 하루 한도: 어드민 IMAGE_ADMIN_DAILY(기본 30), 전체 IMAGE_GLOBAL_DAILY(기본 30)
     const 한도 = await checkImageCap(createAdminClient(), { route: ADMIN_IMAGE_ROUTE })
     if (한도) return NextResponse.json({ error: 한도 }, { status: 429 })
     const 시작 = Date.now()

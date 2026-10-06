@@ -13,15 +13,22 @@ export interface Subscription {
     id: string
     user_id: string
     plan_type: PlanType
-    status: 'active' | 'canceled' | 'expired' | 'past_due'
+    status: 'active' | 'canceled' | 'expired' | 'past_due' | 'renewing' | 'renew_paid_unsynced' | 'renew_needs_review'
     billing_key: string
     customer_key: string
     current_period_start: string
     current_period_end: string
     canceled_at: string | null
+    /** 갱신 처리 중에 들어온 해지 신청 시각(있으면 다음 결제 금지, 처리가 끝나면 canceled) */
+    cancel_requested_at?: string | null
     created_at: string
     updated_at: string
 }
+
+/** 결제가 아직 살아 있는 상태 = 같은 사람에게 새 구독을 만들면 두 번 긁힌다 · 탈퇴 전에 해지해야 한다 */
+export const BILLING_LIVE_STATUSES = ['active', 'renewing', 'renew_paid_unsynced', 'renew_needs_review', 'past_due'] as const
+/** 이용권이 있는 상태 = 해지 예약(canceled, 기간 안)·자동 갱신 도중(renewing)·결제는 됐는데 DB 반영 전(renew_paid_unsynced)·결제 확인 대기(renew_needs_review, 결제됐을 수 있어 끊지 않는다). 연체(past_due)는 제외 */
+export const ENTITLED_STATUSES = ['active', 'canceled', 'renewing', 'renew_paid_unsynced', 'renew_needs_review'] as const
 
 export interface Payment {
     id: string

@@ -70,7 +70,10 @@ export function fcmMessage(token: string, msg: PushMessage): Record<string, unkn
     }
 }
 
-type Fetch = (url: string, init: { method: string; headers: Record<string, string>; body: string }) => Promise<{ status: number; text(): Promise<string> }>
+type Fetch = (url: string, init: { method: string; headers: Record<string, string>; body: string; signal?: AbortSignal }) => Promise<{ status: number; text(): Promise<string> }>
+
+/** 구글 호출 마감. 구글이 멈춰도 알림 예약 작업 전체가 멈추지 않게 */
+export const FCM_TIMEOUT_MS = 10_000
 
 export function createFcmTransport(opts: { env?: Env; fetch?: Fetch; nowSec?: () => number } = {}): Transport {
     const cfg = fcmConfig(opts.env)
@@ -88,6 +91,7 @@ export function createFcmTransport(opts: { env?: Env; fetch?: Fetch; nowSec?: ()
                 grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
                 assertion: makeGoogleAssertion(cfg!.sa, t),
             }).toString(),
+            signal: AbortSignal.timeout(FCM_TIMEOUT_MS),
         })
         const text = await res.text()
         if (res.status !== 200) throw new Error(`fcm 출입증 실패 ${res.status}`)
@@ -105,6 +109,7 @@ export function createFcmTransport(opts: { env?: Env; fetch?: Fetch; nowSec?: ()
                 method: 'POST',
                 headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
                 body: JSON.stringify(fcmMessage(device.token, msg)),
+                signal: AbortSignal.timeout(FCM_TIMEOUT_MS),
             })
             return classifyFcm(res.status, await res.text())
         },

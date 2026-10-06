@@ -7,7 +7,7 @@
 //  3. 겹침           — 같은 type + key 로 이미 「보냄」이 있으면 안 보낸다(실패·막힘은 안 셈 = 다음에 다시 간다)
 //  4. 사용자 설정     — 알림 설정에서 푸시를 껐으면 안 보낸다 / 정보 알림도 조용한 시간엔 보류
 //  5. 상한           — 하루 3번(서울 자정 기준, 시험 발송 제외), 광고 하루 1번·주 3번
-//  6. 보내기         — 기기마다 push_sends 한 줄. 애플·구글이 「죽은 번호」라 하면 그 기기를 끈다(disabled_at)
+//  6. 보내기         — 기기마다 push_sends 한 줄(보내자마자 바로 기록). 애플·구글이 「죽은 번호」라 하면 그 기기를 끈다(disabled_at)
 // 막힌 시도도 push_sends 에 한 줄(status=blocked, error=이유) 남긴다(기기 없음만 빼고). 나중에 「왜 안 갔나」를 셀 수 있게.
 
 import { randomUUID } from 'node:crypto'
@@ -69,7 +69,7 @@ export async function sendPush(input: PushInput, deps: PushDeps): Promise<PushOu
         if (await store.countSentBatches(input.userId, weekWindowStart(now), 'ad') >= AD_WEEKLY_MAX) return block('ad_weekly_cap')
     }
 
-    // 6. 보내기
+    // 6. 보내기 — 기기마다 보내자마자 바로 기록한다(중간에 함수가 끊겨도 이미 간 기기는 「보냄」으로 남아 다시 안 간다)
     const rows: PushSendRow[] = []
     let delivered = 0, failed = 0, disabled = 0
     for (const d of devices) {
@@ -80,19 +80,21 @@ export async function sendPush(input: PushInput, deps: PushDeps): Promise<PushOu
         } catch (e) {
             r = { ok: false, error: e instanceof Error ? e.message : String(e), disable: false }
         }
+        let row: PushSendRow
         if (r.ok) {
             delivered++
-            rows.push({ ...base, id, deviceId: d.id, status: 'sent', error: null })
+            row = { ...base, id, deviceId: d.id, status: 'sent', error: null }
         } else {
             failed++
-            rows.push({ ...base, id, deviceId: d.id, status: 'failed', error: r.error.slice(0, 300) })
+            row = { ...base, id, deviceId: d.id, status: 'failed', error: r.error.slice(0, 300) }
             if (r.disable) {
                 disabled++
                 await store.disableDevice(d.id, r.error).catch(e => console.warn('[push] 기기 끄기 실패', e instanceof Error ? e.message : e))
             }
         }
+        rows.push(row)
+        await safeInsert(deps, [row])
     }
-    await safeInsert(deps, rows)
     return {
         status: delivered > 0 ? 'sent' : 'failed',
         batchId, delivered, failed, disabled,

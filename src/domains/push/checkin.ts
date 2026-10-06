@@ -34,7 +34,11 @@ export interface P089Reader {
     sentP089Since(userIds: string[], since: Date): Promise<Set<string>>
     /** 사람마다 기획팀장 봇 (없으면 빠진다) */
     planningBots(userIds: string[]): Promise<Map<string, { mentorId: string; name: string }>>
+    /** 위 규칙 전부를 DB 함수(p089_candidates) 한 번으로. 함수가 아직 없으면 null = 예전 길(여러 번 묻기) */
+    candidates?(now: Date, limit: number): Promise<P089Candidate[] | null>
 }
+
+export interface P089Candidate { userId: string; mentorId: string | null; botName: string | null }
 
 /** 순수 계산: 받을 사람 고르기 */
 export function pickP089Targets(a: {
@@ -66,13 +70,15 @@ export function pickP089Targets(a: {
 export type P089SendResult = 'sent' | 'blocked' | 'failed'
 export type P089RunOutcome =
     | { skipped: 'ad_quiet_hours' | 'not_configured' }
-    | { candidates: number; sent: number; blocked: number; failed: number }
+    | { candidates: number; sent: number; blocked: number; failed: number; deferred: number; via: 'sql' | 'js' }
 
 export async function runP089(a: {
     reader: P089Reader
     send: (p: PushInput) => Promise<P089SendResult>
     now?: Date
     limit?: number
+    /** 이 시각(ms)이 지나면 새 사람에게 보내지 않는다(남은 사람은 내일 창에서 다시 고른다) */
+    deadline?: number
 }): Promise<P089RunOutcome> {
     const now = a.now ?? new Date()
     // 광고는 21:00~08:00 금지. 막힌 기록 수백 줄을 남기지 않게 DB 를 읽기 전에 끝낸다
@@ -80,28 +86,40 @@ export async function runP089(a: {
     const { reader } = a
     const ago = (d: number) => new Date(now.getTime() - d * DAY_MS)
 
-    const devices = await reader.devicesSeenSince(ago(4))
-    const latest = new Map<string, number>()
-    for (const d of devices) latest.set(d.userId, Math.max(latest.get(d.userId) ?? 0, new Date(d.lastSeenAt).getTime()))
-    const inWindow = [...latest].filter(([, t]) => t <= ago(3).getTime()).map(([u]) => u)
-
-    const activeRecently = new Set<string>(), consented = new Set<string>(), sentRecently = new Set<string>()
-    for (const ids of chunks(inWindow, IN_CHUNK)) {
-        const [ok, sent] = await Promise.all([reader.consented(ids), reader.sentP089Since(ids, ago(7))])
-        ok.forEach(u => consented.add(u)); sent.forEach(u => sentRecently.add(u))
-        // 활동 확인은 사람마다 묻는 거라 비싸다 = 동의했고 아직 안 받은 사람만
-        const left = ids.filter(u => ok.has(u) && !sent.has(u))
-        if (left.length > 0) (await reader.usersActiveSince(left, ago(3))).forEach(u => activeRecently.add(u))
-    }
-    const targets = pickP089Targets({ now, devices, activeRecently, consented, sentRecently, limit: a.limit ?? P089_BATCH_LIMIT })
-
+    const limit = a.limit ?? P089_BATCH_LIMIT
+    let targets: string[]
     const bots = new Map<string, { mentorId: string; name: string }>()
-    for (const ids of chunks(targets, IN_CHUNK)) (await reader.planningBots(ids)).forEach((v, k) => bots.set(k, v))
+    let via: 'sql' | 'js' = 'js'
+    const fromSql = reader.candidates ? await reader.candidates(now, limit) : null
+    if (fromSql) {
+        // DB 함수 한 번 = 사람마다 묻던 활동 확인(수백 번)이 없다
+        via = 'sql'
+        targets = fromSql.map(c => c.userId)
+        for (const c of fromSql) if (c.mentorId) bots.set(c.userId, { mentorId: c.mentorId, name: c.botName ?? '기획팀장' })
+    } else {
+        const devices = await reader.devicesSeenSince(ago(4))
+        const latest = new Map<string, number>()
+        for (const d of devices) latest.set(d.userId, Math.max(latest.get(d.userId) ?? 0, new Date(d.lastSeenAt).getTime()))
+        const inWindow = [...latest].filter(([, t]) => t <= ago(3).getTime()).map(([u]) => u)
+
+        const activeRecently = new Set<string>(), consented = new Set<string>(), sentRecently = new Set<string>()
+        for (const ids of chunks(inWindow, IN_CHUNK)) {
+            const [ok, sent] = await Promise.all([reader.consented(ids), reader.sentP089Since(ids, ago(7))])
+            ok.forEach(u => consented.add(u)); sent.forEach(u => sentRecently.add(u))
+            // 활동 확인은 사람마다 묻는 거라 비싸다 = 동의했고 아직 안 받은 사람만
+            const left = ids.filter(u => ok.has(u) && !sent.has(u))
+            if (left.length > 0) (await reader.usersActiveSince(left, ago(3))).forEach(u => activeRecently.add(u))
+        }
+        targets = pickP089Targets({ now, devices, activeRecently, consented, sentRecently, limit })
+        for (const ids of chunks(targets, IN_CHUNK)) (await reader.planningBots(ids)).forEach((v, k) => bots.set(k, v))
+    }
 
     const tally = { sent: 0, blocked: 0, failed: 0 }
     let next = 0
+    let deferred = 0
     const worker = async () => {
         while (next < targets.length) {
+            if (a.deadline && Date.now() > a.deadline) { deferred = targets.length - next; next = targets.length; break }
             const userId = targets[next++]
             const bot = bots.get(userId)
             try {
@@ -113,7 +131,7 @@ export async function runP089(a: {
         }
     }
     await Promise.all(Array.from({ length: Math.min(SEND_CONCURRENCY, targets.length) }, worker))
-    return { candidates: targets.length, ...tally }
+    return { candidates: targets.length, ...tally, deferred, via }
 }
 
 function chunks<T>(xs: T[], n: number): T[][] {
@@ -167,6 +185,16 @@ export function createSupabaseP089Reader(db: SupabaseClient): P089Reader {
             const rows = must(await db.from('push_sends').select('user_id').eq('push_type', 'P089').eq('status', 'sent')
                 .gte('sent_at', since.toISOString()).in('user_id', userIds), 'P089 기록') as { user_id: string }[]
             return new Set(rows.map(r => r.user_id))
+        },
+        async candidates(now, limit) {
+            const { data, error } = await db.rpc('p089_candidates', { p_now: now.toISOString(), p_limit: limit })
+            if (error) {
+                // 함수가 아직 없으면(마이그레이션 전) 예전 길로
+                if (error.code === 'PGRST202' || error.code === '42883' || /p089_candidates/.test(error.message ?? '')) return null
+                throw new Error(`[P089] 고르기 함수 실패: ${error.message}`)
+            }
+            return ((data ?? []) as { user_id: string; mentor_id: string | null; bot_name: string | null }[])
+                .map(r => ({ userId: r.user_id, mentorId: r.mentor_id, botName: r.bot_name }))
         },
         async planningBots(userIds) {
             const rows = must(await db.from('team_bots').select('user_id, mentor_id, mentors!inner(name)')

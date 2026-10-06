@@ -32,7 +32,7 @@ function fakeDb(opts: {
             lt: (col: string, v: unknown) => { patch = { lt: [col, v] }; return q },
             eq: () => q,
             ilike: (col: string, v: unknown) => { calls.push({ kind: 'select', target: `${table}:ilike`, detail: [col, v] }); return q },
-            in: () => q,
+            in: (col: string, v: unknown) => { if (table === 'subscriptions') calls.push({ kind: 'select', target: 'subscriptions:in', detail: [col, v] }); return q },
             order: () => q,
             limit: () => q,
             maybeSingle: async () => {
@@ -134,6 +134,13 @@ describe('deleteAccount', () => {
         const r = await deleteAccount(db, user)
         expect(r).toEqual({ ok: false, code: 'ACTIVE_SUBSCRIPTION', message: expect.stringContaining('구독') })
         expect(calls.some(c => c.kind === 'delete' || c.kind === 'update' || c.kind === 'auth-delete' || c.kind === 'storage-remove')).toBe(false)
+    })
+
+    it('갱신 중·결제됨 미반영·연체 구독도 탈퇴를 막는 상태로 본다', async () => {
+        const { db, calls } = fakeDb({ activeSub: true })
+        await deleteAccount(db, user)
+        const c = calls.find(x => x.target === 'subscriptions:in')
+        expect((c!.detail as [string, string[]])[1].sort()).toEqual(['active', 'past_due', 'renew_needs_review', 'renew_paid_unsynced', 'renewing'])
     })
 
     it('순서: 결제기록 분리 -> 저장소 -> 하위 표 -> 봇 -> 크리에이터 프로필 -> 로그인 계정', async () => {

@@ -71,11 +71,16 @@ export function apnsPayload(msg: PushMessage): Record<string, unknown> {
 export type Http2Request = (origin: string, path: string, headers: Record<string, string>, body: string) => Promise<{ status: number; body: string }>
 
 /** 기본 보내기: 보낼 때마다 연결을 열고 닫는다(지금 보내는 양으로는 충분하다) */
+/** 애플 호출 마감(연결·응답 전체). req.setTimeout 은 「조용한 시간」만 재서 연결이 안 붙으면 영영 기다릴 수 있었다 */
+export const APNS_TIMEOUT_MS = 10_000
+
 export const http2Request: Http2Request = (origin, path, headers, body) => new Promise((resolve, reject) => {
     const session = connect(origin)
-    session.on('error', reject)
+    const hard = setTimeout(() => { session.destroy(); reject(new Error('apns 시간 초과')) }, APNS_TIMEOUT_MS)
+    session.on('close', () => clearTimeout(hard))
+    session.on('error', e => { clearTimeout(hard); reject(e) })
     const req = session.request({ ':method': 'POST', ':path': path, ...headers })
-    req.setTimeout(10_000, () => { req.close(); session.close(); reject(new Error('apns 시간 초과')) })
+    req.setTimeout(APNS_TIMEOUT_MS, () => { req.close(); session.close(); reject(new Error('apns 시간 초과')) })
     let status = 0
     let data = ''
     req.on('response', h => { status = Number(h[':status'] ?? 0) })

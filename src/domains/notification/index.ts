@@ -85,3 +85,36 @@ export async function createProactiveNotification(
 
     return data
 }
+
+/**
+ * 먼저 말 걸 사람 고르기 — 이미 받은(아직 안 읽은 proactive 알림이 있는) 사람을 먼저 거른 뒤 limit 명.
+ * 예전엔 오래 안 온 사람 50명을 먼저 뽑고 그중 이미 받은 사람을 건너뛰어서, 같은 50명이 계속 뽑히고
+ * 그 뒤 사람들은 영영 차례가 오지 않았다(2026-10-06 전수점검).
+ */
+export async function pickInactiveNotNudged(
+    db: SupabaseClient,
+    opts: { inactiveBefore: Date; limit?: number; pool?: number },
+): Promise<{ id: string; display_name: string | null }[]> {
+    const limit = opts.limit ?? 50
+    const { data: candidates, error } = await db
+        .from('users')
+        .select('id, display_name')
+        .lt('last_active_at', opts.inactiveBefore.toISOString())
+        .order('last_active_at', { ascending: false })
+        .limit(opts.pool ?? 500)
+    if (error) throw new Error(error.message)
+    const rows = (candidates ?? []) as { id: string; display_name: string | null }[]
+    const already = new Set<string>()
+    for (let i = 0; i < rows.length; i += 200) {
+        const ids = rows.slice(i, i + 200).map(r => r.id)
+        const { data, error: nErr } = await db
+            .from('notifications')
+            .select('user_id')
+            .eq('type', 'proactive')
+            .eq('is_read', false)
+            .in('user_id', ids)
+        if (nErr) throw new Error(nErr.message)
+        for (const n of (data ?? []) as { user_id: string }[]) already.add(n.user_id)
+    }
+    return rows.filter(r => !already.has(r.id)).slice(0, limit)
+}

@@ -2,6 +2,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Subscription, Payment } from './types'
+import { ENTITLED_STATUSES } from './types'
 
 /**
  * 활성 구독 조회
@@ -14,7 +15,7 @@ export async function getActiveSubscription(
         .from('subscriptions')
         .select('*')
         .eq('user_id', userId)
-        .in('status', ['active', 'canceled']) // canceled도 기간 내에는 유효
+        .in('status', [...ENTITLED_STATUSES]) // canceled도 기간 내에는 유효, 갱신 도중에도 이용권 유지
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()

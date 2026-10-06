@@ -23,6 +23,11 @@ export const DOC_PARSE = {
     maxSyncPages: 100,
 } as const
 
+/** 업스테이지 문서 읽기(Document Parse·OCR) 공통 마감. 마감 없이 부르면 300초 창구가 통째로 끊긴다 */
+export function upstageTimeoutSignal(ms: number = DOC_PARSE.timeoutMs): AbortSignal {
+    return AbortSignal.timeout(ms)
+}
+
 export const DOC_PARSE_KRW_PER_PAGE = Math.round(DOC_PARSE.usdPerPage * DOC_PARSE.krwPerUsd * 100) / 100   // 13.56
 export const UPSTAGE_MONTHLY_CAP_KRW = DOC_PARSE.monthlyCapUsd * DOC_PARSE.krwPerUsd                      // 67,800
 
@@ -196,8 +201,6 @@ export interface DocParseResult {
 /** 업스테이지 Document Parse Standard 한 번 (동기, 100쪽까지). 절대 던지지 않습니다 */
 export async function callDocumentParse(file: Blob, fileName: string, apiKey = process.env.UPSTAGE_API_KEY): Promise<DocParseResult> {
     if (!apiKey) return { ok: false, text: '', pages: null, error: 'no_key' }
-    const ac = new AbortController()
-    const timer = setTimeout(() => ac.abort(), DOC_PARSE.timeoutMs)
     try {
         const fd = new FormData()
         fd.append('document', file, fileName)
@@ -209,7 +212,7 @@ export async function callDocumentParse(file: Blob, fileName: string, apiKey = p
             method: 'POST',
             headers: { Authorization: `Bearer ${apiKey}` },
             body: fd,
-            signal: ac.signal,
+            signal: upstageTimeoutSignal(),
         })
         if (!res.ok) {
             const t = await res.text().catch(() => '')
@@ -220,8 +223,6 @@ export async function callDocumentParse(file: Blob, fileName: string, apiKey = p
         return { ok: true, text: docParseText(body), pages: typeof pages === 'number' ? pages : null, status: res.status, body }
     } catch (e) {
         return { ok: false, text: '', pages: null, error: e instanceof Error ? e.message : String(e) }
-    } finally {
-        clearTimeout(timer)
     }
 }
 

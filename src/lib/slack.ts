@@ -13,6 +13,7 @@ interface SlackBlock {
 export async function sendSlackNotification(
     text: string,
     blocks?: SlackBlock[],
+    opts: { timeoutMs?: number } = {},
 ) {
     const webhookUrl = process.env.SLACK_WEBHOOK_URL
     if (!webhookUrl) {
@@ -25,6 +26,8 @@ export async function sendSlackNotification(
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text, blocks }),
+            // 슬랙이 멈춰도 부른 쪽(결제·예약 작업)이 같이 멈추지 않게 마감을 둔다
+            signal: AbortSignal.timeout(opts.timeoutMs ?? 5_000),
         })
 
         if (!res.ok) {
@@ -151,7 +154,7 @@ export async function sendErrorAlert(data: {
     error: string
     userId?: string
     metadata?: Record<string, unknown>
-}) {
+}, opts: { timeoutMs?: number } = {}) {
     const text = `🚨 [에러 알림] ${data.source}: ${data.error}`
     const blocks: SlackBlock[] = [
         {
@@ -173,7 +176,7 @@ export async function sendErrorAlert(data: {
             ],
         },
     ]
-    await sendSlackNotification(text, blocks)
+    await sendSlackNotification(text, blocks, opts)
 }
 
 /**

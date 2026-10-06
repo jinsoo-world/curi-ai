@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
     if (!pushConfigured()) return NextResponse.json({ success: true, skipped: 'not_configured' })
     const db = createAdminClient({ longRunning: true })
     try {
-        const result = await runP089({ reader: createSupabaseP089Reader(db), send: liveP089Sender(db) })
+        // 전체 마감 240초(함수 한도 300초). 남은 사람은 다음 날 창에서 다시 고른다. 고르기는 DB 함수 한 번(없으면 예전 길)
+        const result = await runP089({ reader: createSupabaseP089Reader(db), send: liveP089Sender(db), deadline: Date.now() + 240_000 })
         console.log('[cron/push-checkin]', JSON.stringify(result))
         return NextResponse.json({ success: true, ...result })
     } catch (e) {

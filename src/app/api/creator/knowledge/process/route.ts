@@ -2,12 +2,13 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { FAIL_REASON_COL } from '@/domains/knowledge/actions'
 import type { FailureReason } from '@/domains/knowledge/failure-reasons'
-import { requireMentorOwner } from '@/lib/mentor-owner'
+import { requireMentorOwner, mentorOwnerForUser } from '@/lib/mentor-owner'
+import { isInternalRequest } from '@/lib/internal-key'
 import { generateEmbedding, splitIntoChunksWithHeadings, contextualEmbeddingText } from '@/domains/knowledge/embedding'
 import { askSideText } from '@/domains/llm/side-text'
 import { logUpstageOcr } from '@/domains/llm/ocr-usage'
 import { 개인정보가리기 } from '@/domains/knowledge/개인정보가리기'
-import { docParseEnabled, underUpstageCap, callDocumentParse, DOC_SPACE_COPY } from '@/domains/knowledge/doc-parse'
+import { docParseEnabled, underUpstageCap, callDocumentParse, upstageTimeoutSignal, DOC_SPACE_COPY } from '@/domains/knowledge/doc-parse'
 import { reserveFilePages, type PageReservation } from '@/domains/knowledge/doc-gate'
 import { MAX_FILE_BYTES, MAX_TEXT_CHARS, PasswordProtectedError, UnsafeFileError, detectPasswordProtected, limitText } from '@/domains/knowledge/parsers/safety'
 import { recheckAfterKnowledge } from '@/domains/os/publish-gate'
@@ -225,11 +226,14 @@ export async function POST(req: NextRequest) {
     // 월 자료 한도: 잡아 둔 쪽과 뺀 클로버 (실패하면 클로버를 되돌린다)
     let reservation: PageReservation | null = null
     try {
-        const { sourceId, mentorId, payClovers } = await req.json()
+        const { sourceId, mentorId, payClovers, actorUserId } = await req.json()
 
         // 🔒 이 AI 의 주인만 통과. 없으면 남의 AI 지식창고에 내 글을 심어
         // 그 AI 가 손님에게 그 내용을 말하게 만들 수 있다.
-        const owner = await requireMentorOwner(mentorId)
+        // 서버 안 예약 작업(드라이브·노션 가져오기)은 로그인 쿠키가 없다 → 내부 열쇠가 맞을 때만 actorUserId 로 같은 주인 확인
+        const owner = isInternalRequest(req)
+            ? await mentorOwnerForUser(actorUserId, mentorId)
+            : await requireMentorOwner(mentorId)
         if (!owner.ok) {
             return NextResponse.json({ error: owner.error }, { status: owner.status })
         }
@@ -250,9 +254,15 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '소스를 찾을 수 없습니다.' }, { status: 404 })
         }
 
-        await admin.from('knowledge_sources')
-            .update({ processing_status: 'processing' })
+        // 읽기 시작 표시 + 시각. 300초 안에 함수가 끊기면 「읽는 중」으로 영영 남던 것을
+        // 정리 작업(cron/retention-purge)이 30분 뒤 failed(timeout)로 바꾼다
+        const 시작표시 = await admin.from('knowledge_sources')
+            .update({ processing_status: 'processing', processing_started_at: new Date().toISOString() })
             .eq('id', sourceId)
+        if (시작표시.error) {
+            // 칸이 아직 없으면(마이그레이션 전) 예전처럼 상태만
+            await admin.from('knowledge_sources').update({ processing_status: 'processing' }).eq('id', sourceId)
+        }
 
         // Storage에서 파일 다운로드
         const { data: fileData, error: dlError } = await admin.storage
@@ -382,6 +392,7 @@ export async function POST(req: NextRequest) {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${process.env.UPSTAGE_API_KEY}` },
                         body: formData,
+                        signal: upstageTimeoutSignal(),
                     })
                     if (parseRes.ok) {
                         const pd = await parseRes.json()
@@ -435,6 +446,7 @@ export async function POST(req: NextRequest) {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${process.env.UPSTAGE_API_KEY}` },
                             body: formData,
+                            signal: upstageTimeoutSignal(),
                         })
                         if (parseRes.ok) {
                             const pd = await parseRes.json()
@@ -457,6 +469,7 @@ export async function POST(req: NextRequest) {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${process.env.UPSTAGE_API_KEY}` },
                         body: formData,
+                        signal: upstageTimeoutSignal(),
                     })
                     if (parseRes.ok) {
                         const pd = await parseRes.json()
@@ -498,6 +511,7 @@ export async function POST(req: NextRequest) {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${process.env.UPSTAGE_API_KEY}` },
                         body: formData,
+                        signal: upstageTimeoutSignal(),
                     })
                     if (parseRes.ok) {
                         const pd = await parseRes.json()

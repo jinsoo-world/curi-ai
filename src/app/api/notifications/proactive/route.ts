@@ -3,7 +3,7 @@
 
 import { listBlockedMentorIds } from '@/domains/os/blocks'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createProactiveNotification } from '@/domains/notification'
+import { createProactiveNotification, pickInactiveNotNudged } from '@/domains/notification'
 import { GEMINI_MODEL } from '@/domains/chat/constants'
 import { askSideText } from '@/domains/llm/side-text'
 
@@ -13,23 +13,18 @@ import { askSideText } from '@/domains/llm/side-text'
  */
 export async function POST(req: Request) {
     try {
-        // 간단한 보안: CRON_SECRET 체크 (환경변수 설정 시)
+        // CRON_SECRET 체크. 열쇠가 설정돼 있지 않으면 통과시키던 것을 거절로 (다른 예약 작업과 같은 규칙)
         const cronSecret = req.headers.get('x-cron-secret')
-        if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
+        if (!process.env.CRON_SECRET || cronSecret !== process.env.CRON_SECRET) {
             return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
         const supabase = createAdminClient()
 
-        // 48시간 미접속 사용자 조회 (last_active_at 기준)
-        const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
-        const { data: inactiveUsers, error } = await supabase
-            .from('users')
-            .select('id, display_name, last_active_at')
-            .lt('last_active_at', cutoff)
-            .limit(50)
+        // 48시간 미접속 사용자 중 아직 안 읽은 먼저 말 걸기가 없는 사람만, 50명 (이미 받은 사람을 먼저 거른다)
+        const inactiveUsers = await pickInactiveNotNudged(supabase, { inactiveBefore: new Date(Date.now() - 48 * 60 * 60 * 1000), limit: 50 })
 
-        if (error || !inactiveUsers?.length) {
+        if (!inactiveUsers.length) {
             return Response.json({
                 message: 'No inactive users found',
                 count: 0,
@@ -49,17 +44,6 @@ export async function POST(req: Request) {
         let created = 0
 
         for (const user of inactiveUsers) {
-            // 이미 읽지 않은 proactive 알림이 있으면 스킵
-            const { data: existing } = await supabase
-                .from('notifications')
-                .select('id')
-                .eq('user_id', user.id)
-                .eq('type', 'proactive')
-                .eq('is_read', false)
-                .limit(1)
-
-            if (existing?.length) continue
-
             // 랜덤 멘토 선택 (내가 차단한 봇은 빼고)
             const blocked = await listBlockedMentorIds(supabase, user.id)
             const pool = mentors.filter(m => !blocked.has(m.id))

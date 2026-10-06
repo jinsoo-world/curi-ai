@@ -90,7 +90,7 @@ export interface Subscription {
     id: string
     user_id: string
     plan_type: 'monthly' | 'annual'
-    status: 'active' | 'canceled' | 'expired' | 'trial'
+    status: 'active' | 'canceled' | 'expired' | 'trial' | 'past_due' | 'renewing' | 'renew_paid_unsynced'
     current_period_start: string
     current_period_end: string
     toss_subscription_id: string | null

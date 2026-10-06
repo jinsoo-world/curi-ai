@@ -7,7 +7,7 @@
 //  - 리더 정산 정보(creator_payout_profiles)는 1년 보관(대표 확정 2026-10-01 「1년」): 사람 id 를 뗀 채
 //    retained_payout_profiles 로 옮기고 원래 줄은 지운다. 1년이 지나면 /api/cron/retention-purge 가 지운다.
 //  - 앱(레비뉴캣) 구독은 탈퇴로 멈추지 않는다. 막지는 않고 hasStoreSubscription 으로 알려 앱이 「앱스토어나 플레이스토어에서 구독을 해지해 주세요」를 띄운다.
-//  - 결제가 계속 나가는 구독(active, past_due)이 있으면 막고 먼저 해지하라고 안내한다.
+//  - 결제가 계속 나가는 구독(active·renewing·renew_paid_unsynced·past_due)이 있으면 막고 먼저 해지하라고 안내한다.
 //    (자동 해지는 안 한다: 환불·기간 안내는 사람이 확인하고 해지하는 게 안전하다.)
 //  - 순서: 활성 구독 확인 → 결제기록 분리(실패하면 여기서 중단) → 정산 정보 보관함으로 옮기기(실패하면 중단) → 저장소 파일 → 하위 표 → 봇 → 크리에이터 프로필 → 로그인 계정.
 //    다시 불러도 안전하다(지울 것이 없으면 그냥 지나간다).
@@ -17,6 +17,7 @@ import { revokeAppleTokens, revokeStoredAppleToken, type RevokeResult } from './
 import { readAppleRefreshToken } from './apple-token'
 import { planSource, resolvePlan } from '@/domains/os/plan'
 import { addSuppressions } from '@/domains/messaging/suppressions'
+import { BILLING_LIVE_STATUSES } from '@/domains/subscription/types'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = SupabaseClient<any, any, any>
@@ -167,7 +168,7 @@ export async function deleteAccount(
 
     // 1) 결제가 계속 나가는 구독이 있으면 막는다
     const { data: subs, error: subErr } = await db
-        .from('subscriptions').select('id, status').eq('user_id', uid).in('status', ['active', 'past_due']).limit(1)
+        .from('subscriptions').select('id, status').eq('user_id', uid).in('status', [...BILLING_LIVE_STATUSES]).limit(1)
     if (subErr && !(subErr.code && SKIPPABLE.has(subErr.code))) fail('구독 확인', subErr)
     if (subs && subs.length > 0) {
         return { ok: false, code: 'ACTIVE_SUBSCRIPTION', message: '이용 중인 구독이 있어요. 구독을 먼저 해지한 뒤 탈퇴해 주세요.' }

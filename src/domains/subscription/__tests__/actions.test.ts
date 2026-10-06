@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
     createSubscription,
-    cancelSubscription,
-    renewSubscription,
     expireSubscription,
     savePayment,
 } from '../actions'
@@ -79,57 +77,7 @@ describe('subscription/actions', () => {
         })
     })
 
-    describe('cancelSubscription', () => {
-        it('취소 시 에러 없으면 성공', async () => {
-            const updateEq = vi.fn().mockResolvedValue({ data: null, error: null })
-            const db = {
-                from: vi.fn().mockReturnValue({
-                    update: vi.fn().mockReturnValue({ eq: updateEq }),
-                }),
-            } as unknown as Parameters<typeof cancelSubscription>[0]
-
-            await cancelSubscription(db, 'sub-123')
-            expect(updateEq).toHaveBeenCalledWith('id', 'sub-123')
-        })
-
-        it('DB 에러 시 throw', async () => {
-            const db = {
-                from: vi.fn().mockReturnValue({
-                    update: vi.fn().mockReturnValue({
-                        eq: vi.fn().mockResolvedValue({ error: { message: '취소 실패' } }),
-                    }),
-                }),
-            } as unknown as Parameters<typeof cancelSubscription>[0]
-
-            await expect(cancelSubscription(db, 'sub-123')).rejects.toThrow('취소 실패')
-        })
-    })
-
-    describe('renewSubscription', () => {
-        it('월간 갱신 성공', async () => {
-            const eqFn = vi.fn().mockResolvedValue({ error: null })
-            const db = {
-                from: vi.fn().mockReturnValue({
-                    update: vi.fn().mockReturnValue({ eq: eqFn }),
-                }),
-            } as unknown as Parameters<typeof renewSubscription>[0]
-
-            await renewSubscription(db, 'sub-123', 'monthly')
-            expect(eqFn).toHaveBeenCalledWith('id', 'sub-123')
-        })
-
-        it('연간 갱신 성공', async () => {
-            const eqFn = vi.fn().mockResolvedValue({ error: null })
-            const db = {
-                from: vi.fn().mockReturnValue({
-                    update: vi.fn().mockReturnValue({ eq: eqFn }),
-                }),
-            } as unknown as Parameters<typeof renewSubscription>[0]
-
-            await renewSubscription(db, 'sub-123', 'annual')
-            expect(eqFn).toHaveBeenCalledWith('id', 'sub-123')
-        })
-    })
+    // cancelSubscription · renewSubscription 은 renew-cancel-race.test.ts 에서 본다(상태 조건이 생겨 모양이 바뀜)
 
     describe('expireSubscription', () => {
         it('만료 처리: 구독 expired + 유저 free 전환', async () => {
@@ -155,40 +103,28 @@ describe('subscription/actions', () => {
     })
 
     describe('savePayment', () => {
-        it('결제 내역 저장 성공', async () => {
-            const db = {
-                from: vi.fn().mockReturnValue({
-                    insert: vi.fn().mockResolvedValue({ error: null }),
-                }),
-            } as unknown as Parameters<typeof savePayment>[0]
+        const input = { subscriptionId: 'sub-123', userId: 'user-1', tossPaymentKey: 'pk-123', tossOrderId: 'ord-123', amount: 9900, status: 'done' as const }
 
-            await savePayment(db, {
-                subscriptionId: 'sub-123',
-                userId: 'user-1',
-                tossPaymentKey: 'pk-123',
-                tossOrderId: 'ord-123',
-                amount: 9900,
-                status: 'done',
-            })
+        it('같은 주문번호는 한 번만 = upsert(toss_order_id, ignoreDuplicates)', async () => {
+            const upsert = vi.fn().mockResolvedValue({ error: null })
+            const db = { from: vi.fn().mockReturnValue({ upsert }) } as unknown as Parameters<typeof savePayment>[0]
+            await savePayment(db, input)
+            expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ toss_order_id: 'ord-123', amount: 9900 }), { onConflict: 'toss_order_id', ignoreDuplicates: true })
+        })
+
+        it('고유 색인이 아직 없으면(42P10, 마이그레이션 전) 예전처럼 insert', async () => {
+            const upsert = vi.fn().mockResolvedValue({ error: { code: '42P10', message: 'there is no unique or exclusion constraint matching the ON CONFLICT specification' } })
+            const insert = vi.fn().mockResolvedValue({ error: null })
+            const db = { from: vi.fn().mockReturnValue({ upsert, insert }) } as unknown as Parameters<typeof savePayment>[0]
+            await savePayment(db, input)
+            expect(insert).toHaveBeenCalledTimes(1)
         })
 
         it('저장 실패 시 throw', async () => {
             const db = {
-                from: vi.fn().mockReturnValue({
-                    insert: vi.fn().mockResolvedValue({ error: { message: '저장 실패' } }),
-                }),
+                from: vi.fn().mockReturnValue({ upsert: vi.fn().mockResolvedValue({ error: { message: '저장 실패' } }) }),
             } as unknown as Parameters<typeof savePayment>[0]
-
-            await expect(
-                savePayment(db, {
-                    subscriptionId: 'sub-123',
-                    userId: 'user-1',
-                    tossPaymentKey: 'pk-123',
-                    tossOrderId: 'ord-123',
-                    amount: 9900,
-                    status: 'done',
-                })
-            ).rejects.toThrow('저장 실패')
+            await expect(savePayment(db, input)).rejects.toThrow('저장 실패')
         })
     })
 })

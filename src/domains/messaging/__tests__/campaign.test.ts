@@ -186,3 +186,86 @@ describe('캠페인 보내기(예약 작업)', () => {
         expect(await runDueCampaigns({ store, send, now: () => later(1), enabled: true })).toMatchObject({ sent: 2, blocked: 1 })
     })
 })
+
+describe('캠페인 보내기 — 통째로 멈춤 막기', () => {
+    const people = [1, 2, 3].map(n => ({ userId: uid(n), email: null }))
+
+    it('캠페인 하나가 고장 나도 다음 캠페인은 보낸다 + 실패 1번 기록', async () => {
+        const cs = [campaign({ id: 'bad', key: '261004_bad' }), campaign({ id: 'c2', key: '261004_good' })]
+        const { store, updates } = fakeRunStore(cs, people)
+        const orig = store.nextRecipients
+        store.nextRecipients = async (c, after, limit) => { if (c.id === 'bad') throw new Error('db 끊김'); return orig(c, after, limit) }
+        const send = vi.fn(async () => ({ status: 'sent' as const }))
+        const r = await runDueCampaigns({ store, send, now: () => later(1), enabled: true })
+        expect(r.sent).toBe(3)
+        expect(cs[1].status).toBe('sent')
+        expect(updates.find(u => u.id === 'bad' && u.patch.failCount === 1)?.patch).toMatchObject({ lastError: 'db 끊김' })
+        expect(cs[0].status).not.toBe('paused')
+    })
+
+    it('3번째 실패면 멈춤(paused) + 알림 한 번', async () => {
+        const cs = [campaign({ id: 'bad', failCount: 2 })]
+        const { store } = fakeRunStore(cs, people)
+        store.nextRecipients = async () => { throw new Error('고장') }
+        const notify = vi.fn(async () => {})
+        await runDueCampaigns({ store, send: vi.fn(), now: () => later(1), enabled: true, notify })
+        expect(cs[0].status).toBe('paused')
+        expect(cs[0].failCount).toBe(3)
+        expect(notify).toHaveBeenCalledTimes(1)
+    })
+
+    it('마감은 받는 사람마다 본다 — 한 쪽 중간에서 멈추고 다음 회차에 이어서', async () => {
+        const cs = [campaign()]
+        const { store } = fakeRunStore(cs, people)
+        const send = vi.fn(async () => { await new Promise(r => setTimeout(r, 40)); return { status: 'sent' as const } })
+        const r = await runDueCampaigns({ store, send, now: () => later(1), enabled: true, deadline: Date.now() + 20 })
+        expect(send).toHaveBeenCalledTimes(1)
+        expect(r.sent).toBe(1)
+        expect(cs[0].status).toBe('sending')
+        expect(cs[0].cursor).toBe(uid(1))
+    })
+
+    it('끝내기 전에 1시간 넘은 pending 받는 사람을 다시 보낸다', async () => {
+        const cs = [campaign()]
+        const { store } = fakeRunStore(cs, people)
+        const stale = { userId: uid(9), email: null }
+        store.stalePending = vi.fn(async () => [stale])
+        const send = vi.fn(async () => ({ status: 'sent' as const }))
+        const r = await runDueCampaigns({ store, send, now: () => later(1), enabled: true })
+        expect(send).toHaveBeenCalledWith(expect.anything(), stale)
+        expect(r.sent).toBe(4)
+        expect(cs[0].status).toBe('sent')
+    })
+
+    it('멈춘 캠페인은 고치기·예약이 안 되고 취소만 된다', () => {
+        const c = { status: 'paused' as const, approvedAt: null, approvalExpiresAt: null }
+        expect(decide(c, { action: 'schedule', sendAt: later(10), recipientCount: 3 }, NOW, true).ok).toBe(false)
+        expect(decide(c, { action: 'cancel' }, NOW, true).ok).toBe(true)
+    })
+})
+
+describe('캠페인 저장소 — 회원 번호 목록은 200개씩 나눠 묻는다', () => {
+    it('1,000명 목록이어도 .in 한 번에 200개 넘게 넣지 않고, 커서 뒤 limit 개만', async () => {
+        const { createSupabaseCampaignStore } = await import('../campaign-store')
+        const inSizes: number[] = []
+        const db = {
+            from: () => {
+                let ids: string[] = []
+                const q: Record<string, unknown> = {
+                    select: () => q, order: () => q,
+                    in: (_c: string, v: string[]) => { ids = v; inSizes.push(v.length); return q },
+                    then: (res: (v: unknown) => unknown) => Promise.resolve({ data: ids.map(id => ({ id, email: null })), error: null }).then(res),
+                }
+                return q
+            },
+        }
+        const all = Array.from({ length: 1000 }, (_, i) => uid(1000 - i))
+        const store = createSupabaseCampaignStore(db as never)
+        const c = campaign({ audience: { kind: 'user_ids', userIds: all } })
+        const page = await store.nextRecipients(c, uid(100), 500)
+        expect(Math.max(...inSizes)).toBeLessThanOrEqual(200)
+        expect(page).toHaveLength(500)
+        expect(page[0].userId).toBe(uid(101))
+        expect(page[499].userId).toBe(uid(600))
+    })
+})

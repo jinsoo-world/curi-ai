@@ -91,7 +91,7 @@ export async function GET() {
         const { count: activeSubscriptions } = await supabase
             .from('subscriptions')
             .select('*', { count: 'exact', head: true })
-            .eq('status', 'active')
+            .in('status', ['active', 'renewing', 'renew_paid_unsynced'])   // 갱신 도중인 구독도 구독자
 
         // === 비회원(게스트) 대화 수 — guest_chat_logs 테이블 기준 ===
         const { data: guestLogs } = await supabase

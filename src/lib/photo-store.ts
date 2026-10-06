@@ -84,17 +84,36 @@ export async function 사진보관(
 }
 
 /** 48시간 지난 것을 지운다 — 크론이 부른다 */
-export async function 만료된것_지우기(): Promise<{ 지움: number }> {
-    const admin = createAdminClient({ longRunning: true })
-    const { data: rows } = await admin
-        .from('tool_photos')
-        .select('id, path')
-        .lt('expires_at', new Date().toISOString())
-        .limit(500)
+/** 한 번에 지우는 사진 수. 저장소 삭제 한 번에 너무 많이 넣으면 느려지고 실패하면 통째로 남는다 */
+export const 지우기_묶음 = 100
 
-    if (!rows?.length) return { 지움: 0 }
+/**
+ * 48시간 지난 사진을 100개씩 지운다. 마감(deadlineMs)까지 남은 것이 없을 때까지 돈다.
+ * 저장소 삭제가 실패한 묶음은 DB 줄도 남긴다(다음 날 다시 시도 = 파일만 남는 고아가 생기지 않게).
+ * 오류는 던지지 않고 세어서 돌려준다 → 부른 쪽이 알림을 보낸다.
+ */
+export async function 만료된것_지우기(opts: { db?: ReturnType<typeof createAdminClient>; deadlineMs?: number; now?: Date } = {}): Promise<{ 지움: number; 오류: number; 첫오류: string | null }> {
+    const admin = opts.db ?? createAdminClient({ longRunning: true })
+    const deadline = opts.deadlineMs ?? Date.now() + 50_000
+    const cut = (opts.now ?? new Date()).toISOString()
+    let 지움 = 0, 오류 = 0
+    let 첫오류: string | null = null
+    const 실패 = (m: string) => { 오류++; if (!첫오류) 첫오류 = m.slice(0, 200) }
+    const 건너뛸: string[] = []   // 이번 실행에서 저장소 삭제가 실패한 줄 (같은 묶음을 계속 다시 잡지 않게)
 
-    await admin.storage.from(버킷).remove(rows.map((r) => r.path))
-    await admin.from('tool_photos').delete().in('id', rows.map((r) => r.id))
-    return { 지움: rows.length }
+    while (Date.now() < deadline) {
+        let q = admin.from('tool_photos').select('id, path').lt('expires_at', cut).order('expires_at').limit(지우기_묶음)
+        if (건너뛸.length) q = q.not('id', 'in', `(${건너뛸.join(',')})`)
+        const { data: rows, error } = await q
+        if (error) { 실패(`목록 읽기: ${error.message}`); break }
+        if (!rows?.length) break
+
+        const { error: rmErr } = await admin.storage.from(버킷).remove(rows.map((r) => r.path))
+        if (rmErr) { 실패(`저장소 삭제: ${rmErr.message}`); 건너뛸.push(...rows.map((r) => r.id)); if (건너뛸.length >= 1000) break; continue }
+        const { error: delErr } = await admin.from('tool_photos').delete().in('id', rows.map((r) => r.id))
+        if (delErr) { 실패(`DB 삭제: ${delErr.message}`); break }
+        지움 += rows.length
+        if (rows.length < 지우기_묶음) break
+    }
+    return { 지움, 오류, 첫오류 }
 }
