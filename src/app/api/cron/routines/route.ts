@@ -12,7 +12,7 @@
 //    이 코드는 어느 쪽으로 불려도 똑같이 동작한다(판정은 5분 창 규칙이 한다).
 import { NextRequest, NextResponse, after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { listEnabledRoutines, pickDue, runRoutineOnce, RoutineTableMissing } from '@/domains/os/routines'
+import { listEnabledRoutines, pickDue, runRoutineOnce, claimRoutineSlot, routineAiTimeoutMs, RoutineTableMissing } from '@/domains/os/routines'
 import { notifyNative, p001RoutineDone, type PushInput } from '@/domains/push'
 
 export const dynamic = 'force-dynamic'
@@ -20,6 +20,8 @@ export const maxDuration = 60
 
 /** 한 번에 너무 많이 돌면 시간이 넘친다. 남은 것은 다음 5분에 잡힌다(창이 5분이라 놓치지 않는다) */
 const MAX_PER_RUN = 20
+/** 전체 마감(함수 한도 60초). AI 호출 하나는 min(남은 시간 - 3초, 25초) */
+const RUN_BUDGET_MS = 50_000
 
 export async function GET(req: NextRequest) {
     const 열쇠 = process.env.CRON_SECRET
@@ -29,22 +31,29 @@ export async function GET(req: NextRequest) {
     }
 
     const now = new Date()
+    const deadline = Date.now() + RUN_BUDGET_MS
     try {
         const db = createAdminClient()
         const 켜진것 = await listEnabledRoutines(db)
         const 돌것 = pickDue(켜진것, now).slice(0, MAX_PER_RUN)
 
-        let 성공 = 0, 실패 = 0
+        let 성공 = 0, 실패 = 0, 겹침 = 0, 시간부족 = 0
         const 알림: PushInput[] = []
         for (const r of 돌것) {
-            const res = await runRoutineOnce(db, r)   // 안에서 실패를 삼키고 기록만 남긴다
+            const aiMs = routineAiTimeoutMs(deadline - Date.now())
+            if (aiMs === 0) { 시간부족++; continue }   // 다음 5분(같은 창 안)에 잡힌다
+            // 먼저 차지 = 크론이 겹쳐 와도 이번 시간대에 한 번만 돈다
+            if (!(await claimRoutineSlot(db, r, new Date()))) { 겹침++; continue }
+            const res = await runRoutineOnce(db, r, { signal: AbortSignal.timeout(aiMs) })   // 안에서 실패를 삼키고 기록만 남긴다
             if (res.ok) 성공++; else 실패++
             // 앱 알림 P001(매일 루틴 결과). 하루 1번만 = 루틴이 여러 개면 첫 결과만 울린다. 시험 실행(화면에서 누름)은 안 보낸다
             if (res.ok) 알림.push(p001RoutineDone({ userId: r.userId, mentorId: r.mentorId, botName: res.botName, routineTitle: r.title, now }))
         }
         // 응답 뒤에 차례로 보낸다 = 애플·구글이 느려도 루틴 돌리는 시간을 잡아먹지 않는다(같은 사람 하루 1번 판정이 섞이지 않게 차례로)
         if (알림.length > 0) after(async () => { for (const p of 알림) await notifyNative(db, p) })
-        return NextResponse.json({ ok: true, checked: 켜진것.length, ran: 돌것.length, 성공, 실패 })
+        const summary = { ok: true, checked: 켜진것.length, due: 돌것.length, 성공, 실패, 겹침, 시간부족 }
+        console.log('[cron/routines]', JSON.stringify(summary))
+        return NextResponse.json(summary)
     } catch (e) {
         // 표가 아직 없으면 「준비 중」이지 고장이 아니다. 빨간 카드를 만들지 않는다.
         if (e instanceof RoutineTableMissing) return NextResponse.json({ ok: true, ran: 0, note: '루틴 표 준비 중' })

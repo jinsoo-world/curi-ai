@@ -143,11 +143,37 @@ export async function deleteRoutine(db: SupabaseClient, userId: string, id: stri
     if (error) rethrow(error)
 }
 
-/** 크론용: 켜진 루틴 전부 (판정은 shouldRunNow 가 한다) */
-export async function listEnabledRoutines(db: SupabaseClient, limit = 500): Promise<BotRoutine[]> {
-    const { data, error } = await db.from('bot_routines').select(COLS).eq('enabled', true).limit(limit)
+/** 크론용: 켜진 루틴 전부 (판정은 shouldRunNow 가 한다).
+ *  번호(id) 순으로 쪽마다 읽는다 = 500개가 넘어도 뒤쪽 루틴이 영영 안 도는 일이 없다(예전엔 앞 500개에서 잘렸다) */
+export async function listEnabledRoutines(db: SupabaseClient, pageSize = 500, maxRows = 20_000): Promise<BotRoutine[]> {
+    const out: BotRoutine[] = []
+    for (let from = 0; from < maxRows; from += pageSize) {
+        const { data, error } = await db.from('bot_routines').select(COLS).eq('enabled', true)
+            .order('id', { ascending: true }).range(from, from + pageSize - 1)
+        if (error) rethrow(error)
+        const rows = (data ?? []) as unknown as Row[]
+        for (const r of rows) out.push(toRoutine(r))
+        if (rows.length < pageSize) break
+    }
+    return out
+}
+
+/**
+ * 이번 시간대 실행을 먼저 차지한다 — 크론이 겹쳐 와도(하루 1번 + 바깥 5분 예약) 같은 루틴이 두 번 돌지 않는다.
+ * 읽었던 last_run_at 그대로일 때만 지금 시각으로 바꾼다(그사이 다른 실행이 돌았으면 0줄 = false).
+ */
+export async function claimRoutineSlot(db: SupabaseClient, routine: Pick<BotRoutine, 'id' | 'lastRunAt'>, now: Date): Promise<boolean> {
+    let q = db.from('bot_routines').update({ last_run_at: now.toISOString() }).eq('id', routine.id)
+    q = routine.lastRunAt ? q.eq('last_run_at', routine.lastRunAt) : q.is('last_run_at', null)
+    const { data, error } = await q.select('id')
     if (error) rethrow(error)
-    return ((data ?? []) as unknown as Row[]).map(toRoutine)
+    return (data ?? []).length > 0
+}
+
+/** AI 호출 마감 = min(남은 시간 - 3초, 25초). 남은 시간이 모자라면 0 (= 새 루틴을 시작하지 않는다) */
+export function routineAiTimeoutMs(remainingMs: number, capMs = 25_000, reserveMs = 3_000, minMs = 5_000): number {
+    const t = Math.min(remainingMs - reserveMs, capMs)
+    return t >= minMs ? t : 0
 }
 
 /** 지금 돌 것만 고른다 (순수 규칙 두 개를 이어 붙인 것) */
@@ -179,9 +205,9 @@ async function ensureSession(db: SupabaseClient, userId: string, mentorId: strin
 }
 
 /** 모델이 낸 글자를 다 모은다 (루틴은 흘려 보여줄 화면이 없다) */
-async function askBot(systemPrompt: string, userText: string): Promise<string> {
+async function askBot(systemPrompt: string, userText: string, signal?: AbortSignal): Promise<string> {
     let full = ''
-    for await (const chunk of solarChatStream(systemPrompt, [{ role: 'user', content: userText }])) {
+    for await (const chunk of solarChatStream(systemPrompt, [{ role: 'user', content: userText }], signal ? { signal } : {})) {
         if (chunk.text) full += chunk.text
     }
     return full.trim()
@@ -203,7 +229,7 @@ export interface RunResult {
  *
  * 실패해도 던지지 않는다. 실패는 last_result 에 「실패: …」로 남고 다음 루틴이 계속 돈다.
  */
-export async function runRoutineOnce(db: SupabaseClient, routine: BotRoutine): Promise<RunResult> {
+export async function runRoutineOnce(db: SupabaseClient, routine: BotRoutine, opts: { signal?: AbortSignal } = {}): Promise<RunResult> {
     const 시작 = Date.now()
     let 결과: RunResult
     // 🚫 차단한 봇의 루틴은 돌지 않는다 (차단할 때 멈추지만, 그 사이 켜졌어도 한 번 더 막는다)
@@ -226,6 +252,7 @@ export async function runRoutineOnce(db: SupabaseClient, routine: BotRoutine): P
                 on_missing_data: routine.onMissingData,
                 approval_boundary: routine.approvalBoundary,
             }),
+            opts.signal,
         )
         if (!text) throw new Error('모델이 아무 말도 하지 않았어요')
 
