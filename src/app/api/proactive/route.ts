@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { askSideText } from '@/domains/llm/side-text'
-import { createProactiveNotification } from '@/domains/notification'
+import { createProactiveNotification, pickInactiveNotNudged } from '@/domains/notification'
 import { isBotBlocked } from '@/domains/os/blocks'
 
 export const dynamic = 'force-dynamic'
@@ -26,14 +26,10 @@ export async function POST(req: Request) {
 
         const supabase = createAdminClient()
 
-        // 24시간 이상 비활성 사용자 조회
-        const { data: inactiveUsers, error } = await supabase
-            .from('users')
-            .select('id, display_name')
-            .lt('last_active_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-            .limit(50)
+        // 24시간 이상 비활성 사용자 중 아직 안 읽은 먼저 말 걸기가 없는 사람만, 50명
+        const inactiveUsers = await pickInactiveNotNudged(supabase, { inactiveBefore: new Date(Date.now() - 24 * 60 * 60 * 1000), limit: 50 })
 
-        if (error || !inactiveUsers?.length) {
+        if (!inactiveUsers.length) {
             return Response.json({ sent: 0 })
         }
 
