@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: '로그인이 필요해요' }, { status: 401 })
     const mentorId = req.nextUrl.searchParams.get('mentorId') || ''
     try {
-        const db = createAdminClient()
+        const db = createAdminClient({ longRunning: true })
         const syncs = await listCloudSyncs(db, user.id, mentorId)
         return NextResponse.json({ syncs })
     } catch (e) {
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     const base = appUrl(req)
 
     try {
-        const db = createAdminClient()
+        const db = createAdminClient({ longRunning: true })
         await assertBotOwned(db, user.id, mentorId)
 
         if (body.action === 'run') {
@@ -95,7 +95,7 @@ export async function DELETE(req: NextRequest) {
     const mentorId = String(body.mentorId ?? '')
     const syncId = String(body.syncId ?? '')
     try {
-        const db = createAdminClient()
+        const db = createAdminClient({ longRunning: true })
         await assertBotOwned(db, user.id, mentorId)
         await deleteCloudSync(db, user.id, syncId)
         return NextResponse.json({ ok: true })

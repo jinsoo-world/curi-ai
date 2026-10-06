@@ -211,6 +211,19 @@ describe('deleteAccount', () => {
         expect(calls.some(c => c.kind === 'delete' || c.kind === 'auth-delete' || c.kind === 'storage-remove')).toBe(false)
     })
 
+    it('지우는 도중 시간 초과(코드 없는 오류)가 나면 「삭제됨」으로 끝내지 않고 멈춘다 (로그인 계정은 안 지운다)', async () => {
+        const { db, calls } = fakeDb({ fail: { creator_profiles: { code: '', message: 'TimeoutError: The operation was aborted due to timeout' } } })
+        await expect(deleteAccount(db, user)).rejects.toThrow(/creator_profiles/)
+        expect(calls.some(c => c.kind === 'auth-delete')).toBe(false)
+    })
+
+    it('탈퇴 창구는 긴 마감 연결(longRunning)로 지운다 (코드 모양)', async () => {
+        const { readFileSync } = await import('node:fs')
+        const src = readFileSync('src/app/api/account/delete/route.ts', 'utf8')
+        expect(src).toContain('createAdminClient({ longRunning: true })')
+        expect(src).not.toMatch(/createAdminClient\(\)/)
+    })
+
     it('없는 표(42P01)는 건너뛰고 계속한다', async () => {
         const { db, calls } = fakeDb({ fail: { notifications: { code: '42P01' }, payments: { code: '42P01' } } })
         const r = await deleteAccount(db, user)

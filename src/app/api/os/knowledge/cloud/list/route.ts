@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     if (!provider) return NextResponse.json({ error: '드라이브나 노션 중 하나를 골라 주세요' }, { status: 400 })
 
     try {
-        const db = createAdminClient()
+        const db = createAdminClient({ longRunning: true })
         await assertBotOwned(db, user.id, mentorId)
         const items = await listCloudItems(db, user.id, provider)
         return NextResponse.json({ items })

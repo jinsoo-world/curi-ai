@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: '로그인이 필요해요' }, { status: 401 })
     const mentorId = req.nextUrl.searchParams.get('mentorId') || ''
     try {
-        const db = createAdminClient()
+        const db = createAdminClient({ longRunning: true })
         await assertBotOwned(db, user.id, mentorId)
         return NextResponse.json({ feeds: await listFeeds(db, mentorId) })
     } catch (e) {
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     const kind = body.kind
     const handleOrUrl = String(body.handleOrUrl ?? '')
     try {
-        const db = createAdminClient()
+        const db = createAdminClient({ longRunning: true })
         await assertBotOwned(db, user.id, mentorId)
         if (!isFeedKind(kind)) return NextResponse.json({ error: '연결할 곳을 골라 주세요' }, { status: 400 })
 
@@ -91,7 +91,7 @@ export async function DELETE(req: NextRequest) {
     const feedId = String(body.feedId ?? '')
     const deleteSources = body.deleteSources === true    // 기본은 남긴다
     try {
-        const db = createAdminClient()
+        const db = createAdminClient({ longRunning: true })
         await assertBotOwned(db, user.id, mentorId)
         const r = await deleteFeed(db, mentorId, feedId, deleteSources)
         return NextResponse.json({ ok: true, ...r })

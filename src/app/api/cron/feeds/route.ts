@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     const started = Date.now()
     const deadline = started + RUN_BUDGET_MS
     try {
-        const db = createAdminClient()
+        const db = createAdminClient({ longRunning: true })
         const feeds = await listDueFeeds(db, MAX_PER_RUN)
         let ran = 0, 성공 = 0, 실패 = 0, 새자료 = 0, 멈춤 = 0
         for (const feed of feeds) {

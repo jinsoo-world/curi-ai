@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const db = createAdminClient()
+        const db = createAdminClient({ longRunning: true })
         const base = appUrl(req)
         const 돌것 = await listDueCloudSyncs(db, MAX_PER_RUN)
 

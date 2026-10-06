@@ -108,7 +108,7 @@ export default async function AcquisitionPage({ searchParams }: { searchParams: 
     let cur: Awaited<ReturnType<typeof loadSummary>> | null = null
     let prev: Awaited<ReturnType<typeof loadSummary>> | null = null
     try {
-        const db = createAdminClient()
+        const db = createAdminClient({ longRunning: true })
         ;[cur, prev] = await Promise.all([loadSummary(db, p), loadSummary(db, p.prev)])
     } catch (e) {
         error = e instanceof Error ? e.message : '읽지 못했어요'

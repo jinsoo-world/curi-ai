@@ -171,6 +171,8 @@ export default function OsGroupChat({ channelId }: { channelId: string }) {
                 // id 시각을 서버와 맞춘다 (이미 보이는 말은 유지)
                 await load()
             }
+            // 마감(55초)이 가까워 남은 봇을 건너뛰었으면 안내 한 줄 (2026-10-06)
+            if (data.continueLater && typeof data.notice === 'string') setErr(data.notice)
         } catch (e) {
             setErr(e instanceof Error ? e.message : '말을 못 옮겼어요')
             setWorkingIds([])

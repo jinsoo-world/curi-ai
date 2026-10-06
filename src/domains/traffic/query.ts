@@ -46,7 +46,7 @@ function 길이름(r: { utm_source: string | null; utm_campaign: string | null; 
 export async function 유입세기(일수: number): Promise<유입자료> {
     const 기간 = Math.min(90, Math.max(1, Number(일수) || 7))
     const 부터 = new Date(Date.now() - 기간 * 86400_000).toISOString()
-    const admin = createAdminClient()
+    const admin = createAdminClient({ longRunning: true })
 
     const [방문, 가입수, 사진수, 행동줄] = await Promise.all([
         admin.from('visit_logs')

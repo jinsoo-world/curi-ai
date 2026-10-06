@@ -90,7 +90,7 @@ export async function POST(req: Request) {
             return Response.json({ error: '세션 ID가 필요합니다' }, { status: 400 })
         }
 
-        const admin = createAdminClient()
+        const admin = createAdminClient({ longRunning: true })
 
         // 세션 정보 조회
         const { data: session } = await admin

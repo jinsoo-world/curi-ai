@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'bad_body' }, { status: 400 })
     }
 
-    const store = supabaseRcStore(createAdminClient())
+    const store = supabaseRcStore(createAdminClient({ longRunning: true }))
     // 샌드박스(테스트플라이트·애플 심사) 구매는 REVENUECAT_ALLOW_SANDBOX=1 일 때만 요금제를 연다. 심사 기간에만 켠다
     const allowSandbox = process.env.REVENUECAT_ALLOW_SANDBOX === '1'
     const r = await handleRevenueCatWebhook({

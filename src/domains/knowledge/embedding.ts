@@ -10,12 +10,17 @@ function getAI() {
 }
 
 export const EMBEDDING_MODEL = 'gemini-embedding-001'
+/** 대화 중 질문 임베딩 마감. 넘기면 자료 검색 없이 답한다 (2026-10-06 멈춤 점검) */
+export const EMBEDDING_CHAT_TIMEOUT_MS = 3_000
+/** 기본 마감(파일 학습·재처리처럼 사용자가 화면 앞에서 기다리지 않는 일). 대화는 EMBEDDING_CHAT_TIMEOUT_MS 를 넘긴다 */
+export const EMBEDDING_TIMEOUT_MS = 20_000
 
 /**
  * 텍스트를 Gemini 임베딩 벡터로 변환
  * usage 를 주면 비용 기록(llm_usage)에 남긴다. 임베딩은 토큰 수를 안 돌려줘서 글자 수로 어림한다.
+ * opts.timeoutMs = 마감(기본 20초). 대화 경로는 EMBEDDING_CHAT_TIMEOUT_MS(3초)를 넘긴다.
  */
-export async function generateEmbedding(text: string, usage?: UsageCtx): Promise<number[]> {
+export async function generateEmbedding(text: string, usage?: UsageCtx, opts: { timeoutMs?: number } = {}): Promise<number[]> {
     const started = Date.now()
     const log = (ok: boolean, error?: string) => logLlmUsage({
         route: usage?.route ?? 'unknown',
@@ -30,6 +35,8 @@ export async function generateEmbedding(text: string, usage?: UsageCtx): Promise
             contents: text,
             config: {
                 outputDimensionality: 768,
+                // 마감이 지나면 요청을 끊고 던진다(호출 쪽이 자료 없이 넘어간다)
+                abortSignal: AbortSignal.timeout(opts.timeoutMs ?? EMBEDDING_TIMEOUT_MS),
             },
         })
         log(true)

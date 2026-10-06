@@ -8,7 +8,7 @@ export async function POST() {
         return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
-    const supabase = createAdminClient()
+    const supabase = createAdminClient({ longRunning: true })
 
     try {
         // Materialized View 갱신

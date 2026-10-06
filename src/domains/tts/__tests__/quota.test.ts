@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { chargeDailyChars, TTS_DAILY_CHARS } from '../quota'
+import { chargeDailyChars, refundDailyChars, TTS_DAILY_CHARS } from '../quota'
 
 // DB 함수 tts_charge_chars 의 동작(상한 안에서만 더하고 true)을 흉내 낸 가짜 DB
 function fakeDb() {
@@ -31,5 +31,21 @@ describe('하루 글자 수 상한(DB 함수 한 번 호출)', () => {
         expect((await chargeDailyChars(bad as never, 'u', 100)).allowed).toBe(true)
         const thrown = { rpc: async () => { throw new Error('boom') } }
         expect((await chargeDailyChars(thrown as never, 'u', 100)).allowed).toBe(true)
+    })
+})
+
+describe('실패하면 하루 글자 수를 되돌린다 (2026-10-06)', () => {
+    it('올린 창(window)과 같은 창으로 되돌린다', async () => {
+        const calls: Record<string, unknown>[] = []
+        const db = { rpc: async (fn: string, a: Record<string, unknown>) => { calls.push({ fn, ...a }); return { data: fn === 'tts_charge_chars' ? true : 0, error: null } } }
+        const c = await chargeDailyChars(db as never, 'u', 120)
+        expect(c.allowed).toBe(true)
+        expect(typeof c.window).toBe('string')
+        await refundDailyChars(db as never, 'u', 120, c.window!)
+        expect(calls[1]).toMatchObject({ fn: 'tts_refund_chars', p_key: 'tts-day:u:u', p_window: c.window, p_chars: 120 })
+    })
+    it('되돌리기 함수가 없어도 던지지 않는다', async () => {
+        const bad = { rpc: async () => ({ data: null, error: { code: 'PGRST202' } }) }
+        await expect(refundDailyChars(bad as never, 'u', 1, '2026-10-06T00:00:00.000Z')).resolves.toBeUndefined()
     })
 })

@@ -35,7 +35,30 @@ export interface ChatStreamOptions {
     truncationNote?: boolean
     /** 비용 기록(llm_usage)에 남길 자리. 안 주면 route 를 모르는 채로 남긴다 */
     usage?: UsageCtx & { kind?: string }
+    /** 대화 마감 시각(epoch ms). 솔라·Gemini 둘 다 이 시각이 지나면 끊는다. 안 주면 각자 상한(50초) */
+    deadline?: number
 }
+
+/** Gemini 첫 글자 마감. 이 안에 글이 안 오면 끊는다 (끄기 없음, GEMINI_FIRST_TOKEN_MS 로 조정) */
+export const GEMINI_FIRST_TOKEN_MS = 6_000
+/** 검색(구글 검색 도구)·사진을 보는 Gemini 는 찾고 읽는 시간이 있어 첫 글자 마감을 조금 길게 */
+export const GEMINI_SEARCH_FIRST_TOKEN_MS = 10_000
+/** 마감을 안 줬을 때 Gemini 한 번의 전체 상한 */
+const GEMINI_TOTAL_MS = SOLAR_TIMEOUT_MS
+
+function geminiFirstTokenMs(search: boolean): number {
+    const v = Number(process.env.GEMINI_FIRST_TOKEN_MS)
+    if (Number.isFinite(v) && v > 0) return v
+    return search ? GEMINI_SEARCH_FIRST_TOKEN_MS : GEMINI_FIRST_TOKEN_MS
+}
+
+/** 마감까지 남은 시간(ms). 마감이 없으면 fallback */
+function msLeft(deadline: number | undefined, fallback: number): number {
+    return typeof deadline === 'number' ? Math.max(0, Math.min(fallback, deadline - Date.now())) : fallback
+}
+
+/** 검색 Gemini 가 첫 글자도 못 내고 실패했다 (솔라로 넘어가는 신호) */
+class GeminiFailedBeforeText extends Error {}
 
 /** 한 번의 답에 걸린 시간과 토큰을 모아 두었다가 끝날 때 한 줄 남긴다 */
 function usageMeter(opts: ChatStreamOptions) {
@@ -69,6 +92,8 @@ async function* solarWithFallback(
     systemPrompt: string,
     history: GeminiMessage[],
     opts: ChatStreamOptions = {},
+    /** false = 솔라가 죽어도 Gemini 로 안 간다(검색 Gemini 가 이미 실패해 넘어온 경우) */
+    geminiFallback = true,
 ): AsyncGenerator<TextChunk> {
     const { messages } = geminiToOpenAi(systemPrompt, history)
     const started = Date.now()
@@ -80,9 +105,9 @@ async function* solarWithFallback(
     let reason: FallbackReason = 'other'
     let solarError: string | null = null
 
-    // 솔라 요청을 우리가 끊을 수 있게 한다: 첫 글자가 늦을 때, 그리고 전체 시간 상한(50초)
+    // 솔라 요청을 우리가 끊을 수 있게 한다: 첫 글자가 늦을 때, 그리고 전체 시간 상한(50초, 대화 마감이 더 이르면 그때)
     const ctrl = new AbortController()
-    const totalTimer = setTimeout(() => ctrl.abort(), SOLAR_TIMEOUT_MS)
+    const totalTimer = setTimeout(() => ctrl.abort(), msLeft(opts.deadline, SOLAR_TIMEOUT_MS))
     const firstTokenMs = solarFirstTokenTimeoutMs()
     let solarDone = false
     const iter = solarChatStream('', messages, { maxTokens: solarMaxOutputTokens(opts.maxOutputTokens), signal: ctrl.signal })[Symbol.asyncIterator]()
@@ -150,7 +175,7 @@ async function* solarWithFallback(
     }
 
     // 되돌아가기
-    if (!process.env.GEMINI_API_KEY) {
+    if (!process.env.GEMINI_API_KEY || !geminiFallback || msLeft(opts.deadline, 1) <= 0) {
         yield { text: UNAVAILABLE_TEXT }
         return
     }
@@ -162,6 +187,8 @@ async function* geminiStream(
     systemPrompt: string, history: GeminiMessage[], opts: ChatStreamOptions,
     meter: ReturnType<typeof usageMeter>, fallback: boolean,
     fallbackReason: FallbackReason | null = null, solarError: string | null = null,
+    /** 'throw' = 첫 글자 전에 실패하면 「쉬는 중」 대신 GeminiFailedBeforeText 를 던진다(검색 → 솔라 넘김용) */
+    failMode: 'unavailable' | 'throw' = 'unavailable',
 ): AsyncGenerator<TextChunk> {
     let meta: unknown = null
     let logged = false
@@ -175,13 +202,33 @@ async function* geminiStream(
         const t = geminiTokens(meta)
         meter.log({ provider: 'gemini', model: GEMINI_MODEL, input: t.input, output: t.output, fallback, ok, error, fallbackReason, searchQueries, solarError })
     }
+    // 끊기 신호: 첫 글자 마감(보통 6초, 검색 10초) + 전체 마감(대화 마감까지 남은 시간, 없으면 50초)
+    const ctrl = new AbortController()
+    const totalMs = msLeft(opts.deadline, GEMINI_TOTAL_MS)
+    const totalTimer = setTimeout(() => ctrl.abort(new Error('gemini deadline')), totalMs)
+    const firstMs = Math.min(geminiFirstTokenMs(fallbackReason === 'search' || fallbackReason === 'image'), totalMs)
+    let firstTimer: ReturnType<typeof setTimeout> | undefined = setTimeout(() => ctrl.abort(new Error(`gemini first token > ${firstMs}ms`)), firstMs)
+    /** 끊기 신호가 오면 기다리던 다음 조각을 바로 실패로 (SDK 가 신호를 늦게 보더라도 멈추지 않게) */
+    const aborted = new Promise<never>((_r, rej) => {
+        if (ctrl.signal.aborted) rej(ctrl.signal.reason)
+        ctrl.signal.addEventListener('abort', () => rej(ctrl.signal.reason), { once: true })
+    })
+    aborted.catch(() => { /* 아래 race 에서 받는다 */ })
     try {
-        const gemini = await generateGeminiStream(systemPrompt, history, opts)
-        for await (const chunk of gemini) {
+        if (totalMs <= 0) throw new Error('gemini deadline passed')
+        const gemini = await Promise.race([generateGeminiStream(systemPrompt, history, { ...opts, abortSignal: ctrl.signal }), aborted])
+        const it = gemini[Symbol.asyncIterator]()
+        while (true) {
+            const step = await Promise.race([it.next(), aborted])
+            if (step.done) break
+            const chunk = step.value
             if (chunk.usageMetadata) meta = chunk.usageMetadata
             const q = chunk.candidates?.[0]?.groundingMetadata?.webSearchQueries
             if (Array.isArray(q) && q.length > searchQueries) searchQueries = q.length
-            if (chunk.text) { meter.firstToken(); gotText = true }
+            if (chunk.text) {
+                meter.firstToken(); gotText = true
+                if (firstTimer) { clearTimeout(firstTimer); firstTimer = undefined }
+            }
             if (chunk.candidates?.[0]?.finishReason === 'MAX_TOKENS') truncated = true
             yield { text: chunk.text || '' }
         }
@@ -193,10 +240,34 @@ async function* geminiStream(
         const msg = err instanceof Error ? err.message : String(err)
         console.error(`[LLM] gemini ${fallback ? 'fallback failed too' : 'failed'}: ${msg}`)
         log(false, msg)
+        if (failMode === 'throw' && !gotText) throw new GeminiFailedBeforeText(msg)
         yield { text: UNAVAILABLE_TEXT }
     } finally {
         log(true)
+        clearTimeout(totalTimer)
+        if (firstTimer) clearTimeout(firstTimer)
+        // 다 못 읽고 나왔으면 요청을 끊어 토큰이 더 나가지 않게 한다
+        if (!ctrl.signal.aborted) ctrl.abort(new Error('done'))
     }
+}
+
+/**
+ * 검색을 부탁한 말 = 구글 검색이 되는 Gemini 가 먼저. 첫 글자도 못 내고 죽으면(마감 포함) 검색 없이 솔라가 답한다.
+ * 솔라까지 죽으면 Gemini 를 또 부르지 않고 「쉬는 중」 (같은 고장에 두 번 기다리지 않는다).
+ */
+async function* searchWithSolarFallback(systemPrompt: string, history: GeminiMessage[], opts: ChatStreamOptions): AsyncGenerator<TextChunk> {
+    try {
+        yield* geminiStream(systemPrompt, history, opts, usageMeter(opts), false, 'search', null, 'throw')
+        return
+    } catch (err) {
+        if (!(err instanceof GeminiFailedBeforeText)) throw err
+        console.error('[LLM] 검색 Gemini 실패, 검색 없이 솔라로:', err.message.slice(0, 160))
+    }
+    if (!process.env.UPSTAGE_API_KEY) {
+        yield { text: UNAVAILABLE_TEXT }
+        return
+    }
+    yield* solarWithFallback(systemPrompt, history, { ...opts, webSearch: false }, false)
 }
 
 async function* geminiOnly(systemPrompt: string, history: GeminiMessage[], opts: ChatStreamOptions = {}, reason: FallbackReason | null = null): AsyncGenerator<TextChunk> {
@@ -219,7 +290,7 @@ export async function generateChatStream(
     const { hasImage } = geminiToOpenAi('', history)
     const driver = pickDriverFromEnv(hasImage)
     if (driver === 'solar') {
-        if (opts.webSearch && opts.recencyOn !== false && process.env.GEMINI_API_KEY) return geminiOnly(systemPrompt, history, opts, 'search')
+        if (opts.webSearch && opts.recencyOn !== false && process.env.GEMINI_API_KEY) return searchWithSolarFallback(systemPrompt, history, opts)
         return solarWithFallback(systemPrompt, history, opts)
     }
     if (driver === 'gemini') {

@@ -59,6 +59,7 @@ export interface UsageView {
     blocked: boolean                 // 이번 달 한도를 다 썼나
     warn: boolean                    // 알림 퍼센트(80) 이상, 아직 안 막힘
     line: string                     // 화면 한 줄
+    planUnknown?: boolean            // 요금제를 못 읽어 막지 않고 통과시켰다(서버 판정용)
 }
 
 export function usageView(i: UsageInput): UsageView {

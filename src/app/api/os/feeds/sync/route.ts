@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const mentorId = String(body.mentorId ?? '')
     const feedId = String(body.feedId ?? '')
     try {
-        const db = createAdminClient()
+        const db = createAdminClient({ longRunning: true })
         await assertBotOwned(db, user.id, mentorId)
         const feed = await getFeed(db, mentorId, feedId)
         // 「내 SNS 연결」 줄은 SNS 규칙으로 (요금제 상한, 배우기와 같은 횟수 열쇠 = 이 문으로 한도를 비켜 가지 못한다)

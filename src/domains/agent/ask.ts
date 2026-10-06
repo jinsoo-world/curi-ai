@@ -73,6 +73,8 @@ export interface AskChatOptions {
     maxTokens?: number
     recencyOn?: boolean
     usage?: UsageCtx & { kind?: string }
+    /** 마감 시각(epoch ms). 솔라·Gemini 둘 다 이 시각이 지나면 끊는다 (단체방 남은 시간) */
+    deadline?: number
 }
 
 /**
@@ -91,6 +93,7 @@ export async function askChat(
             maxOutputTokens: opts.maxTokens,
             recencyOn: opts.recencyOn,
             usage: opts.usage,
+            deadline: opts.deadline,
         })) {
             if (chunk.text) out += chunk.text
         }

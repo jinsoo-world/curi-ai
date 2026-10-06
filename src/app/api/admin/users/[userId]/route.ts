@@ -12,7 +12,7 @@ export async function GET(
     }
 
     const { userId } = await params
-    const supabase = createAdminClient()
+    const supabase = createAdminClient({ longRunning: true })
 
     try {
         // 유저 기본 정보

@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
         const 나이 = getAge(isValidAgeId(ageId) ? ageId : DEFAULT_AGE_ID)!.minus
         const 머리 = getIdHair(isValidIdHair(hairId) ? hairId : DEFAULT_HAIR_ID)
 
-        const admin = createAdminClient()
+        const admin = createAdminClient({ longRunning: true })
         // 하루 사진 한도 (IMAGE_GLOBAL_DAILY). 클로버를 빼기 전에 본다
         const 한도 = await checkImageCap(admin, { route: '/api/tools/id-photo' })
         if (한도) return NextResponse.json({ error: 한도 }, { status: 429 })

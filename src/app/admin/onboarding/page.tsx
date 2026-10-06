@@ -39,7 +39,7 @@ export default async function OnboardingAdminPage({ searchParams }: { searchPara
     let error = ''
     let d: Awaited<ReturnType<typeof loadOnboarding>> = { users: [], rows: [], botOwners: new Set(), chatUsers: new Set(), sns: new Map() }
     try {
-        d = await loadOnboarding(createAdminClient(), range.startIso, range.endIso)
+        d = await loadOnboarding(createAdminClient({ longRunning: true }), range.startIso, range.endIso)
     } catch (e) {
         error = e instanceof Error ? e.message : '읽지 못했어요'
     }

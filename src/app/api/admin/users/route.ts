@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
-    const supabase = createAdminClient()
+    const supabase = createAdminClient({ longRunning: true })
     const searchParams = request.nextUrl.searchParams
     const search = searchParams.get('search') || ''
     const segment = searchParams.get('segment') || 'all'

@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     if (!열쇠 || req.headers.get('authorization') !== `Bearer ${열쇠}`) {
         return NextResponse.json({ error: 'no' }, { status: 401 })
     }
-    const db = createAdminClient()
+    const db = createAdminClient({ longRunning: true })
     await purgeExpiredPayouts(db)
     await purgeAppConnectRows(db)   // 앱 연결 1회용 번호·임시 보관 중 하루 지난 행
     return NextResponse.json({ success: true })

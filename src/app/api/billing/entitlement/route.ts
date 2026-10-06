@@ -21,7 +21,7 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: '로그인이 필요해요.' }, { status: 401, headers: NO_STORE })
 
-    const admin = createAdminClient()
+    const admin = createAdminClient({ longRunning: true })
     const read = () => admin.from('user_plans').select('plan, expires_at, last_order_id').eq('user_id', user.id).maybeSingle()
     let { data, error } = await read()
     if (error) {

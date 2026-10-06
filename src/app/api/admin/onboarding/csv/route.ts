@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const sp = req.nextUrl.searchParams
     const range = kstRange(sp.get('from'), sp.get('to'))
     try {
-        const d = await loadOnboarding(createAdminClient(), range.startIso, range.endIso)
+        const d = await loadOnboarding(createAdminClient({ longRunning: true }), range.startIso, range.endIso)
         return new NextResponse(toCsv(d.users, d.rows, d.botOwners, d.chatUsers), {
             headers: {
                 'Content-Type': 'text/csv; charset=utf-8',

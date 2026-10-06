@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: '찾을 사진이 없어요.' }, { status: 400 })
     }
 
-    const admin = createAdminClient()
+    const admin = createAdminClient({ longRunning: true })
     const { data: row } = await admin
         .from('tool_photos')
         .select('id, path, expires_at, user_id')
