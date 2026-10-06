@@ -50,6 +50,24 @@ describe('토스 웹훅 /api/billing/webhook', () => {
         expect(h.slack).toHaveBeenCalledWith(expect.stringContaining('9,900원'), expect.anything(), { timeoutMs: 3000 })
     })
 
+    it('모르는·진행 중 상태(IN_PROGRESS·WAITING_FOR_DEPOSIT·READY)는 200 + DB 갱신 없음(실패로 적지 않는다)', async () => {
+        for (const status of ['IN_PROGRESS', 'WAITING_FOR_DEPOSIT', 'READY', 'SOMETHING_NEW']) {
+            h.updates.length = 0
+            h.getPayment.mockResolvedValue({ paymentKey: 'pk', orderId: 'o', status, totalAmount: 9900 })
+            const res = await post({ eventType: 'PAYMENT_STATUS_CHANGED', data: { paymentKey: 'pk' } })
+            expect(res.status, status).toBe(200)
+            expect(h.updates, status).toHaveLength(0)
+        }
+    })
+
+    it('부분 취소(PARTIAL_CANCELED)는 전체 취소로 바꾸지 않는다(결제 기록 상태 그대로) + 알림', async () => {
+        h.getPayment.mockResolvedValue({ paymentKey: 'pk', orderId: 'o', status: 'PARTIAL_CANCELED', totalAmount: 9900 })
+        const res = await post({ eventType: 'PAYMENT_STATUS_CHANGED', data: { paymentKey: 'pk' } })
+        expect(res.status).toBe(200)
+        expect(h.updates.some(u => u.status === 'canceled')).toBe(false)
+        expect(h.slack).toHaveBeenCalledTimes(1)
+    })
+
     it('토스에 없는 결제(404)면 꾸민 요청 → DB·슬랙 손대지 않고 400', async () => {
         h.getPayment.mockRejectedValue(Object.assign(new Error('없음'), { status: 404 }))
         const res = await post({ eventType: 'PAYMENT_STATUS_CHANGED', data: { paymentKey: 'fake', status: 'DONE' } })

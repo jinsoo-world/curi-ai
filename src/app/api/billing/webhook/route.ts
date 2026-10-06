@@ -100,20 +100,27 @@ export async function POST(req: NextRequest) {
                 }
                 const { paymentKey, orderId, status, totalAmount, method, orderName } = payment
 
-                // 1. DB 업데이트 — payments 테이블에서 해당 결제 상태 동기화 (토스가 알려 준 상태로)
+                // 1. DB 업데이트 — payments 테이블에서 해당 결제 상태 동기화 (토스가 알려 준 상태로, 확실한 상태만)
+                //    PARTIAL_CANCELED 는 일부만 돌려준 것 = 전체 취소로 바꾸지 않는다(결제 기록 상태 그대로, 알림만)
+                //    IN_PROGRESS·WAITING_FOR_DEPOSIT·READY·새 상태 = 아직 끝나지 않았거나 모르는 상태 → 200 + 갱신 없음
                 const statusMap: Record<string, string> = {
                     DONE: 'done',
                     CANCELED: 'canceled',
-                    PARTIAL_CANCELED: 'canceled',
                     ABORTED: 'failed',
                     EXPIRED: 'failed',
                 }
-                const dbStatus = statusMap[status] || 'failed'
-                const { error: upErr } = await db
-                    .from('payments')
-                    .update({ status: dbStatus, updated_at: new Date().toISOString() })
-                    .eq('toss_payment_key', paymentKey)
-                if (upErr) throw new Error(`payments 갱신 실패: ${upErr.message}`)
+                const dbStatus = statusMap[status]
+                if (!dbStatus && status !== 'PARTIAL_CANCELED') {
+                    console.log('[Webhook] 갱신하지 않는 상태 — 기록만', status, orderId)
+                    return NextResponse.json({ success: true, ignored: status })
+                }
+                if (dbStatus) {
+                    const { error: upErr } = await db
+                        .from('payments')
+                        .update({ status: dbStatus, updated_at: new Date().toISOString() })
+                        .eq('toss_payment_key', paymentKey)
+                    if (upErr) throw new Error(`payments 갱신 실패: ${upErr.message}`)
+                }
 
                 // 2. 결제자 정보 조회
                 const payer = await getPayerInfo(db, paymentKey)
