@@ -84,7 +84,7 @@ describe('normalizeSnsInput = 모양과 SSRF', () => {
         await expect(sns.normalizeSnsInput('instagram', 'https://evil.com/jin')).rejects.toBeInstanceOf(sns.SnsInputError)
     })
 
-    it('유튜브 채널 번호 주소는 그대로, @핸들은 공식 API 로 번호를 찾는다', async () => {
+    it('유튜브 채널 번호 주소는 그대로, @핸들은 풀기 함수로 번호를 찾는다', async () => {
         const ch = 'UC' + 'a'.repeat(22)
         const r1 = await sns.normalizeSnsInput('youtube', `https://www.youtube.com/channel/${ch}`)
         expect(r1?.fetch).toEqual({ kind: 'youtube', handleOrUrl: `https://www.youtube.com/channel/${ch}` })
@@ -95,7 +95,16 @@ describe('normalizeSnsInput = 모양과 SSRF', () => {
         expect(r2).toEqual({ publicUrl: 'https://www.youtube.com/@jinceo', fetch: { kind: 'youtube', handleOrUrl: `https://www.youtube.com/channel/${ch}` } })
     })
 
-    it('유튜브 @핸들을 공식으로 못 풀면(열쇠 없음) 채널 주소를 달라고 한다. 영상 하나 주소는 막는다', async () => {
+    it('유튜브 @핸들 기본 풀기 = 기존 계정 연결과 같은 방식(채널 페이지 → 열쇠 있으면 공식 API). 열쇠 없어도 된다', async () => {
+        const ch = 'UC' + 'c'.repeat(22)
+        delete process.env.YOUTUBE_API_KEY
+        fetchPageSafely.mockImplementation(async (url: string) => page(url, `<html><link rel="canonical" href="https://www.youtube.com/channel/${ch}"></html>`))
+        const r = await sns.normalizeSnsInput('youtube', '@jinceo')
+        expect(fetchPageSafely.mock.calls[0][0]).toBe('https://www.youtube.com/@jinceo')
+        expect(r?.fetch).toEqual({ kind: 'youtube', handleOrUrl: `https://www.youtube.com/channel/${ch}` })
+    })
+
+    it('유튜브 채널을 못 찾으면 채널 주소를 달라고 한다. 영상 하나 주소는 막는다', async () => {
         await expect(sns.normalizeSnsInput('youtube', '@jinceo', { resolveYoutubeHandle: async () => null })).rejects.toThrow(/channel\/UC/)
         await expect(sns.normalizeSnsInput('youtube', 'https://www.youtube.com/watch?v=abcdefghijk')).rejects.toThrow(/채널/)
         await expect(sns.normalizeSnsInput('youtube', 'https://vimeo.com/123')).rejects.toBeInstanceOf(sns.SnsInputError)
@@ -220,20 +229,147 @@ describe('SNS 가져오기 = 블로그 RSS, 유튜브(제목, 설명만), 큐리
         await expect(sns.SNS_FETCHERS.blog(feedOf(), null, {})).rejects.toThrow(/RSS/)
     })
 
-    it('유튜브: 공식 공개 피드의 제목과 설명만 쓴다. 자막 읽기(readUrl)를 부르지 않는다', async () => {
+    it('유튜브: 영상마다 기존 자막 읽기(readUrl)로 자막을 넣는다. 영상당 최대 길이', async () => {
         const ch = 'UC' + 'b'.repeat(22)
         fetchPageSafely.mockImplementation(async (url: string) => page(url, atom(3)))
+        readUrl.mockImplementation(async (url: string, o: { maxChars?: number }) => ({ ok: true, url, requestedUrl: url, title: 't', text: `[유튜브 영상]\n\n[자막]\n${'말 '.repeat(30_000)}`.slice(0, o.maxChars), kind: 'youtube', method: 'captions' }))
         const r = await sns.SNS_FETCHERS.youtube(feedOf({ kind: 'youtube', handleOrUrl: `https://www.youtube.com/channel/${ch}`, snsSlot: 'youtube' }), null, {})
         expect(fetchPageSafely.mock.calls[0][0]).toBe(`https://www.youtube.com/feeds/videos.xml?channel_id=${ch}`)
-        expect(r.items).toHaveLength(3)
-        expect(r.items[0].title).toBe('영상 3')
-        expect(r.items[0].text).toContain('영상 3 설명입니다')
-        expect(readUrl).not.toHaveBeenCalled()
+        expect(readUrl).toHaveBeenCalledTimes(3)
+        expect(readUrl.mock.calls[0][1]).toMatchObject({ maxChars: sns.SNS_ITEM_MAX_CHARS })
+        expect(r.items.map(i => i.title)).toEqual(['영상 3', '영상 2', '영상 1'])   // 최신 영상부터, 피드 제목 그대로
+        expect(r.items[0].text).toContain('[자막]')
+        expect(r.items.every(i => (i.text ?? '').length <= sns.SNS_ITEM_MAX_CHARS)).toBe(true)
+        expect(r.note).toBeUndefined()
     })
 
-    it('유튜브: 채널 번호가 없는 주소는 거절(채널 페이지를 긁지 않는다)', async () => {
-        await expect(sns.SNS_FETCHERS.youtube(feedOf({ kind: 'youtube', handleOrUrl: 'https://www.youtube.com/@jin', snsSlot: 'youtube' }), null, {})).rejects.toThrow(/채널/)
+    it('유튜브: 자막이 없거나 못 읽으면 제목, 설명으로 대신 넣고 이유를 남긴다', async () => {
+        const ch = 'UC' + 'b'.repeat(22)
+        fetchPageSafely.mockImplementation(async (url: string) => page(url, atom(3)))
+        readUrl.mockImplementation(async (url: string) => url.endsWith('02')
+            ? { ok: false, requestedUrl: url, reason: '이 영상은 열 수 없어요' }
+            : url.endsWith('01')
+                ? { ok: true, url, requestedUrl: url, title: 't', text: '[유튜브 영상] 영상 2\n\n[설명]\n설명\n\n(이 영상은 자막이 없어요)', kind: 'youtube', method: 'meta' }
+                : { ok: true, url, requestedUrl: url, title: 't', text: '[자막]\n안녕하세요 오늘은 마케팅', kind: 'youtube', method: 'captions' })
+        const r = await sns.SNS_FETCHERS.youtube(feedOf({ kind: 'youtube', handleOrUrl: `https://www.youtube.com/channel/${ch}`, snsSlot: 'youtube' }), null, {})
+        expect(r.items).toHaveLength(3)
+        const v3 = r.items.find(i => i.title === '영상 3')!
+        expect(v3.text).toContain('영상 3 설명입니다')                        // 못 읽음 → 피드의 제목, 설명
+        expect(r.items.find(i => i.title === '영상 2')!.text).toContain('자막이 없어요')   // 자막 없음 → 읽기 함수의 제목, 설명
+        expect(r.note).toMatch(/1개.*자막/)
+        expect(r.note).toMatch(/1개.*못 읽어/)
+    })
+
+    it('유튜브: 이미 배운 영상은 읽지 않고, 최근 SNS_YOUTUBE_MAX_VIDEOS 개까지만', async () => {
+        const ch = 'UC' + 'b'.repeat(22)
+        fetchPageSafely.mockImplementation(async (url: string) => page(url, atom(3)))
+        readUrl.mockImplementation(async (url: string) => ({ ok: true, url, requestedUrl: url, title: 't', text: '[자막]\n안녕하세요 오늘은 마케팅', kind: 'youtube', method: 'captions' }))
+        const r = await sns.SNS_FETCHERS.youtube(feedOf({ kind: 'youtube', handleOrUrl: `https://www.youtube.com/channel/${ch}`, snsSlot: 'youtube' }), null, { isKnown: u => u.endsWith('02') })
+        expect(r.items.map(i => i.title)).toEqual(['영상 2', '영상 1'])
+        expect(readUrl).toHaveBeenCalledTimes(2)
+        expect(sns.SNS_YOUTUBE_MAX_VIDEOS).toBe(20)
+    })
+
+    it('유튜브: 저장된 주소가 @핸들이어도 채널 번호를 기존 방식으로 찾아 읽는다', async () => {
+        const ch = 'UC' + 'd'.repeat(22)
+        fetchPageSafely.mockImplementation(async (url: string) => url.includes('/feeds/') ? page(url, atom(1)) : page(url, `<link rel="canonical" href="https://www.youtube.com/channel/${ch}">`))
+        readUrl.mockImplementation(async (url: string) => ({ ok: true, url, requestedUrl: url, title: 't', text: '[자막]\n안녕하세요 오늘은 마케팅', kind: 'youtube', method: 'captions' }))
+        const r = await sns.SNS_FETCHERS.youtube(feedOf({ kind: 'youtube', handleOrUrl: 'https://www.youtube.com/@jin', snsSlot: 'youtube' }), null, {})
+        expect(r.items).toHaveLength(1)
+        expect(fetchPageSafely.mock.calls.some(c => String(c[0]).includes(`channel_id=${ch}`))).toBe(true)
+    })
+})
+
+describe('유튜브 공개 피드가 막혔을 때 (1006 실측: 정상 채널에도 404)', () => {
+    it('열쇠가 없으면 채널 「동영상」 화면에서 영상 번호를 찾아 자막을 읽는다. 제목은 읽기 결과에서', async () => {
+        delete process.env.YOUTUBE_API_KEY
+        const ch = 'UC' + 'e'.repeat(22)
+        fetchPageSafely.mockImplementation(async (url: string) => url.includes('/feeds/')
+            ? { ok: false, requestedUrl: url, reason: '응답 404' }
+            : page(url, '{"videoId":"AAAAAAAAAAA","x":1}{"videoId":"BBBBBBBBBBB"}{"videoId":"AAAAAAAAAAA"}'))
+        readUrl.mockImplementation(async (url: string) => ({ ok: true, url, requestedUrl: url, title: `제목 ${url.slice(-3)} | 채널`, text: '[자막]\n안녕하세요 오늘은 마케팅', kind: 'youtube', method: 'captions' }))
+        const r = await sns.SNS_FETCHERS.youtube(feedOf({ kind: 'youtube', handleOrUrl: `https://www.youtube.com/channel/${ch}`, snsSlot: 'youtube' }), null, {})
+        expect(fetchPageSafely.mock.calls.some(c => c[0] === `https://www.youtube.com/channel/${ch}/videos`)).toBe(true)
+        expect(r.items.map(i => i.url)).toEqual(['https://www.youtube.com/watch?v=AAAAAAAAAAA', 'https://www.youtube.com/watch?v=BBBBBBBBBBB'])
+        expect(r.items[0].title).toBe('제목 AAA')
+    })
+
+    it('videoIdsFromChannelPage = 나온 순서, 겹침 제거, 최대 개수', () => {
+        const html = Array.from({ length: 30 }, (_, i) => `"videoId":"${String(i).padStart(11, 'v')}"`).join(',')
+        expect(sns.videoIdsFromChannelPage(html)).toHaveLength(sns.SNS_YOUTUBE_MAX_VIDEOS)
+        expect(sns.videoIdsFromChannelPage('"videoId":"aaaaaaaaaaa""videoId":"aaaaaaaaaaa"')).toEqual(['aaaaaaaaaaa'])
+    })
+})
+
+/* ─────────────── 4-2. 큐리어스 = 리더 화면 + 그 리더가 쓴 커뮤니티 글 ─────────────── */
+const W = 10272
+type P = { id: number; writer: number; at: string }
+function postList(posts: P[]) {
+    return JSON.stringify({ postList: posts.map(p => ({ id: p.id, title: `글 ${p.id}`, createdAt: p.at, writerInfo: { writerId: p.writer, writerNickname: 'x' } })), totalCount: posts.length, page: 1, size: 200 })
+}
+function curiousApi(posts: P[], opts: { status?: (id: number) => string } = {}) {
+    return async (url: string) => {
+        const u = new URL(url)
+        if (u.pathname === '/api/v2/posts') {
+            const pg = Number(u.searchParams.get('page')), size = Number(u.searchParams.get('size'))
+            return page(url, postList(posts.slice((pg - 1) * size, pg * size)))
+        }
+        const m = u.pathname.match(/^\/api\/v2\/posts\/(\d+)$/)
+        if (m) return page(url, JSON.stringify({ result: 'success', message: 'ok', data: { id: Number(m[1]), title: `글 ${m[1]}`, content: `<p>${'본문입니다 '.repeat(20)}${m[1]}</p>`, status: opts.status?.(Number(m[1])) ?? 'published', createdAt: '2026-10-01T10:00:00', writerInfo: { writerId: W } } }))
+        return { ok: false, requestedUrl: url, reason: '없는 주소' }
+    }
+}
+const leaderFeed = () => feedOf({ kind: 'website', handleOrUrl: `https://curious-500.com/v2/creator/${W}`, snsSlot: 'curious' })
+const mix = (n: number, every = 3): P[] => Array.from({ length: n }, (_, i) => ({ id: 5000 - i, writer: i % every === 0 ? W : 1, at: new Date(Date.UTC(2026, 9, 6, 0, 0) - i * 3_600_000).toISOString().slice(0, 19) }))
+
+describe('큐리어스 = 리더 화면 + 그 리더(writer)가 쓴 공개 커뮤니티 글', () => {
+    beforeEach(() => {
+        readUrl.mockImplementation(async (url: string) => ({ ok: true, url, requestedUrl: url, title: '박근필 | 큐리어스 리더', text: '[큐리어스 리더] 박근필\n소개 글입니다 '.repeat(5), kind: 'web' }))
+    })
+
+    it('리더 번호 = writer 번호. 공개 목록에서 그 사람 글만, 최신순, 본문까지', async () => {
+        fetchPageSafely.mockImplementation(curiousApi(mix(30)))
+        const r = await sns.SNS_FETCHERS.curious(leaderFeed(), null, {})
+        expect(r.items[0].url).toBe(`https://curious-500.com/v2/creator/${W}`)
+        const posts = r.items.slice(1)
+        expect(posts.map(p => p.url)).toEqual([5000, 4997, 4994, 4991, 4988, 4985, 4982, 4979, 4976, 4973].map(id => `https://curious-500.com/v2/community/post/${id}`))
+        expect(posts[0].text).toContain('본문입니다')
+        expect(posts[0].title).toBe('글 5000')
+        // 본체에는 GET 만, 공개 창구(/api/v2)만
+        expect(fetchPageSafely.mock.calls.every(c => String(c[0]).startsWith('https://curious-500.com/api/v2/'))).toBe(true)
+    })
+
+    it('최대 SNS_CURIOUS_MAX_POSTS(30)개, 비공개(published 아님) 글은 뺀다', async () => {
+        fetchPageSafely.mockImplementation(curiousApi(mix(200, 1), { status: id => (id === 4999 ? 'hidden' : 'published') }))
+        const r = await sns.SNS_FETCHERS.curious(leaderFeed(), null, {})
+        const posts = r.items.slice(1)
+        expect(sns.SNS_CURIOUS_MAX_POSTS).toBe(30)
+        expect(posts.length).toBeLessThanOrEqual(30)
+        expect(posts.some(p => p.url.endsWith('/4999'))).toBe(false)
+        expect(r.note).toMatch(/1개.*공개/)
+    })
+
+    it('매일 자동: 이미 배운 리더 화면, 글은 건너뛰고 지난번 이후 새 글만', async () => {
+        fetchPageSafely.mockImplementation(curiousApi(mix(30)))
+        const known = new Set([`https://curious-500.com/v2/creator/${W}`, 'https://curious-500.com/v2/community/post/4997'])
+        const since = new Date(Date.UTC(2026, 9, 6, 0, 0) - 10 * 3_600_000 - 9 * 3_600_000)   // 10시간 전 (목록 시각은 꼬리 없는 서울 시각 = 세계 시각으로는 9시간 앞)
+        const r = await sns.SNS_FETCHERS.curious(leaderFeed(), since, { isKnown: u => known.has(u) })
+        expect(readUrl).not.toHaveBeenCalled()
+        expect(r.items.map(i => i.url)).toEqual(['https://curious-500.com/v2/community/post/5000', 'https://curious-500.com/v2/community/post/4994', 'https://curious-500.com/v2/community/post/4991'])
+    })
+
+    it('리더 화면이 아닌 글 주소면 그 글 하나만 (목록을 돌지 않는다)', async () => {
+        fetchPageSafely.mockImplementation(curiousApi(mix(30)))
+        const r = await sns.SNS_FETCHERS.curious(feedOf({ kind: 'website', handleOrUrl: 'https://curious-500.com/v2/community/post/2665', snsSlot: 'curious' }), null, {})
+        expect(r.items).toHaveLength(1)
         expect(fetchPageSafely).not.toHaveBeenCalled()
+    })
+
+    it('글 목록을 못 열어도 리더 화면은 넣고 이유를 남긴다', async () => {
+        fetchPageSafely.mockImplementation(async (url: string) => ({ ok: false, requestedUrl: url, reason: '큐리어스가 답하지 않아요' }))
+        const r = await sns.SNS_FETCHERS.curious(leaderFeed(), null, {})
+        expect(r.items).toHaveLength(1)
+        expect(r.note).toMatch(/커뮤니티 글/)
     })
 })
 

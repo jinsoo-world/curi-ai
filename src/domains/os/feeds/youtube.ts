@@ -131,7 +131,7 @@ async function listByDataApi(channelId: string, key: string): Promise<FeedItem[]
 }
 
 /** 채널의 최근 영상 목록. 공개 피드 → (한 번 더) → 공식 API 순서 */
-async function listRecentVideos(channelId: string): Promise<FeedItem[]> {
+export async function listRecentVideos(channelId: string): Promise<FeedItem[]> {
     let why = ''
     for (let attempt = 0; attempt < 2; attempt++) {
         const f = await fetchFeed(channelFeedUrl(channelId))

@@ -7,9 +7,11 @@
 //
 // 칸마다 읽는 길 (공개 글만, 공식 길만. 몰래 긁기 없음)
 //   blog      네이버 블로그 = 공개 RSS https://rss.blog.naver.com/{아이디}.xml, 다른 블로그 = RSS, Atom 주소. 최근 20개
-//   youtube   채널 공개 피드(videos.xml?channel_id=UC…)의 제목과 설명만. 자막은 공식으로 받을 길이 없어(captions API 는 영상 주인 로그인 필요) 안 쓴다
-//             @핸들 → 채널 번호는 공식 YouTube Data API(channels.list forHandle, 열쇠 YOUTUBE_API_KEY)로만 푼다. 열쇠가 없으면 채널 주소를 받는다
-//   curious   큐리어스 화면이 부르는 공개 창구(/api/v2, 읽기만)로 그 화면 하나 (리더 소개, 글, 어울림 소개)
+//   youtube   채널 공개 피드(videos.xml?channel_id=UC…)로 최근 영상 → 영상마다 자막 (대표 지시 1006 「유튜브 자막 넣어야 해」)
+//             자막 읽기와 @핸들 → 채널 번호는 기존 「계정 연결」 유튜브와 같은 코드(0929 대표 결정: readUrl 의 자막 도구, findChannelId)
+//             한국어 자막 우선 → 자동 자막 → 없으면 제목, 설명. 못 읽은 영상도 피드의 제목, 설명으로 넣고 이유를 남긴다
+//   curious   큐리어스 화면이 부르는 공개 창구(/api/v2, GET 만)로 그 화면 하나 (리더 소개, 글, 어울림 소개)
+//             리더 화면이면 그 리더(writer)가 쓴 공개 커뮤니티 글도 최신순 30개까지 (대표 지시 1006). 매일 자동 때는 새 글만
 //   instagram 메타 공식 API(인스타그램 로그인 + 앱 심사)가 있어야 한다. 지금은 주소 저장과 소개 링크까지만 = 「곧 열려요」
 //
 // 지키는 것
@@ -19,8 +21,8 @@
 //   - 실패는 연결 줄(last_error, status)에 남는다. 던지지 않는다
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { isSafeFetchUrl, htmlToText } from '@/domains/agent/fetch-url'
-import { parseCuriousUrl, curiousPageUrl } from '@/domains/knowledge/curious-reader'
+import { isSafeFetchUrl, htmlToText, fetchPageSafely } from '@/domains/agent/fetch-url'
+import { parseCuriousUrl, curiousPageUrl, curiousHtmlToText, unwrap, CURIOUS_API } from '@/domains/knowledge/curious-reader'
 import { 링크정리, type CreatorLink } from '@/domains/creator/links'
 import { readUrl, KNOWLEDGE_READ_OPTIONS } from './readers'
 import { assertBotOwned, BotNotMine } from './knowledge'
@@ -32,7 +34,7 @@ import { listFeeds, createFeed, deleteFeed } from './feeds/store'
 import { syncFeed, type SyncResult } from './feeds/sync'
 import { fetchFeed, newerThan, newestFirst, pickCandidates } from './feeds/rss'
 import { fetchPodcastItems } from './feeds/podcast'
-import { resolveChannelInput, channelFeedUrl, channelIdByApi } from './feeds/youtube'
+import { resolveChannelInput, channelFeedUrl, findChannelId, listRecentVideos } from './feeds/youtube'
 import type { FeedItem, FeedKind, FetchNewItems, KnowledgeFeed, SnsSlot } from './feeds/types'
 
 export type { SnsSlot }
@@ -49,9 +51,16 @@ const LINK_KIND: Record<SnsSlot, string> = { instagram: 'instagram', blog: 'blog
 export const SNS_LEARN_CAP: Record<PlanId, number> = { free: 20, basic: 60, pro: 90 }
 /** 블로그 한 번에 읽는 최근 글 수 */
 export const SNS_BLOG_MAX_POSTS = 20
-/** 유튜브 한 번에 보는 최근 영상 수 (공개 피드가 15개를 준다) */
-export const SNS_YOUTUBE_MAX_VIDEOS = 15
-/** 글 하나 최대 글자 */
+/** 유튜브 한 번에 보는 최근 영상 수 (공개 피드는 최근 15개까지만 준다) */
+export const SNS_YOUTUBE_MAX_VIDEOS = 20
+/** 큐리어스 리더가 쓴 커뮤니티 글 최대 수 (최신순) */
+export const SNS_CURIOUS_MAX_POSTS = 30
+/** 커뮤니티 글 목록을 볼 때 한 쪽 크기, 최대 쪽 수 (공개 목록에 글쓴이 거르기가 없어 최신 글부터 훑는다. 200 × 15 = 최근 3,000편) */
+const CURIOUS_LIST_PAGE_SIZE = 200
+const CURIOUS_LIST_MAX_PAGES = 15
+/** 한꺼번에 읽는 영상, 글 수 */
+const READ_CONCURRENCY = 3
+/** 글 하나(영상 하나 자막 포함) 최대 글자 */
 export const SNS_ITEM_MAX_CHARS = 20_000
 export const INSTAGRAM_COMING_SOON = '인스타그램 배우기는 곧 열려요. 지금은 소개 화면에 링크로 보여요'
 
@@ -79,14 +88,12 @@ export interface SnsNormalized {
 }
 
 export interface NormalizeOptions {
-    /** 유튜브 @핸들 → 채널 번호(UC…). 기본 = 공식 YouTube Data API (열쇠 없으면 null) */
+    /** 유튜브 @핸들 → 채널 번호(UC…). 기본 = 기존 계정 연결과 같은 findChannelId (채널 페이지 → 열쇠 있으면 공식 API) */
     resolveYoutubeHandle?: (pageUrl: string) => Promise<string | null>
 }
 
-async function officialYoutubeHandle(pageUrl: string): Promise<string | null> {
-    const key = process.env.YOUTUBE_API_KEY
-    if (!key) return null
-    try { return await channelIdByApi(pageUrl, key) } catch { return null }
+async function defaultYoutubeHandle(pageUrl: string): Promise<string | null> {
+    try { return await findChannelId(pageUrl) } catch { return null }
 }
 
 function toUrl(slot: SnsSlot, t: string): URL {
@@ -97,7 +104,7 @@ function toUrl(slot: SnsSlot, t: string): URL {
 
 /**
  * 적은 것 → 소개 링크 주소 + 배우기 연결. 비면 null(지우기). 틀리면 SnsInputError.
- * 밖에 나가는 건 유튜브 @핸들을 공식 API 로 풀 때 하나뿐이다.
+ * 밖에 나가는 건 유튜브 @핸들을 채널 번호로 풀 때 하나뿐이다.
  */
 export async function normalizeSnsInput(slot: SnsSlot, raw: unknown, opts: NormalizeOptions = {}): Promise<SnsNormalized | null> {
     const t = String(raw ?? '').trim()
@@ -125,7 +132,7 @@ export async function normalizeSnsInput(slot: SnsSlot, raw: unknown, opts: Norma
             const url = `https://www.youtube.com/channel/${r.channelId}`
             return { publicUrl: url, fetch: { kind: 'youtube', handleOrUrl: url } }
         }
-        const id = await (opts.resolveYoutubeHandle ?? officialYoutubeHandle)(r.pageUrl)
+        const id = await (opts.resolveYoutubeHandle ?? defaultYoutubeHandle)(r.pageUrl)
         if (!id || !/^UC[A-Za-z0-9_-]{22}$/.test(id)) {
             throw new SnsInputError(slot, '이 채널을 지금 못 알아봐요. 채널 주소(youtube.com/channel/UC…)로 넣어 주세요')
         }
@@ -177,33 +184,175 @@ const fetchSnsBlog: FetchNewItems = async (feed, since, opts = {}) => {
     return { ...r, items: clip(r.items) }
 }
 
-/** 유튜브: 공식 공개 피드의 제목과 설명만. 채널 번호가 저장돼 있어야 한다(채널 페이지를 긁지 않는다) */
-const fetchSnsYoutube: FetchNewItems = async (feed, since, opts = {}) => {
-    const r = resolveChannelInput(feed.handleOrUrl)
-    if (!r || !('channelId' in r)) throw new Error('유튜브 채널 번호를 몰라요. 채널 주소를 다시 저장해 주세요')
-    let why = '모양이 이상해요'
-    for (let attempt = 0; attempt < 2; attempt++) {
-        const f = await fetchFeed(channelFeedUrl(r.channelId))
-        if (f && 'entries' in f) {
-            const all = newestFirst(f.entries.map(e => {
-                const desc = htmlToText(e.description || e.content || '')
-                return { title: (e.title || '제목 없는 영상').slice(0, 120), url: e.url, publishedAt: e.publishedAt, text: desc ? `${e.title}\n\n${desc}` : e.title }
-            }))
-            const items = pickCandidates(newerThan(all, since), opts, SNS_YOUTUBE_MAX_VIDEOS)
-            const noDesc = items.filter(i => i.text === i.title).length
-            return { items: clip(items), note: noDesc ? `${noDesc}개 영상은 설명이 없어 제목만 있어요` : undefined }
+/** 남은 시간 안에서 셋씩 차례로 돈다. 시간이 모자라면 남은 건 건너뛴다(cut) */
+async function eachWithDeadline<T>(list: T[], deadline: number | undefined, fn: (x: T, i: number, leftMs: number) => Promise<void>): Promise<boolean> {
+    let next = 0, cut = false
+    const worker = async () => {
+        while (next < list.length) {
+            const i = next++
+            const left = deadline ? deadline - Date.now() : KNOWLEDGE_READ_OPTIONS.timeoutMs + 1_000
+            if (left < 3_000) { cut = true; return }
+            await fn(list[i], i, left)
         }
-        why = f && 'error' in f ? f.error : why
     }
-    throw new Error(`유튜브 새 영상 목록을 지금 못 열었어요(${why}). 내일 다시 해 볼게요`)
+    await Promise.all(Array.from({ length: Math.min(READ_CONCURRENCY, list.length) }, worker))
+    return cut
 }
 
-/** 큐리어스: 그 화면 하나를 공개 창구로 읽는다 (readUrl 의 curious 길, 요청은 fetchPageSafely) */
-const fetchSnsCurious: FetchNewItems = async (feed, _since, opts = {}) => {
-    if (opts.isKnown?.(feed.handleOrUrl)) return { items: [] }
-    const r = await readUrl(feed.handleOrUrl, { ...KNOWLEDGE_READ_OPTIONS, maxChars: SNS_ITEM_MAX_CHARS })
-    if (!r.ok) throw new Error(r.reason)
-    return { items: clip([{ title: (r.title || '큐리어스').slice(0, 120), url: feed.handleOrUrl, text: r.text }]) }
+/** 채널 「동영상」 화면 HTML → 영상 번호 (나온 순서 = 최신순, 겹침 제거) */
+export function videoIdsFromChannelPage(html: string, max = SNS_YOUTUBE_MAX_VIDEOS): string[] {
+    const out: string[] = []
+    const re = /"videoId":"([A-Za-z0-9_-]{11})"/g
+    let m: RegExpExecArray | null
+    while ((m = re.exec(html)) && out.length < max) if (!out.includes(m[1])) out.push(m[1])
+    return out
+}
+
+/**
+ * 채널의 최근 영상 (제목, 설명 포함).
+ *   1. 공개 피드 두 번 (설명까지 온다)
+ *   2. 기존 목록 함수 (공식 API, 열쇠 있을 때)
+ *   3. 채널 「동영상」 화면 읽기 (0929 대표 결정 「채널 페이지 읽기를 다시 기본으로」와 같은 길. 1006 실측: 공개 피드가 정상 채널에도 404)
+ */
+async function recentVideosWithDescription(channelId: string): Promise<FeedItem[]> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+        const f = await fetchFeed(channelFeedUrl(channelId))
+        if (f && 'entries' in f) {
+            return f.entries.map(e => {
+                const desc = htmlToText(e.description || e.content || '')
+                return { title: (e.title || '제목 없는 영상').slice(0, 120), url: e.url, publishedAt: e.publishedAt, text: desc ? `${e.title}\n\n${desc}` : e.title }
+            })
+        }
+    }
+    let why = ''
+    try {
+        return (await listRecentVideos(channelId)).map(v => ({ ...v, text: v.title }))
+    } catch (e) { why = e instanceof Error ? e.message : '' }
+    const page = await fetchPageSafely(`https://www.youtube.com/channel/${channelId}/videos`, { maxBytes: 3 * 1024 * 1024, timeoutMs: 10_000 })
+    const ids = page.ok ? videoIdsFromChannelPage(page.body) : []
+    if (ids.length === 0) throw new Error(why || '유튜브 새 영상 목록을 지금 못 열었어요. 내일 다시 해 볼게요')
+    // 제목은 영상을 읽을 때 채운다(읽기 함수가 공식 oEmbed 로 받는다)
+    return ids.map(id => ({ title: '', url: `https://www.youtube.com/watch?v=${id}`, text: '' }))
+}
+
+/**
+ * 유튜브: 최근 영상마다 자막. 자막 읽기는 기존 계정 연결과 같은 readUrl(자막 도구, 한국어 → 자동 자막 → 제목/설명).
+ * 읽기가 실패하면 피드의 제목, 설명으로 대신 넣는다(버리지 않는다). 몇 개가 자막 없이 들어갔는지 note 에 남긴다.
+ */
+const fetchSnsYoutube: FetchNewItems = async (feed, since, opts = {}) => {
+    const r = resolveChannelInput(feed.handleOrUrl)
+    const channelId = r && 'channelId' in r ? r.channelId : await findChannelId(feed.handleOrUrl)
+    const all = newestFirst(await recentVideosWithDescription(channelId))
+    const cands = pickCandidates(newerThan(all, since), opts, SNS_YOUTUBE_MAX_VIDEOS)
+    if (cands.length === 0) return { items: [] }
+
+    const done: (FeedItem | null)[] = cands.map(() => null)
+    let noCaption = 0, unreadable = 0
+    const reasons: string[] = []
+    const cut = await eachWithDeadline(cands, opts.deadline, async (c, i, left) => {
+        const got = await readUrl(c.url, { ...KNOWLEDGE_READ_OPTIONS, timeoutMs: Math.min(KNOWLEDGE_READ_OPTIONS.timeoutMs, left - 1_000), maxChars: SNS_ITEM_MAX_CHARS })
+        if (got.ok) {
+            if ((got as { method?: string }).method !== 'captions') noCaption++
+            const title = (c.title || got.title.split(' | ')[0] || '유튜브 영상').slice(0, 120)
+            done[i] = { title, url: c.url, publishedAt: c.publishedAt, text: got.text }
+        } else {
+            unreadable++
+            reasons.push(got.reason)
+            if (c.text) done[i] = c        // 피드의 제목, 설명으로 대신 (채널 화면에서 온 영상은 글이 없어 뺀다)
+        }
+    })
+    const items = done.filter((x): x is FeedItem => !!x)
+    const note = [
+        noCaption ? `${noCaption}개 영상은 자막이 없어 제목, 설명만 넣었어요` : '',
+        unreadable ? `${unreadable}개 영상은 못 읽어 제목, 설명만 넣었어요(${reasons[0]})` : '',
+        cut ? '시간이 모자라 나머지 영상은 다음에 배워요' : '',
+    ].filter(Boolean).join('. ') || undefined
+    return { items: clip(items), note }
+}
+
+/** 큐리어스 공개 창구 GET 하나 (fetchPageSafely, 주소는 /api/v2 로 고정). 못 읽으면 null */
+async function curiousJson(path: string, leftMs: number): Promise<Record<string, unknown> | null> {
+    const r = await fetchPageSafely(`${CURIOUS_API}${path}`, { timeoutMs: Math.max(1_000, Math.min(8_000, leftMs)), maxBytes: 2 * 1024 * 1024, headers: { Accept: 'application/json' }, normalize: false })
+    if (!r.ok) return null
+    try {
+        const v = unwrap(JSON.parse(r.body))
+        return v && typeof v === 'object' ? v as Record<string, unknown> : null
+    } catch { return null }
+}
+
+/** 목록 시각은 꼬리 없는 서울 시각이다(예: 2026-10-06T10:26:07) */
+function curiousTime(v: unknown): number {
+    const t = String(v ?? '')
+    if (!t) return NaN
+    return Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(t) ? t : `${t}+09:00`)
+}
+
+/**
+ * 그 리더(writer)가 쓴 공개 커뮤니티 글 = 공개 목록(/posts, 최신순)을 훑어 글쓴이 번호로 거른다.
+ * 공개 창구에 글쓴이 거르기가 없어서다. 회원 전용, 비공개 글은 공개 목록이 주지 않는다. 상세가 published 가 아니면 또 뺀다.
+ * since 가 있으면 그보다 오래된 글이 나오는 순간 멈춘다(매일 자동 = 새 글만).
+ */
+async function writerPosts(writerId: number, since: Date | null, opts: { isKnown?: (url: string) => boolean; max: number; deadline?: number }): Promise<{ items: FeedItem[]; hidden: number; error?: string }> {
+    const left = () => (opts.deadline ? opts.deadline - Date.now() : 10_000)
+    const found: { id: number; title: string; at: string }[] = []
+    let stop = false
+    for (let pg = 1; pg <= CURIOUS_LIST_MAX_PAGES && !stop && found.length < opts.max; pg++) {
+        if (left() < 3_000) break
+        const j = await curiousJson(`/posts?category_number=0&sort=created_at&page=${pg}&size=${CURIOUS_LIST_PAGE_SIZE}`, left())
+        if (!j) { if (pg === 1) return { items: [], hidden: 0, error: '큐리어스 커뮤니티 글 목록을 지금 못 열었어요' }; break }
+        const list = Array.isArray(j.postList) ? j.postList as Record<string, unknown>[] : []
+        for (const p of list) {
+            const at = curiousTime(p.createdAt)
+            if (since && Number.isFinite(at) && at <= since.getTime()) { stop = true; break }
+            const w = (p.writerInfo ?? {}) as Record<string, unknown>
+            const id = Number(p.id)
+            if (Number(w.writerId) !== writerId || !Number.isInteger(id) || id <= 0) continue
+            if (opts.isKnown?.(curiousPageUrl({ kind: 'post', id }))) continue
+            found.push({ id, title: String(p.title ?? '').slice(0, 120), at: String(p.createdAt ?? '') })
+            if (found.length >= opts.max) break
+        }
+        if (list.length < CURIOUS_LIST_PAGE_SIZE) break
+    }
+
+    const done: (FeedItem | null)[] = found.map(() => null)
+    let hidden = 0
+    await eachWithDeadline(found, opts.deadline, async (f, i, ms) => {
+        const d = await curiousJson(`/posts/${f.id}`, ms)
+        if (!d) return
+        if (d.status !== undefined && d.status !== 'published') { hidden++; return }
+        const body = curiousHtmlToText(d.content)
+        const title = String(d.title ?? f.title ?? '').slice(0, 120) || '제목 없는 글'
+        const at = curiousTime(d.createdAt ?? f.at)
+        done[i] = { title, url: curiousPageUrl({ kind: 'post', id: f.id }), text: `${title}\n\n${body}`, ...(Number.isFinite(at) ? { publishedAt: new Date(at).toISOString() } : {}) }
+    })
+    return { items: done.filter((x): x is FeedItem => !!x), hidden }
+}
+
+/** 큐리어스: 그 화면 하나(리더 소개 등) + 리더 화면이면 그 사람이 쓴 공개 커뮤니티 글 */
+const fetchSnsCurious: FetchNewItems = async (feed, since, opts = {}) => {
+    const items: FeedItem[] = []
+    const notes: string[] = []
+    let pageError: string | null = null
+    if (!opts.isKnown?.(feed.handleOrUrl)) {
+        const r = await readUrl(feed.handleOrUrl, { ...KNOWLEDGE_READ_OPTIONS, maxChars: SNS_ITEM_MAX_CHARS })
+        if (r.ok) items.push({ title: (r.title || '큐리어스').slice(0, 120), url: feed.handleOrUrl, text: r.text })
+        else pageError = r.reason
+    }
+    const target = parseCuriousUrl(feed.handleOrUrl)
+    if (target?.kind === 'leader' && typeof target.id === 'number') {
+        const max = Math.max(0, Math.min(SNS_CURIOUS_MAX_POSTS, (opts.maxItems ?? Infinity) - items.length))
+        if (max > 0) {
+            const p = await writerPosts(target.id, since, { isKnown: opts.isKnown, max, deadline: opts.deadline })
+            items.push(...p.items)
+            if (p.hidden) notes.push(`${p.hidden}개 글은 공개 글이 아니라 뺐어요`)
+            if (p.error) notes.push(p.error)
+        }
+    }
+    if (pageError) {
+        if (items.length === 0) throw new Error(pageError)
+        notes.unshift(`리더 화면은 못 읽었어요(${pageError})`)
+    }
+    return { items: clip(items), note: notes.join('. ') || undefined }
 }
 
 export const SNS_FETCHERS: Record<Exclude<SnsSlot, 'instagram'>, FetchNewItems> = {
