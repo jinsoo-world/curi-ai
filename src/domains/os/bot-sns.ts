@@ -320,6 +320,26 @@ async function curiousJson(budget: CuriousBudget, path: string, leftMs: number):
     } catch { return null }
 }
 
+/** 공개를 가리는 칸 이름 (회원 전용, 멤버십, 비밀, 유료, 접근 범위). 지금 응답엔 없지만 생기면 공개일 때만 통과 */
+const CURIOUS_GATE_KEY = /member|membership|lounge|private|secret|premium|paid|access|visib|^ispublic$|onlyfor/i
+
+/**
+ * 큐리어스 글 상세가 확실히 공개인가 (보안 재검토 PR #53). 모르면 뺀다.
+ *   - status === 'published' 여야 한다 (1006 실제 응답 GET /api/v2/posts/2788 칸: id, title, content, status, createdAt, updatedAt, writerInfo, likeCount, commentCount, viewCount, isLiked, isOwner, postCategoryNumber)
+ *   - 회원 전용, 멤버십 같은 칸이 있으면 그 값도 공개여야 한다 (isPublic=true, visibility=public, 나머지 참/거짓 칸=false, 번호 칸=비어 있음)
+ */
+export function isCuriousPostPublic(d: Record<string, unknown>): boolean {
+    if (d.status !== 'published') return false
+    for (const [k, v] of Object.entries(d)) {
+        if (!CURIOUS_GATE_KEY.test(k)) continue
+        if (/^ispublic$/i.test(k)) { if (v !== true) return false; continue }
+        if (typeof v === 'string') { if (!/^(public|all|everyone|open|none)$/i.test(v)) return false; continue }
+        if (v === null || v === undefined || v === false || v === 0) continue
+        return false
+    }
+    return true
+}
+
 /** 목록 시각은 꼬리 없는 서울 시각이다(예: 2026-10-06T10:26:07) */
 function curiousTime(v: unknown): number {
     const t = String(v ?? '')
@@ -374,7 +394,7 @@ async function writerPosts(budget: CuriousBudget, writerId: number, since: Date 
         if (left() < 3_000) { cut = true; break }
         const d = await curiousJson(budget, `/posts/${f.id}`, left())
         if (!d) { cut = true; if (budget.stopped) break; continue }
-        if (d.status !== undefined && d.status !== 'published') { hidden++; continue }
+        if (!isCuriousPostPublic(d)) { hidden++; continue }
         const body = curiousHtmlToText(d.content)
         const title = String(d.title ?? f.title ?? '').slice(0, 120) || '제목 없는 글'
         const at = curiousTime(d.createdAt ?? f.at)

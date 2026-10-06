@@ -24,6 +24,7 @@ const TABLE_MISSING = '42P01'
 const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
 const COLUMN_MISSING = '42703'
 
+export const SYNC_FAIL_NOTE = '새 글을 가져오지 못했어요. 내일 다시 해 볼게요'
 export const FEED_CAP_FULL_NOTE = '자료 칸이 가득 찼어요. 안 쓰는 자료를 빼면 더 가져와요'
 /**
  * 지난번 시각보다 조금 앞부터 다시 본다. 시간이 모자라 못 가져온 글을 다음 날 놓치지 않게.
@@ -200,8 +201,9 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
             note: [lastError, ...notes].filter((v, i, a) => v && a.indexOf(v) === i).join('. ') || undefined,
         }
     } catch (e) {
-        const why = msg(e, '새 글을 가져오지 못했어요')
-        console.error('[os/feeds] syncFeed', { feedId: feed.id, why })
+        // 여기까지 온 건 DB 고장 같은 모르는 오류다. 원문은 로그에만, 사람에게(연결 줄, 응답)는 일반 문구 (보안 재검토 PR #53)
+        console.error('[os/feeds] syncFeed', { feedId: feed.id, why: msg(e, '') })
+        const why = SYNC_FAIL_NOTE
         try { await updateFeed(db, feed.id, { status: 'error', last_error: why, last_synced_at: nowIso() }) } catch { /* 기록도 못 하면 로그만 */ }
         return { ...base, ok: false, status: 'error', lastError: why, note: why }
     }

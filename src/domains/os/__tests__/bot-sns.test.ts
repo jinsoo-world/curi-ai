@@ -332,7 +332,7 @@ type P = { id: number; writer: number; at: string }
 function postList(posts: P[]) {
     return JSON.stringify({ postList: posts.map(p => ({ id: p.id, title: `글 ${p.id}`, createdAt: p.at, writerInfo: { writerId: p.writer, writerNickname: 'x' } })), totalCount: posts.length, page: 1, size: 200 })
 }
-function curiousApi(posts: P[], opts: { status?: (id: number) => string } = {}) {
+function curiousApi(posts: P[], opts: { status?: (id: number) => string | undefined; extra?: (id: number) => Record<string, unknown> } = {}) {
     return async (url: string) => {
         const u = new URL(url)
         if (u.pathname === '/api/v2/posts') {
@@ -340,7 +340,7 @@ function curiousApi(posts: P[], opts: { status?: (id: number) => string } = {}) 
             return page(url, postList(posts.slice((pg - 1) * size, pg * size)))
         }
         const m = u.pathname.match(/^\/api\/v2\/posts\/(\d+)$/)
-        if (m) return page(url, JSON.stringify({ result: 'success', message: 'ok', data: { id: Number(m[1]), title: `글 ${m[1]}`, content: `<p>${'본문입니다 '.repeat(20)}${m[1]}</p>`, status: opts.status?.(Number(m[1])) ?? 'published', createdAt: '2026-10-01T10:00:00', writerInfo: { writerId: W } } }))
+        if (m) return page(url, JSON.stringify({ result: 'success', message: 'ok', data: { id: Number(m[1]), title: `글 ${m[1]}`, content: `<p>${'본문입니다 '.repeat(20)}${m[1]}</p>`, status: opts.status ? opts.status(Number(m[1])) : 'published', createdAt: '2026-10-01T10:00:00', writerInfo: { writerId: W }, ...(opts.extra?.(Number(m[1])) ?? {}) } }))
         return { ok: false, requestedUrl: url, reason: '없는 주소' }
     }
 }
@@ -586,5 +586,45 @@ describe('syncFeed 가 기준 번호(sync_cursor)를 저장하는 때', () => {
         let seen: unknown
         await syncFeed(fake.db, feedOf({ kind: 'website', syncCursor: '42' }), { fetchers: { website: async (_f, _s, o) => { seen = o?.cursor; return { items: [] } } } })
         expect(seen).toBe('42')
+    })
+})
+
+describe('큐리어스 글은 공개 표시가 확실할 때만 (보안 재검토)', () => {
+    beforeEach(() => {
+        readUrl.mockImplementation(async (url: string) => ({ ok: true, url, requestedUrl: url, title: '리더', text: '[큐리어스 리더] 소개 글입니다 '.repeat(5), kind: 'web' }))
+    })
+    it('status 가 없거나 published 가 아니면 뺀다', async () => {
+        fetchPageSafely.mockImplementation(curiousApi(mix(4, 1), { status: id => (id === 5000 ? undefined : id === 4999 ? 'draft' : 'published') }))
+        const r = await cur(leaderFeed(), null, {})
+        expect(r.items.filter(i => i.url.includes('/post/')).map(i => i.url.split('/').pop())).toEqual(['4998', '4997'])
+    })
+    it('회원 전용, 멤버십 표시 칸이 있으면 공개일 때만', async () => {
+        const extra = (id: number): Record<string, unknown> => ({
+            5000: { isMemberOnly: true }, 4999: { membershipId: 12 }, 4998: { visibility: 'MEMBERS' }, 4997: { isPublic: false },
+            4996: { isSecret: true }, 4995: { visibility: 'PUBLIC', isMemberOnly: false, membershipId: null, isPublic: true },
+        }[id] ?? {})
+        fetchPageSafely.mockImplementation(curiousApi(mix(7, 1), { extra }))
+        const r = await cur(leaderFeed(), null, {})
+        expect(r.items.filter(i => i.url.includes('/post/')).map(i => i.url.split('/').pop())).toEqual(['4995', '4994'])
+    })
+    it('isCuriousPostPublic = 실제 응답 모양(1006 GET 확인: status, writerInfo, …)은 공개', () => {
+        expect(sns.isCuriousPostPublic({ id: 2788, status: 'published', writerInfo: { writerId: 30 }, isOwner: false, postCategoryNumber: 9 })).toBe(true)
+        expect(sns.isCuriousPostPublic({ id: 1 })).toBe(false)
+        expect(sns.isCuriousPostPublic({ status: 'published', accessLevel: 'member' })).toBe(false)
+    })
+})
+
+describe('syncFeed 끝부분 모르는 오류는 일반 문구', () => {
+    it('DB 고장 원문을 연결 줄, 결과에 남기지 않는다', async () => {
+        const { syncFeed, SYNC_FAIL_NOTE } = await import('../feeds/sync')
+        const fake = makeFakeDb(learnTables())
+        const orig = fake.db.from.bind(fake.db)
+        ;(fake.db as unknown as { from: (t: string) => unknown }).from = (t: string) => {
+            if (t === 'knowledge_sources') throw new Error('relation "knowledge_sources_secret" permission denied')
+            return orig(t)
+        }
+        const r = await syncFeed(fake.db, feedOf({ kind: 'website' }), { fetchers: { website: async () => ({ items: [] }) } })
+        expect(r.lastError).toBe(SYNC_FAIL_NOTE)
+        expect(JSON.stringify(fake.tables.knowledge_feeds[0])).not.toContain('secret')
     })
 })
