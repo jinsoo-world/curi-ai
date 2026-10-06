@@ -79,57 +79,7 @@ describe('subscription/actions', () => {
         })
     })
 
-    describe('cancelSubscription', () => {
-        it('취소 시 에러 없으면 성공', async () => {
-            const updateEq = vi.fn().mockResolvedValue({ data: null, error: null })
-            const db = {
-                from: vi.fn().mockReturnValue({
-                    update: vi.fn().mockReturnValue({ eq: updateEq }),
-                }),
-            } as unknown as Parameters<typeof cancelSubscription>[0]
-
-            await cancelSubscription(db, 'sub-123')
-            expect(updateEq).toHaveBeenCalledWith('id', 'sub-123')
-        })
-
-        it('DB 에러 시 throw', async () => {
-            const db = {
-                from: vi.fn().mockReturnValue({
-                    update: vi.fn().mockReturnValue({
-                        eq: vi.fn().mockResolvedValue({ error: { message: '취소 실패' } }),
-                    }),
-                }),
-            } as unknown as Parameters<typeof cancelSubscription>[0]
-
-            await expect(cancelSubscription(db, 'sub-123')).rejects.toThrow('취소 실패')
-        })
-    })
-
-    describe('renewSubscription', () => {
-        it('월간 갱신 성공', async () => {
-            const eqFn = vi.fn().mockResolvedValue({ error: null })
-            const db = {
-                from: vi.fn().mockReturnValue({
-                    update: vi.fn().mockReturnValue({ eq: eqFn }),
-                }),
-            } as unknown as Parameters<typeof renewSubscription>[0]
-
-            await renewSubscription(db, 'sub-123', 'monthly')
-            expect(eqFn).toHaveBeenCalledWith('id', 'sub-123')
-        })
-
-        it('연간 갱신 성공', async () => {
-            const eqFn = vi.fn().mockResolvedValue({ error: null })
-            const db = {
-                from: vi.fn().mockReturnValue({
-                    update: vi.fn().mockReturnValue({ eq: eqFn }),
-                }),
-            } as unknown as Parameters<typeof renewSubscription>[0]
-
-            await renewSubscription(db, 'sub-123', 'annual')
-            expect(eqFn).toHaveBeenCalledWith('id', 'sub-123')
-        })
-    })
+    // cancelSubscription · renewSubscription 은 renew-cancel-race.test.ts 에서 본다(상태 조건이 생겨 모양이 바뀜)
 
     describe('expireSubscription', () => {
         it('만료 처리: 구독 expired + 유저 free 전환', async () => {
