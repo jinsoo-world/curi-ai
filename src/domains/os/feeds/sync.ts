@@ -140,7 +140,7 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
 
         let fetched: FetchNewItemsResult
         try {
-            fetched = await fetcher(feed, since, { isKnown: u => existing.urls.has(u), maxItems: want, deadline: opts.deadline })
+            fetched = await fetcher(feed, since, { isKnown: u => existing.urls.has(u), maxItems: want, deadline: opts.deadline, cursor: feed.syncCursor ?? null })
         } catch (e) {
             const why = msg(e, '새 글을 가져오지 못했어요')
             await updateFeed(db, feed.id, { status: 'error', last_error: why, last_synced_at: nowIso() })
@@ -190,6 +190,11 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
                 : added === 0 && fetched.note ? fetched.note : null
 
         await updateFeed(db, feed.id, { status: 'connected', last_error: lastError, last_synced_at: nowIso(), item_count: itemCount })
+        // 기준 번호는 가져온 글을 전부 넣었을 때만 옮긴다(못 넣은 글을 다음에 건너뛰지 않게). 칸이 없으면(마이그레이션 전) 조용히 넘어간다
+        if (fetched.cursor && added + skipped === fetched.items.length) {
+            const { error } = await db.from('knowledge_feeds').update({ sync_cursor: fetched.cursor }).eq('id', feed.id)
+            if (error && error.code !== COLUMN_MISSING) console.error('[os/feeds] 기준 번호 저장 실패', { feedId: feed.id, message: error.message })
+        }
         return {
             feedId: feed.id, ok: true, added, skipped, failed, status: 'connected', lastError,
             note: [lastError, ...notes].filter((v, i, a) => v && a.indexOf(v) === i).join('. ') || undefined,

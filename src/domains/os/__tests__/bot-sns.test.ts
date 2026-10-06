@@ -1,7 +1,7 @@
 // 봇 「내 SNS 연결」 = 주소 검증(모양, SSRF), 주인 확인, 같은 글 건너뛰기, 요금제 상한, RSS 읽기(가짜 RSS 즉석 생성)
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { makeFakeDb } from '../feeds/__tests__/fake-db'
-import type { KnowledgeFeed } from '../feeds/types'
+import type { KnowledgeFeed, FetchNewItems } from '../feeds/types'
 
 // 밖으로 나가는 요청은 전부 가짜. 차단 규칙(isSafeFetchUrl)은 진짜를 쓴다
 const fetchPageSafely = vi.fn()
@@ -347,6 +347,9 @@ function curiousApi(posts: P[], opts: { status?: (id: number) => string } = {}) 
 const leaderFeed = () => feedOf({ kind: 'website', handleOrUrl: `https://curious-500.com/v2/creator/${W}`, snsSlot: 'curious' })
 const mix = (n: number, every = 3): P[] => Array.from({ length: n }, (_, i) => ({ id: 5000 - i, writer: i % every === 0 ? W : 1, at: new Date(Date.UTC(2026, 9, 6, 0, 0) - i * 3_600_000).toISOString().slice(0, 19) }))
 
+const sleep = vi.fn<(ms: number) => Promise<void>>(async () => {})
+const cur = (...a: Parameters<FetchNewItems>) => sns.curiousFetcher({ sleep })(...a)
+
 describe('큐리어스 = 리더 화면 + 그 리더(writer)가 쓴 공개 커뮤니티 글', () => {
     beforeEach(() => {
         readUrl.mockImplementation(async (url: string) => ({ ok: true, url, requestedUrl: url, title: '박근필 | 큐리어스 리더', text: '[큐리어스 리더] 박근필\n소개 글입니다 '.repeat(5), kind: 'web' }))
@@ -354,7 +357,7 @@ describe('큐리어스 = 리더 화면 + 그 리더(writer)가 쓴 공개 커뮤
 
     it('리더 번호 = writer 번호. 공개 목록에서 그 사람 글만, 최신순, 본문까지', async () => {
         fetchPageSafely.mockImplementation(curiousApi(mix(30)))
-        const r = await sns.SNS_FETCHERS.curious(leaderFeed(), null, {})
+        const r = await cur(leaderFeed(), null, {})
         expect(r.items[0].url).toBe(`https://curious-500.com/v2/creator/${W}`)
         const posts = r.items.slice(1)
         expect(posts.map(p => p.url)).toEqual([5000, 4997, 4994, 4991, 4988, 4985, 4982, 4979, 4976, 4973].map(id => `https://curious-500.com/v2/community/post/${id}`))
@@ -366,7 +369,7 @@ describe('큐리어스 = 리더 화면 + 그 리더(writer)가 쓴 공개 커뮤
 
     it('최대 SNS_CURIOUS_MAX_POSTS(30)개, 비공개(published 아님) 글은 뺀다', async () => {
         fetchPageSafely.mockImplementation(curiousApi(mix(200, 1), { status: id => (id === 4999 ? 'hidden' : 'published') }))
-        const r = await sns.SNS_FETCHERS.curious(leaderFeed(), null, {})
+        const r = await cur(leaderFeed(), null, {})
         const posts = r.items.slice(1)
         expect(sns.SNS_CURIOUS_MAX_POSTS).toBe(30)
         expect(posts.length).toBeLessThanOrEqual(30)
@@ -378,21 +381,21 @@ describe('큐리어스 = 리더 화면 + 그 리더(writer)가 쓴 공개 커뮤
         fetchPageSafely.mockImplementation(curiousApi(mix(30)))
         const known = new Set([`https://curious-500.com/v2/creator/${W}`, 'https://curious-500.com/v2/community/post/4997'])
         const since = new Date(Date.UTC(2026, 9, 6, 0, 0) - 10 * 3_600_000 - 9 * 3_600_000)   // 10시간 전 (목록 시각은 꼬리 없는 서울 시각 = 세계 시각으로는 9시간 앞)
-        const r = await sns.SNS_FETCHERS.curious(leaderFeed(), since, { isKnown: u => known.has(u) })
+        const r = await cur(leaderFeed(), since, { isKnown: u => known.has(u) })
         expect(readUrl).not.toHaveBeenCalled()
         expect(r.items.map(i => i.url)).toEqual(['https://curious-500.com/v2/community/post/5000', 'https://curious-500.com/v2/community/post/4994', 'https://curious-500.com/v2/community/post/4991'])
     })
 
     it('리더 화면이 아닌 글 주소면 그 글 하나만 (목록을 돌지 않는다)', async () => {
         fetchPageSafely.mockImplementation(curiousApi(mix(30)))
-        const r = await sns.SNS_FETCHERS.curious(feedOf({ kind: 'website', handleOrUrl: 'https://curious-500.com/v2/community/post/2665', snsSlot: 'curious' }), null, {})
+        const r = await cur(feedOf({ kind: 'website', handleOrUrl: 'https://curious-500.com/v2/community/post/2665', snsSlot: 'curious' }), null, {})
         expect(r.items).toHaveLength(1)
         expect(fetchPageSafely).not.toHaveBeenCalled()
     })
 
     it('글 목록을 못 열어도 리더 화면은 넣고 이유를 남긴다', async () => {
         fetchPageSafely.mockImplementation(async (url: string) => ({ ok: false, requestedUrl: url, reason: '큐리어스가 답하지 않아요' }))
-        const r = await sns.SNS_FETCHERS.curious(leaderFeed(), null, {})
+        const r = await cur(leaderFeed(), null, {})
         expect(r.items).toHaveLength(1)
         expect(r.note).toMatch(/커뮤니티 글/)
     })
@@ -500,5 +503,88 @@ describe('checkSnsLearnLimits = 배우기 횟수 열쇠 (learn 과 기존 「지
         ])
         const deny = vi.fn(async (_db: unknown, key: string) => ({ allowed: !key.startsWith('sns-learn:u:'), remaining: 0 }))
         expect(await sns.checkSnsLearnLimits({} as never, 'u1', 'm1', deny)).toMatchObject({ retryAfterSec: 86_400 })
+    })
+})
+
+/* ─────────────── 7. 본체 공개 창구 부담 줄이기 ─────────────── */
+describe('큐리어스 본체 요청 줄이기', () => {
+    beforeEach(() => {
+        sleep.mockClear()
+        readUrl.mockImplementation(async (url: string) => ({ ok: true, url, requestedUrl: url, title: '리더', text: '[큐리어스 리더] 소개 글입니다 '.repeat(5), kind: 'web' }))
+    })
+    const listCalls = () => fetchPageSafely.mock.calls.filter(c => new URL(String(c[0])).pathname === '/api/v2/posts').length
+
+    it('처음 배우기는 최신 600편(200 × 3쪽)까지만 훑는다', async () => {
+        fetchPageSafely.mockImplementation(curiousApi(mix(3000, 1000)))
+        await cur(leaderFeed(), null, {})
+        expect(sns.SNS_CURIOUS_FIRST_SCAN).toBe(600)
+        expect(listCalls()).toBe(3)
+    })
+
+    it('매일 자동은 지난번 본 가장 최신 글 번호에 닿으면 바로 멈추고, 새 기준 번호를 돌려준다', async () => {
+        fetchPageSafely.mockImplementation(curiousApi(mix(3000)))
+        const r = await cur(leaderFeed(), new Date(0), { cursor: '4990', isKnown: u => u.includes('/creator/') })
+        expect(listCalls()).toBe(1)
+        expect(r.items.map(i => i.url)).toEqual([5000, 4997, 4994, 4991].map(id => `https://curious-500.com/v2/community/post/${id}`))
+        expect(r.cursor).toBe('5000')
+    })
+
+    it('한 번 배우기당 본체 요청은 최대 40번 (리더 화면 4 + 목록 + 글), 요청 사이 200ms', async () => {
+        fetchPageSafely.mockImplementation(curiousApi(mix(600, 20)))
+        const r = await cur(leaderFeed(), null, {})
+        const calls = fetchPageSafely.mock.calls.length + sns.CURIOUS_LEADER_PAGE_CALLS
+        expect(calls).toBeLessThanOrEqual(sns.SNS_CURIOUS_MAX_CALLS)
+        expect(sns.SNS_CURIOUS_MAX_CALLS).toBe(40)
+        expect(sleep.mock.calls.every(c => c[0] === 200)).toBe(true)
+        expect(sleep.mock.calls.length).toBeGreaterThanOrEqual(fetchPageSafely.mock.calls.length - 1)
+        expect(r.cursor).toBe('5000')
+    })
+
+    it('40번에 닿으면 멈추고 기준 번호는 안 돌려준다(다음에 이어서)', async () => {
+        fetchPageSafely.mockImplementation(curiousApi(mix(600, 1)))
+        const r = await sns.curiousFetcher({ sleep, maxCalls: 10 })(leaderFeed(), null, {})
+        expect(fetchPageSafely.mock.calls.length + sns.CURIOUS_LEADER_PAGE_CALLS).toBeLessThanOrEqual(10)
+        expect(r.cursor).toBeUndefined()
+        expect(r.note).toMatch(/다음에/)
+    })
+
+    it('하루 전체 본체 요청 상한에 닿으면 멈추고 다음 날로', async () => {
+        fetchPageSafely.mockImplementation(curiousApi(mix(600, 1)))
+        let n = 0
+        const r = await sns.curiousFetcher({ sleep, allowCall: async () => ++n <= 6 })(leaderFeed(), null, {})
+        expect(fetchPageSafely.mock.calls.length).toBeLessThanOrEqual(2)
+        expect(r.cursor).toBeUndefined()
+        expect(r.note).toMatch(/내일/)
+    })
+
+    it('하루 상한은 모든 봇 합쳐 한 열쇠(curious-api:day, 2,000번, 셀 수 없으면 막음)', async () => {
+        const calls: unknown[][] = []
+        const allow = sns.curiousDailyAllow({} as never, async (...a: unknown[]) => { calls.push(a.slice(1)); return { allowed: true, remaining: 1 } })
+        expect(await allow()).toBe(true)
+        expect(calls[0]).toEqual(['curious-api:day', 2_000, 86_400, { failClosed: true }])
+    })
+})
+
+describe('syncFeed 가 기준 번호(sync_cursor)를 저장하는 때', () => {
+    it('가져온 글을 전부 넣었을 때만 저장한다', async () => {
+        const { syncFeed } = await import('../feeds/sync')
+        const ok = makeFakeDb(learnTables())
+        wireAdd(ok.tables)
+        const item = { title: '글', url: 'https://curious-500.com/v2/community/post/1', text: '본문입니다 '.repeat(10) }
+        await syncFeed(ok.db, feedOf({ kind: 'website' }), { fetchers: { website: async () => ({ items: [item], cursor: '99' }) } })
+        expect(ok.tables.knowledge_feeds[0].sync_cursor).toBe('99')
+
+        const bad = makeFakeDb(learnTables())
+        addKnowledgeSource.mockRejectedValue(new Error('넣기 실패'))
+        await syncFeed(bad.db, feedOf({ kind: 'website' }), { fetchers: { website: async () => ({ items: [item], cursor: '99' }) } })
+        expect(bad.tables.knowledge_feeds[0].sync_cursor).toBeUndefined()
+    })
+
+    it('연결 줄의 기준 번호를 가져오기에 넘긴다', async () => {
+        const { syncFeed } = await import('../feeds/sync')
+        const fake = makeFakeDb(learnTables())
+        let seen: unknown
+        await syncFeed(fake.db, feedOf({ kind: 'website', syncCursor: '42' }), { fetchers: { website: async (_f, _s, o) => { seen = o?.cursor; return { items: [] } } } })
+        expect(seen).toBe('42')
     })
 })

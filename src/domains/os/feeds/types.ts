@@ -30,9 +30,16 @@ export interface KnowledgeFeed {
     lastSyncedAt: string | null; lastError: string | null; itemCount: number; createdAt: string
     /** 「내 SNS 연결」로 만든 연결이면 그 칸. 아니면 없음 (sns_slot 칸, 20261022 마이그레이션) */
     snsSlot?: SnsSlot | null
+    /** 지난번 가져오기가 본 가장 최신 글의 기준(큐리어스 = 글 번호). 다음엔 여기 닿으면 멈춘다 (sync_cursor 칸, 20261022_knowledge_feeds_cursor) */
+    syncCursor?: string | null
 }
 
-export interface FetchNewItemsResult { items: FeedItem[]; note?: string }
+export interface FetchNewItemsResult {
+    items: FeedItem[]
+    note?: string
+    /** 다음 가져오기가 여기 닿으면 멈출 기준(가장 최신 글). 끝까지 다 본 때만 준다 */
+    cursor?: string
+}
 
 /** 가져오기를 어디까지 할지 (동기화 엔진이 넘겨 준다) */
 export interface FetchOptions {
@@ -42,6 +49,8 @@ export interface FetchOptions {
     maxItems?: number
     /** 이 시각(Date.now() 기준 ms)을 넘기면 더 읽지 않는다 (서버 실행 한도 60초) */
     deadline?: number
+    /** 지난번 기준(연결 줄의 sync_cursor). 큐리어스 글 목록은 여기 닿으면 멈춘다 */
+    cursor?: string | null
     /** 피드(RSS, Atom) 문서 최대 크기. 없으면 rss.ts 의 FEED_MAX_BYTES (SNS 는 1MB) */
     feedMaxBytes?: number
 }
@@ -58,6 +67,7 @@ export interface KnowledgeFeedRow {
     id: string; mentor_id: string; user_id: string; kind: FeedKind; handle_or_url: string; status: FeedStatus
     last_synced_at: string | null; last_error: string | null; item_count: number | null; created_at: string
     sns_slot?: SnsSlot | null
+    sync_cursor?: string | null
 }
 export function feedFromRow(r: KnowledgeFeedRow): KnowledgeFeed {
     return {
@@ -65,8 +75,11 @@ export function feedFromRow(r: KnowledgeFeedRow): KnowledgeFeed {
         status: r.status, lastSyncedAt: r.last_synced_at, lastError: r.last_error,
         itemCount: r.item_count ?? 0, createdAt: r.created_at,
         ...(r.sns_slot ? { snsSlot: r.sns_slot } : {}),
+        ...(r.sync_cursor ? { syncCursor: r.sync_cursor } : {}),
     }
 }
 export const FEED_COLUMNS = 'id, mentor_id, user_id, kind, handle_or_url, status, last_synced_at, last_error, item_count, created_at'
 /** sns_slot 칸까지. 칸이 아직 없으면(마이그레이션 전) FEED_COLUMNS 로 한 번 더 읽는다 (store.ts) */
 export const FEED_COLUMNS_WITH_SNS = `${FEED_COLUMNS}, sns_slot`
+/** sync_cursor 까지 (칸이 없으면 FEED_COLUMNS_WITH_SNS → FEED_COLUMNS 순서로 다시 읽는다) */
+export const FEED_COLUMNS_FULL = `${FEED_COLUMNS_WITH_SNS}, sync_cursor`

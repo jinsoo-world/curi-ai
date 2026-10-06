@@ -62,9 +62,16 @@ export const SNS_BLOG_MAX_POSTS = 20
 export const SNS_YOUTUBE_MAX_VIDEOS = 20
 /** 큐리어스 리더가 쓴 커뮤니티 글 최대 수 (최신순) */
 export const SNS_CURIOUS_MAX_POSTS = 30
-/** 커뮤니티 글 목록을 볼 때 한 쪽 크기, 최대 쪽 수 (공개 목록에 글쓴이 거르기가 없어 최신 글부터 훑는다. 200 × 15 = 최근 3,000편) */
+/** 커뮤니티 글 목록 한 쪽 크기. 공개 목록에 글쓴이 거르기가 없어 최신 글부터 훑는다 */
 const CURIOUS_LIST_PAGE_SIZE = 200
-const CURIOUS_LIST_MAX_PAGES = 15
+/** 처음(기준 번호 없음) 훑는 최신 글 수 = 200 × 3쪽 (본체 부담 줄이기, 1006) */
+export const SNS_CURIOUS_FIRST_SCAN = 600
+/** 본체 요청 사이 간격, 한 번 배우기당 최대 요청, 하루 전체(모든 봇 합) 최대 요청 */
+export const SNS_CURIOUS_GAP_MS = 200
+export const SNS_CURIOUS_MAX_CALLS = 40
+export const SNS_CURIOUS_DAILY_CALLS = 2_000
+/** 리더 화면 하나를 읽을 때 본체에 가는 요청 수 (리더, 경력, 후기, 리더 페이지) */
+export const CURIOUS_LEADER_PAGE_CALLS = 4
 /** 한꺼번에 읽는 영상, 글 수 */
 const READ_CONCURRENCY = 3
 /** 글 하나(영상 하나 자막 포함) 최대 글자 */
@@ -277,8 +284,34 @@ const fetchSnsYoutube: FetchNewItems = async (feed, since, opts = {}) => {
     return { items: clip(items), note }
 }
 
-/** 큐리어스 공개 창구 GET 하나 (fetchPageSafely, 주소는 /api/v2 로 고정). 못 읽으면 null */
-async function curiousJson(path: string, leftMs: number): Promise<Record<string, unknown> | null> {
+/**
+ * 큐리어스 본체 공개 창구 요청 예산 (본체 부담 줄이기, 1006)
+ *   - 요청 사이 SNS_CURIOUS_GAP_MS 간격
+ *   - 한 번 배우기당 최대 SNS_CURIOUS_MAX_CALLS 번 (리더 화면 읽기 CURIOUS_LEADER_PAGE_CALLS 번 포함)
+ *   - 하루 전체(모든 봇 합) SNS_CURIOUS_DAILY_CALLS 번 = rate_limits 열쇠 curious-api:day (allowCall). 넘으면 다음 날로
+ */
+class CuriousBudget {
+    calls = 0
+    stopped: 'run' | 'day' | null = null
+    constructor(private readonly d: Required<CuriousFetcherDeps>) {}
+    async take(n = 1): Promise<boolean> {
+        if (this.stopped) return false
+        if (this.calls + n > this.d.maxCalls) { this.stopped = 'run'; return false }
+        for (let i = 0; i < n; i++) if (!(await this.d.allowCall())) { this.stopped = 'day'; return false }
+        if (this.calls > 0) await this.d.sleep(SNS_CURIOUS_GAP_MS)
+        this.calls += n
+        return true
+    }
+    note(): string | undefined {
+        if (this.stopped === 'run') return `큐리어스 요청을 한 번에 ${this.d.maxCalls}번까지만 해서 나머지는 다음에 배워요`
+        if (this.stopped === 'day') return '오늘 큐리어스 요청 한도에 닿아 나머지는 내일 배워요'
+        return undefined
+    }
+}
+
+/** 큐리어스 공개 창구 GET 하나 (fetchPageSafely, 주소는 /api/v2 로 고정). 예산이 없거나 못 읽으면 null */
+async function curiousJson(budget: CuriousBudget, path: string, leftMs: number): Promise<Record<string, unknown> | null> {
+    if (!(await budget.take())) return null
     const r = await fetchPageSafely(`${CURIOUS_API}${path}`, { timeoutMs: Math.max(1_000, Math.min(8_000, leftMs)), maxBytes: 2 * 1024 * 1024, headers: { Accept: 'application/json' }, normalize: false })
     if (!r.ok) return null
     try {
@@ -297,75 +330,121 @@ function curiousTime(v: unknown): number {
 /**
  * 그 리더(writer)가 쓴 공개 커뮤니티 글 = 공개 목록(/posts, 최신순)을 훑어 글쓴이 번호로 거른다.
  * 공개 창구에 글쓴이 거르기가 없어서다. 회원 전용, 비공개 글은 공개 목록이 주지 않는다. 상세가 published 가 아니면 또 뺀다.
- * since 가 있으면 그보다 오래된 글이 나오는 순간 멈춘다(매일 자동 = 새 글만).
+ * 멈추는 곳: 지난번 기준 번호(cursor) 이하 글 → 없으면 since 보다 오래된 글 → 처음엔 최신 SNS_CURIOUS_FIRST_SCAN 편.
+ * cursor 는 끝까지 다 봤을 때만 돌려준다(예산, 시간, 한도로 멈췄으면 다음에 같은 자리부터 다시).
  */
-async function writerPosts(writerId: number, since: Date | null, opts: { isKnown?: (url: string) => boolean; max: number; deadline?: number }): Promise<{ items: FeedItem[]; hidden: number; error?: string }> {
+async function writerPosts(budget: CuriousBudget, writerId: number, since: Date | null, opts: { isKnown?: (url: string) => boolean; max: number; capped: boolean; cursor?: string | null; deadline?: number }): Promise<{ items: FeedItem[]; hidden: number; error?: string; cursor?: string }> {
     const left = () => (opts.deadline ? opts.deadline - Date.now() : 10_000)
+    const cursorId = opts.cursor && /^\d+$/.test(opts.cursor) ? Number(opts.cursor) : null
     const found: { id: number; title: string; at: string }[] = []
-    let stop = false
-    for (let pg = 1; pg <= CURIOUS_LIST_MAX_PAGES && !stop && found.length < opts.max; pg++) {
-        if (left() < 3_000) break
-        const j = await curiousJson(`/posts?category_number=0&sort=created_at&page=${pg}&size=${CURIOUS_LIST_PAGE_SIZE}`, left())
-        if (!j) { if (pg === 1) return { items: [], hidden: 0, error: '큐리어스 커뮤니티 글 목록을 지금 못 열었어요' }; break }
+    let newest: number | null = null, scanned = 0, done = false, cut = false
+    for (let pg = 1; !done && found.length < opts.max; pg++) {
+        if (scanned >= SNS_CURIOUS_FIRST_SCAN) { done = true; break }
+        if (left() < 3_000) { cut = true; break }
+        const size = Math.min(CURIOUS_LIST_PAGE_SIZE, SNS_CURIOUS_FIRST_SCAN - scanned)
+        const j = await curiousJson(budget, `/posts?category_number=0&sort=created_at&page=${pg}&size=${size}`, left())
+        if (!j) {
+            if (budget.stopped) { cut = true; break }
+            if (pg === 1) return { items: [], hidden: 0, error: '큐리어스 커뮤니티 글 목록을 지금 못 열었어요' }
+            cut = true; break
+        }
         const list = Array.isArray(j.postList) ? j.postList as Record<string, unknown>[] : []
         for (const p of list) {
-            const at = curiousTime(p.createdAt)
-            if (since && Number.isFinite(at) && at <= since.getTime()) { stop = true; break }
-            const w = (p.writerInfo ?? {}) as Record<string, unknown>
+            scanned++
             const id = Number(p.id)
-            if (Number(w.writerId) !== writerId || !Number.isInteger(id) || id <= 0) continue
+            if (!Number.isInteger(id) || id <= 0) continue
+            if (newest === null) newest = id
+            if (cursorId !== null && id <= cursorId) { done = true; break }
+            const at = curiousTime(p.createdAt)
+            if (since && Number.isFinite(at) && at <= since.getTime()) { done = true; break }
+            const w = (p.writerInfo ?? {}) as Record<string, unknown>
+            if (Number(w.writerId) !== writerId) continue
             if (opts.isKnown?.(curiousPageUrl({ kind: 'post', id }))) continue
             found.push({ id, title: String(p.title ?? '').slice(0, 120), at: String(p.createdAt ?? '') })
             if (found.length >= opts.max) break
         }
-        if (list.length < CURIOUS_LIST_PAGE_SIZE) break
+        if (list.length < size) done = true
     }
+    // 요금제 상한 때문에 덜 가져왔으면 기준을 옮기지 않는다(남은 새 글을 다음에 건너뛰지 않게)
+    if (found.length >= opts.max && opts.capped) cut = true
 
-    const done: (FeedItem | null)[] = found.map(() => null)
+    const items: FeedItem[] = []
     let hidden = 0
-    await eachWithDeadline(found, opts.deadline, async (f, i, ms) => {
-        const d = await curiousJson(`/posts/${f.id}`, ms)
-        if (!d) return
-        if (d.status !== undefined && d.status !== 'published') { hidden++; return }
+    for (const f of found) {            // 요청 사이 간격을 지키려고 하나씩
+        if (left() < 3_000) { cut = true; break }
+        const d = await curiousJson(budget, `/posts/${f.id}`, left())
+        if (!d) { cut = true; if (budget.stopped) break; continue }
+        if (d.status !== undefined && d.status !== 'published') { hidden++; continue }
         const body = curiousHtmlToText(d.content)
         const title = String(d.title ?? f.title ?? '').slice(0, 120) || '제목 없는 글'
         const at = curiousTime(d.createdAt ?? f.at)
-        done[i] = { title, url: curiousPageUrl({ kind: 'post', id: f.id }), text: `${title}\n\n${body}`, ...(Number.isFinite(at) ? { publishedAt: new Date(at).toISOString() } : {}) }
-    })
-    return { items: done.filter((x): x is FeedItem => !!x), hidden }
+        items.push({ title, url: curiousPageUrl({ kind: 'post', id: f.id }), text: `${title}\n\n${body}`, ...(Number.isFinite(at) ? { publishedAt: new Date(at).toISOString() } : {}) })
+    }
+    const nextCursor = !cut && newest !== null ? String(Math.max(newest, cursorId ?? 0)) : undefined
+    return { items, hidden, ...(nextCursor ? { cursor: nextCursor } : {}) }
+}
+
+export interface CuriousFetcherDeps {
+    /** 하루 전체 요청 열쇠 (기본: 늘 통과. 서버는 curiousDailyAllow(db)) */
+    allowCall?: () => Promise<boolean>
+    /** 요청 사이 쉬기 (시험에서 바꿔 끼운다) */
+    sleep?: (ms: number) => Promise<void>
+    /** 한 번 배우기당 최대 요청 수 */
+    maxCalls?: number
+}
+
+/** 하루 전체(모든 봇 합) 큐리어스 요청 열쇠. 셀 수 없으면 막는다 */
+export function curiousDailyAllow(db: SupabaseClient, check: typeof checkRateLimit = checkRateLimit): () => Promise<boolean> {
+    return async () => (await check(db, 'curious-api:day', SNS_CURIOUS_DAILY_CALLS, 86_400, { failClosed: true })).allowed
 }
 
 /** 큐리어스: 그 화면 하나(리더 소개 등) + 리더 화면이면 그 사람이 쓴 공개 커뮤니티 글 */
-const fetchSnsCurious: FetchNewItems = async (feed, since, opts = {}) => {
-    const items: FeedItem[] = []
-    const notes: string[] = []
-    let pageError: string | null = null
-    if (!opts.isKnown?.(feed.handleOrUrl)) {
-        const r = await readUrl(feed.handleOrUrl, { ...KNOWLEDGE_READ_OPTIONS, maxChars: SNS_ITEM_MAX_CHARS })
-        if (r.ok) items.push({ title: (r.title || '큐리어스').slice(0, 120), url: feed.handleOrUrl, text: r.text })
-        else pageError = r.reason
-    }
-    const target = parseCuriousUrl(feed.handleOrUrl)
-    if (target?.kind === 'leader' && typeof target.id === 'number') {
-        const max = Math.max(0, Math.min(SNS_CURIOUS_MAX_POSTS, (opts.maxItems ?? Infinity) - items.length))
-        if (max > 0) {
-            const p = await writerPosts(target.id, since, { isKnown: opts.isKnown, max, deadline: opts.deadline })
-            items.push(...p.items)
-            if (p.hidden) notes.push(`${p.hidden}개 글은 공개 글이 아니라 뺐어요`)
-            if (p.error) notes.push(p.error)
+export function curiousFetcher(deps: CuriousFetcherDeps = {}): FetchNewItems {
+    return async (feed, since, opts = {}) => {
+        const budget = new CuriousBudget({
+            allowCall: deps.allowCall ?? (async () => true),
+            sleep: deps.sleep ?? (ms => new Promise(r => setTimeout(r, ms))),
+            maxCalls: deps.maxCalls ?? SNS_CURIOUS_MAX_CALLS,
+        })
+        const items: FeedItem[] = []
+        const notes: string[] = []
+        let pageError: string | null = null
+        let pageCut = false
+        if (!opts.isKnown?.(feed.handleOrUrl)) {
+            if (await budget.take(CURIOUS_LEADER_PAGE_CALLS)) {
+                const r = await readUrl(feed.handleOrUrl, { ...KNOWLEDGE_READ_OPTIONS, maxChars: SNS_ITEM_MAX_CHARS })
+                if (r.ok) items.push({ title: (r.title || '큐리어스').slice(0, 120), url: feed.handleOrUrl, text: r.text })
+                else pageError = r.reason
+            } else pageCut = true
         }
+        let cursor: string | undefined
+        const target = parseCuriousUrl(feed.handleOrUrl)
+        if (target?.kind === 'leader' && typeof target.id === 'number') {
+            const room = (opts.maxItems ?? Infinity) - items.length
+            const max = Math.max(0, Math.min(SNS_CURIOUS_MAX_POSTS, room))
+            if (max > 0) {
+                const p = await writerPosts(budget, target.id, since, { isKnown: opts.isKnown, max, capped: room < SNS_CURIOUS_MAX_POSTS, cursor: opts.cursor, deadline: opts.deadline })
+                items.push(...p.items)
+                if (p.hidden) notes.push(`${p.hidden}개 글은 공개 글이 아니라 뺐어요`)
+                if (p.error) notes.push(p.error)
+                if (!pageCut && !pageError) cursor = p.cursor
+            }
+        }
+        const b = budget.note()
+        if (b) notes.push(b)
+        if (pageError) {
+            if (items.length === 0) throw new Error(pageError)
+            notes.unshift(`리더 화면은 못 읽었어요(${pageError})`)
+        }
+        if (pageCut && items.length === 0 && b) throw new Error(b)
+        return { items: clip(items), note: notes.join('. ') || undefined, ...(cursor ? { cursor } : {}) }
     }
-    if (pageError) {
-        if (items.length === 0) throw new Error(pageError)
-        notes.unshift(`리더 화면은 못 읽었어요(${pageError})`)
-    }
-    return { items: clip(items), note: notes.join('. ') || undefined }
 }
 
 export const SNS_FETCHERS: Record<Exclude<SnsSlot, 'instagram'>, FetchNewItems> = {
     blog: fetchSnsBlog,
     youtube: fetchSnsYoutube,
-    curious: fetchSnsCurious,
+    curious: curiousFetcher(),
 }
 
 /* ─────────────────────────── 4. 배우기 한 번 ─────────────────────────── */
@@ -420,7 +499,7 @@ export async function syncSnsFeed(db: SupabaseClient, feed: KnowledgeFeed, opts:
         const label = slot === 'blog' ? linkLabelOf(feed.handleOrUrl) : SNS_SLOT_LABEL[slot]
         return await syncFeed(db, feed, {
             deadline: opts.deadline,
-            fetchers: { [feed.kind]: SNS_FETCHERS[slot] },
+            fetchers: { [feed.kind]: slot === 'curious' ? curiousFetcher({ allowCall: curiousDailyAllow(db) }) : SNS_FETCHERS[slot] },
             maxNew: remaining,
             source: { titlePrefix: `[${label}]`, sourceKind: `sns_${slot}` },
         })

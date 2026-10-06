@@ -8,7 +8,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { isSafeFetchUrl } from '@/domains/agent/fetch-url'
 import { removeBotSource, assertBotOwned } from '@/domains/os/knowledge'
 import type { FeedKind, FeedStatus, KnowledgeFeed, KnowledgeFeedRow } from './types'
-import { feedFromRow, FEED_COLUMNS, FEED_COLUMNS_WITH_SNS, isSocialStubKind } from './types'
+import { feedFromRow, FEED_COLUMNS, FEED_COLUMNS_WITH_SNS, FEED_COLUMNS_FULL, isSocialStubKind } from './types'
 import { resolveChannelInput } from './youtube'
 import { substackFeedUrl } from './podcast'
 import { withScheme } from './rss'
@@ -30,11 +30,16 @@ function fail(error: { code?: string; message?: string } | null): never {
 }
 
 type FeedQueryResult = { data: unknown; error: { code?: string; message?: string } | null }
-/** sns_slot 칸까지 읽어 보고, 칸이 아직 없으면(마이그레이션 전) 옛 칸만으로 한 번 더 */
+/**
+ * sns_slot, sync_cursor 칸까지 읽어 보고, 칸이 아직 없으면(마이그레이션 전) 하나씩 빼고 다시.
+ * sync_cursor 만 없을 때 sns_slot 까지 잃으면 SNS 줄이 일반 줄로 돌아 버리니 한 단계씩 뺀다.
+ */
 async function selectWithSns(run: (cols: string) => PromiseLike<FeedQueryResult>): Promise<FeedQueryResult> {
-    const r = await run(FEED_COLUMNS_WITH_SNS)
-    if (r.error?.code === COLUMN_MISSING) return run(FEED_COLUMNS)
-    return r
+    for (const cols of [FEED_COLUMNS_FULL, FEED_COLUMNS_WITH_SNS]) {
+        const r = await run(cols)
+        if (r.error?.code !== COLUMN_MISSING) return r
+    }
+    return run(FEED_COLUMNS)
 }
 
 /** 이 봇에 붙은 연결 목록 */
