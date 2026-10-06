@@ -99,6 +99,19 @@ describe('구글(FCM)', () => {
         })
     })
 
+    it('구글 호출(출입증·보내기) 모두 10초 마감이 붙는다', async () => {
+        const signals: unknown[] = []
+        const fetch = vi.fn(async (url: string, init: { signal?: AbortSignal }) => {
+            signals.push(init.signal)
+            if (url.includes('oauth2')) return { status: 200, text: async () => JSON.stringify({ access_token: 'ya29.x', expires_in: 3600 }) }
+            return { status: 200, text: async () => '{}' }
+        })
+        const t = createFcmTransport({ env: { FCM_SERVICE_ACCOUNT_JSON: SA }, fetch, nowSec: () => 1_700_000_000 })
+        await t.send(AND, MSG)
+        expect(signals).toHaveLength(2)
+        for (const s of signals) expect(s).toBeInstanceOf(AbortSignal)
+    })
+
     it('구글 출입증을 받아 보내고, 출입증은 끝나기 전까지 다시 쓴다', async () => {
         const calls: { url: string; body: string; headers: Record<string, string> }[] = []
         const fetch = vi.fn(async (url: string, init: { body: string; headers: Record<string, string> }) => {

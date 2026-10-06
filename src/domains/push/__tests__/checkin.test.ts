@@ -110,7 +110,7 @@ describe('runP089 — 예약 작업 한 번', () => {
         const r = await runP089({ reader, send: async p => { sent.push(p); return 'sent' }, now: NOW })
         expect(sent.map(p => p.userId)).toEqual(['u1'])   // u2 동의 없음, u3 최근 접속
         expect(sent[0]).toMatchObject({ type: 'P089', deeplink: 'curiai://bot/m1' })
-        expect(r).toEqual({ candidates: 1, sent: 1, blocked: 0, failed: 0 })
+        expect(r).toEqual({ candidates: 1, sent: 1, blocked: 0, failed: 0, deferred: 0, via: 'js' })
         expect((reader.devicesSeenSince as ReturnType<typeof vi.fn>).mock.calls[0][0].toISOString()).toBe(daysAgo(4))
         expect((reader.usersActiveSince as ReturnType<typeof vi.fn>).mock.calls[0][1].toISOString()).toBe(daysAgo(3))
         expect((reader.sentP089Since as ReturnType<typeof vi.fn>).mock.calls[0][1].toISOString()).toBe(daysAgo(7))
@@ -122,9 +122,37 @@ describe('runP089 — 예약 작업 한 번', () => {
             reader, now: NOW,
             send: async () => { if (i++ === 0) throw new Error('boom'); return 'blocked' },
         })
-        expect(r).toEqual({ candidates: 2, sent: 0, blocked: 1, failed: 1 })
+        expect(r).toEqual({ candidates: 2, sent: 0, blocked: 1, failed: 1, deferred: 0, via: 'js' })
     })
 })
+describe('runP089 — DB 함수 한 번으로 고르기 + 전체 마감', () => {
+    it('DB 함수(p089_candidates)가 있으면 그 결과만 쓰고 사람마다 묻지 않는다', async () => {
+        const reader = fakeReader({ candidates: vi.fn(async () => [{ userId: 'u9', mentorId: 'm9', botName: '기획팀장' }]) })
+        const sent: string[] = []
+        const r = await runP089({ reader, send: async p => { sent.push(p.userId); return 'sent' }, now: NOW })
+        expect(sent).toEqual(['u9'])
+        expect(reader.devicesSeenSince).not.toHaveBeenCalled()
+        expect(reader.usersActiveSince).not.toHaveBeenCalled()
+        expect(r).toMatchObject({ candidates: 1, sent: 1, via: 'sql' })
+    })
+    it('함수가 아직 없으면(null) 예전 길', async () => {
+        const reader = fakeReader({ candidates: vi.fn(async () => null) })
+        const r = await runP089({ reader, send: async () => 'sent', now: NOW })
+        expect(reader.devicesSeenSince).toHaveBeenCalled()
+        expect(r).toMatchObject({ via: 'js' })
+    })
+    it('마감이 지나면 남은 사람에게 보내지 않는다(내일 다시 고름)', async () => {
+        const many = Array.from({ length: 20 }, (_, i) => ({ userId: `u${i}`, mentorId: null, botName: null }))
+        const reader = fakeReader({ candidates: vi.fn(async () => many) })
+        const r = await runP089({ reader, send: async () => { await new Promise(res => setTimeout(res, 15)); return 'sent' }, now: NOW, deadline: Date.now() + 5 })
+        expect(r).toMatchObject({ candidates: 20 })
+        if ('deferred' in r) {
+            expect(r.deferred).toBeGreaterThan(0)
+            expect(r.sent + r.deferred).toBe(20)
+        }
+    })
+})
+
 
 describe('P089 은 sendPush 관문 규칙을 그대로 받는다', () => {
     const IOS = { id: 'd1', userId: 'u1', platform: 'ios' as const, token: 'aa', apnsEnv: 'production' as const }
