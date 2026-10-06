@@ -5,7 +5,7 @@ import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit
 import { logLlmUsage } from '@/domains/llm/usage-log'
 import { answerToChunks, echoesRecentUserText, ECHO_RECENT_USER_TEXTS, isSentenceInText, MIN_SPEAK_CHARS, normalizeForMatch, TTS_CHUNK_MAX } from '@/domains/tts/chunks'
 import { verifyGrant } from '@/domains/tts/grant'
-import { chargeDailyChars } from '@/domains/tts/quota'
+import { chargeDailyChars, refundDailyChars } from '@/domains/tts/quota'
 
 const ADMIN_EMAIL = 'jin@mission-driven.kr'
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -13,6 +13,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export const maxDuration = 60
 
 const DEFAULT_VOICE = 'pFZP5JQG7iQjIQuC4Bku'  // ElevenLabs 기본 여성 한국어 음성 (Lily)
+/** 일레븐랩스 마감 (2026-10-06 멈춤 점검). 넘기면 끊고, 올린 하루 글자 수를 되돌린다 */
+const ELEVENLABS_TIMEOUT_MS = 15_000
 
 /** 옛 방식(text 직접 전달) 요청을 받아주는 마감일. 이 날이 지나면 message 식별자만 받는다. */
 const LEGACY_TEXT_UNTIL = Date.parse('2026-11-15T00:00:00+09:00')
@@ -197,15 +199,17 @@ export async function POST(request: NextRequest) {
 
         const trimmedText = reading.text.slice(0, TTS_CHUNK_MAX)
 
-        // 사용자별 하루 읽기 글자 수 상한
-        if (!(await chargeDailyChars(db, user.id, trimmedText.length)).allowed) {
-            return NextResponse.json({ error: '오늘 음성으로 들을 수 있는 분량을 다 썼어요. 내일 다시 이용해 주세요.' }, { status: 429 })
-        }
-
         const ELEVENLABS_KEY = process.env.ELEVENLABS_API_KEY
         if (!ELEVENLABS_KEY) {
             return NextResponse.json({ error: 'ElevenLabs API 키가 설정되지 않았습니다.' }, { status: 500 })
         }
+
+        // 사용자별 하루 읽기 글자 수 상한 (소리를 못 만들면 아래에서 되돌린다)
+        const charge = await chargeDailyChars(db, user.id, trimmedText.length)
+        if (!charge.allowed) {
+            return NextResponse.json({ error: '오늘 음성으로 들을 수 있는 분량을 다 썼어요. 내일 다시 이용해 주세요.' }, { status: 429 })
+        }
+        const refund = () => (charge.window ? refundDailyChars(db, user.id, trimmedText.length, charge.window) : Promise.resolve())
 
         // voice_id: 그 봇의 목소리 또는 기본 다국어 음성
         const voiceId = reading.voiceId || DEFAULT_VOICE
@@ -227,37 +231,52 @@ export async function POST(request: NextRequest) {
             latencyMs: Date.now() - 시작, ok, error: error ?? null,
             meta: { chars: trimmedText.length, clonedVoice: isClonedVoice },
         })
-        const ttsRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`, {
-            method: 'POST',
-            headers: {
-                'xi-api-key': ELEVENLABS_KEY,
-                'Content-Type': 'application/json',
-                'Accept': 'audio/mpeg',
-            },
-            body: JSON.stringify({
-                text: trimmedText,
-                model_id: modelId,
-                language_code: 'ko',
-                voice_settings: voiceSettings,
-            }),
-        })
+        // 마감 15초 (본문 받기까지 포함). 넘기거나 실패하면 글자 수를 되돌린다
+        const signal = AbortSignal.timeout(ELEVENLABS_TIMEOUT_MS)
+        let ttsRes: Response
+        let audioBuffer: ArrayBuffer
+        try {
+            ttsRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`, {
+                method: 'POST',
+                signal,
+                headers: {
+                    'xi-api-key': ELEVENLABS_KEY,
+                    'Content-Type': 'application/json',
+                    'Accept': 'audio/mpeg',
+                },
+                body: JSON.stringify({
+                    text: trimmedText,
+                    model_id: modelId,
+                    language_code: 'ko',
+                    voice_settings: voiceSettings,
+                }),
+            })
 
-        if (!ttsRes.ok) {
-            const errBody = await ttsRes.text()
-            console.error('[TTS] ElevenLabs 실패:', ttsRes.status, errBody)
-            logTts(false, `${ttsRes.status} ${errBody.slice(0, 200)}`)
+            if (!ttsRes.ok) {
+                const errBody = await ttsRes.text().catch(() => '')
+                console.error('[TTS] ElevenLabs 실패:', ttsRes.status, errBody)
+                logTts(false, `${ttsRes.status} ${errBody.slice(0, 200)}`)
+                await refund()
 
-            if (ttsRes.status === 429) {
-                return NextResponse.json({ error: '요청이 너무 많습니다.' }, { status: 429 })
+                if (ttsRes.status === 429) {
+                    return NextResponse.json({ error: '요청이 너무 많습니다.' }, { status: 429 })
+                }
+                if (ttsRes.status === 401) {
+                    return NextResponse.json({ error: 'API 인증 오류입니다.' }, { status: 500 })
+                }
+                return NextResponse.json({ error: '음성 생성에 실패했습니다.' }, { status: 500 })
             }
-            if (ttsRes.status === 401) {
-                return NextResponse.json({ error: 'API 인증 오류입니다.' }, { status: 500 })
-            }
-            return NextResponse.json({ error: '음성 생성에 실패했습니다.' }, { status: 500 })
+
+            // 오디오 스트림을 ArrayBuffer로 변환 → Base64 data URL 반환
+            audioBuffer = await ttsRes.arrayBuffer()
+        } catch (e) {
+            // 시간 초과·연결 끊김 = 소리를 못 만들었다. 글자 수를 되돌린다
+            const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e)
+            console.error('[TTS] ElevenLabs 연결 실패:', msg)
+            logTts(false, msg.slice(0, 200))
+            await refund()
+            return NextResponse.json({ error: '음성 생성이 늦어지고 있어요. 잠시 뒤 다시 시도해 주세요.' }, { status: 504 })
         }
-
-        // 오디오 스트림을 ArrayBuffer로 변환 → Base64 data URL 반환
-        const audioBuffer = await ttsRes.arrayBuffer()
         logTts(true)
         const base64 = Buffer.from(audioBuffer).toString('base64')
         const audioUrl = `data:audio/mpeg;base64,${base64}`

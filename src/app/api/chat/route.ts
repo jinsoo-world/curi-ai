@@ -337,7 +337,7 @@ export async function POST(req: Request) {
             user ? Promise.resolve(adminForReads.from('user_onboarding').select('occupation, org_name, use_cases').eq('user_id', user.id).maybeSingle())
                 .then(r => r.data).catch(e => { console.error('[chat] onboarding', e instanceof Error ? e.message : e); return null }) : Promise.resolve(null),
             // 로그인 회원 대화 = 월간 사용 한도로 막는다 (대표 결정 0928, 주간과 5시간 창 없음). 손님 한도는 위에서 그대로.
-            user ? readUsage(adminForReads, user.id, new Date(), user.email) : Promise.resolve(null),
+            user ? readUsage(adminForReads, user.id, new Date(), user.email).catch(e => { console.error('[chat] usage', e instanceof Error ? e.message : e); return null }) : Promise.resolve(null),
             // 🎛 답변 설정 — 목적·추가 지침·말투·길이·창의성·안내문 (domains/os/response-settings)
             loadResponseSettingsForChat(adminForReads, mentorId, mentor as { creator_id?: string | null }, user?.id ?? null).catch(settingsFallback),
             // 🧩 사용자가 깃허브에서 내려받아 이 봇에 붙인 스킬(지침 글). 울타리 안에만 들어가고 도구 게이트는 못 넘는다(domains/os/skills)

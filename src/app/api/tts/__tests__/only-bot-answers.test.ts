@@ -5,7 +5,11 @@ import { signGrant } from '@/domains/tts/grant'
 import { answerToChunks } from '@/domains/tts/chunks'
 
 const quota = { ok: true }
-vi.mock('@/domains/tts/quota', () => ({ chargeDailyChars: async () => ({ allowed: quota.ok }) }))
+const refunds: { chars: number; window: string }[] = []
+vi.mock('@/domains/tts/quota', () => ({
+    chargeDailyChars: async () => ({ allowed: quota.ok, window: quota.ok ? 'W' : undefined }),
+    refundDailyChars: async (_db: unknown, _u: string, chars: number, window: string) => { refunds.push({ chars, window }) },
+}))
 
 const ME = '11111111-1111-4111-8111-111111111111'
 const OTHER = '22222222-2222-4222-8222-222222222222'
@@ -89,6 +93,7 @@ beforeEach(() => {
     }
     fetchMock.mockClear()
     quota.ok = true
+    refunds.length = 0
 })
 
 describe('저장된 봇 답(messageId)', () => {
@@ -304,5 +309,34 @@ describe('옛 방식(text) 호환', () => {
         try {
             expect((await call({ text: '아무 글이나 길게 써서 보내 봅니다' })).status).toBe(410)
         } finally { vi.useRealTimers() }
+    })
+})
+
+describe('일레븐랩스 마감·실패 시 글자 수 되돌리기 (2026-10-06)', () => {
+    it('일레븐랩스 요청에 15초 마감 신호를 건다', async () => {
+        await call({ messageId: MSG_BOT })
+        const init = (fetchMock.mock.calls[0] as unknown[])[1] as { signal?: AbortSignal }
+        expect(init.signal).toBeInstanceOf(AbortSignal)
+    })
+
+    it('일레븐랩스가 실패하면 올린 하루 글자 수를 되돌린다', async () => {
+        fetchMock.mockImplementationOnce(async () => new Response('boom', { status: 500 }))
+        const res = await call({ messageId: MSG_BOT })
+        expect(res.status).toBe(500)
+        expect(refunds).toHaveLength(1)
+        expect(refunds[0].window).toBe('W')
+        expect(refunds[0].chars).toBeGreaterThan(0)
+    })
+
+    it('시간 초과(던짐)여도 되돌린다', async () => {
+        fetchMock.mockImplementationOnce(async () => { throw new DOMException('timeout', 'TimeoutError') })
+        const res = await call({ messageId: MSG_BOT })
+        expect(res.status).toBe(504)
+        expect(refunds).toHaveLength(1)
+    })
+
+    it('성공하면 되돌리지 않는다', async () => {
+        await call({ messageId: MSG_BOT })
+        expect(refunds).toHaveLength(0)
     })
 })

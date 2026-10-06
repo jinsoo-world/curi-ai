@@ -6,18 +6,33 @@ import { windowStart } from '@/lib/rate-limit'
 
 export const TTS_DAILY_CHARS = 20000
 
-export async function chargeDailyChars(db: SupabaseClient, userId: string, chars: number, limit = TTS_DAILY_CHARS): Promise<{ allowed: boolean }> {
+/** window = 올린 하루 창. 소리 만들기가 실패하면 refundDailyChars 에 그대로 넘겨 같은 창에서 되돌린다 */
+export async function chargeDailyChars(db: SupabaseClient, userId: string, chars: number, limit = TTS_DAILY_CHARS): Promise<{ allowed: boolean; window?: string }> {
+    const window = windowStart(Date.now(), 86400)
     try {
         const { data, error } = await db.rpc('tts_charge_chars', {
             p_key: `tts-day:u:${userId}`,
-            p_window: windowStart(Date.now(), 86400),
+            p_window: window,
             p_chars: chars,
             p_limit: limit,
         })
         if (error) throw error
-        return { allowed: data === true }
+        return data === true ? { allowed: true, window } : { allowed: false }
     } catch (e) {
         console.warn('[tts-quota] 확인 실패, 통과', (e as { code?: string }).code ?? (e instanceof Error ? e.message : e))
         return { allowed: true }
+    }
+}
+
+/**
+ * 소리를 못 만들었으면(일레븐랩스 실패·시간 초과) 올린 글자 수를 되돌린다 (2026-10-06).
+ * DB 함수 tts_refund_chars(20261023) 가 없거나 실패해도 던지지 않는다(경고만).
+ */
+export async function refundDailyChars(db: SupabaseClient, userId: string, chars: number, window: string): Promise<void> {
+    try {
+        const { error } = await db.rpc('tts_refund_chars', { p_key: `tts-day:u:${userId}`, p_window: window, p_chars: chars })
+        if (error) console.warn('[tts-quota] 되돌리기 실패', error.code ?? error.message)
+    } catch (e) {
+        console.warn('[tts-quota] 되돌리기 실패', e instanceof Error ? e.message : e)
     }
 }

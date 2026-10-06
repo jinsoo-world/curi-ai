@@ -4,6 +4,8 @@ import { createClient as createAdmin } from '@supabase/supabase-js'
 import { requireMentorOwner } from '@/lib/mentor-owner'
 
 export const maxDuration = 60
+/** 일레븐랩스 마감 (2026-10-06 멈춤 점검). 넘기면 끊고 녹음 파일만 저장한다(클론은 다음에 다시) */
+const ELEVENLABS_TIMEOUT_MS = 15_000
 
 export async function POST(request: NextRequest) {
     try {
@@ -78,6 +80,7 @@ export async function POST(request: NextRequest) {
                     await fetch(`https://api.elevenlabs.io/v1/voices/${mentor.voice_id}`, {
                         method: 'DELETE',
                         headers: { 'xi-api-key': ELEVENLABS_KEY },
+                        signal: AbortSignal.timeout(ELEVENLABS_TIMEOUT_MS),
                     })
                 } catch (e) {
                     console.error('[Voice Upload] 기존 voice 삭제 실패 (무시):', e)
@@ -100,6 +103,7 @@ export async function POST(request: NextRequest) {
                     method: 'POST',
                     headers: { 'xi-api-key': ELEVENLABS_KEY },
                     body: elForm,
+                    signal: AbortSignal.timeout(ELEVENLABS_TIMEOUT_MS),
                 })
 
                 const elData = await elRes.json()
