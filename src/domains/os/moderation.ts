@@ -54,6 +54,8 @@ const SYSTEM = [
     '(illegal, sexual, hate, violence) 불법, 성적, 성인, 혐오, 괴롭힘, 폭력 내용.',
     '(medical_claim, legal_claim, financial_claim) 완치 보장, 수익 보장처럼 의료, 법률, 돈 문제를 단정하는가.',
     '(personal_data) 다른 사람의 전화번호, 계좌번호, 주소, 주민등록번호 같은 개인정보가 지시문이나 자료에 있는가.',
+    '(solicit_personal_data) 대화 상대(손님)에게 주민등록번호, 계좌번호, 카드번호, 비밀번호, 인증번호를 받아내라고 시키는가.',
+    '(scam) 플랫폼 밖 계좌로 입금, 외부 메신저로 옮기기, 투자금 모집을 유도하는가.',
     '판정: 문제가 분명하면 block, 애매하거나 사람이 봐야 하면 review, 문제가 없으면 pass.',
     '답은 JSON 한 개만. 다른 글 금지:',
     '{"verdict":"pass"|"review"|"block","reasons":["쉬운 한국어 짧은 이유"],"categories":["위 괄호 속 이름"]}',
