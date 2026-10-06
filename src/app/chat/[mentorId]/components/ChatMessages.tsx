@@ -26,7 +26,6 @@ interface ChatMessagesProps {
     mentorEmoji: string
     isStreaming: boolean
     autoTTS?: boolean
-    systemPrompt?: string
     voiceId?: string | null
     exportLabel?: string
     /** 채팅방 테마 색상 hex. null이면 기본 사용자 말풍선 */
@@ -100,7 +99,7 @@ function splitSentences(text: string): string[] {
 // 🎵 전역 TTS 캐시 (세션 내 동일 텍스트 즉시 재생)
 const globalTTSCache = new Map<string, string>()
 
-function TTSButton({ message, mentorName, autoPlay, systemPrompt, voiceId }: { message: ChatMessage; mentorName: string; autoPlay?: boolean; systemPrompt?: string; voiceId?: string | null }) {
+function TTSButton({ message, mentorName, autoPlay, voiceId }: { message: ChatMessage; mentorName: string; autoPlay?: boolean; voiceId?: string | null }) {
     const [status, setStatus] = useState<'idle' | 'loading' | 'playing'>('idle')
     const [progress, setProgress] = useState(0)
     const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -116,7 +115,7 @@ function TTSButton({ message, mentorName, autoPlay, systemPrompt, voiceId }: { m
         const res = await fetch('/api/tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, mentorName, systemPrompt, voiceId: voiceId || undefined }),
+            body: JSON.stringify({ text, mentorName, voiceId: voiceId || undefined }),
         })
         if (!res.ok) return null
         const data = await res.json()
@@ -248,7 +247,7 @@ const ThumbDownIcon = ({ filled }: { filled: boolean }) => (
 )
 
 /** 복사/음성재생/좋아요/아쉬워요 액션 아이콘 — 제미나이 스타일 작은 아이콘 */
-function MessageActions({ message, mentorName, autoPlay, systemPrompt, voiceId }: { message: ChatMessage; mentorName?: string; autoPlay?: boolean; systemPrompt?: string; voiceId?: string | null }) {
+function MessageActions({ message, mentorName, autoPlay, voiceId }: { message: ChatMessage; mentorName?: string; autoPlay?: boolean; voiceId?: string | null }) {
     const [copied, setCopied] = useState(false)
     const [feedback, setFeedback] = useState<'like' | 'dislike' | null>(null)
     const isAssistant = message.role === 'assistant'
@@ -311,7 +310,7 @@ function MessageActions({ message, mentorName, autoPlay, systemPrompt, voiceId }
             </button>
             {isAssistant && (
                 <>
-                    <TTSButton message={message} mentorName={mentorName || ''} autoPlay={autoPlay} systemPrompt={systemPrompt} voiceId={voiceId} />
+                    <TTSButton message={message} mentorName={mentorName || ''} autoPlay={autoPlay} voiceId={voiceId} />
                     <button
                         onClick={() => handleFeedback('like')}
                         style={{
@@ -490,7 +489,6 @@ export default function ChatMessages({
     mentorEmoji,
     isStreaming,
     autoTTS,
-    systemPrompt,
     voiceId,
     exportLabel,
     themeColor,
@@ -821,7 +819,7 @@ export default function ChatMessages({
 
                                 {/* 액션 아이콘 — hover 시 표시 */}
                                 {msg.content && !isEmptyAssistant && (
-                                    <MessageActions message={msg} mentorName={mentor.name} autoPlay={autoPlayMsgId === msg.id} systemPrompt={systemPrompt} voiceId={voiceId} />
+                                    <MessageActions message={msg} mentorName={mentor.name} autoPlay={autoPlayMsgId === msg.id} voiceId={voiceId} />
                                 )}
                             </div>
                         </div>

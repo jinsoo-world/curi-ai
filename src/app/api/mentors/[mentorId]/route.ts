@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getMentorById, getPublicMentorById } from '@/domains/mentor'
+import { getMentorById, getPublicMentorById, toPublicMentor } from '@/domains/mentor'
+import { assertBotOwned } from '@/domains/os/knowledge'
 
 export async function GET(
     _request: NextRequest,
@@ -41,7 +42,23 @@ export async function GET(
             )
         }
 
-        return NextResponse.json({ mentor })
+        // 🔒 지시문(system_prompt) 등은 봇 주인에게만. 손님, 남에게는 공개 칸만 내보낸다
+        const row = mentor as Record<string, unknown>
+        const { data: { user } } = await supabase.auth.getUser()
+        let isOwner = false
+        if (user && typeof row.id === 'string' && row.creator_id) {
+            try {
+                await assertBotOwned(createAdminClient(), user.id, row.id)
+                isOwner = true
+            } catch {
+                isOwner = false
+            }
+        }
+
+        return NextResponse.json(
+            { mentor: isOwner ? mentor : toPublicMentor(row) },
+            { headers: { 'Cache-Control': 'private, no-store' } },   // 주인 응답이 공용 캐시에 남지 않게
+        )
     } catch (e) {
         console.error('[Mentors API] GET error:', e)
         return NextResponse.json(

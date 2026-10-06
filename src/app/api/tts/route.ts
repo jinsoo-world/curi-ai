@@ -6,6 +6,18 @@ import { logLlmUsage } from '@/domains/llm/usage-log'
 
 export const maxDuration = 60
 
+/** 이 목소리를 가진 봇 중 공개 봇이 있거나, 내가 만든 봇이 있으면 쓸 수 있다 */
+async function canUseVoice(userId: string, voiceId: string): Promise<boolean> {
+    const db = createAdminClient()
+    const { data: mentors } = await db.from('mentors').select('id, is_active, creator_id').eq('voice_id', voiceId).limit(20)
+    const rows = (mentors ?? []) as { id: string; is_active: boolean | null; creator_id: string | null }[]
+    if (rows.length === 0) return false
+    if (rows.some(m => m.is_active)) return true
+    const { data: mine } = await db.from('creator_profiles').select('id').eq('user_id', userId)
+    const myIds = new Set(((mine ?? []) as { id: string }[]).map(c => c.id))
+    return rows.some(m => !!m.creator_id && myIds.has(m.creator_id))
+}
+
 export async function POST(request: NextRequest) {
     try {
         // 인증 확인
@@ -29,6 +41,13 @@ export async function POST(request: NextRequest) {
         const ELEVENLABS_KEY = process.env.ELEVENLABS_API_KEY
         if (!ELEVENLABS_KEY) {
             return NextResponse.json({ error: 'ElevenLabs API 키가 설정되지 않았습니다.' }, { status: 500 })
+        }
+
+        // 🔒 복제 목소리는 공개 봇이거나 내 봇일 때만 쓴다(남의 비공개 복제 목소리, 아무 목소리 ID 차단)
+        if (requestVoiceId) {
+            if (typeof requestVoiceId !== 'string' || !(await canUseVoice(user.id, requestVoiceId))) {
+                return NextResponse.json({ error: '이 목소리는 쓸 수 없어요.' }, { status: 403 })
+            }
         }
 
         // voice_id: 요청에서 직접 또는 기본 다국어 음성
