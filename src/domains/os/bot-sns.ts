@@ -60,6 +60,11 @@ export class SnsInputError extends Error {
     constructor(public readonly field: SnsSlot, message: string) { super(message) }
 }
 
+/** sns_slot 칸이 아직 없다(마이그레이션 20261022 전). API 는 「준비 중」으로 바꾼다 */
+export class SnsNotReady extends Error {
+    constructor() { super('SNS 연결은 준비 중이에요. 잠시 후 다시 해 주세요') }
+}
+
 export function isSnsSlot(v: unknown): v is SnsSlot {
     return typeof v === 'string' && (SNS_SLOTS as readonly string[]).includes(v)
 }
@@ -364,6 +369,11 @@ export async function saveBotSns(db: SupabaseClient, a: { userId: string; mentor
         const adopt = all.find(f => !f.snsSlot && same(f))
         const feedId = adopt ? adopt.id : (await createFeed(db, { userId: a.userId, mentorId: a.mentorId, kind: want.kind, handleOrUrl: want.handleOrUrl })).id
         const { error } = await db.from('knowledge_feeds').update({ sns_slot: slot }).eq('id', feedId).eq('mentor_id', a.mentorId)
+        if (error?.code === '42703') {
+            // 칸이 없으면 방금 만든 줄을 되돌리고 「준비 중」 (SNS 표시 없는 연결이 남지 않게)
+            if (!adopt) await deleteFeed(db, a.mentorId, feedId, false)
+            throw new SnsNotReady()
+        }
         if (error) throw new Error(error.message)
     }
 

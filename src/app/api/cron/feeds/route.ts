@@ -5,9 +5,11 @@
 // 한 번에 너무 많이 돌면 60초를 넘긴다 → 개수 한도 + 시간 한도. 남은 것은 다음 날 앞줄에 선다.
 // 연결 하나가 고장 나도 다른 연결은 계속 돈다(syncFeed 는 던지지 않는다).
 // vercel.json: "0 3 * * *" = UTC 3시 = 서울 낮 12시.
+// 봇 「내 SNS 연결」로 만든 연결(sns_slot)은 SNS 규칙(요금제 상한, 유튜브 제목/설명만)으로 돈다 = syncSnsFeed.
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { listDueFeeds, syncFeed, FeedTableMissing } from '@/domains/os/feeds'
+import { syncSnsFeed } from '@/domains/os/bot-sns'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -30,7 +32,7 @@ export async function GET(req: NextRequest) {
         let ran = 0, 성공 = 0, 실패 = 0, 새자료 = 0
         for (const feed of feeds) {
             if (Date.now() > deadline - 5_000) break
-            const r = await syncFeed(db, feed, { deadline })
+            const r = feed.snsSlot ? await syncSnsFeed(db, feed, { deadline }) : await syncFeed(db, feed, { deadline })
             ran++
             새자료 += r.added
             if (r.ok) 성공++; else 실패++
