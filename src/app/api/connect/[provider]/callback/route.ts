@@ -8,8 +8,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
-    ConnectorTableMissing, TokenExchangeFailed, exchangeCode, fetchAccountHint, findProvider, providerReady,
-    readConnectorKey, redirectUri, replaceConnector, stateCookieName, verifyState,
+    ConnectorTableMissing, TokenExchangeFailed, appPkce, appReturnUrl, consumeAppNonce, exchangeCode, fetchAccountHint,
+    findProvider, isAppState, providerReady, readConnectorKey, redirectUri, replaceConnector, stateCookieName,
+    verifyAppState, verifyState,
 } from '@/domains/connectors'
 
 export const dynamic = 'force-dynamic'
@@ -19,8 +20,56 @@ function appUrl(req: NextRequest): string {
     return (process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin).replace(/\/+$/, '')
 }
 
+/**
+ * 앱에서 시작한 연결. 쿠키·로그인 대신 서명된 state(사용자·공급자·출처·1회용 번호·10분)로 사람을 알아본다.
+ * 끝나면 curiai://connect?connected=… 또는 ?error=…&provider=… 로 돌려보낸다(토큰·열쇠 문구 없음).
+ */
+async function appCallback(req: NextRequest, id: string): Promise<NextResponse> {
+    const base = appUrl(req)
+    const back = (params: Record<string, string>) => NextResponse.redirect(appReturnUrl(params))
+    const fail = (error: string) => back({ error, provider: id })
+
+    const p = findProvider(id)
+    if (!p) return fail('unknown')
+    const q = req.nextUrl.searchParams
+    const key = readConnectorKey()
+    const clientId = process.env[p.envClientId]?.trim()
+    const clientSecret = process.env[p.envClientSecret]?.trim()
+    if (!key || !clientId || !clientSecret || !providerReady(p)) return fail('not_ready')
+
+    const saved = verifyAppState(q.get('state'), key)
+    if (!saved || saved.p !== p.id) return fail('bad_state')
+
+    const db = createAdminClient()
+    try {
+        // 허용 안 함을 눌러도 번호는 쓴 것으로 친다
+        if (!(await consumeAppNonce(db, saved.n, saved.u))) return fail('bad_state')
+        if (q.get('error')) return fail('denied')
+        const code = q.get('code') ?? ''
+        if (!code) return fail('bad_state')
+
+        const token = await exchangeCode(p, {
+            code, redirectUri: redirectUri(base, p.id), clientId, clientSecret,
+            verifier: p.pkce ? appPkce(key, saved.n).verifier : undefined, state: q.get('state') ?? undefined,
+        })
+        const hint = await fetchAccountHint(p, token)
+        await replaceConnector(db, saved.u, {
+            kind: p.id, label: p.name,
+            secret: JSON.stringify({ ...token, obtained_at: new Date().toISOString() }),
+            meta: hint ? { hint } : {},
+        })
+        return back({ connected: p.id })
+    } catch (e) {
+        if (e instanceof TokenExchangeFailed) { console.error('[connect/callback:app]', p.id, 'token', e.status); return fail('token') }
+        if (e instanceof ConnectorTableMissing) return fail('table')
+        console.error('[connect/callback:app]', p.id, e instanceof Error ? e.message : 'unknown')
+        return fail('save')
+    }
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ provider: string }> }) {
     const { provider: id } = await params
+    if (isAppState(req.nextUrl.searchParams.get('state'))) return appCallback(req, id)
     const base = appUrl(req)
     const back = (q: string) => {
         const res = NextResponse.redirect(`${base}/os/connect?${q}`)

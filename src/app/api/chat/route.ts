@@ -39,6 +39,7 @@ import { askQuickWithFallback } from '@/domains/agent/ask'
 import { isBotBlocked } from '@/domains/os/blocks'
 import { BLOCKED_CHAT_TEXT } from '@/domains/os/reports'
 import { recordTopicGap } from '@/domains/chat/signals'
+import { guestProfilePrompt } from '@/domains/chat/guest-profile'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -407,6 +408,8 @@ export async function POST(req: Request) {
         systemPrompt = applyResponseSettingsToPrompt(systemPrompt, responseSettings)
         // 봇 지침 지문(의미 답 저장소 칸막이)에 쓴다. 사람별 정보가 붙기 전의 지침
         const 봇지침지문용 = systemPrompt
+        // 손님이 앱에서 적은 이름·하는 일(로그인 사용자는 서버 프로필이 우선이라 안 쓴다)
+        if (!user) systemPrompt += guestProfilePrompt(body.guestProfile)
 
         // 🧩 사용자가 깃허브에서 내려받아 이 봇에 붙인 스킬(지침 글). 울타리 안에만 들어가고 도구 게이트는 못 넘는다(domains/os/skills)
         if (user) {
