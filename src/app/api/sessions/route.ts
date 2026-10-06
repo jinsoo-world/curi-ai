@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createChatSession } from '@/domains/chat'
 import { getMentorById } from '@/domains/mentor'
+import { fetchLastMessages } from '@/domains/chat/last-message-preview'
 
 export const dynamic = 'force-dynamic'
 
@@ -85,7 +86,12 @@ export async function GET(req: Request) {
             return Response.json({ sessions: [] })
         }
 
-        return Response.json({ sessions: sessions || [] })
+        const list = sessions || []
+        // 봇마다 마지막 말 한 줄 (한 번에 가져온다. 본인 세션 id 만 넘기고, 함수는 RLS 를 따른다)
+        const last = await fetchLastMessages(supabase, 'session', list.map((s: { id: string }) => s.id))
+        return Response.json({
+            sessions: list.map((s: { id: string }) => ({ ...s, last_message_preview: last[s.id]?.preview ?? null })),
+        })
     } catch (error) {
         console.error('[Sessions API] GET error:', error)
         return Response.json({ sessions: [] })
