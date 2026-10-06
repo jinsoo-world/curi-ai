@@ -385,66 +385,14 @@ export async function POST(req: NextRequest) {
             }
 
         } else if (['ppt', 'pptx'].includes(ext)) {
-            // PPTX: pptxtojson 로컬 파서로 텍스트 추출
+            // PPTX: pptxtojson 2.2 로컬 파서로 텍스트 추출
             if (ext === 'pptx') {
                 try {
                     console.log('[Process] Parsing PPTX locally with pptxtojson:', source.title)
-                    // eslint-disable-next-line @typescript-eslint/no-require-imports
-                    const { parse: parsePptx } = require('pptxtojson/dist/index.cjs')
-                    const buffer = Buffer.from(await fileData.arrayBuffer())
-                    const result = await parsePptx(buffer.buffer)
-
-                    // 슬라이드별 텍스트 추출
-                    const slideTexts: string[] = []
-                    if (result?.slides) {
-                        for (let i = 0; i < result.slides.length; i++) {
-                            const slide = result.slides[i]
-                            const texts: string[] = []
-
-                            const extractText = (elements: any[]) => {
-                                for (const el of elements || []) {
-                                    if (el.content) {
-                                        // HTML 태그 제거해서 순수 텍스트 추출
-                                        const plainText = el.content
-                                            .replace(/<[^>]*>/g, ' ')
-                                            .replace(/&nbsp;/g, ' ')
-                                            .replace(/&amp;/g, '&')
-                                            .replace(/&lt;/g, '<')
-                                            .replace(/&gt;/g, '>')
-                                            .replace(/\s+/g, ' ')
-                                            .trim()
-                                        if (plainText) texts.push(plainText)
-                                    }
-                                    if (el.data) {
-                                        // 테이블 데이터
-                                        for (const row of el.data || []) {
-                                            for (const cell of row || []) {
-                                                if (cell?.text) texts.push(cell.text)
-                                            }
-                                        }
-                                    }
-                                    if (el.elements) {
-                                        extractText(el.elements)
-                                    }
-                                }
-                            }
-
-                            extractText(slide.elements || [])
-                            extractText(slide.layoutElements || [])
-
-                            if (texts.length > 0) {
-                                slideTexts.push(`[슬라이드 ${i + 1}]\n${texts.join('\n')}`)
-                            }
-
-                            // 슬라이드 노트
-                            if (slide.note) {
-                                slideTexts.push(`[슬라이드 ${i + 1} 노트]\n${slide.note}`)
-                            }
-                        }
-                    }
-
-                    textContent = slideTexts.join('\n\n')
-                    console.log(`[Process] PPTX parsed: ${result?.slides?.length || 0} slides, ${textContent.length} chars`)
+                    const { parsePptx } = await import('@/domains/knowledge/parsers/pptx')
+                    const parsed = await parsePptx(Buffer.from(await fileData.arrayBuffer()))
+                    textContent = parsed.text
+                    console.log(`[Process] PPTX parsed: ${parsed.slides} slides, ${textContent.length} chars`)
                 } catch (pptxErr) {
                     console.error('[Process] PPTX local parse error:', pptxErr)
                     // 로컬 파서 실패 시 Upstage OCR 폴백 (회사 월 상한 안에서만)
@@ -546,6 +494,8 @@ export async function POST(req: NextRequest) {
             let 이유 = '텍스트를 추출할 수 없습니다.'
             if (ext === 'pdf') {
                 이유 = 'PDF에서 글자를 못 뽑았어요. 스캔본(사진만 있는 PDF)이거나 암호가 걸린 파일일 수 있어요. 글자를 드래그해 고를 수 있는 PDF로 다시 올려 주세요.'
+            } else if (ext === 'ppt') {
+                이유 = '옛 파워포인트(.ppt)는 글을 못 읽었어요. 파워포인트에서 「다른 이름으로 저장」으로 .pptx 로 저장해서 올려 주세요.'
             } else if (['xlsx', 'xls', 'csv'].includes(ext)) {
                 이유 = '엑셀/CSV에서 글자를 못 뽑았어요. 암호가 걸려 있거나 칸이 비어 있는 표일 수 있어요.'
             }
