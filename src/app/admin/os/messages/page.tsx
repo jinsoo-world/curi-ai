@@ -37,7 +37,7 @@ const REASON: Record<string, string> = {
     push_off: '앱 알림 꺼 둠', ad_no_consent_push: '광고 동의 없음',
 }
 const STATUS: Record<string, string> = {
-    draft: '초안', test_sent: '시험함', approved: '승인됨', scheduled: '예약됨', sending: '보내는 중', sent: '보냄', cancelled: '취소',
+    draft: '초안', test_sent: '시험함', approved: '승인됨', scheduled: '예약됨', sending: '보내는 중', sent: '보냄', cancelled: '취소', paused: '멈춤(3번 실패)',
     blocked: '막힘', failed: '실패', pending: '보내는 중',
 }
 const ROUTE: Record<string, string> = { app_push: '앱 푸시', web_push: '웹 푸시', email: '메일', sms: '문자' }

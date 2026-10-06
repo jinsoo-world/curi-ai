@@ -14,10 +14,12 @@
 import { getTypeDef, type Route } from './registry'
 import { hasAdPrefix, hasUnsubscribePlaceholder } from './rules'
 
-export type CampaignStatus = 'draft' | 'test_sent' | 'approved' | 'scheduled' | 'sending' | 'sent' | 'cancelled'
+export type CampaignStatus = 'draft' | 'test_sent' | 'approved' | 'scheduled' | 'sending' | 'sent' | 'cancelled' | 'paused'
 export type CampaignAudience = { kind: 'consented' } | { kind: 'user_ids'; userIds: string[] }
 
 export const LOCK_THRESHOLD = 30
+/** 같은 캠페인이 이만큼 연속 실패하면 멈춤(paused) + 알림 한 번 */
+export const CAMPAIGN_MAX_FAILS = 3
 export const APPROVAL_TTL_MS = 3 * 60 * 60 * 1000
 export const MAX_USER_IDS = 1000
 export const CAMPAIGN_KEY_RE = /^(\d{2})(\d{2})(\d{2})_[a-z0-9][a-z0-9-]{0,39}$/
@@ -40,6 +42,8 @@ export interface Campaign {
     approvedBy: string | null
     approvalExpiresAt: string | null
     cursor: string | null
+    /** 연속 실패 횟수 (예약 작업 공통 칸). 3번이면 paused */
+    failCount?: number
 }
 
 export interface DraftInput {
@@ -120,6 +124,7 @@ export type Decision = { ok: true; patch: Partial<Campaign> } | { ok: false; err
 export function decide(c: Pick<Campaign, 'status' | 'approvedAt' | 'approvalExpiresAt'>, a: CampaignAction, now: Date, enabled = campaignsEnabled()): Decision {
     const s = c.status
     if (s === 'sent' || s === 'cancelled') return { ok: false, error: '이미 끝난 캠페인이에요' }
+    if (s === 'paused' && a.action !== 'cancel') return { ok: false, error: '여러 번 실패해 멈춘 캠페인이에요. 취소하고 새로 만들어 주세요' }
     switch (a.action) {
         case 'edit':
             if (s === 'scheduled' || s === 'sending') return { ok: false, error: '예약된 캠페인은 고칠 수 없어요. 취소하고 새로 만들어 주세요' }
@@ -178,8 +183,12 @@ export interface CampaignRunStore {
     /** (캠페인, 사람) 줄을 먼저 적는다. 이미 있으면 false = 보내지 않는다 */
     reserve(campaignId: string, userId: string): Promise<boolean>
     record(campaignId: string, userId: string, status: SendStatus, reason: string | null): Promise<void>
-    update(id: string, patch: Partial<Campaign> & { sentAt?: string; lastError?: string | null; stats?: Record<string, number> }): Promise<void>
+    update(id: string, patch: Partial<Campaign> & { sentAt?: string; lastError?: string | null; stats?: Record<string, number>; claimedAt?: string | null }): Promise<void>
+    /** 1시간 넘게 「보내는 중(pending)」으로 남은 받는 사람(보내다 함수가 죽음). 다시 보낸다 */
+    stalePending?(campaignId: string, before: Date): Promise<Recipient[]>
 }
+
+export const PENDING_RETRY_MS = 60 * 60_000
 
 export interface RunResult { campaigns: number; sent: number; blocked: number; failed: number; skipped: number; notes: string[] }
 
@@ -188,59 +197,101 @@ export async function runDueCampaigns(a: {
     send: (c: Campaign, r: Recipient) => Promise<{ status: SendStatus; reason?: string | null }>
     now?: () => Date
     enabled?: boolean
-    /** 이 시각(ms)이 지나면 다음 회차로 넘긴다 */
+    /** 이 시각(ms)이 지나면 다음 회차로 넘긴다 (받는 사람마다 확인) */
     deadline?: number
     pageSize?: number
     onlyId?: string
+    /** 캠페인이 연속 실패로 멈췄을 때 한 번 알린다 (기존 보고 관문) */
+    notify?: (text: string) => Promise<void>
 }): Promise<RunResult> {
     const now = a.now ?? (() => new Date())
     const enabled = a.enabled ?? campaignsEnabled()
     const out: RunResult = { campaigns: 0, sent: 0, blocked: 0, failed: 0, skipped: 0, notes: [] }
     if (!enabled) { out.notes.push('멈춤 스위치(MSG_CAMPAIGNS_ENABLED)'); return out }
     const due = (await a.store.listDue(now())).filter(c => !a.onlyId || c.id === a.onlyId)
+    let pausedNow = 0
     for (const c of due) {
-        const ok = canRun(c, now(), enabled)
-        if (!ok.ok) {
-            if (ok.terminal) {
-                await a.store.update(c.id, { status: 'cancelled', lastError: ok.reason })
-                out.notes.push(`${c.key}: ${ok.reason} → 취소`)
-            }
-            continue
+        if (a.deadline && Date.now() > a.deadline) { out.notes.push('마감: 남은 캠페인은 다음 회차'); break }
+        // 캠페인 하나가 고장 나도 다음 캠페인은 계속 돈다
+        try {
+            await runOneCampaign(a, c, now, enabled, out)
+        } catch (e) {
+            const message = (e instanceof Error ? e.message : String(e)).slice(0, 300)
+            const failCount = (c.failCount ?? 0) + 1
+            const pause = failCount >= CAMPAIGN_MAX_FAILS
+            if (pause) pausedNow++
+            out.notes.push(`${c.key}: 실패 ${failCount}번${pause ? ' → 멈춤' : ''}`)
+            console.error('[campaign] 실패', c.key, failCount, message)
+            await a.store.update(c.id, { failCount, lastError: message, claimedAt: null, ...(pause ? { status: 'paused' as const } : {}) })
+                .catch(e2 => console.error('[campaign] 실패 기록 실패', c.key, e2 instanceof Error ? e2.message : e2))
         }
-        if (!(await a.store.claim(c.id, ['scheduled', 'sending']))) continue
-        out.campaigns++
-        const approved = !!c.approvedAt
-        let cursor = c.cursor
-        let processed = 0
-        let finished = false
-        const stats = { sent: 0, blocked: 0, failed: 0, skipped: 0 }
-        for (;;) {
-            if (a.deadline && Date.now() > a.deadline) break
-            const page = await a.store.nextRecipients(c, cursor, a.pageSize ?? 200)
-            if (page.length === 0) { finished = true; break }
-            for (const r of page) {
-                cursor = r.userId
-                // 승인 없이 시작한 작은 캠페인이 보내는 동안 30명을 넘으면 멈춘다
-                if (!approved && processed >= LOCK_THRESHOLD) {
-                    await a.store.update(c.id, { status: 'cancelled', cursor, lastError: 'over_30_without_approval', stats })
-                    out.notes.push(`${c.key}: 승인 없이 ${LOCK_THRESHOLD}명을 넘어 멈춤`)
-                    return addStats(out, stats)
-                }
-                if (!(await a.store.reserve(c.id, r.userId))) { stats.skipped++; continue }
-                processed++
-                let res: { status: SendStatus; reason?: string | null }
-                try { res = await a.send(c, r) } catch (e) { res = { status: 'failed', reason: e instanceof Error ? e.message.slice(0, 200) : 'error' } }
-                stats[res.status]++
-                await a.store.record(c.id, r.userId, res.status, res.reason ?? null)
-            }
-            await a.store.update(c.id, { cursor })
-        }
-        await a.store.update(c.id, finished
-            ? { status: 'sent', cursor, sentAt: now().toISOString(), stats, lastError: null }
-            : { status: 'sending', cursor, stats })
-        addStats(out, stats)
+    }
+    if (pausedNow > 0 && a.notify) {
+        await a.notify(`🛑 [예약 작업 멈춤] 캠페인 보내기: ${CAMPAIGN_MAX_FAILS}번 연속 실패한 캠페인 ${pausedNow}개를 멈췄어요. 관리자 캠페인 화면에서 확인해 주세요.`).catch(() => {})
     }
     return out
+}
+
+async function runOneCampaign(
+    a: Parameters<typeof runDueCampaigns>[0], c: Campaign, now: () => Date, enabled: boolean, out: RunResult,
+): Promise<void> {
+    const ok = canRun(c, now(), enabled)
+    if (!ok.ok) {
+        if (ok.terminal) {
+            await a.store.update(c.id, { status: 'cancelled', lastError: ok.reason })
+            out.notes.push(`${c.key}: ${ok.reason} → 취소`)
+        }
+        return
+    }
+    if (!(await a.store.claim(c.id, ['scheduled', 'sending']))) return
+    out.campaigns++
+    const approved = !!c.approvedAt
+    let cursor = c.cursor
+    let processed = 0
+    let finished = false
+    let timeUp = false
+    const stats = { sent: 0, blocked: 0, failed: 0, skipped: 0 }
+    const sendOne = async (r: Recipient, retry: boolean) => {
+        if (!retry && !(await a.store.reserve(c.id, r.userId))) { stats.skipped++; return }
+        processed++
+        let res: { status: SendStatus; reason?: string | null }
+        try { res = await a.send(c, r) } catch (e) { res = { status: 'failed', reason: e instanceof Error ? e.message.slice(0, 200) : 'error' } }
+        stats[res.status]++
+        await a.store.record(c.id, r.userId, res.status, res.reason ?? null)
+    }
+    outer: for (;;) {
+        if (a.deadline && Date.now() > a.deadline) { timeUp = true; break }
+        const page = await a.store.nextRecipients(c, cursor, a.pageSize ?? 200)
+        if (page.length === 0) { finished = true; break }
+        for (const r of page) {
+            // 마감은 받는 사람마다 본다 (한 쪽 200명을 다 돌다 함수 한도를 넘기지 않게)
+            if (a.deadline && Date.now() > a.deadline) { timeUp = true; break outer }
+            cursor = r.userId
+            // 승인 없이 시작한 작은 캠페인이 보내는 동안 30명을 넘으면 멈춘다
+            if (!approved && processed >= LOCK_THRESHOLD) {
+                await a.store.update(c.id, { status: 'cancelled', cursor, lastError: 'over_30_without_approval', stats, claimedAt: null })
+                out.notes.push(`${c.key}: 승인 없이 ${LOCK_THRESHOLD}명을 넘어 멈춤`)
+                addStats(out, stats)
+                return
+            }
+            await sendOne(r, false)
+        }
+        await a.store.update(c.id, { cursor })
+    }
+    // 1시간 넘게 pending 으로 남은 사람(보내다 함수가 죽음)은 끝내기 전에 한 번 더 보낸다
+    if (finished && a.store.stalePending) {
+        const stale = await a.store.stalePending(c.id, new Date(now().getTime() - PENDING_RETRY_MS))
+        for (const r of stale) {
+            if (a.deadline && Date.now() > a.deadline) { finished = false; timeUp = true; break }
+            if (!approved && processed >= LOCK_THRESHOLD) break
+            await sendOne(r, true)
+        }
+    }
+    if (timeUp) out.notes.push(`${c.key}: 마감 → 다음 회차에 이어서`)
+    await a.store.update(c.id, finished
+        ? { status: 'sent', cursor, sentAt: now().toISOString(), stats, lastError: null, failCount: 0, claimedAt: null }
+        : { status: 'sending', cursor, stats, failCount: 0, claimedAt: null })
+    addStats(out, stats)
 }
 
 function addStats(out: RunResult, s: { sent: number; blocked: number; failed: number; skipped: number }): RunResult {

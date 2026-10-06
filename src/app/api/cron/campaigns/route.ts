@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runDueCampaigns } from '@/domains/messaging/campaign'
 import { createSupabaseCampaignStore, liveCampaignSender } from '@/domains/messaging/campaign-store'
+import { sendSlackNotification } from '@/lib/slack'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -16,7 +17,11 @@ export async function GET(req: NextRequest) {
     }
     const db = createAdminClient({ longRunning: true })
     try {
-        const result = await runDueCampaigns({ store: createSupabaseCampaignStore(db), send: liveCampaignSender(db), deadline: Date.now() + 240_000 })
+        // 캠페인마다 실패를 따로 센다(3번이면 멈춤 + 알림 한 번). 마감은 받는 사람마다 본다
+        const result = await runDueCampaigns({
+            store: createSupabaseCampaignStore(db), send: liveCampaignSender(db), deadline: Date.now() + 240_000,
+            notify: text => sendSlackNotification(text, undefined, { timeoutMs: 3_000 }),
+        })
         console.log('[cron/campaigns]', JSON.stringify(result))
         return NextResponse.json({ success: true, ...result })
     } catch (e) {
