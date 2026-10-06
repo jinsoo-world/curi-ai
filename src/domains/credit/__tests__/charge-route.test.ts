@@ -87,7 +87,8 @@ describe('/api/credits/charge 새 주문 막기', () => {
         const res = await POST(req(주문(끝난시각 - 60_000)))
         expect(res.status).toBe(200)
         expect(confirmPayment).toHaveBeenCalledTimes(1)
-        expect(rpc).toHaveBeenCalledWith('클로버_더하기', { 그사람: 'u1', 더할값: 200 })
+        // 지급은 기록·잔액을 한 번에 하는 DB 함수(같은 주문번호 두 번 지급 막기, 2026-10-06)
+        expect(rpc).toHaveBeenCalledWith('grant_clover_purchase', { p_user: 'u1', p_order: 주문(끝난시각 - 60_000).orderId, p_amount: 200 })
     })
 
     it('토스 조회가 실패하면 주문번호의 시각으로 판정한다', async () => {
@@ -96,6 +97,17 @@ describe('/api/credits/charge 새 주문 막기', () => {
         expect(ok.status).toBe(200)
         const no = await POST(req(주문(끝난시각 + 60_000)))
         expect(no.status).toBe(410)
+    })
+
+    it('지급 함수가 아직 없으면(마이그레이션 전) 예전 두 걸음 방식으로 지급한다', async () => {
+        getPayment.mockResolvedValue({ requestedAt: 전 })
+        rpc.mockImplementation(async (name: string) => name === 'grant_clover_purchase'
+            ? { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.grant_clover_purchase' } }
+            : { data: 300, error: null })
+        const res = await POST(req(주문(끝난시각 - 60_000)))
+        expect(res.status).toBe(200)
+        expect(rpc).toHaveBeenCalledWith('클로버_더하기', { 그사람: 'u1', 더할값: 200 })
+        expect(insert).toHaveBeenCalledTimes(1)
     })
 
     it('이미 지급한 주문은 판매 끝 뒤에도 그대로 「끝났어요」를 돌려준다 (새로고침에 안전)', async () => {
