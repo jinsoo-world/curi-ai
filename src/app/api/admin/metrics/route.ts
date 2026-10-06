@@ -8,7 +8,7 @@ export async function GET() {
         return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
-    const supabase = createAdminClient()
+    const supabase = createAdminClient({ longRunning: true })
 
     try {
         // KST 기준 날짜 계산 (UTC+9)

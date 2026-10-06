@@ -16,9 +16,13 @@ function urlOf(input: RequestInfo | URL): string {
     return (input as Request).url ?? ''
 }
 
+/** 짧은 마감(3초)을 쓰는 로그인 확인 주소 = 사용자 확인(/auth/v1/user)·표시 갱신(/auth/v1/token)만.
+ *  관리자 일(/auth/v1/admin/* 계정 지우기·목록·조회)은 오래 걸릴 수 있어 제외한다 */
+const SHORT_AUTH_PATH = /\/auth\/v1\/(user|token)(?:[/?#]|$)/
+
 /** 이 주소에 쓸 마감. 로그인 확인은 더 짧게 */
 export function timeoutForUrl(input: RequestInfo | URL, defaultMs: number): number {
-    return urlOf(input).includes('/auth/v1/') ? Math.min(AUTH_TIMEOUT_MS, defaultMs) : defaultMs
+    return SHORT_AUTH_PATH.test(urlOf(input)) ? Math.min(AUTH_TIMEOUT_MS, defaultMs) : defaultMs
 }
 
 function anySignal(signals: AbortSignal[]): AbortSignal {

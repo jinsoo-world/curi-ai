@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     if (!열쇠 || req.headers.get('authorization') !== `Bearer ${열쇠}`) {
         return NextResponse.json({ error: 'no' }, { status: 401 })
     }
-    const db = createAdminClient()
+    const db = createAdminClient({ longRunning: true })
     try {
         const result = await runDueCampaigns({ store: createSupabaseCampaignStore(db), send: liveCampaignSender(db), deadline: Date.now() + 240_000 })
         console.log('[cron/campaigns]', JSON.stringify(result))

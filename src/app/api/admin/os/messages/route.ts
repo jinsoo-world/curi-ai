@@ -18,7 +18,7 @@ type LogRow = {
 export async function GET(req: Request) {
     const auth = await requireAdminAPI()
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-    const db = createAdminClient()
+    const db = createAdminClient({ longRunning: true })
     const days = Math.min(30, Math.max(1, Number(new URL(req.url).searchParams.get('days')) || 1))
     const since = new Date(Date.now() - days * 86_400_000).toISOString()
 
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     const def = getTypeDef(typeof b.type === 'string' ? b.type : null)
     if (!def || typeof b.enabled !== 'boolean') return NextResponse.json({ error: 'type(장부에 있는 것), enabled(true/false) 가 필요해요' }, { status: 400 })
     if (!def.toggleable) return NextResponse.json({ error: '이 유형은 끌 수 없어요(끄면 가입이 막혀요)' }, { status: 400 })
-    const { error } = await createAdminClient().from('message_types').upsert(
+    const { error } = await createAdminClient({ longRunning: true }).from('message_types').upsert(
         { type: def.type, enabled: b.enabled, updated_at: new Date().toISOString(), updated_by: auth.user.id },
         { onConflict: 'type' },
     )

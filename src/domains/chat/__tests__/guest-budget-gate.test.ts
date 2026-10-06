@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { checkGuestAllowance, cleanVisitorId, guestLogLabel, hashIp, clientIp, guestDailyGlobalCap, GUEST_IP_DAILY_CAP } from '../guest-gate'
 import { budgetDecision, checkAiBudget, monthSpendKrw, resetBudgetCacheForTest, guestChatDisabled, monthlyBudgetKrw } from '../budget-gate'
@@ -66,6 +66,11 @@ describe('손님 문지기', () => {
     it('IP 는 x-forwarded-for 첫 값', () => {
         const req = new Request('https://x', { headers: { 'x-forwarded-for': '9.9.9.9, 10.0.0.1' } })
         expect(clientIp(req)).toBe('9.9.9.9')
+    })
+
+    it('x-vercel-forwarded-for 가 있으면 그걸 먼저 믿는다(위조한 x-forwarded-for 무시)', () => {
+        const req = new Request('https://x', { headers: { 'x-forwarded-for': '6.6.6.6', 'x-vercel-forwarded-for': '3.3.3.3' } })
+        expect(clientIp(req)).toBe('3.3.3.3')
     })
 
     it('본 적 있는 번호는 그 번호로 센다', async () => {
@@ -160,6 +165,13 @@ describe('AI 비용 안전 스위치', () => {
         expect(db.calls.filter(c => c === 'rpc:llm_cost_krw_month')).toHaveLength(1)
         await monthSpendKrw(db, new Date(now.getTime() + 61_000))
         expect(db.calls.filter(c => c === 'rpc:llm_cost_krw_month')).toHaveLength(2)
+    })
+
+    it('합계를 못 읽어 손님이 전부 막히면 console.error 로 크게 남긴다', async () => {
+        const err = vi.spyOn(console, 'error').mockImplementation(() => {})
+        await checkAiBudget(fakeDb({ costError: true }), { guest: true, paid: false }, { AI_BUDGET_MONTHLY_KRW: '100' })
+        expect(err.mock.calls.some(c => String(c[0]).includes('llm_cost_krw_month'))).toBe(true)
+        err.mockRestore()
     })
 
     it('합계 함수가 없으면(실패) 손님 막음', async () => {

@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: `탈퇴하려면 「${CONFIRM_WORD}」를 입력해 주세요.` }, { status: 400 })
         }
 
-        const admin = createAdminClient()
+        const admin = createAdminClient({ longRunning: true })
         const rl = await checkRateLimit(admin, rateLimitKey('account-delete', user.id), 5, 3600)
         if (!rl.allowed) return NextResponse.json({ error: rateLimitMessage('탈퇴 요청') }, { status: 429 })
 

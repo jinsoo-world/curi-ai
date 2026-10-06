@@ -29,7 +29,7 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ guest: true, ...FREE })
     try {
-        const { data, error } = await createAdminClient()
+        const { data, error } = await createAdminClient({ longRunning: true })
             .from('user_plans')
             .select('plan, expires_at, last_order_id')
             .eq('user_id', user.id)
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '결제 금액이 맞지 않아요.' }, { status: 400 })
         }
 
-        const admin = createAdminClient()
+        const admin = createAdminClient({ longRunning: true })
 
         // ③ 이미 반영한 결제인지 먼저 본다. 표가 없으면 돈을 받기 전에 멈춘다(승인 뒤 저장 실패가 더 나쁘다)
         const { data: 기존, error: 읽기오류 } = await admin

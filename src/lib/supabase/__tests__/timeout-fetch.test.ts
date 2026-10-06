@@ -33,6 +33,13 @@ describe('supabase 시간 제한 fetch', () => {
         expect(timeoutForUrl('https://x.supabase.co/auth/v1/user', DB_TIMEOUT_MS)).toBe(AUTH_TIMEOUT_MS)
         expect(timeoutForUrl('https://x.supabase.co/rest/v1/users', DB_TIMEOUT_MS)).toBe(DB_TIMEOUT_MS)
         expect(timeoutForUrl(new URL('https://x.supabase.co/auth/v1/user'), DB_LONG_TIMEOUT_MS)).toBe(AUTH_TIMEOUT_MS)
+        expect(timeoutForUrl('https://x.supabase.co/auth/v1/token?grant_type=refresh_token', DB_TIMEOUT_MS)).toBe(AUTH_TIMEOUT_MS)
+    })
+
+    it('관리자 로그인 일(/auth/v1/admin/*)은 짧은 마감에서 뺀다', () => {
+        expect(timeoutForUrl('https://x.supabase.co/auth/v1/admin/users/abc', DB_LONG_TIMEOUT_MS)).toBe(DB_LONG_TIMEOUT_MS)
+        expect(timeoutForUrl('https://x.supabase.co/auth/v1/admin/users?page=1', DB_TIMEOUT_MS)).toBe(DB_TIMEOUT_MS)
+        expect(timeoutForUrl('https://x.supabase.co/auth/v1/userinfo', DB_TIMEOUT_MS)).toBe(DB_TIMEOUT_MS)
     })
 
     it('호출한 쪽이 넘긴 끊기 신호도 그대로 먹는다', async () => {

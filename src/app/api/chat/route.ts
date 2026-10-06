@@ -103,7 +103,8 @@ function isOurChatImage(url: unknown): boolean {
 async function returnOverageClovers(o: { userId: string; amount: number } | null): Promise<void> {
     if (!o || o.amount <= 0) return
     try {
-        const db = createAdminClient()
+        // 돈 호출 = 긴 마감 (5초에 끊겨도 DB 는 커밋될 수 있어 「돌려줬는데 기록 없음」이 된다)
+        const db = createAdminClient({ longRunning: true })
         const { data: left } = await db.rpc('클로버_더하기', { 그사람: o.userId, 더할값: o.amount })
         if (typeof left === 'number' && left >= 0) {
             await db.from('credit_transactions').insert({ user_id: o.userId, amount: o.amount, balance_after: left, type: 'chat_usage', description: '답을 못 만들어 되돌림' })
@@ -208,7 +209,8 @@ export async function POST(req: Request) {
             const ipRl = await checkRateLimit(adminDb, `chat:ip:${hashIp(ip)}`, GUEST_IP_PER_MINUTE, 60, { failClosed: true })
             if (!ipRl.allowed) return Response.json({ error: rateLimitMessage('대화') }, { status: 429 })
             // 💸 비용 안전 스위치: GUEST_CHAT_DISABLED=1, 또는 이번 달 AI 원가가 예산 70% 를 넘으면 손님 대화를 쉰다
-            const budget = await checkAiBudget(adminDb, { guest: true, paid: false })
+            // 월 합계는 오래 걸릴 수 있다 = 긴 마감 연결 (5초에 끊기면 손님 전원이 막힌다)
+            const budget = await checkAiBudget(createAdminClient({ longRunning: true }), { guest: true, paid: false })
             if (!budget.allowed) {
                 return sseOnce({ text: GUEST_PAUSED_TEXT, done: true, fullResponse: GUEST_PAUSED_TEXT, guestLimit: true, budgetPaused: true })
             }
@@ -366,9 +368,15 @@ export async function POST(req: Request) {
             isFreeTrial = true
         }
 
+        if (user && !usage) {
+            // 사용량을 못 읽었다 = 한도를 지킬 수 없다. 통째로 건너뛰지 않고 한도 안내로 막는다
+            const msg = '지금은 사용량을 확인하지 못했어요. 잠시 뒤 다시 시도해 주세요.'
+            return sseOnce({ text: msg, done: true, fullResponse: msg, usageLimit: true, usageUnknown: true })
+        }
         if (user && usage) {
-            // 💸 비용 안전 스위치: 이번 달 AI 원가가 예산 90% 를 넘으면 무료 회원 대화를 쉰다(유료는 계속, 요금제를 못 읽었으면 통과)
-            const budget = await checkAiBudget(adminForReads, { guest: false, paid: usage.plan !== 'free' || !!usage.planUnknown })
+            // 💸 비용 안전 스위치: 이번 달 AI 원가가 예산 90% 를 넘으면 무료 회원 대화를 쉰다(유료는 계속).
+            //    요금제를 못 읽었으면(planUnknown) 한도는 막지 않지만, 예산 판정에선 유료로 치지 않는다
+            const budget = await checkAiBudget(createAdminClient({ longRunning: true }), { guest: false, paid: usage.plan !== 'free' && !usage.planUnknown })
             if (!budget.allowed) {
                 return sseOnce({ text: FREE_PAUSED_TEXT, done: true, fullResponse: FREE_PAUSED_TEXT, budgetPaused: true })
             }
@@ -380,7 +388,7 @@ export async function POST(req: Request) {
                 const mentorUuid = typeof mentorId === 'string' && /^[0-9a-f-]{36}$/i.test(mentorId) ? mentorId : null
                 // 잔액 확인, 차감, 거래 기록을 DB 함수 하나로 (모자라면 -1, 아무것도 안 바뀜)
                 const cost = chatCloverCost({ photo: hasPhoto })
-                const { data: left, error: spendErr } = await createAdminClient().rpc('spend_clovers_for_chat', {
+                const { data: left, error: spendErr } = await createAdminClient({ longRunning: true }).rpc('spend_clovers_for_chat', {
                     p_user: user.id, p_amount: cost, p_mentor: mentorUuid, p_desc: hasPhoto ? '한도 넘긴 대화 (사진)' : '한도 넘긴 대화',
                 })
                 if (spendErr) console.error('[chat] 클로버 이어 쓰기 차감 실패:', spendErr.message)
@@ -881,7 +889,6 @@ export async function POST(req: Request) {
                 }
                 let fullResponse = ''
                 let streamFailed = false
-                let doneSent = false
                 /** 솔라가 돌려준 실제 토큰만. 없으면 null — 가짜 숫자 금지 */
                 let llmUsage: { prompt: number; completion: number; total: number } | null = null
                 /** 누가 답했나 (솔라, 또는 검색을 썼는지까지 포함한 Gemini). 저장 답 판단에 쓴다 */
@@ -957,7 +964,7 @@ export async function POST(req: Request) {
                 if (streamFailed) {
                     send({ error: ERROR_MESSAGES.streamError, done: true })
                 } else {
-                    doneSent = send({
+                    send({
                         text: '', done: true, fullResponse,
                         ...(newSessionId ? { sessionId: newSessionId } : {}),
                         ...(willSave ? { messageId: assistantMessageId } : {}),
@@ -980,8 +987,7 @@ export async function POST(req: Request) {
                         await returnOverageClovers(overageCharge)
                         return
                     }
-                    // 끝 신호가 화면에 못 갔으면(화면이 먼저 나감) 클로버를 되돌린다
-                    if (!doneSent) await returnOverageClovers(overageCharge)
+                    // 클로버는 답을 못 만들었을 때(!answerOk)만 되돌린다. 끝 신호 전에 끊겨도 답은 저장되므로 되돌리지 않는다(공짜 틈 방지)
 
                     // 💾 새로 만든 답을 저장해 둔다 (좁은 조건을 다 통과했을 때만)
                     if (답저장자리 && !fullResponse.includes(TRUNCATED_NOTE) && isStorableAnswer({ text: fullResponse, guardTripped: outputGuard.tripped, answeredBy, allowGemini: cacheAllowsGemini(), unavailableText: UNAVAILABLE_TEXT })) {

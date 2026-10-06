@@ -23,9 +23,11 @@ export const GUEST_IP_PER_MINUTE = 20
 
 export type GuestBlockReason = 'visitor_limit' | 'ip_limit' | 'global_limit' | 'count_failed'
 
-/** 요청한 쪽 IP (x-forwarded-for 첫 값). 없으면 빈 글 */
+/** 요청한 쪽 IP. Vercel 이 직접 적는 x-vercel-forwarded-for 를 먼저 믿는다(사용자가 위조할 수 없다),
+ *  없으면 x-forwarded-for 첫 값, 그다음 x-real-ip. 없으면 빈 글 */
 export function clientIp(req: Request): string {
-    return (req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || '').slice(0, 45)
+    const first = (h: string) => req.headers.get(h)?.split(',')[0]?.trim() || ''
+    return (first('x-vercel-forwarded-for') || first('x-forwarded-for') || first('x-real-ip')).slice(0, 45)
 }
 
 /** IP 원문 대신 쓰는 짧은 해시 (16자리) */

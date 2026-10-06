@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '결제 금액이 맞지 않아요.' }, { status: 400 })
         }
 
-        const admin = createAdminClient()
+        const admin = createAdminClient({ longRunning: true })
 
         // ③ 이미 지급한 결제인지 먼저 본다 (승인 전에 확인해야 재시도에도 안전하다)
         const { data: 이미지급 } = await admin

@@ -27,7 +27,7 @@ const bad = (error: string, status = 400) => NextResponse.json({ error }, { stat
 export async function GET() {
     const auth = await requireAdminAPI()
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
-    const db = createAdminClient()
+    const db = createAdminClient({ longRunning: true })
     const { data, error } = await db.from('message_campaigns').select(`${CAMPAIGN_COLUMNS}, created_at, sent_at, last_error`)
         .order('created_at', { ascending: false }).limit(50)
     if (error) return NextResponse.json({ campaigns: [], missing: true, enabled: campaignsEnabled() })
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     const auth = await requireAdminAPI()
     if (auth.error || !auth.user) return NextResponse.json({ error: auth.error ?? 'Forbidden' }, { status: auth.status || 403 })
     const user = auth.user
-    const db = createAdminClient()
+    const db = createAdminClient({ longRunning: true })
     const b = await req.json().catch(() => ({})) as Record<string, unknown>
     const action = String(b.action ?? '')
     const now = new Date()

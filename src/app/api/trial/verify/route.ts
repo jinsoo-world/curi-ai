@@ -28,7 +28,7 @@ export async function POST(req: Request) {
             return Response.json({ error: '인증번호 6자리를 입력해주세요.' }, { status: 400 })
         }
 
-        const db = createAdminClient()
+        const db = createAdminClient({ longRunning: true })
 
         // 이미 체험 중이면 두 번 주지 않는다
         const { data: 나 } = await db

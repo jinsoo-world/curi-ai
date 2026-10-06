@@ -14,7 +14,10 @@ const state: {
     holdAssistantInsert: Promise<void> | null
     llmCalls: { system: string; history: unknown[]; opts: Record<string, unknown>; opsBefore: number }[]
     afterWork: Promise<unknown>[]
-} = { user: null, ops: [], guestCountError: false, guestCount: 0, answer: ['안녕', '하세요'], holdAssistantInsert: null, llmCalls: [], afterWork: [] }
+    usage: Record<string, unknown> | null
+    monthCost: number
+    rpcCalls: string[]
+} = { usage: { plan: 'free', blocked: false, resetAt: new Date() }, monthCost: 0, rpcCalls: [], user: null, ops: [], guestCountError: false, guestCount: 0, answer: ['안녕', '하세요'], holdAssistantInsert: null, llmCalls: [], afterWork: [] }
 
 function fakeDb() {
     return {
@@ -52,7 +55,11 @@ function fakeDb() {
             void row
             return q
         },
-        rpc: async () => ({ data: 1, error: null }),
+        rpc: async (name: string) => {
+            state.rpcCalls.push(name)
+            if (name === 'llm_cost_krw_month') return { data: state.monthCost, error: null }
+            return { data: 1, error: null }
+        },
         auth: { getUser: async () => ({ data: { user: state.user } }) },
     }
 }
@@ -83,7 +90,7 @@ vi.mock('@/domains/chat', () => ({
 }))
 vi.mock('@/domains/chat/constants', async (orig) => ({ ...(await orig<object>()), UNAVAILABLE_TEXT: '지금은 잠깐 쉬는 중이에요' }))
 vi.mock('@/domains/os', () => ({ getOwnedTeamBotMentor: async () => null }))
-vi.mock('@/domains/os/usage-db', () => ({ readUsage: async () => ({ plan: 'free', blocked: false, resetAt: new Date() }) }))
+vi.mock('@/domains/os/usage-db', () => ({ readUsage: async () => { if (!state.usage) throw new Error('db down'); return state.usage } }))
 vi.mock('@/domains/os/audience-db', () => ({ checkChatAudience: async () => ({ allowed: true }), checkVisitorBotWeeklyLimit: async () => ({ allowed: true }) }))
 vi.mock('@/domains/os/knowledge', () => ({ findSourcesOfChunks: async () => [] }))
 vi.mock('@/domains/os/readers', () => ({ readUrlsInText: async () => [], buildLinkPrompt: () => ({ readUrls: [], anyOk: false, prefix: '', sources: [] }), linkTextForTurn: () => ({ text: '', fromHistory: false }) }))
@@ -108,6 +115,7 @@ vi.mock('@/domains/llm', () => ({ pickDriverFromEnv: () => 'solar' }))
 vi.mock('@/domains/tts/grant', () => ({ signGrant: () => null }))
 
 import { POST } from '../route'
+import { resetBudgetCacheForTest } from '@/domains/chat/budget-gate'
 
 function req(body: Record<string, unknown>, ip = '7.7.7.7') {
     return new Request('http://x/api/chat', { method: 'POST', headers: { 'x-forwarded-for': ip }, body: JSON.stringify(body) })
@@ -143,6 +151,10 @@ beforeEach(() => {
     state.holdAssistantInsert = null
     state.llmCalls = []
     state.afterWork = []
+    state.usage = { plan: 'free', blocked: false, resetAt: new Date() }
+    state.monthCost = 0
+    state.rpcCalls = []
+    resetBudgetCacheForTest()
     vi.stubEnv('GUEST_CHAT_DISABLED', '')
     vi.stubEnv('AI_BUDGET_MONTHLY_KRW', '')
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://x.supabase.co')
@@ -236,5 +248,50 @@ describe('자료 0건 점검은 대화 경로에서 뺐다 (코드 모양)', () 
         expect(src).not.toContain('전체조각건수')
         expect(src).toContain('keepAliveAfterResponse(logZeroHitDiagnosis(')
         expect(src).toMatch(/ZERO_HIT_DIAG_RATE = 0\.01/)
+    })
+})
+
+describe('검토 수정 (2026-10-06)', () => {
+    beforeEach(() => { state.user = ME })
+
+    it('사용량을 못 읽으면(null) 한도·예산 검사를 건너뛰지 않고 한도 안내로 막는다', async () => {
+        state.usage = null
+        const ev = await readUntilDone(await POST(req({ messages: [{ role: 'user', content: '질문' }], mentorId: 'm', sessionId: SESSION })))
+        expect(ev[0]).toMatchObject({ done: true, usageLimit: true })
+        expect(state.llmCalls).toHaveLength(0)
+    })
+
+    it('요금제를 못 읽었으면(planUnknown) 한도는 막지 않지만 예산 판정에선 유료로 치지 않는다', async () => {
+        vi.stubEnv('AI_BUDGET_MONTHLY_KRW', '100')
+        state.monthCost = 95
+        state.usage = { plan: 'pro', planUnknown: true, blocked: false, resetAt: new Date() }
+        const ev = await readUntilDone(await POST(req({ messages: [{ role: 'user', content: '질문' }], mentorId: 'm', sessionId: SESSION })))
+        expect(ev[0]).toMatchObject({ done: true, budgetPaused: true })
+        resetBudgetCacheForTest()
+        state.usage = { plan: 'pro', blocked: false, resetAt: new Date() }
+        const ev2 = await readUntilDone(await POST(req({ messages: [{ role: 'user', content: '질문' }], mentorId: 'm', sessionId: SESSION })))
+        expect(ev2.at(-1)).toMatchObject({ done: true, fullResponse: '안녕하세요' })
+    })
+
+    it('한도 넘긴 대화(클로버 차감)에서 화면이 끝 신호 전에 나가도, 답이 만들어졌으면 클로버를 돌려주지 않는다', async () => {
+        state.usage = { plan: 'free', blocked: true, resetAt: new Date() }
+        state.answer = ['한', '참', '긴', '답']
+        const res = await POST(req({ messages: [{ role: 'user', content: '질문' }], mentorId: 'm', sessionId: SESSION, cloverOk: true }))
+        const reader = res.body!.getReader()
+        await reader.read()          // 첫 조각만 받고
+        await reader.cancel()        // 화면을 나간다
+        await new Promise(r => setTimeout(r, 20))
+        await flushAfter()
+        expect(state.rpcCalls).toContain('spend_clovers_for_chat')
+        expect(state.rpcCalls).not.toContain('클로버_더하기')
+        expect(state.ops.some(o => o.table === 'messages' && o.op === 'insert' && o.row?.role === 'assistant')).toBe(true)
+    })
+
+    it('답을 못 만들면(쉬는 중) 차감한 클로버를 돌려준다', async () => {
+        state.usage = { plan: 'free', blocked: true, resetAt: new Date() }
+        state.answer = [UNAVAILABLE]
+        await readUntilDone(await POST(req({ messages: [{ role: 'user', content: '질문' }], mentorId: 'm', sessionId: SESSION, cloverOk: true })))
+        await flushAfter()
+        expect(state.rpcCalls).toContain('클로버_더하기')
     })
 })

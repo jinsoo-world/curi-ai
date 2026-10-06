@@ -23,7 +23,7 @@ async function me() {
 export async function GET() {
     const user = await me()
     if (!user) return NextResponse.json({ links: [], guest: true })
-    const db = createAdminClient()
+    const db = createAdminClient({ longRunning: true })
     const [links, bonus] = await Promise.all([
         db.from('user_sns_links').select('id, url, platform, status, added_count, note, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
         db.from('sns_link_bonuses').select('clovers, created_at').eq('user_id', user.id).maybeSingle(),
@@ -40,10 +40,10 @@ export async function POST(req: NextRequest) {
     const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || '주인'
     try {
         if (body.action === 'paste') {
-            const r = await pasteSnsPosts(createAdminClient(), { userId: user.id, displayName, url: body.url, posts: body.posts, images: body.images })
+            const r = await pasteSnsPosts(createAdminClient({ longRunning: true }), { userId: user.id, displayName, url: body.url, posts: body.posts, images: body.images })
             return NextResponse.json(r)
         }
-        const r = await connectSnsLink(createAdminClient(), {
+        const r = await connectSnsLink(createAdminClient({ longRunning: true }), {
             userId: user.id,
             displayName,
             url: body.url,

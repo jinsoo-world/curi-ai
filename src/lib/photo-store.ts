@@ -40,7 +40,7 @@ export async function 사진보관(
     options?: string | null,
 ): Promise<보관결과 | null> {
     try {
-        const admin = createAdminClient()
+        const admin = createAdminClient({ longRunning: true })
         const 언제 = Date.now()
         const 폴더 = userId ?? 'guest'
         const path = `${폴더}/${언제}-${randomUUID().slice(0, 8)}.${ext}`
@@ -85,7 +85,7 @@ export async function 사진보관(
 
 /** 48시간 지난 것을 지운다 — 크론이 부른다 */
 export async function 만료된것_지우기(): Promise<{ 지움: number }> {
-    const admin = createAdminClient()
+    const admin = createAdminClient({ longRunning: true })
     const { data: rows } = await admin
         .from('tool_photos')
         .select('id, path')

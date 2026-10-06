@@ -10,7 +10,7 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ photos: [] })
 
-    const admin = createAdminClient()
+    const admin = createAdminClient({ longRunning: true })
     const { data: rows } = await admin
         .from('tool_photos')
         .select('id, kind, path, created_at, expires_at, options')

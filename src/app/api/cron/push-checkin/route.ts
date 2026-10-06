@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'no' }, { status: 401 })
     }
     if (!pushConfigured()) return NextResponse.json({ success: true, skipped: 'not_configured' })
-    const db = createAdminClient()
+    const db = createAdminClient({ longRunning: true })
     try {
         const result = await runP089({ reader: createSupabaseP089Reader(db), send: liveP089Sender(db) })
         console.log('[cron/push-checkin]', JSON.stringify(result))

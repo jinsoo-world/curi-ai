@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
         const ratio = getRatio(kind === 'insta' ? 'square' : (isValidRatioId(ratioId) ? ratioId : DEFAULT_RATIO_ID))!
         const PHOTO_COST = model.cost
 
-        const admin = createAdminClient()
+        const admin = createAdminClient({ longRunning: true })
         // 하루 사진 한도 (IMAGE_GLOBAL_DAILY). 클로버를 빼기 전에 본다
         const 한도 = await checkImageCap(admin, { route: '/api/tools/profile-photo' })
         if (한도) return NextResponse.json({ error: 한도 }, { status: 429 })

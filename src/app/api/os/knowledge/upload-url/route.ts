@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     if (fileSize > MAX_FILE_SIZE) return NextResponse.json({ error: '파일은 10MB 까지 넣을 수 있어요' }, { status: 400 })
 
     try {
-        const db = createAdminClient()
+        const db = createAdminClient({ longRunning: true })
         await assertBotOwned(db, user.id, mentorId)
         await assertRoomForMore(db, mentorId)
 

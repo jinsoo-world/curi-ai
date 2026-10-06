@@ -9,6 +9,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { monthStartKST } from '@/domains/os/usage'
+import { readMonthSpentKrw } from '@/domains/os/bot-face'
 
 export const BUDGET_GUEST_STOP_PCT = 0.7
 export const BUDGET_FREE_STOP_PCT = 0.9
@@ -38,14 +39,11 @@ export async function monthSpendKrw(db: SupabaseClient, now: Date = new Date()):
     const since = monthStartKST(now).toISOString()
     const t = now.getTime()
     if (cache && cache.month === since && t - cache.at < (cache.value === null ? FAIL_CACHE_MS : CACHE_MS)) return cache.value
-    let value: number | null = null
-    try {
-        const { data, error } = await db.rpc('llm_cost_krw_month', {})
-        const n = Number(data)
-        value = !error && data !== null && data !== undefined && Number.isFinite(n) ? n : null
-        if (error) console.warn('[budget] 이번 달 원가 합계 실패:', error.message)
-    } catch (e) {
-        console.warn('[budget] 이번 달 원가 합계 실패:', e instanceof Error ? e.message : e)
+    // 읽기는 PR #54 의 readMonthSpentKrw 를 그대로 쓴다. 월 합계는 오래 걸릴 수 있어 부르는 쪽이 longRunning 연결을 넘긴다
+    const value = await readMonthSpentKrw(db)
+    if (value === null) {
+        // 합계를 못 읽으면 손님 전원이 막힌다 = 크게 남긴다 (함수 없음·시간 초과·권한)
+        console.error('[budget] 🚨 이번 달 AI 원가 합계(llm_cost_krw_month)를 못 읽음 → AI_BUDGET_MONTHLY_KRW 가 켜져 있어 손님 대화가 전부 막힌다. 함수 적용·DB 상태를 확인하라')
     }
     cache = { at: t, month: since, value }
     return value

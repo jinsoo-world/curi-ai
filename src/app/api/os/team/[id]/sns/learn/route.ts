@@ -31,7 +31,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         slots = body.slots
     }
     try {
-        const db = createAdminClient()
+        const db = createAdminClient({ longRunning: true })
         const mentorId = await resolveOwnedBot(db, user.id, id)
         const limited = await checkSnsLearnLimits(db, user.id, mentorId)
         if (limited) return NextResponse.json(limited, { status: 429 })

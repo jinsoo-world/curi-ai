@@ -31,7 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
         )
     }
 
-    const admin = createAdminClient()
+    const admin = createAdminClient({ longRunning: true })
 
     const { data: 그사람, error: 조회오류 } = await admin
         .from('users')

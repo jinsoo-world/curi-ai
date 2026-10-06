@@ -11,7 +11,7 @@ export async function chargeCredit(
     request: CreditChargeRequest
 ): Promise<{ success: boolean; transaction?: CreditTransaction; error?: string }> {
     const { createAdminClient } = await import('@/lib/supabase/admin')
-    const supabase = createAdminClient()
+    const supabase = createAdminClient({ longRunning: true })
 
     // 현재 잔액 조회
     const { data: user } = await supabase
@@ -63,7 +63,7 @@ export async function deductCredit(
     request: CreditDeductRequest
 ): Promise<{ success: boolean; remainingBalance?: number; error?: string }> {
     const { createAdminClient } = await import('@/lib/supabase/admin')
-    const supabase = createAdminClient()
+    const supabase = createAdminClient({ longRunning: true })
 
     // 현재 잔액 조회
     const { data: user } = await supabase
@@ -121,7 +121,7 @@ export async function deductCredit(
 /** 가입 보너스 크레딧 지급 (1만원) */
 export async function grantSignupBonus(userId: string): Promise<boolean> {
     const { createAdminClient } = await import('@/lib/supabase/admin')
-    const supabase = createAdminClient()
+    const supabase = createAdminClient({ longRunning: true })
 
     // 이미 보너스 받았는지 확인
     const { data: existingBonus } = await supabase
