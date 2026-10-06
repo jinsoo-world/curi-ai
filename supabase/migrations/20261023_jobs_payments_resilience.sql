@@ -8,7 +8,7 @@
 --      next_run_at(다음에 돌 시각) · fail_count(연속 실패) · claimed_at(지금 누가 잡았나) · last_error · status 'paused'
 --   2) subscriptions.status 에 'renewing'(갱신 중 잡음)·'renew_paid_unsynced'(돈은 나갔는데 DB 반영 실패)·'past_due' 허용
 --   3) knowledge_sources.processing_started_at (읽기 시작 시각 → 30분 넘으면 정리 작업이 failed(timeout))
---   4) credit_transactions: 같은 충전 주문번호로 두 번 지급 못 하게 겹칠 수 없는 열쇠(이미 겹친 줄이 있으면 건너뛰고 알림만)
+--   4) grant_clover_purchase(): 충전 지급을 「기록 + 잔액」 한 번에(같은 주문번호 두 번 지급 막기) + 겹칠 수 없는 열쇠(이미 겹친 줄이 있으면 건너뜀)
 --   5) p089_candidates(): 「3일 안부」 받을 사람을 SQL 한 번으로 고른다
 --   6) llm_cost_report(): AI 비용 매일 보고용 회사별 · 손님/무료/유료별 합계
 -- ============================================================
@@ -81,6 +81,38 @@ BEGIN
     RAISE NOTICE '이미 같은 주문번호로 두 번 지급된 줄이 있어 열쇠를 만들지 못했다. 그 줄을 먼저 확인할 것 (코드는 열쇠 없이도 예전처럼 동작)';
   END;
 END $$;
+
+-- 한 주문번호 = 한 번 지급. 주문번호마다 잠그고 이미 기록이 있으면 null, 지급했으면 새 잔액.
+-- 기록과 잔액이 한 묶음(트랜잭션)이라 「잔액만 오르고 기록 없음」·「기록만 있고 잔액 안 오름」이 생기지 않는다
+CREATE OR REPLACE FUNCTION public.grant_clover_purchase(p_user UUID, p_order TEXT, p_amount INTEGER)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  new_balance INTEGER;
+BEGIN
+  IF p_amount IS NULL OR p_amount <= 0 OR p_amount > 100000 THEN
+    RAISE EXCEPTION 'bad amount';
+  END IF;
+  IF p_order IS NULL OR length(p_order) < 6 THEN
+    RAISE EXCEPTION 'bad order';
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtext('clover_purchase:' || p_order));
+  IF EXISTS (SELECT 1 FROM public.credit_transactions WHERE type = 'purchase' AND description = p_order) THEN
+    RETURN NULL;
+  END IF;
+  new_balance := public."클로버_더하기"(p_user, p_amount);
+  IF new_balance IS NULL OR new_balance < 0 THEN
+    RAISE EXCEPTION 'user not found';
+  END IF;
+  INSERT INTO public.credit_transactions (user_id, amount, balance_after, type, description)
+  VALUES (p_user, p_amount, new_balance, 'purchase', p_order);
+  RETURN new_balance;
+END $$;
+REVOKE ALL ON FUNCTION public.grant_clover_purchase(UUID, TEXT, INTEGER) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.grant_clover_purchase(UUID, TEXT, INTEGER) TO service_role;
 
 -- ---------- 5) 「3일 안부」 받을 사람 고르기 (SQL 한 번) ----------
 -- 규칙은 domains/push/checkin.ts 와 같다:
