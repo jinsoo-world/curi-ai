@@ -1,5 +1,6 @@
 // api/notifications — 사용자 알림 조회 및 읽음 처리
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getUnreadNotifications, markNotificationRead } from '@/domains/notification'
 
 /**
@@ -14,7 +15,8 @@ export async function GET() {
             return Response.json({ notifications: [] })
         }
 
-        const notifications = await getUnreadNotifications(supabase, user.id)
+        // 회원 열쇠로는 notifications 표를 못 읽는다(20261021 잠금). 서버가 내 것만 골라 읽는다
+        const notifications = await getUnreadNotifications(createAdminClient(), user.id)
         return Response.json({ notifications })
     } catch (error) {
         console.error('[Notifications] GET error:', error)
@@ -40,7 +42,7 @@ export async function PATCH(req: Request) {
             return Response.json({ error: 'notificationId required' }, { status: 400 })
         }
 
-        await markNotificationRead(supabase, notificationId)
+        await markNotificationRead(createAdminClient(), notificationId, user.id)
         return Response.json({ success: true })
     } catch (error) {
         console.error('[Notifications] PATCH error:', error)

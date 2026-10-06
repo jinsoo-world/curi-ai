@@ -237,7 +237,7 @@ export async function POST(req: Request) {
         // 멘토 정보 조회 (domains/mentor)
         // 봇 찾기 = ①내가 볼 수 있는 봇 ②공개 봇 ③내 팀의 개인 봇(공개 안 됨, 주인만)
         const mentor = (await getMentorById(supabase, mentorId))
-            ?? (await getPublicMentorById(mentorId))
+            ?? (await getPublicMentorById(mentorId, { withPrivate: true }))
             ?? (user ? await getOwnedTeamBotMentor(createAdminClient(), user.id, mentorId) : null)
         if (!mentor) {
             return new Response('Mentor not found', { status: 404 })
@@ -938,7 +938,7 @@ export async function POST(req: Request) {
 
                         if (user) {
                             const dailyUsed = (userProfile as any)?.daily_free_used || 0
-                            await incrementDailyFreeUsage(supabase, user.id, dailyUsed)
+                            await incrementDailyFreeUsage(createAdminClient(), user.id, dailyUsed)   // 회원 열쇠로는 users 를 못 고친다(20261021 잠금)
 
                             // 🧠 메모리 추출 (P1 cost: 조건부 — 3턴마다만 실행)
                             // 2026-09-19: 매번 LLM 호출은 비용 과다. 대화 초반(3,6,9턴)에만 추출.

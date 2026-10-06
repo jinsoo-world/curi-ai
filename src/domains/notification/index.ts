@@ -42,11 +42,14 @@ export async function getUnreadNotifications(
 export async function markNotificationRead(
     db: SupabaseClient,
     notificationId: string,
+    userId: string,
 ) {
+    // 🔒 관리자 열쇠로 부르므로 주인 조건을 직접 건다 (남의 알림은 안 바뀐다)
     const { error } = await db
         .from('notifications')
         .update({ is_read: true })
         .eq('id', notificationId)
+        .eq('user_id', userId)
 
     if (error) {
         console.error('[Notification] markRead error:', error)

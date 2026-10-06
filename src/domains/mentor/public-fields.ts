@@ -12,6 +12,12 @@ export const PUBLIC_MENTOR_FIELDS = [
     'pdf_export_enabled', 'status', 'created_at', 'updated_at', 'sort_order',
 ] as const
 
+/**
+ * 주인과 서버만 보는 칸. DB 에서도 anon·authenticated 는 이 칸을 못 읽는다
+ * (supabase/migrations/20261021_mentors_column_lockdown.sql). 서버는 관리자 열쇠로만 읽는다.
+ */
+export const PRIVATE_MENTOR_FIELDS = ['system_prompt', 'persona_template', 'style_template', 'personality_traits'] as const
+
 export type PublicMentor = Partial<Record<(typeof PUBLIC_MENTOR_FIELDS)[number], unknown>>
 
 /** 봇 행에서 공개 칸만 골라낸다 */

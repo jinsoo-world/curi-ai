@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
-    getChannel, getChannelBots, listChannelMessages,
+    getChannel, getChannelBots, toClientBot, listChannelMessages,
     addChannelMembers, removeChannelMembers, renameChannel, deleteChannel, ChannelTableMissing,
 } from '@/domains/os/channels'
 import { listBlockedMentorIds, withoutBlocked } from '@/domains/os/blocks'
@@ -35,7 +35,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         // 내가 차단한 봇은 멤버와 지난 말에서 빠진다
         return NextResponse.json({
             channel,
-            members: withoutBlocked(members, blocked, b => b.mentorId),
+            members: withoutBlocked(members, blocked, b => b.mentorId).map(toClientBot),   // 지시문은 응답에 안 싣는다
             messages: messages.filter(m => !m.mentorId || !blocked.has(m.mentorId)),
         })
     } catch (e) {
@@ -69,7 +69,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         let ids = 지금.memberMentorIds
         if (add.length > 0) ids = await addChannelMembers(db, user.id, id, add)
         if (remove.length > 0) ids = await removeChannelMembers(db, user.id, id, remove)
-        return NextResponse.json({ members: await getChannelBots(db, user.id, ids) })
+        return NextResponse.json({ members: (await getChannelBots(db, user.id, ids)).map(toClientBot) })
     } catch (e) {
         if (e instanceof ChannelTableMissing) return NextResponse.json({ tableMissing: true }, { status: 503 })
         const message = e instanceof Error ? e.message : '방을 못 바꿨어요'

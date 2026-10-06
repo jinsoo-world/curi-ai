@@ -4,6 +4,30 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { MentorCardData } from './types'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { findFallbackMentor as findFallback } from '@/lib/mentors-data'
+import { PUBLIC_MENTOR_FIELDS, PRIVATE_MENTOR_FIELDS } from './public-fields'
+
+const PUBLIC_SELECT = PUBLIC_MENTOR_FIELDS.join(', ')
+const PRIVATE_SELECT = PRIVATE_MENTOR_FIELDS.join(', ')
+
+/** 예전 select('*') 결과와 같은 느슨한 모양. 호출부가 칸 이름으로 바로 읽는다 */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type MentorRow = any
+
+/**
+ * 비밀 칸(지시문 등)을 관리자 열쇠로 붙인다. 서버 안에서만 쓰는 값이다.
+ * DB 칸 권한상 로그인 세션/손님 열쇠로는 비밀 칸을 못 읽는다(20261021_mentors_column_lockdown.sql).
+ * 관리자 열쇠가 없으면(로컬 등) 공개 칸만 돌려준다.
+ */
+async function withPrivateFields(row: MentorRow, admin?: SupabaseClient): Promise<MentorRow> {
+    let db: SupabaseClient
+    try {
+        db = admin ?? createAdminClient()
+    } catch {
+        return row
+    }
+    const { data } = await db.from('mentors').select(PRIVATE_SELECT).eq('id', row.id).maybeSingle()
+    return data ? { ...row, ...(data as unknown as MentorRow) } : row
+}
 
 /**
  * 활성 멘토 목록 조회 (Admin 클라이언트 우선)
@@ -35,34 +59,38 @@ export async function getActiveMentors(): Promise<MentorCardData[]> {
 
 /**
  * ID 또는 slug로 멘토 조회 (DB → slug → 폴백 순서)
+ *
+ * db 가 로그인 세션 클라이언트여도 된다: 볼 수 있는 봇인지는 db(행 정책)로 공개 칸만 읽어 정하고,
+ * 그 봇의 비밀 칸(지시문 등)은 관리자 열쇠로 따로 붙인다. 돌려준 값은 서버 안에서만 쓴다
+ * (화면·응답으로 낼 땐 toPublicMentor 로 거른다).
  */
 export async function getMentorById(
     db: SupabaseClient,
     mentorId: string,
-) {
+): Promise<MentorRow | null> {
     // 1) ID로 조회
     const { data: byId, error } = await db
         .from('mentors')
-        .select('*')
+        .select(PUBLIC_SELECT)
         .eq('id', mentorId)
         .single()
 
-    if (byId && !error) return byId
+    if (byId && !error) return withPrivateFields(byId as unknown as MentorRow)
 
     // 2) slug로 재시도
     const { data: bySlug } = await db
         .from('mentors')
-        .select('*')
+        .select(PUBLIC_SELECT)
         .eq('slug', mentorId)
         .single()
 
-    if (bySlug) return bySlug
+    if (bySlug) return withPrivateFields(bySlug as unknown as MentorRow)
 
     // 3) 폴백 데이터
     const fallback = findFallback(mentorId)
     if (fallback) {
         console.log(`[Mentor Queries] 폴백 멘토 데이터 사용: ${mentorId}`)
-        return fallback
+        return fallback as unknown as MentorRow
     }
 
     return null
@@ -76,7 +104,7 @@ export async function getMentorById(
  * (2026-09-04 실측: 「구글 문서 치트키」 등 2개. 줄은 살아 있고 is_active=true 인데
  *  사용자 권한 조회만 0행이었다.) 두 화면 기준을 하나로 맞춘다.
  */
-export async function getPublicMentorById(mentorId: string) {
+export async function getPublicMentorById(mentorId: string, opts: { withPrivate?: boolean } = {}): Promise<MentorRow | null> {
     let db: SupabaseClient
     try {
         db = createAdminClient()
@@ -84,21 +112,22 @@ export async function getPublicMentorById(mentorId: string) {
         return null
     }
 
+    // 화면(소개·마켓·공유 그림)은 공개 칸만. 대화 창구만 withPrivate 로 지시문까지 읽는다
     const { data: byId } = await db
         .from('mentors')
-        .select('*')
+        .select(PUBLIC_SELECT)
         .eq('id', mentorId)
         .eq('is_active', true)
         .maybeSingle()
-    if (byId) return byId
-
-    const { data: bySlug } = await db
+    const { data: bySlug } = byId ? { data: null } : await db
         .from('mentors')
-        .select('*')
+        .select(PUBLIC_SELECT)
         .eq('slug', mentorId)
         .eq('is_active', true)
         .maybeSingle()
-    return bySlug ?? null
+    const row = (byId ?? bySlug ?? null) as unknown as MentorRow | null
+    if (!row) return null
+    return opts.withPrivate ? withPrivateFields(row, db) : row
 }
 
 /**

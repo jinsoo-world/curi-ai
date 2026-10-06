@@ -32,7 +32,9 @@ export async function PATCH(
             return Response.json({ error: '변경할 항목이 없습니다.' }, { status: 400 })
         }
 
-        const { data, error } = await supabase
+        // 회원 열쇠로는 chat_sessions 를 못 고친다(20261021 잠금). 주인 조건(user_id)을 걸고 관리자 열쇠로 고친다
+        const { createAdminClient } = await import('@/lib/supabase/admin')
+        const { data, error } = await createAdminClient()
             .from('chat_sessions')
             .update(updates)
             .eq('id', sessionId)
