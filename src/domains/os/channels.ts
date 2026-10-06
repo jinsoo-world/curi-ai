@@ -258,6 +258,15 @@ export interface ChannelBot {
     avatarUrl: string | null
 }
 
+/** 화면(응답)으로 내보내는 방 멤버. 지시문은 서버 안에서 답을 만들 때만 쓰고 밖으로 내지 않는다 */
+export type ClientChannelBot = Omit<ChannelBot, 'systemPrompt'>
+
+export function toClientBot(b: ChannelBot): ClientChannelBot {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { systemPrompt, ...rest } = b
+    return rest
+}
+
 /**
  * 방에 있는 봇들의 몸(이름, 설명, 캐릭터). 내 팀(team_bots)에 아직 있는 봇만 돌려준다.
  * 팀에서 뺀 봇은 방에서도 말하지 않는다.

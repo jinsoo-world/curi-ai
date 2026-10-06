@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,8 +23,11 @@ export async function POST(req: Request) {
             return Response.json({ error: 'mentorId가 필요합니다.' }, { status: 400 })
         }
 
+        // 회원 열쇠로는 chat_sessions 를 못 고친다(20261021 잠금). 주인 조건(user_id)을 걸고 관리자 열쇠로
+        const admin = createAdminClient()
+
         // soft delete: 해당 멘토의 모든 세션에 deleted_at 기록
-        const { data, error } = await supabase
+        const { data, error } = await admin
             .from('chat_sessions')
             .update({ deleted_at: new Date().toISOString() })
             .eq('user_id', user.id)
@@ -35,7 +39,7 @@ export async function POST(req: Request) {
             console.error('[Sessions Delete By Mentor] Error:', error)
             // deleted_at 컬럼이 없으면 실제 삭제 (fallback)
             if (error.message?.includes('deleted_at')) {
-                const { error: deleteErr } = await supabase
+                const { error: deleteErr } = await admin
                     .from('chat_sessions')
                     .delete()
                     .eq('user_id', user.id)

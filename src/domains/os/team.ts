@@ -56,9 +56,10 @@ export async function listTeam(db: SupabaseClient, userId: string): Promise<Team
     for (const c of (counts ?? []) as { mentor_id: string }[]) countMap.set(c.mentor_id, (countMap.get(c.mentor_id) ?? 0) + 1)
 
     // 🔒 지시문은 내가 만든 봇만 싣는다. 마켓에서 데려온 남의 봇은 빈 글(지시문 유출 방지)
-    const { data: myCreator } = await db.from('creator_profiles').select('id').eq('user_id', userId).maybeSingle()
-    const myCreatorId = (myCreator as { id: string } | null)?.id ?? null
-    const isMine = (r: Row) => !!myCreatorId && r.mentors?.creator_id === myCreatorId
+    //    크리에이터 프로필이 여러 줄인 사람도 있다(옛 중복). maybeSingle 은 그때 오류로 비어 내 봇 지시문까지 사라졌다
+    const { data: myCreators } = await db.from('creator_profiles').select('id').eq('user_id', userId)
+    const myCreatorIds = new Set(((myCreators ?? []) as { id: string }[]).map(c => c.id))
+    const isMine = (r: Row) => !!r.mentors?.creator_id && myCreatorIds.has(r.mentors.creator_id)
 
     return rows.map(r => ({
         id: r.id,

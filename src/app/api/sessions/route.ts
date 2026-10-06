@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createChatSession } from '@/domains/chat'
 import { getMentorById } from '@/domains/mentor'
 import { fetchLastMessages } from '@/domains/chat/last-message-preview'
@@ -35,7 +36,8 @@ export async function POST(req: Request) {
         const title = `${mentor?.name || '멘토'}와의 대화`
 
         // 세션 생성 (domains/chat)
-        const session = await createChatSession(supabase, user.id, mentorId, title)
+        // 회원 열쇠로는 chat_sessions 에 못 쓴다(20261021 잠금). 로그인한 본인 id 로 서버가 만든다
+        const session = await createChatSession(createAdminClient(), user.id, mentorId, title)
 
         if (!session) {
             return Response.json(

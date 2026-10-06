@@ -6,7 +6,8 @@ import { listTeam } from '../team'
 const ME = 'user-me'
 const MY_CREATOR = 'creator-me'
 
-function fakeDb(creatorId: string | null) {
+function fakeDb(creatorId: string | string[] | null) {
+    const creators = creatorId === null ? [] : (Array.isArray(creatorId) ? creatorId : [creatorId]).map(id => ({ id }))
     const rows = [
         { id: 't1', mentor_id: 'm-mine', role: 'helper', shape: 'circle', color: 'green', one_liner: null, approval_mode: 'always_ask', pinned: false, hidden: false, sort_order: 0, created_at: '', linked_from_market: false,
           mentors: { name: '내 봇', avatar_url: null, greeting_message: '', system_prompt: '내 지시문', is_active: false, slug: 'a', creator_id: MY_CREATOR } },
@@ -23,7 +24,11 @@ function fakeDb(creatorId: string | null) {
             Object.assign(q, { select: self, eq: self, in: self, order: self })
             if (table === 'team_bots') Object.assign(q, { then: (r: (v: unknown) => void) => r({ data: rows, error: null }) })
             if (table === 'knowledge_sources') Object.assign(q, { then: (r: (v: unknown) => void) => r({ data: [], error: null }) })
-            if (table === 'creator_profiles') Object.assign(q, { maybeSingle: async () => ({ data: creatorId ? { id: creatorId } : null, error: null }) })
+            // 진짜 DB 처럼: 행이 2개 이상이면 maybeSingle 은 오류(data null)를 낸다
+            if (table === 'creator_profiles') Object.assign(q, {
+                maybeSingle: async () => creators.length > 1 ? { data: null, error: { code: 'PGRST116' } } : { data: creators[0] ?? null, error: null },
+                then: (r: (v: unknown) => void) => r({ data: creators, error: null }),
+            })
             return q
         },
     }
@@ -36,6 +41,12 @@ describe('os/team — listTeam 지시문', () => {
         expect(team.find(b => b.id === 't2')?.systemPrompt).toBe('')
         expect(team.find(b => b.id === 't3')?.systemPrompt).toBe('')
         expect(JSON.stringify(team)).not.toContain('비밀 지시문')
+    })
+
+    it('크리에이터 프로필이 여러 개여도(옛 중복 행) 내 봇 지시문은 실리고 남의 봇은 빈 글', async () => {
+        const team = await listTeam(fakeDb(['creator-dup', MY_CREATOR]) as never, ME)
+        expect(team.find(b => b.id === 't1')?.systemPrompt).toBe('내 지시문')
+        expect(team.find(b => b.id === 't2')?.systemPrompt).toBe('')
     })
 
     it('크리에이터 프로필이 없으면 지시문은 하나도 안 실린다', async () => {

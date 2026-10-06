@@ -69,6 +69,8 @@ export async function GET(
 }
 
 // 🔒 음성 삭제 시 voice_id/voice_sample_url 초기화 + ElevenLabs Voice 삭제
+//    회원 열쇠로는 mentors 를 못 고친다(20261021 잠금). 주인 확인 뒤 관리자 열쇠로 고친다.
+//    voice_id 는 비우기(null)만 받는다. 남의 복제 목소리 id 를 내 봇에 붙여 쓰지 못하게.
 const ALLOWED_FIELDS = ['voice_id', 'voice_sample_url', 'voice_test_url']
 
 export async function PATCH(
@@ -89,14 +91,23 @@ export async function PATCH(
         if (Object.keys(updates).length === 0) {
             return NextResponse.json({ error: '업데이트할 필드 없음' }, { status: 400 })
         }
+        if ('voice_id' in updates && updates.voice_id !== null) {
+            return NextResponse.json({ error: '목소리는 녹음으로만 바꿀 수 있어요' }, { status: 400 })
+        }
+
+        const admin = createAdminClient()
+        try {
+            await assertBotOwned(admin, user.id, mentorId)
+        } catch {
+            return NextResponse.json({ error: '내 봇이 아니에요' }, { status: 403 })
+        }
 
         // 🗑️ voice_id를 null로 바꾸는 경우 → ElevenLabs에서도 삭제
-        if ('voice_id' in updates && updates.voice_id === null) {
-            const { data: mentor } = await supabase
+        if ('voice_id' in updates) {
+            const { data: mentor } = await admin
                 .from('mentors')
                 .select('voice_id')
                 .eq('id', mentorId)
-                .eq('creator_id', user.id)
                 .single()
 
             if (mentor?.voice_id) {
@@ -115,11 +126,10 @@ export async function PATCH(
             }
         }
 
-        const { error } = await supabase
+        const { error } = await admin
             .from('mentors')
             .update(updates)
             .eq('id', mentorId)
-            .eq('creator_id', user.id)
 
         if (error) throw error
         return NextResponse.json({ ok: true })

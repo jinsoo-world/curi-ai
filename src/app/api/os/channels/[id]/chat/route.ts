@@ -13,7 +13,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { readUsage } from '@/domains/os/usage-db'
 import { limitReachedMessage } from '@/domains/os/usage'
 import {
-    getChannel, getChannelBots, listChannelMessages, saveChannelMessage,
+    getChannel, getChannelBots, toClientBot, listChannelMessages, saveChannelMessage,
     findMentionedBot, canBotSpeakAgain, ChannelTableMissing,
 } from '@/domains/os/channels'
 import type { ChannelBot, ChannelMessage } from '@/domains/os/channels'
@@ -165,7 +165,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         }
         return NextResponse.json({
             messages: 새말,
-            members: bots,
+            members: bots.map(toClientBot),   // 지시문은 응답에 안 싣는다
             responderIds: 말한봇,
             // 읽은 링크(성공, 실패). 화면이 첫 봇 답 아래에 작은 카드로 보여 준다
             readUrls,
