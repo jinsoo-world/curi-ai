@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchLastMessages } from '@/domains/chat/last-message-preview'
 import { listChannels, createChannel, getChannelBots, ChannelTableMissing } from '@/domains/os/channels'
 
 export const dynamic = 'force-dynamic'
@@ -19,9 +20,13 @@ export async function GET() {
     try {
         const db = createAdminClient()
         const rooms = await listChannels(db, user.id)
+        // 내 방 id 만 넘겨 마지막 말을 한 번에 가져온다
+        const last = await fetchLastMessages(db, 'channel', rooms.map(r => r.id))
         const withBots = await Promise.all(rooms.map(async r => ({
             ...r,
             members: await getChannelBots(db, user.id, r.memberMentorIds),
+            last_message_preview: last[r.id]?.preview ?? null,
+            last_message_at: last[r.id]?.at ?? null,
         })))
         return NextResponse.json({ channels: withBots })
     } catch (e) {
