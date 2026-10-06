@@ -19,6 +19,8 @@ export interface GeminiCallOptions {
     maxOutputTokens?: number
     /** false 면 구글 검색 도구를 안 붙인다(Strict 로 과거 자료만 답해야 하는 봇용). 안 주면 켠 채로(기존 동작) */
     recencyOn?: boolean
+    /** 끊기 신호. 첫 글자 마감·대화 마감이 지나면 요청을 끊는다 (stream.ts 가 만든다) */
+    abortSignal?: AbortSignal
 }
 
 /**
@@ -39,6 +41,7 @@ export async function generateChatStream(
             systemInstruction: systemPrompt,
             ...GEMINI_CONFIG,
             ...(typeof opts.maxOutputTokens === 'number' ? { maxOutputTokens: opts.maxOutputTokens } : {}),
+            ...(opts.abortSignal ? { abortSignal: opts.abortSignal } : {}),
             // 구글 검색 연결 — 멘토가 최신 정보를 찾아볼 수 있게 한다.
             // 이걸 안 켜면 학습 시점 이후의 일을 모르고, 모르는 채로 지어낸다.
             // (실측 2026-09-04: 오늘 날짜를 3월 25일이라고 답했다)

@@ -15,6 +15,9 @@ import type { FallbackReason } from './fallback-reason'
 
 export type SideProvider = 'gemini' | 'solar'
 
+/** 곁일 Gemini 마감 (2026-10-06 멈춤 점검). 넘기면 던지고, 호출 쪽이 원래 하던 대로 넘어간다 */
+export const SIDE_TEXT_GEMINI_TIMEOUT_MS = 8_000
+
 export function sideTextProvider(env: Record<string, string | undefined> = process.env): SideProvider {
     return String(env.SIDE_TEXT_PROVIDER ?? '').trim().toLowerCase() === 'solar' ? 'solar' : 'gemini'
 }
@@ -39,6 +42,8 @@ export interface SideTextRequest {
     solarMaxTokens?: number
     /** 솔라를 기다릴 최대 시간. 넘으면 Gemini 로 */
     solarTimeoutMs?: number
+    /** Gemini 를 기다릴 최대 시간. 안 주면 8초, 단 solarTimeoutMs 를 더 길게 준 일(요약·초안 등 긴 일)은 그 값 */
+    geminiTimeoutMs?: number
 }
 
 /** 곁일 하나를 묻고 글만 돌려받는다. 둘 다 안 되면 null (호출 쪽이 원래 하던 대로 넘어간다) */
@@ -95,6 +100,7 @@ export async function askSideText(req: SideTextRequest): Promise<string | null> 
                 ...(req.system ? { systemInstruction: req.system } : {}),
                 ...(typeof req.temperature === 'number' ? { temperature: req.temperature } : {}),
                 ...(typeof req.maxTokens === 'number' ? { maxOutputTokens: req.maxTokens } : {}),
+                abortSignal: AbortSignal.timeout(req.geminiTimeoutMs ?? Math.max(SIDE_TEXT_GEMINI_TIMEOUT_MS, req.solarTimeoutMs ?? 0)),
             },
             contents: [{ role: 'user', parts: [{ text: req.prompt }] }],
         })
