@@ -23,6 +23,11 @@ export interface Subscription {
     updated_at: string
 }
 
+/** 결제가 아직 살아 있는 상태 = 같은 사람에게 새 구독을 만들면 두 번 긁힌다 · 탈퇴 전에 해지해야 한다 */
+export const BILLING_LIVE_STATUSES = ['active', 'renewing', 'renew_paid_unsynced', 'past_due'] as const
+/** 이용권이 있는 상태 = 해지 예약(canceled, 기간 안)·자동 갱신 도중(renewing)·결제는 됐는데 DB 반영 전(renew_paid_unsynced). 연체(past_due)는 제외 */
+export const ENTITLED_STATUSES = ['active', 'canceled', 'renewing', 'renew_paid_unsynced'] as const
+
 export interface Payment {
     id: string
     subscription_id: string | null

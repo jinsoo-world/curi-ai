@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { issueBillingKey, chargeBilling, generateOrderId } from '@/lib/toss'
-import { createSubscription, savePayment, getPlan, isValidPlanType } from '@/domains/subscription'
+import { createSubscription, savePayment, getPlan, isValidPlanType, BILLING_LIVE_STATUSES } from '@/domains/subscription'
 import { sendErrorAlert } from '@/lib/slack'
 import { isIosAppUserAgent } from '@/lib/app-shell'
 
@@ -53,7 +53,8 @@ export async function POST(req: NextRequest) {
             .from('subscriptions')
             .select('id, status')
             .eq('user_id', userId)
-            .eq('status', 'active')
+            .in('status', [...BILLING_LIVE_STATUSES])   // 갱신 중·결제됨 미반영·연체도 「구독 중」 (새로 만들면 두 번 긁힌다)
+            .limit(1)
             .maybeSingle()
         if (existingSub) {
             return NextResponse.json(
