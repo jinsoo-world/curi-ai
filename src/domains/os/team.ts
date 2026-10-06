@@ -160,7 +160,11 @@ export async function createTeamBot(
  * 공개 중인 내 봇의 이름, 한 줄 소개(제목), 지시문, 인사말을 고치면 같은 저장에서 내리고 다시 확인한다.
  * 돌려주는 moderation 은 확인을 했을 때만 있다(창구가 422/202 로 바꿔 준다).
  */
-export type TeamBotPatch = Partial<Pick<TeamBot, 'pinned' | 'hidden' | 'sortOrder' | 'approvalMode' | 'shape' | 'color' | 'oneLiner' | 'role' | 'name' | 'greeting' | 'systemPrompt' | 'avatarUrl'>> & { isPublic?: boolean }
+export type TeamBotPatch = Partial<Pick<TeamBot, 'pinned' | 'hidden' | 'sortOrder' | 'approvalMode' | 'shape' | 'color' | 'oneLiner' | 'role' | 'name' | 'greeting' | 'systemPrompt' | 'avatarUrl'>> & {
+    isPublic?: boolean
+    /** 「추가 프롬프트」(비밀 칸, 최대 5,000자). null = 지움. 길이 검사는 창구가 parseExtraPrompt 로 먼저 한다 */
+    extraPrompt?: string | null
+}
 
 export async function updateTeamBot(
     db: SupabaseClient, userId: string, teamBotId: string,
@@ -187,6 +191,7 @@ export async function updateTeamBot(
     if (patch.name !== undefined) body.name = patch.name.trim().slice(0, 20)
     if (patch.greeting !== undefined) body.greeting_message = patch.greeting.trim().slice(0, 200)
     if (patch.systemPrompt !== undefined) body.system_prompt = patch.systemPrompt.slice(0, 12000)
+    if (patch.extraPrompt !== undefined) body.extra_prompt = patch.extraPrompt
     if (patch.avatarUrl !== undefined) body.avatar_url = patch.avatarUrl
     // 한 줄 소개 → 마켓 제목. 비우면 제목은 그대로 둔다(빈 제목 카드 방지). 내 봇이 아니면 조용히 건너뛴다
     const line = (patch.oneLiner ?? '').trim().slice(0, 40)

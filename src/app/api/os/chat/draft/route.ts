@@ -4,6 +4,7 @@
 //  - card 가 없으면 → 평소대로 /api/chat 으로 가서 봇이 답한다.
 //  - card 가 있으면 → 봇은 답하지 않고 「보낼 내용 초안 + 승인 카드」가 말풍선 자리에 뜬다.
 // 허용을 눌러도 여기서 보내지 않는다. 기록만 남고, 실제 발신은 발신 담당이 나중에 한다.
+import { withExtraPrompt } from '@/domains/mentor/extra-prompt'
 import { NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -68,11 +69,11 @@ export async function POST(req: Request) {
         ownedMentorId = mentorId
         const { data: tb } = await db
             .from('team_bots')
-            .select('approval_mode, mentors(system_prompt)')
+            .select('approval_mode, mentors(system_prompt, extra_prompt)')
             .eq('user_id', user.id).eq('mentor_id', mentorId).maybeSingle()
-        const row = tb as unknown as { approval_mode?: typeof approvalMode; mentors?: { system_prompt?: string } | null } | null
+        const row = tb as unknown as { approval_mode?: typeof approvalMode; mentors?: { system_prompt?: string; extra_prompt?: string | null } | null } | null
         if (row?.approval_mode) approvalMode = row.approval_mode
-        botPrompt = row?.mentors?.system_prompt ?? ''
+        botPrompt = withExtraPrompt(row?.mentors?.system_prompt ?? '', row?.mentors?.extra_prompt)
     } catch { /* 공개 봇이거나 표가 아직 없다 — 카드는 그대로 만든다 */ }
 
     // ④ 관문에 세운다. 초안만 만드는 봇(draft_only)은 카드조차 만들지 않고 「못 한다」고 알린다.

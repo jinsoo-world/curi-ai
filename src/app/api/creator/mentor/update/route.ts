@@ -1,4 +1,5 @@
 // /api/creator/mentor/update — 멘토 수정 API
+import { parseExtraPrompt } from '@/domains/mentor/extra-prompt'
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { requireMentorOwner } from '@/lib/mentor-owner'
@@ -19,6 +20,7 @@ export async function PATCH(req: NextRequest) {
             description,
             expertise,
             systemPrompt,
+            extraPrompt,
             greetingMessage,
             sampleQuestions,
             isActive,
@@ -47,6 +49,12 @@ export async function PATCH(req: NextRequest) {
         if (description !== undefined) updateData.description = description
         if (expertise !== undefined) updateData.expertise = expertise
         if (systemPrompt !== undefined) updateData.system_prompt = systemPrompt
+        // 추가 프롬프트(비밀 칸, 최대 5,000자). 넘으면 아무것도 안 쓰고 400. 공개 중이면 아래 공개 관문이 다시 AI 확인한다
+        if (extraPrompt !== undefined) {
+            const extra = parseExtraPrompt(extraPrompt)
+            if (!extra.ok) return NextResponse.json({ error: extra.error }, { status: 400 })
+            updateData.extra_prompt = extra.value
+        }
         if (greetingMessage !== undefined) updateData.greeting_message = greetingMessage
         if (sampleQuestions !== undefined) updateData.sample_questions = sampleQuestions
         if (avatarUrl !== undefined) updateData.avatar_url = avatarUrl

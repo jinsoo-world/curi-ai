@@ -10,7 +10,7 @@ const BOT = '9fc9b3fa-1721-40c6-bc4e-1b544c117483'
 const ROW = {
     id: BOT, name: '테스트봇', slug: 'test-bot', title: '제목', description: '설명',
     avatar_url: null, expertise: ['a'], personality_traits: ['따뜻한'],
-    system_prompt: '비밀 지시문 819자', greeting_message: '안녕', sample_questions: ['q1'],
+    system_prompt: '비밀 지시문 819자', extra_prompt: '비밀 추가 프롬프트 자주 받는 질문', greeting_message: '안녕', sample_questions: ['q1'],
     voice_id: 'voice-abc', is_premium: false, is_active: true, sort_order: 1,
     created_at: '2026-10-01T00:00:00Z', style_template: { tone: 'x' }, creator_id: CREATOR,
     mentor_type: 'general', status: 'active', persona_template: 'mentor', price: 0,
@@ -44,7 +44,7 @@ const call = async () => {
     return { status: res.status, body: await res.json() as { mentor: Record<string, unknown> } }
 }
 
-const SECRET = ['system_prompt', 'persona_template', 'style_template', 'personality_traits']
+const SECRET = ['system_prompt', 'persona_template', 'style_template', 'personality_traits', 'extra_prompt']
 
 beforeEach(() => { state.user = null })
 
@@ -54,6 +54,7 @@ describe('GET /api/mentors/{id} 공개 필드', () => {
         expect(status).toBe(200)
         for (const k of SECRET) expect(body.mentor).not.toHaveProperty(k)
         expect(JSON.stringify(body)).not.toContain('비밀 지시문')
+        expect(JSON.stringify(body)).not.toContain('비밀 추가 프롬프트')
         // 화면이 쓰는 칸은 남아 있다
         expect(body.mentor).toMatchObject({
             id: BOT, name: '테스트봇', slug: 'test-bot', greeting_message: '안녕', sample_questions: ['q1'],
@@ -73,5 +74,6 @@ describe('GET /api/mentors/{id} 공개 필드', () => {
         const { body } = await call()
         expect(body.mentor.system_prompt).toBe('비밀 지시문 819자')
         expect(body.mentor.persona_template).toBe('mentor')
+        expect(body.mentor.extra_prompt).toBe('비밀 추가 프롬프트 자주 받는 질문')
     })
 })

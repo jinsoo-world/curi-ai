@@ -4,10 +4,11 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { MentorCardData } from './types'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { findFallbackMentor as findFallback } from '@/lib/mentors-data'
-import { PUBLIC_MENTOR_FIELDS, PRIVATE_MENTOR_FIELDS } from './public-fields'
+import { PUBLIC_MENTOR_FIELDS, PRIVATE_MENTOR_FIELDS, LEGACY_PRIVATE_MENTOR_FIELDS } from './public-fields'
 
 const PUBLIC_SELECT = PUBLIC_MENTOR_FIELDS.join(', ')
 const PRIVATE_SELECT = PRIVATE_MENTOR_FIELDS.join(', ')
+const LEGACY_PRIVATE_SELECT = LEGACY_PRIVATE_MENTOR_FIELDS.join(', ')
 
 /** 예전 select('*') 결과와 같은 느슨한 모양. 호출부가 칸 이름으로 바로 읽는다 */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,8 +26,14 @@ async function withPrivateFields(row: MentorRow, admin?: SupabaseClient): Promis
     } catch {
         return row
     }
-    const { data } = await db.from('mentors').select(PRIVATE_SELECT).eq('id', row.id).maybeSingle()
-    return data ? { ...row, ...(data as unknown as MentorRow) } : row
+    const { data, error } = await db.from('mentors').select(PRIVATE_SELECT).eq('id', row.id).maybeSingle()
+    if (data) return { ...row, ...(data as unknown as MentorRow) }
+    if (error) {
+        // extra_prompt 칸이 아직 없는 DB(마이그레이션 20261022 적용 전)에서도 지시문은 읽힌다 = 대화가 지시문 없이 나가지 않는다
+        const { data: legacy } = await db.from('mentors').select(LEGACY_PRIVATE_SELECT).eq('id', row.id).maybeSingle()
+        if (legacy) return { ...row, ...(legacy as unknown as MentorRow) }
+    }
+    return row
 }
 
 /**

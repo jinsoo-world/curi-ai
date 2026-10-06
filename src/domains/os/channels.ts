@@ -251,6 +251,8 @@ export interface ChannelBot {
     mentorId: string
     name: string
     systemPrompt: string
+    /** mentors.extra_prompt — 「추가 프롬프트」(비밀 칸). 화면 응답(toClientBot)에는 안 싣는다 */
+    extraPrompt?: string | null
     /** team_bots.one_liner — 한 줄 소개(말투 힌트) */
     oneLiner: string | null
     shape: string
@@ -259,11 +261,11 @@ export interface ChannelBot {
 }
 
 /** 화면(응답)으로 내보내는 방 멤버. 지시문은 서버 안에서 답을 만들 때만 쓰고 밖으로 내지 않는다 */
-export type ClientChannelBot = Omit<ChannelBot, 'systemPrompt'>
+export type ClientChannelBot = Omit<ChannelBot, 'systemPrompt' | 'extraPrompt'>
 
 export function toClientBot(b: ChannelBot): ClientChannelBot {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { systemPrompt, ...rest } = b
+    const { systemPrompt, extraPrompt, ...rest } = b
     return rest
 }
 
@@ -277,13 +279,13 @@ export async function getChannelBots(
     if (mentorIds.length === 0) return []
     const { data, error } = await db
         .from('team_bots')
-        .select('mentor_id, shape, color, one_liner, mentors(name, system_prompt, avatar_url)')
+        .select('mentor_id, shape, color, one_liner, mentors(name, system_prompt, extra_prompt, avatar_url)')
         .eq('user_id', userId)
         .in('mentor_id', mentorIds)
     if (error) throw wrap(error)
     const rows = (data ?? []) as unknown as {
         mentor_id: string; shape: string; color: string; one_liner: string | null
-        mentors: { name: string; system_prompt: string | null; avatar_url: string | null } | null
+        mentors: { name: string; system_prompt: string | null; extra_prompt?: string | null; avatar_url: string | null } | null
     }[]
     const byId = new Map(rows.map(r => [r.mentor_id, r]))
     // 방에 넣은 순서를 지킨다
@@ -294,6 +296,7 @@ export async function getChannelBots(
             mentorId: r.mentor_id,
             name: r.mentors?.name ?? '이름 없는 봇',
             systemPrompt: r.mentors?.system_prompt ?? '',
+            extraPrompt: r.mentors?.extra_prompt ?? null,
             oneLiner: r.one_liner ?? null,
             shape: r.shape, color: r.color,
             avatarUrl: r.mentors?.avatar_url ?? null,

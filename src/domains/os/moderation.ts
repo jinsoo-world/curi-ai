@@ -36,6 +36,8 @@ export interface ModerationInput {
     title: string
     description: string
     systemPrompt: string
+    /** 「추가 프롬프트」. 비어 있으면 검사 글·지문이 예전과 같다 */
+    extraPrompt?: string
     greeting: string
     sampleQuestions: string[]
     knowledge: string
@@ -52,6 +54,8 @@ const SYSTEM = [
     '(illegal, sexual, hate, violence) 불법, 성적, 성인, 혐오, 괴롭힘, 폭력 내용.',
     '(medical_claim, legal_claim, financial_claim) 완치 보장, 수익 보장처럼 의료, 법률, 돈 문제를 단정하는가.',
     '(personal_data) 다른 사람의 전화번호, 계좌번호, 주소, 주민등록번호 같은 개인정보가 지시문이나 자료에 있는가.',
+    '(solicit_personal_data) 대화 상대(손님)에게 주민등록번호, 계좌번호, 카드번호, 비밀번호, 인증번호를 받아내라고 시키는가.',
+    '(scam) 플랫폼 밖 계좌로 입금, 외부 메신저로 옮기기, 투자금 모집을 유도하는가.',
     '판정: 문제가 분명하면 block, 애매하거나 사람이 봐야 하면 review, 문제가 없으면 pass.',
     '답은 JSON 한 개만. 다른 글 금지:',
     '{"verdict":"pass"|"review"|"block","reasons":["쉬운 한국어 짧은 이유"],"categories":["위 괄호 속 이름"]}',
@@ -71,6 +75,7 @@ export function buildModerationPrompt(b: ModerationInput): { system: string; pro
         `[제목] ${fence(b.title)}`,
         `[설명] ${fence(b.description)}`,
         `[지시문] ${fence(b.systemPrompt).slice(0, PROMPT_SAMPLE_CHARS)}`,
+        ...(b.extraPrompt?.trim() ? [`[추가 프롬프트] ${fence(b.extraPrompt).slice(0, PROMPT_SAMPLE_CHARS)}`] : []),
         `[인사말] ${fence(b.greeting)}`,
         `[예시 질문] ${b.sampleQuestions.map(fence).join(' / ')}`,
         `[자료 앞부분] ${fence(b.knowledge).slice(0, KNOWLEDGE_SAMPLE_CHARS)}`,
@@ -100,20 +105,21 @@ export function parseModerationAnswer(raw: string | null | undefined): Moderatio
 
 /** 검사한 내용의 지문. 관리자가 승인할 때 「그 사이 바뀌었나」를 이걸로 본다 */
 export function contentHash(b: ModerationInput): string {
-    return createHash('sha256').update(JSON.stringify([
-        b.ownerName, b.name, b.title, b.description, b.systemPrompt, b.greeting, b.sampleQuestions, b.knowledge,
-    ])).digest('hex')
+    const fields: unknown[] = [b.ownerName, b.name, b.title, b.description, b.systemPrompt, b.greeting, b.sampleQuestions, b.knowledge]
+    // 추가 프롬프트가 빈 봇은 예전 지문 그대로(열린 확인 대기를 헛되이 다시 돌리지 않는다)
+    if (b.extraPrompt?.trim()) fields.push(b.extraPrompt.trim())
+    return createHash('sha256').update(JSON.stringify(fields)).digest('hex')
 }
 
 /** 봇 글, 자료 앞부분을 읽는다 (자료는 이미 넣어 둔 조각을 새것부터 읽는다 = 방금 넣은 자료가 빠지지 않는다) */
 export async function readBotForReview(db: SupabaseClient, mentorId: string, ownerName: string): Promise<ModerationInput> {
     const { data: m, error } = await db
         .from('mentors')
-        .select('name, title, description, system_prompt, greeting_message, sample_questions')
+        .select('name, title, description, system_prompt, extra_prompt, greeting_message, sample_questions')
         .eq('id', mentorId)
         .maybeSingle()
     if (error || !m) throw new Error(error?.message ?? '봇을 못 찾았다')
-    const row = m as { name: string | null; title: string | null; description: string | null; system_prompt: string | null; greeting_message: string | null; sample_questions: string[] | null }
+    const row = m as { name: string | null; title: string | null; description: string | null; system_prompt: string | null; extra_prompt?: string | null; greeting_message: string | null; sample_questions: string[] | null }
     const { data: chunks } = await db.from('knowledge_chunks').select('content').eq('mentor_id', mentorId).order('created_at', { ascending: false }).limit(20)
     let knowledge = ''
     for (const c of (chunks ?? []) as { content: string | null }[]) {
@@ -122,7 +128,7 @@ export async function readBotForReview(db: SupabaseClient, mentorId: string, own
     }
     return {
         ownerName, name: row.name ?? '', title: row.title ?? '', description: row.description ?? '',
-        systemPrompt: row.system_prompt ?? '', greeting: row.greeting_message ?? '',
+        systemPrompt: row.system_prompt ?? '', extraPrompt: row.extra_prompt ?? '', greeting: row.greeting_message ?? '',
         sampleQuestions: (row.sample_questions ?? []).slice(0, 5), knowledge: knowledge.slice(0, KNOWLEDGE_SAMPLE_CHARS),
     }
 }
