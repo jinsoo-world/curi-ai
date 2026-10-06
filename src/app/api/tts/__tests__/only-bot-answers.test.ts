@@ -47,7 +47,7 @@ vi.mock('@/lib/rate-limit', () => ({
 }))
 vi.mock('@/domains/llm/usage-log', () => ({ logLlmUsage: () => {} }))
 
-const fetchMock = vi.fn(async (..._a: unknown[]) => new Response(new Uint8Array([1, 2, 3]), { status: 200 }))
+const fetchMock = vi.fn(async () => new Response(new Uint8Array([1, 2, 3]), { status: 200 }))
 vi.stubGlobal('fetch', fetchMock)
 
 import { POST } from '../route'
