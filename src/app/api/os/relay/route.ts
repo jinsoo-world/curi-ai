@@ -85,7 +85,8 @@ async function recentLines(db: SupabaseClient, sessionId: string): Promise<strin
 
 /** 말 한 줄 저장 + 방 시각 갱신 (실패해도 대화는 이어진다) */
 async function saveLine(db: SupabaseClient, sessionId: string, role: 'user' | 'assistant', content: string): Promise<void> {
-    const { error } = await db.from('messages').insert({ session_id: sessionId, role, content })
+    // origin='handoff' = 서버가 만든 넘김 글(봇의 실제 답이 아니다)
+    const { error } = await db.from('messages').insert({ session_id: sessionId, role, content, origin: 'handoff' })
     if (error) console.error('[os/relay] 말 저장 실패:', error.message)
     await db.from('chat_sessions').update({ last_message_at: new Date().toISOString() }).eq('id', sessionId)
 }
@@ -106,6 +107,12 @@ export async function POST(req: Request) {
 
         // ② 지금 방의 봇이 내 봇인가
         await assertBotOwned(db, user.id, fromMentorId)
+
+        // 넘긴 방(fromSessionId)이 내 방이고 그 봇 방일 때만 쓴다(남의 방에 글 심기 차단)
+        if (fromSessionId) {
+            const { data: owned } = await db.from('chat_sessions').select('id').eq('id', fromSessionId).eq('user_id', user.id).eq('mentor_id', fromMentorId).maybeSingle()
+            if (!owned) return NextResponse.json({ relayed: false, error: '내 대화방이 아니에요' }, { status: 403 })
+        }
 
         const team = await myTeam(db, user.id)
         const from = team.find(b => b.mentor_id === fromMentorId)

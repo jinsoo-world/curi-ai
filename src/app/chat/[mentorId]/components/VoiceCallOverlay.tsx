@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { VOICE_FREE_TOTAL_SECONDS, VOICE_MAX_CALL_SECONDS } from '@/domains/chat/constants'
 
 /** 서버가 봇 답에 찍어준 읽기표 (지금까지의 봇 답 + 도장) */
-type TtsGrant = { text: string; ts: number; sig: string }
+type TtsGrant = { text: string; ts: number; sig: string; from: number } | { crisis: true }
 
 interface VoiceCallOverlayProps {
     isOpen: boolean
@@ -340,7 +340,7 @@ export default function VoiceCallOverlay({
                 if (!grant) return
                 const idx = sentenceIndex++
                 totalSlotsRef.current = sentenceIndex
-                enqueueTts({ mentorId, sentence, grant }, idx, controller)
+                enqueueTts('crisis' in grant ? { mentorId, greeting: 'crisis' } : { mentorId, sentence, grant }, idx, controller)
             }
 
             await onStreamMessage(text, onSentence, controller.signal)

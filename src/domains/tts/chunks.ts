@@ -57,3 +57,47 @@ export function answerToChunks(content: string): string[] {
 export function normalizeForMatch(text: string): string {
     return text.replace(/\s+/g, ' ').trim()
 }
+
+/** 소리로 읽는 문장의 최소 길이(이보다 짧은 조각은 따로 요청해 읽지 않는다) */
+export const MIN_SPEAK_CHARS = 8
+
+/** 마크다운·공백을 정리한 비교용 글 */
+function plain(text: string): string {
+    return normalizeForMatch(stripMarkdown(text))
+}
+
+/**
+ * 봇의 답 조각이 바로 앞 사용자 말을 그대로 베낀 것인가.
+ * 사용자가 글을 써 넣고 봇 목소리로 읽히게 하는 「따라 말하기」를 막는다.
+ * - 사용자 말의 앞 30자(8자 이상)가 조각 안에 그대로 있으면 베낌
+ * - 조각(8자 이상) 전체가 사용자 말 안에 그대로 들어 있어도 베낌
+ */
+export function echoesUserText(chunk: string, userText: string | null | undefined): boolean {
+    if (!userText) return false
+    const u = plain(userText)
+    const c = plain(chunk)
+    if (u.length < MIN_SPEAK_CHARS || c.length < MIN_SPEAK_CHARS) return false
+    const head = u.slice(0, 30)
+    return c.includes(head) || u.includes(c)
+}
+
+/**
+ * 도장 찍힌 글(text) 안에서 sentence 가 「문장 경계에서 시작하는 한 구간」인가.
+ * 경계 = 글 맨 앞이거나 바로 앞이 공백. 최소 8자. 단, 답의 맨 처음 문장(headOfAnswer)은 「네!」 같은 짧은 추임새라 2자부터 허용.
+ */
+export function isSentenceInText(sentence: string, text: string, headOfAnswer: boolean): boolean {
+    const s = normalizeForMatch(sentence)
+    const t = normalizeForMatch(text)
+    if (!s) return false
+    let at = t.indexOf(s)
+    if (s.length < MIN_SPEAK_CHARS) {
+        // 짧은 문장은 답의 맨 처음 것만
+        return headOfAnswer && s.length >= 2 && t.startsWith(s)
+    }
+    while (at !== -1) {
+        // 글 맨 앞(창은 답의 처음이거나 공백 뒤에서 시작한다) 또는 바로 앞이 공백
+        if (at === 0 || t[at - 1] === ' ') return true
+        at = t.indexOf(s, at + 1)
+    }
+    return false
+}

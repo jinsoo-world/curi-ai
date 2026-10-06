@@ -1227,7 +1227,7 @@ export default function ChatPage() {
                         voiceSampleUrl={mentor.voice_sample_url}
                         voiceId={mentor.voice_id}
                         userName={userName}
-                        onStreamMessage={async (text: string, onSentence: (s: string, grant?: { text: string; ts: number; sig: string }) => void, signal: AbortSignal) => {
+                        onStreamMessage={async (text: string, onSentence: (s: string, grant?: { text: string; ts: number; sig: string; from: number } | { crisis: true }) => void, signal: AbortSignal) => {
                             // 📝 사용자 발화를 채팅에 추가
                             const userMsg: ChatMessage = { id: `voice-user-${Date.now()}`, role: 'user', content: text, createdAt: new Date().toISOString() }
                             setMessages(prev => [...prev, userMsg])
@@ -1264,7 +1264,7 @@ export default function ChatPage() {
 
                             let fullResponse = ''
                             let sentenceBuffer = ''
-                            let liveGrant: { text: string; ts: number; sig: string } | undefined // 서버가 찍어준 읽기표(지금까지의 봇 답 + 도장)
+                            let liveGrant: { text: string; ts: number; sig: string; from: number } | undefined // 서버가 찍어준 읽기표(지금까지의 봇 답 + 도장)
                             let voiceSavedId: string | undefined
                             let isFirstSentence = true // ⚡ 동적 청킹: 첫 문장 즉시 발사
                             const decoder = new TextDecoder()
@@ -1285,7 +1285,7 @@ export default function ChatPage() {
                                             if (chunk) {
                                                 fullResponse += chunk
                                                 sentenceBuffer += chunk
-                                                if (json.ttsGrant) liveGrant = { text: fullResponse, ts: json.ttsGrant.ts, sig: json.ttsGrant.sig }
+                                                if (json.ttsGrant) liveGrant = { text: fullResponse.slice(json.ttsGrant.from ?? 0), ts: json.ttsGrant.ts, sig: json.ttsGrant.sig, from: json.ttsGrant.from ?? 0 }
 
                                                 // ⚡ 한국어 문장 감지 — 3단계
                                                 let cutIndex = -1
@@ -1337,6 +1337,8 @@ export default function ChatPage() {
                                                 fullResponse = json.fullResponse
                                             }
                                             if (typeof json.messageId === 'string') voiceSavedId = json.messageId
+                                            // 위기 안내는 서버가 정한 고정 문구로 읽는다
+                                            if (json.crisis === true) onSentence('위기 안내', { crisis: true })
                                         } catch { /* skip */ }
                                     }
                                 }

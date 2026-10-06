@@ -3,8 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
 import { logLlmUsage } from '@/domains/llm/usage-log'
-import { answerToChunks, normalizeForMatch, stripMarkdown, TTS_CHUNK_MAX } from '@/domains/tts/chunks'
+import { answerToChunks, echoesUserText, isSentenceInText, MIN_SPEAK_CHARS, normalizeForMatch, TTS_CHUNK_MAX } from '@/domains/tts/chunks'
 import { verifyGrant } from '@/domains/tts/grant'
+import { chargeDailyChars } from '@/domains/tts/quota'
 
 const ADMIN_EMAIL = 'jin@mission-driven.kr'
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -26,20 +27,23 @@ const PREVIEW_LINES: Record<string, string> = {
 }
 const DEFAULT_PREVIEW_LINE = '안녕하세요, 큐리 AI 봇입니다. 무엇이든 물어보세요!'
 const OWNER_PREVIEW_MAX = 200
+/** 위기 상담 안내(통화에서도 읽는 고정 문구, 채팅 화면의 CRISIS_RESPONSE 를 소리용으로 줄인 것) */
+const CRISIS_SPOKEN = '지금 많이 힘드신 것 같아서 걱정돼요. 혼자 감당하지 않으셔도 돼요. 자살예방상담전화 1393, 정신건강위기상담전화 1577-0199로 지금 바로 연락해 보세요. 24시간 도움을 받으실 수 있어요.'
+type Db = ReturnType<typeof createAdminClient>
 
 type Mentor = { id: string; name: string | null; voice_id: string | null; is_active: boolean | null; creator_id: string | null }
 type Reading = { text: string; voiceId: string | null; mentorId: string | null }
 type Fail = { error: string; status: number }
 const fail = (error: string, status: number): Fail => ({ error, status })
 
-async function loadMentor(db: ReturnType<typeof createAdminClient>, mentorId: unknown): Promise<Mentor | null> {
+async function loadMentor(db: Db, mentorId: unknown): Promise<Mentor | null> {
     if (typeof mentorId !== 'string' || !mentorId) return null
     const { data } = await db.from('mentors').select('id, name, voice_id, is_active, creator_id').eq('id', mentorId).maybeSingle()
     return (data as Mentor | null) ?? null
 }
 
 /** 이 봇이 내 봇인가(주인 = 크리에이터 프로필 · 봇 팀 · 어드민) */
-async function isMyMentor(db: ReturnType<typeof createAdminClient>, user: { id: string; email?: string | null }, mentor: Mentor): Promise<boolean> {
+async function isMyMentor(db: Db, user: { id: string; email?: string | null }, mentor: Mentor): Promise<boolean> {
     if (user.email === ADMIN_EMAIL) return true
     const { data: mine } = await db.from('creator_profiles').select('id').eq('user_id', user.id)
     if (mentor.creator_id && ((mine ?? []) as { id: string }[]).some(c => c.id === mentor.creator_id)) return true
@@ -48,54 +52,69 @@ async function isMyMentor(db: ReturnType<typeof createAdminClient>, user: { id: 
 }
 
 /** 공개 봇이거나 내 봇이면 읽을 수 있다 */
-async function canUseMentor(db: ReturnType<typeof createAdminClient>, user: { id: string; email?: string | null }, mentor: Mentor): Promise<boolean> {
+async function canUseMentor(db: Db, user: { id: string; email?: string | null }, mentor: Mentor): Promise<boolean> {
     return !!mentor.is_active || (await isMyMentor(db, user, mentor))
 }
 
+/** 이 메시지 바로 앞의 사용자 말 (따라 말하기 검사용) */
+async function precedingUserText(db: Db, sessionId: string, before: string | null): Promise<string | null> {
+    let q = db.from('messages').select('content').eq('session_id', sessionId).eq('role', 'user')
+    if (before) q = q.lt('created_at', before)
+    const { data } = await q.order('created_at', { ascending: false }).limit(1)
+    return ((data ?? []) as { content: string }[])[0]?.content ?? null
+}
+
 /** ① 저장된 봇 답(message 식별자)의 몇 번째 조각 */
-async function readSavedMessage(db: ReturnType<typeof createAdminClient>, userId: string, body: Record<string, unknown>): Promise<(Reading & { part: number; parts: number }) | Fail> {
+async function readSavedMessage(db: Db, user: { id: string; email?: string | null }, body: Record<string, unknown>): Promise<(Reading & { part: number; parts: number }) | Fail> {
     const { messageId } = body
     if (typeof messageId !== 'string' || !UUID_RE.test(messageId)) return fail('메시지를 찾을 수 없어요.', 400)
     const part = typeof body.part === 'number' && Number.isInteger(body.part) && body.part >= 0 ? body.part : 0
-    const { data: msg } = await db.from('messages').select('id, role, content, session_id').eq('id', messageId).maybeSingle()
-    const m = msg as { id: string; role: string; content: string; session_id: string | null } | null
-    // 봇의 답만. 사용자 말·시스템 글은 읽지 않는다
-    if (!m || m.role !== 'assistant' || !m.session_id) return fail('이 글은 읽을 수 없어요.', 403)
+    const { data: msg } = await db.from('messages').select('id, role, content, session_id, origin, created_at').eq('id', messageId).maybeSingle()
+    const m = msg as { id: string; role: string; content: string; session_id: string | null; origin: string | null; created_at: string | null } | null
+    // 봇이 서버에서 실제로 만든 답만(origin='server'). 손님이 가져온 글·넘김 글은 읽지 않는다
+    if (!m || m.role !== 'assistant' || !m.session_id || m.origin !== 'server') return fail('이 글은 읽을 수 없어요.', 403)
     const { data: sess } = await db.from('chat_sessions').select('user_id, mentor_id').eq('id', m.session_id).maybeSingle()
     const s = sess as { user_id: string | null; mentor_id: string | null } | null
     // 내 대화방의 답만
-    if (!s || s.user_id !== userId) return fail('이 글은 읽을 수 없어요.', 403)
+    if (!s || s.user_id !== user.id) return fail('이 글은 읽을 수 없어요.', 403)
     const chunks = answerToChunks(m.content)
     if (chunks.length === 0 || part >= chunks.length) return fail('읽을 내용이 없어요.', 404)
+    // 그 봇의 목소리를 쓸 권한(공개 봇이거나 내 봇) — 남의 비공개 봇은 막는다
     const mentor = await loadMentor(db, s.mentor_id)
+    if (mentor && !(await canUseMentor(db, user, mentor))) return fail('이 목소리는 쓸 수 없어요.', 403)
+    // 사용자 말을 그대로 따라 한 조각은 읽지 않는다
+    if (echoesUserText(chunks[part], await precedingUserText(db, m.session_id, m.created_at))) return fail('이 글은 읽을 수 없어요.', 403)
     return { text: chunks[part], voiceId: mentor?.voice_id ?? null, mentorId: mentor?.id ?? null, part, parts: chunks.length }
 }
 
 /** ② 통화 중 실시간 문장 — 서버가 찍어준 도장이 맞는 글 안의 문장만 */
-async function readLiveSentence(db: ReturnType<typeof createAdminClient>, user: { id: string; email?: string | null }, body: Record<string, unknown>): Promise<Reading | Fail> {
-    const grant = body.grant as { text?: unknown; ts?: unknown; sig?: unknown } | undefined
+async function readLiveSentence(db: Db, user: { id: string; email?: string | null }, body: Record<string, unknown>): Promise<Reading | Fail> {
+    const grant = body.grant as { text?: unknown; ts?: unknown; sig?: unknown; from?: unknown } | undefined
     const sentence = body.sentence
     const mentor = await loadMentor(db, body.mentorId)
     if (!mentor || !grant || typeof sentence !== 'string') return fail('읽을 수 없어요.', 400)
-    if (!verifyGrant(user.id, mentor.id, { text: grant.text, ts: grant.ts, sig: grant.sig })) return fail('읽을 수 없어요.', 403)
+    if (!verifyGrant(user.id, mentor.id, { text: grant.text, ts: grant.ts, sig: grant.sig, from: grant.from })) return fail('읽을 수 없어요.', 403)
+    // 도장 찍힌 글 안에서 문장 경계에서 시작하는 구간(8자 이상, 답의 첫 문장만 짧아도 됨)만
     const s = normalizeForMatch(sentence)
-    if (s.length < 1 || s.length > TTS_CHUNK_MAX || !normalizeForMatch(grant.text as string).includes(s)) return fail('읽을 수 없어요.', 403)
+    if (s.length > TTS_CHUNK_MAX || !isSentenceInText(s, grant.text as string, grant.from === 0)) return fail('읽을 수 없어요.', 403)
     if (!(await canUseMentor(db, user, mentor))) return fail('이 목소리는 쓸 수 없어요.', 403)
     return { text: s, voiceId: mentor.voice_id, mentorId: mentor.id }
 }
 
 /** ③ 통화 첫 인사·조용할 때 말 거는 문구 — 문구는 서버가 만든다 */
-async function readGreeting(db: ReturnType<typeof createAdminClient>, user: { id: string; email?: string | null }, body: Record<string, unknown>): Promise<Reading | Fail> {
+async function readGreeting(db: Db, user: { id: string; email?: string | null }, body: Record<string, unknown>): Promise<Reading | Fail> {
     const mentor = await loadMentor(db, body.mentorId)
     if (!mentor || !(await canUseMentor(db, user, mentor))) return fail('이 목소리는 쓸 수 없어요.', 403)
+    if (body.greeting === 'crisis') return { text: CRISIS_SPOKEN, voiceId: mentor.voice_id, mentorId: mentor.id }
     if (body.greeting === 'idle') return { text: '아직 계세요? 궁금한 게 있으면 편하게 말씀해 주세요!', voiceId: mentor.voice_id, mentorId: mentor.id }
     const { data: prof } = await db.from('users').select('display_name').eq('id', user.id).maybeSingle()
-    const name = String((prof as { display_name?: string | null } | null)?.display_name || '').trim().slice(0, 20) || '회원'
+    // 이름은 한글·영문·숫자만 10자(이름 칸에 글을 심어 읽히는 것을 막는다)
+    const name = String((prof as { display_name?: string | null } | null)?.display_name || '').replace(/[^가-힣a-zA-Z0-9]/g, '').slice(0, 10) || '회원'
     return { text: `네, ${name}님! ${mentor.name || '큐리'}입니다, 반갑습니다!`, voiceId: mentor.voice_id, mentorId: mentor.id }
 }
 
 /** ④ 미리 듣기 — 공개 봇은 고정 문구, 내 봇은 주인이 쓴 짧은 문장(200자) */
-async function readPreview(db: ReturnType<typeof createAdminClient>, user: { id: string; email?: string | null }, body: Record<string, unknown>): Promise<Reading | Fail> {
+async function readPreview(db: Db, user: { id: string; email?: string | null }, body: Record<string, unknown>): Promise<Reading | Fail> {
     const mentor = await loadMentor(db, body.mentorId)
     if (typeof body.ownerPreview === 'string') {
         if (mentor) {
@@ -114,23 +133,24 @@ async function readPreview(db: ReturnType<typeof createAdminClient>, user: { id:
     return { text: PREVIEW_LINES[mentor.name ?? ''] || DEFAULT_PREVIEW_LINE, voiceId: mentor.voice_id, mentorId: mentor.id }
 }
 
-/** ⑤ 옛 방식(text) — 내 대화방 최근 봇 답에 들어 있는 글일 때만, 목소리는 그 답의 봇 것 */
-async function readLegacyText(db: ReturnType<typeof createAdminClient>, userId: string, body: Record<string, unknown>): Promise<Reading | Fail> {
+/** ⑤ 옛 방식(text) — 내 대화방 최근 봇 답(origin='server')의 읽을 조각과 정확히 같은 글일 때만, 목소리는 그 답의 봇 것 */
+async function readLegacyText(db: Db, user: { id: string; email?: string | null }, body: Record<string, unknown>): Promise<Reading | Fail> {
     if (Date.now() >= LEGACY_TEXT_UNTIL) return fail('앱을 최신 버전으로 업데이트해 주세요.', 410)
     if (typeof body.text !== 'string') return fail('텍스트가 필요합니다.', 400)
     const wanted = normalizeForMatch(body.text.slice(0, TTS_CHUNK_MAX))
-    if (!wanted) return fail('텍스트가 필요합니다.', 400)
-    const { data: sessions } = await db.from('chat_sessions').select('id, mentor_id').eq('user_id', userId)
+    if (wanted.length < MIN_SPEAK_CHARS) return fail('이 글은 읽을 수 없어요.', 403)
+    const { data: sessions } = await db.from('chat_sessions').select('id, mentor_id').eq('user_id', user.id)
         .order('last_message_at', { ascending: false, nullsFirst: false }).limit(5)
     const sess = (sessions ?? []) as { id: string; mentor_id: string | null }[]
     if (sess.length === 0) return fail('이 글은 읽을 수 없어요.', 403)
-    const { data: msgs } = await db.from('messages').select('content, session_id').in('session_id', sess.map(x => x.id))
-        .eq('role', 'assistant').order('created_at', { ascending: false }).limit(20)
-    for (const m of (msgs ?? []) as { content: string; session_id: string }[]) {
-        if (normalizeForMatch(stripMarkdown(m.content)).includes(wanted)) {
-            const mentor = await loadMentor(db, sess.find(x => x.id === m.session_id)?.mentor_id)
-            return { text: wanted, voiceId: mentor?.voice_id ?? null, mentorId: mentor?.id ?? null }
-        }
+    const { data: msgs } = await db.from('messages').select('content, session_id, created_at').in('session_id', sess.map(x => x.id))
+        .eq('role', 'assistant').eq('origin', 'server').order('created_at', { ascending: false }).limit(20)
+    for (const m of (msgs ?? []) as { content: string; session_id: string; created_at: string | null }[]) {
+        if (!answerToChunks(m.content).some(c => normalizeForMatch(c) === wanted)) continue
+        const mentor = await loadMentor(db, sess.find(x => x.id === m.session_id)?.mentor_id)
+        if (mentor && !(await canUseMentor(db, user, mentor))) return fail('이 목소리는 쓸 수 없어요.', 403)
+        if (echoesUserText(wanted, await precedingUserText(db, m.session_id, m.created_at))) return fail('이 글은 읽을 수 없어요.', 403)
+        return { text: wanted, voiceId: mentor?.voice_id ?? null, mentorId: mentor?.id ?? null }
     }
     return fail('이 글은 읽을 수 없어요.', 403)
 }
@@ -159,23 +179,28 @@ export async function POST(request: NextRequest) {
         let part: number | undefined
         let parts: number | undefined
         if (body.messageId !== undefined) {
-            const r = await readSavedMessage(db, user.id, body)
+            const r = await readSavedMessage(db, user, body)
             reading = r
             if (!('error' in r)) { part = r.part; parts = r.parts }
         } else if (body.grant !== undefined) {
             reading = await readLiveSentence(db, user, body)
-        } else if (body.greeting === true || body.greeting === 'idle') {
+        } else if (body.greeting === true || body.greeting === 'idle' || body.greeting === 'crisis') {
             reading = await readGreeting(db, user, body)
         } else if (body.preview === true || body.ownerPreview !== undefined) {
             reading = await readPreview(db, user, body)
         } else {
-            reading = await readLegacyText(db, user.id, body)
+            reading = await readLegacyText(db, user, body)
         }
         if ('error' in reading) {
             return NextResponse.json({ error: reading.error }, { status: reading.status })
         }
 
         const trimmedText = reading.text.slice(0, TTS_CHUNK_MAX)
+
+        // 사용자별 하루 읽기 글자 수 상한
+        if (!(await chargeDailyChars(db, user.id, trimmedText.length)).allowed) {
+            return NextResponse.json({ error: '오늘 음성으로 들을 수 있는 분량을 다 썼어요. 내일 다시 이용해 주세요.' }, { status: 429 })
+        }
 
         const ELEVENLABS_KEY = process.env.ELEVENLABS_API_KEY
         if (!ELEVENLABS_KEY) {
