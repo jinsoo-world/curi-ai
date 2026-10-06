@@ -42,10 +42,10 @@ export async function GET(req: Request) {
 
     const deps: RenewDeps = {
         async listDue(now, limit, staleBefore) {
-            // 기간이 끝난 active + 결제 중 죽어 10분 넘게 renewing 으로 남은 줄
+            // 기간이 끝난 active·canceled(만료 처리) + 결제 중 죽어 10분 넘게 renewing 으로 남은 줄
             const { data, error } = await supabase.from('subscriptions').select('*')
                 .lte('current_period_end', now.toISOString())
-                .or(`status.eq.active,and(status.eq.renewing,updated_at.lt."${staleBefore.toISOString()}")`)
+                .or(`status.eq.active,status.eq.canceled,and(status.eq.renewing,updated_at.lt."${staleBefore.toISOString()}")`)
                 .order('current_period_end', { ascending: true })
                 .limit(limit)
             if (error) throw new Error(error.message)
@@ -54,7 +54,7 @@ export async function GET(req: Request) {
         async claim(sub, now) {
             // active → renewing 을 바꾼 쪽만 결제한다. renewing 재잡기는 읽은 그 시각(updated_at)일 때만
             let q = supabase.from('subscriptions').update({ status: 'renewing', updated_at: now.toISOString() }).eq('id', sub.id)
-            q = sub.status === 'renewing' ? q.eq('status', 'renewing').eq('updated_at', sub.updated_at) : q.eq('status', 'active')
+            q = sub.status === 'renewing' ? q.eq('status', 'renewing').eq('updated_at', sub.updated_at) : q.eq('status', 'active').is('cancel_requested_at', null)
             const { data, error } = await q.select('id')
             if (error) throw new Error(error.message)
             return (data ?? []).length > 0
