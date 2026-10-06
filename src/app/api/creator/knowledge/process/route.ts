@@ -308,7 +308,7 @@ export async function POST(req: NextRequest) {
             try {
                 const { parseExcel } = await import('@/domains/knowledge/parsers/excel')
                 const buffer = Buffer.from(await fileData.arrayBuffer())
-                textContent = parseExcel(buffer, ext)
+                textContent = await parseExcel(buffer, ext)
                 console.log('[Process] 엑셀 읽음:', source.title, '글자', textContent.length)
             } catch (xlErr) {
                 읽기오류(xlErr)
@@ -354,7 +354,7 @@ export async function POST(req: NextRequest) {
                     console.error('[Process] 한글 kordoc 읽기 실패:', hwpErr instanceof Error ? hwpErr.message : hwpErr)
                 }
             }
-            if (!parsed && textContent.trim().length < 200 && !(await underUpstageCap(admin, pages))) {
+            if (!막힘.v && !parsed && textContent.trim().length < 200 && !(await underUpstageCap(admin, pages))) {
                 await failSource('company_cap_wait')
                 return NextResponse.json({ error: DOC_SPACE_COPY.cap, code: 'cap' }, { status: 503 })
             }
@@ -562,14 +562,15 @@ export async function POST(req: NextRequest) {
         console.log(`[Process] Text: ${textContent.length}chars → ${chunks.length} chunks`)
         let successCount = 0
 
-        for (let i = 0; i < chunks.length; i++) {
+        // 조각을 동시에 5개씩 묶어 처리한다 (하나씩 하면 긴 글에서 maxDuration 에 걸린다). 조각별 실패 처리는 그대로
+        const 한조각 = async (i: number) => {
             try {
                 // 임베딩 글에만 자료 제목, 종류, 소제목을 붙인다 (저장 글은 원문 그대로)
                 const 임베딩글 = contextualEmbeddingText({ title: source.title, sourceType: source.source_type, heading: pieces[i].heading }, chunks[i])
                 const embedding = await generateEmbedding(임베딩글, { route: '/api/creator/knowledge/process', mentorId })
                 if (!embedding || embedding.length === 0) {
                     console.error(`[Process] Chunk ${i}: empty embedding returned`)
-                    continue
+                    return
                 }
                 const { error: insertErr } = await admin.from('knowledge_chunks').insert({
                     source_id: sourceId,
@@ -581,12 +582,16 @@ export async function POST(req: NextRequest) {
                 if (insertErr) {
                     // 여기서 오류를 안 보고 성공으로 세던 것이 조각 0건의 구멍이었다
                     console.error(`[Process] Chunk ${i} 저장 실패:`, JSON.stringify(insertErr))
-                    continue
+                    return
                 }
                 successCount++
             } catch (embErr) {
                 console.error(`[Process] Chunk ${i}/${chunks.length} failed:`, embErr instanceof Error ? embErr.message : embErr)
             }
+        }
+        const 동시 = 5
+        for (let i = 0; i < chunks.length; i += 동시) {
+            await Promise.all(Array.from({ length: Math.min(동시, chunks.length - i) }, (_, k) => 한조각(i + k)))
         }
         console.log(`[Process] Embedding result: ${successCount}/${chunks.length} chunks OK`)
         // 조각이 하나도 안 들어갔으면 「다 읽음」이 아니라 「못 읽음」이다 (예전에는 조각 0개로 다 읽음이 됐다)

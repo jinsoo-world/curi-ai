@@ -5,7 +5,7 @@
 import { assertZipSafe, asPasswordError, limitText, PasswordProtectedError } from './safety'
 
 export async function parseHangul(buffer: Buffer): Promise<string> {
-    assertZipSafe(buffer)
+    await assertZipSafe(buffer)
     const { parse } = await import('kordoc')
     const r = await parse(buffer, { ocr: false })
     if (!r.success) {

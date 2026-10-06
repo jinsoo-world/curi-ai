@@ -45,7 +45,9 @@ function 쓴범위(시트: XLSX.WorkSheet): { 범위: XLSX.Range; 크다: boolea
         if (c > e.c) e.c = c
     }
     if (!칸있음) return null
-    const 크다 = e.r - s.r + 1 > MAX_ROWS || e.c - s.c + 1 > MAX_COLS
+    // sheetRows 로 잘린 시트는 원래 범위가 !fullref 에 남는다
+    const 원래 = 시트['!fullref'] ? XLSX.utils.decode_range(시트['!fullref']) : null
+    const 크다 = e.r - s.r + 1 > MAX_ROWS || e.c - s.c + 1 > MAX_COLS || (!!원래 && (원래.e.r - 원래.s.r + 1 > MAX_ROWS || 원래.e.c - 원래.s.c + 1 > MAX_COLS))
     if (!크다) return { 범위: { s, e }, 크다 }
     // 창 밖에 흩어진 칸(끝 칸 하나 등)은 버리고, 창 안에 실제로 있는 칸까지만 읽는다
     for (const { r, c } of 칸들) {
@@ -57,14 +59,14 @@ function 쓴범위(시트: XLSX.WorkSheet): { 범위: XLSX.Range; 크다: boolea
     return { 범위: { s, e: { r: Math.max(창.r, s.r), c: Math.max(창.c, s.c) } }, 크다 }
 }
 
-export function parseExcel(buffer: Buffer, ext = ''): string {
+export async function parseExcel(buffer: Buffer, ext = ''): Promise<string> {
     let wb: XLSX.WorkBook
     try {
         if (ext === 'csv') {
-            wb = XLSX.read(csv글(buffer), { type: 'string' })
+            wb = XLSX.read(csv글(buffer), { type: 'string', sheetRows: MAX_ROWS + 1 })
         } else {
-            assertZipSafe(buffer)
-            wb = XLSX.read(buffer, { type: 'buffer' })
+            await assertZipSafe(buffer)
+            wb = XLSX.read(buffer, { type: 'buffer', sheetRows: MAX_ROWS + 1 })
         }
     } catch (err) {
         throw asPasswordError(err)

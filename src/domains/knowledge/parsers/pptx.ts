@@ -51,7 +51,7 @@ export async function parsePptx(buffer: Buffer): Promise<{ text: string; slides:
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { parse } = require('pptxtojson/dist/index.cjs') as { parse: (data: ArrayBuffer) => Promise<{ slides?: Slide[] }> }
     const ab = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer
-    assertZipSafe(buffer)
+    await assertZipSafe(buffer)
     let result: { slides?: Slide[] }
     try {
         result = await parse(ab)

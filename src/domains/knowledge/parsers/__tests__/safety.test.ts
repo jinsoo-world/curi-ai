@@ -20,29 +20,29 @@ describe('엑셀 범위 폭탄', () => {
         z.file('xl/worksheets/sheet1.xml', xml)
         const buf = Buffer.from(await z.generateAsync({ type: 'uint8array' }))
         const t = Date.now()
-        const out = parseExcel(buf, 'xlsx')
+        const out = await parseExcel(buf, 'xlsx')
         expect(Date.now() - t).toBeLessThan(5000)
         expect(out).toContain('홍길동,90')
         expect(out).toContain('[표가 너무 커서 앞부분만 읽었어요]')
     })
-    it('5만 행을 넘으면 앞부분만 읽고 표시한다', () => {
+    it('5만 행을 넘으면 앞부분만 읽고 표시한다', async () => {
         const rows = Array.from({ length: 50_010 }, (_, i) => [`행${i}`])
         const wb = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), '큰표')
-        const out = parseExcel(Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })), 'xlsx')
+        const out = await parseExcel(Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })), 'xlsx')
         expect(out).toContain('행49999')
         expect(out).not.toContain('행50000\n')
         expect(out).toContain('[표가 너무 커서 앞부분만 읽었어요]')
     })
-    it('작은 표에는 표시가 안 붙는다', () => {
+    it('작은 표에는 표시가 안 붙는다', async () => {
         const wb = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['가']]), 's')
-        expect(parseExcel(Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })), 'xlsx')).not.toContain('너무 커서')
+        expect(await parseExcel(Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })), 'xlsx')).not.toContain('너무 커서')
     })
 })
 
 describe('뽑은 글 상한', () => {
-    it('50만 자를 넘으면 자르고 표시한다', () => {
+    it('50만 자를 넘으면 자르고 표시한다', async () => {
         const r = limitText('가'.repeat(MAX_TEXT_CHARS + 10))
         expect(r.truncated).toBe(true)
         expect(r.text.startsWith('가'.repeat(MAX_TEXT_CHARS))).toBe(true)
@@ -59,25 +59,52 @@ describe('압축 폭탄', () => {
     }
     it('압축률 100배 초과는 거절 (20MB 가 수십 KB)', async () => {
         const b = await 폭탄zip(20 * 1024 * 1024)
-        expect(() => assertZipSafe(b)).toThrow(UnsafeFileError)
-        expect(() => parseExcel(b, 'xlsx')).toThrow(UnsafeFileError)
+        await expect(assertZipSafe(b)).rejects.toThrow(UnsafeFileError)
+        await expect(parseExcel(b, 'xlsx')).rejects.toThrow(UnsafeFileError)
         await expect(parseWord(b)).rejects.toThrow(UnsafeFileError)
         await expect(parsePptx(b)).rejects.toThrow(UnsafeFileError)
     })
-    it('원래 크기 합계 200MB 초과는 거절', async () => {
-        // 작은 zip 의 목차에 적힌 원래 크기를 210MB 로 고쳐 만든다
+    it('풀린 크기 합계가 한도를 넘으면 거절 (무압축·압축 항목 모두 세어 합산)', async () => {
         const z = new JSZip()
-        z.file('a.txt', 'x'.repeat(5000))
-        const b = Buffer.from(await z.generateAsync({ type: 'uint8array', compression: 'STORE' }))
-        b.writeUInt32LE(210 * 1024 * 1024, b.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02])) + 24)
-        expect(() => assertZipSafe(b)).toThrow(/너무 큽니다/)
+        z.file('a.txt', 'x'.repeat(5000), { compression: 'STORE' })
+        z.file('b.txt', 'y'.repeat(5000), { compression: 'DEFLATE' })
+        const b = Buffer.from(await z.generateAsync({ type: 'uint8array' }))
+        await expect(assertZipSafe(b, { maxUnzipped: 8000, maxRatio: 1e9 })).rejects.toThrow(/너무 큽니다/)
+        await expect(assertZipSafe(b, { maxUnzipped: 12000, maxRatio: 1e9 })).resolves.toBeUndefined()
+    })
+    it('목차에 풀린 크기를 거짓으로 적어도 실제로 풀어 세어 거절한다', async () => {
+        // 풀면 20MB 인 압축 항목의 목차(중앙·지역)에 풀린 크기를 1000 으로 속여 적는다. 한도는 10MB 로 낮춰 즉석 시험
+        const 진짜 = await 폭탄zip(20 * 1024 * 1024)
+        const 거짓 = Buffer.from(진짜)
+        const 중앙 = 거짓.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]))
+        거짓.writeUInt32LE(1000, 중앙 + 24)
+        const 지역 = 거짓.indexOf(Buffer.from([0x50, 0x4b, 0x03, 0x04]))
+        거짓.writeUInt32LE(1000, 지역 + 22)
+        await expect(assertZipSafe(거짓, { maxUnzipped: 10 * 1024 * 1024, maxRatio: 1e9 })).rejects.toThrow(/너무 큽니다/)
+        // 거짓 크기가 아니라도 같은 결과, 한도 안이면 통과
+        await expect(assertZipSafe(거짓, { maxUnzipped: 30 * 1024 * 1024, maxRatio: 1e9 })).resolves.toBeUndefined()
+    })
+    it('거짓 크기 docx 는 파서에 가기 전에 막힌다(작은 한도로)', async () => {
+        const z = new JSZip()
+        z.file('word/document.xml', Buffer.alloc(3 * 1024 * 1024, 0x61))
+        const b = Buffer.from(await z.generateAsync({ type: 'uint8array', compression: 'DEFLATE', compressionOptions: { level: 9 } }))
+        b.writeUInt32LE(10, b.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02])) + 24)
+        // 압축률 100배 한도로도 막힌다 (3MB 가 수 KB)
+        await expect(parseWord(b)).rejects.toThrow(UnsafeFileError)
+        await expect(parsePptx(b)).rejects.toThrow(UnsafeFileError)
+    })
+    it('지원 않는 압축 방식(bzip2=12)은 거절', async () => {
+        const z = new JSZip(); z.file('a.txt', 'x'.repeat(5000))
+        const b = Buffer.from(await z.generateAsync({ type: 'uint8array', compression: 'DEFLATE' }))
+        b.writeUInt16LE(12, b.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02])) + 10)
+        await expect(assertZipSafe(b)).rejects.toThrow(/압축 방식/)
     })
     it('보통 파일은 통과', async () => {
         const z = new JSZip()
         z.file('a.txt', 'hello world '.repeat(10))
         const 보통 = Buffer.from(await z.generateAsync({ type: 'uint8array' }))
-        expect(() => assertZipSafe(보통)).not.toThrow()
-        expect(() => assertZipSafe(Buffer.from('plain text'))).not.toThrow()
+        await expect(assertZipSafe(보통)).resolves.toBeUndefined()
+        await expect(assertZipSafe(Buffer.from('plain text'))).resolves.toBeUndefined()
     })
 })
 
@@ -94,9 +121,9 @@ describe('CSV 글자 방식', () => {
     it('EUC-KR 은 깨짐이 적은 쪽으로', () => {
         expect(csv글(Buffer.from([0xb0, 0xa1, 0xb3, 0xaa, 0xb4, 0xd9, 0x2c, 0x31]))).toBe('가나다,1')
     })
-    it('utf-16 csv 가 엑셀 읽기를 끝까지 통과', () => {
+    it('utf-16 csv 가 엑셀 읽기를 끝까지 통과', async () => {
         const buf = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('이름,나이\n가나다,3', 'utf16le')])
-        expect(parseExcel(buf, 'csv')).toContain('가나다,3')
+        expect(await parseExcel(buf, 'csv')).toContain('가나다,3')
     })
 })
 

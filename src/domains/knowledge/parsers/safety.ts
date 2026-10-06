@@ -1,4 +1,5 @@
 // 파일 읽기 전 안전 점검: 압축 폭탄, 암호 걸린 파일, 너무 긴 글.
+import { createInflateRaw } from 'zlib'
 import * as XLSX from 'xlsx'
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024
@@ -28,12 +29,20 @@ export function limitText(text: string): { text: string; truncated: boolean } {
 }
 
 /**
- * zip(xlsx·docx·pptx·hwpx) 목차만 읽어 압축 풀었을 때 크기를 센다. 풀기 전에 부른다.
- * 원래 크기 합계 200MB 초과, 또는 압축률 100배 초과면 거절. zip 이 아니면 아무 일도 안 한다.
+ * zip(xlsx·docx·pptx·hwpx) 을 파서에 넘기기 전에 실제로 풀어 보며 바이트만 센다.
+ * 목차(중앙 디렉터리)에 적힌 풀린 크기는 거짓일 수 있어(408KB 가 400MB 로 풀린 사례) 믿지 않는다.
+ * - deflate 항목: 흐름 방식 inflate 로 풀며 세다가 누적이 한도를 넘는 순간 중단 (메모리는 조각 하나만)
+ * - stored(무압축) 항목: 압축 크기 그대로
+ * - 그 밖의 압축 방식·zip64: 거절
+ * 한도: 풀린 크기 합계 200MB, 압축률 100배. zip 이 아니면 아무 일도 안 한다.
  */
-export function assertZipSafe(buffer: Buffer): void {
+export async function assertZipSafe(
+    buffer: Buffer,
+    opts: { maxUnzipped?: number; maxRatio?: number } = {},
+): Promise<void> {
+    const maxUnzipped = opts.maxUnzipped ?? MAX_UNZIPPED_BYTES
+    const maxRatio = opts.maxRatio ?? MAX_ZIP_RATIO
     if (buffer.length < 22 || buffer[0] !== 0x50 || buffer[1] !== 0x4b) return
-    // 끝에서 목차 끝 표시(0x06054b50) 찾기
     let eocd = -1
     for (let i = buffer.length - 22; i >= Math.max(0, buffer.length - 22 - 65535); i--) {
         if (buffer.readUInt32LE(i) === 0x06054b50) { eocd = i; break }
@@ -42,13 +51,43 @@ export function assertZipSafe(buffer: Buffer): void {
     const count = buffer.readUInt16LE(eocd + 10)
     let off = buffer.readUInt32LE(eocd + 16)
     let total = 0
-    for (let n = 0; n < count && off + 46 <= buffer.length; n++) {
-        if (buffer.readUInt32LE(off) !== 0x02014b50) break
-        total += buffer.readUInt32LE(off + 24)
+    for (let n = 0; n < count; n++) {
+        if (off + 46 > buffer.length || buffer.readUInt32LE(off) !== 0x02014b50) break
+        const method = buffer.readUInt16LE(off + 10)
+        const compSize = buffer.readUInt32LE(off + 20)
+        const lho = buffer.readUInt32LE(off + 42)
         off += 46 + buffer.readUInt16LE(off + 28) + buffer.readUInt16LE(off + 30) + buffer.readUInt16LE(off + 32)
+        if (compSize === 0xffffffff || lho === 0xffffffff) throw new UnsafeFileError('zip64 파일은 읽지 않습니다')
+        if (method === 0) {
+            total += compSize
+        } else if (method === 8) {
+            if (lho + 30 > buffer.length || buffer.readUInt32LE(lho) !== 0x04034b50) throw new UnsafeFileError('깨진 압축 파일입니다')
+            const start = lho + 30 + buffer.readUInt16LE(lho + 26) + buffer.readUInt16LE(lho + 28)
+            if (start + compSize > buffer.length) throw new UnsafeFileError('깨진 압축 파일입니다')
+            total += await countInflated(buffer.subarray(start, start + compSize), maxUnzipped - total)
+        } else {
+            throw new UnsafeFileError('지원하지 않는 압축 방식입니다')
+        }
+        if (total > maxUnzipped) throw new UnsafeFileError(`압축을 풀면 ${maxUnzipped / 1048576}MB 를 넘어 너무 큽니다`)
     }
-    if (total > MAX_UNZIPPED_BYTES) throw new UnsafeFileError(`압축을 풀면 ${Math.round(total / 1048576)}MB 라 너무 큽니다`)
-    if (total / Math.max(buffer.length, 1) > MAX_ZIP_RATIO) throw new UnsafeFileError('압축률이 비정상적으로 높은 파일입니다')
+    if (total / Math.max(buffer.length, 1) > maxRatio) throw new UnsafeFileError('압축률이 비정상적으로 높은 파일입니다')
+}
+
+/** deflate 조각을 흐름으로 풀어 바이트만 센다. limit 를 넘는 순간 멈추고 limit+1 이상을 돌려준다 */
+function countInflated(data: Buffer, limit: number): Promise<number> {
+    return new Promise((resolve) => {
+        const inflate = createInflateRaw()
+        let n = 0
+        let done = false
+        const finish = (v: number) => { if (!done) { done = true; inflate.destroy(); resolve(v) } }
+        inflate.on('data', (c: Buffer) => {
+            n += c.length
+            if (n > limit) finish(n)
+        })
+        inflate.on('end', () => finish(n))
+        inflate.on('error', () => finish(n)) // 깨진 조각은 읽는 쪽 파서가 실패시킨다
+        inflate.end(data)
+    })
 }
 
 const 암호문구 = /password|passphrase|encrypt|암호/i

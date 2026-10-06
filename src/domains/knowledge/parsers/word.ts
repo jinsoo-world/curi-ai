@@ -12,7 +12,7 @@ function 글Clean(글: string): string {
 }
 
 export async function parseDocx(buffer: Buffer): Promise<string> {
-    assertZipSafe(buffer)
+    await assertZipSafe(buffer)
     const mammoth = await import('mammoth')
     try {
         const result = await mammoth.extractRawText({ buffer })
