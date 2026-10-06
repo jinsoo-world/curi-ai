@@ -9,6 +9,7 @@ import { logUpstageOcr } from '@/domains/llm/ocr-usage'
 import { 개인정보가리기 } from '@/domains/knowledge/개인정보가리기'
 import { docParseEnabled, underUpstageCap, callDocumentParse, DOC_SPACE_COPY } from '@/domains/knowledge/doc-parse'
 import { reserveFilePages, type PageReservation } from '@/domains/knowledge/doc-gate'
+import { MAX_FILE_BYTES, MAX_TEXT_CHARS, PasswordProtectedError, UnsafeFileError, detectPasswordProtected, limitText } from '@/domains/knowledge/parsers/safety'
 import { recheckAfterKnowledge } from '@/domains/os/publish-gate'
 
 /**
@@ -212,6 +213,12 @@ function extractTextFromUpstage(pd: Record<string, unknown>): string {
     return ''
 }
 
+function 암호안내(ext: string): string {
+    if (['doc', 'docx'].includes(ext)) return '암호가 걸린 워드 파일이에요. 워드에서 「파일 > 정보 > 문서 보호」의 암호를 지우고 다시 저장해서 올려 주세요.'
+    if (['hwp', 'hwpx'].includes(ext)) return '암호가 걸린 한글 파일이에요. 한글에서 「파일 > 문서 암호 설정」을 해제하고 다시 저장해서 올려 주세요.'
+    return '암호가 걸린 파일이에요. 암호를 푼 파일로 다시 올려 주세요.'
+}
+
 export async function POST(req: NextRequest) {
     // 못 읽으면 「못 읽음」과 이유 한 줄을 남긴다 (화면이 「다시 시도」와 함께 보여 준다). 이유는 summary 칸(실패일 때만)
     let failSource: ((why: FailureReason) => Promise<void>) | null = null
@@ -259,6 +266,23 @@ export async function POST(req: NextRequest) {
 
         const ext = source.title?.split('.').pop()?.toLowerCase() || ''
         let textContent = ''
+        // 읽다가 암호·위험 파일로 드러난 경우 (각 읽기 블록이 오류를 삼키므로 표시만 해 둔다)
+        const 막힘: { v: 'password' | 'unsafe' | null } = { v: null }
+        const 읽기오류 = (err: unknown) => {
+            if (err instanceof PasswordProtectedError) 막힘.v = 'password'
+            else if (err instanceof UnsafeFileError) 막힘.v = 'unsafe'
+        }
+
+        // 다운로드 직후 실제 크기 확인 (올릴 때 신고한 크기를 믿지 않는다)
+        if (fileData.size > MAX_FILE_BYTES) {
+            await failSource('file_too_large')
+            return NextResponse.json({ error: `파일이 너무 커요. ${MAX_FILE_BYTES / 1048576}MB 이하로 줄여서 올려 주세요.` }, { status: 413 })
+        }
+        // 암호 걸린 파일은 업스테이지 비용을 쓰기 전에 거른다
+        if (['doc', 'docx', 'xlsx', 'pptx', 'hwp'].includes(ext) && detectPasswordProtected(ext, Buffer.from(await fileData.arrayBuffer()))) {
+            await failSource('password_protected')
+            return NextResponse.json({ error: 암호안내(ext), code: 'password_protected' }, { status: 400 })
+        }
 
         // 월 자료 한도 (DOC_PARSE_ENABLED 일 때만): 쪽 수를 로컬로 세고, 업스테이지를 부르기 전에 막는다
         const docParseOn = docParseEnabled()
@@ -282,21 +306,12 @@ export async function POST(req: NextRequest) {
             // 엑셀·CSV — 대표 지적 2026-09-17 「AI 만들기에서 파일학습이 안되네. 엑셀파일 등등」
             // 표는 시트마다 제목을 달고 줄로 편다. AI 가 읽을 때 어느 표의 어느 칸인지 알아야 한다.
             try {
-                const mod = await import('xlsx')
-                // CJS/ESM 섞이면 default 에만 실리는 경우가 있어 둘 다 본다
-                const XLSX = (mod as unknown as { default?: typeof import('xlsx') }).default ?? mod
+                const { parseExcel } = await import('@/domains/knowledge/parsers/excel')
                 const buffer = Buffer.from(await fileData.arrayBuffer())
-                const wb = XLSX.read(buffer, { type: 'buffer' })
-                const 조각: string[] = []
-                for (const 시트이름 of wb.SheetNames) {
-                    const 시트 = wb.Sheets[시트이름]
-                    if (!시트) continue
-                    const 표 = XLSX.utils.sheet_to_csv(시트, { blankrows: false })
-                    if (표.trim()) 조각.push(`[${시트이름}]\n${표.trim()}`)
-                }
-                textContent = 조각.join('\n\n')
-                console.log('[Process] 엑셀 읽음:', source.title, '시트', wb.SheetNames.length, '글자', textContent.length)
+                textContent = await parseExcel(buffer, ext)
+                console.log('[Process] 엑셀 읽음:', source.title, '글자', textContent.length)
             } catch (xlErr) {
+                읽기오류(xlErr)
                 console.error('[Process] 엑셀 읽기 실패:', xlErr instanceof Error ? xlErr.message : xlErr)
                 textContent = ''
             }
@@ -314,7 +329,7 @@ export async function POST(req: NextRequest) {
 
 
         } else if (['hwp', 'hwpx'].includes(ext) && docParseOn) {
-            // 한글: 업스테이지 Document Parse Standard (대표 확정 0929). 회사 월 상한이면 hwpjs 로컬로
+            // 한글: 업스테이지 Document Parse Standard (대표 확정 0929). 회사 월 상한·실패면 kordoc 로컬로 (hwp 5.0·hwpx 둘 다)
             const pages = reservation?.pages ?? 1
             let parsed = false
             if (await underUpstageCap(admin, pages)) {
@@ -329,36 +344,35 @@ export async function POST(req: NextRequest) {
                     console.error('[Process] HWP Document Parse error:', r.status, r.error)
                 }
             }
-            if (!parsed && ext === 'hwp') {
+            if (!parsed) {
                 try {
-                    const { toMarkdown } = await import('@ohah/hwpjs')
-                    const result = toMarkdown(Buffer.from(await fileData.arrayBuffer()), { image: 'base64', useHtml: false })
-                    textContent = typeof result === 'string' ? result : result.markdown || ''
-                    console.log('[Process] HWP hwpjs fallback, text length:', textContent.length)
+                    const { parseHangul } = await import('@/domains/knowledge/parsers/hwp')
+                    textContent = await parseHangul(Buffer.from(await fileData.arrayBuffer()))
+                    console.log('[Process] 한글 kordoc 로컬 읽음, text length:', textContent.length)
                 } catch (hwpErr) {
-                    console.error('[Process] HWP hwpjs parse error:', hwpErr instanceof Error ? hwpErr.message : hwpErr)
+                읽기오류(hwpErr)
+                    console.error('[Process] 한글 kordoc 읽기 실패:', hwpErr instanceof Error ? hwpErr.message : hwpErr)
                 }
             }
-            if (!parsed && textContent.trim().length < 200 && !(await underUpstageCap(admin, pages))) {
+            if (!막힘.v && !parsed && textContent.trim().length < 200 && !(await underUpstageCap(admin, pages))) {
                 await failSource('company_cap_wait')
                 return NextResponse.json({ error: DOC_SPACE_COPY.cap, code: 'cap' }, { status: 503 })
             }
 
         } else if (['hwp', 'hwpx'].includes(ext)) {
-            // HWP: @ohah/hwpjs로 마크다운 변환 시도 (무료, 로컬 처리)
+            // 한글(Document Parse 꺼짐): kordoc 로컬 처리 (무료)
             try {
-                const { toMarkdown } = await import('@ohah/hwpjs')
-                const uint8 = Buffer.from(await fileData.arrayBuffer())
-                const result = toMarkdown(uint8, { image: 'base64', useHtml: false })
-                textContent = typeof result === 'string' ? result : result.markdown || ''
-                console.log('[Process] HWP parsed with hwpjs, text length:', textContent.length)
+                const { parseHangul } = await import('@/domains/knowledge/parsers/hwp')
+                textContent = await parseHangul(Buffer.from(await fileData.arrayBuffer()))
+                console.log('[Process] 한글 kordoc 로컬 읽음, text length:', textContent.length)
             } catch (hwpErr) {
-                console.error('[Process] HWP hwpjs parse error:', hwpErr instanceof Error ? hwpErr.message : hwpErr)
+                읽기오류(hwpErr)
+                console.error('[Process] 한글 kordoc 읽기 실패:', hwpErr instanceof Error ? hwpErr.message : hwpErr)
             }
 
-            // hwpjs가 본문을 못 읽은 경우 (200자 이하 = 메타데이터뿐) → Upstage OCR fallback
-            if (textContent.trim().length < 200 && await underUpstageCap(admin)) {
-                console.log('[Process] HWP hwpjs result too short, falling back to Upstage OCR')
+            // 본문을 못 읽은 경우 (200자 이하 = 메타데이터뿐) → Upstage OCR fallback
+            if (!막힘.v && textContent.trim().length < 200 && await underUpstageCap(admin)) {
+                console.log('[Process] HWP 로컬 결과가 너무 짧음, falling back to Upstage OCR')
                 try {
                     const formData = new FormData()
                     formData.append('document', fileData, source.title)
@@ -388,86 +402,31 @@ export async function POST(req: NextRequest) {
             }
 
         } else if (['doc', 'docx'].includes(ext)) {
-            // DOCX: mammoth로 텍스트 추출 (무료, 로컬 처리)
+            // docx = mammoth, 옛 doc = word-extractor (무료, 로컬 처리). 앞머리로 가른다
             try {
-                const mammoth = await import('mammoth')
-                const buffer = Buffer.from(await fileData.arrayBuffer())
-                const result = await mammoth.extractRawText({ buffer })
-                textContent = (result.value || '')
-                    .replace(/\n{3,}/g, '\n\n')  // 3줄 이상 연속 빈줄 → 2줄로
-                    .replace(/[ \t]{2,}/g, ' ')   // 연속 공백 → 1칸으로
-                    .trim()
-                console.log('[Process] DOCX parsed with mammoth, text length:', textContent.length)
+                const { parseWord } = await import('@/domains/knowledge/parsers/word')
+                textContent = await parseWord(Buffer.from(await fileData.arrayBuffer()))
+                console.log('[Process] 워드 읽음:', ext, 'text length:', textContent.length)
             } catch (docErr) {
-                console.error('[Process] DOCX parse error:', docErr)
+                읽기오류(docErr)
+                console.error('[Process] 워드 읽기 실패:', ext, docErr instanceof Error ? docErr.message : docErr)
             }
 
         } else if (['ppt', 'pptx'].includes(ext)) {
-            // PPTX: pptxtojson 로컬 파서로 텍스트 추출
+            // PPTX: pptxtojson 2.2 로컬 파서로 텍스트 추출
             if (ext === 'pptx') {
                 try {
                     console.log('[Process] Parsing PPTX locally with pptxtojson:', source.title)
-                    // eslint-disable-next-line @typescript-eslint/no-require-imports
-                    const { parse: parsePptx } = require('pptxtojson/dist/index.cjs')
-                    const buffer = Buffer.from(await fileData.arrayBuffer())
-                    const result = await parsePptx(buffer.buffer)
-
-                    // 슬라이드별 텍스트 추출
-                    const slideTexts: string[] = []
-                    if (result?.slides) {
-                        for (let i = 0; i < result.slides.length; i++) {
-                            const slide = result.slides[i]
-                            const texts: string[] = []
-
-                            const extractText = (elements: any[]) => {
-                                for (const el of elements || []) {
-                                    if (el.content) {
-                                        // HTML 태그 제거해서 순수 텍스트 추출
-                                        const plainText = el.content
-                                            .replace(/<[^>]*>/g, ' ')
-                                            .replace(/&nbsp;/g, ' ')
-                                            .replace(/&amp;/g, '&')
-                                            .replace(/&lt;/g, '<')
-                                            .replace(/&gt;/g, '>')
-                                            .replace(/\s+/g, ' ')
-                                            .trim()
-                                        if (plainText) texts.push(plainText)
-                                    }
-                                    if (el.data) {
-                                        // 테이블 데이터
-                                        for (const row of el.data || []) {
-                                            for (const cell of row || []) {
-                                                if (cell?.text) texts.push(cell.text)
-                                            }
-                                        }
-                                    }
-                                    if (el.elements) {
-                                        extractText(el.elements)
-                                    }
-                                }
-                            }
-
-                            extractText(slide.elements || [])
-                            extractText(slide.layoutElements || [])
-
-                            if (texts.length > 0) {
-                                slideTexts.push(`[슬라이드 ${i + 1}]\n${texts.join('\n')}`)
-                            }
-
-                            // 슬라이드 노트
-                            if (slide.note) {
-                                slideTexts.push(`[슬라이드 ${i + 1} 노트]\n${slide.note}`)
-                            }
-                        }
-                    }
-
-                    textContent = slideTexts.join('\n\n')
-                    console.log(`[Process] PPTX parsed: ${result?.slides?.length || 0} slides, ${textContent.length} chars`)
+                    const { parsePptx } = await import('@/domains/knowledge/parsers/pptx')
+                    const parsed = await parsePptx(Buffer.from(await fileData.arrayBuffer()))
+                    textContent = parsed.text
+                    console.log(`[Process] PPTX parsed: ${parsed.slides} slides, ${textContent.length} chars`)
                 } catch (pptxErr) {
+                읽기오류(pptxErr)
                     console.error('[Process] PPTX local parse error:', pptxErr)
                     // 로컬 파서 실패 시 Upstage OCR 폴백 (회사 월 상한 안에서만)
                     console.log('[Process] Falling back to Upstage OCR for PPTX')
-                    if (await underUpstageCap(admin)) try {
+                    if (!막힘.v && await underUpstageCap(admin)) try {
                         const formData = new FormData()
                         formData.append('document', fileData, source.title)
                         formData.append('model', 'ocr')
@@ -514,28 +473,20 @@ export async function POST(req: NextRequest) {
             }
 
         } else if (ext === 'pdf') {
-            // PDF: pdf-parse v2 (PDFParse 클래스). v1 호출(require()(buffer))은 「is not a function」으로 항상 깨졌다.
+            // PDF: unpdf (서버리스용 가벼운 판). 이전 pdf-parse 와 한글 글자 수가 같다(시험으로 확인)
             const buffer = Buffer.from(await fileData.arrayBuffer())
             try {
-                const { PDFParse } = await import('pdf-parse')
-                const parser = new PDFParse({ data: new Uint8Array(buffer) })
-                try {
-                    const pdfData = await parser.getText()
-                    textContent = (pdfData.text || '')
-                        .replace(/\n-- \d+ of \d+ --\n/g, '\n') // v2 페이지 구분 꼬리표 제거
-                        .replace(/\n{3,}/g, '\n\n')
-                        .replace(/[ \t]{2,}/g, ' ')
-                        .trim()
-                    console.log('[Process] PDF parsed with pdf-parse, text length:', textContent.length, 'pages:', pdfData.pages?.length ?? 0)
-                } finally {
-                    await parser.destroy().catch(() => {})
-                }
+                const { parsePdf } = await import('@/domains/knowledge/parsers/pdf')
+                const pdfData = await parsePdf(buffer)
+                textContent = pdfData.text
+                console.log('[Process] PDF parsed with unpdf, text length:', textContent.length, 'pages:', pdfData.pages)
             } catch (pdfErr) {
-                console.error('[Process] pdf-parse error:', pdfErr instanceof Error ? pdfErr.message : pdfErr)
+                읽기오류(pdfErr)
+                console.error('[Process] unpdf error:', pdfErr instanceof Error ? pdfErr.message : pdfErr)
             }
 
-            // pdf-parse로 텍스트 못 읽은 경우 (스캔 PDF) → Upstage OCR fallback
-            if (textContent.trim().length < 200 && process.env.UPSTAGE_API_KEY && await underUpstageCap(admin)) {
+            // 글자를 200자 못 읽은 경우 (스캔 PDF) → Upstage OCR fallback
+            if (!막힘.v && textContent.trim().length < 200 && process.env.UPSTAGE_API_KEY && await underUpstageCap(admin)) {
                 console.log('[Process] PDF text too short, falling back to Upstage OCR')
                 try {
                     const formData = new FormData()
@@ -569,10 +520,27 @@ export async function POST(req: NextRequest) {
             console.error('[Process] Unsupported file type:', ext)
         }
 
+        if (막힘.v === 'password') {
+            await failSource('password_protected')
+            return NextResponse.json({ error: 암호안내(ext), code: 'password_protected' }, { status: 400 })
+        }
+        if (막힘.v === 'unsafe') {
+            await failSource('file_too_large')
+            return NextResponse.json({ error: '파일이 너무 커서 읽을 수 없어요. 압축을 풀면 비정상적으로 큰 파일은 받지 않아요. 내용을 줄여서 다시 올려 주세요.' }, { status: 413 })
+        }
+
+        // 뽑은 글이 너무 길면 앞부분만 쓴다 (50만 자)
+        if (textContent.length > MAX_TEXT_CHARS) {
+            console.log('[Process] 글이 너무 길어 자름:', source.title, textContent.length)
+            textContent = limitText(textContent).text
+        }
+
         if (!textContent.trim()) {
             let 이유 = '텍스트를 추출할 수 없습니다.'
             if (ext === 'pdf') {
                 이유 = 'PDF에서 글자를 못 뽑았어요. 스캔본(사진만 있는 PDF)이거나 암호가 걸린 파일일 수 있어요. 글자를 드래그해 고를 수 있는 PDF로 다시 올려 주세요.'
+            } else if (ext === 'ppt') {
+                이유 = '옛 파워포인트(.ppt)는 글을 못 읽었어요. 파워포인트에서 「다른 이름으로 저장」으로 .pptx 로 저장해서 올려 주세요.'
             } else if (['xlsx', 'xls', 'csv'].includes(ext)) {
                 이유 = '엑셀/CSV에서 글자를 못 뽑았어요. 암호가 걸려 있거나 칸이 비어 있는 표일 수 있어요.'
             }
@@ -594,14 +562,15 @@ export async function POST(req: NextRequest) {
         console.log(`[Process] Text: ${textContent.length}chars → ${chunks.length} chunks`)
         let successCount = 0
 
-        for (let i = 0; i < chunks.length; i++) {
+        // 조각을 동시에 5개씩 묶어 처리한다 (하나씩 하면 긴 글에서 maxDuration 에 걸린다). 조각별 실패 처리는 그대로
+        const 한조각 = async (i: number) => {
             try {
                 // 임베딩 글에만 자료 제목, 종류, 소제목을 붙인다 (저장 글은 원문 그대로)
                 const 임베딩글 = contextualEmbeddingText({ title: source.title, sourceType: source.source_type, heading: pieces[i].heading }, chunks[i])
                 const embedding = await generateEmbedding(임베딩글, { route: '/api/creator/knowledge/process', mentorId })
                 if (!embedding || embedding.length === 0) {
                     console.error(`[Process] Chunk ${i}: empty embedding returned`)
-                    continue
+                    return
                 }
                 const { error: insertErr } = await admin.from('knowledge_chunks').insert({
                     source_id: sourceId,
@@ -613,12 +582,16 @@ export async function POST(req: NextRequest) {
                 if (insertErr) {
                     // 여기서 오류를 안 보고 성공으로 세던 것이 조각 0건의 구멍이었다
                     console.error(`[Process] Chunk ${i} 저장 실패:`, JSON.stringify(insertErr))
-                    continue
+                    return
                 }
                 successCount++
             } catch (embErr) {
                 console.error(`[Process] Chunk ${i}/${chunks.length} failed:`, embErr instanceof Error ? embErr.message : embErr)
             }
+        }
+        const 동시 = 5
+        for (let i = 0; i < chunks.length; i += 동시) {
+            await Promise.all(Array.from({ length: Math.min(동시, chunks.length - i) }, (_, k) => 한조각(i + k)))
         }
         console.log(`[Process] Embedding result: ${successCount}/${chunks.length} chunks OK`)
         // 조각이 하나도 안 들어갔으면 「다 읽음」이 아니라 「못 읽음」이다 (예전에는 조각 0개로 다 읽음이 됐다)

@@ -90,12 +90,11 @@ export interface PageCount {
     method: string
 }
 
-/** 한글(HWP) 본문 글자 수 (hwpjs, 로컬). 못 읽으면 0 */
+/** 한글(HWP) 본문 글자 수 (kordoc, 로컬). 못 읽으면 0 */
 async function hwpLocalChars(buf: Buffer): Promise<number> {
     try {
-        const { toMarkdown } = await import('@ohah/hwpjs')
-        const r = toMarkdown(buf, { image: 'base64', useHtml: false })
-        const md = typeof r === 'string' ? r : r.markdown || ''
+        const { parseHangul } = await import('./parsers/hwp')
+        const md = await parseHangul(buf)
         return md.replace(/data:[^)\s]+/g, '').trim().length
     } catch {
         return 0
@@ -113,15 +112,9 @@ export async function countFilePages(ext: string, buf: Buffer): Promise<PageCoun
         if (e === 'csv') return { pages: 1, method: 'csv' }
 
         if (e === 'pdf') {
-            const { PDFParse } = await import('pdf-parse')
-            const parser = new PDFParse({ data: new Uint8Array(buf) })
-            try {
-                const info = await parser.getInfo()
-                const total = Number((info as { total?: number }).total)
-                if (Number.isFinite(total) && total > 0) return { pages: total, method: 'pdf' }
-            } finally {
-                await parser.destroy().catch(() => {})
-            }
+            const { countPdfPages } = await import('./parsers/pdf')
+            const total = await countPdfPages(buf)
+            if (Number.isFinite(total) && total > 0) return { pages: total, method: 'pdf' }
             return { pages: pagesFromBytes(buf.length, 100 * 1024), method: 'pdf-bytes' }
         }
 

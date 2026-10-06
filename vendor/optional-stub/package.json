@@ -1,0 +1,7 @@
+{
+  "name": "optional-stub",
+  "version": "0.0.0",
+  "description": "kordoc 의 큰 선택 부품(AI 모델 실행·PDF 렌더)을 설치하지 않으려고 자리만 채우는 빈 부품",
+  "main": "index.js",
+  "license": "MIT"
+}

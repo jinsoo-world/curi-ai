@@ -16,3 +16,4 @@ node_modules/
 # 스모크 시험 산출물
 test-results/
 playwright-report/
+test/fixtures-local/

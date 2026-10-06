@@ -2,7 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // WASM/네이티브 패키지는 Turbopack 번들링 건너뛰기
-  serverExternalPackages: ['@ohah/hwpjs', 'pdf-parse', 'xlsx'],
+  serverExternalPackages: ['kordoc', 'xlsx'],
+  // 파일 학습 창구 함수에서 이미지 처리 부품(sharp, 약 19MB)은 뺀다. kordoc 가 글만 뽑을 때는 안 쓴다
+  outputFileTracingExcludes: {
+    '/api/creator/knowledge/process': ['node_modules/sharp/**', 'node_modules/@img/**'],
+  },
   // 이미지 최적화
   images: {
     formats: ['image/avif', 'image/webp'],
