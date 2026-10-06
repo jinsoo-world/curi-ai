@@ -56,10 +56,55 @@ describe('자동결제 갱신 runRenewals', () => {
     })
 
     it('카드 거절이고 그 주문번호로 결제된 것도 없으면 past_due + 알림', async () => {
-        const d = deps([sub()], { charge: vi.fn(async () => { throw new Error('카드 한도 초과') }) })
+        const d = deps([sub()], { charge: vi.fn(async () => { throw Object.assign(new Error('카드 한도 초과'), { code: 'EXCEED_MAX_AMOUNT' }) }) })
         const r = await runRenewals(d, { now: () => NOW, deadline: Date.now() + 60_000 })
         expect(d.markPastDue).toHaveBeenCalledTimes(1)
         expect(r.failed).toBe(1)
+    })
+
+    it('토스가 코드로 거절했고 조회가 ABORTED/EXPIRED 여도 past_due', async () => {
+        for (const status of ['ABORTED', 'EXPIRED']) {
+            const d = deps([sub()], {
+                charge: vi.fn(async () => { throw Object.assign(new Error('거절'), { code: 'REJECT_CARD_COMPANY' }) }),
+                lookupOrder: vi.fn(async () => ({ paymentKey: 'pk', orderId: paid.orderId, status })),
+            })
+            await runRenewals(d, { now: () => NOW, deadline: Date.now() + 60_000 })
+            expect(d.markPastDue, status).toHaveBeenCalledTimes(1)
+        }
+    })
+
+    it('토스 10초 시간 초과(코드 없음) 후 조회가 null 이어도 past_due 로 적지 않는다 = renewing 유지', async () => {
+        const d = deps([sub()], {
+            charge: vi.fn(async () => { throw Object.assign(new Error('This operation was aborted'), { name: 'TimeoutError' }) }),
+            lookupOrder: vi.fn(async () => null),
+        })
+        const r = await runRenewals(d, { now: () => NOW, deadline: Date.now() + 60_000 })
+        expect(d.markPastDue).not.toHaveBeenCalled()
+        expect(r.uncertain).toBe(1)
+    })
+
+    it('네트워크 오류(코드 없음)도 renewing 유지', async () => {
+        const d = deps([sub()], { charge: vi.fn(async () => { throw new TypeError('fetch failed') }) })
+        const r = await runRenewals(d, { now: () => NOW, deadline: Date.now() + 60_000 })
+        expect(d.markPastDue).not.toHaveBeenCalled()
+        expect(r.uncertain).toBe(1)
+    })
+
+    it('코드로 거절됐어도 조회가 IN_PROGRESS 면 확실하지 않다 = renewing 유지', async () => {
+        const d = deps([sub()], {
+            charge: vi.fn(async () => { throw Object.assign(new Error('x'), { code: 'PROVIDER_ERROR' }) }),
+            lookupOrder: vi.fn(async () => ({ paymentKey: 'pk', orderId: paid.orderId, status: 'IN_PROGRESS' })),
+        })
+        const r = await runRenewals(d, { now: () => NOW, deadline: Date.now() + 60_000 })
+        expect(d.markPastDue).not.toHaveBeenCalled()
+        expect(r.uncertain).toBe(1)
+    })
+
+    it('자동 갱신할 수 없는 요금제는 결제 없이 확실한 실패(past_due)', async () => {
+        const d = deps([sub({ plan_type: 'pro' })])
+        await runRenewals(d, { now: () => NOW, deadline: Date.now() + 60_000 })
+        expect(d.charge).not.toHaveBeenCalled()
+        expect(d.markPastDue).toHaveBeenCalledTimes(1)
     })
 
     it('결제 오류가 났지만 같은 주문번호가 이미 DONE 이면 다시 결제하지 않고 DB 만 맞춘다', async () => {

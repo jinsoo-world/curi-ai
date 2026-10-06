@@ -55,6 +55,21 @@ function asCharge(o: OrderLookup): ChargeResult {
     return { paymentKey: o.paymentKey, orderId: o.orderId, totalAmount: o.totalAmount ?? 0, approvedAt: o.approvedAt ?? new Date().toISOString(), receipt: o.receipt ?? null }
 }
 
+/**
+ * 결제 오류 판정 (순수 함수).
+ *  paid     = 같은 주문번호가 토스에 DONE
+ *  declined = 토스가 오류 코드로 확실히 거절했고, 조회가 「없음」 또는 ABORTED·EXPIRED → past_due 로 적어도 된다
+ *  uncertain= 그 밖 전부(시간 초과·네트워크·코드 없음·조회 실패·IN_PROGRESS 등) → renewing 유지, 다음에 다시 확인
+ */
+export function judgeChargeFailure(chargeErr: unknown, lookup: OrderLookup | null | 'error'): 'paid' | 'declined' | 'uncertain' {
+    if (lookup && lookup !== 'error' && lookup.status === 'DONE') return 'paid'
+    const code = (chargeErr as { code?: unknown } | null)?.code
+    const hasCode = typeof code === 'string' && code.length > 0
+    if (!hasCode || lookup === 'error') return 'uncertain'
+    if (lookup === null || lookup.status === 'ABORTED' || lookup.status === 'EXPIRED') return 'declined'
+    return 'uncertain'
+}
+
 export async function runRenewals(deps: RenewDeps, opts: { now?: () => Date; deadline?: number; limit?: number } = {}): Promise<RenewSummary> {
     const now = opts.now ?? (() => new Date())
     const deadline = opts.deadline ?? Date.now() + RENEW_BUDGET_MS
@@ -86,28 +101,34 @@ export async function runRenewals(deps: RenewDeps, opts: { now?: () => Date; dea
             }
 
             if (!paid) {
+                if (!plan) {
+                    // 자동 갱신할 수 없는 요금제 = 결제를 시도하지 않은 확실한 실패
+                    await deps.markPastDue(sub)
+                    await deps.alert({ source: 'billing/renew', error: `자동 갱신할 수 없는 요금제: ${sub.plan_type}`, userId: sub.user_id, metadata: { subscriptionId: sub.id } })
+                    out.failed++
+                    continue
+                }
                 try {
-                    if (!plan) throw new Error(`자동 갱신할 수 없는 요금제: ${sub.plan_type}`)
                     paid = await deps.charge(sub, plan.price, orderId, `큐리AI ${plan.label} 갱신`)
                 } catch (chargeErr) {
                     // 같은 주문번호가 이미 결제됐을 수 있다(앞 실행이 결제 후 죽음, 또는 응답만 늦음) → 토스에 물어 확인
-                    let prior: OrderLookup | null
-                    try {
-                        prior = await deps.lookupOrder(orderId)
-                    } catch {
-                        // 결제가 됐는지 모른다 → past_due 로 적지 않고 renewing 으로 둔다. 다음 실행이 다시 잡아 주문번호로 확인한다
-                        out.uncertain++
-                        await deps.alert({ source: 'billing/renew 결제 여부 확인 불가', error: chargeErr instanceof Error ? chargeErr.message : String(chargeErr), userId: sub.user_id, metadata: { subscriptionId: sub.id, orderId } })
-                        continue
-                    }
-                    if (prior && prior.status === 'DONE') {
+                    let prior: OrderLookup | null | 'error'
+                    try { prior = await deps.lookupOrder(orderId) } catch { prior = 'error' }
+                    const msg = chargeErr instanceof Error ? chargeErr.message : '갱신 결제 실패'
+                    const verdict = judgeChargeFailure(chargeErr, prior)
+                    if (verdict === 'paid' && prior && prior !== 'error') {
                         paid = asCharge(prior)
                         fromLookup = true
-                    } else {
-                        const msg = chargeErr instanceof Error ? chargeErr.message : '갱신 결제 실패'
+                    } else if (verdict === 'declined') {
                         await deps.markPastDue(sub)
                         await deps.alert({ source: 'billing/renew', error: msg, userId: sub.user_id, metadata: { subscriptionId: sub.id, orderId } })
                         out.failed++
+                        continue
+                    } else {
+                        // 결제가 됐는지 모른다(시간 초과·네트워크·코드 없음·진행 중) → past_due 로 적지 않고 renewing 으로 둔다.
+                        // 다음 실행이 10분 넘은 renewing 을 다시 잡아 같은 주문번호로 확인한다(같은 번호라 두 번 결제되지 않는다)
+                        out.uncertain++
+                        await deps.alert({ source: 'billing/renew 결제 여부 확인 불가', error: msg, userId: sub.user_id, metadata: { subscriptionId: sub.id, orderId } })
                         continue
                     }
                 }
