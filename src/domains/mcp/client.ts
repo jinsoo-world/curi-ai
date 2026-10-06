@@ -7,7 +7,7 @@
 // 🔐 인증 값은 머리글에만 싣는다. 오류 글에 섞여 나오면 지운다(redact).
 
 import { httpsPost, type HttpPost } from './transport'
-import { MAX_TOOL_DESCRIPTION_CHARS, MAX_TOOL_SCHEMA_CHARS, MAX_TOOLS_PER_SERVER, TOOL_TIMEOUT_MS } from './limits'
+import { MAX_TOOL_DESCRIPTION_CHARS, MAX_TOOL_DESCRIPTIONS_TOTAL_CHARS, MAX_TOOL_SCHEMA_CHARS, MAX_TOOLS_PER_SERVER, NOTIFY_TIMEOUT_MS, TOOL_TIMEOUT_MS } from './limits'
 
 export const MCP_PROTOCOL_VERSION = '2025-06-18'
 const CLIENT_INFO = { name: 'curi-ai', version: '1.0.0' }
@@ -15,6 +15,8 @@ const CLIENT_INFO = { name: 'curi-ai', version: '1.0.0' }
 export interface McpTool {
     name: string
     description: string
+    /** 서버가 annotations.readOnlyHint=true(그리고 destructiveHint≠true)로 밝힌 도구만 true. 모르면 쓰기 도구로 본다 */
+    readOnly: boolean
     inputSchema: Record<string, unknown>
 }
 
@@ -69,19 +71,27 @@ export function pickResponse(contentType: string, body: string, id: number): Jso
     return messages.find(m => m && (m.id === id || m.id === String(id)) && ('result' in m || 'error' in m)) ?? null
 }
 
-/** 서버가 준 도구 목록을 우리가 쓸 모양으로 다듬는다 (개수·설명·스키마 크기 제한) */
-export function cleanTools(raw: unknown): McpTool[] {
+/**
+ * 서버가 준 도구 목록을 우리가 쓸 모양으로 다듬는다
+ * (개수·설명·설명 글자 합·스키마 크기 제한, 읽기 전용 표시, 설명 속 인증 값 가리기)
+ */
+export function cleanTools(raw: unknown, secret?: string | null): McpTool[] {
     const list = Array.isArray(raw) ? raw : []
     const out: McpTool[] = []
+    let descTotal = 0
     for (const t of list) {
         if (!t || typeof t !== 'object') continue
         const name = String((t as { name?: unknown }).name ?? '').trim()
         if (!name || name.length > 128) continue
-        const description = String((t as { description?: unknown }).description ?? '').slice(0, MAX_TOOL_DESCRIPTION_CHARS)
+        const description = redact(String((t as { description?: unknown }).description ?? ''), secret).slice(0, MAX_TOOL_DESCRIPTION_CHARS)
+        if (descTotal + description.length > MAX_TOOL_DESCRIPTIONS_TOTAL_CHARS) break
+        descTotal += description.length
         let schema = (t as { inputSchema?: unknown }).inputSchema
         if (!schema || typeof schema !== 'object' || Array.isArray(schema)) schema = { type: 'object', properties: {} }
         if (JSON.stringify(schema).length > MAX_TOOL_SCHEMA_CHARS) schema = { type: 'object', properties: {} }
-        out.push({ name, description, inputSchema: schema as Record<string, unknown> })
+        const ann = ((t as { annotations?: unknown }).annotations ?? {}) as { readOnlyHint?: unknown; destructiveHint?: unknown }
+        const readOnly = ann.readOnlyHint === true && ann.destructiveHint !== true
+        out.push({ name, description, readOnly, inputSchema: schema as Record<string, unknown> })
         if (out.length >= MAX_TOOLS_PER_SERVER) break
     }
     return out
@@ -114,7 +124,16 @@ export class McpSession {
         private readonly auth: McpAuth | null = null,
         private readonly post: HttpPost = httpsPost,
         private readonly timeoutMs: number = TOOL_TIMEOUT_MS,
+        private readonly now: () => number = Date.now,
     ) {}
+
+    /** 이번 요청에 줄 시간 = min(상한, 마감까지 남은 시간). 남은 시간이 없으면 보내지 않는다 */
+    private budget(cap: number, deadline?: number): number {
+        if (deadline === undefined) return cap
+        const left = deadline - this.now()
+        if (left <= 0) this.fail('시간이 모자라 서버에 묻지 못했어요')
+        return Math.min(cap, left)
+    }
 
     private headers(): Record<string, string> {
         const h: Record<string, string> = {
@@ -132,11 +151,12 @@ export class McpSession {
         throw new McpError(redact(message, this.auth?.value))
     }
 
-    private async send(method: string, params: Record<string, unknown>): Promise<unknown> {
+    private async send(method: string, params: Record<string, unknown>, deadline?: number): Promise<unknown> {
+        const timeoutMs = this.budget(this.timeoutMs, deadline)
         const id = this.nextId++
         let res
         try {
-            res = await this.post(this.url, this.headers(), JSON.stringify({ jsonrpc: '2.0', id, method, params }), { timeoutMs: this.timeoutMs })
+            res = await this.post(this.url, this.headers(), JSON.stringify({ jsonrpc: '2.0', id, method, params }), { timeoutMs })
         } catch (e) {
             this.fail(e instanceof Error ? e.message : '서버에 붙지 못했어요')
         }
@@ -151,35 +171,37 @@ export class McpSession {
         return msg.result
     }
 
-    private async notify(method: string): Promise<void> {
+    private async notify(method: string, deadline?: number): Promise<void> {
         try {
-            await this.post(this.url, this.headers(), JSON.stringify({ jsonrpc: '2.0', method }), { timeoutMs: this.timeoutMs })
+            const timeoutMs = this.budget(NOTIFY_TIMEOUT_MS, deadline)
+            await this.post(this.url, this.headers(), JSON.stringify({ jsonrpc: '2.0', method }), { timeoutMs })
         } catch { /* 알림은 실패해도 이어 간다 */ }
     }
 
-    async initialize(): Promise<{ serverName: string }> {
+    /** deadline = 이 시각(밀리초, now() 기준)까지 끝내야 한다. 안 주면 요청마다 timeoutMs */
+    async initialize(deadline?: number): Promise<{ serverName: string }> {
         const result = await this.send('initialize', {
             protocolVersion: MCP_PROTOCOL_VERSION,
             capabilities: {},
             clientInfo: CLIENT_INFO,
-        }) as { protocolVersion?: unknown; serverInfo?: { name?: unknown } } | undefined
+        }, deadline) as { protocolVersion?: unknown; serverInfo?: { name?: unknown } } | undefined
         if (typeof result?.protocolVersion === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(result.protocolVersion)) {
             this.protocolVersion = result.protocolVersion
         }
         this.initialized = true
-        await this.notify('notifications/initialized')
+        await this.notify('notifications/initialized', deadline)
         return { serverName: String(result?.serverInfo?.name ?? '').slice(0, 80) }
     }
 
-    async listTools(): Promise<McpTool[]> {
-        if (!this.initialized) await this.initialize()
-        const result = await this.send('tools/list', {}) as { tools?: unknown } | undefined
-        return cleanTools(result?.tools)
+    async listTools(deadline?: number): Promise<McpTool[]> {
+        if (!this.initialized) await this.initialize(deadline)
+        const result = await this.send('tools/list', {}, deadline) as { tools?: unknown } | undefined
+        return cleanTools(result?.tools, this.auth?.value)
     }
 
-    async callTool(name: string, args: Record<string, unknown>): Promise<{ text: string; isError: boolean }> {
-        if (!this.initialized) await this.initialize()
-        const result = await this.send('tools/call', { name, arguments: args })
+    async callTool(name: string, args: Record<string, unknown>, deadline?: number): Promise<{ text: string; isError: boolean }> {
+        if (!this.initialized) await this.initialize(deadline)
+        const result = await this.send('tools/call', { name, arguments: args }, deadline)
         const out = toolResultToText(result)
         return { text: redact(out.text, this.auth?.value), isError: out.isError }
     }

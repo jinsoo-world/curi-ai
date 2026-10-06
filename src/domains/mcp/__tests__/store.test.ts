@@ -3,7 +3,7 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import { randomBytes } from 'crypto'
 import { createMcpServer, deleteMcpServer, listMcpServers, McpInputError, McpLimitReached, McpNotMine, readMcpServerForUse, serversForBot, updateMcpServer } from '../store'
 import { mcpServerLimit, MCP_SERVER_LIMITS } from '../limits'
-import { fakeDb } from './fake-db'
+import { fakeDb, ownedBots } from './fake-db'
 
 const SECRET = 'sk-live-SUPERSECRET-987654'
 const BOT_A = '11111111-1111-4111-8111-111111111111'
@@ -87,12 +87,48 @@ describe('고치기·봇 고르기', () => {
     })
 
     it('봇 목록이 있으면 그 봇 대화에서만, 꺼진 서버는 안 쓴다', async () => {
-        const { db } = fakeDb()
+        const { db } = fakeDb(ownedBots('u1', [BOT_A, BOT_B]))
         await createMcpServer(db, 'u1', { name: '전체', url: 'https://a.example.com/mcp' }, 10)
         await createMcpServer(db, 'u1', { name: 'A만', url: 'https://b.example.com/mcp', botIds: [BOT_A] }, 10)
         await createMcpServer(db, 'u1', { name: '꺼짐', url: 'https://c.example.com/mcp', enabled: false }, 10)
         expect((await serversForBot(db, 'u1', BOT_A)).map(s => s.view.name)).toEqual(['전체', 'A만'])
         expect((await serversForBot(db, 'u1', BOT_B)).map(s => s.view.name)).toEqual(['전체'])
         expect(await serversForBot(db, 'u2', BOT_A)).toEqual([])
+    })
+})
+
+describe('보안 검토 반영', () => {
+    it('봇 목록은 전부 내가 만든 봇이어야 한다', async () => {
+        const { db } = fakeDb({ ...ownedBots('u1', [BOT_A]), mentors: [{ id: BOT_A, creator_id: 'cp-u1' }, { id: BOT_B, creator_id: 'cp-other' }] })
+        await expect(createMcpServer(db, 'u1', { name: 'x', url: 'https://a.example.com/mcp', botIds: [BOT_A, BOT_B] }, 3)).rejects.toThrow(/내 봇/)
+        const ok = await createMcpServer(db, 'u1', { name: 'x', url: 'https://a.example.com/mcp', botIds: [BOT_A] }, 3)
+        await expect(updateMcpServer(db, 'u1', ok.id, { botIds: [BOT_B] })).rejects.toThrow(/내 봇/)
+    })
+
+    it('쓰기 허용 도구 이름 목록을 저장·수정한다', async () => {
+        const { db } = fakeDb()
+        const v = await createMcpServer(db, 'u1', { name: 'x', url: 'https://a.example.com/mcp', allowedTools: ['send_email', 'send_email', ' create_page '] }, 3)
+        expect(v.allowedTools).toEqual(['send_email', 'create_page'])
+        const u = await updateMcpServer(db, 'u1', v.id, { allowedTools: [] })
+        expect(u.allowedTools).toEqual([])
+        await expect(updateMcpServer(db, 'u1', v.id, { allowedTools: 'all' })).rejects.toBeInstanceOf(McpInputError)
+        await expect(updateMcpServer(db, 'u1', v.id, { allowedTools: Array.from({ length: 51 }, (_, i) => `t${i}`) })).rejects.toBeInstanceOf(McpInputError)
+    })
+
+    it('호스트가 바뀌는데 인증 값을 새로 안 주면 저장된 인증 값을 지운다. 같은 호스트면 둔다', async () => {
+        const { db } = fakeDb()
+        const v = await createMcpServer(db, 'u1', { name: 'x', url: 'https://a.example.com/mcp', authValue: SECRET }, 3)
+        const samehost = await updateMcpServer(db, 'u1', v.id, { url: 'https://a.example.com/v2/mcp' })
+        expect(samehost.hasAuth).toBe(true)
+        const moved = await updateMcpServer(db, 'u1', v.id, { url: 'https://attacker.example.net/mcp' })
+        expect(moved).toMatchObject({ hasAuth: false, authHint: null })
+        const withNew = await updateMcpServer(db, 'u1', v.id, { url: 'https://b.example.com/mcp', authValue: 'new-token-1234' })
+        expect(withNew).toMatchObject({ hasAuth: true, authHint: '••••1234' })
+    })
+
+    it('대화용 서버 목록은 프로 한도만큼만 읽는다', async () => {
+        const { db, queries } = fakeDb()
+        await serversForBot(db, 'u1', BOT_A)
+        expect(queries.find(q => q.table === 'mcp_servers' && q.op === 'select')?.limit).toBe(10)
     })
 })

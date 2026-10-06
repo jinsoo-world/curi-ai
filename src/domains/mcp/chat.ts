@@ -1,7 +1,9 @@
 // domains/mcp — /api/chat 에서 부르는 한 줄짜리 입구
 //
-// 누구의 서버를 쓰나 = **대화하는 회원 본인**이 붙인 서버만 (봇 주인 것이 아니다).
-//   남의 공개 봇과 대화하는 손님이 봇 주인의 열쇠로 도구를 부르게 되면 안 되기 때문이다.
+// 누구의 서버를 쓰나 = **대화하는 회원 본인**이 붙인 서버만, 그리고 **회원 본인이 만든 봇** 대화에서만.
+//   남의 공개 봇과 대화하는 손님이 봇 주인의 열쇠로 도구를 부르게 되면 안 되고,
+//   남이 만든 봇(지침을 남이 정함)이 내 열쇠로 내 도구를 부르게 해서도 안 된다.
+// 도구 결과는 시스템 지침이 아니라 사용자 차례 앞 「자료」로 붙인다(material, 무작위 태그 울타리).
 // 모델 = 솔라(도구 호출 지원). 솔라 열쇠가 없으면 도구 단계를 건너뛴다(Gemini 도구 호출은 아직 안 붙였다).
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -9,14 +11,14 @@ import { solarToolStep } from '@/domains/llm/solar-tools'
 import { logLlmUsage } from '@/domains/llm/usage-log'
 import { SOLAR_CHAT_MODEL } from '@/domains/llm/constants'
 import { McpSession } from './client'
-import { markMcpServer, serversForBot } from './store'
-import { runToolPhase, toolResultsPrompt, type ModelStep, type ToolPhaseResult } from './agent'
+import { assertBotsOwned, markMcpServer, serversForBot } from './store'
+import { runToolPhase, toolMaterial, type ModelStep, type ToolPhaseResult } from './agent'
 
 export interface McpChatOutcome {
     /** 이 봇에 쓸 서버가 하나라도 있었나 (있으면 의미 답 저장소를 쓰지 않는다) */
     hadServers: boolean
-    /** 시스템 지침 앞에 붙일 글 (도구 결과가 없으면 빈 글) */
-    prompt: string
+    /** 사용자 차례 앞에 붙일 자료 글 (도구 결과가 없으면 빈 글) */
+    material: string
     sources: { id: string; title: string }[]
     phase: ToolPhaseResult | null
 }
@@ -28,10 +30,12 @@ export async function runMcpForChat(input: {
     history: { role: string; content: string }[]
     modelStep?: ModelStep
 }): Promise<McpChatOutcome> {
-    const empty: McpChatOutcome = { hadServers: false, prompt: '', sources: [], phase: null }
+    const empty: McpChatOutcome = { hadServers: false, material: '', sources: [], phase: null }
     const servers = await serversForBot(input.db, input.userId, input.botId)
     if (servers.length === 0) return empty
-    const step = input.modelStep ?? (process.env.UPSTAGE_API_KEY ? ((m, t) => solarToolStep(m, t)) as ModelStep : null)
+    // 내 봇이 아니면 아무것도 안 한다
+    try { await assertBotsOwned(input.db, input.userId, [input.botId]) } catch { return empty }
+    const step = input.modelStep ?? (process.env.UPSTAGE_API_KEY ? ((m, t, timeoutMs) => solarToolStep(m, t, { timeoutMs })) as ModelStep : null)
     if (!step) {
         console.warn('[Chat MCP] 도구 호출 모델(솔라 열쇠)이 없어 건너뜀')
         return { ...empty, hadServers: true }
@@ -41,7 +45,11 @@ export async function runMcpForChat(input: {
     const phase = await runToolPhase({
         servers: servers.map(s => {
             const session = new McpSession(s.view.url, s.auth)
-            return { id: s.view.id, name: s.view.name, listTools: () => session.listTools(), callTool: (n, a) => session.callTool(n, a) }
+            return {
+                id: s.view.id, name: s.view.name, allowedTools: s.view.allowedTools,
+                listTools: deadline => session.listTools(deadline),
+                callTool: (n, a, deadline) => session.callTool(n, a, deadline),
+            }
         }),
         history: input.history
             .filter(m => m && (m.role === 'user' || m.role === 'assistant'))
@@ -58,14 +66,14 @@ export async function runMcpForChat(input: {
             userId: input.userId, mentorId: input.botId,
             inputTokens: phase.usage.prompt, outputTokens: phase.usage.completion,
             latencyMs: Date.now() - started, ok: phase.stoppedBy !== 'model_error',
-            meta: { calls: phase.calls.length, tools: phase.toolCount, stoppedBy: phase.stoppedBy },
+            meta: { calls: phase.calls.length, tools: phase.toolCount, stoppedBy: phase.stoppedBy, blockedWrites: phase.blockedWrites },
         })
     }
-    console.log('[Chat MCP]', JSON.stringify({ servers: servers.length, tools: phase.toolCount, calls: phase.calls.length, stoppedBy: phase.stoppedBy, failed: phase.failedServers.length }))
+    console.log('[Chat MCP]', JSON.stringify({ servers: servers.length, tools: phase.toolCount, calls: phase.calls.length, blockedWrites: phase.blockedWrites, stoppedBy: phase.stoppedBy, failed: phase.failedServers.length }))
 
     return {
         hadServers: true,
-        prompt: toolResultsPrompt(phase.calls),
+        material: toolMaterial(phase.calls),
         sources: phase.calls.filter(c => c.ok).map((c, i) => ({ id: `mcp:${c.serverId}:${i}`, title: `MCP · ${c.serverName} · ${c.tool}` })),
         phase,
     }

@@ -1,6 +1,7 @@
 // MCP 서버 주소 검사 (SSRF) — 저장 때 이름 검사 + 붙을 때 이름 풀이 검사 + 붙기 직전 검사
 import { describe, it, expect } from 'vitest'
-import { checkMcpUrl, safeLookup, checkHeaderName, normalizeAuthValue } from '../url'
+import { checkMcpUrl, safeLookup, checkHeaderName, normalizeAuthValue, isBlockedMcpHost } from '../url'
+import { isPrivateIp } from '@/domains/agent/fetch-url'
 import { httpsPost, McpTransportError } from '../transport'
 
 describe('checkMcpUrl', () => {
@@ -64,7 +65,7 @@ describe('safeLookup (이름을 번호로 푼 뒤 검사 = DNS 되돌리기 막�
 })
 
 describe('httpsPost 붙기 직전 검사', () => {
-    it.each(['https://127.0.0.1/mcp', 'https://[::1]/mcp', 'https://169.254.169.254/', 'https://localhost/mcp', 'http://example.com/'])('%s 는 네트워크에 나가기 전에 막힌다', async url => {
+    it.each(['https://127.0.0.1/mcp', 'https://[::1]/mcp', 'https://169.254.169.254/', 'https://localhost/mcp', 'http://example.com/', 'https://www.curi-ai.com/mcp'])('%s 는 네트워크에 나가기 전에 막힌다', async url => {
         await expect(httpsPost(url, {}, '{}')).rejects.toBeInstanceOf(McpTransportError)
         await expect(httpsPost(url, {}, '{}')).rejects.toMatchObject({ code: 'blocked' })
     })
@@ -85,5 +86,31 @@ describe('인증 머리글', () => {
         expect(normalizeAuthValue('X-API-Key', 'abc123')).toBe('abc123')
         expect(normalizeAuthValue('Authorization', '  ')).toBeNull()
         expect(() => normalizeAuthValue('Authorization', 'a\r\nHost: evil')).toThrow()
+    })
+})
+
+describe('IPv6 특수 대역 (net.BlockList 서브넷)', () => {
+    it.each(['::ffff:8.8.8.8', '::8.8.8.8', '::', '::1', 'fec0::1', 'ff02::1', '64:ff9b:1::1', '2001:0:4136:e378::1', '2001:db8::1', '100::1', 'fd12::1', 'fe80::1', '[::1]'])('%s 는 막는다', ip => {
+        expect(isPrivateIp(ip)).toBe(true)
+    })
+    it('공개 IPv6 는 통과', () => {
+        expect(isPrivateIp('2606:4700::1111')).toBe(false)
+        expect(isPrivateIp('2a00:1450:4001::200e')).toBe(false)
+    })
+})
+
+describe('우리 사이트 주소 막기 (MCP)', () => {
+    it('curi-ai.com 과 NEXT_PUBLIC_SITE_URL 호스트는 막는다', () => {
+        const before = process.env.NEXT_PUBLIC_SITE_URL
+        process.env.NEXT_PUBLIC_SITE_URL = 'https://preview.curi-stage.example'
+        try {
+            for (const h of ['curi-ai.com', 'www.curi-ai.com', 'api.curi-ai.com', 'CURI-AI.COM.', 'preview.curi-stage.example']) expect(isBlockedMcpHost(h), h).toBe(true)
+            expect(isBlockedMcpHost('mcp.example.com')).toBe(false)
+            expect(checkMcpUrl('https://www.curi-ai.com/api/os/mcp').ok).toBe(false)
+            expect(checkMcpUrl('https://notcuri-ai.com/mcp').ok).toBe(true)
+        } finally {
+            if (before === undefined) delete process.env.NEXT_PUBLIC_SITE_URL
+            else process.env.NEXT_PUBLIC_SITE_URL = before
+        }
     })
 })

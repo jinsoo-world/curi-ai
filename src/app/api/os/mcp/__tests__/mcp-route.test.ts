@@ -79,10 +79,10 @@ describe('/api/os/mcp', () => {
     it('연결 시험: 도구 이름·설명만 돌려주고 상태를 남긴다. 실패해도 인증 값은 안 나간다', async () => {
         const created = await (await POST(req('POST', { name: 'a', url: 'https://a.example.com/mcp', authValue: SECRET }))).json()
         initialize.mockResolvedValue({ serverName: '시험' })
-        listTools.mockResolvedValue([{ name: 'search', description: '찾기', inputSchema: { type: 'object' } }])
+        listTools.mockResolvedValue([{ name: 'search', description: '찾기', readOnly: true, inputSchema: { type: 'object' } }, { name: 'send', description: '보내기', readOnly: false, inputSchema: { type: 'object' } }])
         const ok = await (await TEST(req('POST'), ctx(created.server.id))).json()
-        expect(ok).toEqual({ ok: true, serverName: '시험', tools: [{ name: 'search', description: '찾기' }] })
-        expect(state.fake.rows[0]).toMatchObject({ status: 'ok', tool_count: 1 })
+        expect(ok).toEqual({ ok: true, serverName: '시험', tools: [{ name: 'search', description: '찾기', readOnly: true, allowed: true }, { name: 'send', description: '보내기', readOnly: false, allowed: false }] })
+        expect(state.fake.rows[0]).toMatchObject({ status: 'ok', tool_count: 2 })
 
         initialize.mockRejectedValue(new McpError('서버가 인증을 거절했어요(인증 값을 확인해 주세요)'))
         const bad = await (await TEST(req('POST'), ctx(created.server.id))).text()
@@ -92,7 +92,15 @@ describe('/api/os/mcp', () => {
         expect(String(state.fake.rows[0].last_error)).not.toContain('SUPERSECRET')
     })
 
+    it('POST·PATCH 로 쓰기 허용 도구(allowedTools)를 받는다', async () => {
+        const created = await (await POST(req('POST', { name: 'a', url: 'https://a.example.com/mcp', allowedTools: ['send'] }))).json()
+        expect(created.server.allowedTools).toEqual(['send'])
+        const res = await PATCH(req('PATCH', { allowedTools: [] }), ctx(created.server.id))
+        expect((await res.json()).server.allowedTools).toEqual([])
+    })
+
     it('PATCH 로 끄기·봇 고르기', async () => {
+        state.fake = fakeDb({ creator_profiles: [{ id: 'cp-u1', user_id: 'u1' }], mentors: [{ id: '11111111-1111-4111-8111-111111111111', creator_id: 'cp-u1' }] })
         const created = await (await POST(req('POST', { name: 'a', url: 'https://a.example.com/mcp' }))).json()
         const res = await PATCH(req('PATCH', { enabled: false, botIds: ['11111111-1111-4111-8111-111111111111'] }), ctx(created.server.id))
         expect((await res.json()).server).toMatchObject({ enabled: false, botIds: ['11111111-1111-4111-8111-111111111111'] })

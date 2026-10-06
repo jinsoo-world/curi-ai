@@ -22,9 +22,27 @@ export function checkMcpUrl(raw: unknown): UrlCheck {
     try { u = new URL(text) } catch { return { ok: false, reason: '서버 주소 모양이 아니에요' } }
     if (u.protocol !== 'https:') return { ok: false, reason: 'https 주소만 쓸 수 있어요' }
     if (u.username || u.password) return { ok: false, reason: '주소에 아이디·비밀번호를 넣지 마세요. 인증 값 칸에 따로 넣어 주세요' }
-    if (isBlockedHost(u.hostname)) return { ok: false, reason: '쓸 수 없는 주소예요(내부망·로컬 주소는 막혀 있어요)' }
+    if (isBlockedMcpHost(u.hostname)) return { ok: false, reason: '쓸 수 없는 주소예요(내부망·로컬 주소는 막혀 있어요)' }
     u.hash = ''
     return { ok: true, url: u.toString() }
+}
+
+/** 우리 서비스 자신(curi-ai.com, NEXT_PUBLIC_SITE_URL)을 MCP 서버로 붙이지 못하게 */
+const OWN_DOMAINS = ['curi-ai.com']
+
+/**
+ * MCP 용 호스트 차단 = 공통 규칙(isBlockedHost) + 우리 사이트.
+ * 공통 규칙(fetch-url)에 우리 사이트를 넣지 않은 이유 = 링크 미리보기·읽기가 우리 공개 페이지를 읽는 길까지 막힌다.
+ */
+export function isBlockedMcpHost(hostname: string): boolean {
+    const host = String(hostname ?? '').trim().toLowerCase().replace(/\.$/, '').replace(/^\[|\]$/g, '')
+    if (isBlockedHost(host)) return true
+    if (OWN_DOMAINS.some(d => host === d || host.endsWith(`.${d}`))) return true
+    const site = process.env.NEXT_PUBLIC_SITE_URL
+    if (site) {
+        try { if (new URL(site).hostname.toLowerCase() === host) return true } catch { /* 주소가 이상하면 넘어간다 */ }
+    }
+    return false
 }
 
 type LookupCb = (err: NodeJS.ErrnoException | null, address: string | { address: string; family: number }[], family?: number) => void

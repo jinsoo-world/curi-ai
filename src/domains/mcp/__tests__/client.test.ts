@@ -1,6 +1,7 @@
 // MCP 클라이언트 — Streamable HTTP(JSON·SSE 둘 다), 세션 번호, 인증 값 비노출
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { McpSession, McpError, parseSse, cleanTools, redact } from '../client'
+import { MAX_TOOL_DESCRIPTIONS_TOTAL_CHARS } from '../limits'
 import type { HttpPost, HttpResult } from '../transport'
 
 const SECRET = 'Bearer sk-live-SUPERSECRET-123456'
@@ -30,7 +31,7 @@ describe('McpSession', () => {
         const init = await s.initialize()
         expect(init.serverName).toBe('시험서버')
         const tools = await s.listTools()
-        expect(tools).toEqual([{ name: 'search', description: '찾기', inputSchema: { type: 'object', properties: { q: { type: 'string' } } } }])
+        expect(tools).toEqual([{ name: 'search', description: '찾기', readOnly: false, inputSchema: { type: 'object', properties: { q: { type: 'string' } } } }])
         expect(calls.map(c => c.body.method)).toEqual(['initialize', 'notifications/initialized', 'tools/list'])
         expect(calls[0].headers.Accept).toContain('text/event-stream')
         expect(calls[0].headers['Mcp-Session-Id']).toBeUndefined()
@@ -78,16 +79,71 @@ describe('McpSession', () => {
     })
 })
 
+describe('도구 표시(annotations)와 가리기', () => {
+    it('readOnlyHint 가 true 이고 destructiveHint 가 true 가 아닐 때만 읽기 전용', () => {
+        const out = cleanTools([
+            { name: 'read', annotations: { readOnlyHint: true } },
+            { name: 'write' },
+            { name: 'weird', annotations: { readOnlyHint: true, destructiveHint: true } },
+            { name: 'del', annotations: { readOnlyHint: false, destructiveHint: true } },
+        ])
+        expect(out.map(t => [t.name, t.readOnly])).toEqual([['read', true], ['write', false], ['weird', false], ['del', false]])
+    })
+    it('도구 설명 전체 글자 합이 상한을 넘으면 뒤의 도구는 버린다', () => {
+        const out = cleanTools(Array.from({ length: 20 }, (_, i) => ({ name: `t${i}`, description: 'd'.repeat(500) })))
+        expect(out.reduce((n, t) => n + t.description.length, 0)).toBeLessThanOrEqual(MAX_TOOL_DESCRIPTIONS_TOTAL_CHARS)
+        expect(out.length).toBeLessThan(20)
+    })
+    it('도구 설명에 섞인 인증 값을 가린다', async () => {
+        const { post } = fakeServer(msg => {
+            if (msg.method === 'initialize') return json({ jsonrpc: '2.0', id: msg.id, result: {} })
+            if (msg.method === 'tools/list') return json({ jsonrpc: '2.0', id: msg.id, result: { tools: [{ name: 'x', description: `key=${SECRET}` }] } })
+            return { status: 202, headers: {}, body: '' }
+        })
+        const tools = await new McpSession('https://mcp.example.com/mcp', { headerName: 'Authorization', value: SECRET }, post).listTools()
+        expect(tools[0].description).not.toContain('SUPERSECRET')
+    })
+})
+
+describe('마감 시각', () => {
+    it('요청마다 남은 시간 안에서만 기다리고, 알림은 3초 이하', async () => {
+        const timeouts: Record<string, number> = {}
+        let t = 1_000
+        const post: HttpPost = async (_u, _h, body, opts) => {
+            const msg = JSON.parse(body)
+            timeouts[msg.method] = opts?.timeoutMs ?? -1
+            t += 2_000
+            if (msg.method === 'initialize') return json({ jsonrpc: '2.0', id: msg.id, result: {} })
+            if (msg.method === 'tools/list') return json({ jsonrpc: '2.0', id: msg.id, result: { tools: [] } })
+            return { status: 202, headers: {}, body: '' }
+        }
+        const s = new McpSession('https://mcp.example.com/mcp', null, post, 15_000, () => t)
+        await s.listTools(t + 10_000)
+        expect(timeouts.initialize).toBe(10_000)
+        expect(timeouts['notifications/initialized']).toBeLessThanOrEqual(3_000)
+        expect(timeouts['tools/list']).toBeLessThanOrEqual(6_000)
+    })
+    it('마감이 지났으면 서버에 보내지도 않는다', async () => {
+        const post = vi.fn() as unknown as HttpPost
+        const s = new McpSession('https://mcp.example.com/mcp', null, post, 15_000, () => 5_000)
+        await expect(s.listTools(4_000)).rejects.toThrow(/시간/)
+        expect(post).not.toHaveBeenCalled()
+    })
+})
+
 describe('도움 함수', () => {
     it('parseSse 는 여러 이벤트의 data 를 모은다', () => {
         expect(parseSse('data: {"id":1}\n\ndata: not json\n\ndata: {"id":2}\n\n')).toEqual([{ id: 1 }, { id: 2 }])
     })
     it('cleanTools 는 개수·설명·스키마 크기를 자른다', () => {
-        const many = Array.from({ length: 40 }, (_, i) => ({ name: `t${i}`, description: 'x'.repeat(2000), inputSchema: { type: 'object', big: 'y'.repeat(10_000) } }))
+        const many = Array.from({ length: 40 }, (_, i) => ({ name: `t${i}`, description: 'x'.repeat(50), inputSchema: { type: 'object', big: 'y'.repeat(10_000) } }))
         const out = cleanTools(many)
         expect(out).toHaveLength(20)
-        expect(out[0].description).toHaveLength(500)
+        expect(cleanTools([{ name: 'long', description: 'x'.repeat(2000) }])[0].description).toHaveLength(500)
         expect(out[0].inputSchema).toEqual({ type: 'object', properties: {} })
+        // 스키마 1,500자 넘으면 줄인다
+        const mid = cleanTools([{ name: 'a', inputSchema: { type: 'object', p: 'z'.repeat(1_600) } }])
+        expect(mid[0].inputSchema).toEqual({ type: 'object', properties: {} })
         expect(cleanTools([{ description: '이름 없음' }, null])).toEqual([])
     })
     it('redact 는 전체 값과 토큰 부분을 모두 가린다', () => {

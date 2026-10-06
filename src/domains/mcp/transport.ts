@@ -6,8 +6,7 @@
 // 몸통은 MAX_RESPONSE_BYTES 넘으면 끊는다.
 
 import { request } from 'https'
-import { isBlockedHost } from '@/domains/agent/fetch-url'
-import { safeLookup } from './url'
+import { isBlockedMcpHost, safeLookup } from './url'
 import { MAX_RESPONSE_BYTES, TOOL_TIMEOUT_MS } from './limits'
 
 export interface HttpResult {
@@ -41,7 +40,7 @@ export const httpsPost: HttpPost = (url, headers, body, opts = {}) => {
         const u = new URL(url)
         if (u.protocol !== 'https:') return reject(new McpTransportError('blocked', 'https 주소만 쓸 수 있어요'))
         // 붙기 직전에 이름으로 한 번 더 본다(저장 뒤 규칙이 바뀌어도, 번호 주소는 이름 풀이를 안 거쳐도 막히게). 풀린 번호는 safeLookup 이 본다
-        if (isBlockedHost(u.hostname)) {
+        if (isBlockedMcpHost(u.hostname)) {
             return reject(new McpTransportError('blocked', '쓸 수 없는 주소예요(내부망·로컬 주소는 막혀 있어요)'))
         }
 

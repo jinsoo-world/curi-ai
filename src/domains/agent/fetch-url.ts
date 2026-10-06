@@ -15,6 +15,26 @@
 //  7. 이 파일은 「안전하게 가져오기」까지만. 글로 바꾸는 일(본문 추출, 유튜브 자막)은 domains/os/readers 에 있다.
 
 import { lookup } from 'dns/promises'
+import { BlockList, isIPv6 } from 'net'
+
+/** 막는 IPv6 대역. 루프백·미지정·사설·링크로컬·멀티캐스트·문서용·터널(테레도)·IPv4 품은 옛 모양 */
+const BLOCKED_V6 = (() => {
+    const list = new BlockList()
+    const nets: [string, number][] = [
+        ['::', 96],            // ::, ::1, ::a.b.c.d (IPv4 호환, 옛 모양)
+        ['::ffff:0:0', 96],    // IPv4 를 품은 모양 전부 (공개 IPv4 도 이 모양으로는 받지 않는다)
+        ['64:ff9b:1::', 48],   // 지역 NAT64
+        ['100::', 64],         // 버리는 대역
+        ['2001::', 32],        // 테레도 터널
+        ['2001:db8::', 32],    // 문서용
+        ['fc00::', 7],         // 사설(ULA)
+        ['fe80::', 10],        // 링크 로컬
+        ['fec0::', 10],        // 옛 사이트 로컬
+        ['ff00::', 8],         // 멀티캐스트
+    ]
+    for (const [net, prefix] of nets) list.addSubnet(net, prefix, 'ipv6')
+    return list
+})()
 
 /** 한 번에 읽을 수 있는 최대 크기 */
 export const MAX_FETCH_BYTES = 2 * 1024 * 1024
@@ -58,11 +78,10 @@ export function isPrivateIp(ip: string): boolean {
     const addr = String(ip ?? '').trim().toLowerCase().replace(/^\[|\]$/g, '')
     if (!addr) return true
 
-    // IPv6 가 IPv4 를 품은 모양(::ffff:10.0.0.1)은 뒤의 IPv4 로 본다
-    const mapped = addr.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/)
-    if (mapped) return isPrivateIp(mapped[1])
-    // 같은 것을 16진수로 쓴 모양(::ffff:7f00:1, URL 해석기가 이렇게 바꿔 준다), NAT64(64:ff9b::/96), 6to4(2002::/16)도 품은 IPv4 로 본다
-    const hexMapped = addr.match(/^(?:::ffff:|64:ff9b::|0:0:0:0:0:ffff:)([0-9a-f]{1,4}):([0-9a-f]{1,4})$/)
+    // IPv6 가 IPv4 를 품은 모양(::ffff:10.0.0.1, ::ffff:7f00:1)은 공개 번호여도 막는다 (::ffff:0:0/96, 정상 이름 풀이는 이 모양을 주지 않는다)
+    if (/^(?:::ffff:|0:0:0:0:0:ffff:)/.test(addr)) return true
+    // NAT64(64:ff9b::/96), 6to4(2002::/16)는 품은 IPv4 로 본다
+    const hexMapped = addr.match(/^64:ff9b::([0-9a-f]{1,4}):([0-9a-f]{1,4})$/)
     if (hexMapped) {
         const hi = parseInt(hexMapped[1], 16), lo = parseInt(hexMapped[2], 16)
         return isPrivateIp(`${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`)
@@ -89,10 +108,8 @@ export function isPrivateIp(ip: string): boolean {
         return false
     }
 
-    // IPv6
-    if (addr === '::' || addr === '::1') return true
-    if (/^f[cd][0-9a-f]{2}:/.test(addr)) return true  // fc00::/7 사설
-    if (/^fe[89ab][0-9a-f]:/.test(addr)) return true  // fe80::/10 링크 로컬
+    // IPv6 = 서브넷 목록(net.BlockList)으로 본다. 위에서 IPv4 를 품은 모양(NAT64 64:ff9b::/96, 6to4)은 이미 걸렀다
+    if (isIPv6(addr)) return BLOCKED_V6.check(addr, 'ipv6')
     return false
 }
 
