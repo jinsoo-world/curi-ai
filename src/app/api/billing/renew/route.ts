@@ -77,6 +77,15 @@ export async function GET(req: Request) {
         },
         markPastDue: sub => setStatus(sub, 'past_due'),
         markPaidUnsynced: sub => setStatus(sub, 'renew_paid_unsynced'),
+        markNeedsReview: sub => setStatus(sub, 'renew_needs_review'),
+        async markCanceled(sub) {
+            // 해지 신청 + 결제 안 된 것이 확실 = 결제 없이 canceled (기간은 이미 끝났으니 다음 만료 처리에서 정리)
+            const now = new Date().toISOString()
+            const { error } = await supabase.from('subscriptions')
+                .update({ status: 'canceled', canceled_at: now, updated_at: now })
+                .eq('id', sub.id).eq('status', 'renewing')
+            if (error) throw new Error(error.message)
+        },
         alert: a => sendErrorAlert(a),
     }
 

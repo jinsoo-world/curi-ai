@@ -17,6 +17,8 @@ export const RENEW_BUDGET_MS = 50_000
 /** 토스 결제(10초) + 조회 두 번이 들어갈 자리. 이보다 적게 남으면 새 구독을 시작하지 않는다 */
 export const RENEW_PER_ITEM_MS = 12_000
 export const RENEW_STALE_MS = 10 * 60_000
+/** renewing 이 기간 끝에서 이만큼 지나도 안 풀리면 자동 결제를 멈추고 사람에게 넘긴다 */
+export const RENEW_STUCK_MS = 3 * 86_400_000
 
 export interface ChargeResult {
     paymentKey: string
@@ -46,10 +48,14 @@ export interface RenewDeps {
     markRenewed(sub: Subscription, paid: ChargeResult): Promise<void>
     markPastDue(sub: Subscription): Promise<void>
     markPaidUnsynced(sub: Subscription): Promise<void>
+    /** 해지 신청이 들어왔고 결제되지 않은 것이 확실 → canceled (결제 없이) */
+    markCanceled(sub: Subscription): Promise<void>
+    /** renewing 이 3일 넘게 안 풀림 → 결제 시도를 멈추고 사람 확인(renew_needs_review) */
+    markNeedsReview(sub: Subscription): Promise<void>
     alert(a: { source: string; error: string; userId?: string; metadata?: Record<string, unknown> }): Promise<void>
 }
 
-export interface RenewSummary { picked: number; renewed: number; synced: number; expired: number; failed: number; unsynced: number; uncertain: number; skipped: number; skippedForTime: number }
+export interface RenewSummary { picked: number; renewed: number; synced: number; expired: number; failed: number; unsynced: number; uncertain: number; canceled: number; needsReview: number; skipped: number; skippedForTime: number }
 
 function asCharge(o: OrderLookup): ChargeResult {
     return { paymentKey: o.paymentKey, orderId: o.orderId, totalAmount: o.totalAmount ?? 0, approvedAt: o.approvedAt ?? new Date().toISOString(), receipt: o.receipt ?? null }
@@ -73,7 +79,7 @@ export function judgeChargeFailure(chargeErr: unknown, lookup: OrderLookup | nul
 export async function runRenewals(deps: RenewDeps, opts: { now?: () => Date; deadline?: number; limit?: number } = {}): Promise<RenewSummary> {
     const now = opts.now ?? (() => new Date())
     const deadline = opts.deadline ?? Date.now() + RENEW_BUDGET_MS
-    const out: RenewSummary = { picked: 0, renewed: 0, synced: 0, expired: 0, failed: 0, unsynced: 0, uncertain: 0, skipped: 0, skippedForTime: 0 }
+    const out: RenewSummary = { picked: 0, renewed: 0, synced: 0, expired: 0, failed: 0, unsynced: 0, uncertain: 0, canceled: 0, needsReview: 0, skipped: 0, skippedForTime: 0 }
     const t0 = now()
     const subs = await deps.listDue(t0, opts.limit ?? RENEW_BATCH_LIMIT, new Date(t0.getTime() - RENEW_STALE_MS))
     out.picked = subs.length
@@ -94,10 +100,31 @@ export async function runRenewals(deps: RenewDeps, opts: { now?: () => Date; dea
             let paid: ChargeResult | null = null
             let fromLookup = false
 
-            // 결제 중 죽은 줄을 다시 잡은 경우: 이미 결제됐는지 먼저 본다
-            if (sub.status === 'renewing') {
-                const prior = await deps.lookupOrder(orderId).catch(() => null)
-                if (prior && prior.status === 'DONE') { paid = asCharge(prior); fromLookup = true }
+            // 결제 중 죽은 줄을 다시 잡았거나 해지 신청이 들어온 줄: 결제하기 전에 그 주문번호가 이미 결제됐는지 먼저 본다.
+            // 조회가 오류면 확인 불가 = 다시 결제하지 않는다(같은 번호라도 응답 없는 결제를 겹쳐 부르지 않게)
+            if (sub.status === 'renewing' || sub.cancel_requested_at) {
+                let prior: OrderLookup | null | 'error'
+                try { prior = await deps.lookupOrder(orderId) } catch { prior = 'error' }
+                const isDone = !!prior && prior !== 'error' && prior.status === 'DONE'
+                const surelyUnpaid = prior === null || (prior !== 'error' && (prior.status === 'ABORTED' || prior.status === 'EXPIRED'))
+                if (isDone && prior && prior !== 'error') { paid = asCharge(prior); fromLookup = true }
+
+                if (!paid && sub.cancel_requested_at) {
+                    // 해지 신청 = 결제 시도 금지. 결제 안 된 게 확실하면 해지로, 모르면 그대로 둔다
+                    if (surelyUnpaid) { await deps.markCanceled(sub); out.canceled++ } else { out.uncertain++ }
+                    continue
+                }
+                if (!paid && sub.status === 'renewing' && t.getTime() - new Date(sub.current_period_end).getTime() > RENEW_STUCK_MS) {
+                    // 3일 넘게 확인이 안 됨 = 자동으로 더 결제하지 않고 사람에게
+                    await deps.markNeedsReview(sub)
+                    out.needsReview++
+                    continue
+                }
+                if (prior === 'error') {
+                    out.uncertain++
+                    await deps.alert({ source: 'billing/renew 결제 여부 확인 불가', error: '주문번호 조회 실패', userId: sub.user_id, metadata: { subscriptionId: sub.id, orderId } })
+                    continue
+                }
             }
 
             if (!paid) {
@@ -149,6 +176,9 @@ export async function runRenewals(deps: RenewDeps, opts: { now?: () => Date; dea
             out.failed++
             await deps.alert({ source: 'billing/renew', error: e instanceof Error ? e.message : String(e), userId: sub.user_id, metadata: { subscriptionId: sub.id } }).catch(() => {})
         }
+    }
+    if (out.needsReview > 0) {
+        await deps.alert({ source: 'billing/renew 사람 확인 필요', error: `자동 갱신 ${out.needsReview}건이 3일 넘게 결제 확인이 안 돼 자동 결제를 멈췄어요. 토스 콘솔에서 주문번호로 확인해 주세요` }).catch(() => {})
     }
     return out
 }

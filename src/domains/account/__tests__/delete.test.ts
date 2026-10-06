@@ -140,7 +140,7 @@ describe('deleteAccount', () => {
         const { db, calls } = fakeDb({ activeSub: true })
         await deleteAccount(db, user)
         const c = calls.find(x => x.target === 'subscriptions:in')
-        expect((c!.detail as [string, string[]])[1].sort()).toEqual(['active', 'past_due', 'renew_paid_unsynced', 'renewing'])
+        expect((c!.detail as [string, string[]])[1].sort()).toEqual(['active', 'past_due', 'renew_needs_review', 'renew_paid_unsynced', 'renewing'])
     })
 
     it('순서: 결제기록 분리 -> 저장소 -> 하위 표 -> 봇 -> 크리에이터 프로필 -> 로그인 계정', async () => {
