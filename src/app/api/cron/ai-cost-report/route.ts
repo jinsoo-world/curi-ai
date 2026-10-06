@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'no' }, { status: 401 })
     }
     try {
-        const db = createAdminClient()
+        const db = createAdminClient({ longRunning: true })   // 이번 달 합계는 줄이 많아 5초를 넘길 수 있다
         const now = new Date()
         const r = kstRanges(now)
         const [day, month] = await Promise.all([fetchCostRows(db, r.dayFrom, r.dayTo), fetchCostRows(db, r.monthFrom, now)])
