@@ -17,7 +17,7 @@ export const DOC_PARSE = {
     ocrUsdPerPage: 0.0015,
     krwPerUsd: 1356,
     monthlyCapUsd: 50,
-    // 3쪽 11초 실측. 넘으면 hwpjs 로컬로 읽음 (process 창구 최대 300초)
+    // 3쪽 11초 실측. 넘으면 kordoc 로컬로 읽음 (process 창구 최대 300초)
     timeoutMs: 180_000,
     /** 동기 호출 상한 */
     maxSyncPages: 100,

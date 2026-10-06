@@ -304,7 +304,7 @@ export async function POST(req: NextRequest) {
 
 
         } else if (['hwp', 'hwpx'].includes(ext) && docParseOn) {
-            // 한글: 업스테이지 Document Parse Standard (대표 확정 0929). 회사 월 상한이면 hwpjs 로컬로
+            // 한글: 업스테이지 Document Parse Standard (대표 확정 0929). 회사 월 상한·실패면 kordoc 로컬로 (hwp 5.0·hwpx 둘 다)
             const pages = reservation?.pages ?? 1
             let parsed = false
             if (await underUpstageCap(admin, pages)) {
@@ -319,14 +319,13 @@ export async function POST(req: NextRequest) {
                     console.error('[Process] HWP Document Parse error:', r.status, r.error)
                 }
             }
-            if (!parsed && ext === 'hwp') {
+            if (!parsed) {
                 try {
-                    const { toMarkdown } = await import('@ohah/hwpjs')
-                    const result = toMarkdown(Buffer.from(await fileData.arrayBuffer()), { image: 'base64', useHtml: false })
-                    textContent = typeof result === 'string' ? result : result.markdown || ''
-                    console.log('[Process] HWP hwpjs fallback, text length:', textContent.length)
+                    const { parseHangul } = await import('@/domains/knowledge/parsers/hwp')
+                    textContent = await parseHangul(Buffer.from(await fileData.arrayBuffer()))
+                    console.log('[Process] 한글 kordoc 로컬 읽음, text length:', textContent.length)
                 } catch (hwpErr) {
-                    console.error('[Process] HWP hwpjs parse error:', hwpErr instanceof Error ? hwpErr.message : hwpErr)
+                    console.error('[Process] 한글 kordoc 읽기 실패:', hwpErr instanceof Error ? hwpErr.message : hwpErr)
                 }
             }
             if (!parsed && textContent.trim().length < 200 && !(await underUpstageCap(admin, pages))) {
@@ -335,20 +334,18 @@ export async function POST(req: NextRequest) {
             }
 
         } else if (['hwp', 'hwpx'].includes(ext)) {
-            // HWP: @ohah/hwpjs로 마크다운 변환 시도 (무료, 로컬 처리)
+            // 한글(Document Parse 꺼짐): kordoc 로컬 처리 (무료)
             try {
-                const { toMarkdown } = await import('@ohah/hwpjs')
-                const uint8 = Buffer.from(await fileData.arrayBuffer())
-                const result = toMarkdown(uint8, { image: 'base64', useHtml: false })
-                textContent = typeof result === 'string' ? result : result.markdown || ''
-                console.log('[Process] HWP parsed with hwpjs, text length:', textContent.length)
+                const { parseHangul } = await import('@/domains/knowledge/parsers/hwp')
+                textContent = await parseHangul(Buffer.from(await fileData.arrayBuffer()))
+                console.log('[Process] 한글 kordoc 로컬 읽음, text length:', textContent.length)
             } catch (hwpErr) {
-                console.error('[Process] HWP hwpjs parse error:', hwpErr instanceof Error ? hwpErr.message : hwpErr)
+                console.error('[Process] 한글 kordoc 읽기 실패:', hwpErr instanceof Error ? hwpErr.message : hwpErr)
             }
 
-            // hwpjs가 본문을 못 읽은 경우 (200자 이하 = 메타데이터뿐) → Upstage OCR fallback
+            // 본문을 못 읽은 경우 (200자 이하 = 메타데이터뿐) → Upstage OCR fallback
             if (textContent.trim().length < 200 && await underUpstageCap(admin)) {
-                console.log('[Process] HWP hwpjs result too short, falling back to Upstage OCR')
+                console.log('[Process] HWP 로컬 결과가 너무 짧음, falling back to Upstage OCR')
                 try {
                     const formData = new FormData()
                     formData.append('document', fileData, source.title)
