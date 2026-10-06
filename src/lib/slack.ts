@@ -154,7 +154,7 @@ export async function sendErrorAlert(data: {
     error: string
     userId?: string
     metadata?: Record<string, unknown>
-}) {
+}, opts: { timeoutMs?: number } = {}) {
     const text = `🚨 [에러 알림] ${data.source}: ${data.error}`
     const blocks: SlackBlock[] = [
         {
@@ -176,7 +176,7 @@ export async function sendErrorAlert(data: {
             ],
         },
     ]
-    await sendSlackNotification(text, blocks)
+    await sendSlackNotification(text, blocks, opts)
 }
 
 /**
