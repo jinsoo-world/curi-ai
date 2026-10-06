@@ -39,6 +39,32 @@ export async function requireMentorOwner(
         return { ok: false, error: '로그인이 필요합니다.', status: 401 }
     }
 
+    return checkOwner({ id: user.id, email: user.email ?? '' }, mentorId)
+}
+
+/**
+ * 서버 안 전용 — 로그인 쿠키 없이 「이 사람이 이 멘토의 주인인가」를 확인한다.
+ * 예약 작업(드라이브·노션 가져오기)이 내부 열쇠(x-internal-key)로 학습 창구를 부를 때 쓴다.
+ * 내부 열쇠가 맞아도 몸통이 적어 보낸 사람을 그대로 믿지 않고 같은 주인 확인을 한 번 더 한다.
+ */
+export async function mentorOwnerForUser(
+    userId: unknown,
+    mentorId: unknown,
+): Promise<MentorOwnerOk | MentorOwnerFail> {
+    if (typeof mentorId !== 'string' || !mentorId) {
+        return { ok: false, error: '멘토 ID는 필수입니다.', status: 400 }
+    }
+    if (typeof userId !== 'string' || !userId) {
+        return { ok: false, error: '사용자 ID는 필수입니다.', status: 400 }
+    }
+    // 내부 호출은 어드민 예외를 쓰지 않는다(email 비움)
+    return checkOwner({ id: userId, email: '' }, mentorId)
+}
+
+async function checkOwner(
+    user: { id: string; email: string },
+    mentorId: string,
+): Promise<MentorOwnerOk | MentorOwnerFail> {
     const admin = createAdmin(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,

@@ -18,6 +18,8 @@ import {
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
+/** 함수 한도(60초) 안에 답하려고 50초에서 새 파일을 그만 맡긴다. 남은 것은 다음 날 예약 작업이 잇는다 */
+const RUN_BUDGET_MS = 50_000
 
 function appUrl(req: NextRequest): string {
     return (process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin).replace(/\/+$/, '')
@@ -56,6 +58,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({})) as Record<string, unknown>
     const mentorId = String(body.mentorId ?? '')
     const base = appUrl(req)
+    const signal = AbortSignal.timeout(RUN_BUDGET_MS)
 
     try {
         const db = createAdminClient({ longRunning: true })
@@ -65,7 +68,7 @@ export async function POST(req: NextRequest) {
             const syncId = String(body.syncId ?? '')
             const row = await getCloudSyncRow(db, user.id, syncId)
             if (!row || row.mentorId !== mentorId) return NextResponse.json({ error: '그 동기화를 못 찾았어요' }, { status: 404 })
-            const result = await runCloudSync(db, row, base)
+            const result = await runCloudSync(db, row, base, { signal })
             return NextResponse.json({ ran: 1, ...result })
         }
 
@@ -76,9 +79,10 @@ export async function POST(req: NextRequest) {
         const registered = await registerCloudSyncs(db, user.id, mentorId, provider, items)
         let 성공 = 0, 실패 = 0
         for (const r of registered) {
+            if (signal.aborted) break   // 남은 등록은 다음 예약 작업이 처음 도는 줄로 잡는다(next_run_at = 지금)
             const row = await getCloudSyncRow(db, user.id, r.id)
             if (!row) continue
-            const result = await runCloudSync(db, row, base)
+            const result = await runCloudSync(db, row, base, { signal })
             if (result.ok) 성공++; else 실패++
         }
         const syncs = await listCloudSyncs(db, user.id, mentorId)

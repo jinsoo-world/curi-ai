@@ -1,6 +1,6 @@
 // 드라이브・노션 동기화(갈래 G)의 순수 판정 함수들 — 인터넷・DB 없이 확인한다.
-import { describe, it, expect } from 'vitest'
-import { isChangedSince, cleanCloudProvider } from '../cloudsync'
+import { describe, it, expect, vi } from 'vitest'
+import { isChangedSince, cleanCloudProvider, handOffToProcess, nextDriveCursor } from '../cloudsync'
 
 describe('isChangedSince — 수정시각 비교(새 것만 판정)', () => {
     it('커서(마지막 동기화 시각)가 없으면 처음이라 항상 바뀐 것으로 본다', () => {
@@ -34,5 +34,53 @@ describe('cleanCloudProvider', () => {
         expect(cleanCloudProvider('')).toBeNull()
         expect(cleanCloudProvider(undefined)).toBeNull()
         expect(cleanCloudProvider(123)).toBeNull()
+    })
+})
+
+describe('handOffToProcess — 학습 창구에 맡기기(기다리지 않기 + 내부 열쇠)', () => {
+    const body = { sourceId: 's1', mentorId: 'm1', actorUserId: 'u1' }
+
+    it('내부 열쇠 머리글과 주인 번호를 같이 보낸다', async () => {
+        const f = vi.fn(async (_url: string, _init?: RequestInit) => new Response('{}', { status: 200 }))
+        const r = await handOffToProcess('https://x.test', body, { fetch: f as unknown as typeof fetch, secret: 'k' })
+        expect(r).toEqual({ queued: true })
+        const [url, init] = f.mock.calls[0]
+        expect(url).toBe('https://x.test/api/creator/knowledge/process')
+        expect((init!.headers as Record<string, string>)['x-internal-key']).toBe('k')
+        expect(JSON.parse(String(init!.body))).toEqual(body)
+        expect(init!.signal).toBeInstanceOf(AbortSignal)
+    })
+
+    it('정해진 시간 안에 답이 없으면 맡긴 것으로 친다(학습은 그쪽에서 계속)', async () => {
+        const f = vi.fn((_url: string, init?: RequestInit) => new Promise<Response>((_, reject) => {
+            init!.signal!.addEventListener('abort', () => reject(Object.assign(new Error('timeout'), { name: 'TimeoutError' })))
+        }))
+        const r = await handOffToProcess('https://x.test', body, { fetch: f as unknown as typeof fetch, secret: 'k', waitMs: 20 })
+        expect(r).toEqual({ queued: true })
+    })
+
+    it('401·403 처럼 바로 거절되면 실패로 센다', async () => {
+        const f = vi.fn(async () => new Response('{}', { status: 401 }))
+        expect(await handOffToProcess('https://x.test', body, { fetch: f as unknown as typeof fetch, secret: 'k' })).toEqual({ queued: false, status: 401 })
+    })
+
+    it('서버 열쇠가 없으면 부르지도 않는다', async () => {
+        const f = vi.fn()
+        const r = await handOffToProcess('https://x.test', body, { fetch: f as unknown as typeof fetch, secret: '' })
+        expect(r.queued).toBe(false)
+        expect(f).not.toHaveBeenCalled()
+    })
+})
+
+describe('nextDriveCursor — 중간에 멈추면 커서를 마지막으로 맡긴 파일까지만', () => {
+    const now = '2026-10-06T00:00:00.000Z'
+    it('다 맡겼으면 지금 시각', () => {
+        expect(nextDriveCursor({ prevCursor: null, done: true, lastHandledModified: '2026-10-01T00:00:00Z', nowIso: now })).toBe(now)
+    })
+    it('마감·칸 부족으로 멈췄으면 마지막으로 맡긴 파일의 수정시각', () => {
+        expect(nextDriveCursor({ prevCursor: '2026-09-01T00:00:00Z', done: false, lastHandledModified: '2026-10-01T00:00:00Z', nowIso: now })).toBe('2026-10-01T00:00:00Z')
+    })
+    it('하나도 못 맡겼으면 커서를 그대로 둔다(놓치지 않는다)', () => {
+        expect(nextDriveCursor({ prevCursor: '2026-09-01T00:00:00Z', done: false, lastHandledModified: null, nowIso: now })).toBe('2026-09-01T00:00:00Z')
     })
 })

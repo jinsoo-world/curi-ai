@@ -14,6 +14,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { addKnowledgeSource } from '@/domains/knowledge'
+import { INTERNAL_KEY_HEADER } from '@/lib/internal-key'
+import { createTableJobStore, type DueJob, type DueJobStore } from '@/lib/jobs/run-due-batch'
 import { 올릴수있는파일 } from '@/domains/knowledge/files'
 import { markInjectionPatterns } from '@/domains/chat/injection'
 import { assertBotOwned, assertRoomForMore } from '@/domains/os/knowledge'
@@ -121,7 +123,7 @@ export interface CloudSyncView {
     provider: CloudProvider
     folderOrPageId: string
     name: string
-    status: 'pending' | 'ok' | 'error'
+    status: 'pending' | 'ok' | 'error' | 'paused'
     lastError: string | null
     itemCount: number
     lastSyncedAt: string | null
@@ -233,18 +235,73 @@ function sanitizeStorageBase(name: string): string {
     return name.replace(/[^a-zA-Z0-9._-]/g, '').replace(/^[._-]+/, '').slice(0, 40)
 }
 
-async function runDriveSync(db: SupabaseClient, row: SyncRow, connectorId: string, baseUrl: string): Promise<number> {
+/** 학습 창구를 부를 때 응답을 기다리는 최대 시간. 넘으면 「맡겼다」로 본다(학습은 그쪽 함수에서 끝까지 돈다) */
+export const PROCESS_HANDOFF_MS = 3_000
+
+export type ProcessHandoff = { queued: true } | { queued: false; status: number | null; error?: string }
+
+/**
+ * 학습 창구(/api/creator/knowledge/process)에 자료 하나를 맡긴다 — 기다리지 않는다.
+ * 예전엔 서버가 로그인 쿠키 없이 자기 창구를 불러 매번 401 이 났고(자료가 「읽는 중」으로 남음),
+ * 응답을 끝까지 기다려 파일 하나에 수십 초를 썼다.
+ * 이제 내부 열쇠(x-internal-key = CRON_SECRET)와 주인 번호(actorUserId)를 같이 보내고, 몇 초 안에 거절이 없으면 맡긴 것으로 친다.
+ */
+export async function handOffToProcess(
+    baseUrl: string,
+    body: { sourceId: string; mentorId: string; actorUserId: string },
+    deps: { fetch?: typeof fetch; secret?: string; waitMs?: number } = {},
+): Promise<ProcessHandoff> {
+    const secret = deps.secret ?? process.env.CRON_SECRET
+    if (!secret) return { queued: false, status: null, error: 'CRON_SECRET 없음' }
+    const doFetch = deps.fetch ?? fetch
+    try {
+        const res = await doFetch(`${baseUrl}/api/creator/knowledge/process`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', [INTERNAL_KEY_HEADER]: secret },
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(deps.waitMs ?? PROCESS_HANDOFF_MS),
+        })
+        if (res.ok) return { queued: true }
+        return { queued: false, status: res.status }
+    } catch (e) {
+        // 기다리기를 그만둔 것(시간 초과) = 요청은 이미 갔다 → 학습은 그쪽에서 계속 돈다
+        const name = e instanceof Error ? e.name : ''
+        if (name === 'TimeoutError' || name === 'AbortError') return { queued: true }
+        return { queued: false, status: null, error: e instanceof Error ? e.message : String(e) }
+    }
+}
+
+/**
+ * 다음 커서 — 바뀐 파일을 전부 맡겼으면 지금 시각, 시간·칸이 모자라 중간에 멈췄으면
+ * 마지막으로 맡긴 파일의 수정시각(그 뒤 파일은 다음 회차에 다시 본다). 하나도 못 맡겼으면 그대로.
+ */
+export function nextDriveCursor(a: { prevCursor: string | null; done: boolean; lastHandledModified: string | null; nowIso: string }): string | null {
+    if (a.done) return a.nowIso
+    return a.lastHandledModified ?? a.prevCursor
+}
+
+interface SyncRunOptions { signal?: AbortSignal; handOff?: typeof handOffToProcess }
+
+async function runDriveSync(db: SupabaseClient, row: SyncRow, connectorId: string, baseUrl: string, opts: SyncRunOptions): Promise<{ count: number; cursor: string | null }> {
+    const handOff = opts.handOff ?? handOffToProcess
     return withGoogleDriveAuth(db, row.userId, connectorId, async token => {
         const files = await listDriveFilesInFolder(token, row.folderOrPageId, 올릴수있는파일)
-        const changed = files
+        // 오래된 것부터 = 중간에 멈춰도 커서를 「마지막으로 맡긴 파일」까지만 민다
+        const changedAll = files
             .filter(f => isChangedSince(f.modifiedTime, row.lastSyncedAt) && f.size <= DRIVE_MAX_FILE_BYTES)
-            .slice(0, MAX_PER_SYNC_RUN)
+            .sort((x, y) => String(x.modifiedTime ?? '').localeCompare(String(y.modifiedTime ?? '')))
+        const changed = changedAll.slice(0, MAX_PER_SYNC_RUN)
 
         let count = 0
+        let handled = 0
+        let lastHandledModified: string | null = null
+        let stopped = changedAll.length > changed.length
         for (const f of changed) {
+            if (opts.signal?.aborted) { stopped = true; break }   // 마감 — 남은 파일은 다음 회차
             try {
                 await assertRoomForMore(db, row.mentorId)
             } catch {
+                stopped = true
                 break // 자료 칸(봇 하나당 10개)이 다 찼다. 이번 실행은 여기까지
             }
             const content = await fetchDriveFileContent(token, f)
@@ -253,7 +310,7 @@ async function runDriveSync(db: SupabaseClient, row: SyncRow, connectorId: strin
 
             const { error: upErr } = await db.storage.from('knowledge-files')
                 .upload(storageKey, content.buffer, { contentType: CONTENT_TYPE[content.ext] ?? 'application/octet-stream', upsert: true })
-            if (upErr) { console.error('[cloudsync] 드라이브 파일 올리기 실패', f.path, upErr.message); continue }
+            if (upErr) { console.error('[cloudsync] 드라이브 파일 올리기 실패', f.path, upErr.message); handled++; lastHandledModified = f.modifiedTime ?? lastHandledModified; continue }
 
             const { data: source, error: insErr } = await db.from('knowledge_sources').insert({
                 mentor_id: row.mentorId,
@@ -266,21 +323,18 @@ async function runDriveSync(db: SupabaseClient, row: SyncRow, connectorId: strin
             if (insErr || !source) {
                 await db.storage.from('knowledge-files').remove([storageKey])
                 console.error('[cloudsync] 드라이브 자료 칸 못 만듦', f.path, insErr?.message)
+                handled++; lastHandledModified = f.modifiedTime ?? lastHandledModified
                 continue
             }
 
-            try {
-                const res = await fetch(`${baseUrl}/api/creator/knowledge/process`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sourceId: (source as { id: string }).id, mentorId: row.mentorId }),
-                })
-                if (!res.ok) { console.error('[cloudsync] 드라이브 파일 못 읽음', f.path, res.status); continue }
-                count++
-            } catch (e) {
-                console.error('[cloudsync] 드라이브 파일 처리 요청 실패', f.path, e instanceof Error ? e.message : e)
-            }
+            const r = await handOff(baseUrl, { sourceId: (source as { id: string }).id, mentorId: row.mentorId, actorUserId: row.userId })
+            handled++
+            lastHandledModified = f.modifiedTime ?? lastHandledModified
+            if (r.queued) count++
+            else console.error('[cloudsync] 드라이브 파일 학습 맡기기 실패', f.path, r.status, r.error ?? '')
         }
-        return count
+        const done = !stopped && handled === changed.length
+        return { count, cursor: nextDriveCursor({ prevCursor: row.lastSyncedAt, done, lastHandledModified, nowIso: new Date().toISOString() }) }
     })
 }
 
@@ -308,45 +362,60 @@ async function runNotionSync(db: SupabaseClient, row: SyncRow, connectorId: stri
 }
 
 /** 등록 하나를 실제로 돌린다. 실패해도 던지지 않는다 — 결과를 knowledge_syncs 에 사람 말로 남긴다 */
-export async function runCloudSync(db: SupabaseClient, row: SyncRow, baseUrl: string): Promise<{ ok: boolean; itemCount: number }> {
-    const connector = await findConnector(db, row.userId, row.provider)
-    if (!connector) {
-        await 결과기록(db, row.id, 'error', '연결이 끊겼어요. 다시 연결해 주세요', 0, false)
-        return { ok: false, itemCount: 0 }
-    }
+export async function runCloudSync(db: SupabaseClient, row: SyncRow, baseUrl: string, opts: SyncRunOptions = {}): Promise<{ ok: boolean; itemCount: number; error?: string }> {
     try {
-        const itemCount = row.provider === 'google_drive'
-            ? await runDriveSync(db, row, connector.id, baseUrl)
-            : await runNotionSync(db, row, connector.id)
-        await 결과기록(db, row.id, 'ok', null, itemCount, true)
+        // 연결 찾기도 try 안 = DB 가 잠깐 안 돼도 던지지 않고 이 등록만 실패로 남긴다
+        const connector = await findConnector(db, row.userId, row.provider)
+        if (!connector) {
+            const msg = '연결이 끊겼어요. 다시 연결해 주세요'
+            await 결과기록(db, row.id, 'error', msg, 0, null)
+            return { ok: false, itemCount: 0, error: msg }
+        }
+        let itemCount: number
+        let cursor: string | null
+        if (row.provider === 'google_drive') {
+            const r = await runDriveSync(db, row, connector.id, baseUrl, opts)
+            itemCount = r.count
+            cursor = r.cursor
+        } else {
+            itemCount = await runNotionSync(db, row, connector.id)
+            cursor = new Date().toISOString()
+        }
+        await 결과기록(db, row.id, 'ok', null, itemCount, cursor)
         return { ok: true, itemCount }
     } catch (e) {
         const message = e instanceof Error ? e.message : '동기화하지 못했어요'
         console.error('[cloudsync] 실패', row.provider, row.folderOrPageId, message)
-        await 결과기록(db, row.id, 'error', message, 0, false)
-        return { ok: false, itemCount: 0 }
+        await 결과기록(db, row.id, 'error', message, 0, null).catch(() => {})
+        return { ok: false, itemCount: 0, error: message }
     }
 }
 
-/** 결과를 knowledge_syncs 에 남긴다. 성공했을 때만 커서(last_synced_at)를 지금 시각으로 민다 */
+/** 결과를 knowledge_syncs 에 남긴다. 성공했을 때만 커서(last_synced_at)를 민다(cursor 가 있을 때) */
 async function 결과기록(
-    db: SupabaseClient, syncId: string, status: 'ok' | 'error', lastError: string | null, itemCount: number, advanceCursor: boolean,
+    db: SupabaseClient, syncId: string, status: 'ok' | 'error', lastError: string | null, itemCount: number, cursor: string | null,
 ): Promise<void> {
     const patch: Record<string, unknown> = { status, last_error: lastError, item_count: itemCount, updated_at: new Date().toISOString() }
-    if (advanceCursor) patch.last_synced_at = new Date().toISOString()
+    if (status === 'ok' && cursor) patch.last_synced_at = cursor
     await db.from('knowledge_syncs').update(patch).eq('id', syncId)
 }
 
-/** cron 이 부르는 「지금 돌 것 전부」. 오래 안 돈 것부터, 한 번에 너무 많이 돌지 않게 상한을 둔다 */
-export async function listDueCloudSyncs(db: SupabaseClient, limit = 30): Promise<SyncRow[]> {
-    const { data, error } = await db.from('knowledge_syncs')
-        .select('id, user_id, mentor_id, provider, folder_or_page_id, name, last_synced_at')
-        .order('last_synced_at', { ascending: true, nullsFirst: true })
-        .limit(limit)
-    if (error) {
-        if ((error.code === TABLE_MISSING || error.code === TABLE_MISSING_REST)) return []
-        throw new Error(error.message)
-    }
-    return ((data ?? []) as { id: string; user_id: string; mentor_id: string; provider: CloudProvider; folder_or_page_id: string; name: string; last_synced_at: string | null }[])
-        .map(r => ({ id: r.id, userId: r.user_id, mentorId: r.mentor_id, provider: r.provider, folderOrPageId: r.folder_or_page_id, name: r.name, lastSyncedAt: r.last_synced_at }))
+export type CloudSyncJob = SyncRow & DueJob
+
+/** cron 이 쓰는 저장소 — 공통 장치(lib/jobs/run-due-batch)가 고르기·차지·실패 횟수·멈춤을 맡는다 */
+export function createCloudSyncJobStore(db: SupabaseClient): DueJobStore<CloudSyncJob> {
+    return createTableJobStore<CloudSyncJob>(db, {
+        table: 'knowledge_syncs',
+        select: 'id, user_id, mentor_id, provider, folder_or_page_id, name, last_synced_at, fail_count',
+        map: r => ({
+            id: String(r.id), userId: String(r.user_id), mentorId: String(r.mentor_id), provider: r.provider as CloudProvider,
+            folderOrPageId: String(r.folder_or_page_id), name: String(r.name ?? ''), lastSyncedAt: (r.last_synced_at as string | null) ?? null,
+            failCount: Number(r.fail_count ?? 0),
+        }),
+    })
+}
+
+export function isSyncTableMissing(e: unknown): boolean {
+    const code = (e as { code?: string } | null)?.code
+    return code === TABLE_MISSING || code === TABLE_MISSING_REST
 }
