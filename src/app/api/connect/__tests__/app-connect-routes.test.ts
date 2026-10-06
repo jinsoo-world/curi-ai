@@ -37,14 +37,14 @@ vi.mock('@/lib/supabase/admin', () => ({
                 return {
                     insert: async (r: Pending & { handoff_hash: string }) => { st.pending.set(r.handoff_hash, r); return { error: null } },
                     delete: () => {
-                        const q = { hash: '', after: '' }
+                        const q = { hash: '', user: '', after: '' }
                         const chain: Record<string, unknown> = {
-                            eq: (_c: string, v: string) => { q.hash = v; return chain },
+                            eq: (c: string, v: string) => { if (c === 'user_id') q.user = v; else q.hash = v; return chain },
                             gt: (_c: string, v: string) => { q.after = v; return chain },
                             select: () => chain,
                             maybeSingle: async () => {
                                 const row = st.pending.get(q.hash)
-                                if (!row || row.expires_at <= q.after) return { data: null, error: null }
+                                if (!row || row.expires_at <= q.after || (q.user && row.user_id !== q.user)) return { data: null, error: null }
                                 st.pending.delete(q.hash)
                                 return { data: row, error: null }
                             },
@@ -83,7 +83,7 @@ import { decryptSecret, readConnectorKey } from '@/domains/connectors'
 const ctx = (provider: string) => ({ params: Promise.resolve({ provider }) })
 const post = (url: string, body?: unknown) => new NextRequest(url, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body), headers: { authorization: 'Bearer app-token' } })
 const origFetch = global.fetch
-const SECRET = 'app-secret-AAAA'
+const SECRET = 'app-secret-' + 'A'.repeat(43)   // 실제 앱은 32바이트 무작위(base64url 43자)
 const PROOF = appProofOf(SECRET)
 const TOK = 'ntn_abcdefghijklmnopqrstuvwxyz0123456789'
 
@@ -182,22 +182,27 @@ describe('app-finish', () => {
     it('공격자 state 를 피해자가 마무리하면 거절(계정 바꿔치기 방지), 저장 없음', async () => {
         const h = await handoffFor('attacker')      // 공격자가 자기 app-start 로 만든 state, 피해자가 동의
         st.user = { id: 'victim' }
-        const res = await finish(h, 'victim-own-secret')
+        const res = await finish(h, 'victim-own-secret-' + 'V'.repeat(43))
         expect(res.status).toBe(400)
         expect(st.saved).toHaveLength(0)
-        expect(st.pending.size).toBe(0)             // 꺼낸 행은 지워져 다시 못 쓴다
+        expect(st.pending.size).toBe(1)             // 본인 행만 꺼내므로 남의 행은 건드리지 않는다
     })
     it('사용자가 같아도 비밀값 원문이 틀리면 거절', async () => {
         const h = await handoffFor('u1')
         expect((await finish(h, 'wrong')).status).toBe(400)
         expect(st.saved).toHaveLength(0)
     })
-    it('다른 사용자 Bearer 로는 거절, 그 뒤 본인도 못 쓴다(1회용)', async () => {
+    it('다른 사용자 Bearer 로는 거절, 그래도 본인 연결은 망가지지 않는다', async () => {
         const h = await handoffFor('u1')
         st.user = { id: 'u2' }
         expect((await finish(h)).status).toBe(400)
         st.user = { id: 'u1' }
-        expect((await finish(h)).status).toBe(400)
+        expect((await finish(h)).status).toBe(200)
+    })
+    it('비밀값이 43자보다 짧으면 거절', async () => {
+        const h = await handoffFor('u1')
+        expect((await finish(h, 'short-secret')).status).toBe(400)
+        expect(st.saved).toHaveLength(0)
     })
     it('두 번째 호출은 거절, 만료된 것도 거절, 없는 handoff 도 거절', async () => {
         const h = await handoffFor('u1')

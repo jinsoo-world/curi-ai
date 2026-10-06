@@ -136,10 +136,12 @@ export async function putAppPending(
 
 /** handoff 로 한 번만 꺼낸다(DELETE ... RETURNING 이라 동시에 두 번 불러도 한 쪽만 받는다). 없거나 만료면 null */
 export async function takeAppPending(
-    db: SupabaseClient, handoff: string, nowMs = Date.now(),
+    db: SupabaseClient, handoff: string, userId: string, nowMs = Date.now(),
 ): Promise<AppPending | null> {
+    // 본인 행만 꺼낸다 (교환번호를 가로챈 남이 틀린 로그인으로 불러 정상 연결을 지우지 못하게)
     const { data, error } = await db.from('connector_app_pending').delete()
         .eq('handoff_hash', sha256hex(handoff))
+        .eq('user_id', userId)
         .gt('expires_at', new Date(nowMs).toISOString())
         .select('user_id, proof_hash, kind, secret_encrypted, meta')
         .maybeSingle()

@@ -30,13 +30,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({})) as Record<string, unknown>
     const handoff = typeof body.handoff === 'string' ? body.handoff : ''
     const appSecret = typeof body.appSecret === 'string' ? body.appSecret : ''
-    if (!handoff || !appSecret || handoff.length > 200 || appSecret.length > 200) return 거절()
+    if (!handoff || !appSecret || handoff.length > 200 || appSecret.length < 43 || appSecret.length > 200) return 거절() // 비밀값은 32바이트 이상 무작위(base64url 43자+)
 
     const key = readConnectorKey()
     if (!key) return NextResponse.json({ error: '연결 기능이 아직 준비 중이에요' }, { status: 503 })
 
     try {
-        const row = await takeAppPending(db, handoff)
+        const row = await takeAppPending(db, handoff, user.id)
         if (!row) return 거절()
         if (row.user_id !== user.id || !proofMatches(appSecret, row.proof_hash)) return 거절()
         const p = findProvider(row.kind)
