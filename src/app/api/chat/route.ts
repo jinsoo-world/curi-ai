@@ -662,7 +662,7 @@ export async function POST(req: Request) {
         let mcp자료 = ''
         if (user) {
             try {
-                const mcp = await runMcpForChat({ db: createAdminClient(), userId: user.id, botId: String((mentor as { id: string }).id), history: messages })
+                const mcp = await runMcpForChat({ db: createAdminClient(), userId: user.id, botId: String((mentor as { id: string }).id), sessionId: sessionOwned ? sessionId ?? null : null, history: messages })
                 if (mcp.hadServers) personalized = true   // 내 도구 결과가 섞인 답은 남과 나눠 쓰는 저장 답에 넣지 않는다
                 if (mcp.material) {
                     연결자료읽음 = true

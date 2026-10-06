@@ -294,3 +294,26 @@ export async function markMcpServer(db: SupabaseClient, userId: string, id: stri
     if (r.toolCount !== undefined) patch.tool_count = r.toolCount
     await db.from('mcp_servers').update(patch).eq('id', id).eq('user_id', userId)
 }
+
+/**
+ * 이 대화방이 MCP 도구 결과로 오염됐나 (서버 기록 mcp_session_taint 기준, 화면이 보내는 대화 기록은 안 믿는다).
+ * 세션 번호가 없거나, 표를 못 읽으면(표 없음 포함) **오염된 것으로 본다** = 쓰기 도구를 숨기는 쪽으로 닫는다.
+ */
+export async function isSessionTainted(db: SupabaseClient, userId: string, sessionId: string | null | undefined): Promise<boolean> {
+    if (!sessionId) return true
+    try {
+        const { data, error } = await db.from('mcp_session_taint').select('session_id')
+            .eq('session_id', sessionId).eq('user_id', userId).maybeSingle()
+        if (error) return true
+        return !!data
+    } catch {
+        return true
+    }
+}
+
+/** 이 대화방에 「MCP 도구 결과를 썼다」 표시를 남긴다. 다음 대화가 처음부터 쓰기 도구 없이 시작한다 */
+export async function markSessionTainted(db: SupabaseClient, userId: string, sessionId: string): Promise<void> {
+    const { error } = await db.from('mcp_session_taint')
+        .upsert({ session_id: sessionId, user_id: userId, tainted_at: new Date().toISOString() }, { onConflict: 'session_id' })
+    if (error) console.warn('[mcp] 세션 표시 실패:', error.code ?? 'unknown')
+}

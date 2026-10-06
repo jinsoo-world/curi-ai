@@ -50,6 +50,8 @@ export interface ToolPhaseResult {
     toolCount: number
     /** 바깥 자료를 읽은 뒤라 막은 쓰기 도구 호출 수 */
     blockedWrites: number
+    /** 끝났을 때 오염 상태 = 앞 대화에서 이미 오염됐거나 이번에 도구 결과를 받았다 */
+    tainted: boolean
     stoppedBy: 'no_tools' | 'model_done' | 'call_limit' | 'step_limit' | 'time_budget' | 'model_error'
     usage: { prompt: number; completion: number }
 }
@@ -82,6 +84,8 @@ export async function runToolPhase(input: {
     maxSteps?: number
     budgetMs?: number
     now?: () => number
+    /** 같은 대화방 앞 대화에서 이미 도구 결과를 썼나 (서버 기록 기준). true 면 처음부터 쓰기 도구를 숨긴다 */
+    initiallyTainted?: boolean
 }): Promise<ToolPhaseResult> {
     const maxCalls = input.maxCalls ?? MAX_TOOL_CALLS_PER_TURN
     const maxSteps = input.maxSteps ?? MAX_MODEL_STEPS
@@ -93,7 +97,7 @@ export async function runToolPhase(input: {
     const calls: ToolCallRecord[] = []
     let blockedWrites = 0
     /** 바깥 자료(도구 결과)를 받았나. 받은 뒤엔 쓰기 도구를 막는다 */
-    let tainted = false
+    let tainted = input.initiallyTainted === true
 
     // 1) 도구 목록 (마감 시각까지만)
     const listed = await Promise.all(input.servers.map(async (s, i) => {
@@ -119,7 +123,7 @@ export async function runToolPhase(input: {
         .filter(e => e.tool.readOnly || !tainted)
         .map(e => ({ type: 'function', function: { name: e.fn, description: `[${e.server.name}] ${e.tool.description}`.slice(0, 600), parameters: e.tool.inputSchema } }))
 
-    const result = (stoppedBy: ToolPhaseResult['stoppedBy']): ToolPhaseResult => ({ calls, failedServers, toolCount: entries.length, blockedWrites, stoppedBy, usage })
+    const result = (stoppedBy: ToolPhaseResult['stoppedBy']): ToolPhaseResult => ({ calls, failedServers, toolCount: entries.length, blockedWrites, tainted, stoppedBy, usage })
     if (entries.length === 0) return result('no_tools')
 
     // 2) 한 걸음씩

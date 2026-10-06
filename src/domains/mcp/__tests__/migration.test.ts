@@ -16,3 +16,14 @@ describe('20261018_mcp_servers.sql', () => {
         expect(sql).toMatch(/allowed_tools\s+TEXT\[\] NOT NULL DEFAULT '\{\}'/)
     })
 })
+
+const taintSql = readFileSync(path.resolve(__dirname, '../../../../supabase/migrations/20261019_mcp_session_taint.sql'), 'utf8')
+describe('20261019_mcp_session_taint.sql', () => {
+    it('서버 전용 표: RLS 켬, 정책 없음, 회원 권한 회수, 세션 지우면 같이 지움', () => {
+        expect(taintSql).toMatch(/CREATE TABLE IF NOT EXISTS public\.mcp_session_taint/)
+        expect(taintSql).toMatch(/REFERENCES public\.chat_sessions\(id\) ON DELETE CASCADE/)
+        expect(taintSql).toMatch(/ENABLE ROW LEVEL SECURITY/)
+        expect(taintSql).not.toMatch(/CREATE POLICY/i)
+        expect(taintSql).toMatch(/REVOKE ALL ON public\.mcp_session_taint FROM anon, authenticated/)
+    })
+})

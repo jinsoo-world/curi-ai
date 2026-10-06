@@ -1,20 +1,29 @@
 // 시험용 아주 작은 Supabase 흉내. 표 여러 개, 모든 질의의 eq/in 조건과 limit 을 기록한다
 type Row = Record<string, unknown>
 
-export function fakeDb(seed: Record<string, Row[]> = {}) {
+export function fakeDb(seed: Record<string, Row[]> = {}, opts: { missing?: string[] } = {}) {
     const tables: Record<string, Row[]> = { mcp_servers: [], mentors: [], creator_profiles: [], ...seed }
     const rows = tables.mcp_servers
     const queries: { table: string; op: string; filters: Record<string, unknown>; limit?: number }[] = []
     let seq = 0
+    const missing = new Set(opts.missing ?? [])
 
-    function builder(table: string, op: 'select' | 'insert' | 'update' | 'delete', payload?: Row, opts?: { count?: string; head?: boolean }) {
+    function builder(table: string, op: 'select' | 'insert' | 'update' | 'delete' | 'upsert', payload?: Row, opts?: { count?: string; head?: boolean; onConflict?: string }) {
         const filters: Record<string, unknown> = {}
         const ins: Record<string, unknown[]> = {}
         const entry: { table: string; op: string; filters: Record<string, unknown>; limit?: number } = { table, op, filters }
         queries.push(entry)
         const list = tables[table] ?? (tables[table] = [])
         const match = () => list.filter(r => Object.entries(filters).every(([k, v]) => r[k] === v) && Object.entries(ins).every(([k, vs]) => vs.includes(r[k])))
-        const run = (): { data: unknown; error: null; count?: number } => {
+        const run = (): { data: unknown; error: { code: string; message: string } | null; count?: number } => {
+            if (missing.has(table)) return { data: null, error: { code: '42P01', message: 'relation does not exist' } }
+            if (op === 'upsert') {
+                const key = opts?.onConflict ?? 'id'
+                const found = list.find(r => r[key] === payload?.[key])
+                if (found) Object.assign(found, payload)
+                else list.push({ ...payload })
+                return { data: null, error: null }
+            }
             if (op === 'insert') {
                 const now = new Date().toISOString()
                 const row = { id: `00000000-0000-4000-8000-${String(++seq).padStart(12, '0')}`, created_at: now, updated_at: now, tool_count: null, last_error: null, last_checked_at: null, ...payload }
@@ -34,8 +43,8 @@ export function fakeDb(seed: Record<string, Row[]> = {}) {
             in: (k: string, vs: unknown[]) => { ins[k] = vs; return q },
             order: () => q,
             limit: (n: number) => { entry.limit = n; return q },
-            single: async () => { const r = run(); return { data: (r.data as Row[])[0] ?? null, error: null } },
-            maybeSingle: async () => { const r = run(); return { data: (r.data as Row[] | null)?.[0] ?? null, error: null } },
+            single: async () => { const r = run(); return { data: (r.data as Row[] | null)?.[0] ?? null, error: r.error } },
+            maybeSingle: async () => { const r = run(); return { data: (r.data as Row[] | null)?.[0] ?? null, error: r.error } },
             then: (res: (v: unknown) => unknown, rej?: (e: unknown) => unknown) => Promise.resolve(run()).then(res, rej),
         }
         return q
@@ -47,6 +56,7 @@ export function fakeDb(seed: Record<string, Row[]> = {}) {
             insert: (row: Row) => builder(table, 'insert', row),
             update: (patch: Row) => builder(table, 'update', patch),
             delete: () => builder(table, 'delete'),
+            upsert: (row: Row, o?: { onConflict?: string }) => builder(table, 'upsert', row, { onConflict: o?.onConflict }),
         }),
     }
     return { db: db as never, rows, tables, queries }
