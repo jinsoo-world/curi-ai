@@ -30,10 +30,9 @@ function 오류응답(e: unknown, where: string) {
     if (e instanceof BotNotMine) return NextResponse.json({ error: '권한이 없어요' }, { status: 403 })
     if (e instanceof SnsInputError) return NextResponse.json({ error: e.message, field: e.field }, { status: 400 })
     if (e instanceof FeedTableMissing || e instanceof SnsNotReady) return NextResponse.json({ error: 준비중, preparing: true }, { status: 503 })
-    const message = e instanceof Error ? e.message : 'SNS 연결을 다루지 못했어요'
-    console.error(`[os/team/sns ${where}]`, message)
-    // 연결 줄 규칙(같은 곳 두 번, 봇당 연결 5개)은 사람 말이라 그대로 보여 준다
-    return NextResponse.json({ error: message }, { status: 400 })
+    // 모르는 오류는 안쪽 글(DB 오류 등)을 내보내지 않고 일반 문구로 (보안 검토 PR #53)
+    console.error(`[os/team/sns ${where}]`, e instanceof Error ? e.message : e)
+    return NextResponse.json({ error: where === 'GET' ? 'SNS 연결을 불러오지 못했어요' : 'SNS 주소를 저장하지 못했어요. 잠시 후 다시 해 주세요' }, { status: 500 })
 }
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {

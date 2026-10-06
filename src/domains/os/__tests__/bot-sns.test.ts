@@ -188,6 +188,24 @@ describe('saveBotSns = 공개 링크(mentors.links) + 배우기 연결(knowledge
         expect((fake.tables.mentors[0].links as unknown[]).length).toBe(1)
     })
 
+    it('동시에 두 번 저장해도 SNS 칸 줄은 하나 (upsert onConflict mentor_id,sns_slot)', async () => {
+        const fake = makeFakeDb(ownerTables())
+        await Promise.all([
+            sns.saveBotSns(fake.db, { userId: 'u-owner', mentorId: 'm-1', input: { blog: 'blog.naver.com/jin_01' } }),
+            sns.saveBotSns(fake.db, { userId: 'u-owner', mentorId: 'm-1', input: { blog: 'blog.naver.com/jin_02' } }),
+        ])
+        expect(fake.tables.knowledge_feeds.filter(f => f.sns_slot === 'blog')).toHaveLength(1)
+    })
+
+    it('봇당 연결 수(5)가 차 있으면 그 칸 이름과 함께 입력 오류', async () => {
+        const t = ownerTables()
+        for (let i = 0; i < 5; i++) t.knowledge_feeds.push({ id: `f${i}`, mentor_id: 'm-1', user_id: 'u-owner', kind: 'website', handle_or_url: `https://a${i}.com`, status: 'connected', created_at: '2026-10-01' })
+        const fake = makeFakeDb(t)
+        const e = await sns.saveBotSns(fake.db, { userId: 'u-owner', mentorId: 'm-1', input: { youtube: 'https://www.youtube.com/channel/UC' + 'a'.repeat(22) } }).catch(x => x)
+        expect(e).toBeInstanceOf(sns.SnsInputError)
+        expect(e.field).toBe('youtube')
+    })
+
     it('readBotSns = 칸 4개 상태 + 요금제 상한', async () => {
         const fake = makeFakeDb(ownerTables())
         await sns.saveBotSns(fake.db, { userId: 'u-owner', mentorId: 'm-1', input: { blog: 'blog.naver.com/jin_01', instagram: '@jin.ceo' } })
@@ -216,6 +234,13 @@ describe('SNS 가져오기 = 블로그 RSS, 유튜브(제목, 설명만), 큐리
         expect(r.items[0].title).toBe('글 25')                     // 최신 글부터
         expect(r.items.every(i => (i.text ?? '').length <= sns.SNS_ITEM_MAX_CHARS)).toBe(true)
         expect(readUrl).not.toHaveBeenCalled()                      // RSS 본문이 길면 글을 따로 열지 않는다
+    })
+
+    it('블로그: 피드는 1MB 까지만 받는다', async () => {
+        fetchPageSafely.mockImplementation(async (url: string) => page(url, rss(2)))
+        await sns.SNS_FETCHERS.blog(feedOf(), null, {})
+        expect(fetchPageSafely.mock.calls[0][1]).toMatchObject({ maxBytes: sns.SNS_FEED_MAX_BYTES })
+        expect(sns.SNS_FEED_MAX_BYTES).toBe(1024 * 1024)
     })
 
     it('블로그: 이미 배운 주소는 읽지도 않는다', async () => {
@@ -399,7 +424,8 @@ describe('syncSnsFeed = 배우기 한 번', () => {
         const call = addKnowledgeSource.mock.calls[0]
         expect(call[2]).toBe('[네이버 블로그] 글 2')
         expect(call[5]).toBe('https://blog.naver.com/jin/2230000002')
-        expect(call[6]?.meta).toMatchObject({ sourceKind: 'sns_blog', citationUrl: 'https://blog.naver.com/jin/2230000002', authorIsMe: true })
+        // 소유 증명 전이라 「내가 쓴 글」로 표시하지 않는다 (보안 검토 PR #53)
+        expect(call[6]?.meta).toMatchObject({ sourceKind: 'sns_blog', citationUrl: 'https://blog.naver.com/jin/2230000002', authorIsMe: false })
     })
 
     it('두 번 눌러도 같은 글은 두 번 안 들어간다', async () => {
@@ -441,5 +467,38 @@ describe('syncSnsFeed = 배우기 한 번', () => {
         const r = await sns.syncSnsFeed(fake.db, feedOf())
         expect(r.ok).toBe(false)
         expect(fake.tables.knowledge_feeds[0]).toMatchObject({ status: 'error', last_error: '주소를 못 열었어요' })
+    })
+})
+
+/* ─────────────── 6. 크론 이중 확인, 횟수 열쇠 ─────────────── */
+describe('claimFeedForRun = 크론이 줄을 돌기 전에', () => {
+    it('먼저 last_synced_at 을 찍고(한 줄이 매일 앞줄을 막지 않게), 주인이 맞으면 true', async () => {
+        const fake = makeFakeDb(learnTables())
+        const { claimFeedForRun } = await import('../feeds/store')
+        expect(await claimFeedForRun(fake.db, feedOf())).toBe(true)
+        expect(fake.tables.knowledge_feeds[0].last_synced_at).toBeTruthy()
+        expect(fake.tables.knowledge_feeds[0].status).toBe('connected')
+    })
+    it('연결한 사람이 더는 봇 주인이 아니면 paused 로 멈추고 false', async () => {
+        const fake = makeFakeDb(learnTables())
+        const { claimFeedForRun } = await import('../feeds/store')
+        expect(await claimFeedForRun(fake.db, feedOf({ userId: 'u-other' }))).toBe(false)
+        expect(fake.tables.knowledge_feeds[0]).toMatchObject({ status: 'paused' })
+        expect(String(fake.tables.knowledge_feeds[0].last_error)).toMatch(/주인/)
+    })
+})
+
+describe('checkSnsLearnLimits = 배우기 횟수 열쇠 (learn 과 기존 「지금 가져오기」가 같은 열쇠)', () => {
+    it('봇 분당 2, 봇 하루 10, 회원 하루 30. 전부 failClosed', async () => {
+        const calls: unknown[][] = []
+        const check = vi.fn(async (...a: unknown[]) => { calls.push(a.slice(1)); return { allowed: true, remaining: 1 } })
+        expect(await sns.checkSnsLearnLimits({} as never, 'u1', 'm1', check)).toBeNull()
+        expect(calls).toEqual([
+            ['sns-learn:m:m1', 2, 60, { failClosed: true }],
+            ['sns-learn:d:m1', 10, 86_400, { failClosed: true }],
+            ['sns-learn:u:u1', 30, 86_400, { failClosed: true }],
+        ])
+        const deny = vi.fn(async (_db: unknown, key: string) => ({ allowed: !key.startsWith('sns-learn:u:'), remaining: 0 }))
+        expect(await sns.checkSnsLearnLimits({} as never, 'u1', 'm1', deny)).toMatchObject({ retryAfterSec: 86_400 })
     })
 })

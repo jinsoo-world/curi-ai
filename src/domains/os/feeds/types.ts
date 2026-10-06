@@ -42,6 +42,8 @@ export interface FetchOptions {
     maxItems?: number
     /** 이 시각(Date.now() 기준 ms)을 넘기면 더 읽지 않는다 (서버 실행 한도 60초) */
     deadline?: number
+    /** 피드(RSS, Atom) 문서 최대 크기. 없으면 rss.ts 의 FEED_MAX_BYTES (SNS 는 1MB) */
+    feedMaxBytes?: number
 }
 
 /**

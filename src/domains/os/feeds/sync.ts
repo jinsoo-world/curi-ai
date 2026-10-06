@@ -164,7 +164,7 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
                 const prefix = opts.source?.titlePrefix ? `${opts.source.titlePrefix} ` : ''
                 const title = `${prefix}${item.title || item.url}`.slice(0, 120)
                 const meta = opts.source?.sourceKind
-                    ? { meta: { sourceKind: opts.source.sourceKind, citationUrl: item.url, authorIsMe: true, fetchedAt: nowIso() } }
+                    ? { meta: { sourceKind: opts.source.sourceKind, citationUrl: item.url, authorIsMe: false, fetchedAt: nowIso() } }   // 소유 증명 전이라 「내가 쓴 글」 아님 (보안 검토 PR #53)
                     : undefined
                 const source = await addKnowledgeSource(db, feed.mentorId, title, marked, feed.kind === 'youtube' ? 'youtube' : 'url', item.url, meta)
                 existing.urls.add(item.url)

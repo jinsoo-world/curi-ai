@@ -7,7 +7,7 @@
 --   sns_slot 이 붙은 연결은 SNS 규칙으로 돈다: 요금제별 SNS 자료 상한, 유튜브는 공개 피드의 제목과 설명만(자막 안 씀).
 --   공개 링크(소개 화면)는 이미 있는 mentors.links 에 넣는다.
 --
--- 권한: knowledge_feeds 의 RLS(켬, 봇 주인만)와 권한(authenticated 읽기, service_role 전부)은 그대로. 새 정책 없음.
+-- 권한: 이 파일은 권한을 바꾸지 않는다. 잠금은 20261022_knowledge_feeds_lock.sql (service_role 만).
 --   서버 코드는 service_role 로 쓰고, API 가 봇 주인을 먼저 확인한다(resolveOwnedBot → assertBotOwned).
 -- 적용: Supabase SQL 편집기에 통째로 붙여 실행. 여러 번 실행해도 안전. 데이터는 바꾸지 않는다.
 --   코드는 이 칸이 없어도 깨지지 않는다(읽기는 옛 칸으로 다시 읽고, 저장은 「준비 중」 503).
@@ -30,10 +30,12 @@ begin
   end if;
 end $$;
 
--- 봇 하나에 같은 SNS 칸은 하나만
-create unique index if not exists knowledge_feeds_mentor_sns_slot_uq
-  on public.knowledge_feeds (mentor_id, sns_slot)
-  where sns_slot is not null;
+-- 봇 하나에 같은 SNS 칸은 하나만.
+-- 조건 없는 고유 색인이어야 저장 창구의 upsert(on conflict (mentor_id, sns_slot))가 이 색인을 쓴다.
+-- sns_slot 이 빈(NULL) 일반 연결 줄끼리는 서로 겹침으로 치지 않는다(Postgres 기본).
+drop index if exists public.knowledge_feeds_mentor_sns_slot_uq;   -- 처음 버전(조건 있는 색인)을 실행했으면 바꾼다
+create unique index if not exists knowledge_feeds_mentor_sns_slot_key
+  on public.knowledge_feeds (mentor_id, sns_slot);
 
 comment on column public.knowledge_feeds.sns_slot is
   '봇 「내 SNS 연결」 칸(instagram/blog/youtube/curious). 비어 있으면 일반 계정 연결';

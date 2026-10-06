@@ -29,8 +29,9 @@ import { assertBotOwned, BotNotMine } from './knowledge'
 import { linkLabelOf } from './link-rules'
 import { classifySnsLink } from './sns-link'
 import { readPlanId } from './usage-db'
+import { checkRateLimit } from '@/lib/rate-limit'
 import type { PlanId } from './plan'
-import { listFeeds, createFeed, deleteFeed } from './feeds/store'
+import { listFeeds, deleteFeed, validateHandle, MAX_FEEDS_PER_BOT } from './feeds/store'
 import { syncFeed, type SyncResult } from './feeds/sync'
 import { fetchFeed, newerThan, newestFirst, pickCandidates } from './feeds/rss'
 import { fetchPodcastItems } from './feeds/podcast'
@@ -49,6 +50,12 @@ const LINK_KIND: Record<SnsSlot, string> = { instagram: 'instagram', blog: 'blog
 
 /** 봇 하나가 SNS 에서 배운 자료 총량 (요금제별). 한 곳 30개, 자료 칸 10개 규칙은 따로 그대로 */
 export const SNS_LEARN_CAP: Record<PlanId, number> = { free: 20, basic: 60, pro: 90 }
+/** SNS 피드(RSS, Atom) 문서 최대 크기 (보안 검토 PR #53) */
+export const SNS_FEED_MAX_BYTES = 1024 * 1024
+/** 「배우기」 횟수: 봇마다 분당, 하루, 회원마다 하루 (learn 창구와 기존 「지금 가져오기」가 같은 열쇠) */
+export const SNS_LEARN_PER_MIN = 2
+export const SNS_LEARN_PER_DAY = 10
+export const SNS_LEARN_PER_USER_DAY = 30
 /** 블로그 한 번에 읽는 최근 글 수 */
 export const SNS_BLOG_MAX_POSTS = 20
 /** 유튜브 한 번에 보는 최근 영상 수 (공개 피드는 최근 15개까지만 준다) */
@@ -180,7 +187,7 @@ const clip = (items: FeedItem[]): FeedItem[] => items.map(i => ({ ...i, text: (i
 
 /** 블로그: 기존 RSS 가져오기. 첫 배우기에도 최근 20개까지 (기존은 첫 연결 10개) */
 const fetchSnsBlog: FetchNewItems = async (feed, since, opts = {}) => {
-    const r = await fetchPodcastItems(feed, since ?? new Date(0), { ...opts, maxItems: Math.min(opts.maxItems ?? Infinity, SNS_BLOG_MAX_POSTS) })
+    const r = await fetchPodcastItems(feed, since ?? new Date(0), { ...opts, maxItems: Math.min(opts.maxItems ?? Infinity, SNS_BLOG_MAX_POSTS), feedMaxBytes: SNS_FEED_MAX_BYTES })
     return { ...r, items: clip(r.items) }
 }
 
@@ -216,7 +223,7 @@ export function videoIdsFromChannelPage(html: string, max = SNS_YOUTUBE_MAX_VIDE
  */
 async function recentVideosWithDescription(channelId: string): Promise<FeedItem[]> {
     for (let attempt = 0; attempt < 2; attempt++) {
-        const f = await fetchFeed(channelFeedUrl(channelId))
+        const f = await fetchFeed(channelFeedUrl(channelId), SNS_FEED_MAX_BYTES)
         if (f && 'entries' in f) {
             return f.entries.map(e => {
                 const desc = htmlToText(e.description || e.content || '')
@@ -499,31 +506,34 @@ export async function saveBotSns(db: SupabaseClient, a: { userId: string; mentor
     if (cleaned.length < links.length) throw new SnsInputError(changes[changes.length - 1][0], '링크는 8개까지 넣을 수 있어요. 소개 화면 링크를 하나 빼 주세요')
 
     const all = await listFeeds(db, a.mentorId)
+    let feedCount = all.length
     for (const [slot, n] of changes) {
         const mine = all.find(f => f.snsSlot === slot)
         const want = n?.fetch ?? null
         if (!want) {
-            if (mine) await deleteFeed(db, a.mentorId, mine.id, false)
+            if (mine) { await deleteFeed(db, a.mentorId, mine.id, false); feedCount-- }
             continue
         }
         const same = (f: KnowledgeFeed) => f.kind === want.kind && f.handleOrUrl.trim().toLowerCase() === want.handleOrUrl.toLowerCase()
         if (mine && same(mine)) continue
-        if (mine) {
-            const { error } = await db.from('knowledge_feeds').update({ kind: want.kind, handle_or_url: want.handleOrUrl, status: 'connected', last_error: null, last_synced_at: null, item_count: 0 })
-                .eq('id', mine.id).eq('mentor_id', a.mentorId)
-            if (error) throw new Error(error.message)
-            continue
-        }
         // 「계정 연결」로 이미 붙여 둔 같은 곳이면 그 줄을 SNS 칸으로 쓴다(두 번 붙이지 않는다)
-        const adopt = all.find(f => !f.snsSlot && same(f))
-        const feedId = adopt ? adopt.id : (await createFeed(db, { userId: a.userId, mentorId: a.mentorId, kind: want.kind, handleOrUrl: want.handleOrUrl })).id
-        const { error } = await db.from('knowledge_feeds').update({ sns_slot: slot }).eq('id', feedId).eq('mentor_id', a.mentorId)
-        if (error?.code === '42703') {
-            // 칸이 없으면 방금 만든 줄을 되돌리고 「준비 중」 (SNS 표시 없는 연결이 남지 않게)
-            if (!adopt) await deleteFeed(db, a.mentorId, feedId, false)
-            throw new SnsNotReady()
+        const adopt = mine ? undefined : all.find(f => !f.snsSlot && same(f))
+        let error: { code?: string; message?: string } | null
+        if (adopt) {
+            ({ error } = await db.from('knowledge_feeds').update({ sns_slot: slot }).eq('id', adopt.id).eq('mentor_id', a.mentorId))
+        } else {
+            if (!mine && feedCount >= MAX_FEEDS_PER_BOT) throw new SnsInputError(slot, `계정은 봇 하나당 ${MAX_FEEDS_PER_BOT}개까지 연결할 수 있어요. 안 쓰는 연결을 하나 빼 주세요`)
+            validateHandle(want.kind, want.handleOrUrl)
+            // 동시에 두 번 눌러도 칸 줄은 하나 = (mentor_id, sns_slot) 고유 색인에 upsert (보안 검토 PR #53)
+            ;({ error } = await db.from('knowledge_feeds').upsert({
+                user_id: a.userId, mentor_id: a.mentorId, sns_slot: slot,
+                kind: want.kind, handle_or_url: want.handleOrUrl,
+                status: 'connected', last_error: null, last_synced_at: null, item_count: 0,
+            }, { onConflict: 'mentor_id,sns_slot' }))
         }
+        if (error?.code === '42703' || (error && /sns_slot|no unique or exclusion constraint/i.test(error.message ?? ''))) throw new SnsNotReady()
         if (error) throw new Error(error.message)
+        if (!mine && !adopt) feedCount++
     }
 
     const { error } = await db.from('mentors').update({ links: cleaned }).eq('id', a.mentorId)
@@ -555,6 +565,20 @@ export async function learnBotSns(db: SupabaseClient, a: { mentorId: string; slo
         out.push({ slot, ok: r.ok, added: r.added, skipped: r.skipped, failed: r.failed, note: r.note ?? r.lastError ?? null })
     }
     return out
+}
+
+/**
+ * 배우기 횟수 열쇠. 돈(임베딩)이 드는 일이라 셀 수 없으면 막는다(failClosed). 통과면 null, 막히면 사람 말과 다시 시도까지 초.
+ * learn 창구와 /api/os/feeds/sync(SNS 줄)가 같은 열쇠를 쓴다 = 다른 문으로 돌아가 한도를 비켜 가지 못한다.
+ */
+export async function checkSnsLearnLimits(
+    db: SupabaseClient, userId: string, mentorId: string, check: typeof checkRateLimit = checkRateLimit,
+): Promise<{ error: string; retryAfterSec: number } | null> {
+    const o = { failClosed: true }
+    if (!(await check(db, `sns-learn:m:${mentorId}`, SNS_LEARN_PER_MIN, 60, o)).allowed) return { error: '방금 배웠어요. 1분 뒤에 다시 눌러 주세요', retryAfterSec: 60 }
+    if (!(await check(db, `sns-learn:d:${mentorId}`, SNS_LEARN_PER_DAY, 86_400, o)).allowed) return { error: `이 봇은 오늘 ${SNS_LEARN_PER_DAY}번 다 배웠어요. 새 글은 하루 1번 자동으로 배워요`, retryAfterSec: 86_400 }
+    if (!(await check(db, `sns-learn:u:${userId}`, SNS_LEARN_PER_USER_DAY, 86_400, o)).allowed) return { error: `오늘은 ${SNS_LEARN_PER_USER_DAY}번 다 배웠어요. 내일 다시 눌러 주세요`, retryAfterSec: 86_400 }
+    return null
 }
 
 /** 이 사람의 요금제 (요금제 상한 보여 주기용) */

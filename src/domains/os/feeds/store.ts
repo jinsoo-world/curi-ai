@@ -6,7 +6,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isSafeFetchUrl } from '@/domains/agent/fetch-url'
-import { removeBotSource } from '@/domains/os/knowledge'
+import { removeBotSource, assertBotOwned } from '@/domains/os/knowledge'
 import type { FeedKind, FeedStatus, KnowledgeFeed, KnowledgeFeedRow } from './types'
 import { feedFromRow, FEED_COLUMNS, FEED_COLUMNS_WITH_SNS, isSocialStubKind } from './types'
 import { resolveChannelInput } from './youtube'
@@ -122,4 +122,21 @@ export async function deleteFeed(db: SupabaseClient, mentorId: string, feedId: s
     const { error } = await db.from('knowledge_feeds').delete().eq('id', feedId).eq('mentor_id', mentorId)
     if (error) fail(error)
     return { removedSources }
+}
+
+export const FEED_OWNER_GONE_NOTE = '연결한 사람이 이제 이 봇의 주인이 아니라 멈췄어요'
+
+/**
+ * 매일 크론이 줄 하나를 돌기 전에 (보안 검토 PR #53)
+ *   1. last_synced_at 을 먼저 찍는다 = 그 줄이 멈추거나 오래 걸려도 다음 날 또 맨 앞에 서서 크론 전체를 막지 않는다
+ *   2. 연결한 사람이 아직 봇 주인인지 다시 본다(assertBotOwned). 아니면 paused 로 멈추고 false
+ */
+export async function claimFeedForRun(db: SupabaseClient, feed: KnowledgeFeed): Promise<boolean> {
+    const now = new Date().toISOString()
+    let owned = true
+    try { await assertBotOwned(db, feed.userId, feed.mentorId) } catch { owned = false }
+    const patch = owned ? { last_synced_at: now } : { last_synced_at: now, status: 'paused', last_error: FEED_OWNER_GONE_NOTE }
+    const { error } = await db.from('knowledge_feeds').update(patch).eq('id', feed.id).eq('mentor_id', feed.mentorId)
+    if (error) console.error('[os/feeds] 크론 줄 찍기 실패', { feedId: feed.id, message: error.message })
+    return owned
 }

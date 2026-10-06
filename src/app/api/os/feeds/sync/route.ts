@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { assertBotOwned, BotNotMine } from '@/domains/os/knowledge'
 import { getFeed, syncFeed, FeedTableMissing } from '@/domains/os/feeds'
-import { syncSnsFeed } from '@/domains/os/bot-sns'
+import { syncSnsFeed, checkSnsLearnLimits } from '@/domains/os/bot-sns'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -26,7 +26,11 @@ export async function POST(req: NextRequest) {
         const db = createAdminClient()
         await assertBotOwned(db, user.id, mentorId)
         const feed = await getFeed(db, mentorId, feedId)
-        // 「내 SNS 연결」 줄은 SNS 규칙으로 (요금제 상한, 유튜브 제목/설명만)
+        // 「내 SNS 연결」 줄은 SNS 규칙으로 (요금제 상한, 배우기와 같은 횟수 열쇠 = 이 문으로 한도를 비켜 가지 못한다)
+        if (feed.snsSlot) {
+            const limited = await checkSnsLearnLimits(db, user.id, mentorId)
+            if (limited) return NextResponse.json(limited, { status: 429 })
+        }
         const sync = feed.snsSlot
             ? await syncSnsFeed(db, feed, { deadline: started + SYNC_BUDGET_MS })
             : await syncFeed(db, feed, { deadline: started + SYNC_BUDGET_MS })

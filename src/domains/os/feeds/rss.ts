@@ -40,8 +40,8 @@ export function withScheme(raw: string): string {
 
 
 /** 피드 주소 하나를 안전하게 가져와 해석한다. 피드가 아니면 null (던지지 않는다) */
-export async function fetchFeed(url: string): Promise<{ url: string; entries: ParsedFeedEntry[] } | { error: string } | null> {
-    const page = await fetchPageSafely(url, { maxBytes: FEED_MAX_BYTES, timeoutMs: FEED_TIMEOUT_MS })
+export async function fetchFeed(url: string, maxBytes: number = FEED_MAX_BYTES): Promise<{ url: string; entries: ParsedFeedEntry[] } | { error: string } | null> {
+    const page = await fetchPageSafely(url, { maxBytes, timeoutMs: FEED_TIMEOUT_MS })
     if (!page.ok) return { error: page.reason }
     if (!looksLikeFeed(page.body)) return null
     return { url: page.url, entries: parseFeed(page.body) }
@@ -51,12 +51,12 @@ export async function fetchFeed(url: string): Promise<{ url: string; entries: Pa
  * 주소 하나에서 피드를 찾아 읽는다.
  * 주소 자체가 피드면 그대로, 웹페이지면 그 안의 「RSS 링크」를 따라간다. 못 찾으면 던진다.
  */
-export async function loadFeedFrom(url: string): Promise<{ url: string; entries: ParsedFeedEntry[] }> {
-    const page = await fetchPageSafely(url, { maxBytes: FEED_MAX_BYTES, timeoutMs: FEED_TIMEOUT_MS })
+export async function loadFeedFrom(url: string, maxBytes: number = FEED_MAX_BYTES): Promise<{ url: string; entries: ParsedFeedEntry[] }> {
+    const page = await fetchPageSafely(url, { maxBytes, timeoutMs: FEED_TIMEOUT_MS })
     if (!page.ok) throw new Error(page.reason)
     if (looksLikeFeed(page.body)) return { url: page.url, entries: parseFeed(page.body) }
     for (const link of discoverFeedLinks(page.body, page.url).slice(0, 2)) {
-        const f = await fetchFeed(link)
+        const f = await fetchFeed(link, maxBytes)
         if (f && 'entries' in f) return f
     }
     throw new Error('그 주소에서 새 글 목록(RSS)을 못 찾았어요. RSS 주소를 직접 넣어 주세요')

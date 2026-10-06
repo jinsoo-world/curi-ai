@@ -73,6 +73,18 @@ describe('GET, PUT /api/os/team/[id]/sns', () => {
         expect(g.accounts[0]).toMatchObject({ slot: 'instagram', status: 'coming_soon', canLearn: false })
     })
 
+    it('모르는 오류(DB 고장 등)는 500 일반 문구, 안쪽 글은 안 나간다', async () => {
+        const orig = fake.db.from.bind(fake.db)
+        ;(fake.db as unknown as { from: (t: string) => unknown }).from = (t: string) => {
+            const b = orig(t) as unknown as Record<string, unknown>
+            if (t === 'mentors') b.update = () => ({ eq: async () => ({ error: { message: 'permission denied for table mentors_secret' } }) })
+            return b
+        }
+        const res = await put('tb-mine', { instagram: '@jin.ceo' })
+        expect(res.status).toBe(500)
+        expect(JSON.stringify(await res.json())).not.toContain('mentors_secret')
+    })
+
     it('저장은 분당 10번까지 (429)', async () => {
         limits['sns-save:u-owner'] = false
         expect((await put('tb-mine', { blog: 'blog.naver.com/jin_01' })).status).toBe(429)
@@ -86,17 +98,28 @@ describe('POST /api/os/team/[id]/sns/learn', () => {
         expect(learnBotSns).not.toHaveBeenCalled()
     })
 
-    it('봇마다 분당 2번, 하루 10번. 셀 수 없으면 막는다(failClosed)', async () => {
+    it('봇마다 분당 2번, 하루 10번, 회원 하루 30번. 셀 수 없으면 막는다(failClosed)', async () => {
         await learn('tb-mine')
         expect(limitCalls.map(c => [c.key, c.limit, c.windowSec, c.opts?.failClosed])).toEqual([
             ['sns-learn:m:m-1', 2, 60, true],
             ['sns-learn:d:m-1', 10, 86_400, true],
+            ['sns-learn:u:u-owner', 30, 86_400, true],
         ])
         limits['sns-learn:m'] = false
         expect((await learn('tb-mine')).status).toBe(429)
         delete limits['sns-learn:m']
         limits['sns-learn:d'] = false
         expect((await learn('tb-mine')).status).toBe(429)
+        delete limits['sns-learn:d']
+        limits['sns-learn:u'] = false
+        expect((await learn('tb-mine')).status).toBe(429)
+    })
+
+    it('모르는 오류는 안쪽 글을 내보내지 않고 500 일반 문구', async () => {
+        learnBotSns.mockRejectedValue(new Error('relation "secret_table" violates something'))
+        const res = await learn('tb-mine')
+        expect(res.status).toBe(500)
+        expect(JSON.stringify(await res.json())).not.toContain('secret_table')
     })
 
     it('slots 가 틀리면 400, 맞으면 결과와 칸 상태를 돌려준다', async () => {
