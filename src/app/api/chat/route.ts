@@ -41,7 +41,7 @@ import { BLOCKED_CHAT_TEXT } from '@/domains/os/reports'
 import { recordTopicGap } from '@/domains/chat/signals'
 import { guestProfilePrompt } from '@/domains/chat/guest-profile'
 import { signGrant } from '@/domains/tts/grant'
-import { echoesUserText } from '@/domains/tts/chunks'
+import { echoesRecentUserText, ECHO_RECENT_USER_TEXTS } from '@/domains/tts/chunks'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -848,8 +848,9 @@ export async function POST(req: Request) {
                     let rawResponse = ''
                     // 🔊 음성 통화: 지금까지 내보낸 글에 도장을 찍어 같이 내려준다(/api/tts 는 이 도장이 맞는 글만 읽는다)
                     let emittedText = ''
-                    // 사용자 말을 그대로 따라 한 답에는 도장을 안 찍는다(따라 말하기 방지)
-                    const grantFor = () => (inputMethod === 'voice_call' && user && !echoesUserText(emittedText, lastUserMessage) ? signGrant(user.id, (mentor as { id: string }).id, emittedText) : null)
+                    // 최근 사용자 말 5개를 따라 한 답에는 도장을 안 찍는다(따라 말하기 방지, /api/tts 와 같은 함수)
+                    const recentUserTexts = messages.filter((m: { role?: string }) => m.role === 'user').slice(-ECHO_RECENT_USER_TEXTS).map((m: { content?: string }) => String(m.content ?? ''))
+                    const grantFor = () => (inputMethod === 'voice_call' && user && !echoesRecentUserText(emittedText, recentUserTexts) ? signGrant(user.id, (mentor as { id: string }).id, emittedText) : null)
                     for await (const chunk of response) {
                         if (chunk.usage) llmUsage = chunk.usage
                         if ('answer' in chunk && chunk.answer) answeredBy = chunk.answer

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
 import { logLlmUsage } from '@/domains/llm/usage-log'
-import { answerToChunks, echoesUserText, isSentenceInText, MIN_SPEAK_CHARS, normalizeForMatch, TTS_CHUNK_MAX } from '@/domains/tts/chunks'
+import { answerToChunks, echoesRecentUserText, ECHO_RECENT_USER_TEXTS, isSentenceInText, MIN_SPEAK_CHARS, normalizeForMatch, TTS_CHUNK_MAX } from '@/domains/tts/chunks'
 import { verifyGrant } from '@/domains/tts/grant'
 import { chargeDailyChars } from '@/domains/tts/quota'
 
@@ -56,12 +56,12 @@ async function canUseMentor(db: Db, user: { id: string; email?: string | null },
     return !!mentor.is_active || (await isMyMentor(db, user, mentor))
 }
 
-/** 이 메시지 바로 앞의 사용자 말 (따라 말하기 검사용) */
-async function precedingUserText(db: Db, sessionId: string, before: string | null): Promise<string | null> {
+/** 이 메시지 앞의 최근 사용자 말 5개 (따라 말하기 검사용) */
+async function recentUserTexts(db: Db, sessionId: string, before: string | null): Promise<string[]> {
     let q = db.from('messages').select('content').eq('session_id', sessionId).eq('role', 'user')
     if (before) q = q.lt('created_at', before)
-    const { data } = await q.order('created_at', { ascending: false }).limit(1)
-    return ((data ?? []) as { content: string }[])[0]?.content ?? null
+    const { data } = await q.order('created_at', { ascending: false }).limit(ECHO_RECENT_USER_TEXTS)
+    return ((data ?? []) as { content: string }[]).map(r => r.content)
 }
 
 /** ① 저장된 봇 답(message 식별자)의 몇 번째 조각 */
@@ -83,7 +83,7 @@ async function readSavedMessage(db: Db, user: { id: string; email?: string | nul
     const mentor = await loadMentor(db, s.mentor_id)
     if (mentor && !(await canUseMentor(db, user, mentor))) return fail('이 목소리는 쓸 수 없어요.', 403)
     // 사용자 말을 그대로 따라 한 조각은 읽지 않는다
-    if (echoesUserText(chunks[part], await precedingUserText(db, m.session_id, m.created_at))) return fail('이 글은 읽을 수 없어요.', 403)
+    if (echoesRecentUserText(chunks[part], await recentUserTexts(db, m.session_id, m.created_at))) return fail('이 글은 읽을 수 없어요.', 403)
     return { text: chunks[part], voiceId: mentor?.voice_id ?? null, mentorId: mentor?.id ?? null, part, parts: chunks.length }
 }
 
@@ -149,7 +149,7 @@ async function readLegacyText(db: Db, user: { id: string; email?: string | null 
         if (!answerToChunks(m.content).some(c => normalizeForMatch(c) === wanted)) continue
         const mentor = await loadMentor(db, sess.find(x => x.id === m.session_id)?.mentor_id)
         if (mentor && !(await canUseMentor(db, user, mentor))) return fail('이 목소리는 쓸 수 없어요.', 403)
-        if (echoesUserText(wanted, await precedingUserText(db, m.session_id, m.created_at))) return fail('이 글은 읽을 수 없어요.', 403)
+        if (echoesRecentUserText(wanted, await recentUserTexts(db, m.session_id, m.created_at))) return fail('이 글은 읽을 수 없어요.', 403)
         return { text: wanted, voiceId: mentor?.voice_id ?? null, mentorId: mentor?.id ?? null }
     }
     return fail('이 글은 읽을 수 없어요.', 403)

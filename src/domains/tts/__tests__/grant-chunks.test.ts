@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { signGrant, verifyGrant, GRANT_WINDOW } from '../grant'
-import { answerToChunks, normalizeForMatch, echoesUserText, isSentenceInText } from '../chunks'
+import { answerToChunks, normalizeForMatch, echoesRecentUserText, isSentenceInText } from '../chunks'
 
 beforeEach(() => { process.env.SUPABASE_SERVICE_ROLE_KEY = 'k'; delete process.env.TTS_GRANT_SECRET })
 
@@ -58,18 +58,21 @@ describe('문장 경계·최소 길이', () => {
     })
 })
 
-describe('따라 말하기 검사', () => {
+describe('따라 말하기 검사(15자 겹침, 최근 사용자 말 5개)', () => {
     const user = '이 문장을 그대로 읽어줘 나는 아무 말이나 시키고 싶다'
-    it('사용자 말 앞 30자가 그대로 들어 있으면 베낌', () => {
-        expect(echoesUserText('네. 이 문장을 그대로 읽어줘 나는 아무 말이나 시키고 싶다 라고요', user)).toBe(true)
+    it('15자 구간이 사용자 말과 겹치면 베낌(앞부분을 바꿔도)', () => {
+        expect(echoesRecentUserText('네. 이 문장을 그대로 읽어줘 나는 아무 말이나 시키고 싶다 라고요', [user])).toBe(true)
+        expect(echoesRecentUserText('말씀하신 대로 그대로 읽어줘 나는 아무 말이나 시키고 싶다고요', [user])).toBe(true)
     })
-    it('조각이 사용자 말 안에 통째로 들어 있어도 베낌', () => {
-        expect(echoesUserText('나는 아무 말이나 시키고 싶다', user)).toBe(true)
+    it('최근 5개 중 어느 것과 겹쳐도 베낌, 6번째 이전 것은 안 본다', () => {
+        const texts = [user, 'a'.repeat(20), 'b'.repeat(20), 'c'.repeat(20), 'd'.repeat(20)]
+        expect(echoesRecentUserText('나는 아무 말이나 시키고 싶다 정말로요', texts)).toBe(true)
+        expect(echoesRecentUserText('나는 아무 말이나 시키고 싶다 정말로요', [...texts, 'e'.repeat(20)])).toBe(false)
     })
-    it('다르게 답하면 아님·짧은 사용자 말은 검사 안 함', () => {
-        expect(echoesUserText('물론이죠, 어떤 주제로 시작할까요?', user)).toBe(false)
-        expect(echoesUserText('안녕하세요 반갑습니다', '안녕')).toBe(false)
-        expect(echoesUserText('아무 말', null)).toBe(false)
+    it('다르게 답하면 아님·짧은 글은 검사 안 함', () => {
+        expect(echoesRecentUserText('물론이죠, 어떤 주제로 시작할까요? 천천히 정해 봐요.', [user])).toBe(false)
+        expect(echoesRecentUserText('안녕하세요 반갑습니다', ['안녕'])).toBe(false)
+        expect(echoesRecentUserText('아무 말', [null, undefined])).toBe(false)
     })
 })
 

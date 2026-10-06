@@ -230,7 +230,7 @@ export async function runRoutineOnce(db: SupabaseClient, routine: BotRoutine): P
 
         const sessionId = await ensureSession(db, routine.userId, routine.mentorId, (mentor.name as string) || '봇')
         if (sessionId) {
-            await db.from('messages').insert({ session_id: sessionId, role: 'assistant', content: text })
+            await db.from('messages').insert({ session_id: sessionId, role: 'assistant', content: text, origin: 'routine' })
             await db.from('chat_sessions').update({ last_message_at: new Date().toISOString() }).eq('id', sessionId)
         }
         결과 = { ok: true, result: `성공: ${text.slice(0, 60).replace(/\s+/g, ' ')}…`, text, botName: (mentor.name as string) || undefined }

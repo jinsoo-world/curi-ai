@@ -66,19 +66,28 @@ function plain(text: string): string {
     return normalizeForMatch(stripMarkdown(text))
 }
 
+/** 따라 말하기로 보는 겹침 길이(글자) */
+export const ECHO_OVERLAP_CHARS = 15
+/** 겹침을 보는 최근 사용자 말 개수 */
+export const ECHO_RECENT_USER_TEXTS = 5
+
 /**
- * 봇의 답 조각이 바로 앞 사용자 말을 그대로 베낀 것인가.
+ * 봇의 답 조각이 최근 사용자 말(최대 5개)을 따라 한 것인가.
  * 사용자가 글을 써 넣고 봇 목소리로 읽히게 하는 「따라 말하기」를 막는다.
- * - 사용자 말의 앞 30자(8자 이상)가 조각 안에 그대로 있으면 베낌
- * - 조각(8자 이상) 전체가 사용자 말 안에 그대로 들어 있어도 베낌
+ * 조각 안의 15자 구간 하나라도 최근 사용자 말 중 하나에 그대로 들어 있으면 베낌(앞부분만 살짝 바꿔도 걸린다).
  */
-export function echoesUserText(chunk: string, userText: string | null | undefined): boolean {
-    if (!userText) return false
-    const u = plain(userText)
+export function echoesRecentUserText(chunk: string, recentUserTexts: (string | null | undefined)[]): boolean {
     const c = plain(chunk)
-    if (u.length < MIN_SPEAK_CHARS || c.length < MIN_SPEAK_CHARS) return false
-    const head = u.slice(0, 30)
-    return c.includes(head) || u.includes(c)
+    if (c.length < ECHO_OVERLAP_CHARS) return false
+    for (const raw of recentUserTexts.slice(-ECHO_RECENT_USER_TEXTS)) {
+        if (!raw) continue
+        const u = plain(raw)
+        if (u.length < ECHO_OVERLAP_CHARS) continue
+        for (let i = 0; i + ECHO_OVERLAP_CHARS <= c.length; i++) {
+            if (u.includes(c.slice(i, i + ECHO_OVERLAP_CHARS))) return true
+        }
+    }
+    return false
 }
 
 /**
