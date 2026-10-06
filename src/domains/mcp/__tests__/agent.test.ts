@@ -134,6 +134,33 @@ describe('쓰기 도구 (데이터 빼내기 막기)', () => {
     })
 })
 
+describe('세션 오염 표시 (앞 대화에서 바깥 자료를 읽었음)', () => {
+    it('initiallyTainted 면 처음부터 허용된 쓰기 도구도 숨긴다', async () => {
+        const s = server({ tools: [RO('search'), RW('send_email')], allowedTools: ['send_email'] })
+        let seen: string[] = []
+        const r = await runToolPhase({ servers: [s], history, initiallyTainted: true, modelStep: async (_m, tools) => { seen = tools.map(t => t.function.name); return { content: '', toolCalls: [], usage: null } } })
+        expect(seen).toHaveLength(1)
+        expect(seen[0]).toMatch(/search$/)
+        expect(r.tainted).toBe(true)
+    })
+    it('initiallyTainted 인데 쓰기 도구만 있으면 모델을 부르지 않는다', async () => {
+        const s = server({ tools: [RW('send_email')], allowedTools: ['send_email'] })
+        const step: ModelStep = vi.fn()
+        const r = await runToolPhase({ servers: [s], history, initiallyTainted: true, modelStep: step })
+        expect(step).not.toHaveBeenCalled()
+        expect(s.callTool).not.toHaveBeenCalled()
+        expect(r.stoppedBy).toBe('model_done')
+    })
+    it('도구 결과를 받으면 tainted=true, 아무것도 안 부르면 false', async () => {
+        const s = server()
+        let round = 0
+        const r1 = await runToolPhase({ servers: [s], history, modelStep: async (_m, tools) => (++round === 1 ? { content: '', toolCalls: [{ id: 'a', name: tools[0].function.name, arguments: '{}' }], usage: null } : { content: '', toolCalls: [], usage: null }) })
+        expect(r1.tainted).toBe(true)
+        const r2 = await runToolPhase({ servers: [server()], history, modelStep: async () => ({ content: '', toolCalls: [], usage: null }) })
+        expect(r2.tainted).toBe(false)
+    })
+})
+
 describe('자료 울타리', () => {
     it('함수 이름은 모델 규칙(영숫자·_·-, 64자)에 맞춘다', () => {
         expect(toolFunctionName(0, 0, 'search.web')).toBe('m0_0__search_web')
