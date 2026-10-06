@@ -126,10 +126,14 @@ export async function cancelSubscription(
     return (data ?? []).length > 0
 }
 
+/** 갱신 처리 중인 상태 (자동 결제가 잡았거나, 결제는 됐는데 DB 반영 전) */
+const IN_RENEWAL = ['renewing', 'renew_paid_unsynced'] as const
+
 /**
- * 구독 갱신 (정기결제 성공 후).
- * 자동 갱신이 잡은 줄(renewing)일 때만 active 로 바꾼다. 그사이 상태가 바뀌었으면(해지 등)
- * 돈은 냈으니 기간만 연장하고 상태는 그대로 둔다 = 해지가 active 로 덮어써지지 않는다.
+ * 구독 갱신 (정기결제 성공 후). 자동 갱신 작업과 renew_paid_unsynced 를 손으로 맞출 때 같은 규칙을 쓴다.
+ *  ① 갱신 처리 중이고 해지 신청(cancel_requested_at)이 없으면 → 기간 연장 + active
+ *  ② 갱신 처리 중인데 해지 신청이 있으면 → 기간 연장(돈은 냈다) + canceled (해지를 지킨다)
+ *  ③ 그 밖에 상태가 바뀌었으면(이미 해지 등) → 기간만 연장, 상태 그대로
  */
 export async function renewSubscription(
     db: SupabaseClient,
@@ -145,33 +149,59 @@ export async function renewSubscription(
         current_period_end: newPeriodEnd.toISOString(),
         updated_at: now.toISOString(),
     }
+    const fail = (e: { message: string }): never => {
+        console.error('[Subscription] renewSubscription error:', e.message)
+        throw new Error(e.message)
+    }
 
-    const { data, error } = await db
-        .from('subscriptions')
+    const a = await db.from('subscriptions')
         .update({ ...period, status: 'active' })
         .eq('id', subscriptionId)
-        .eq('status', 'renewing')
+        .in('status', [...IN_RENEWAL])
+        .is('cancel_requested_at', null)
         .select('id')
+    if (a.error) fail(a.error)
+    if ((a.data ?? []).length > 0) return { status: 'active' }
 
-    if (error) {
-        console.error('[Subscription] renewSubscription error:', error.message)
-        throw new Error(error.message)
+    const b = await db.from('subscriptions')
+        .update({ ...period, status: 'canceled', canceled_at: now.toISOString() })
+        .eq('id', subscriptionId)
+        .in('status', [...IN_RENEWAL])
+        .select('id, status')
+    if (b.error) fail(b.error)
+    if ((b.data ?? []).length > 0) {
+        console.warn('[Subscription] 갱신 중 해지 신청 — 기간 연장 + canceled:', subscriptionId)
+        return { status: 'canceled' }
     }
-    if ((data ?? []).length > 0) return { status: 'active' }
 
-    const { data: kept, error: e2 } = await db
-        .from('subscriptions')
+    const c = await db.from('subscriptions')
         .update(period)
         .eq('id', subscriptionId)
         .select('id, status')
-    if (e2) {
-        console.error('[Subscription] renewSubscription(상태 유지) error:', e2.message)
-        throw new Error(e2.message)
-    }
-    const row = ((kept ?? []) as { status: string }[])[0]
+    if (c.error) fail(c.error)
+    const row = ((c.data ?? []) as { status: string }[])[0]
     if (!row) throw new Error('갱신할 구독을 찾지 못했어요')
     console.warn('[Subscription] 갱신 중 상태가 바뀜 — 기간만 연장, 상태 유지:', subscriptionId, row.status)
     return { status: row.status }
+}
+
+/**
+ * 갱신 처리 중(renewing·renew_paid_unsynced·renew_needs_review) 해지 신청.
+ * 지금 바로 canceled 로 바꾸면 끝나 가는 결제 처리와 부딪치므로 신청 시각만 찍는다.
+ * 다음 결제는 시도하지 않고, 처리가 끝나면(renewSubscription·자동 갱신 작업) canceled 가 된다.
+ */
+export async function requestCancelDuringRenew(db: SupabaseClient, subscriptionId: string): Promise<boolean> {
+    const now = new Date().toISOString()
+    const { data, error } = await db.from('subscriptions')
+        .update({ cancel_requested_at: now, updated_at: now })
+        .eq('id', subscriptionId)
+        .in('status', ['renewing', 'renew_paid_unsynced', 'renew_needs_review'])
+        .select('id')
+    if (error) {
+        console.error('[Subscription] requestCancelDuringRenew error:', error.message)
+        throw new Error(error.message)
+    }
+    return (data ?? []).length > 0
 }
 
 /**

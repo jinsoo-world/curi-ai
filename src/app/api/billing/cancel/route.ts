@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createBrowserClient } from '@/lib/supabase/server'
-import { cancelSubscription, getActiveSubscription } from '@/domains/subscription'
+import { cancelSubscription, getActiveSubscription, requestCancelDuringRenew } from '@/domains/subscription'
 import { sendErrorAlert } from '@/lib/slack'
 
 export const dynamic = 'force-dynamic'
@@ -33,16 +33,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '이미 취소된 구독입니다.' }, { status: 400 })
         }
 
-        // 자동 갱신 결제가 진행 중이면 막는다(갱신이 끝나며 해지를 덮어쓰지 않게, 결제는 이미 나갔을 수 있다)
-        if (subscription.status !== 'active') {
-            return NextResponse.json({ error: '자동 결제를 처리하는 중이에요. 잠시 뒤 다시 해지해 주세요.' }, { status: 409 })
+        // 자동 갱신 결제를 처리하는 중이면(renewing·renew_paid_unsynced·renew_needs_review) 바로 바꾸지 않고 해지 신청만 받는다.
+        // 다음 결제는 시도하지 않고, 처리 중인 결제가 끝나면 해지된다(이미 낸 돈만큼 기간은 남는다)
+        const 신청받기 = async () => {
+            const ok = await requestCancelDuringRenew(supabase, subscription.id)
+            if (!ok) return NextResponse.json({ error: '구독 상태가 바뀌었어요. 화면을 새로고침한 뒤 다시 해지해 주세요.' }, { status: 409 })
+            return NextResponse.json({ success: true, requested: true, message: '해지 신청을 받았어요. 처리 중인 결제가 끝나면 해지돼요.' }, { status: 202 })
         }
+        if (subscription.status !== 'active') return 신청받기()
 
-        // 구독 취소 (기간 만료 시 자동 해지). active 일 때만 바뀐다 = 그사이 갱신이 잡았으면 0줄
+        // 구독 취소 (기간 만료 시 자동 해지). active 일 때만 바뀐다 = 그사이 갱신이 잡았으면 0줄 → 해지 신청으로
         const 해지됨 = await cancelSubscription(supabase, subscription.id)
-        if (!해지됨) {
-            return NextResponse.json({ error: '자동 결제를 처리하는 중이에요. 잠시 뒤 다시 해지해 주세요.' }, { status: 409 })
-        }
+        if (!해지됨) return 신청받기()
 
         return NextResponse.json({
             success: true,
