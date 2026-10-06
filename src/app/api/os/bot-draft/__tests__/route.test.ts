@@ -3,12 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 let user: { id: string; user_metadata?: Record<string, unknown> } | null = { id: 'u1', user_metadata: { full_name: '진수' } }
 const limits: Record<string, boolean> = {}
+const limitOpts: unknown[] = []
 const askSideText = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({ auth: { getUser: async () => ({ data: { user } }) } }) }))
 vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => ({}) }))
 vi.mock('@/lib/rate-limit', () => ({
-    checkRateLimit: async (_db: unknown, key: string, limit: number, windowSec: number) => ({ allowed: limits[`${key.split(':')[1]}:${limit}:${windowSec}`] !== false }),
+    checkRateLimit: async (_db: unknown, key: string, limit: number, windowSec: number, opts?: unknown) => (limitOpts.push(opts), { allowed: limits[`${key.split(':')[1]}:${limit}:${windowSec}`] !== false }),
 }))
 vi.mock('@/domains/llm/side-text', () => ({ askSideText: (...a: unknown[]) => askSideText(...a) }))
 
@@ -19,6 +20,7 @@ const post = (body: unknown) => POST(new Request('https://x/api/os/bot-draft', {
 beforeEach(() => {
     user = { id: 'u1', user_metadata: { full_name: '진수' } }
     for (const k of Object.keys(limits)) delete limits[k]
+    limitOpts.length = 0
     askSideText.mockReset().mockResolvedValue(JSON.stringify({ name: '뉴스봇', oneLiner: '소식 정리', greeting: '안녕하세요', sampleQuestions: ['a', 'b', 'c'], shape: 'hex', color: 'blue' }))
 })
 
@@ -56,6 +58,7 @@ describe('/api/os/bot-draft', () => {
         expect(d.promptText).toContain('[승인]')
         expect(d.fallback).toBe(false)
         expect(askSideText.mock.calls[0][0]).toMatchObject({ kind: 'bot-draft', route: '/api/os/bot-draft', userId: 'u1' })
+        expect(limitOpts).toEqual([{ failClosed: true }, { failClosed: true }])   // 셀 수 없으면 막는다 (모델 비용)
     })
 
     it('모델이 이상한 답을 하거나 터져도 기본값 카드 200', async () => {
