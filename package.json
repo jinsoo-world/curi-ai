@@ -61,11 +61,9 @@
     "vitest": "^4.0.18"
   },
   "overrides": {
-    "kordoc": {
-      "onnxruntime-node": "file:./vendor/optional-stub",
-      "@huggingface/transformers": "file:./vendor/optional-stub",
-      "@hyzyla/pdfium": "file:./vendor/optional-stub",
-      "pdfjs-dist": "file:./vendor/optional-stub"
-    }
+    "onnxruntime-node": "file:./vendor/optional-stub",
+    "@huggingface/transformers": "file:./vendor/optional-stub",
+    "@hyzyla/pdfium": "file:./vendor/optional-stub",
+    "pdfjs-dist": "file:./vendor/optional-stub"
   }
 }

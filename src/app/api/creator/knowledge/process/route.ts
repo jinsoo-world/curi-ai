@@ -9,6 +9,7 @@ import { logUpstageOcr } from '@/domains/llm/ocr-usage'
 import { 개인정보가리기 } from '@/domains/knowledge/개인정보가리기'
 import { docParseEnabled, underUpstageCap, callDocumentParse, DOC_SPACE_COPY } from '@/domains/knowledge/doc-parse'
 import { reserveFilePages, type PageReservation } from '@/domains/knowledge/doc-gate'
+import { MAX_FILE_BYTES, MAX_TEXT_CHARS, PasswordProtectedError, UnsafeFileError, detectPasswordProtected, limitText } from '@/domains/knowledge/parsers/safety'
 import { recheckAfterKnowledge } from '@/domains/os/publish-gate'
 
 /**
@@ -212,6 +213,12 @@ function extractTextFromUpstage(pd: Record<string, unknown>): string {
     return ''
 }
 
+function 암호안내(ext: string): string {
+    if (['doc', 'docx'].includes(ext)) return '암호가 걸린 워드 파일이에요. 워드에서 「파일 > 정보 > 문서 보호」의 암호를 지우고 다시 저장해서 올려 주세요.'
+    if (['hwp', 'hwpx'].includes(ext)) return '암호가 걸린 한글 파일이에요. 한글에서 「파일 > 문서 암호 설정」을 해제하고 다시 저장해서 올려 주세요.'
+    return '암호가 걸린 파일이에요. 암호를 푼 파일로 다시 올려 주세요.'
+}
+
 export async function POST(req: NextRequest) {
     // 못 읽으면 「못 읽음」과 이유 한 줄을 남긴다 (화면이 「다시 시도」와 함께 보여 준다). 이유는 summary 칸(실패일 때만)
     let failSource: ((why: FailureReason) => Promise<void>) | null = null
@@ -259,6 +266,23 @@ export async function POST(req: NextRequest) {
 
         const ext = source.title?.split('.').pop()?.toLowerCase() || ''
         let textContent = ''
+        // 읽다가 암호·위험 파일로 드러난 경우 (각 읽기 블록이 오류를 삼키므로 표시만 해 둔다)
+        const 막힘: { v: 'password' | 'unsafe' | null } = { v: null }
+        const 읽기오류 = (err: unknown) => {
+            if (err instanceof PasswordProtectedError) 막힘.v = 'password'
+            else if (err instanceof UnsafeFileError) 막힘.v = 'unsafe'
+        }
+
+        // 다운로드 직후 실제 크기 확인 (올릴 때 신고한 크기를 믿지 않는다)
+        if (fileData.size > MAX_FILE_BYTES) {
+            await failSource('file_too_large')
+            return NextResponse.json({ error: `파일이 너무 커요. ${MAX_FILE_BYTES / 1048576}MB 이하로 줄여서 올려 주세요.` }, { status: 413 })
+        }
+        // 암호 걸린 파일은 업스테이지 비용을 쓰기 전에 거른다
+        if (['doc', 'docx', 'xlsx', 'pptx', 'hwp'].includes(ext) && detectPasswordProtected(ext, Buffer.from(await fileData.arrayBuffer()))) {
+            await failSource('password_protected')
+            return NextResponse.json({ error: 암호안내(ext), code: 'password_protected' }, { status: 400 })
+        }
 
         // 월 자료 한도 (DOC_PARSE_ENABLED 일 때만): 쪽 수를 로컬로 세고, 업스테이지를 부르기 전에 막는다
         const docParseOn = docParseEnabled()
@@ -287,6 +311,7 @@ export async function POST(req: NextRequest) {
                 textContent = parseExcel(buffer, ext)
                 console.log('[Process] 엑셀 읽음:', source.title, '글자', textContent.length)
             } catch (xlErr) {
+                읽기오류(xlErr)
                 console.error('[Process] 엑셀 읽기 실패:', xlErr instanceof Error ? xlErr.message : xlErr)
                 textContent = ''
             }
@@ -325,6 +350,7 @@ export async function POST(req: NextRequest) {
                     textContent = await parseHangul(Buffer.from(await fileData.arrayBuffer()))
                     console.log('[Process] 한글 kordoc 로컬 읽음, text length:', textContent.length)
                 } catch (hwpErr) {
+                읽기오류(hwpErr)
                     console.error('[Process] 한글 kordoc 읽기 실패:', hwpErr instanceof Error ? hwpErr.message : hwpErr)
                 }
             }
@@ -340,11 +366,12 @@ export async function POST(req: NextRequest) {
                 textContent = await parseHangul(Buffer.from(await fileData.arrayBuffer()))
                 console.log('[Process] 한글 kordoc 로컬 읽음, text length:', textContent.length)
             } catch (hwpErr) {
+                읽기오류(hwpErr)
                 console.error('[Process] 한글 kordoc 읽기 실패:', hwpErr instanceof Error ? hwpErr.message : hwpErr)
             }
 
             // 본문을 못 읽은 경우 (200자 이하 = 메타데이터뿐) → Upstage OCR fallback
-            if (textContent.trim().length < 200 && await underUpstageCap(admin)) {
+            if (!막힘.v && textContent.trim().length < 200 && await underUpstageCap(admin)) {
                 console.log('[Process] HWP 로컬 결과가 너무 짧음, falling back to Upstage OCR')
                 try {
                     const formData = new FormData()
@@ -381,6 +408,7 @@ export async function POST(req: NextRequest) {
                 textContent = await parseWord(Buffer.from(await fileData.arrayBuffer()))
                 console.log('[Process] 워드 읽음:', ext, 'text length:', textContent.length)
             } catch (docErr) {
+                읽기오류(docErr)
                 console.error('[Process] 워드 읽기 실패:', ext, docErr instanceof Error ? docErr.message : docErr)
             }
 
@@ -394,10 +422,11 @@ export async function POST(req: NextRequest) {
                     textContent = parsed.text
                     console.log(`[Process] PPTX parsed: ${parsed.slides} slides, ${textContent.length} chars`)
                 } catch (pptxErr) {
+                읽기오류(pptxErr)
                     console.error('[Process] PPTX local parse error:', pptxErr)
                     // 로컬 파서 실패 시 Upstage OCR 폴백 (회사 월 상한 안에서만)
                     console.log('[Process] Falling back to Upstage OCR for PPTX')
-                    if (await underUpstageCap(admin)) try {
+                    if (!막힘.v && await underUpstageCap(admin)) try {
                         const formData = new FormData()
                         formData.append('document', fileData, source.title)
                         formData.append('model', 'ocr')
@@ -452,11 +481,12 @@ export async function POST(req: NextRequest) {
                 textContent = pdfData.text
                 console.log('[Process] PDF parsed with unpdf, text length:', textContent.length, 'pages:', pdfData.pages)
             } catch (pdfErr) {
+                읽기오류(pdfErr)
                 console.error('[Process] unpdf error:', pdfErr instanceof Error ? pdfErr.message : pdfErr)
             }
 
             // 글자를 200자 못 읽은 경우 (스캔 PDF) → Upstage OCR fallback
-            if (textContent.trim().length < 200 && process.env.UPSTAGE_API_KEY && await underUpstageCap(admin)) {
+            if (!막힘.v && textContent.trim().length < 200 && process.env.UPSTAGE_API_KEY && await underUpstageCap(admin)) {
                 console.log('[Process] PDF text too short, falling back to Upstage OCR')
                 try {
                     const formData = new FormData()
@@ -488,6 +518,21 @@ export async function POST(req: NextRequest) {
             }
         } else {
             console.error('[Process] Unsupported file type:', ext)
+        }
+
+        if (막힘.v === 'password') {
+            await failSource('password_protected')
+            return NextResponse.json({ error: 암호안내(ext), code: 'password_protected' }, { status: 400 })
+        }
+        if (막힘.v === 'unsafe') {
+            await failSource('file_too_large')
+            return NextResponse.json({ error: '파일이 너무 커서 읽을 수 없어요. 압축을 풀면 비정상적으로 큰 파일은 받지 않아요. 내용을 줄여서 다시 올려 주세요.' }, { status: 413 })
+        }
+
+        // 뽑은 글이 너무 길면 앞부분만 쓴다 (50만 자)
+        if (textContent.length > MAX_TEXT_CHARS) {
+            console.log('[Process] 글이 너무 길어 자름:', source.title, textContent.length)
+            textContent = limitText(textContent).text
         }
 
         if (!textContent.trim()) {

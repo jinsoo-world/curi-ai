@@ -1,6 +1,8 @@
 // pptx 읽기 = pptxtojson 2.2.0. 슬라이드마다 제목을 달고 글·표 칸·노트를 줄로 편다.
 // (옛 .ppt 는 여기서 못 읽는다. 호출쪽이 업스테이지로 시도하고, 안 되면 pptx 로 저장해 올려 달라고 안내한다.)
 
+import { assertZipSafe, asPasswordError, limitText } from './safety'
+
 type Element = {
     content?: string
     text?: string
@@ -49,7 +51,13 @@ export async function parsePptx(buffer: Buffer): Promise<{ text: string; slides:
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { parse } = require('pptxtojson/dist/index.cjs') as { parse: (data: ArrayBuffer) => Promise<{ slides?: Slide[] }> }
     const ab = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer
-    const result = await parse(ab)
+    assertZipSafe(buffer)
+    let result: { slides?: Slide[] }
+    try {
+        result = await parse(ab)
+    } catch (err) {
+        throw asPasswordError(err)
+    }
     const out: string[] = []
     const slides = result?.slides ?? []
     slides.forEach((slide, i) => {
@@ -59,5 +67,5 @@ export async function parsePptx(buffer: Buffer): Promise<{ text: string; slides:
         if (texts.length > 0) out.push(`[슬라이드 ${i + 1}]\n${texts.join('\n')}`)
         if (slide.note) out.push(`[슬라이드 ${i + 1} 노트]\n${slide.note}`)
     })
-    return { text: out.join('\n\n'), slides: slides.length }
+    return { text: limitText(out.join('\n\n')).text, slides: slides.length }
 }
