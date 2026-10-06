@@ -6,7 +6,7 @@
 --
 --   1) 예약 작업 공통 칸: knowledge_syncs · bot_routines · message_campaigns (+ knowledge_feeds 칸만)
 --      next_run_at(다음에 돌 시각) · fail_count(연속 실패) · claimed_at(지금 누가 잡았나) · last_error · status 'paused'
---   2) subscriptions.status 에 'renewing'(갱신 중 잡음)·'renew_paid_unsynced'(돈은 나갔는데 DB 반영 실패)·'past_due' 허용
+--   2) subscriptions.status 에 'renewing'(갱신 중 잡음)·'renew_paid_unsynced'(돈은 나갔는데 DB 반영 실패)·'past_due' 허용 + payments(toss_order_id) 겹칠 수 없는 열쇠
 --   3) knowledge_sources.processing_started_at (읽기 시작 시각 → 30분 넘으면 정리 작업이 failed(timeout))
 --   4) grant_clover_purchase(): 충전 지급을 「기록 + 잔액」 한 번에(같은 주문번호 두 번 지급 막기) + 겹칠 수 없는 열쇠(이미 겹친 줄이 있으면 건너뜀)
 --   5) p089_candidates(): 「3일 안부」 받을 사람을 SQL 한 번으로 고른다
@@ -66,6 +66,15 @@ ALTER TABLE public.subscriptions DROP CONSTRAINT IF EXISTS subscriptions_status_
 ALTER TABLE public.subscriptions ADD CONSTRAINT subscriptions_status_check
   CHECK (status IN ('active', 'canceled', 'expired', 'trial', 'past_due', 'renewing', 'renew_paid_unsynced')) NOT VALID;
 CREATE INDEX IF NOT EXISTS subscriptions_renew_due_idx ON public.subscriptions (current_period_end) WHERE status IN ('active', 'renewing');
+-- 같은 주문번호 결제 기록은 한 줄만(갱신을 다시 잡아 복구할 때 두 번 쌓이지 않게. 코드는 upsert … ignoreDuplicates)
+DO $$
+BEGIN
+  BEGIN
+    CREATE UNIQUE INDEX IF NOT EXISTS payments_toss_order_id_uniq ON public.payments (toss_order_id);
+  EXCEPTION WHEN unique_violation THEN
+    RAISE NOTICE '이미 같은 주문번호 결제 기록이 두 줄 이상 있어 열쇠를 만들지 못했다. 그 줄을 먼저 확인할 것 (코드는 열쇠 없이도 예전처럼 insert)';
+  END;
+END $$;
 
 -- ---------- 3) 파일 학습 시작 시각 ----------
 ALTER TABLE public.knowledge_sources ADD COLUMN IF NOT EXISTS processing_started_at TIMESTAMPTZ;
@@ -88,7 +97,7 @@ CREATE OR REPLACE FUNCTION public.grant_clover_purchase(p_user UUID, p_order TEX
 RETURNS INTEGER
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   new_balance INTEGER;

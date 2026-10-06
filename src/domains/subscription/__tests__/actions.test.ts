@@ -105,40 +105,28 @@ describe('subscription/actions', () => {
     })
 
     describe('savePayment', () => {
-        it('결제 내역 저장 성공', async () => {
-            const db = {
-                from: vi.fn().mockReturnValue({
-                    insert: vi.fn().mockResolvedValue({ error: null }),
-                }),
-            } as unknown as Parameters<typeof savePayment>[0]
+        const input = { subscriptionId: 'sub-123', userId: 'user-1', tossPaymentKey: 'pk-123', tossOrderId: 'ord-123', amount: 9900, status: 'done' as const }
 
-            await savePayment(db, {
-                subscriptionId: 'sub-123',
-                userId: 'user-1',
-                tossPaymentKey: 'pk-123',
-                tossOrderId: 'ord-123',
-                amount: 9900,
-                status: 'done',
-            })
+        it('같은 주문번호는 한 번만 = upsert(toss_order_id, ignoreDuplicates)', async () => {
+            const upsert = vi.fn().mockResolvedValue({ error: null })
+            const db = { from: vi.fn().mockReturnValue({ upsert }) } as unknown as Parameters<typeof savePayment>[0]
+            await savePayment(db, input)
+            expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ toss_order_id: 'ord-123', amount: 9900 }), { onConflict: 'toss_order_id', ignoreDuplicates: true })
+        })
+
+        it('고유 색인이 아직 없으면(42P10, 마이그레이션 전) 예전처럼 insert', async () => {
+            const upsert = vi.fn().mockResolvedValue({ error: { code: '42P10', message: 'there is no unique or exclusion constraint matching the ON CONFLICT specification' } })
+            const insert = vi.fn().mockResolvedValue({ error: null })
+            const db = { from: vi.fn().mockReturnValue({ upsert, insert }) } as unknown as Parameters<typeof savePayment>[0]
+            await savePayment(db, input)
+            expect(insert).toHaveBeenCalledTimes(1)
         })
 
         it('저장 실패 시 throw', async () => {
             const db = {
-                from: vi.fn().mockReturnValue({
-                    insert: vi.fn().mockResolvedValue({ error: { message: '저장 실패' } }),
-                }),
+                from: vi.fn().mockReturnValue({ upsert: vi.fn().mockResolvedValue({ error: { message: '저장 실패' } }) }),
             } as unknown as Parameters<typeof savePayment>[0]
-
-            await expect(
-                savePayment(db, {
-                    subscriptionId: 'sub-123',
-                    userId: 'user-1',
-                    tossPaymentKey: 'pk-123',
-                    tossOrderId: 'ord-123',
-                    amount: 9900,
-                    status: 'done',
-                })
-            ).rejects.toThrow('저장 실패')
+            await expect(savePayment(db, input)).rejects.toThrow('저장 실패')
         })
     })
 })

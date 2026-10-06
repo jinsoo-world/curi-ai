@@ -74,18 +74,22 @@ export async function savePayment(
         receiptUrl?: string
     },
 ) {
-    const { error } = await db
-        .from('payments')
-        .insert({
-            subscription_id: data.subscriptionId,
-            user_id: data.userId,
-            toss_payment_key: data.tossPaymentKey,
-            toss_order_id: data.tossOrderId,
-            amount: data.amount,
-            status: data.status,
-            paid_at: data.paidAt || new Date().toISOString(),
-            receipt_url: data.receiptUrl || null,
-        })
+    const row = {
+        subscription_id: data.subscriptionId,
+        user_id: data.userId,
+        toss_payment_key: data.tossPaymentKey,
+        toss_order_id: data.tossOrderId,
+        amount: data.amount,
+        status: data.status,
+        paid_at: data.paidAt || new Date().toISOString(),
+        receipt_url: data.receiptUrl || null,
+    }
+    // 같은 주문번호는 한 줄만(자동 갱신을 다시 잡아 복구할 때 결제 기록이 두 번 생기지 않게). 고유 색인 = 20261023 마이그레이션
+    let { error } = await db.from('payments').upsert(row, { onConflict: 'toss_order_id', ignoreDuplicates: true })
+    if (error && error.code === '42P10') {
+        // 고유 색인이 아직 없으면(마이그레이션 전) 예전처럼
+        ({ error } = await db.from('payments').insert(row))
+    }
 
     if (error) {
         console.error('[Subscription] savePayment error:', error.message)
