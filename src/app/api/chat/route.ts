@@ -23,6 +23,7 @@ import {
     CuriousAuthExpired, curiousMyPosts, curiousMyStudies, curiousPostsToText, curiousStudiesToText, findProvider, providerReady, withCuriousAuth,
 } from '@/domains/connectors'
 import { checkRateLimit, rateLimitKey, rateLimitMessage } from '@/lib/rate-limit'
+import { runMcpForChat } from '@/domains/mcp/chat'
 import { applySkills, skillsForMentor } from '@/domains/os/skills'
 // 🎛 답변 설정(목적·지침·말투·길이·창의성·출처·안내문·최신성). 트윈·리더 봇(마켓 공개봇)=Strict, 내 팀 봇=Adaptive 기본값 (domains/os/response-settings)
 import { isIosAppUserAgent } from '@/lib/app-shell'
@@ -655,6 +656,24 @@ export async function POST(req: Request) {
             }
         }
 
+        // 🧰 MCP 도구 = 대화하는 회원 본인이 만든 봇 대화에서만, 본인이 붙인 MCP 서버 중 이 봇에 켜 둔 것만 (봇 주인 확인은 runMcpForChat 이 DB 로 한다).
+        //    모델(솔라)이 고른 도구만 부르고, 기본은 읽기 전용 도구만. 호출 5번·걸음 4번·마감 25초·결과 길이·내부망 차단은 domains/mcp 가 지킨다.
+        //    결과는 시스템 지침이 아니라 사용자 차례 앞 「자료」(무작위 태그 울타리)로 붙인다 = 아래 buildGeminiHistory 직전.
+        let mcp자료 = ''
+        if (user) {
+            try {
+                const mcp = await runMcpForChat({ db: createAdminClient(), userId: user.id, botId: String((mentor as { id: string }).id), history: messages })
+                if (mcp.hadServers) personalized = true   // 내 도구 결과가 섞인 답은 남과 나눠 쓰는 저장 답에 넣지 않는다
+                if (mcp.material) {
+                    연결자료읽음 = true
+                    mcp자료 = mcp.material
+                    usedSources = [...usedSources, ...mcp.sources]
+                }
+            } catch (mcpErr) {
+                console.error('[Chat MCP] Error:', mcpErr instanceof Error ? mcpErr.name : 'unknown')
+            }
+        }
+
         // 📷 사진 첨부 — 우리 저장소에 올려둔 사진을 읽어 Gemini 에 같이 넘긴다.
         // Gemini 는 주소만 줘서는 사진을 못 본다. 내용을 직접 실어 보내야 한다.
         const safeImageUrl = isOurChatImage(imageUrl) ? (imageUrl as string) : null
@@ -727,7 +746,11 @@ export async function POST(req: Request) {
         else if (canSearch) systemPrompt = `${systemPrompt}\n\n${SEARCH_OFFER_PROMPT}`
 
         // Gemini 대화 히스토리 구성 (domains/mentor)
-        const geminiMessages = buildGeminiHistory(responseSettings.initialMessage || mentor.greeting_message, messages, attachedImage)
+        // 🧰 MCP 자료는 이번 사용자 말 바로 앞에 붙인다(같은 사용자 차례 안, 저장되는 말·사용량 셈에는 안 들어간다)
+        const 모델용말 = mcp자료 && Array.isArray(messages) && messages[messages.length - 1]?.role === 'user'
+            ? [...messages.slice(0, -1), { ...messages[messages.length - 1], content: `${mcp자료}\n\n[사용자 말]\n${messages[messages.length - 1].content ?? ''}` }]
+            : messages
+        const geminiMessages = buildGeminiHistory(responseSettings.initialMessage || mentor.greeting_message, 모델용말, attachedImage)
 
         // 스트리밍 응답 (domains/chat) — 어느 모델이 답하는지는 stream.ts 가 고른다.
         // 밖에서 확인할 수 있게 고른 드라이버 이름만 응답 머리글(X-Llm-Driver)에 붙인다.
