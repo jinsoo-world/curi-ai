@@ -41,7 +41,7 @@ describe('handOffToProcess — 학습 창구에 맡기기(기다리지 않기 + 
     const body = { sourceId: 's1', mentorId: 'm1', actorUserId: 'u1' }
 
     it('내부 열쇠 머리글과 주인 번호를 같이 보낸다', async () => {
-        const f = vi.fn(async (_url: string, _init?: RequestInit) => new Response('{}', { status: 200 }))
+        const f = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(async () => new Response('{}', { status: 200 }))
         const r = await handOffToProcess('https://x.test', body, { fetch: f as unknown as typeof fetch, secret: 'k' })
         expect(r).toEqual({ queued: true })
         const [url, init] = f.mock.calls[0]
