@@ -2,20 +2,12 @@
 
 import { useState, useCallback, useRef } from 'react'
 
-// 멘토별 미리 듣기 대사
-const PREVIEW_LINES: Record<string, string> = {
-    '열정진': '안녕하세요! 열정진입니다. 오늘도 콘텐츠로 세상을 바꿔봅시다!',
-    '글담쌤': '반가워요, 글담쌤이에요. 오늘은 어떤 글을 써볼까요?',
-    'Cathy': 'Hi there! I\'m Cathy. Ready to level up your marketing game?',
-    '봉이 김선달': '허허, 이 김선달이가 돈 버는 비법을 알려주지!',
-    '신사임당': '반갑습니다. 지혜로운 삶과 예술에 대해 이야기 나눠볼까요?',
-}
+// 미리 듣기 문구는 서버(/api/tts)가 정한다. 여기엔 지원하는 기본 봇 이름만 둔다.
+const PREVIEW_NAMES = ['열정진', '글담쌤', 'Cathy', '봉이 김선달', '신사임당']
 
-const DEFAULT_LINE = '안녕하세요, 큐리 AI 멘토입니다. 무엇이든 물어보세요!'
-
-export default function VoicePreviewButton({ mentorName, voiceId }: { mentorName: string; voiceId?: string | null }) {
+export default function VoicePreviewButton({ mentorId, mentorName }: { mentorId: string; mentorName: string }) {
     // 🎵 음성 미리듣기가 지원되는 기본 멘토만 표시
-    if (!PREVIEW_LINES[mentorName]) return null
+    if (!PREVIEW_NAMES.includes(mentorName)) return null
 
     const [status, setStatus] = useState<'idle' | 'loading' | 'playing'>('idle')
     const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -56,11 +48,7 @@ export default function VoicePreviewButton({ mentorName, voiceId }: { mentorName
                 const res = await fetch('/api/tts', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        text: PREVIEW_LINES[mentorName] || DEFAULT_LINE,
-                        mentorName,
-                        voiceId: voiceId || undefined,
-                    }),
+                    body: JSON.stringify({ mentorId, preview: true }),
                 })
 
                 if (!res.ok) throw new Error('TTS 실패')

@@ -3,16 +3,21 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { VOICE_FREE_TOTAL_SECONDS, VOICE_MAX_CALL_SECONDS } from '@/domains/chat/constants'
 
+/** 서버가 봇 답에 찍어준 읽기표 (지금까지의 봇 답 + 도장) */
+type TtsGrant = { text: string; ts: number; sig: string; from: number } | { crisis: true }
+
 interface VoiceCallOverlayProps {
     isOpen: boolean
     onClose: () => void
+    /** 봇 id (서버가 이 봇의 목소리로 읽는다) */
+    mentorId: string
     mentorName: string
     mentorEmoji: string
     mentorImage?: string
     voiceSampleUrl?: string | null
     voiceId?: string | null
     userName?: string
-    onStreamMessage: (text: string, onSentence: (sentence: string) => void, signal: AbortSignal) => Promise<string>
+    onStreamMessage: (text: string, onSentence: (sentence: string, grant?: TtsGrant) => void, signal: AbortSignal) => Promise<string>
 }
 
 interface SpeechRecognitionEvent {
@@ -21,7 +26,7 @@ interface SpeechRecognitionEvent {
 }
 
 export default function VoiceCallOverlay({
-    isOpen, onClose, mentorName, mentorEmoji, mentorImage, voiceSampleUrl, voiceId, userName, onStreamMessage,
+    isOpen, onClose, mentorId, mentorName, mentorEmoji, mentorImage, onStreamMessage,
 }: VoiceCallOverlayProps) {
     const [phase, setPhase] = useState<'connecting' | 'listening' | 'thinking' | 'speaking' | 'idle' | 'expired'>('idle')
     const [transcript, setTranscript] = useState('')
@@ -44,10 +49,8 @@ export default function VoiceCallOverlay({
     const totalSlotsRef = useRef(0)
     const isPlayingRef = useRef(false)
     const streamDoneRef = useRef(false)
-    const ttsQueueRef = useRef<{ sentence: string; slotIndex: number }[]>([])
+    const ttsQueueRef = useRef<{ payload: Record<string, unknown>; slotIndex: number }[]>([])
     const isTtsProcessingRef = useRef(false)  // ⚡ Concurrency 1 Lock
-
-    const safeVoiceId = voiceId || undefined
 
     // ── 🔊 Ordered Slot 큐 재생 ──
     const tryPlayNext = useCallback(() => {
@@ -97,13 +100,13 @@ export default function VoiceCallOverlay({
 
         while (ttsQueueRef.current.length > 0) {
             if (controller.signal.aborted) break
-            const { sentence, slotIndex } = ttsQueueRef.current.shift()!
+            const { payload, slotIndex } = ttsQueueRef.current.shift()!
 
             try {
                 const res = await fetch('/api/tts', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: sentence, mentorName, voiceId: safeVoiceId }),
+                    body: JSON.stringify(payload),
                     signal: controller.signal,
                 })
 
@@ -126,7 +129,7 @@ export default function VoiceCallOverlay({
                         const retry = await fetch('/api/tts', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ text: sentence, mentorName, voiceId: safeVoiceId }),
+                            body: JSON.stringify(payload),
                             signal: controller.signal,
                         })
                         if (retry.ok) {
@@ -156,11 +159,12 @@ export default function VoiceCallOverlay({
 
         isTtsProcessingRef.current = false  // Lock 해제
         if (streamDoneRef.current) tryPlayNext()
-    }, [mentorName, safeVoiceId, tryPlayNext])
+    }, [tryPlayNext])
 
-    const enqueueTts = useCallback((sentence: string, slotIndex: number, controller: AbortController) => {
+    // payload = 서버에 보낼 요청 (인사말 {mentorId, greeting} 또는 문장 {mentorId, sentence, grant})
+    const enqueueTts = useCallback((payload: Record<string, unknown>, slotIndex: number, controller: AbortController) => {
         slotMapRef.current.set(slotIndex, null) // 슬롯 예약
-        ttsQueueRef.current.push({ sentence, slotIndex })
+        ttsQueueRef.current.push({ payload, slotIndex })
         processTtsQueue(controller)
     }, [processTtsQueue])
 
@@ -172,14 +176,11 @@ export default function VoiceCallOverlay({
         abortRef.current = controller
 
         resetSlotQueue()
-        const displayName = userName || '고객'
-        const greetingText = `네, ${displayName}님! ${mentorName}입니다, 반갑습니다!`
-
         // 인사말을 큐의 0번 슬롯으로 넣기 — 프리패칭 충돌 없음!
         totalSlotsRef.current = 1
         streamDoneRef.current = true
-        enqueueTts(greetingText, 0, controller)
-    }, [userName, mentorName, enqueueTts, resetSlotQueue])
+        enqueueTts({ mentorId, greeting: true }, 0, controller)
+    }, [mentorId, enqueueTts, resetSlotQueue])
 
     // 🔒 통화 전 사용량 체크
     useEffect(() => {
@@ -254,9 +255,9 @@ export default function VoiceCallOverlay({
             resetSlotQueue()
             totalSlotsRef.current = 1
             streamDoneRef.current = true
-            enqueueTts('아직 계세요? 궁금한 게 있으면 편하게 말씀해 주세요!', 0, controller)
+            enqueueTts({ mentorId, greeting: 'idle' }, 0, controller)  // 문구는 서버가 정한다
         }, 15000)
-    }, [enqueueTts, resetSlotQueue])
+    }, [mentorId, enqueueTts, resetSlotQueue])
 
     // ── 🛑 끼어들기 — 3중 abort ──
     const interruptSpeaking = useCallback(() => {
@@ -328,16 +329,18 @@ export default function VoiceCallOverlay({
             let sentenceIndex = 0
             let firstFired = false
 
-            const onSentence = (sentence: string) => {
+            const onSentence = (sentence: string, grant?: TtsGrant) => {
                 if (controller.signal.aborted) return
                 if (!firstFired) {
                     firstFired = true
                     setPhase('speaking')
                     startInterruptionDetection()
                 }
+                // 서버가 읽기표를 안 준 문장(열쇠 없음 등)은 소리로 만들지 않는다
+                if (!grant) return
                 const idx = sentenceIndex++
                 totalSlotsRef.current = sentenceIndex
-                enqueueTts(sentence, idx, controller)
+                enqueueTts('crisis' in grant ? { mentorId, greeting: 'crisis' } : { mentorId, sentence, grant }, idx, controller)
             }
 
             await onStreamMessage(text, onSentence, controller.signal)
@@ -353,7 +356,7 @@ export default function VoiceCallOverlay({
             setError('대화 중 오류가 발생했어요')
             setTimeout(() => { setError(null); setPhase('listening'); startListening() }, 2000)
         }
-    }, [onStreamMessage, startListening, startInterruptionDetection, enqueueTts, resetSlotQueue, tryPlayNext])
+    }, [mentorId, onStreamMessage, startListening, startInterruptionDetection, enqueueTts, resetSlotQueue, tryPlayNext])
 
     const handleHangup = useCallback(() => {
         stopAll()

@@ -40,6 +40,8 @@ import { isBotBlocked } from '@/domains/os/blocks'
 import { BLOCKED_CHAT_TEXT } from '@/domains/os/reports'
 import { recordTopicGap } from '@/domains/chat/signals'
 import { guestProfilePrompt } from '@/domains/chat/guest-profile'
+import { signGrant } from '@/domains/tts/grant'
+import { echoesRecentUserText, ECHO_RECENT_USER_TEXTS } from '@/domains/tts/chunks'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -185,7 +187,7 @@ export async function POST(req: Request) {
             const crisisStream = new ReadableStream({
                 start(controller) {
                     controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ text: CRISIS_RESPONSE, done: true, fullResponse: CRISIS_RESPONSE })}\n\n`)
+                        encoder.encode(`data: ${JSON.stringify({ text: CRISIS_RESPONSE, done: true, fullResponse: CRISIS_RESPONSE, crisis: true })}\n\n`)
                     )
                     controller.close()
                 },
@@ -844,6 +846,11 @@ export async function POST(req: Request) {
 
                 try {
                     let rawResponse = ''
+                    // 🔊 음성 통화: 지금까지 내보낸 글에 도장을 찍어 같이 내려준다(/api/tts 는 이 도장이 맞는 글만 읽는다)
+                    let emittedText = ''
+                    // 최근 사용자 말 5개를 따라 한 답에는 도장을 안 찍는다(따라 말하기 방지, /api/tts 와 같은 함수)
+                    const recentUserTexts = messages.filter((m: { role?: string }) => m.role === 'user').slice(-ECHO_RECENT_USER_TEXTS).map((m: { content?: string }) => String(m.content ?? ''))
+                    const grantFor = () => (inputMethod === 'voice_call' && user && !echoesRecentUserText(emittedText, recentUserTexts) ? signGrant(user.id, (mentor as { id: string }).id, emittedText) : null)
                     for await (const chunk of response) {
                         if (chunk.usage) llmUsage = chunk.usage
                         if ('answer' in chunk && chunk.answer) answeredBy = chunk.answer
@@ -855,8 +862,10 @@ export async function POST(req: Request) {
                             const newText = outputGuard.feed(cleaned)
                             if (newText) {
                                 fullResponse = outputGuard.text
+                                emittedText += newText
+                                const ttsGrant = grantFor()
                                 controller.enqueue(
-                                    encoder.encode(`data: ${JSON.stringify({ text: newText, done: false })}\n\n`)
+                                    encoder.encode(`data: ${JSON.stringify({ text: newText, done: false, ...(ttsGrant ? { ttsGrant } : {}) })}\n\n`)
                                 )
                             }
                             if (outputGuard.tripped) break
@@ -865,7 +874,11 @@ export async function POST(req: Request) {
 
                     // 최종 정리 = 잡아 둔 나머지 글자를 내보낸다
                     const tail = outputGuard.finish(stripThinkingPatterns(rawResponse))
-                    if (tail) controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: tail, done: false })}\n\n`))
+                    if (tail) {
+                        emittedText += tail
+                        const ttsGrant = grantFor()
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: tail, done: false, ...(ttsGrant ? { ttsGrant } : {}) })}\n\n`))
+                    }
                     fullResponse = outputGuard.text
                     if (outputGuard.tripped) console.warn('[Chat Guard] 카나리 유출 차단', JSON.stringify({ mentorId, userId: user?.id ?? null, pattern: extractionPattern }))
 
@@ -882,6 +895,7 @@ export async function POST(req: Request) {
                     // ⚠️ sessionOwned = 이 대화방이 지금 로그인한 사람 것인지 위에서 확인한 값.
                     // 확인 없이 저장하면 남의 대화방에 아무 글이나 심을 수 있다.
                     const isGuestSession = !sessionId || sessionId.startsWith('guest-') || !sessionOwned
+                    let assistantMessageId: string | null = null
                     console.log(`[Chat Save] sessionId=${sessionId}, isGuest=${isGuestSession}, hasResponse=${!!fullResponse}, responseLen=${fullResponse.length}`)
                     if (!isGuestSession && fullResponse && sessionId) {
                         try {
@@ -907,7 +921,7 @@ export async function POST(req: Request) {
                             if (userMsgErr) console.error('[Chat Save] userMessage INSERT failed:', JSON.stringify(userMsgErr))
                             else console.log('[Chat Save] userMessage saved OK')
 
-                            const { error: assistantMsgErr } = await adminDb.from('messages').insert({
+                            const { data: assistantRow, error: assistantMsgErr } = await adminDb.from('messages').insert({
                                 session_id: sessionId,
                                 role: 'assistant',
                                 content: fullResponse,
@@ -919,7 +933,9 @@ export async function POST(req: Request) {
                                         tokens_used: llmUsage.total,
                                     }
                                     : {}),
-                            })
+                            }).select('id').single()
+                            // 듣기 버튼이 이 답을 가리킬 수 있게 저장된 메시지 id 를 마지막 이벤트에 실어 보낸다
+                            assistantMessageId = (assistantRow as { id?: string } | null)?.id ?? null
                             if (assistantMsgErr) console.error('[Chat Save] assistantMessage INSERT failed:', JSON.stringify(assistantMsgErr))
                             else console.log(`[Chat Save] assistantMessage saved OK tokens=${llmUsage ? `${llmUsage.prompt}/${llmUsage.completion}/${llmUsage.total}` : 'n/a'}`)
 
@@ -1000,7 +1016,7 @@ export async function POST(req: Request) {
                     }
 
                     controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ text: '', done: true, fullResponse, ...(newSessionId ? { sessionId: newSessionId } : {}), sources: responseSettings.citationsOn ? usedSources : [], readUrls, ...(overageLeft !== null ? { cloverBalance: overageLeft } : {}), ...(overageCharge ? { cloverSpent: overageCharge.amount } : {}) })}\n\n`)
+                        encoder.encode(`data: ${JSON.stringify({ text: '', done: true, fullResponse, ...(newSessionId ? { sessionId: newSessionId } : {}), ...(assistantMessageId ? { messageId: assistantMessageId } : {}), sources: responseSettings.citationsOn ? usedSources : [], readUrls, ...(overageLeft !== null ? { cloverBalance: overageLeft } : {}), ...(overageCharge ? { cloverSpent: overageCharge.amount } : {}) })}\n\n`)
                     )
                 } catch (error) {
                     await returnOverageClovers(overageCharge)

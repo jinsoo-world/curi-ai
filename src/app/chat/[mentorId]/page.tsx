@@ -532,6 +532,7 @@ export default function ChatPage() {
 
             let fullContent = ''
             let sseBuffer = ''
+            let savedId: string | undefined // 서버가 저장한 답의 id (듣기 버튼용)
 
             while (true) {
                 const { done, value } = await reader.read()
@@ -558,6 +559,7 @@ export default function ChatPage() {
                                 ])
                             }
                             if (data.done) {
+                                if (typeof data.messageId === 'string') savedId = data.messageId
                                 setIsStreaming(false)
                                 // 비회원 대화 제한 → 로그인 유도 마커 추가
                                 const finalContent = data.guestLimit 
@@ -565,7 +567,7 @@ export default function ChatPage() {
                                     : fullContent
                                 const finalMessages: ChatMessage[] = [
                                     ...baseMessages,
-                                    { id: assistantId, role: 'assistant', content: finalContent, createdAt: new Date().toISOString() },
+                                    { id: assistantId, role: 'assistant', content: finalContent, createdAt: new Date().toISOString(), ...(savedId ? { savedId } : {}) },
                                 ]
                                 setMessages(finalMessages)
                                 if (!data.guestLimit) fetchSuggestions(finalMessages)
@@ -581,7 +583,7 @@ export default function ChatPage() {
             if (fullContent) {
                 setMessages([
                     ...baseMessages,
-                    { id: assistantId, role: 'assistant', content: fullContent, createdAt: new Date().toISOString() },
+                    { id: assistantId, role: 'assistant', content: fullContent, createdAt: new Date().toISOString(), ...(savedId ? { savedId } : {}) },
                 ])
             }
             // 비로그인 사용자: localStorage 카운트 증가 + 대화 저장
@@ -1218,13 +1220,14 @@ export default function ChatPage() {
                     <VoiceCallOverlay
                         isOpen={voiceCallOpen}
                         onClose={() => setVoiceCallOpen(false)}
+                        mentorId={mentor.id}
                         mentorName={mentor.name}
                         mentorEmoji={mentorEmoji}
                         mentorImage={mentorImage}
                         voiceSampleUrl={mentor.voice_sample_url}
                         voiceId={mentor.voice_id}
                         userName={userName}
-                        onStreamMessage={async (text: string, onSentence: (s: string) => void, signal: AbortSignal) => {
+                        onStreamMessage={async (text: string, onSentence: (s: string, grant?: { text: string; ts: number; sig: string; from: number } | { crisis: true }) => void, signal: AbortSignal) => {
                             // 📝 사용자 발화를 채팅에 추가
                             const userMsg: ChatMessage = { id: `voice-user-${Date.now()}`, role: 'user', content: text, createdAt: new Date().toISOString() }
                             setMessages(prev => [...prev, userMsg])
@@ -1261,6 +1264,8 @@ export default function ChatPage() {
 
                             let fullResponse = ''
                             let sentenceBuffer = ''
+                            let liveGrant: { text: string; ts: number; sig: string; from: number } | undefined // 서버가 찍어준 읽기표(지금까지의 봇 답 + 도장)
+                            let voiceSavedId: string | undefined
                             let isFirstSentence = true // ⚡ 동적 청킹: 첫 문장 즉시 발사
                             const decoder = new TextDecoder()
                             let sseBuffer = ''
@@ -1280,6 +1285,7 @@ export default function ChatPage() {
                                             if (chunk) {
                                                 fullResponse += chunk
                                                 sentenceBuffer += chunk
+                                                if (json.ttsGrant) liveGrant = { text: fullResponse.slice(json.ttsGrant.from ?? 0), ts: json.ttsGrant.ts, sig: json.ttsGrant.sig, from: json.ttsGrant.from ?? 0 }
 
                                                 // ⚡ 한국어 문장 감지 — 3단계
                                                 let cutIndex = -1
@@ -1314,14 +1320,14 @@ export default function ChatPage() {
                                                             sentenceBuffer = remainder
                                                             isFirstSentence = false
                                                             console.log('[Stream] 🚀 첫 문장 즉시:', completeSentence)
-                                                            onSentence(completeSentence)
+                                                            onSentence(completeSentence, liveGrant)
                                                         }
                                                     } else {
                                                         // ⚡ 두 번째부터: 15자 이상만 전송 (API 호출 절감)
                                                         if (completeSentence.length >= 15) {
                                                             sentenceBuffer = remainder
                                                             console.log('[Stream] 🎯 문장 전송:', completeSentence)
-                                                            onSentence(completeSentence)
+                                                            onSentence(completeSentence, liveGrant)
                                                         }
                                                         // 15자 미만이면 버퍼 유지 → 다음과 합침
                                                     }
@@ -1330,6 +1336,9 @@ export default function ChatPage() {
                                             if (json.fullResponse) {
                                                 fullResponse = json.fullResponse
                                             }
+                                            if (typeof json.messageId === 'string') voiceSavedId = json.messageId
+                                            // 위기 안내는 서버가 정한 고정 문구로 읽는다
+                                            if (json.crisis === true) onSentence('위기 안내', { crisis: true })
                                         } catch { /* skip */ }
                                     }
                                 }
@@ -1338,12 +1347,12 @@ export default function ChatPage() {
                             // ⚡ 마지막 flush: 길이 무관, 남은 텍스트 전부 전송
                             if (sentenceBuffer.trim().length >= 2) {
                                 console.log('[Stream] 🔚 flush:', sentenceBuffer.trim())
-                                onSentence(sentenceBuffer.trim())
+                                onSentence(sentenceBuffer.trim(), liveGrant)
                             }
 
                             // 📝 AI 응답을 채팅에 추가
                             if (fullResponse.trim()) {
-                                const assistantMsg: ChatMessage = { id: `voice-ai-${Date.now()}`, role: 'assistant', content: fullResponse, createdAt: new Date().toISOString() }
+                                const assistantMsg: ChatMessage = { id: `voice-ai-${Date.now()}`, role: 'assistant', content: fullResponse, createdAt: new Date().toISOString(), ...(voiceSavedId ? { savedId: voiceSavedId } : {}) }
                                 setMessages(prev => [...prev, assistantMsg])
                             }
 

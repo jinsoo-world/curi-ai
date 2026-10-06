@@ -7,6 +7,13 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { 한글강조_바로잡기 } from '@/domains/chat/markdown'
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+/** 서버(/api/tts)가 읽을 수 있는 저장된 봇 답 id. 아직 저장 전이거나 손님 대화면 null */
+function savedMessageId(m: ChatMessage): string | null {
+    if (m.savedId && UUID_RE.test(m.savedId)) return m.savedId
+    return UUID_RE.test(m.id) ? m.id : null
+}
+
 export interface ChatMessage {
     id: string
     role: 'user' | 'assistant' | 'system'
@@ -14,6 +21,8 @@ export interface ChatMessage {
     /** 사용자가 함께 보낸 사진 주소 */
     imageUrl?: string
     createdAt?: string
+    /** 서버가 저장한 메시지 id (스트리밍 직후 답에 붙는다). 듣기 버튼이 이 값으로 읽어 달라고 요청한다 */
+    savedId?: string
 }
 
 interface ChatMessagesProps {
@@ -55,73 +64,34 @@ const SpinnerIcon = () => (
 )
 
 /** TTS 음성 재생 버튼 */
-// 🚫 마크다운 제거 — TTS 전 깨끗한 텍스트로 변환
-function stripMarkdown(text: string): string {
-    return text
-        .replace(/```[\s\S]*?```/g, '') // 코드 블록 제거
-        .replace(/`([^`]+)`/g, '$1')    // 인라인 코드
-        .replace(/#{1,6}\s*/g, '')       // 제목
-        .replace(/\*\*([^*]+)\*\*/g, '$1') // 굵게
-        .replace(/\*([^*]+)\*/g, '$1')     // 기울임
-        .replace(/__([^_]+)__/g, '$1')
-        .replace(/_([^_]+)_/g, '$1')
-        .replace(/~~([^~]+)~~/g, '$1')     // 취소선
-        .replace(/>\s*/g, '')              // 인용
-        .replace(/[-*+]\s+/g, '')          // 목록
-        .replace(/\d+\.\s+/g, '')          // 번호 목록
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // 링크
-        .replace(/!\[([^\]]*)\]\([^)]+\)/g, '') // 이미지
-        .replace(/\|[^|]*\|/g, '')         // 테이블
-        .replace(/---+/g, '')              // 구분선
-        .replace(/\n{3,}/g, '\n\n')        // 과도한 줄바꿈
-        .trim()
-}
-
-// ✂️ 문장 단위 분할
-function splitSentences(text: string): string[] {
-    // 한국어: .다 / .요 / .까 등 + 영어: . ! ? 기준 분할
-    const chunks = text.split(/(?<=[.!?다요까죠세])\s+/g).filter(s => s.trim().length > 5)
-    if (chunks.length === 0) return [text]
-    // 너무 짧은 조각은 합치기
-    const merged: string[] = []
-    let current = ''
-    for (const chunk of chunks) {
-        current += (current ? ' ' : '') + chunk
-        if (current.length >= 40) {
-            merged.push(current)
-            current = ''
-        }
-    }
-    if (current) merged.push(current)
-    return merged
-}
-
 // 🎵 전역 TTS 캐시 (세션 내 동일 텍스트 즉시 재생)
-const globalTTSCache = new Map<string, string>()
+const globalTTSCache = new Map<string, { audioUrl: string; parts: number }>()
 
-function TTSButton({ message, mentorName, autoPlay, voiceId }: { message: ChatMessage; mentorName: string; autoPlay?: boolean; voiceId?: string | null }) {
+function TTSButton({ message, autoPlay }: { message: ChatMessage; autoPlay?: boolean }) {
+    const messageId = savedMessageId(message)
     const [status, setStatus] = useState<'idle' | 'loading' | 'playing'>('idle')
     const [progress, setProgress] = useState(0)
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const hasAutoPlayed = useRef(false)
     const abortRef = useRef(false)
 
-    // 단일 문장 TTS 호출 (캐시 사용)
-    const fetchTTS = useCallback(async (text: string): Promise<string | null> => {
-        const cacheKey = `${mentorName}:${text.slice(0, 100)}`
+    // 조각 하나 TTS 호출 (캐시 사용). 서버가 저장된 봇 답에서 그 조각을 읽어 목소리까지 정한다
+    const fetchTTS = useCallback(async (part: number): Promise<{ audioUrl: string | null; parts: number }> => {
+        if (!messageId) return { audioUrl: null, parts: 0 }
+        const cacheKey = `${messageId}:${part}`
         const cached = globalTTSCache.get(cacheKey)
-        if (cached) return cached
+        if (cached) return { audioUrl: cached.audioUrl, parts: cached.parts }
 
         const res = await fetch('/api/tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, mentorName, voiceId: voiceId || undefined }),
+            body: JSON.stringify({ messageId, part }),
         })
-        if (!res.ok) return null
+        if (!res.ok) return { audioUrl: null, parts: 0 }
         const data = await res.json()
-        if (data.audioUrl) globalTTSCache.set(cacheKey, data.audioUrl)
-        return data.audioUrl || null
-    }, [mentorName, voiceId])
+        if (data.audioUrl) globalTTSCache.set(cacheKey, { audioUrl: data.audioUrl, parts: data.parts ?? 1 })
+        return { audioUrl: data.audioUrl || null, parts: data.parts ?? 1 }
+    }, [messageId])
 
     const handleTTS = useCallback(async () => {
         if (status === 'playing' && audioRef.current) {
@@ -139,15 +109,13 @@ function TTSButton({ message, mentorName, autoPlay, voiceId }: { message: ChatMe
         abortRef.current = false
 
         try {
-            const cleanText = stripMarkdown(message.content)
-            const sentences = splitSentences(cleanText)
-
-            // 문장별 순차 재생
-            for (let i = 0; i < sentences.length; i++) {
+            // 조각별 순차 재생 (전체 조각 수는 첫 응답에서 알게 된다)
+            let total = 1
+            for (let i = 0; i < total; i++) {
                 if (abortRef.current) break
 
-                const text = sentences[i].slice(0, 500)
-                const audioUrl = await fetchTTS(text)
+                const { audioUrl, parts } = await fetchTTS(i)
+                if (i === 0) total = Math.max(parts, 1)
                 if (!audioUrl || abortRef.current) continue
 
                 await new Promise<void>((resolve, reject) => {
@@ -158,7 +126,7 @@ function TTSButton({ message, mentorName, autoPlay, voiceId }: { message: ChatMe
                     audio.ontimeupdate = () => {
                         if (audio.duration) {
                             const sentenceProgress = audio.currentTime / audio.duration
-                            const totalProgress = (i + sentenceProgress) / sentences.length
+                            const totalProgress = (i + sentenceProgress) / total
                             setProgress(totalProgress * 100)
                         }
                     }
@@ -174,7 +142,7 @@ function TTSButton({ message, mentorName, autoPlay, voiceId }: { message: ChatMe
             setProgress(0)
             abortRef.current = false
         }
-    }, [status, message.content, fetchTTS])
+    }, [status, fetchTTS])
 
     // 자동 재생 트리거
     useEffect(() => {
@@ -247,7 +215,7 @@ const ThumbDownIcon = ({ filled }: { filled: boolean }) => (
 )
 
 /** 복사/음성재생/좋아요/아쉬워요 액션 아이콘 — 제미나이 스타일 작은 아이콘 */
-function MessageActions({ message, mentorName, autoPlay, voiceId }: { message: ChatMessage; mentorName?: string; autoPlay?: boolean; voiceId?: string | null }) {
+function MessageActions({ message, autoPlay }: { message: ChatMessage; autoPlay?: boolean }) {
     const [copied, setCopied] = useState(false)
     const [feedback, setFeedback] = useState<'like' | 'dislike' | null>(null)
     const isAssistant = message.role === 'assistant'
@@ -310,7 +278,7 @@ function MessageActions({ message, mentorName, autoPlay, voiceId }: { message: C
             </button>
             {isAssistant && (
                 <>
-                    <TTSButton message={message} mentorName={mentorName || ''} autoPlay={autoPlay} voiceId={voiceId} />
+                    {savedMessageId(message) && <TTSButton message={message} autoPlay={autoPlay} />}
                     <button
                         onClick={() => handleFeedback('like')}
                         style={{
@@ -819,7 +787,7 @@ export default function ChatMessages({
 
                                 {/* 액션 아이콘 — hover 시 표시 */}
                                 {msg.content && !isEmptyAssistant && (
-                                    <MessageActions message={msg} mentorName={mentor.name} autoPlay={autoPlayMsgId === msg.id} voiceId={voiceId} />
+                                    <MessageActions message={msg} autoPlay={autoPlayMsgId === msg.id} />
                                 )}
                             </div>
                         </div>

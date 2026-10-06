@@ -1220,10 +1220,10 @@ export default function CreatorEditPage() {
                                                 const res = await fetch('/api/tts', {
                                                     method: 'POST',
                                                     headers: { 'Content-Type': 'application/json' },
+                                                    // 서버가 내 봇인지 확인하고, 그 봇의 목소리로 읽는다(200자)
                                                     body: JSON.stringify({
-                                                        text: greetingMessage || `안녕하세요! ${name || 'AI'}입니다. 만나서 반가워요!`,
-                                                        mentorName: name,
-                                                        voiceId: clonedVoiceId,
+                                                        mentorId,
+                                                        ownerPreview: (greetingMessage || `안녕하세요! ${name || 'AI'}입니다. 만나서 반가워요!`).slice(0, 200),
                                                     }),
                                                 })
                                                 const data = await res.json()

@@ -54,7 +54,8 @@ async function ensureSession(db: SupabaseClient, userId: string, mentorId: strin
 }
 
 async function saveLine(db: SupabaseClient, sessionId: string, role: 'user' | 'assistant', content: string): Promise<void> {
-    const { error } = await db.from('messages').insert({ session_id: sessionId, role, content })
+    // origin='handoff' = 서버가 만든 넘김 글. 봇의 실제 답이 아니라서 소리로 읽지 않는다
+    const { error } = await db.from('messages').insert({ session_id: sessionId, role, content, origin: 'handoff' })
     if (error) console.error('[os/mention-handoff] 말 저장 실패:', error.message)
     await db.from('chat_sessions').update({ last_message_at: new Date().toISOString() }).eq('id', sessionId)
 }
@@ -91,8 +92,12 @@ export async function POST(req: Request) {
         const toName = to.mentors?.name ?? '옆 봇'
         const ack = handoffAckLine(toName)
 
-        // ② 지금 방
+        // ② 지금 방 — 넘긴 방(fromSessionId)이 내 방이고 그 봇 방일 때만 쓴다(남의 방에 글 심기 차단)
         let sid = fromSessionId
+        if (sid) {
+            const { data: owned } = await db.from('chat_sessions').select('id').eq('id', sid).eq('user_id', user.id).eq('mentor_id', fromMentorId).maybeSingle()
+            if (!owned) return NextResponse.json({ handedOff: false, error: '내 대화방이 아니에요' }, { status: 403 })
+        }
         if (!sid) sid = await ensureSession(db, user.id, fromMentorId, fromName)
         if (sid) {
             await saveLine(db, sid, 'user', text)
