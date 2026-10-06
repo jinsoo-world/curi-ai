@@ -282,20 +282,10 @@ export async function POST(req: NextRequest) {
             // 엑셀·CSV — 대표 지적 2026-09-17 「AI 만들기에서 파일학습이 안되네. 엑셀파일 등등」
             // 표는 시트마다 제목을 달고 줄로 편다. AI 가 읽을 때 어느 표의 어느 칸인지 알아야 한다.
             try {
-                const mod = await import('xlsx')
-                // CJS/ESM 섞이면 default 에만 실리는 경우가 있어 둘 다 본다
-                const XLSX = (mod as unknown as { default?: typeof import('xlsx') }).default ?? mod
+                const { parseExcel } = await import('@/domains/knowledge/parsers/excel')
                 const buffer = Buffer.from(await fileData.arrayBuffer())
-                const wb = XLSX.read(buffer, { type: 'buffer' })
-                const 조각: string[] = []
-                for (const 시트이름 of wb.SheetNames) {
-                    const 시트 = wb.Sheets[시트이름]
-                    if (!시트) continue
-                    const 표 = XLSX.utils.sheet_to_csv(시트, { blankrows: false })
-                    if (표.trim()) 조각.push(`[${시트이름}]\n${표.trim()}`)
-                }
-                textContent = 조각.join('\n\n')
-                console.log('[Process] 엑셀 읽음:', source.title, '시트', wb.SheetNames.length, '글자', textContent.length)
+                textContent = parseExcel(buffer, ext)
+                console.log('[Process] 엑셀 읽음:', source.title, '글자', textContent.length)
             } catch (xlErr) {
                 console.error('[Process] 엑셀 읽기 실패:', xlErr instanceof Error ? xlErr.message : xlErr)
                 textContent = ''
@@ -388,18 +378,13 @@ export async function POST(req: NextRequest) {
             }
 
         } else if (['doc', 'docx'].includes(ext)) {
-            // DOCX: mammoth로 텍스트 추출 (무료, 로컬 처리)
+            // docx = mammoth, 옛 doc = word-extractor (무료, 로컬 처리). 앞머리로 가른다
             try {
-                const mammoth = await import('mammoth')
-                const buffer = Buffer.from(await fileData.arrayBuffer())
-                const result = await mammoth.extractRawText({ buffer })
-                textContent = (result.value || '')
-                    .replace(/\n{3,}/g, '\n\n')  // 3줄 이상 연속 빈줄 → 2줄로
-                    .replace(/[ \t]{2,}/g, ' ')   // 연속 공백 → 1칸으로
-                    .trim()
-                console.log('[Process] DOCX parsed with mammoth, text length:', textContent.length)
+                const { parseWord } = await import('@/domains/knowledge/parsers/word')
+                textContent = await parseWord(Buffer.from(await fileData.arrayBuffer()))
+                console.log('[Process] 워드 읽음:', ext, 'text length:', textContent.length)
             } catch (docErr) {
-                console.error('[Process] DOCX parse error:', docErr)
+                console.error('[Process] 워드 읽기 실패:', ext, docErr instanceof Error ? docErr.message : docErr)
             }
 
         } else if (['ppt', 'pptx'].includes(ext)) {
