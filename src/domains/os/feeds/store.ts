@@ -8,7 +8,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { isSafeFetchUrl } from '@/domains/agent/fetch-url'
 import { removeBotSource } from '@/domains/os/knowledge'
 import type { FeedKind, FeedStatus, KnowledgeFeed, KnowledgeFeedRow } from './types'
-import { feedFromRow, FEED_COLUMNS, isSocialStubKind } from './types'
+import { feedFromRow, FEED_COLUMNS, FEED_COLUMNS_WITH_SNS, isSocialStubKind } from './types'
 import { resolveChannelInput } from './youtube'
 import { substackFeedUrl } from './podcast'
 import { withScheme } from './rss'
@@ -16,6 +16,7 @@ import { SOCIAL_STUB_NOTE } from './social-stub'
 
 const TABLE_MISSING = '42P01'
 const TABLE_MISSING_REST = 'PGRST205'   // PostgREST 는 표가 없으면 이 코드를 준다
+const COLUMN_MISSING = '42703'
 /** 봇 하나에 붙일 수 있는 계정 수 */
 export const MAX_FEEDS_PER_BOT = 5
 
@@ -28,18 +29,26 @@ function fail(error: { code?: string; message?: string } | null): never {
     throw new Error(error?.message ?? '연결 표를 읽지 못했어요')
 }
 
+type FeedQueryResult = { data: unknown; error: { code?: string; message?: string } | null }
+/** sns_slot 칸까지 읽어 보고, 칸이 아직 없으면(마이그레이션 전) 옛 칸만으로 한 번 더 */
+async function selectWithSns(run: (cols: string) => PromiseLike<FeedQueryResult>): Promise<FeedQueryResult> {
+    const r = await run(FEED_COLUMNS_WITH_SNS)
+    if (r.error?.code === COLUMN_MISSING) return run(FEED_COLUMNS)
+    return r
+}
+
 /** 이 봇에 붙은 연결 목록 */
 export async function listFeeds(db: SupabaseClient, mentorId: string): Promise<KnowledgeFeed[]> {
-    const { data, error } = await db.from('knowledge_feeds').select(FEED_COLUMNS)
-        .eq('mentor_id', mentorId).order('created_at', { ascending: false })
+    const { data, error } = await selectWithSns(cols => db.from('knowledge_feeds').select(cols)
+        .eq('mentor_id', mentorId).order('created_at', { ascending: false }))
     if (error) fail(error)
     return ((data ?? []) as unknown as KnowledgeFeedRow[]).map(feedFromRow)
 }
 
 /** 연결 하나 (이 봇 것만) */
 export async function getFeed(db: SupabaseClient, mentorId: string, feedId: string): Promise<KnowledgeFeed> {
-    const { data, error } = await db.from('knowledge_feeds').select(FEED_COLUMNS)
-        .eq('id', feedId).eq('mentor_id', mentorId).maybeSingle()
+    const { data, error } = await selectWithSns(cols => db.from('knowledge_feeds').select(cols)
+        .eq('id', feedId).eq('mentor_id', mentorId).maybeSingle())
     if (error) fail(error)
     if (!data) throw new Error('그 연결을 못 찾았어요')
     return feedFromRow(data as unknown as KnowledgeFeedRow)
@@ -47,10 +56,10 @@ export async function getFeed(db: SupabaseClient, mentorId: string, feedId: stri
 
 /** 매일 크론이 돌릴 연결들. 준비 중(paused)은 빼고, 오래 안 가져온 것부터 */
 export async function listDueFeeds(db: SupabaseClient, limit: number): Promise<KnowledgeFeed[]> {
-    const { data, error } = await db.from('knowledge_feeds').select(FEED_COLUMNS)
+    const { data, error } = await selectWithSns(cols => db.from('knowledge_feeds').select(cols)
         .neq('status', 'paused')
         .order('last_synced_at', { ascending: true, nullsFirst: true })
-        .limit(limit)
+        .limit(limit))
     if (error) fail(error)
     return ((data ?? []) as unknown as KnowledgeFeedRow[]).map(feedFromRow)
 }

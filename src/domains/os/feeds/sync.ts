@@ -61,8 +61,12 @@ export interface SyncResult {
 export interface SyncOptions {
     /** 이 시각(Date.now() 기준 ms)을 넘기면 더 넣지 않는다 */
     deadline?: number
-    /** 시험용: 종류별 가져오기를 바꿔 끼운다 */
+    /** 시험용: 종류별 가져오기를 바꿔 끼운다 (「내 SNS 연결」도 이걸로 SNS 가져오기를 끼운다) */
     fetchers?: Partial<Record<FeedKind, FetchNewItems>>
+    /** 이번에 새로 넣을 최대 개수 (한 곳 상한보다 작을 때만 쓴다. SNS 요금제 상한) */
+    maxNew?: number
+    /** 자료 이름 앞에 붙일 말과 넣은 방식 (SNS: 「[네이버 블로그] 글 제목」, sns_blog). 출처가 자료 목록에 보이게 */
+    source?: { titlePrefix?: string; sourceKind?: string }
 }
 
 function msg(e: unknown, fallback: string): string {
@@ -130,12 +134,13 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
             return { ...base, ok: true, status: 'connected', lastError: FEED_CAP_FULL_NOTE, note: FEED_CAP_FULL_NOTE }
         }
 
+        const want = Math.max(0, Math.min(room, opts.maxNew ?? Infinity))
         const since = feed.lastSyncedAt ? new Date(Date.parse(feed.lastSyncedAt) - SYNC_LOOKBACK_MS) : null
         const fetcher = opts.fetchers?.[feed.kind] ?? FETCHERS[feed.kind]
 
         let fetched: FetchNewItemsResult
         try {
-            fetched = await fetcher(feed, since, { isKnown: u => existing.urls.has(u), maxItems: room, deadline: opts.deadline })
+            fetched = await fetcher(feed, since, { isKnown: u => existing.urls.has(u), maxItems: want, deadline: opts.deadline })
         } catch (e) {
             const why = msg(e, '새 글을 가져오지 못했어요')
             await updateFeed(db, feed.id, { status: 'error', last_error: why, last_synced_at: nowIso() })
@@ -146,7 +151,7 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
         const reasons: string[] = []
         for (const item of fetched.items) {
             if (existing.urls.has(item.url)) { skipped++; continue }           // 🔁 같은 주소는 두 번 넣지 않는다
-            if (added >= room) break                                           // 한 곳에서 가져오는 글 수 한도
+            if (added >= want) break                                           // 한 곳에서 가져오는 글 수 한도 (SNS 는 요금제 상한도)
             const k = accountKeyOf(item.url) ?? `feed:${feed.id}`
             if ((existing.perKey.get(k) ?? 0) === 0 && existing.count >= MAX_SOURCES_PER_BOT) { slotFull = true; break }   // 새 칸이 필요한데 칸이 다 찼다
             if (opts.deadline && Date.now() > opts.deadline) { cut = true; break }
@@ -156,8 +161,12 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
             const { text: marked, marked: n } = markInjectionPatterns(text)
             if (n > 0) console.warn('[os/feeds] 자료 속 명령문 표식', { mentorId: feed.mentorId, kind: feed.kind, count: n })
             try {
-                const title = (item.title || item.url).slice(0, 120)
-                const source = await addKnowledgeSource(db, feed.mentorId, title, marked, feed.kind === 'youtube' ? 'youtube' : 'url', item.url)
+                const prefix = opts.source?.titlePrefix ? `${opts.source.titlePrefix} ` : ''
+                const title = `${prefix}${item.title || item.url}`.slice(0, 120)
+                const meta = opts.source?.sourceKind
+                    ? { meta: { sourceKind: opts.source.sourceKind, citationUrl: item.url, authorIsMe: true, fetchedAt: nowIso() } }
+                    : undefined
+                const source = await addKnowledgeSource(db, feed.mentorId, title, marked, feed.kind === 'youtube' ? 'youtube' : 'url', item.url, meta)
                 existing.urls.add(item.url)
                 if ((existing.perKey.get(k) ?? 0) === 0) existing.count++
                 existing.perKey.set(k, (existing.perKey.get(k) ?? 0) + 1)

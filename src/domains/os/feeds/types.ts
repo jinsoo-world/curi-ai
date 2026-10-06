@@ -20,11 +20,16 @@ export function isSocialStubKind(kind: FeedKind): boolean {
 
 export interface FeedItem { title: string; url: string; text?: string; publishedAt?: string; /** 글의 대표 사진 주소 (og:image). 사진 설명용 */ image?: string }
 
+/** 봇 「내 SNS 연결」 칸 (bot-sns.ts). 이 칸이 붙은 연결은 SNS 규칙(요금제 상한, 유튜브 제목/설명만)으로 돈다 */
+export type SnsSlot = 'instagram' | 'blog' | 'youtube' | 'curious'
+
 export interface KnowledgeFeed {
     id: string; mentorId: string; userId: string
     kind: FeedKind
     handleOrUrl: string; status: FeedStatus
     lastSyncedAt: string | null; lastError: string | null; itemCount: number; createdAt: string
+    /** 「내 SNS 연결」로 만든 연결이면 그 칸. 아니면 없음 (sns_slot 칸, 20261022 마이그레이션) */
+    snsSlot?: SnsSlot | null
 }
 
 export interface FetchNewItemsResult { items: FeedItem[]; note?: string }
@@ -50,12 +55,16 @@ export type FetchNewItems = (feed: KnowledgeFeed, since: Date | null, opts?: Fet
 export interface KnowledgeFeedRow {
     id: string; mentor_id: string; user_id: string; kind: FeedKind; handle_or_url: string; status: FeedStatus
     last_synced_at: string | null; last_error: string | null; item_count: number | null; created_at: string
+    sns_slot?: SnsSlot | null
 }
 export function feedFromRow(r: KnowledgeFeedRow): KnowledgeFeed {
     return {
         id: r.id, mentorId: r.mentor_id, userId: r.user_id, kind: r.kind, handleOrUrl: r.handle_or_url,
         status: r.status, lastSyncedAt: r.last_synced_at, lastError: r.last_error,
         itemCount: r.item_count ?? 0, createdAt: r.created_at,
+        ...(r.sns_slot ? { snsSlot: r.sns_slot } : {}),
     }
 }
 export const FEED_COLUMNS = 'id, mentor_id, user_id, kind, handle_or_url, status, last_synced_at, last_error, item_count, created_at'
+/** sns_slot 칸까지. 칸이 아직 없으면(마이그레이션 전) FEED_COLUMNS 로 한 번 더 읽는다 (store.ts) */
+export const FEED_COLUMNS_WITH_SNS = `${FEED_COLUMNS}, sns_slot`
