@@ -40,7 +40,7 @@ function fakeDb(o: {
                 rate.set(k, (rate.get(k) ?? 0) + 1)
                 return { data: rate.get(k), error: null }
             }
-            if (name === 'llm_usage_month_cost') {
+            if (name === 'llm_cost_krw_month') {
                 if (o.costError) return { data: null, error: { message: 'missing' } }
                 return { data: o.monthCost ?? 0, error: null }
             }
@@ -157,9 +157,9 @@ describe('AI 비용 안전 스위치', () => {
         const now = new Date('2026-10-06T03:00:00Z')
         await monthSpendKrw(db, now)
         await monthSpendKrw(db, new Date(now.getTime() + 30_000))
-        expect(db.calls.filter(c => c === 'rpc:llm_usage_month_cost')).toHaveLength(1)
+        expect(db.calls.filter(c => c === 'rpc:llm_cost_krw_month')).toHaveLength(1)
         await monthSpendKrw(db, new Date(now.getTime() + 61_000))
-        expect(db.calls.filter(c => c === 'rpc:llm_usage_month_cost')).toHaveLength(2)
+        expect(db.calls.filter(c => c === 'rpc:llm_cost_krw_month')).toHaveLength(2)
     })
 
     it('합계 함수가 없으면(실패) 손님 막음', async () => {

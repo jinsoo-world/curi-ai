@@ -4,7 +4,8 @@
 // AI_BUDGET_MONTHLY_KRW=숫자 → llm_usage 이번 달(서울 기준) 추정 원가 합계를 1분마다 한 번만 센다.
 //                              70% 넘으면 손님 정지, 90% 넘으면 무료 회원도 정지. 유료 회원은 계속.
 // 세다가 실패하면 손님만 막고 회원은 통과(돈 내는 사람이 고장 때문에 막히면 안 된다).
-// 합계는 DB 함수 llm_usage_month_cost 하나로 센다(행을 서버로 가져오지 않는다).
+// 합계는 PR #54 가 만든 DB 함수 llm_cost_krw_month(마이그레이션 20261008_llm_cost_month.sql, 이번 달 서울 기준)를 그대로 쓴다.
+// 여기선 1분 기억만 더한다. 기준은 대화 경로 = 손님 70%·무료 회원 90% (사진 쪽 #54 는 무료 회원 70%).
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { monthStartKST } from '@/domains/os/usage'
@@ -39,7 +40,7 @@ export async function monthSpendKrw(db: SupabaseClient, now: Date = new Date()):
     if (cache && cache.month === since && t - cache.at < (cache.value === null ? FAIL_CACHE_MS : CACHE_MS)) return cache.value
     let value: number | null = null
     try {
-        const { data, error } = await db.rpc('llm_usage_month_cost', { p_since: since })
+        const { data, error } = await db.rpc('llm_cost_krw_month', {})
         const n = Number(data)
         value = !error && data !== null && data !== undefined && Number.isFinite(n) ? n : null
         if (error) console.warn('[budget] 이번 달 원가 합계 실패:', error.message)

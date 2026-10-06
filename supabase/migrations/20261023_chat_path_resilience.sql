@@ -1,5 +1,5 @@
 -- 대화 경로 「통째로 멈춤」 점검 후속 (2026-10-06). 여러 번 실행해도 안전하다. 새 표·새 칸 없음.
--- 코드는 이 함수들이 없어도 옛 방식으로 돈다(배포가 먼저 나가도 안 깨진다). 단 AI_BUDGET_MONTHLY_KRW 를 켜기 전에는 꼭 적용한다.
+-- 코드는 이 함수들이 없어도 옛 방식으로 돈다(배포가 먼저 나가도 안 깨진다). 단 AI_BUDGET_MONTHLY_KRW 를 켜기 전에는 이 파일과 20261008_llm_cost_month.sql(PR #54)을 꼭 적용한다.
 -- 전부 서버 열쇠(service_role)만 부를 수 있다.
 
 -- 1) 사용량 세기를 함수 하나로.
@@ -30,14 +30,7 @@ $$;
 REVOKE ALL ON FUNCTION public.count_user_turns(uuid, timestamptz, uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.count_user_turns(uuid, timestamptz, uuid) TO service_role;
 
--- 2) 이번 달 AI 추정 원가 합계 (비용 안전 스위치 AI_BUDGET_MONTHLY_KRW 용, 서버가 1분에 한 번만 부른다)
-CREATE OR REPLACE FUNCTION public.llm_usage_month_cost(p_since timestamptz)
-RETURNS numeric
-LANGUAGE sql STABLE SECURITY INVOKER SET search_path = public AS $$
-  SELECT coalesce(sum(cost_krw), 0) FROM public.llm_usage WHERE created_at >= p_since;
-$$;
-REVOKE ALL ON FUNCTION public.llm_usage_month_cost(timestamptz) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.llm_usage_month_cost(timestamptz) TO service_role;
+-- 2) 이번 달 AI 원가 합계는 PR #54 의 llm_cost_krw_month(20261008_llm_cost_month.sql)를 그대로 쓴다. 여기서 새로 만들지 않는다.
 
 -- 3) 소리 읽기 실패 시 하루 글자 수 되돌리기 (tts_charge_chars 로 올린 만큼만, 0 아래로는 안 내려간다)
 CREATE OR REPLACE FUNCTION public.tts_refund_chars(p_key text, p_window timestamptz, p_chars integer)
