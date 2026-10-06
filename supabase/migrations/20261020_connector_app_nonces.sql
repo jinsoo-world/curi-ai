@@ -6,7 +6,7 @@
 --
 -- 원칙: RLS 켬 + 정책 없음 = 서버(service_role)만 읽고 쓴다. 사용자 화면은 이 표를 못 본다.
 -- 적용: Supabase SQL 편집기에 통째로 붙여 실행 (여러 번 실행해도 안전).
--- 청소: 만든 지 1일 지난 행은 지워도 된다(state 유효 10분).
+-- 청소: 하루 지난 행은 크론(/api/cron/retention-purge)이 지운다(state 유효 10분).
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS public.connector_app_nonces (
@@ -18,3 +18,5 @@ CREATE TABLE IF NOT EXISTS public.connector_app_nonces (
 CREATE INDEX IF NOT EXISTS connector_app_nonces_created_idx ON public.connector_app_nonces (created_at);
 
 ALTER TABLE public.connector_app_nonces ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.connector_app_nonces FROM anon, authenticated;
+GRANT ALL ON public.connector_app_nonces TO service_role;

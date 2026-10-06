@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 import {
     ConnectorTableMissing, connectorsEnabled, createConnector, looksLikeNotionToken, notionPing,
 } from '@/domains/connectors'
@@ -17,6 +18,10 @@ export async function POST(req: NextRequest) {
     if (!connectorsEnabled()) {
         return NextResponse.json({ error: '연결 기능이 아직 준비 중이에요(서버 설정이 필요해요)' }, { status: 503 })
     }
+
+    // 사용자별 분당 5회(노션에 토큰을 찍어 보는 시도를 막는다)
+    const rl = await checkRateLimit(createAdminClient(), `notion-app-token:${user.id}`, 5, 60)
+    if (!rl.allowed) return NextResponse.json({ error: rateLimitMessage('연결') }, { status: 429 })
 
     const body = await req.json().catch(() => ({})) as Record<string, unknown>
     const token = String(body.token ?? '').trim()
@@ -35,8 +40,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ connector: view })
     } catch (e) {
         if (e instanceof ConnectorTableMissing) return NextResponse.json({ error: '연결 기능이 아직 준비 중이에요' }, { status: 503 })
-        const message = e instanceof Error ? e.message : '연결을 다루지 못했어요'
+        const message = e instanceof Error ? e.message : ''
+        // 개수 한도는 사용자가 바로 알아야 하는 말이라 그대로, 나머지(DB 오류 원문)는 일반 문구로
+        if (message.endsWith('붙일 수 있어요')) return NextResponse.json({ error: message }, { status: 400 })
         console.error('[connect/notion/app-token]', message)
-        return NextResponse.json({ error: message }, { status: 400 })
+        return NextResponse.json({ error: '저장하지 못했어요. 잠시 뒤 다시 해 주세요' }, { status: 500 })
     }
 }

@@ -409,7 +409,13 @@ export async function POST(req: Request) {
         // 봇 지침 지문(의미 답 저장소 칸막이)에 쓴다. 사람별 정보가 붙기 전의 지침
         const 봇지침지문용 = systemPrompt
         // 손님이 앱에서 적은 이름·하는 일(로그인 사용자는 서버 프로필이 우선이라 안 쓴다)
-        if (!user) systemPrompt += guestProfilePrompt(body.guestProfile)
+        if (!user) {
+            const 손님소개 = guestProfilePrompt(body.guestProfile)
+            if (손님소개) {
+                systemPrompt += 손님소개
+                personalized = true   // 이 손님 정보가 든 답은 남과 나눠 쓰는 저장 답에 넣지도 꺼내 쓰지도 않는다
+            }
+        }
 
         // 🧩 사용자가 깃허브에서 내려받아 이 봇에 붙인 스킬(지침 글). 울타리 안에만 들어가고 도구 게이트는 못 넘는다(domains/os/skills)
         if (user) {

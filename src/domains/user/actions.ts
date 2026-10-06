@@ -63,7 +63,11 @@ export async function updateUserProfile(
     if (options.mergeInterests && Array.isArray(data.interests)) {
         const { data: row } = await db.from('users').select('interests').eq('id', userId).maybeSingle()
         const old = Array.isArray(row?.interests) ? row.interests as string[] : []
-        data = { ...data, interests: Array.from(new Set([...old, ...data.interests])) }
+        // 문자열만, 30자, 최대 30개
+        const incoming = (data.interests as unknown[])
+            .filter((v): v is string => typeof v === 'string')
+            .map(v => v.trim().slice(0, 30)).filter(Boolean).slice(0, 30)
+        data = { ...data, interests: Array.from(new Set([...old, ...incoming])).slice(0, 30) }
     }
     const updateData: Record<string, unknown> = {
         updated_at: new Date().toISOString(),

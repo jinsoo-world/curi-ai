@@ -6,7 +6,7 @@
 // 🔐 서명 열쇠는 CONNECTOR_SECRET_KEY(연결 자물쇠)를 같이 쓴다. 열쇠가 없으면 연결 기능 자체가 꺼진다.
 // 🔐 토큰·client secret 은 로그·응답·오류 문구에 절대 넣지 않는다.
 
-import { createHash, createHmac, randomBytes, timingSafeEqual } from 'crypto'
+import { createHash, createHmac, hkdfSync, randomBytes, timingSafeEqual } from 'crypto'
 import type { Provider, TokenJson } from './providers'
 
 /** 쿠키에 넣는 내용 */
@@ -40,8 +40,14 @@ export function pkcePair(): { verifier: string; challenge: string } {
     return { verifier, challenge }
 }
 
+/** 마스터 열쇠 하나에서 용도별 하위 열쇠를 만든다(HKDF). 한 용도의 서명이 다른 용도로 통하지 않게 라벨로 갈라 둔다 */
+export function deriveKey(master: Buffer, label: string): Buffer {
+    return Buffer.from(hkdfSync('sha256', master, Buffer.alloc(0), label, 32))
+}
+export const KEY_LABEL_WEB_STATE = 'curi-connect/web-state/v1'
+
 function hmac(payload: string, key: Buffer): string {
-    return b64url(createHmac('sha256', key).update(payload).digest())
+    return b64url(createHmac('sha256', deriveKey(key, KEY_LABEL_WEB_STATE)).update(payload).digest())
 }
 
 /** 쿠키 값 = "본문(base64url).서명(base64url)" */

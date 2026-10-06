@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
     ConnectorTableMissing, TokenExchangeFailed, appPkce, appReturnUrl, consumeAppNonce, exchangeCode, fetchAccountHint,
-    findProvider, isAppState, providerReady, readConnectorKey, redirectUri, replaceConnector, stateCookieName,
+    findProvider, isAppState, providerReady, putAppPending, readConnectorKey, redirectUri, replaceConnector, stateCookieName,
     verifyAppState, verifyState,
 } from '@/domains/connectors'
 
@@ -21,8 +21,10 @@ function appUrl(req: NextRequest): string {
 }
 
 /**
- * 앱에서 시작한 연결. 쿠키·로그인 대신 서명된 state(사용자·공급자·출처·1회용 번호·10분)로 사람을 알아본다.
- * 끝나면 curiai://connect?connected=… 또는 ?error=…&provider=… 로 돌려보낸다(토큰·열쇠 문구 없음).
+ * 앱에서 시작한 연결. 쿠키·로그인 대신 서명된 state(사용자·공급자·출처·1회용 번호·앱 비밀값 해시·10분)로 사람을 알아본다.
+ * 토큰은 바로 저장하지 않고 잠가서 임시 표(5분)에 두고, 딥링크로는 1회용 handoff 만 보낸다:
+ *   curiai://connect?handoff=…&provider=…  → 앱이 POST /api/connect/app-finish { handoff, appSecret } 로 마무리
+ * 실패는 curiai://connect?error=…&provider=… (토큰·열쇠 문구 없음).
  */
 async function appCallback(req: NextRequest, id: string): Promise<NextResponse> {
     const base = appUrl(req)
@@ -53,12 +55,12 @@ async function appCallback(req: NextRequest, id: string): Promise<NextResponse> 
             verifier: p.pkce ? appPkce(key, saved.n).verifier : undefined, state: q.get('state') ?? undefined,
         })
         const hint = await fetchAccountHint(p, token)
-        await replaceConnector(db, saved.u, {
-            kind: p.id, label: p.name,
-            secret: JSON.stringify({ ...token, obtained_at: new Date().toISOString() }),
+        const handoff = await putAppPending(db, key, {
+            userId: saved.u, proofHash: saved.pr, kind: p.id,
+            tokenJson: JSON.stringify({ ...token, obtained_at: new Date().toISOString() }),
             meta: hint ? { hint } : {},
         })
-        return back({ connected: p.id })
+        return back({ handoff, provider: p.id })
     } catch (e) {
         if (e instanceof TokenExchangeFailed) { console.error('[connect/callback:app]', p.id, 'token', e.status); return fail('token') }
         if (e instanceof ConnectorTableMissing) return fail('table')
