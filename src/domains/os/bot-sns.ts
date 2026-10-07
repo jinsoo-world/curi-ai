@@ -12,7 +12,9 @@
 //             한국어 자막 우선 → 자동 자막 → 없으면 제목, 설명. 못 읽은 영상도 피드의 제목, 설명으로 넣고 이유를 남긴다
 //   curious   큐리어스 화면이 부르는 공개 창구(/api/v2, GET 만)로 그 화면 하나 (리더 소개, 글, 어울림 소개)
 //             리더 화면이면 그 리더(writer)가 쓴 공개 커뮤니티 글도 최신순 30개까지 (대표 지시 1006). 매일 자동 때는 새 글만
-//   instagram 메타 공식 API(인스타그램 로그인 + 앱 심사)가 있어야 한다. 지금은 주소 저장과 소개 링크까지만 = 「곧 열려요」
+//   instagram 메타 공식 API(Instagram API with Instagram Login, instagram_business_basic). 주인이 「인스타그램 연결하기」로 로그인하면
+//             (/api/sns/instagram/connect) 내 게시물의 글(캡션)만 배운다 = domains/os/instagram. 앱 설정 환경변수가 없으면 「곧 열려요」
+//             주소 칸(소개 링크)은 그대로 따로 저장된다. 주소를 지워도 로그인 연결은 끊기지 않는다(끊기는 DELETE /api/sns/instagram/connect)
 //
 // 지키는 것
 //   - 밖으로 나가는 요청은 전부 fetchPageSafely(사설 주소 차단, 크기와 시간 한도)를 지난다. 주소는 저장 전에 isSafeFetchUrl 로 한 번 더 본다
@@ -37,12 +39,15 @@ import { fetchFeed, newerThan, newestFirst, pickCandidates } from './feeds/rss'
 import { fetchPodcastItems } from './feeds/podcast'
 import { resolveChannelInput, channelFeedUrl, findChannelId, listRecentVideos } from './feeds/youtube'
 import type { FeedItem, FeedKind, FetchNewItems, KnowledgeFeed, SnsSlot } from './feeds/types'
+import { readConnectorKey } from '@/domains/connectors/crypto'
+import { instagramConnectEnabled, INSTAGRAM_RECONNECT_NOTE } from './instagram/core'
+import { readInstagramConnection, prepareInstagramSync, instagramProfileUrl } from './instagram/store'
 
 export type { SnsSlot }
 
 /** 화면 순서 그대로 */
 export const SNS_SLOTS: readonly SnsSlot[] = ['instagram', 'blog', 'youtube', 'curious']
-/** 배우기가 되는 칸 (인스타그램은 메타 심사 전까지 「곧 열려요」) */
+/** 주소만 넣으면 배우기가 되는 칸. 인스타그램은 로그인 연결이 있을 때만 배운다(learnBotSns 가 연결 줄로 판단) */
 export const SNS_LEARNABLE: readonly SnsSlot[] = ['blog', 'youtube', 'curious']
 export const SNS_SLOT_LABEL: Record<SnsSlot, string> = { instagram: '인스타그램', blog: '블로그', youtube: '유튜브', curious: '큐리어스' }
 /** mentors.links 의 kind (creator/links.ts LINK_KINDS 와 같은 글자) */
@@ -504,8 +509,16 @@ export function snsCapNote(cap: number): string {
 export async function syncSnsFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: { deadline?: number } = {}): Promise<SyncResult> {
     const slot = feed.snsSlot
     const base = { feedId: feed.id, added: 0, skipped: 0, failed: 0 }
-    if (!slot || slot === 'instagram') return { ...base, ok: true, status: feed.status, lastError: INSTAGRAM_COMING_SOON, note: INSTAGRAM_COMING_SOON }
+    if (!slot || (slot === 'instagram' && !instagramConnectEnabled())) return { ...base, ok: true, status: feed.status, lastError: INSTAGRAM_COMING_SOON, note: INSTAGRAM_COMING_SOON }
     try {
+        let fetcher: FetchNewItems
+        if (slot === 'instagram') {
+            const p = await prepareInstagramSync(db, readConnectorKey(), feed)
+            if ('stop' in p) return { ...base, ok: p.stop.status !== 'error', status: p.stop.status, lastError: p.stop.note, note: p.stop.note }
+            fetcher = p.fetcher
+        } else {
+            fetcher = slot === 'curious' ? curiousFetcher({ allowCall: curiousDailyAllow(db) }) : SNS_FETCHERS[slot]
+        }
         const plan = await readPlanId(db, feed.userId)
         const cap = SNS_LEARN_CAP[plan]
         const counts = await countSnsItems(db, feed.mentorId, await listSnsFeeds(db, feed.mentorId))
@@ -519,7 +532,7 @@ export async function syncSnsFeed(db: SupabaseClient, feed: KnowledgeFeed, opts:
         const label = slot === 'blog' ? linkLabelOf(feed.handleOrUrl) : SNS_SLOT_LABEL[slot]
         return await syncFeed(db, feed, {
             deadline: opts.deadline,
-            fetchers: { [feed.kind]: slot === 'curious' ? curiousFetcher({ allowCall: curiousDailyAllow(db) }) : SNS_FETCHERS[slot] },
+            fetchers: { [feed.kind]: fetcher },
             maxNew: remaining,
             source: { titlePrefix: `[${label}]`, sourceKind: `sns_${slot}` },
         })
@@ -533,7 +546,7 @@ export async function syncSnsFeed(db: SupabaseClient, feed: KnowledgeFeed, opts:
 
 /* ─────────────────────────── 5. 읽기, 저장, 배우기 ─────────────────────────── */
 
-export type SnsAccountStatus = 'empty' | 'coming_soon' | 'needs_save' | 'ready' | 'learned' | 'error'
+export type SnsAccountStatus = 'empty' | 'coming_soon' | 'needs_save' | 'ready' | 'learned' | 'error' | 'needs_reconnect'
 
 export interface SnsAccountView {
     slot: SnsSlot
@@ -547,6 +560,14 @@ export interface SnsAccountView {
     learnedCount: number
     /** 사람에게 보여 줄 한 줄 (실패 이유, 안내) */
     lastError: string | null
+    /** 인스타그램만: 로그인 연결 버튼을 보여 줄까 (앱 설정이 있을 때) */
+    canConnect?: boolean
+    /** 인스타그램만: 로그인으로 연결돼 있나 */
+    connected?: boolean
+    /** 인스타그램만: 연결된 계정 아이디 (@ 빼고) */
+    username?: string | null
+    /** 인스타그램만: 열쇠가 끝나 다시 연결해야 한다 */
+    needsReconnect?: boolean
 }
 
 export interface BotSnsView {
@@ -562,13 +583,23 @@ async function readLinks(db: SupabaseClient, mentorId: string): Promise<CreatorL
 
 /** 칸 4개의 주소, 상태, 배운 수 + 요금제 상한 */
 export async function readBotSns(db: SupabaseClient, mentorId: string, plan: PlanId): Promise<BotSnsView> {
-    const [links, feeds] = await Promise.all([readLinks(db, mentorId), listSnsFeeds(db, mentorId)])
+    const igOn = instagramConnectEnabled()
+    const [links, feeds, ig] = await Promise.all([readLinks(db, mentorId), listSnsFeeds(db, mentorId), igOn ? readInstagramConnection(db, mentorId) : Promise.resolve(null)])
     const counts = await countSnsItems(db, mentorId, feeds)
     const accounts = SNS_SLOTS.map((slot): SnsAccountView => {
         const url = links.find(l => l.kind === LINK_KIND[slot])?.url ?? null
         const feed = feeds.find(f => f.snsSlot === slot)
         const view = { slot, label: SNS_SLOT_LABEL[slot], url, canLearn: false, lastLearnedAt: null, learnedCount: 0, lastError: null }
-        if (slot === 'instagram') return url ? { ...view, status: 'coming_soon', lastError: INSTAGRAM_COMING_SOON } : { ...view, status: 'empty' }
+        if (slot === 'instagram') {
+            if (!igOn) return url ? { ...view, status: 'coming_soon', lastError: INSTAGRAM_COMING_SOON } : { ...view, status: 'empty' }
+            const learned = { lastLearnedAt: feed?.lastSyncedAt ?? null, learnedCount: feed ? counts.get(feed.id) ?? 0 : 0 }
+            const igView = { ...view, ...learned, canConnect: true, connected: false, needsReconnect: false, username: ig?.username ?? null }
+            if (!ig || ig.status === 'disconnected' || !ig.username) return { ...igView, username: null, status: 'empty' }
+            const profile = { ...igView, url: instagramProfileUrl(ig.username) }
+            if (ig.status === 'needs_reconnect') return { ...profile, status: 'needs_reconnect', needsReconnect: true, lastError: INSTAGRAM_RECONNECT_NOTE }
+            const status: SnsAccountStatus = feed?.status === 'error' ? 'error' : feed?.lastSyncedAt ? 'learned' : 'ready'
+            return { ...profile, connected: true, canLearn: !!feed, status, lastError: feed?.lastError ?? null }
+        }
         if (!feed) return url ? { ...view, status: 'needs_save', lastError: '주소를 한 번 더 저장하면 배울 수 있어요' } : { ...view, status: 'empty' }
         const status: SnsAccountStatus = feed.status === 'error' ? 'error' : feed.lastSyncedAt ? 'learned' : 'ready'
         return { ...view, url: url ?? feed.handleOrUrl, canLearn: true, status, lastLearnedAt: feed.lastSyncedAt ?? null, learnedCount: counts.get(feed.id) ?? 0, lastError: feed.lastError ?? null }
@@ -607,6 +638,7 @@ export async function saveBotSns(db: SupabaseClient, a: { userId: string; mentor
     const all = await listFeeds(db, a.mentorId)
     let feedCount = all.length
     for (const [slot, n] of changes) {
+        if (slot === 'instagram') continue      // 인스타그램 연결 줄은 로그인 연결 것. 주소 칸은 소개 링크만 바꾼다
         const mine = all.find(f => f.snsSlot === slot)
         const want = n?.fetch ?? null
         if (!want) {
@@ -650,8 +682,10 @@ export interface SnsLearnResult {
 
 /** 「지금 배우기」: 고른 칸(없으면 배울 수 있는 칸 전부)을 차례로 한 번씩. 시간 한도를 넘기면 남은 칸은 다음에 */
 export async function learnBotSns(db: SupabaseClient, a: { mentorId: string; slots?: SnsSlot[]; deadline?: number }): Promise<SnsLearnResult[]> {
-    const want = (a.slots?.length ? a.slots : SNS_LEARNABLE).filter(s => SNS_LEARNABLE.includes(s))
-    const feeds = (await listSnsFeeds(db, a.mentorId)).filter(f => f.snsSlot && want.includes(f.snsSlot))
+    // 인스타그램은 로그인 연결 줄이 켜져 있을 때만 (끊은 줄 = paused 는 건너뛴다)
+    const igOn = instagramConnectEnabled()
+    const want = (a.slots?.length ? a.slots : SNS_SLOTS).filter(s => SNS_LEARNABLE.includes(s) || (s === 'instagram' && igOn))
+    const feeds = (await listSnsFeeds(db, a.mentorId)).filter(f => f.snsSlot && want.includes(f.snsSlot) && !(f.snsSlot === 'instagram' && f.status === 'paused'))
     const out: SnsLearnResult[] = []
     for (const slot of want) {
         const feed = feeds.find(f => f.snsSlot === slot)

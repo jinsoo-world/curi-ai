@@ -1,5 +1,6 @@
 // 봇 「내 SNS 연결」 = 주소 검증(모양, SSRF), 주인 확인, 같은 글 건너뛰기, 요금제 상한, RSS 읽기(가짜 RSS 즉석 생성)
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { randomBytes } from 'crypto'
 import { makeFakeDb } from '../feeds/__tests__/fake-db'
 import type { KnowledgeFeed, FetchNewItems } from '../feeds/types'
 
@@ -626,5 +627,68 @@ describe('syncFeed 끝부분 모르는 오류는 일반 문구', () => {
         const r = await syncFeed(fake.db, feedOf({ kind: 'website' }), { fetchers: { website: async () => ({ items: [] }) } })
         expect(r.lastError).toBe(SYNC_FAIL_NOTE)
         expect(JSON.stringify(fake.tables.knowledge_feeds[0])).not.toContain('secret')
+    })
+})
+
+/* ─────────────── 인스타그램 (로그인 연결, 1007) ─────────────── */
+describe('인스타그램 칸 배우기 (로그인 연결이 있을 때만)', () => {
+    const key = randomBytes(32)
+    const env = {
+        INSTAGRAM_APP_ID: '1', INSTAGRAM_APP_SECRET: 's', INSTAGRAM_REDIRECT_URI: 'https://www.curi-ai.com/api/sns/instagram/callback',
+        CONNECTOR_SECRET_KEY: key.toString('base64'),
+    }
+    const igFeed = (over: Partial<KnowledgeFeed> = {}) => feedOf({ id: 'feed-ig', kind: 'instagram', handleOrUrl: 'https://www.instagram.com/jin.ceo/', snsSlot: 'instagram', ...over })
+    async function tables() {
+        const t = ownerTables()
+        t.knowledge_feeds.push({ id: 'feed-ig', mentor_id: 'm-1', user_id: 'u-owner', kind: 'instagram', handle_or_url: 'https://www.instagram.com/jin.ceo/', status: 'connected', created_at: '2026-10-01T00:00:00Z', sns_slot: 'instagram' })
+        const { encryptSecret } = await import('@/domains/connectors/crypto')
+        const { igTokenKey } = await import('../instagram/core')
+        ;(t as Record<string, Record<string, unknown>[]>).instagram_connections = [{ mentor_id: 'm-1', user_id: 'u-owner', status: 'connected', username: 'jin.ceo', token_encrypted: encryptSecret('IGT', igTokenKey(key)), token_expires_at: new Date(Date.now() + 30 * 86400_000).toISOString() }]
+        return t
+    }
+    const media = { data: [
+        { id: '2', caption: '오늘은 새벽 운동 루틴을 소개할게요. 5시 기상 후 스트레칭', media_type: 'IMAGE', permalink: 'https://www.instagram.com/p/B2/', timestamp: '2026-10-02T00:00:00+0000' },
+        { id: '1', caption: '짧다', media_type: 'IMAGE', permalink: 'https://www.instagram.com/p/A1/', timestamp: '2026-10-01T00:00:00+0000' },
+    ] }
+
+    it('기능이 꺼져 있으면 예전처럼 「곧 열려요」(밖에 안 나간다)', async () => {
+        const fake = makeFakeDb(await tables())
+        const f = vi.fn()
+        vi.stubGlobal('fetch', f)
+        const r = await sns.syncSnsFeed(fake.db, igFeed())
+        expect(r.note).toBe(sns.INSTAGRAM_COMING_SOON)
+        expect(f).not.toHaveBeenCalled()
+        vi.unstubAllGlobals()
+    })
+
+    it('켜져 있으면 내 게시물 글만 [인스타그램] 자료로, 지금 배우기에도 들어간다', async () => {
+        for (const [k, v] of Object.entries(env)) vi.stubEnv(k, v)
+        const fake = makeFakeDb(await tables())
+        wireAdd(fake.tables)
+        vi.stubGlobal('fetch', vi.fn(async (u: string) => {
+            expect(new URL(u).searchParams.get('access_token')).toBe('IGT')
+            return new Response(JSON.stringify(media))
+        }))
+        const out = await sns.learnBotSns(fake.db, { mentorId: 'm-1' })
+        const ig = out.find(o => o.slot === 'instagram')
+        expect(ig).toMatchObject({ ok: true, added: 1 })
+        const call = addKnowledgeSource.mock.calls[0]
+        expect(call[2]).toMatch(/^\[인스타그램\] 오늘은 새벽 운동/)
+        expect(call[5]).toBe('https://www.instagram.com/p/B2/')
+        expect(call[6]?.meta).toMatchObject({ sourceKind: 'sns_instagram', authorIsMe: false })
+        expect(fake.tables.knowledge_feeds.find(f => f.id === 'feed-ig')?.sync_cursor).toBe('2026-10-02T00:00:00.000Z')
+        vi.unstubAllGlobals(); vi.unstubAllEnvs()
+    })
+
+    it('끊은 연결(paused)은 지금 배우기에서 건너뛴다', async () => {
+        for (const [k, v] of Object.entries(env)) vi.stubEnv(k, v)
+        const t = await tables()
+        t.knowledge_feeds[0].status = 'paused'
+        const fake = makeFakeDb(t)
+        const f = vi.fn()
+        vi.stubGlobal('fetch', f)
+        expect((await sns.learnBotSns(fake.db, { mentorId: 'm-1' })).find(o => o.slot === 'instagram')).toBeUndefined()
+        expect(f).not.toHaveBeenCalled()
+        vi.unstubAllGlobals(); vi.unstubAllEnvs()
     })
 })

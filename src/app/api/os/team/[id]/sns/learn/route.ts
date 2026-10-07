@@ -1,7 +1,7 @@
 // POST /api/os/team/[id]/sns/learn { slots?: ['blog' | 'youtube' | 'curious'] } → 「지금 배우기」
 //
 // 저장한 SNS 주소에서 공개 글을 읽어 봇 자료로 넣는다(이미 배운 글은 건너뛴다). slots 를 안 보내면 배울 수 있는 칸 전부.
-// 인스타그램은 메타 공식 API 전까지 「곧 열려요」라 여기서 돌지 않는다.
+// 인스타그램은 로그인 연결(/api/sns/instagram/connect)이 켜져 있을 때만 돈다(앱 설정 환경변수가 없으면 「곧 열려요」).
 // 하루 1번 자동(새 글만)은 /api/cron/feeds 가 같은 함수(syncSnsFeed)로 돈다.
 // 🔒 봇 주인만. 돈(임베딩)이 드는 창구라 횟수 제한은 셀 수 없으면 막는다(failClosed): 봇마다 분당 2번·하루 10번, 회원마다 하루 30번
 //    기존 「지금 가져오기」(/api/os/feeds/sync)도 SNS 줄이면 같은 열쇠(checkSnsLearnLimits)
@@ -27,7 +27,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const body = await req.json().catch(() => ({})) as { slots?: unknown }
     let slots: SnsSlot[] | undefined
     if (body && body.slots !== undefined) {
-        if (!Array.isArray(body.slots) || !body.slots.every(isSnsSlot)) return NextResponse.json({ error: '배울 칸을 확인해 주세요 (blog, youtube, curious)' }, { status: 400 })
+        if (!Array.isArray(body.slots) || !body.slots.every(isSnsSlot)) return NextResponse.json({ error: '배울 칸을 확인해 주세요 (instagram, blog, youtube, curious)' }, { status: 400 })
         slots = body.slots
     }
     try {
