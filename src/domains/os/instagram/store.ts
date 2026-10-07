@@ -83,9 +83,16 @@ export async function saveInstagramConnection(
     if (!mine && feeds.length >= MAX_FEEDS_PER_BOT) throw new InstagramTooManyFeeds()
 
     const now = new Date(nowMs).toISOString()
+    // 다른 계정으로 바꿔 연결하면 옛 계정 번호를 남긴다 = 옛 계정 주인의 메타 「정보 삭제 요청」도 이 봇을 찾는다 (보안 검토 PR #57)
+    const { data: prevRow, error: pErr } = await db.from(IG_TABLE).select('ig_user_id, ig_scoped_id, previous_ig_ids').eq('mentor_id', a.mentorId).maybeSingle()
+    if (pErr) fail(pErr)
+    const prev = prevRow as { ig_user_id?: string | null; ig_scoped_id?: string | null; previous_ig_ids?: string[] | null } | null
+    const currentIds = new Set([a.login.igUserId, a.login.igScopedId])
+    const previous = [...new Set([...(prev?.previous_ig_ids ?? []), prev?.ig_user_id, prev?.ig_scoped_id])]
+        .filter((v): v is string => !!v && !currentIds.has(v)).slice(-20)
     const { error } = await db.from(IG_TABLE).upsert({
         mentor_id: a.mentorId, user_id: a.userId,
-        ig_user_id: a.login.igUserId, ig_scoped_id: a.login.igScopedId,
+        ig_user_id: a.login.igUserId, ig_scoped_id: a.login.igScopedId, previous_ig_ids: previous,
         username: a.login.username, account_type: a.login.accountType,
         token_encrypted: encryptSecret(a.login.accessToken, igTokenKey(master)),
         token_expires_at: a.login.expiresAt, token_refreshed_at: now,
@@ -267,15 +274,28 @@ export async function refreshInstagramTokens(
 
 /* ─────────────────────────── 메타 콜백: 연결 해제, 정보 삭제 ─────────────────────────── */
 
-/** 메타가 보낸 사용자 번호(앱 범위 번호 또는 계정 번호)로 이 계정이 연결된 봇들 */
-async function mentorsOfIgUser(db: SupabaseClient, igId: string): Promise<string[]> {
+/** 메타가 보낸 사용자 번호(앱 범위 번호 또는 계정 번호)로 이 계정이 지금 연결된 봇들 (withPrevious = 예전에 연결했던 봇까지) */
+async function mentorsOfIgUser(db: SupabaseClient, igId: string, withPrevious = false): Promise<string[]> {
     const out = new Set<string>()
     for (const col of ['ig_scoped_id', 'ig_user_id']) {
         const { data, error } = await db.from(IG_TABLE).select('mentor_id').eq(col, igId)
         if (error) fail(error)
         for (const r of (data ?? []) as { mentor_id: string }[]) out.add(r.mentor_id)
     }
+    if (withPrevious) {
+        const { data, error } = await db.from(IG_TABLE).select('mentor_id').contains('previous_ig_ids', [igId])
+        if (error && !missing(error.code)) fail(error)
+        for (const r of (data ?? []) as { mentor_id: string }[]) out.add(r.mentor_id)
+    }
     return [...out]
+}
+
+/** 지금 그 계정이 연결된 봇인가 (예전 계정 번호로만 찾은 봇은 지금 연결을 지우면 안 된다) */
+async function isCurrentlyIgUser(db: SupabaseClient, mentorId: string, igId: string): Promise<boolean> {
+    const { data, error } = await db.from(IG_TABLE).select('ig_user_id, ig_scoped_id').eq('mentor_id', mentorId).maybeSingle()
+    if (error) fail(error)
+    const r = data as { ig_user_id?: string | null; ig_scoped_id?: string | null } | null
+    return !!r && (r.ig_user_id === igId || r.ig_scoped_id === igId)
 }
 
 /** 사용자가 인스타그램에서 우리 앱 연결을 해제했다 → 그 계정의 열쇠를 전부 지운다 */
@@ -291,13 +311,20 @@ export async function deauthorizeInstagramUser(db: SupabaseClient, igId: string)
  * 돌려주는 접수 번호로 상태 화면을 본다.
  */
 export async function requestInstagramDataDeletion(db: SupabaseClient, igId: string, nowMs = Date.now()): Promise<string> {
-    const mentors = await mentorsOfIgUser(db, igId)
+    // 같은 계정의 처리 전 요청이 있으면 그 번호를 그대로 준다(메타 재전송, 같은 요청 여러 번)
+    const { data: open, error: oErr } = await db.from(IG_DELETION_TABLE).select('confirmation_code').eq('ig_user_id', igId).eq('status', 'pending').limit(1)
+    if (oErr) fail(oErr)
+    const openCode = ((open ?? []) as { confirmation_code: string }[])[0]?.confirmation_code
+    if (openCode) return openCode
+    const mentors = await mentorsOfIgUser(db, igId, true)
     const code = randomBytes(12).toString('hex')
     const { error } = await db.from(IG_DELETION_TABLE).insert({
         confirmation_code: code, ig_user_id: igId, mentor_ids: mentors, status: 'pending', requested_at: new Date(nowMs).toISOString(),
     })
     if (error) fail(error)
     for (const m of mentors) {
+        // 지금 다른 계정이 연결된 봇(예전 번호로만 찾음)은 지금 연결을 지우지 않는다. 배운 옛 글은 크론이 지운다
+        if (!(await isCurrentlyIgUser(db, m, igId))) continue
         await setFeed(db, m, { status: 'paused', last_error: '인스타그램 정보 삭제 요청으로 연결을 지웠어요' })
         const { error: dErr } = await db.from(IG_TABLE).delete().eq('mentor_id', m)
         if (dErr) fail(dErr)

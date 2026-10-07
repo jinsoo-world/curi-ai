@@ -16,6 +16,8 @@ export const IG_FETCH_TIMEOUT_MS = 10_000
 const GRAPH = 'https://graph.instagram.com'
 const MEDIA_FIELDS = 'id,caption,media_type,permalink,timestamp'
 const PAGE_LIMIT = 25
+/** 한 번에 넘기는 최대 쪽 수 (빈 쪽만 이어지는 이상한 응답에도 끝나게) */
+const MAX_PAGES = 10
 
 export class InstagramApiError extends Error {
     /** 메타 오류 190 = 열쇠가 끝났거나 취소됨 → 다시 연결 필요 */
@@ -124,7 +126,9 @@ export async function fetchOwnMedia(
     first.searchParams.set('limit', String(PAGE_LIMIT))
     first.searchParams.set('access_token', token)
     let next: string | null = first.toString()
+    let pages = 0
     while (next) {
+        if (pages++ >= MAX_PAGES) return { media, complete: false }
         if (media.length >= max) return { media, complete: false }
         if (o.deadline && Date.now() > o.deadline - 2_000) return { media, complete: false }
         const j = await call(next, '게시물 목록', {}, o.fetchImpl ?? fetch)

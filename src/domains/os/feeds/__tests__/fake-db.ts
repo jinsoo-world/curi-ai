@@ -32,6 +32,7 @@ export function makeFakeDb(initial: Tables, opts: { missingTables?: string[] } =
             if (kind === 'eq') return r[c] === v
             if (kind === 'neq') return r[c] !== v
             if (kind === 'in') return (v as unknown[]).includes(r[c])
+            if (kind === 'contains') return Array.isArray(r[c]) && (v as unknown[]).every(x => (r[c] as unknown[]).includes(x))
             if (r[c] === null || r[c] === undefined) return false
             return kind === 'lt' ? String(r[c]) < String(v) : String(r[c]) > String(v)
         })
@@ -82,6 +83,7 @@ export function makeFakeDb(initial: Tables, opts: { missingTables?: string[] } =
             lt: (c: string, v: unknown) => { filters.push(['lt', c, v]); return b },
             gt: (c: string, v: unknown) => { filters.push(['gt', c, v]); return b },
             in: (c: string, v: unknown[]) => { filters.push(['in', c, v]); return b },
+            contains: (c: string, v: unknown[]) => { filters.push(['contains', c, v]); return b },
             order: () => b,
             limit: (n: number) => { limitN = n; return b },
             maybeSingle: () => { single = 'maybe'; return run() },

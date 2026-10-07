@@ -177,6 +177,25 @@ describe('메타 연결 해제, 정보 삭제', () => {
         expect(await readInstagramDeletion(fake.db, 'not-a-code')).toBeNull()
     })
 
+    it('다른 계정으로 바꿔 연결한 봇도 옛 계정의 삭제 요청이 찾는다(지금 연결은 그대로)', async () => {
+        await saveInstagramConnection(fake.db, master, { userId: 'u1', mentorId: 'm1', login: login() })
+        fake.tables.knowledge_sources.push({ id: 'old', mentor_id: 'm1', feed_id: null, title: '[인스타그램] 옛 계정 글', original_url: 'https://www.instagram.com/p/OLD/' })
+        await saveInstagramConnection(fake.db, master, { userId: 'u1', mentorId: 'm1', login: login({ igUserId: '555', igScopedId: '556', username: 'new.acct' }) })
+        expect(fake.tables[IG_TABLE][0].previous_ig_ids).toEqual(['17841400000', '777'])
+        const code = await requestInstagramDataDeletion(fake.db, '777')
+        expect(fake.tables[IG_TABLE][0]).toMatchObject({ ig_user_id: '555', status: 'connected' })   // 새 계정 연결은 안 지운다
+        expect(fake.tables.instagram_deletion_requests[0].mentor_ids).toEqual(['m1'])
+        await processInstagramDeletions(fake.db)
+        expect(fake.tables.knowledge_sources.find(s => s.id === 'old')).toBeUndefined()
+        expect(await readInstagramDeletion(fake.db, code)).toMatchObject({ status: 'done' })
+    })
+
+    it('같은 계정의 처리 전 요청이 있으면 같은 접수 번호', async () => {
+        const a = await requestInstagramDataDeletion(fake.db, '123')
+        expect(await requestInstagramDataDeletion(fake.db, '123')).toBe(a)
+        expect(fake.tables.instagram_deletion_requests).toHaveLength(1)
+    })
+
     it('연결한 적 없는 계정 삭제 요청도 접수 번호를 주고 바로 끝난다', async () => {
         const code = await requestInstagramDataDeletion(fake.db, '123')
         expect(await processInstagramDeletions(fake.db)).toEqual({ done: 1, removed: 0 })

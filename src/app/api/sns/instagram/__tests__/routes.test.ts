@@ -244,7 +244,7 @@ describe('메타 콜백 (signed_request)', () => {
     })
     it('해제: 열쇠를 지운다', async () => {
         await seed()
-        const r = await deauthorize(req('/api/sns/instagram/deauthorize', form(signed({ algorithm: 'HMAC-SHA256', user_id: '777', issued_at: 1 }))))
+        const r = await deauthorize(req('/api/sns/instagram/deauthorize', form(signed({ algorithm: 'HMAC-SHA256', user_id: '777', issued_at: Math.floor(Date.now() / 1000) }))))
         expect(r.status).toBe(200)
         expect(fake.tables[IG_TABLE][0]).toMatchObject({ token_encrypted: null, status: 'disconnected' })
     })

@@ -23,6 +23,7 @@ create table if not exists public.instagram_connections (
   user_id             uuid not null references public.users(id) on delete cascade,
   ig_user_id          text not null,                 -- 프로페셔널 계정 번호 (/me user_id)
   ig_scoped_id        text,                          -- 앱 범위 번호 (/me id, 메타 콜백 user_id)
+  previous_ig_ids     text[] not null default '{}',  -- 다른 계정으로 바꿔 연결하기 전 계정 번호들 (옛 계정의 정보 삭제 요청도 찾게)
   username            text,
   account_type        text,                          -- BUSINESS / MEDIA_CREATOR
   token_encrypted     text,                          -- 잠근 60일 열쇠. 끊으면 null
@@ -36,6 +37,7 @@ create table if not exists public.instagram_connections (
 
 create index if not exists instagram_connections_ig_user_idx on public.instagram_connections (ig_user_id);
 create index if not exists instagram_connections_ig_scoped_idx on public.instagram_connections (ig_scoped_id);
+create index if not exists instagram_connections_previous_ids_idx on public.instagram_connections using gin (previous_ig_ids);
 -- 매일 크론 열쇠 연장: 연결 중이고 곧 끝나는 것부터
 create index if not exists instagram_connections_refresh_idx on public.instagram_connections (status, token_expires_at);
 
@@ -53,6 +55,7 @@ create table if not exists public.instagram_deletion_requests (
 );
 
 create index if not exists instagram_deletion_requests_pending_idx on public.instagram_deletion_requests (status, requested_at);
+create index if not exists instagram_deletion_requests_ig_user_idx on public.instagram_deletion_requests (ig_user_id, status);
 
 comment on table public.instagram_deletion_requests is
   '메타 인스타그램 정보 삭제 요청 접수. 매일 크론(/api/cron/feeds)이 배운 인스타그램 자료를 지우고 done 으로 바꾼다';

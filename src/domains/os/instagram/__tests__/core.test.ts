@@ -85,8 +85,13 @@ describe('메타 signed_request', () => {
         return `${sig}.${body}`
     }
     it('앱 비밀값으로 서명이 맞으면 user_id 를 돌려준다', () => {
-        expect(verifySignedRequest(make({ algorithm: 'HMAC-SHA256', user_id: '1789', issued_at: 1 }), 'sek')).toMatchObject({ userId: '1789' })
+        expect(verifySignedRequest(make({ algorithm: 'HMAC-SHA256', user_id: '1789', issued_at: Math.floor(Date.now() / 1000) }), 'sek')).toMatchObject({ userId: '1789' })
         expect(verifySignedRequest(make({ algorithm: 'HMAC-SHA256', user_id: 1789 }), 'sek')).toMatchObject({ userId: '1789' })
+    })
+    it('하루 넘은 서명은 다시 보내도 거절', () => {
+        const now = 1_800_000_000
+        expect(verifySignedRequest(make({ algorithm: 'HMAC-SHA256', user_id: '1', issued_at: now - 60 }), 'sek', now)).not.toBeNull()
+        expect(verifySignedRequest(make({ algorithm: 'HMAC-SHA256', user_id: '1', issued_at: now - 2 * 86400 }), 'sek', now)).toBeNull()
     })
     it('비밀값이 다르거나, 알고리즘이 다르거나, user_id 가 없거나, 모양이 틀리면 null', () => {
         expect(verifySignedRequest(make({ algorithm: 'HMAC-SHA256', user_id: '1' }, 'other'), 'sek')).toBeNull()

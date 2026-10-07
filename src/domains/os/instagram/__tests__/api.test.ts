@@ -146,6 +146,13 @@ describe('fetchOwnMedia', () => {
         expect(r.complete).toBe(false)
     })
 
+    it('빈 쪽만 이어져도 10쪽에서 멈춘다', async () => {
+        const { f, calls } = fakeFetch(() => json({ data: [], paging: { next: 'https://graph.instagram.com/next?after=x' } }))
+        const r = await fetchOwnMedia('T', { max: 60, fetchImpl: f })
+        expect(calls).toHaveLength(10)
+        expect(r.complete).toBe(false)
+    })
+
     it('190 은 tokenInvalid 로 던진다', async () => {
         const { f } = fakeFetch(() => json({ error: { code: 190, message: 'expired' } }, 400))
         await expect(fetchOwnMedia('T', { max: 60, fetchImpl: f })).rejects.toMatchObject({ tokenInvalid: true })

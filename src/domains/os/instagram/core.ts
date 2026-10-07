@@ -131,7 +131,9 @@ export function buildInstagramAuthUrl(cfg: InstagramConfig, state: string): stri
 /* ─────────────────────────── 메타 signed_request ─────────────────────────── */
 // 연결 해제(deauthorize), 정보 삭제(data-deletion) 콜백이 보내는 값. "서명.본문" (둘 다 base64url), 서명 = HMAC-SHA256(본문, 앱 비밀값)
 
-export function verifySignedRequest(raw: string | null | undefined, appSecret: string): { userId: string; issuedAt?: number } | null {
+export const SIGNED_REQUEST_MAX_AGE_SEC = 24 * 3600
+
+export function verifySignedRequest(raw: string | null | undefined, appSecret: string, nowSec = Math.floor(Date.now() / 1000)): { userId: string; issuedAt?: number } | null {
     const v = String(raw ?? '').trim()
     if (!v || !appSecret) return null
     const parts = v.split('.')
@@ -146,6 +148,8 @@ export function verifySignedRequest(raw: string | null | undefined, appSecret: s
         if (String(p.algorithm ?? '').toUpperCase() !== 'HMAC-SHA256') return null
         const userId = typeof p.user_id === 'string' || typeof p.user_id === 'number' ? String(p.user_id) : ''
         if (!/^\d{1,40}$/.test(userId)) return null
+        // 오래된 서명을 다시 보내는 것 막기 (메타는 바로 보낸다. 하루 넘은 것은 거절)
+        if (typeof p.issued_at === 'number' && Math.abs(nowSec - p.issued_at) > SIGNED_REQUEST_MAX_AGE_SEC) return null
         return { userId, ...(typeof p.issued_at === 'number' ? { issuedAt: p.issued_at } : {}) }
     } catch {
         return null
