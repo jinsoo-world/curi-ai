@@ -1,5 +1,5 @@
 // 시험용 가짜 Supabase — 표를 메모리에 두고 우리가 쓰는 만큼만 흉내 낸다.
-// (select/insert/update/upsert/delete + eq/neq/order/limit/maybeSingle/single + count head)
+// (select/insert/update/upsert/delete + eq/neq/lt/gt/in/order/limit/maybeSingle/single + count head)
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 type Row = Record<string, unknown>
@@ -28,7 +28,14 @@ export function makeFakeDb(initial: Tables, opts: { missingTables?: string[] } =
         let limitN = Infinity
         const filters: [string, string, unknown][] = []
 
-        const match = (r: Row) => filters.every(([kind, c, v]) => kind === 'eq' ? r[c] === v : r[c] !== v)
+        const match = (r: Row) => filters.every(([kind, c, v]) => {
+            if (kind === 'eq') return r[c] === v
+            if (kind === 'neq') return r[c] !== v
+            if (kind === 'in') return (v as unknown[]).includes(r[c])
+            if (kind === 'contains') return Array.isArray(r[c]) && (v as unknown[]).every(x => (r[c] as unknown[]).includes(x))
+            if (r[c] === null || r[c] === undefined) return false
+            return kind === 'lt' ? String(r[c]) < String(v) : String(r[c]) > String(v)
+        })
 
         const run = async () => {
             calls.push({ table, op, filters: [...filters] })
@@ -53,9 +60,10 @@ export function makeFakeDb(initial: Tables, opts: { missingTables?: string[] } =
             }
             if (op === 'delete') {
                 const keep = rows.filter(r => !match(r))
-                const gone = rows.length - keep.length
+                const goneRows = rows.filter(match)
                 tables[table] = keep
-                return { data: null, error: null, count: gone }
+                // DELETE ... RETURNING 흉내 (select 를 붙였을 때 지운 줄을 돌려준다)
+                return { data: single ? goneRows[0] ?? null : goneRows, error: null, count: goneRows.length }
             }
             const hit = rows.filter(match).slice(0, limitN)
             if (countMode && head) return { data: null, error: null, count: hit.length }
@@ -72,6 +80,10 @@ export function makeFakeDb(initial: Tables, opts: { missingTables?: string[] } =
             delete: () => { op = 'delete'; return b },
             eq: (c: string, v: unknown) => { filters.push(['eq', c, v]); return b },
             neq: (c: string, v: unknown) => { filters.push(['neq', c, v]); return b },
+            lt: (c: string, v: unknown) => { filters.push(['lt', c, v]); return b },
+            gt: (c: string, v: unknown) => { filters.push(['gt', c, v]); return b },
+            in: (c: string, v: unknown[]) => { filters.push(['in', c, v]); return b },
+            contains: (c: string, v: unknown[]) => { filters.push(['contains', c, v]); return b },
             order: () => b,
             limit: (n: number) => { limitN = n; return b },
             maybeSingle: () => { single = 'maybe'; return run() },

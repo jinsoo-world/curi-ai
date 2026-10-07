@@ -118,7 +118,8 @@ export async function syncFeed(db: SupabaseClient, feed: KnowledgeFeed, opts: Sy
     const nowIso = () => new Date().toISOString()
     try {
         // X, Instagram, TikTok = 열쇠 등록 전까지 「준비 중」. 밖에 나가지 않는다
-        if (isSocialStubKind(feed.kind)) {
+        // (「내 SNS 연결」 인스타그램처럼 공식 열쇠로 가져오기를 끼워 넣은 경우만 돈다)
+        if (isSocialStubKind(feed.kind) && !opts.fetchers?.[feed.kind]) {
             await updateFeed(db, feed.id, { status: 'paused', last_error: SOCIAL_STUB_NOTE })
             return { ...base, ok: true, status: 'paused', lastError: SOCIAL_STUB_NOTE, note: SOCIAL_STUB_NOTE }
         }
