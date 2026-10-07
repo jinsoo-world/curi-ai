@@ -65,7 +65,7 @@ beforeEach(() => {
         mentors: [{ id: 'm-1', creator_id: 'cp-1', links: [] }],
         creator_profiles: [{ id: 'cp-1', user_id: 'u-owner' }],
         knowledge_feeds: [], knowledge_sources: [], knowledge_chunks: [],
-        connector_app_pending: [], [IG_TABLE]: [], instagram_deletion_requests: [],
+        connector_app_pending: [], [IG_TABLE]: [], instagram_deletion_requests: [], instagram_learned_sources: [],
         subscriptions: [],
     })
 })
@@ -177,6 +177,10 @@ describe('앱 연결: 콜백 → 딥링크 handoff → POST finish', () => {
         const loc = String((await callback(req(`/api/sns/instagram/callback?error=access_denied&state=${encodeURIComponent(st)}`))).headers.get('location'))
         expect(loc).toBe('curiai://connect?error=denied&provider=instagram')
     })
+    it('finish: 앱 설정이 없으면 503', async () => {
+        vi.stubEnv('INSTAGRAM_APP_ID', '')
+        expect((await finish(req('/api/sns/instagram/finish', { method: 'POST', body: JSON.stringify({ handoff: 'x', appSecret: secret }) }))).status).toBe(503)
+    })
     it('finish: 손님 401, 다른 사람 400', async () => {
         user = null
         expect((await finish(req('/api/sns/instagram/finish', { method: 'POST', body: '{}' }))).status).toBe(401)
@@ -250,7 +254,7 @@ describe('메타 콜백 (signed_request)', () => {
     })
     it('삭제: { url, confirmation_code } + 상태 화면', async () => {
         await seed()
-        const r = await deletion.POST(req('/api/sns/instagram/data-deletion', form(signed({ algorithm: 'HMAC-SHA256', user_id: '17841400000' }))))
+        const r = await deletion.POST(req('/api/sns/instagram/data-deletion', form(signed({ algorithm: 'HMAC-SHA256', user_id: '17841400000', issued_at: Math.floor(Date.now() / 1000) }))))
         expect(r.status).toBe(200)
         const d = await r.json()
         expect(d.confirmation_code).toMatch(/^[0-9a-f]{24}$/)

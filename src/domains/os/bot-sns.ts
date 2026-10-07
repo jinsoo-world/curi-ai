@@ -41,7 +41,7 @@ import { resolveChannelInput, channelFeedUrl, findChannelId, listRecentVideos } 
 import type { FeedItem, FeedKind, FetchNewItems, KnowledgeFeed, SnsSlot } from './feeds/types'
 import { readConnectorKey } from '@/domains/connectors/crypto'
 import { instagramConnectEnabled, INSTAGRAM_RECONNECT_NOTE } from './instagram/core'
-import { readInstagramConnection, prepareInstagramSync, instagramProfileUrl } from './instagram/store'
+import { readInstagramConnection, prepareInstagramSync, instagramProfileUrl, recordInstagramSources } from './instagram/store'
 
 export type { SnsSlot }
 
@@ -530,12 +530,17 @@ export async function syncSnsFeed(db: SupabaseClient, feed: KnowledgeFeed, opts:
             return { ...base, ok: true, status: 'connected', lastError: why, note: why }
         }
         const label = slot === 'blog' ? linkLabelOf(feed.handleOrUrl) : SNS_SLOT_LABEL[slot]
-        return await syncFeed(db, feed, {
+        const r = await syncFeed(db, feed, {
             deadline: opts.deadline,
             fetchers: { [feed.kind]: fetcher },
             maxNew: remaining,
             source: { titlePrefix: `[${label}]`, sourceKind: `sns_${slot}` },
         })
+        // 인스타그램: 배운 글에 지금 계정 번호를 붙인다 (메타 정보 삭제 요청이 그 계정 글만 지우게. 보안 검토 PR #57)
+        if (slot === 'instagram' && r.added > 0) {
+            try { await recordInstagramSources(db, feed.mentorId, feed.id) } catch (e) { console.error('[os/bot-sns] 인스타그램 계정 표시 실패', { feedId: feed.id, why: e instanceof Error ? e.message : '' }) }
+        }
+        return r
     } catch (e) {
         const why = e instanceof Error && e.message ? e.message : '배우지 못했어요'
         console.error('[os/bot-sns] syncSnsFeed', { feedId: feed.id, why })

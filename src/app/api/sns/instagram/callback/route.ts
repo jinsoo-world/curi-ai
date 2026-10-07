@@ -14,7 +14,7 @@ import { consumeAppNonce, putAppPending, appReturnUrl } from '@/domains/connecto
 import { ConnectorTableMissing } from '@/domains/connectors/store'
 import { BotNotMine, assertBotOwned } from '@/domains/os/knowledge'
 import { FeedTableMissing } from '@/domains/os/feeds'
-import { readInstagramConfig, verifyIgState, IG_PENDING_KIND } from '@/domains/os/instagram/core'
+import { readInstagramConfig, verifyIgState, IG_PENDING_KIND, instagramAppBase } from '@/domains/os/instagram/core'
 import { completeInstagramLogin, InstagramApiError, NotProfessionalAccount } from '@/domains/os/instagram/api'
 import { saveInstagramConnection, InstagramTableMissing, InstagramTooManyFeeds } from '@/domains/os/instagram/store'
 
@@ -22,7 +22,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
 function appUrl(req: NextRequest): string {
-    return (process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin).replace(/\/+$/, '')
+    return instagramAppBase(req.nextUrl.origin)
 }
 
 export async function GET(req: NextRequest) {

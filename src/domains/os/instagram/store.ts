@@ -22,8 +22,8 @@ import { fetchOwnMedia, refreshLongLivedToken, InstagramApiError, type Instagram
 
 export const IG_TABLE = 'instagram_connections'
 export const IG_DELETION_TABLE = 'instagram_deletion_requests'
-/** 배운 자료 이름 앞에 붙는 말 (bot-sns 의 SNS_SLOT_LABEL 과 같다) */
-export const IG_TITLE_PREFIX = '[인스타그램]'
+/** 배운 자료 한 건마다 그때 연결된 인스타그램 계정 번호 (정보 삭제 요청이 그 계정 글만 지우게) */
+export const IG_LEARNED_TABLE = 'instagram_learned_sources'
 
 export type IgStatus = 'connected' | 'needs_reconnect' | 'disconnected'
 
@@ -306,62 +306,98 @@ export async function deauthorizeInstagramUser(db: SupabaseClient, igId: string)
 }
 
 /**
- * 메타 「정보 삭제 요청」 접수. 바로 열쇠와 연결 줄(아이디 포함)을 지우고, 배운 인스타그램 자료는 삭제 대기로 적어 둔다.
- * 자료 지우기는 시간이 걸려 매일 크론(processInstagramDeletions)이 기존 자료 빼기(removeBotSource)로 처리한다.
- * 돌려주는 접수 번호로 상태 화면을 본다.
+ * 배우기 뒤: 이 연결 줄로 들어온 자료 중 아직 계정 번호가 안 붙은 것에 지금 연결된 계정 번호를 붙인다.
+ * 배우기는 지금 연결의 열쇠로만 돌기 때문에 새로 들어온 자료 = 지금 계정의 글이다. 붙인 수를 돌려준다(못 붙여도 배우기는 살린다).
+ */
+export async function recordInstagramSources(db: SupabaseClient, mentorId: string, feedId: string): Promise<number> {
+    const { data: conn, error: cErr } = await db.from(IG_TABLE).select('ig_user_id, ig_scoped_id').eq('mentor_id', mentorId).maybeSingle()
+    if (cErr) { if (missing(cErr.code)) return 0; throw new Error(cErr.message) }
+    const c = conn as { ig_user_id?: string | null; ig_scoped_id?: string | null } | null
+    if (!c?.ig_user_id) return 0
+    const { data: srcs, error: sErr } = await db.from('knowledge_sources').select('id').eq('mentor_id', mentorId).eq('feed_id', feedId)
+    if (sErr) throw new Error(sErr.message)
+    const { data: done, error: dErr } = await db.from(IG_LEARNED_TABLE).select('source_id').eq('mentor_id', mentorId)
+    if (dErr) { if (missing(dErr.code)) return 0; throw new Error(dErr.message) }
+    const known = new Set(((done ?? []) as { source_id: string }[]).map(r => r.source_id))
+    let n = 0
+    for (const r of (srcs ?? []) as { id: string }[]) {
+        if (known.has(r.id)) continue
+        const { error } = await db.from(IG_LEARNED_TABLE).insert({ source_id: r.id, mentor_id: mentorId, ig_user_id: c.ig_user_id, ig_scoped_id: c.ig_scoped_id ?? null })
+        if (error && error.code !== '23505') throw new Error(error.message)
+        if (!error) n++
+    }
+    return n
+}
+
+/**
+ * 메타 「정보 삭제 요청」 접수.
+ *   - 지금 그 계정이 연결된 봇: 열쇠·아이디(연결 줄째)와 SNS 인스타그램 연결 줄을 바로 지운다(배운 글은 크론이)
+ *   - 예전 계정 번호로만 찾은 봇(그 뒤 다른 계정으로 바꿈): 지금 연결은 건드리지 않는다
+ *   - 배운 글은 그 계정 번호가 붙은 것만 매일 크론(processInstagramDeletions)이 기존 자료 빼기(removeBotSource)로 지운다
+ * 같은 계정의 처리 전 요청이 있으면 그 접수 번호를 주되, 연결 지우기는 매번 다시 한다(그사이 다시 연결했을 수 있다).
  */
 export async function requestInstagramDataDeletion(db: SupabaseClient, igId: string, nowMs = Date.now()): Promise<string> {
-    // 같은 계정의 처리 전 요청이 있으면 그 번호를 그대로 준다(메타 재전송, 같은 요청 여러 번)
-    const { data: open, error: oErr } = await db.from(IG_DELETION_TABLE).select('confirmation_code').eq('ig_user_id', igId).eq('status', 'pending').limit(1)
-    if (oErr) fail(oErr)
-    const openCode = ((open ?? []) as { confirmation_code: string }[])[0]?.confirmation_code
-    if (openCode) return openCode
     const mentors = await mentorsOfIgUser(db, igId, true)
+    for (const m of mentors) {
+        if (!(await isCurrentlyIgUser(db, m, igId))) continue
+        const { error: dErr } = await db.from(IG_TABLE).delete().eq('mentor_id', m)
+        if (dErr) fail(dErr)
+        const feed = (await listFeeds(db, m)).find(f => f.snsSlot === 'instagram')
+        if (feed) await deleteFeed(db, m, feed.id, false)     // 연결 줄만. 글은 계정 번호로 골라 크론이 지운다
+    }
+
+    const { data: open, error: oErr } = await db.from(IG_DELETION_TABLE).select('confirmation_code, mentor_ids').eq('ig_user_id', igId).eq('status', 'pending').limit(1)
+    if (oErr) fail(oErr)
+    const prev = ((open ?? []) as { confirmation_code: string; mentor_ids: string[] | null }[])[0]
+    if (prev) {
+        const merged = [...new Set([...(prev.mentor_ids ?? []), ...mentors])]
+        if (merged.length !== (prev.mentor_ids ?? []).length) {
+            const { error } = await db.from(IG_DELETION_TABLE).update({ mentor_ids: merged }).eq('confirmation_code', prev.confirmation_code)
+            if (error) fail(error)
+        }
+        return prev.confirmation_code
+    }
     const code = randomBytes(12).toString('hex')
     const { error } = await db.from(IG_DELETION_TABLE).insert({
         confirmation_code: code, ig_user_id: igId, mentor_ids: mentors, status: 'pending', requested_at: new Date(nowMs).toISOString(),
     })
     if (error) fail(error)
-    for (const m of mentors) {
-        // 지금 다른 계정이 연결된 봇(예전 번호로만 찾음)은 지금 연결을 지우지 않는다. 배운 옛 글은 크론이 지운다
-        if (!(await isCurrentlyIgUser(db, m, igId))) continue
-        await setFeed(db, m, { status: 'paused', last_error: '인스타그램 정보 삭제 요청으로 연결을 지웠어요' })
-        const { error: dErr } = await db.from(IG_TABLE).delete().eq('mentor_id', m)
-        if (dErr) fail(dErr)
-    }
     return code
 }
 
-/** 그 봇이 인스타그램에서 배운 자료 번호 (SNS 칸 연결 줄의 자료 + 연결 줄 없이 남은 [인스타그램] 자료) */
-async function instagramSourceIds(db: SupabaseClient, mentorId: string): Promise<string[]> {
-    const { data, error } = await db.from('knowledge_sources').select('id, title, original_url').eq('mentor_id', mentorId)
-    if (error) throw new Error(error.message)
-    return ((data ?? []) as { id: string; title?: string | null; original_url?: string | null }[])
-        .filter(r => String(r.original_url ?? '').startsWith('https://www.instagram.com/') && String(r.title ?? '').startsWith(IG_TITLE_PREFIX))
-        .map(r => r.id)
+/** 그 봇이 그 인스타그램 계정(계정 번호 또는 앱 범위 번호)으로 배운 자료 번호 */
+async function learnedSourceIds(db: SupabaseClient, mentorId: string, igId: string): Promise<string[]> {
+    const out = new Set<string>()
+    for (const col of ['ig_user_id', 'ig_scoped_id']) {
+        const { data, error } = await db.from(IG_LEARNED_TABLE).select('source_id').eq('mentor_id', mentorId).eq(col, igId)
+        if (error) { if (missing(error.code)) return []; throw new Error(error.message) }
+        for (const r of (data ?? []) as { source_id: string }[]) out.add(r.source_id)
+    }
+    return [...out]
 }
 
-/** 삭제 대기 요청 처리 (매일 크론). 시간이 모자라면 남은 건 다음 날 이어서 */
+/** 삭제 대기 요청 처리 (매일 크론). 그 계정 번호가 붙은 자료만 지운다. 시간이 모자라면 남은 건 다음 날 이어서 */
 export async function processInstagramDeletions(db: SupabaseClient, o: { limit?: number; deadline?: number } = {}): Promise<{ done: number; removed: number }> {
-    const { data, error } = await db.from(IG_DELETION_TABLE).select('confirmation_code, mentor_ids, removed_sources')
+    const { data, error } = await db.from(IG_DELETION_TABLE).select('confirmation_code, ig_user_id, mentor_ids, removed_sources')
         .eq('status', 'pending').order('requested_at', { ascending: true }).limit(o.limit ?? 10)
     if (error) {
         if (missing(error.code)) return { done: 0, removed: 0 }
         throw new Error(error.message)
     }
     let done = 0, removed = 0
-    for (const req of (data ?? []) as { confirmation_code: string; mentor_ids: string[] | null; removed_sources: number | null }[]) {
+    for (const req of (data ?? []) as { confirmation_code: string; ig_user_id: string; mentor_ids: string[] | null; removed_sources: number | null }[]) {
         let cut = false, count = req.removed_sources ?? 0
         for (const m of req.mentor_ids ?? []) {
-            const feed = (await listFeeds(db, m)).find(f => f.snsSlot === 'instagram')
-            if (feed) {
-                const r = await deleteFeed(db, m, feed.id, true)
-                count += r.removedSources; removed += r.removedSources
-            }
-            for (const id of await instagramSourceIds(db, m)) {
+            for (const id of await learnedSourceIds(db, m, req.ig_user_id)) {
                 if (o.deadline && Date.now() > o.deadline) { cut = true; break }
-                await removeBotSource(db, m, id)
-                count++; removed++
+                try {
+                    await removeBotSource(db, m, id)
+                    count++; removed++
+                } catch (e) {
+                    // 주인이 이미 지운 자료면 표시만 정리한다
+                    if (!(e instanceof Error && /못 찾았어요/.test(e.message))) throw e
+                }
+                await db.from(IG_LEARNED_TABLE).delete().eq('source_id', id)
             }
             if (cut) break
         }

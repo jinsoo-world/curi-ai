@@ -7,7 +7,7 @@ import { igTokenKey, INSTAGRAM_RECONNECT_NOTE, INSTAGRAM_DISCONNECTED_NOTE } fro
 import {
     saveInstagramConnection, disconnectInstagram, readInstagramConnection, loadInstagramToken, instagramFetcher,
     prepareInstagramSync, refreshInstagramTokens, deauthorizeInstagramUser, requestInstagramDataDeletion,
-    processInstagramDeletions, readInstagramDeletion, InstagramTooManyFeeds, IG_TABLE,
+    processInstagramDeletions, readInstagramDeletion, InstagramTooManyFeeds, IG_TABLE, IG_LEARNED_TABLE, recordInstagramSources,
 } from '../store'
 import type { KnowledgeFeed } from '@/domains/os/feeds/types'
 
@@ -24,7 +24,7 @@ const feedOf = (): KnowledgeFeed => {
 }
 
 beforeEach(() => {
-    fake = makeFakeDb({ knowledge_feeds: [], knowledge_sources: [], knowledge_chunks: [], [IG_TABLE]: [], instagram_deletion_requests: [] })
+    fake = makeFakeDb({ knowledge_feeds: [], knowledge_sources: [], knowledge_chunks: [], [IG_TABLE]: [], instagram_deletion_requests: [], instagram_learned_sources: [] })
 })
 
 describe('연결 저장', () => {
@@ -157,43 +157,68 @@ describe('메타 연결 해제, 정보 삭제', () => {
         expect(await deauthorizeInstagramUser(fake.db, '888')).toBe(1)
     })
 
-    it('삭제: 바로 열쇠, 아이디를 지우고 접수 번호. 크론이 배운 인스타그램 자료를 지운다(다른 자료는 그대로)', async () => {
+    it('배운 자료에 그때 연결된 인스타그램 계정 번호를 붙인다(이미 붙인 건 그대로)', async () => {
         await saveInstagramConnection(fake.db, master, { userId: 'u1', mentorId: 'm1', login: login() })
         const feedId = fake.tables.knowledge_feeds[0].id
+        fake.tables.knowledge_sources.push({ id: 's1', mentor_id: 'm1', feed_id: feedId, title: '[인스타그램] 글1', original_url: 'https://www.instagram.com/p/A/' })
+        expect(await recordInstagramSources(fake.db, 'm1', String(feedId))).toBe(1)
+        expect(fake.tables[IG_LEARNED_TABLE]).toEqual([expect.objectContaining({ source_id: 's1', mentor_id: 'm1', ig_user_id: '17841400000', ig_scoped_id: '777' })])
+        await saveInstagramConnection(fake.db, master, { userId: 'u1', mentorId: 'm1', login: login({ igUserId: '555', igScopedId: '556', username: 'new.acct' }) })
+        fake.tables.knowledge_sources.push({ id: 's2', mentor_id: 'm1', feed_id: feedId, title: '[인스타그램] 새 글', original_url: 'https://www.instagram.com/p/N/' })
+        expect(await recordInstagramSources(fake.db, 'm1', String(feedId))).toBe(1)
+        expect(fake.tables[IG_LEARNED_TABLE].map(r => [r.source_id, r.ig_user_id])).toEqual([['s1', '17841400000'], ['s2', '555']])
+    })
+
+    async function seedTwoAccounts() {
+        // 같은 봇이 옛 계정(17841400000/777)으로 s-old 를, 새 계정(555/556)으로 s-new 를 배웠다. s-blog 는 블로그 글
+        await saveInstagramConnection(fake.db, master, { userId: 'u1', mentorId: 'm1', login: login() })
+        const feedId = String(fake.tables.knowledge_feeds[0].id)
+        fake.tables.knowledge_sources.push({ id: 's-old', mentor_id: 'm1', feed_id: feedId, title: '[인스타그램] 옛 글', original_url: 'https://www.instagram.com/p/O/' })
+        await recordInstagramSources(fake.db, 'm1', feedId)
+        await saveInstagramConnection(fake.db, master, { userId: 'u1', mentorId: 'm1', login: login({ igUserId: '555', igScopedId: '556', username: 'new.acct' }) })
         fake.tables.knowledge_sources.push(
-            { id: 's1', mentor_id: 'm1', feed_id: feedId, title: '[인스타그램] 글1', original_url: 'https://www.instagram.com/p/A/' },
-            { id: 's2', mentor_id: 'm1', feed_id: null, title: '[인스타그램] 옛 글', original_url: 'https://www.instagram.com/p/B/' },
-            { id: 's3', mentor_id: 'm1', feed_id: null, title: '[네이버 블로그] 글', original_url: 'https://blog.naver.com/x/1' },
+            { id: 's-new', mentor_id: 'm1', feed_id: feedId, title: '[인스타그램] 새 글', original_url: 'https://www.instagram.com/p/N/' },
+            { id: 's-blog', mentor_id: 'm1', feed_id: null, title: '[네이버 블로그] 글', original_url: 'https://blog.naver.com/x/1' },
         )
-        const code = await requestInstagramDataDeletion(fake.db, '17841400000')
+        await recordInstagramSources(fake.db, 'm1', feedId)
+        return feedId
+    }
+
+    it('지금 연결된 계정의 삭제: 열쇠·연결 줄을 바로 지우고, 크론은 그 계정 글만 지운다', async () => {
+        await seedTwoAccounts()
+        const code = await requestInstagramDataDeletion(fake.db, '556')
         expect(code).toMatch(/^[0-9a-f]{24}$/)
         expect(fake.tables[IG_TABLE]).toHaveLength(0)
+        expect(fake.tables.knowledge_feeds.filter(f => f.sns_slot === 'instagram')).toHaveLength(0)
         expect(await readInstagramDeletion(fake.db, code)).toMatchObject({ status: 'pending' })
-
-        const r = await processInstagramDeletions(fake.db)
-        expect(r).toEqual({ done: 1, removed: 2 })
-        expect(fake.tables.knowledge_sources.map(s => s.id)).toEqual(['s3'])
+        expect(await processInstagramDeletions(fake.db)).toEqual({ done: 1, removed: 1 })
+        expect(fake.tables.knowledge_sources.map(s => s.id).sort()).toEqual(['s-blog', 's-old'])
         expect(await readInstagramDeletion(fake.db, code)).toMatchObject({ status: 'done' })
         expect(await readInstagramDeletion(fake.db, 'not-a-code')).toBeNull()
     })
 
-    it('다른 계정으로 바꿔 연결한 봇도 옛 계정의 삭제 요청이 찾는다(지금 연결은 그대로)', async () => {
-        await saveInstagramConnection(fake.db, master, { userId: 'u1', mentorId: 'm1', login: login() })
-        fake.tables.knowledge_sources.push({ id: 'old', mentor_id: 'm1', feed_id: null, title: '[인스타그램] 옛 계정 글', original_url: 'https://www.instagram.com/p/OLD/' })
-        await saveInstagramConnection(fake.db, master, { userId: 'u1', mentorId: 'm1', login: login({ igUserId: '555', igScopedId: '556', username: 'new.acct' }) })
+    it('옛 계정 번호로만 찾은 봇: 지금 연결·연결 줄은 그대로, 옛 계정 글만 지운다', async () => {
+        await seedTwoAccounts()
         expect(fake.tables[IG_TABLE][0].previous_ig_ids).toEqual(['17841400000', '777'])
         const code = await requestInstagramDataDeletion(fake.db, '777')
-        expect(fake.tables[IG_TABLE][0]).toMatchObject({ ig_user_id: '555', status: 'connected' })   // 새 계정 연결은 안 지운다
+        expect(fake.tables[IG_TABLE][0]).toMatchObject({ ig_user_id: '555', status: 'connected' })
         expect(fake.tables.instagram_deletion_requests[0].mentor_ids).toEqual(['m1'])
-        await processInstagramDeletions(fake.db)
-        expect(fake.tables.knowledge_sources.find(s => s.id === 'old')).toBeUndefined()
+        expect(await processInstagramDeletions(fake.db)).toEqual({ done: 1, removed: 1 })
+        expect(fake.tables.knowledge_sources.map(s => s.id).sort()).toEqual(['s-blog', 's-new'])
+        expect(fake.tables.knowledge_feeds.filter(f => f.sns_slot === 'instagram')).toHaveLength(1)
+        expect(fake.tables[IG_TABLE][0].status).toBe('connected')
         expect(await readInstagramDeletion(fake.db, code)).toMatchObject({ status: 'done' })
     })
 
-    it('같은 계정의 처리 전 요청이 있으면 같은 접수 번호', async () => {
+    it('같은 계정의 처리 전 요청이 있으면 같은 접수 번호. 그래도 연결 지우기는 매번 다시 한다', async () => {
         const a = await requestInstagramDataDeletion(fake.db, '123')
         expect(await requestInstagramDataDeletion(fake.db, '123')).toBe(a)
         expect(fake.tables.instagram_deletion_requests).toHaveLength(1)
+        // 접수 뒤 같은 계정을 다시 연결했다가 메타가 요청을 또 보내면 다시 지운다
+        await saveInstagramConnection(fake.db, master, { userId: 'u1', mentorId: 'm1', login: login({ igUserId: '123', igScopedId: '124' }) })
+        expect(await requestInstagramDataDeletion(fake.db, '123')).toBe(a)
+        expect(fake.tables[IG_TABLE]).toHaveLength(0)
+        expect(fake.tables.instagram_deletion_requests[0].mentor_ids).toEqual(['m1'])
     })
 
     it('연결한 적 없는 계정 삭제 요청도 접수 번호를 주고 바로 끝난다', async () => {

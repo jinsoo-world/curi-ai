@@ -643,7 +643,8 @@ describe('인스타그램 칸 배우기 (로그인 연결이 있을 때만)', ()
         t.knowledge_feeds.push({ id: 'feed-ig', mentor_id: 'm-1', user_id: 'u-owner', kind: 'instagram', handle_or_url: 'https://www.instagram.com/jin.ceo/', status: 'connected', created_at: '2026-10-01T00:00:00Z', sns_slot: 'instagram' })
         const { encryptSecret } = await import('@/domains/connectors/crypto')
         const { igTokenKey } = await import('../instagram/core')
-        ;(t as Record<string, Record<string, unknown>[]>).instagram_connections = [{ mentor_id: 'm-1', user_id: 'u-owner', status: 'connected', username: 'jin.ceo', token_encrypted: encryptSecret('IGT', igTokenKey(key)), token_expires_at: new Date(Date.now() + 30 * 86400_000).toISOString() }]
+        ;(t as Record<string, Record<string, unknown>[]>).instagram_connections = [{ mentor_id: 'm-1', user_id: 'u-owner', status: 'connected', username: 'jin.ceo', ig_user_id: '17841400000', ig_scoped_id: '777', token_encrypted: encryptSecret('IGT', igTokenKey(key)), token_expires_at: new Date(Date.now() + 30 * 86400_000).toISOString() }]
+        ;(t as Record<string, Record<string, unknown>[]>).instagram_learned_sources = []
         return t
     }
     const media = { data: [
@@ -677,6 +678,8 @@ describe('인스타그램 칸 배우기 (로그인 연결이 있을 때만)', ()
         expect(call[5]).toBe('https://www.instagram.com/p/B2/')
         expect(call[6]?.meta).toMatchObject({ sourceKind: 'sns_instagram', authorIsMe: false })
         expect(fake.tables.knowledge_feeds.find(f => f.id === 'feed-ig')?.sync_cursor).toBe('2026-10-02T00:00:00.000Z')
+        // 배운 글에 그때 연결된 인스타그램 계정 번호를 붙인다 (정보 삭제 요청이 그 계정 글만 지우게)
+        expect(fake.tables.instagram_learned_sources).toEqual([expect.objectContaining({ source_id: 'src-1', mentor_id: 'm-1', ig_user_id: '17841400000' })])
         vi.unstubAllGlobals(); vi.unstubAllEnvs()
     })
 

@@ -4,7 +4,7 @@ import { createHmac, randomBytes } from 'crypto'
 import {
     readInstagramConfig, instagramConnectEnabled, signIgState, verifyIgState, buildInstagramAuthUrl,
     verifySignedRequest, mediaToItems, shouldRefresh, isProfessional, INSTAGRAM_SCOPE, IG_STATE_MAX_AGE_SEC,
-    REFRESH_MIN_AGE_MS, REFRESH_WINDOW_MS,
+    REFRESH_MIN_AGE_MS, REFRESH_WINDOW_MS, SIGNED_REQUEST_MAX_AGE_SEC, instagramAppBase,
 } from '../core'
 
 const master = randomBytes(32)
@@ -86,12 +86,16 @@ describe('메타 signed_request', () => {
     }
     it('앱 비밀값으로 서명이 맞으면 user_id 를 돌려준다', () => {
         expect(verifySignedRequest(make({ algorithm: 'HMAC-SHA256', user_id: '1789', issued_at: Math.floor(Date.now() / 1000) }), 'sek')).toMatchObject({ userId: '1789' })
-        expect(verifySignedRequest(make({ algorithm: 'HMAC-SHA256', user_id: 1789 }), 'sek')).toMatchObject({ userId: '1789' })
+        expect(verifySignedRequest(make({ algorithm: 'HMAC-SHA256', user_id: 1789, issued_at: Math.floor(Date.now() / 1000) }), 'sek')).toMatchObject({ userId: '1789' })
     })
-    it('하루 넘은 서명은 다시 보내도 거절', () => {
+    it('issued_at 이 없거나 1시간 넘게 어긋나면 거절 (다시 보내기 막기)', () => {
         const now = 1_800_000_000
+        expect(SIGNED_REQUEST_MAX_AGE_SEC).toBe(3600)
         expect(verifySignedRequest(make({ algorithm: 'HMAC-SHA256', user_id: '1', issued_at: now - 60 }), 'sek', now)).not.toBeNull()
-        expect(verifySignedRequest(make({ algorithm: 'HMAC-SHA256', user_id: '1', issued_at: now - 2 * 86400 }), 'sek', now)).toBeNull()
+        expect(verifySignedRequest(make({ algorithm: 'HMAC-SHA256', user_id: '1', issued_at: now - 3601 }), 'sek', now)).toBeNull()
+        expect(verifySignedRequest(make({ algorithm: 'HMAC-SHA256', user_id: '1', issued_at: now + 3601 }), 'sek', now)).toBeNull()
+        expect(verifySignedRequest(make({ algorithm: 'HMAC-SHA256', user_id: '1' }), 'sek', now)).toBeNull()
+        expect(verifySignedRequest(make({ algorithm: 'HMAC-SHA256', user_id: '1', issued_at: '1800000000' }), 'sek', now)).toBeNull()
     })
     it('비밀값이 다르거나, 알고리즘이 다르거나, user_id 가 없거나, 모양이 틀리면 null', () => {
         expect(verifySignedRequest(make({ algorithm: 'HMAC-SHA256', user_id: '1' }, 'other'), 'sek')).toBeNull()
@@ -160,3 +164,13 @@ describe('프로페셔널 계정', () => {
         expect(isProfessional(undefined)).toBe(false)
     })
 })
+
+describe('돌아가는 주소의 기준 (요청 Host 로 떨어지지 않게)', () => {
+    it('NEXT_PUBLIC_APP_URL → 없으면 INSTAGRAM_REDIRECT_URI 의 주인 → 운영이면 www.curi-ai.com → 개발이면 요청 주소', () => {
+        expect(instagramAppBase('https://evil.example', { NEXT_PUBLIC_APP_URL: 'https://www.curi-ai.com/' })).toBe('https://www.curi-ai.com')
+        expect(instagramAppBase('https://evil.example', { INSTAGRAM_REDIRECT_URI: 'https://www.curi-ai.com/api/sns/instagram/callback' })).toBe('https://www.curi-ai.com')
+        expect(instagramAppBase('https://evil.example', { NODE_ENV: 'production' })).toBe('https://www.curi-ai.com')
+        expect(instagramAppBase('http://localhost:3000', { NODE_ENV: 'development' })).toBe('http://localhost:3000')
+    })
+})
+

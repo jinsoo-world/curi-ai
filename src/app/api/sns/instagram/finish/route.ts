@@ -12,7 +12,7 @@ import { takeAppPending, proofMatches, openAppPending } from '@/domains/connecto
 import { ConnectorTableMissing } from '@/domains/connectors/store'
 import { BotNotMine, assertBotOwned } from '@/domains/os/knowledge'
 import { FeedTableMissing } from '@/domains/os/feeds'
-import { IG_PENDING_KIND } from '@/domains/os/instagram/core'
+import { IG_PENDING_KIND, readInstagramConfig } from '@/domains/os/instagram/core'
 import type { InstagramLogin } from '@/domains/os/instagram/api'
 import { saveInstagramConnection, InstagramTableMissing, InstagramTooManyFeeds } from '@/domains/os/instagram/store'
 
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     if (!handoff || !appSecret || handoff.length > 200 || appSecret.length < 43 || appSecret.length > 200) return 거절()
 
     const key = readConnectorKey()
-    if (!key) return NextResponse.json({ error: '곧 열려요', preparing: true }, { status: 503 })
+    if (!key || !readInstagramConfig()) return NextResponse.json({ error: '곧 열려요', preparing: true }, { status: 503 })
 
     try {
         const row = await takeAppPending(db, handoff, user.id)

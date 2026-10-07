@@ -1,12 +1,13 @@
 -- ============================================================
 -- 2026-10-24 봇 「내 SNS 연결 — 인스타그램」 (Instagram API with Instagram Login, instagram_business_basic)
--- 표 2개 신설. 기존 표는 건드리지 않는다. 데이터는 바꾸지 않는다.
+-- 표 3개 신설. 기존 표는 건드리지 않는다. 데이터는 바꾸지 않는다.
 --
 --   instagram_connections        봇 하나에 인스타그램 계정 하나.
 --                                60일 열쇠는 연결 자물쇠(CONNECTOR_SECRET_KEY)에서 갈라낸 열쇠로 AES-256-GCM 잠금(token_encrypted).
 --                                끊으면 열쇠만 지운다(token_encrypted = null, status = 'disconnected'). 아이디 번호는
 --                                나중에 메타 「정보 삭제 요청」이 오면 어느 봇 자료인지 찾으려고 남긴다(삭제 요청이 오면 줄째 지운다).
 --   instagram_deletion_requests  메타 「정보 삭제 요청」 접수 번호와 처리 상태(상태 화면 /api/sns/instagram/data-deletion?code=…).
+--   instagram_learned_sources    배운 자료마다 그때 연결된 계정 번호 (삭제 요청이 그 계정 글만 지우게)
 --
 -- 배우기는 이미 있는 knowledge_feeds(sns_slot = 'instagram', kind = 'instagram') 줄로 돈다. 그 표는 바꾸지 않는다.
 --
@@ -60,22 +61,38 @@ create index if not exists instagram_deletion_requests_ig_user_idx on public.ins
 comment on table public.instagram_deletion_requests is
   '메타 인스타그램 정보 삭제 요청 접수. 매일 크론(/api/cron/feeds)이 배운 인스타그램 자료를 지우고 done 으로 바꾼다';
 
+-- 배운 자료 한 건마다 그때 연결된 계정 번호. 메타 정보 삭제 요청이 오면 그 계정 번호가 붙은 자료만 지운다
+-- (같은 봇이 계정을 바꿔 연결했어도 다른 계정 글은 안 지운다). 자료가 지워지면 같이 지워진다
+create table if not exists public.instagram_learned_sources (
+  source_id     uuid primary key references public.knowledge_sources(id) on delete cascade,
+  mentor_id     uuid not null references public.mentors(id) on delete cascade,
+  ig_user_id    text not null,
+  ig_scoped_id  text,
+  created_at    timestamptz not null default now()
+);
+
+create index if not exists instagram_learned_sources_mentor_idx on public.instagram_learned_sources (mentor_id, ig_user_id);
+create index if not exists instagram_learned_sources_scoped_idx on public.instagram_learned_sources (mentor_id, ig_scoped_id);
+
 alter table public.instagram_connections enable row level security;
 alter table public.instagram_deletion_requests enable row level security;
+alter table public.instagram_learned_sources enable row level security;
 
 -- 정책 0개 (혹시 손으로 만든 정책이 있으면 지운다)
 do $$
 declare p record;
 begin
   for p in select policyname, tablename from pg_policies
-           where schemaname = 'public' and tablename in ('instagram_connections', 'instagram_deletion_requests') loop
+           where schemaname = 'public' and tablename in ('instagram_connections', 'instagram_deletion_requests', 'instagram_learned_sources') loop
     execute format('drop policy %I on public.%I', p.policyname, p.tablename);
   end loop;
 end $$;
 
 revoke all on table public.instagram_connections from anon, authenticated;
 revoke all on table public.instagram_deletion_requests from anon, authenticated;
+revoke all on table public.instagram_learned_sources from anon, authenticated;
 grant all on table public.instagram_connections to service_role;
 grant all on table public.instagram_deletion_requests to service_role;
+grant all on table public.instagram_learned_sources to service_role;
 
 commit;

@@ -61,6 +61,21 @@ export function instagramConnectEnabled(env: Env = process.env): boolean {
     return readInstagramConfig(env) !== null && readConnectorKey(env.CONNECTOR_SECRET_KEY) !== null
 }
 
+/**
+ * 돌아가는 주소(웹 설정 화면, 로그인)의 기준. 요청 Host 머리글로 떨어지지 않게 (보안 검토 PR #57)
+ *   NEXT_PUBLIC_APP_URL → INSTAGRAM_REDIRECT_URI 의 주인 → 운영이면 https://www.curi-ai.com → 개발만 요청 주소
+ */
+export function instagramAppBase(requestOrigin: string, env: Env = process.env): string {
+    const fixed = (env.NEXT_PUBLIC_APP_URL ?? '').trim()
+    if (fixed) return fixed.replace(/\/+$/, '')
+    try {
+        const r = (env.INSTAGRAM_REDIRECT_URI ?? '').trim()
+        if (r) return new URL(r).origin
+    } catch { /* 아래로 */ }
+    if (env.NODE_ENV === 'production') return 'https://www.curi-ai.com'
+    return requestOrigin.replace(/\/+$/, '')
+}
+
 /** 토큰 잠금 전용 열쇠 (커넥터 토큰 열쇠와 갈라 둔다) */
 export function igTokenKey(master: Buffer): Buffer {
     return deriveKey(master, KEY_LABEL_IG_TOKEN)
@@ -131,9 +146,9 @@ export function buildInstagramAuthUrl(cfg: InstagramConfig, state: string): stri
 /* ─────────────────────────── 메타 signed_request ─────────────────────────── */
 // 연결 해제(deauthorize), 정보 삭제(data-deletion) 콜백이 보내는 값. "서명.본문" (둘 다 base64url), 서명 = HMAC-SHA256(본문, 앱 비밀값)
 
-export const SIGNED_REQUEST_MAX_AGE_SEC = 24 * 3600
+export const SIGNED_REQUEST_MAX_AGE_SEC = 3600
 
-export function verifySignedRequest(raw: string | null | undefined, appSecret: string, nowSec = Math.floor(Date.now() / 1000)): { userId: string; issuedAt?: number } | null {
+export function verifySignedRequest(raw: string | null | undefined, appSecret: string, nowSec = Math.floor(Date.now() / 1000)): { userId: string; issuedAt: number } | null {
     const v = String(raw ?? '').trim()
     if (!v || !appSecret) return null
     const parts = v.split('.')
@@ -148,9 +163,9 @@ export function verifySignedRequest(raw: string | null | undefined, appSecret: s
         if (String(p.algorithm ?? '').toUpperCase() !== 'HMAC-SHA256') return null
         const userId = typeof p.user_id === 'string' || typeof p.user_id === 'number' ? String(p.user_id) : ''
         if (!/^\d{1,40}$/.test(userId)) return null
-        // 오래된 서명을 다시 보내는 것 막기 (메타는 바로 보낸다. 하루 넘은 것은 거절)
-        if (typeof p.issued_at === 'number' && Math.abs(nowSec - p.issued_at) > SIGNED_REQUEST_MAX_AGE_SEC) return null
-        return { userId, ...(typeof p.issued_at === 'number' ? { issuedAt: p.issued_at } : {}) }
+        // 오래된 서명을 다시 보내는 것 막기: issued_at 필수, 1시간 넘게 어긋나면 거절 (메타는 바로 보낸다)
+        if (typeof p.issued_at !== 'number' || !Number.isFinite(p.issued_at) || Math.abs(nowSec - p.issued_at) > SIGNED_REQUEST_MAX_AGE_SEC) return null
+        return { userId, issuedAt: p.issued_at }
     } catch {
         return null
     }

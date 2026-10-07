@@ -15,7 +15,7 @@ import { readConnectorKey } from '@/domains/connectors/crypto'
 import { BotNotMine } from '@/domains/os/knowledge'
 import { FeedTableMissing } from '@/domains/os/feeds'
 import { readBotSns, readPlanId } from '@/domains/os/bot-sns'
-import { readInstagramConfig, signIgState, buildInstagramAuthUrl } from '@/domains/os/instagram/core'
+import { readInstagramConfig, signIgState, buildInstagramAuthUrl, instagramAppBase } from '@/domains/os/instagram/core'
 import { disconnectInstagram, InstagramTableMissing } from '@/domains/os/instagram/store'
 import { resolveInstagramBot } from '@/domains/os/instagram/owner'
 
@@ -33,7 +33,7 @@ async function me() {
 }
 
 function appUrl(req: NextRequest): string {
-    return (process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin).replace(/\/+$/, '')
+    return instagramAppBase(req.nextUrl.origin)
 }
 
 async function start(userId: string, ids: { mentorId?: unknown; teamBotId?: unknown }, src: 'web' | 'app', proof?: string): Promise<{ url: string } | NextResponse> {
