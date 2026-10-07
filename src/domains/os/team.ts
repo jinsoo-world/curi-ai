@@ -190,7 +190,7 @@ export async function updateTeamBot(
     const body: Record<string, unknown> = {}
     if (patch.name !== undefined) body.name = patch.name.trim().slice(0, 20)
     if (patch.greeting !== undefined) body.greeting_message = patch.greeting.trim().slice(0, 200)
-    if (patch.systemPrompt !== undefined) body.system_prompt = patch.systemPrompt.slice(0, 12000)
+    if (patch.systemPrompt !== undefined) body.system_prompt = patch.systemPrompt   // 한도(30,000자)는 창구와 공개 관문이 막는다. 자르지 않는다
     if (patch.extraPrompt !== undefined) body.extra_prompt = patch.extraPrompt
     if (patch.avatarUrl !== undefined) body.avatar_url = patch.avatarUrl
     // 한 줄 소개 → 마켓 제목. 비우면 제목은 그대로 둔다(빈 제목 카드 방지). 내 봇이 아니면 조용히 건너뛴다

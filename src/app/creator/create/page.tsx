@@ -10,6 +10,7 @@ import AppSidebar from '@/components/AppSidebar'
 import { PhotoDrop } from '@/components/studio/PhotoDrop'
 import { createClient } from '@/lib/supabase/client'
 import { 올릴수있는파일, 고르기필터 } from '@/domains/knowledge/files'
+import { SYSTEM_PROMPT_MAX, SYSTEM_PROMPT_TOO_LONG, systemPromptLength, systemPromptTooLong } from '@/domains/mentor/system-prompt'
 
 interface UploadedFile {
     id: string
@@ -802,12 +803,11 @@ export default function CreatorCreatePage() {
                                     style={{ ...styles.textarea, fontFamily: 'monospace', fontSize: 13 }}
                                     value={systemPrompt}
                                     onChange={e => setSystemPrompt(e.target.value)}
-                                    maxLength={10000}
                                     placeholder="예: 당신은 마케팅 전문가입니다. 데이터 기반 분석과 실전 사례를 통해 조언합니다."
                                     rows={8}
                                 />
-                                <div style={{ textAlign: 'right' as const, fontSize: 11, color: systemPrompt.length > 2700 ? '#f59e0b' : '#b0b8c1', marginTop: 4 }}>
-                                    {systemPrompt.length.toLocaleString()}/10,000
+                                <div style={{ textAlign: 'right' as const, fontSize: 11, color: systemPromptTooLong(systemPrompt) ? '#e5484d' : '#b0b8c1', marginTop: 4 }}>
+                                    {systemPromptTooLong(systemPrompt) ? `${SYSTEM_PROMPT_TOO_LONG} · ` : ''}{systemPromptLength(systemPrompt).toLocaleString()}/{SYSTEM_PROMPT_MAX.toLocaleString()}
                                 </div>
                             </div>
 

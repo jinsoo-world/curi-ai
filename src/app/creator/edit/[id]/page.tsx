@@ -11,6 +11,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { MENTOR_IMAGES } from '@/domains/mentor/constants'
 import { 올릴수있는파일, 고르기필터 } from '@/domains/knowledge/files'
+import { SYSTEM_PROMPT_MAX, SYSTEM_PROMPT_TOO_LONG, systemPromptLength, systemPromptTooLong } from '@/domains/mentor/system-prompt'
 
 export default function CreatorEditPage() {
     const router = useRouter()
@@ -772,11 +773,10 @@ export default function CreatorEditPage() {
                                 style={{ ...styles.textarea, fontFamily: 'monospace', fontSize: 13 }}
                                 value={systemPrompt}
                                 onChange={e => setSystemPrompt(e.target.value)}
-                                maxLength={10000}
                                 rows={12}
                             />
-                            <div style={{ textAlign: 'right' as const, fontSize: 11, color: systemPrompt.length > 9000 ? '#f59e0b' : '#b0b8c1', marginTop: 4 }}>
-                                {systemPrompt.length.toLocaleString()}/10,000
+                            <div style={{ textAlign: 'right' as const, fontSize: 11, color: systemPromptTooLong(systemPrompt) ? '#e5484d' : '#b0b8c1', marginTop: 4 }}>
+                                {systemPromptTooLong(systemPrompt) ? `${SYSTEM_PROMPT_TOO_LONG} · ` : ''}{systemPromptLength(systemPrompt).toLocaleString()}/{SYSTEM_PROMPT_MAX.toLocaleString()}
                             </div>
                         </div>
                     </div>

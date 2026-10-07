@@ -141,6 +141,12 @@ describe('S3 모델 답 정리', () => {
         const full = ensureHardLimits(p)
         expect(full).toBe(p)
     })
+    it('금지선 붙이기는 지시문을 자르지 않는다(예전엔 12,000자에서 잘랐다)', () => {
+        const long = '가'.repeat(20_000)
+        const p = ensureHardLimits(long)
+        expect(p.startsWith(long)).toBe(true)
+        for (const l of TWIN_HARD_LIMITS) expect(p).toContain(l)
+    })
     it('tidyLine', () => {
         expect(tidyLine('가 · 나 — 다', 20)).toBe('가, 나 다')
         expect(tidyLine(undefined, 5)).toBe('')

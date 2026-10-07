@@ -6,10 +6,10 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { askSideText } from '@/domains/llm/side-text'
 import { tidyUnderstanding, isEmptyUnderstanding, type Understanding } from './understand-shared'
 import { applyBotEdit } from './publish-gate'
+import { systemPromptTooLong } from '@/domains/mentor/system-prompt'
 
 export const UNDERSTAND_MODEL = 'gemini-3.5-flash-lite'
 const TEXT_MAX = 6_000
-const PROMPT_MAX = 12_000
 
 export function understandAsk(title: string, text: string): string {
     return `아래 자료는 봇 주인이 넣은 자료다. 봇이 이 자료에서 배운 것을 JSON 하나로만 답한다.
@@ -91,7 +91,7 @@ export function upsertUnderstandBlock(prompt: string, sourceId: string, title: s
     const base = removeUnderstandBlock(prompt, sourceId).trimEnd()
     const block = understandBlock(sourceId, title, u)
     const next = base ? `${base}\n\n${block}` : block
-    if (next.length > PROMPT_MAX) throw new Error('봇 설명이 너무 길어요. 핵심을 줄여 주세요')
+    if (systemPromptTooLong(next)) throw new Error('봇 설명이 너무 길어요. 핵심을 줄여 주세요')
     return next
 }
 

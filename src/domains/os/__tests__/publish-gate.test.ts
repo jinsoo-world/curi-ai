@@ -11,6 +11,7 @@ import {
     unpublishForReports, unpublishByAdmin, isBotHeld, releaseHold, BotHeld,
 } from '../publish-gate'
 import { openReviewOf } from '../moderation'
+import { SystemPromptTooLong } from '@/domains/mentor/system-prompt'
 
 beforeEach(() => { askSideText.mockReset(); sendSlackNotification.mockReset() })
 
@@ -382,5 +383,19 @@ describe('신고로 내리기 + 묶음 (1002)', () => {
         askSideText.mockResolvedValue(answer('pass'))
         await applyBotEdit(w.db, { ...ACT, fields: {}, wantPublic: true })
         expect(w.mentor.is_active).toBe(true)
+    })
+})
+
+describe('applyBotEdit — 지시문 한도(30,000자) 마지막 관문', () => {
+    it('30,001자 지시문은 아무것도 쓰기 전에 SystemPromptTooLong 으로 막는다', async () => {
+        const w = stateDb({ isActive: true })
+        await expect(applyBotEdit(w.db, { ...ACT, fields: { system_prompt: '가'.repeat(30_001) } })).rejects.toBeInstanceOf(SystemPromptTooLong)
+        expect(w.updates).toHaveLength(0)
+    })
+    it('30,000자는 잘리지 않고 저장된다', async () => {
+        askSideText.mockResolvedValue(answer('pass'))
+        const w = stateDb({ isActive: false })
+        await applyBotEdit(w.db, { ...ACT, fields: { system_prompt: '가'.repeat(30_000) } })
+        expect((w.updates[0].system_prompt as string).length).toBe(30_000)
     })
 })

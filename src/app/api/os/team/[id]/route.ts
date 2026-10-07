@@ -6,6 +6,7 @@
 //
 // 모양/색이 실제로 바뀌면 단톡에 「눈치채기 → 받아치기」 비트를 남긴다 (look-change).
 import { parseExtraPrompt } from '@/domains/mentor/extra-prompt'
+import { SYSTEM_PROMPT_TOO_LONG, SystemPromptTooLong, systemPromptTooLong } from '@/domains/mentor/system-prompt'
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
@@ -46,7 +47,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         patch.name = name
     }
     if (typeof body.greeting === 'string') patch.greeting = body.greeting.slice(0, 200)
-    if (typeof body.systemPrompt === 'string') patch.systemPrompt = body.systemPrompt.slice(0, 12000)
+    if (typeof body.systemPrompt === 'string') {
+        // 지시문: 30,000자 넘으면 아무것도 안 쓰고 거절(예전엔 12,000자에서 조용히 잘랐다)
+        if (systemPromptTooLong(body.systemPrompt)) return NextResponse.json({ error: SYSTEM_PROMPT_TOO_LONG }, { status: 400 })
+        patch.systemPrompt = body.systemPrompt
+    }
     if (body.extraPrompt !== undefined) {
         // 추가 프롬프트: 5,000자 넘으면 아무것도 안 쓰고 거절(자르지 않는다 = 주인이 모르게 뒷부분이 사라지지 않게)
         const extra = parseExtraPrompt(body.extraPrompt)
@@ -105,6 +110,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     } catch (e) {
         if (e instanceof BotPublishDenied) return NextResponse.json({ error: e.message }, { status: 403 })
         if (e instanceof BotHeld) return NextResponse.json({ error: e.message, code: 'BOT_HELD' }, { status: 409 })
+        if (e instanceof SystemPromptTooLong) return NextResponse.json({ error: e.message }, { status: 400 })
         console.error('[os/team PATCH]', e instanceof Error ? e.message : e)
         return NextResponse.json({ error: '바꾸지 못했어요' }, { status: 500 })
     }

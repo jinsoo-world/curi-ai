@@ -9,6 +9,7 @@ import { createTeamBot, TeamTableMissing, SHAPES, COLORS } from '@/domains/os'
 import type { BotColor, BotShape } from '@/domains/os'
 import { ensureHardLimits, cleanDraftLinks, cleanDraftPastes } from '@/domains/os/twin-draft'
 import { addDraftSources } from '@/domains/os/knowledge'
+import { SYSTEM_PROMPT_TOO_LONG, systemPromptTooLong } from '@/domains/mentor/system-prompt'
 import { composeGreeting, learnedLine, tidyLine } from '@/domains/os/twin-draft-shared'
 
 export const dynamic = 'force-dynamic'
@@ -24,6 +25,9 @@ export async function POST(req: Request) {
     if (!name || name.length > 20) return NextResponse.json({ error: '이름은 1~20자' }, { status: 400 })
     const prompt = String(b.prompt ?? '').trim()
     if (prompt.length < 20) return NextResponse.json({ error: '봇 설명이 비어 있어요' }, { status: 400 })
+    // 금지선까지 붙인 최종 지시문이 30,000자 넘으면 봇을 만들기 전에 막는다(예전엔 12,000자에서 조용히 잘랐다)
+    const systemPrompt = ensureHardLimits(prompt)
+    if (systemPromptTooLong(systemPrompt)) return NextResponse.json({ error: SYSTEM_PROMPT_TOO_LONG }, { status: 400 })
     const shape = (SHAPES as readonly string[]).includes(String(b.shape)) ? b.shape as BotShape : 'circle'
     const color = (COLORS as readonly string[]).includes(String(b.color)) ? b.color as BotColor : 'orange'
     const oneLiner = tidyLine(b.oneLiner, 40)
@@ -42,7 +46,7 @@ export async function POST(req: Request) {
             job: 'custom', customJob: oneLiner || `${displayName}님의 말투로 답장 초안 쓰기`, autonomy: 'always_ask', name, shape, color, role: 'twin',
         }, 'twin_draft')
         const { error } = await db.from('mentors').update({
-            system_prompt: ensureHardLimits(prompt),
+            system_prompt: systemPrompt,
             ...(greeting ? { greeting_message: greeting } : {}),
             ...(chips.length > 0 ? { sample_questions: chips } : {}),   // 초안 칩이 없으면 만들 때 넣은 첫 칩 3개를 둔다
             ...(oneLiner ? { title: oneLiner, description: oneLiner } : {}),

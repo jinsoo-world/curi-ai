@@ -22,7 +22,7 @@ import { askSideText } from '@/domains/llm/side-text'
 export const MODERATION_MODEL = 'gemini-3.5-flash-lite'
 /** 자료는 앞부분만 본다 */
 export const KNOWLEDGE_SAMPLE_CHARS = 4_000
-/** 지시문은 길 수 있어(12,000자) 앞부분만 본다 = 비용 상한 */
+/** 지시문은 길 수 있어(30,000자) 앞부분만 본다 = 비용 상한 */
 const PROMPT_SAMPLE_CHARS = 6_000
 /** 모델을 이만큼만 기다린다. 넘으면 review */
 const MODERATION_TIMEOUT_MS = 25_000
