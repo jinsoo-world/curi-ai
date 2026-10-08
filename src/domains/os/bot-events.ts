@@ -13,6 +13,7 @@ export type BotCreatedPath =
     | 'twin_draft'      // /home SNS 링크로 만든 분신 초안
     | 'onboarding'      // /os/start 첫 팀 자동 만들기
     | 'creator_create'  // 옛 /creator/create
+    | 'deep_create'     // 깊게 만들기 (구독 전용, 10/7)
 
 export async function recordBotCreated(
     db: SupabaseClient,
