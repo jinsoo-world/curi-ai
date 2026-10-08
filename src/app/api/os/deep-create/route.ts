@@ -1,7 +1,8 @@
 // POST /api/os/deep-create = 「깊게 만들기」 시작 (대표 확정 10/7, 구독 전용 · 무료는 미리보기만)
 // body { idea(≤200자), links?: string[](≤3), refText?: string(≤20,000자) } → { jobId, status, stage, paywall }
 // 서버가 조사 → 정리 → 점검을 단계별로 돈다(응답 뒤에도 계속). 앱은 GET /api/os/deep-create/{jobId} 로 상태를 묻는다.
-// 한도: 사람별 시간당 5번(셀 수 없으면 막음) → 무료는 이번 달 AI 예산 90% 넘으면 미리보기 정지 → 하루(서울) 무료 1·베이직 3·프로 10.
+// 한도: 사람별 시간당 5번(셀 수 없으면 막음) → 무료는 이번 달 AI 예산 90% 넘으면 미리보기 정지 → 하루(서울) 무료 1·베이직 3·프로 10
+//       (실패한 작업도 센다. 표 개수 + 원자적 하루 카운터 bump_rate_limit deep:day:{user}:{서울날짜} 둘 다 통과해야 넣는다).
 // 이미 도는 내 작업이 있으면 새로 만들지 않고 그 작업을 돌려준다(resumed: true).
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -11,7 +12,7 @@ import { readPlanId } from '@/domains/os/usage-db'
 import { checkAiBudget } from '@/domains/chat/budget-gate'
 import { keepAliveAfterResponse } from '@/domains/llm/usage-log'
 import {
-    DEEP_DAILY, DEEP_PER_HOUR, DEEP_STAGE_LABEL, DeepTableMissing, cleanDeepInput, countDeepToday, findRunningDeepJob, isTableMissing, runDeepJob,
+    DEEP_DAILY, DEEP_PER_HOUR, DEEP_STAGE_LABEL, DeepTableMissing, bumpDeepDay, cleanDeepInput, countDeepToday, findRunningDeepJob, isTableMissing, runDeepJob,
 } from '@/domains/os/deep-create'
 
 export const dynamic = 'force-dynamic'
@@ -50,7 +51,10 @@ export async function POST(req: Request) {
         throw e
     }
     if (used === null) return NextResponse.json({ error: '잠시 후 다시 해 주세요' }, { status: 503 })
-    if (used >= DEEP_DAILY[plan]) {
+    // 원자적 하루 카운터 (세고 넣는 사이 경쟁 제거). 셀 수 없으면 막는다
+    const bumped = used >= DEEP_DAILY[plan] ? used + 1 : await bumpDeepDay(db, user.id)
+    if (bumped === null) return NextResponse.json({ error: '잠시 후 다시 해 주세요' }, { status: 503 })
+    if (used >= DEEP_DAILY[plan] || bumped > DEEP_DAILY[plan]) {
         const error = paywall
             ? '무료 미리보기는 하루 1번이에요. 구독하면 하루 여러 번 깊게 만들 수 있어요'
             : `오늘 깊게 만들기(${DEEP_DAILY[plan]}번)를 다 썼어요. 내일 다시 해 주세요`

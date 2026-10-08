@@ -9,6 +9,8 @@ let insertErr: { code?: string; message: string } | null = null
 let budget = { allowed: true } as { allowed: boolean; reason?: string }
 let jobRow: Record<string, unknown> | null = null
 let saveClaim = true
+let dayBump: number | null = 1
+const rpcCalls: unknown[][] = []
 const inserted: Record<string, unknown>[] = []
 const mentorUpdates: Record<string, unknown>[] = []
 const runs: string[] = []
@@ -19,6 +21,7 @@ const limits: Record<string, boolean> = {}
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({ auth: { getUser: async () => ({ data: { user } }) } }) }))
 vi.mock('@/lib/supabase/admin', () => ({
     createAdminClient: () => ({
+        rpc: async (...a: unknown[]) => (rpcCalls.push(a), dayBump === null ? { data: null, error: { message: 'x' } } : { data: dayBump, error: null }),
         from: (t: string) => {
             if (t === 'user_plans') return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: plan ? { plan, expires_at: null } : null, error: null }) }) }) }
             if (t === 'mentors') return { update: (p: Record<string, unknown>) => ({ eq: async () => (mentorUpdates.push(p), { error: null }) }) }
@@ -74,11 +77,11 @@ const result = {
 const doneJob = (over: Record<string, unknown> = {}) => ({
     id: JOB_ID, user_id: 'u1', plan: 'free', status: 'done', idea: '잡스 같은 기획 봇', ref_links: [], ref_text: null,
     research: { notes: '조사 노트 '.repeat(20), sources: [{ url: 'https://s', title: 'S' }], material: '' }, result,
-    fidelity: { total: 78, grade: 'B', items: [], weaknesses: ['출처 적음'] }, error: null, claimed_at: null, saved_at: null, mentor_id: null, created_at: '', ...over,
+    fidelity: { total: 78, grade: 'B', items: [], weaknesses: ['출처 적음'] }, error: null, claimed_at: null, attempts: 0, saved_at: null, mentor_id: null, created_at: new Date().toISOString(), ...over,
 })
 
 beforeEach(() => {
-    user = { id: 'u1' }; plan = null; usedToday = 0; running = null; insertErr = null; budget = { allowed: true }; jobRow = null; saveClaim = true
+    user = { id: 'u1' }; plan = null; usedToday = 0; running = null; insertErr = null; budget = { allowed: true }; jobRow = null; saveClaim = true; dayBump = 1; rpcCalls.length = 0
     for (const a of [inserted, mentorUpdates, runs, created, textSources]) a.length = 0
     for (const k of Object.keys(limits)) delete limits[k]
 })
@@ -101,20 +104,37 @@ describe('POST /api/os/deep-create (시작)', () => {
     })
 
     it('하루 한도: 무료 1 · 베이직 3 · 프로 10', async () => {
-        usedToday = 1
+        usedToday = 1; dayBump = 2
         const free = await start({ idea: '세무 봇' })
         expect(free.status).toBe(429)
         expect(await free.json()).toMatchObject({ paywall: true })
-        plan = 'basic'; usedToday = 2
+        plan = 'basic'; usedToday = 2; dayBump = 3
         expect((await start({ idea: '세무 봇' })).status).toBe(200)
         usedToday = 3
         expect((await start({ idea: '세무 봇' })).status).toBe(429)
-        plan = 'pro'; usedToday = 9
+        plan = 'pro'; usedToday = 9; dayBump = 10
         const ok = await start({ idea: '세무 봇' })
         expect(ok.status).toBe(200)
         expect(await ok.json()).toMatchObject({ paywall: false })
         usedToday = 10
         expect((await start({ idea: '세무 봇' })).status).toBe(429)
+    })
+
+    it('원자적 하루 카운터: 올린 값이 한도를 넘으면 넣지 않는다 (동시에 두 번 눌러도)', async () => {
+        plan = 'basic'; usedToday = 2; dayBump = 4
+        const res = await start({ idea: '세무 봇' })
+        expect(res.status).toBe(429)
+        expect(inserted).toHaveLength(0)
+        expect(rpcCalls[0][0]).toBe('bump_rate_limit')
+        expect(String((rpcCalls[0][1] as { p_key: string }).p_key)).toMatch(/^deep:day:u1:\d{4}-\d{2}-\d{2}$/)
+        dayBump = 3
+        expect((await start({ idea: '세무 봇' })).status).toBe(200)
+    })
+
+    it('하루 카운터를 셀 수 없으면 막는다(503)', async () => {
+        dayBump = null
+        expect((await start({ idea: '세무 봇' })).status).toBe(503)
+        expect(inserted).toHaveLength(0)
     })
 
     it('셀 수 없으면 503, 표가 없으면 503(곧 열려요)', async () => {
