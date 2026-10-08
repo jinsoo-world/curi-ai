@@ -22,8 +22,14 @@ import { askSideText } from '@/domains/llm/side-text'
 export const MODERATION_MODEL = 'gemini-3.5-flash-lite'
 /** 자료는 앞부분만 본다 */
 export const KNOWLEDGE_SAMPLE_CHARS = 4_000
-/** 지시문은 길 수 있어(30,000자) 앞부분만 본다 = 비용 상한 */
-const PROMPT_SAMPLE_CHARS = 6_000
+/**
+ * 지시문은 길 수 있어(30,000자) 6,000자 조각으로 나눠 전부 본다(앞부분만 보면 뒤에 나쁜 내용을 숨길 수 있다).
+ * 첫 조각은 다른 칸과 함께 한 번에, 나머지 조각은 따로 묻는다. 하나라도 걸리면 그 판정이 이긴다.
+ * 통과한 조각은 지문(해시)만 판정 기록에 남기고, 같은 조각은 다음 검사에서 건너뛴다(글은 남기지 않는다).
+ */
+export const PROMPT_CHUNK_CHARS = 6_000
+/** 조각 지문에 섞는 판정 기준 이름. 기준(SYSTEM)이나 모델을 바꾸면 올린다 = 옛 통과 지문이 무효가 된다 */
+const CHUNK_RULES_VERSION = 'v1'
 /** 모델을 이만큼만 기다린다. 넘으면 review */
 const MODERATION_TIMEOUT_MS = 25_000
 
@@ -74,8 +80,8 @@ export function buildModerationPrompt(b: ModerationInput): { system: string; pro
         `[이름] ${fence(b.name)}`,
         `[제목] ${fence(b.title)}`,
         `[설명] ${fence(b.description)}`,
-        `[지시문] ${fence(b.systemPrompt).slice(0, PROMPT_SAMPLE_CHARS)}`,
-        ...(b.extraPrompt?.trim() ? [`[추가 프롬프트] ${fence(b.extraPrompt).slice(0, PROMPT_SAMPLE_CHARS)}`] : []),
+        `[지시문] ${fence(b.systemPrompt).slice(0, PROMPT_CHUNK_CHARS)}`,
+        ...(b.extraPrompt?.trim() ? [`[추가 프롬프트] ${fence(b.extraPrompt).slice(0, PROMPT_CHUNK_CHARS)}`] : []),
         `[인사말] ${fence(b.greeting)}`,
         `[예시 질문] ${b.sampleQuestions.map(fence).join(' / ')}`,
         `[자료 앞부분] ${fence(b.knowledge).slice(0, KNOWLEDGE_SAMPLE_CHARS)}`,
@@ -83,6 +89,57 @@ export function buildModerationPrompt(b: ModerationInput): { system: string; pro
         '위 자료를 심사해 JSON 한 개로만 답하라.',
     ]
     return { system: SYSTEM, prompt: lines.join('\n') }
+}
+
+/** 지시문 첫 조각 뒤의 나머지 조각들(울타리 흉내는 지운 글). 짧으면 빈 배열 */
+export function promptRestChunks(systemPrompt: string): string[] {
+    const t = fence(systemPrompt)
+    const out: string[] = []
+    for (let i = PROMPT_CHUNK_CHARS; i < t.length; i += PROMPT_CHUNK_CHARS) out.push(t.slice(i, i + PROMPT_CHUNK_CHARS))
+    return out
+}
+
+/** 나머지 조각 하나를 심사하는 글. 첫 조각과 같은 기준(SYSTEM)을 쓴다 */
+export function buildChunkPrompt(b: Pick<ModerationInput, 'ownerName' | 'name'>, chunk: string, index: number, total: number): string {
+    return [
+        '<<<봇자료',
+        `[주인 이름] ${fence(b.ownerName).slice(0, 40)}`,
+        `[이름] ${fence(b.name)}`,
+        `[지시문 ${index}/${total} 부분] ${chunk}`,
+        '봇자료>>>',
+        '위 자료(봇 지시문의 한 부분)를 심사해 JSON 한 개로만 답하라.',
+    ].join('\n')
+}
+
+/** 조각 지문 = 기준 이름 + 모델 + 조각 글 */
+export function chunkHash(chunk: string): string {
+    return createHash('sha256').update(`${CHUNK_RULES_VERSION}\n${MODERATION_MODEL}\n${chunk}`).digest('hex')
+}
+
+const RANK: Record<ModerationVerdict, number> = { pass: 0, review: 1, block: 2 }
+/** 여러 판정 합치기 = 가장 무거운 판정, 이유와 분류는 모아서 5개까지 */
+export function mergeResults(results: ModerationResult[]): ModerationResult {
+    const verdict = results.reduce<ModerationVerdict>((v, r) => (RANK[r.verdict] > RANK[v] ? r.verdict : v), 'pass')
+    const uniq = (xs: string[]) => [...new Set(xs)].slice(0, 5)
+    return { verdict, reasons: uniq(results.flatMap(r => r.reasons)), categories: uniq(results.flatMap(r => r.categories)) }
+}
+
+/** 이 봇의 최근 판정 기록에 남은 통과 조각 지문. 못 읽으면 빈 집합(= 전부 다시 본다) */
+async function passedChunkHashes(db: SupabaseClient, mentorId: string): Promise<Set<string>> {
+    try {
+        const { data, error } = await db.from('app_events').select('name, extra').eq('name', 'os_bot_moderation')
+            .eq('extra->>mentor_id', mentorId).order('created_at', { ascending: false }).limit(20)
+        if (error) return new Set()
+        const out = new Set<string>()
+        for (const e of (data ?? []) as { name?: string; extra?: Record<string, unknown> | null }[]) {
+            if (e.name !== undefined && e.name !== 'os_bot_moderation') continue
+            const list = e.extra?.passed_chunks
+            if (Array.isArray(list)) for (const h of list) if (typeof h === 'string') out.add(h)
+        }
+        return out
+    } catch {
+        return new Set()
+    }
 }
 
 /** 엄격하게 읽는다. 코드 울타리(```json)만 벗긴다. 모양이 틀리면 null */
@@ -141,25 +198,46 @@ export async function readBotForReview(db: SupabaseClient, mentorId: string, own
 export async function reviewBot(db: SupabaseClient, a: { mentorId: string; userId: string; ownerName: string }): Promise<ModerationResult & { hash: string | null }> {
     let result: ModerationResult
     let hash: string | null = null
+    let passedChunks: string[] = []
+    let hadChunks = false
     try {
         const input = await readBotForReview(db, a.mentorId, a.ownerName)
         hash = contentHash(input)
+        const ask = async (system: string, prompt: string): Promise<ModerationResult> => {
+            let timer: ReturnType<typeof setTimeout> | undefined
+            const answer = await Promise.race([
+                askSideText({
+                    kind: 'bot-moderation', route: '/api/os/team', userId: a.userId, mentorId: a.mentorId,
+                    geminiModel: MODERATION_MODEL, temperature: 0, maxTokens: 400, solarMaxTokens: 400, solarTimeoutMs: 15_000,
+                    system, prompt,
+                }),
+                new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), MODERATION_TIMEOUT_MS) }),
+            ]).catch(() => null).finally(() => clearTimeout(timer))
+            return parseModerationAnswer(answer) ?? CHECK_FAILED
+        }
         const { system, prompt } = buildModerationPrompt(input)
-        let timer: ReturnType<typeof setTimeout> | undefined
-        const answer = await Promise.race([
-            askSideText({
-                kind: 'bot-moderation', route: '/api/os/team', userId: a.userId, mentorId: a.mentorId,
-                geminiModel: MODERATION_MODEL, temperature: 0, maxTokens: 400, solarMaxTokens: 400, solarTimeoutMs: 15_000,
-                system, prompt,
-            }),
-            new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), MODERATION_TIMEOUT_MS) }),
-        ]).finally(() => clearTimeout(timer))
-        result = parseModerationAnswer(answer) ?? CHECK_FAILED
+        const rest = promptRestChunks(input.systemPrompt)
+        hadChunks = rest.length > 0
+        const seen = hadChunks ? await passedChunkHashes(db, a.mentorId) : new Set<string>()
+        const total = rest.length + 1
+        const todo = rest.map((chunk, i) => ({ chunk, index: i + 2, h: chunkHash(chunk) })).filter(c => !seen.has(c.h))
+        const [main, ...parts] = await Promise.all([
+            ask(system, prompt),
+            ...todo.map(c => ask(system, buildChunkPrompt(input, c.chunk, c.index, total))),
+        ])
+        result = mergeResults([main, ...parts])
+        // 이번에 통과한 조각 + 예전에 통과해 건너뛴 조각 = 다음 검사에서 건너뛸 지문
+        const passedNow = new Set(todo.filter((_, i) => parts[i].verdict === 'pass').map(c => c.h))
+        passedChunks = rest.map(chunkHash).filter(h => seen.has(h) || passedNow.has(h))
     } catch (e) {
         console.error('[os/moderation] 확인 실패, 사람이 본다', e instanceof Error ? e.message : e)
         result = CHECK_FAILED
     }
-    await logReviewEvent(db, 'os_bot_moderation', a.userId, { mentor_id: a.mentorId, verdict: result.verdict, categories: result.categories })
+    // 판정, 분류, (긴 지시문이면) 통과 조각 지문만 남긴다. 봇 글은 남기지 않는다
+    await logReviewEvent(db, 'os_bot_moderation', a.userId, {
+        mentor_id: a.mentorId, verdict: result.verdict, categories: result.categories,
+        ...(hadChunks ? { passed_chunks: passedChunks } : {}),
+    })
     return { ...result, hash }
 }
 
