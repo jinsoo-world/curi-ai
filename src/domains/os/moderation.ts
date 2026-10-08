@@ -29,7 +29,13 @@ export const KNOWLEDGE_SAMPLE_CHARS = 4_000
  */
 export const PROMPT_CHUNK_CHARS = 6_000
 /** 조각 지문에 섞는 판정 기준 이름. 기준(SYSTEM)이나 모델을 바꾸면 올린다 = 옛 통과 지문이 무효가 된다 */
-const CHUNK_RULES_VERSION = 'v1'
+const CHUNK_RULES_VERSION = 'v2'   // v2 = 조각마다 앞 조각 끝 200자 겹침
+/** 나머지 조각 앞에 앞 조각 끝을 이만큼 겹쳐 넣는다 = 경계에 걸친 문장도 한 조각 안에 통째로 들어간다 */
+export const CHUNK_OVERLAP_CHARS = 200
+/** 조각(첫 조각 포함)이 이보다 많으면 모델에 묻지 않고 사람이 본다 = 한도(30,000자)를 넘은 지시문, 비용 상한 */
+export const MAX_PROMPT_CHUNKS = 5
+/** 조각이 너무 많을 때 = 사람이 본다 */
+const TOO_MANY_CHUNKS: ModerationResult = { verdict: 'review', reasons: ['지시문이 너무 길어 사람이 확인할게요'], categories: ['needs_review'] }
 /** 모델을 이만큼만 기다린다. 넘으면 review */
 const MODERATION_TIMEOUT_MS = 25_000
 
@@ -95,7 +101,7 @@ export function buildModerationPrompt(b: ModerationInput): { system: string; pro
 export function promptRestChunks(systemPrompt: string): string[] {
     const t = fence(systemPrompt)
     const out: string[] = []
-    for (let i = PROMPT_CHUNK_CHARS; i < t.length; i += PROMPT_CHUNK_CHARS) out.push(t.slice(i, i + PROMPT_CHUNK_CHARS))
+    for (let i = PROMPT_CHUNK_CHARS; i < t.length; i += PROMPT_CHUNK_CHARS) out.push(t.slice(i - CHUNK_OVERLAP_CHARS, i + PROMPT_CHUNK_CHARS))
     return out
 }
 
@@ -217,6 +223,11 @@ export async function reviewBot(db: SupabaseClient, a: { mentorId: string; userI
         }
         const { system, prompt } = buildModerationPrompt(input)
         const rest = promptRestChunks(input.systemPrompt)
+        if (rest.length + 1 > MAX_PROMPT_CHUNKS) {
+            result = TOO_MANY_CHUNKS
+            await logReviewEvent(db, 'os_bot_moderation', a.userId, { mentor_id: a.mentorId, verdict: result.verdict, categories: result.categories })
+            return { ...result, hash }
+        }
         hadChunks = rest.length > 0
         const seen = hadChunks ? await passedChunkHashes(db, a.mentorId) : new Set<string>()
         const total = rest.length + 1

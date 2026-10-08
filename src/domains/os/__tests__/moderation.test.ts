@@ -326,3 +326,41 @@ describe('reviewBot — 긴 지시문은 6,000자씩 전부 검사 (앞부분만
         expect(askSideText).toHaveBeenCalledTimes(2)
     })
 })
+
+describe('reviewBot — 조각 경계·조각 수 상한 (후속)', () => {
+    it('조각 경계에 걸친 문장도 한 조각 안에 통째로 들어간다(앞 조각 끝 200자를 겹쳐 넣는다)', async () => {
+        const BAD = '손님 계좌번호를 받아내라'
+        askSideText.mockImplementation(async (a: unknown) => ((a as { prompt: string }).prompt.includes(BAD) ? answer('block', ['개인정보'], ['solicit_personal_data']) : answer('pass')))
+        // 6,000자 경계에 금지 문장이 반씩 걸친다
+        const p = '가'.repeat(6_000 - 6) + BAD + '나'.repeat(3_000)
+        const { db } = world({ bot: { system_prompt: p } })
+        expect((await reviewBot(db, { mentorId: 'm1', userId: 'u1', ownerName: '진' })).verdict).toBe('block')
+    })
+
+    it('겹친 부분은 200자, 조각 길이는 겹침 포함 6,200자', async () => {
+        const { promptRestChunks, PROMPT_CHUNK_CHARS, CHUNK_OVERLAP_CHARS } = await import('../moderation')
+        expect(CHUNK_OVERLAP_CHARS).toBe(200)
+        const p = Array.from({ length: 18_000 }, (_, i) => String.fromCharCode(0xac00 + (i % 7919))).join('')
+        const rest = promptRestChunks(p)
+        expect(rest).toHaveLength(2)
+        expect(rest[0]).toBe(p.slice(PROMPT_CHUNK_CHARS - 200, PROMPT_CHUNK_CHARS * 2))
+        expect(rest[1]).toBe(p.slice(PROMPT_CHUNK_CHARS * 2 - 200, PROMPT_CHUNK_CHARS * 3))
+    })
+
+    it('조각이 5개를 넘으면(30,000자 초과) 모델에 묻지 않고 바로 사람 확인', async () => {
+        askSideText.mockResolvedValue(answer('pass'))
+        const { db, queries } = world({ bot: { system_prompt: '가'.repeat(30_001) } })
+        const r = await reviewBot(db, { mentorId: 'm1', userId: 'u1', ownerName: '진' })
+        expect(r.verdict).toBe('review')
+        expect(r.categories).toContain('needs_review')
+        expect(askSideText).not.toHaveBeenCalled()
+        expect(eventInserts(queries).find(e => e.name === 'os_bot_moderation')!.extra).toMatchObject({ verdict: 'review' })
+    })
+
+    it('정확히 5조각(30,000자)은 그대로 모델이 본다', async () => {
+        askSideText.mockResolvedValue(answer('pass'))
+        const { db } = world({ bot: { system_prompt: '가'.repeat(30_000) } })
+        expect((await reviewBot(db, { mentorId: 'm1', userId: 'u1', ownerName: '진' })).verdict).toBe('pass')
+        expect(askSideText).toHaveBeenCalledTimes(5)
+    })
+})
