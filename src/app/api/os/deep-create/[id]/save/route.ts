@@ -70,5 +70,5 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
         }
     }
     await db.from('deep_create_jobs').update({ mentor_id: bot.mentorId }).eq('id', job.id)
-    return NextResponse.json({ bot: { ...bot, systemPrompt: '', greeting: r.greeting }, mentorId: bot.mentorId, referencesSaved })
+    return NextResponse.json({ bot: { ...bot, systemPrompt: r.promptText, greeting: r.greeting }, mentorId: bot.mentorId, referencesSaved })
 }

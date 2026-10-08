@@ -194,7 +194,7 @@ describe('POST /api/os/deep-create/{id}/save (저장)', () => {
         plan = 'pro'; jobRow = doneJob()
         const res = await save()
         expect(res.status).toBe(200)
-        expect(await res.json()).toMatchObject({ mentorId: 'm1', referencesSaved: true, bot: { id: 'tb1' } })
+        expect(await res.json()).toMatchObject({ mentorId: 'm1', referencesSaved: true, bot: { id: 'tb1', systemPrompt: result.promptText } })
         expect(created[0]).toMatchObject([expect.anything(), { id: 'u1' }, { job: 'custom', name: '잡스 봇' }, 'deep_create'])
         expect(mentorUpdates[0]).toMatchObject({ system_prompt: result.promptText, greeting_message: '안녕', sample_questions: ['a', 'b', 'c'] })
         expect(String(textSources[0][3])).toContain('https://s')
