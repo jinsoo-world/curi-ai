@@ -15,6 +15,7 @@ import {
     type ModerationResult,
 } from './moderation'
 import { mentorName, notifyNative, p033Published, p034InReview, p035NeedsFix } from '@/domains/push'
+import { SystemPromptTooLong, systemPromptTooLong } from '@/domains/mentor/system-prompt'
 
 /** 손님 시연용 봇 이름표 (공개 금지) */
 const DEMO_SLUG_PREFIX = 'os-demo-'
@@ -152,6 +153,8 @@ export async function unpublishByOwner(db: SupabaseClient, a: GateActor): Promis
 export async function applyBotEdit(
     db: SupabaseClient, a: GateActor & { fields: Record<string, unknown>; wantPublic?: boolean },
 ): Promise<{ moderation?: ModerationResult }> {
+    // 지시문 한도 마지막 관문: 어느 창구로 와도 30,000자 넘는 지시문은 쓰기 전에 막는다(자르지 않는다)
+    if (systemPromptTooLong(a.fields.system_prompt)) throw new SystemPromptTooLong()
     let pq = db.from('mentors').select(`is_active, slug, ${REVIEWED_FIELDS.join(', ')}`).eq('id', a.mentorId)
     if (a.creatorId) pq = pq.eq('creator_id', a.creatorId)
     const { data: p, error: pErr } = await pq.maybeSingle()

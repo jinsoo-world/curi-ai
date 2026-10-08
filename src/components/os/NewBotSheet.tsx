@@ -24,6 +24,7 @@ import {
 import { clearHomeDraft, readHomeDraft, type HomeDraft } from '@/domains/home/draft-store'
 import type { UnreadLink } from '@/domains/os/link-rules'
 import LinkReadReport from './LinkReadReport'
+import { SYSTEM_PROMPT_MAX, SYSTEM_PROMPT_TOO_LONG, systemPromptLength, systemPromptTooLong } from '@/domains/mentor/system-prompt'
 import { retryLinkRead } from './link-retry'
 
 interface Props {
@@ -49,6 +50,16 @@ export default function NewBotSheet({ guest, onClose, onCreated, onWantGroup, ed
 }
 
 /** 편집 = 한 장. 프로필 사진·한줄소개·프롬프트·나머지. 바뀐 칸만 보낸다 */
+/** 지시문 글자 수. 한도를 넘으면 자르지 않고 빨간 문구로 알린다(저장 버튼은 꺼진다) */
+function PromptCount({ prompt }: { prompt: string }) {
+    const over = systemPromptTooLong(prompt)
+    return (
+        <div style={{ textAlign: 'right', fontSize: 12, marginTop: 4, color: over ? '#e5484d' : 'var(--os-글-연)' }} aria-live="polite">
+            {over ? `${SYSTEM_PROMPT_TOO_LONG} · ` : ''}{systemPromptLength(prompt).toLocaleString('ko-KR')}/{SYSTEM_PROMPT_MAX.toLocaleString('ko-KR')}
+        </div>
+    )
+}
+
 function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => void; onSaved?: () => void | Promise<void> }) {
     const [name, setName] = useState(bot.name)
     const [oneLiner, setOneLiner] = useState(bot.oneLiner ?? '')
@@ -67,7 +78,7 @@ function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => 
     const [busy, setBusy] = useState(false)
     const [err, setErr] = useState<string | null>(null)
 
-    const canSave = name.trim().length > 0 && name.trim().length <= 20
+    const canSave = name.trim().length > 0 && name.trim().length <= 20 && !systemPromptTooLong(prompt)
 
     const onPickPhoto = (file: File | null) => {
         if (!file) return
@@ -162,9 +173,10 @@ function EditBotSheet({ bot, onClose, onSaved }: { bot: TeamBot; onClose: () => 
                 </div>
 
                 <div className="os-field">
-                    <div className="os-field-label">프롬프트 (이 봇이 따르는 설명, 12000자까지)</div>
-                    <textarea className="os-textarea" rows={6} value={prompt} onChange={e => setPrompt(e.target.value.slice(0, 12000))}
-                        maxLength={12000} placeholder="예) 너는 글감봇이야. 짧고 구체적인 글감만 제안해." aria-label="프롬프트" disabled={busy} />
+                    <div className="os-field-label">프롬프트 (이 봇이 따르는 설명, {SYSTEM_PROMPT_MAX.toLocaleString('ko-KR')}자까지)</div>
+                    <textarea className="os-textarea" rows={6} value={prompt} onChange={e => setPrompt(e.target.value)}
+                        placeholder="예) 너는 글감봇이야. 짧고 구체적인 글감만 제안해." aria-label="프롬프트" disabled={busy} />
+                    <PromptCount prompt={prompt} />
                 </div>
 
                 {bot.role !== 'twin' && (
@@ -634,8 +646,9 @@ function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => v
                 </div>
             </div>
             <div className="os-field">
-                <div className="os-field-label">프롬프트 (이 봇이 따르는 설명, 12000자까지)</div>
-                <textarea className="os-textarea" rows={6} value={prompt} onChange={e => setPrompt(e.target.value.slice(0, 12000))} maxLength={12000} aria-label="프롬프트" disabled={busy} />
+                <div className="os-field-label">프롬프트 (이 봇이 따르는 설명, {SYSTEM_PROMPT_MAX.toLocaleString('ko-KR')}자까지)</div>
+                <textarea className="os-textarea" rows={6} value={prompt} onChange={e => setPrompt(e.target.value)} aria-label="프롬프트" disabled={busy} />
+                <PromptCount prompt={prompt} />
             </div>
             <div className="os-field">
                 <div className="os-field-label">모양</div>
@@ -665,7 +678,7 @@ function LinkDraftTab({ onClose, onCreated, initial = null }: { onClose: () => v
             {err && <div className="os-notice" style={{ margin: '14px 0 0' }}>{err}</div>}
             <div className="os-sheet-foot">
                 <button type="button" className="os-btn" onClick={() => setDraft(null)} disabled={busy}>이전</button>
-                <button type="button" className="os-btn primary" onClick={() => void create()} disabled={busy || !name.trim() || name.trim().length > 20 || prompt.trim().length < 20}>{busy ? '만드는 중' : TWIN_DRAFT_COPY.create}</button>
+                <button type="button" className="os-btn primary" onClick={() => void create()} disabled={busy || !name.trim() || name.trim().length > 20 || prompt.trim().length < 20 || systemPromptTooLong(prompt)}>{busy ? '만드는 중' : TWIN_DRAFT_COPY.create}</button>
             </div>
         </>
     )

@@ -10,6 +10,7 @@ import {
     publishMentor,
 } from '@/domains/creator'
 import { recheckAfterKnowledge, BotHeld } from '@/domains/os/publish-gate'
+import { SYSTEM_PROMPT_TOO_LONG, SystemPromptTooLong, systemPromptTooLong } from '@/domains/mentor/system-prompt'
 import { moderationReply } from '@/domains/os/moderation'
 import { requireMentorOwner } from '@/lib/mentor-owner'
 
@@ -80,6 +81,8 @@ export async function POST(req: NextRequest) {
                         { status: 400 },
                     )
                 }
+                // 지시문 최대 30,000자. 넘으면 아무것도 안 쓰고 400 (자르지 않는다)
+                if (systemPromptTooLong(systemPrompt)) return NextResponse.json({ error: SYSTEM_PROMPT_TOO_LONG }, { status: 400 })
 
                 const persona = await setMentorPersona(admin, {
                     mentorId,
@@ -157,6 +160,7 @@ export async function POST(req: NextRequest) {
     } catch (error: unknown) {
         // 신고로 묶인 봇 공개 = 409 (관리자 확인 뒤에만 공개된다)
         if (error instanceof BotHeld) return NextResponse.json({ error: error.message, code: 'BOT_HELD' }, { status: 409 })
+        if (error instanceof SystemPromptTooLong) return NextResponse.json({ error: error.message }, { status: 400 })
         console.error('[Creator API] Error:', error)
         const message = error instanceof Error ? error.message : 'AI 생성 중 오류가 발생했습니다.'
         return NextResponse.json({ error: message }, { status: 500 })

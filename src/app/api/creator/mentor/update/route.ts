@@ -1,5 +1,6 @@
 // /api/creator/mentor/update — 멘토 수정 API
 import { parseExtraPrompt } from '@/domains/mentor/extra-prompt'
+import { SYSTEM_PROMPT_TOO_LONG, SystemPromptTooLong, systemPromptTooLong } from '@/domains/mentor/system-prompt'
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { requireMentorOwner } from '@/lib/mentor-owner'
@@ -48,7 +49,11 @@ export async function PATCH(req: NextRequest) {
         if (title !== undefined) updateData.title = title
         if (description !== undefined) updateData.description = description
         if (expertise !== undefined) updateData.expertise = expertise
-        if (systemPrompt !== undefined) updateData.system_prompt = systemPrompt
+        if (systemPrompt !== undefined) {
+            // 지시문 최대 30,000자. 넘으면 아무것도 안 쓰고 400 (자르지 않는다)
+            if (systemPromptTooLong(systemPrompt)) return NextResponse.json({ error: SYSTEM_PROMPT_TOO_LONG }, { status: 400 })
+            updateData.system_prompt = systemPrompt
+        }
         // 추가 프롬프트(비밀 칸, 최대 5,000자). 넘으면 아무것도 안 쓰고 400. 공개 중이면 아래 공개 관문이 다시 AI 확인한다
         if (extraPrompt !== undefined) {
             const extra = parseExtraPrompt(extraPrompt)
@@ -84,6 +89,7 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ success: true, message: '멘토가 수정되었습니다.' })
     } catch (error: unknown) {
         if (error instanceof BotHeld) return NextResponse.json({ error: error.message, code: 'BOT_HELD' }, { status: 409 })
+        if (error instanceof SystemPromptTooLong) return NextResponse.json({ error: error.message }, { status: 400 })
         console.error('[Creator Update API] Error:', error)
         const message = error instanceof Error ? error.message : '멘토 수정 중 오류가 발생했습니다.'
         return NextResponse.json({ error: message }, { status: 500 })

@@ -283,10 +283,11 @@ export function draftPrompt(ownerName: string, name: string, d: DraftCore, sampl
 
 /** 만들 때 금지선이 빠졌으면 뒤에 다시 붙인다 (주인이 고쳐도 금지선은 남긴다) */
 export function ensureHardLimits(prompt: string): string {
-    const p = String(prompt ?? '').slice(0, 12_000)
+    // 자르지 않는다 = 뒤에 붙인 금지선이 잘려 나가지 않게. 한도(30,000자)는 만들기 창구가 이 결과로 검사한다
+    const p = String(prompt ?? '')
     const missing = TWIN_HARD_LIMITS.filter(l => !p.includes(l))
     if (missing.length === 0) return p
-    return `${p}\n\n[절대 하지 않는 것]\n${missing.map(l => `- ${l}`).join('\n')}`.slice(0, 14_000)
+    return `${p}\n\n[절대 하지 않는 것]\n${missing.map(l => `- ${l}`).join('\n')}`
 }
 
 /** 종류별로 읽은 개수 */
