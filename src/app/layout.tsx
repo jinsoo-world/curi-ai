@@ -18,8 +18,8 @@ const SITE_URL = 'https://www.curi-ai.com'
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: '큐리AI | 인생 후반전 에이전트 OS',
-    template: '%s | 큐리AI',
+    default: '서프 | 인생 후반전 에이전트 OS',
+    template: '%s | 서프',
   },
   description:
     '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다.',
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   // 아이폰 「홈 화면에 추가」 = 주소창 없이 앱처럼 열리고, 상태바가 화면 위에 겹친다(검정 바탕이라 자연스럽다)
   appleWebApp: {
     capable: true,
-    title: '큐리AI',
+    title: '서프',
     statusBarStyle: 'black-translucent',
   },
   alternates: {
@@ -41,24 +41,24 @@ export const metadata: Metadata = {
     //    그래서 짝을 이루는 두 화면(/login·/en)에만 각자 적는다.
   },
   openGraph: {
-    title: '인생 후반전 에이전트 OS, 큐리AI',
+    title: '인생 후반전 에이전트 OS, 서프',
     description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다.',
     type: 'website',
     url: SITE_URL,
-    siteName: '큐리AI',
+    siteName: '서프',
     locale: 'ko_KR',
     images: [
       {
         url: '/og/curi-os.png',
         width: 1200,
         height: 630,
-        alt: '큐리AI | 인생 후반전 에이전트 OS',
+        alt: '서프 | 인생 후반전 에이전트 OS',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: '인생 후반전 에이전트 OS, 큐리AI',
+    title: '인생 후반전 에이전트 OS, 서프',
     description: '이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다.',
     images: ['/og/curi-os.png'],
   },
@@ -96,21 +96,21 @@ const jsonLd = {
       '@type': 'WebSite',
       '@id': `${SITE_URL}/#website`,
       url: SITE_URL,
-      name: '큐리AI',
+      name: '서프',
       inLanguage: 'ko-KR',
       description: '인생 후반전 에이전트 OS. 이름 있는 AI 봇 팀이 내 자료로 답하고 초안을 만듭니다.',
     },
     {
       '@type': 'Organization',
       '@id': `${SITE_URL}/#org`,
-      name: '큐리AI',
+      name: '서프',
       url: SITE_URL,
       logo: `${SITE_URL}/logo.png`,
       parentOrganization: { '@type': 'Organization', name: '미션드리븐', url: 'https://curious-500.com' },
     },
     {
       '@type': 'SoftwareApplication',
-      name: '큐리AI',
+      name: '서프',
       url: SITE_URL,
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web',

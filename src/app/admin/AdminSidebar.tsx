@@ -52,12 +52,12 @@ export default function AdminSidebar() {
                 }}>
                     <Image
                         src="/logo.png"
-                        alt="큐리"
+                        alt="서프"
                         width={32}
                         height={32}
                         style={{ borderRadius: 8 }}
                     />
-                    큐리 어드민
+                    서프 어드민
                 </Link>
             </div>
             <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>

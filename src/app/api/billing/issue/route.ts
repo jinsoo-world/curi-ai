@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
             customerKey,
             plan.price,
             orderId,
-            `큐리AI ${plan.label}`,
+            `서프 ${plan.label}`,
         )
         console.log('[Billing] Payment successful:', paymentResult.paymentKey)
 

@@ -150,7 +150,7 @@ const ko = {
     'noti.quietSub': '이 시간엔 푸시, 문자를 보내지 않아요. 이메일은 가요. (한국 시간)',
 
     // ── 손님 첫 화면 (/os/welcome) ──
-    'wel.kicker': '큐리AI',
+    'wel.kicker': '서프',
     'wel.h1': '이름 있는 AI 팀원(봇)이\n내 자료로 답하고 초안을 만들어요',
     'wel.team': '나만의 AI 팀을 만들어보세요.',
     'wel.cta': '카카오/구글로 시작',
@@ -307,7 +307,7 @@ const en: Record<TKey, string> = {
     'noti.quietOrder': 'prefix',
     'noti.quietSub': 'No push or SMS during these hours. Email still goes out. (Korea time)',
 
-    'wel.kicker': 'Curi AI',
+    'wel.kicker': 'Surf',
     'wel.h1': 'AI teammates with names (bots)\nanswer from your own material and draft for you',
     'wel.team': 'Build your own AI team.',
     'wel.cta': 'Start with Kakao or Google',

@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     const outcome = await dispatchWith(db, {
         audience: 'self',
         type: 'OWNER_NOTIFY',
-        message: { channel, userId: user.id, to, subject: typeof b.subject === 'string' ? b.subject.slice(0, 200) : '큐리AI', body: text, url },
+        message: { channel, userId: user.id, to, subject: typeof b.subject === 'string' ? b.subject.slice(0, 200) : '서프', body: text, url },
     })
     return NextResponse.json(outcome, { status: outcome.status === 'blocked' ? 403 : outcome.status === 'failed' ? 502 : 200 })
 }

@@ -1622,7 +1622,7 @@ export default function CreatorEditPage() {
                                                 return
                                             }
                                             if (!res.ok) throw new Error(data.error || '상태 변경 실패')
-                                            setToast({ type: 'success', message: newVal ? '✅ 배포 ON — 큐리AI에 공개됩니다' : '⏸️ 배포 OFF — 비공개 상태입니다' })
+                                            setToast({ type: 'success', message: newVal ? '✅ 배포 ON — 서프에 공개됩니다' : '⏸️ 배포 OFF — 비공개 상태입니다' })
                                         } catch {
                                             setIsActive(!newVal) // 롤백
                                             setToast({ type: 'error', message: '상태 변경 실패' })
@@ -2003,7 +2003,7 @@ export default function CreatorEditPage() {
                                     {summaryLoading ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: 24 }}>
                                             <div style={{ width: 32, height: 32, border: '3px solid #d1fae5', borderTopColor: '#22c55e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                                            <div style={{ fontSize: 14, color: '#16a34a', fontWeight: 600 }}>큐리 AI가 분석중...</div>
+                                            <div style={{ fontSize: 14, color: '#16a34a', fontWeight: 600 }}>서프가 분석중...</div>
                                             <div style={{ fontSize: 12, color: '#6b7280' }}>파일 내용을 요약하고 있어요</div>
                                         </div>
                                     ) : previewSource.summary ? (

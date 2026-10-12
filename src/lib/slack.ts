@@ -1,4 +1,4 @@
-// 큐리 AI — Slack Incoming Webhook 유틸리티
+// 서프 — Slack Incoming Webhook 유틸리티
 
 interface SlackBlock {
     type: string

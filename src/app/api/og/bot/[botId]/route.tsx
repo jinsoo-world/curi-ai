@@ -24,7 +24,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ botId: 
     let bot: ShareBot | null = null
     try { bot = (await getPublicMentorById(botId)) as ShareBot | null } catch { bot = null }
     const face = await faceDataUrl(bot ? absoluteUrl(baseUrl, bot.avatar_url) : null)
-    const name = bot?.name ?? '큐리AI'
+    const name = bot?.name ?? '서프'
     const line = bot ? botOneLiner(bot, 40) : '나를 닮은 AI 봇'
 
     return new ImageResponse(
@@ -39,7 +39,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ botId: 
                 <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 64, flex: 1 }}>
                     <div style={{ fontSize: 76, fontWeight: 800, lineHeight: 1.1 }}>{name}</div>
                     <div style={{ fontSize: 38, marginTop: 20, opacity: 0.92 }}>{line}</div>
-                    <div style={{ fontSize: 32, marginTop: 48, fontWeight: 700 }}>큐리AI에서 대화하기 →</div>
+                    <div style={{ fontSize: 32, marginTop: 48, fontWeight: 700 }}>서프에서 대화하기 →</div>
                 </div>
             </div>
         ),

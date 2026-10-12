@@ -60,7 +60,7 @@ export function createEmailDriver(): Driver {
                     ...(msg.replyTo && EMAIL_RE.test(msg.replyTo) ? { ReplyToAddresses: [msg.replyTo] } : {}),
                     Content: {
                         Simple: {
-                            Subject: { Data: msg.subject ?? '큐리AI', Charset: 'UTF-8' },
+                            Subject: { Data: msg.subject ?? '서프', Charset: 'UTF-8' },
                             Body: {
                                 Text: { Data: msg.body, Charset: 'UTF-8' },
                                 Html: { Data: msg.html ?? textToHtml(msg.body), Charset: 'UTF-8' },

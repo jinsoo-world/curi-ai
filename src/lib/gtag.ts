@@ -12,7 +12,7 @@ export function event(action: string, params?: Record<string, string | number | 
     window.gtag('event', action, params)
 }
 
-// ---- 큐리AI 전용 이벤트 헬퍼 ----
+// ---- 서프 전용 이벤트 헬퍼 ----
 
 /** 멘토 선택 */
 export function trackMentorSelect(mentorId: string, mentorName: string) {

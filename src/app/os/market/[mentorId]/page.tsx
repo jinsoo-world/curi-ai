@@ -1,6 +1,6 @@
 // /os/market/[mentorId] = 마켓 봇 소개(프로필) 화면.
 // 대표 흐름: 마켓 카드 → 소개(큰 사진, 한 줄, 예시 질문, 대화 CTA) → 그다음 팀에 추가.
-// 옛 /mentors/[mentorId] 패턴을 큐리AI 뼈대 안에서 다시 쓴다. 대화는 /os/chat 으로만 보낸다.
+// 옛 /mentors/[mentorId] 패턴을 서프 뼈대 안에서 다시 쓴다. 대화는 /os/chat 으로만 보낸다.
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'

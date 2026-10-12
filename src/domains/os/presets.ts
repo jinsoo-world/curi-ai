@@ -8,7 +8,7 @@
 
 import type { ApprovalMode, BotColor, BotRole, BotShape, NewBotInput } from './types'
 
-/** 봇 지시문 8칸 틀(큐리AI_봇지시문_틀_v1_1001)의 칸별 글. 이름과 만든 사람 이름은 조립할 때 끼운다 */
+/** 봇 지시문 8칸 틀(서프_봇지시문_틀_v1_1001)의 칸별 글. 이름과 만든 사람 이름은 조립할 때 끼운다 */
 export interface BotPersona {
     intro: string    // 「저는 이 팀의 ○○이에요.」 뒤에 이어지는 한 줄 소개
     traits: string   // [성격] 행동으로 쓴 3줄

@@ -194,7 +194,7 @@ async function notifyOwner(db: SupabaseClient, p: { ownerUserId: string; mentorI
         const out = await dispatchWith(db, {
             audience: 'self',
             type: 'P042',
-            message: { channel: 'push', userId: p.ownerUserId, subject: '큐리AI', body: text, url: `/mentors/${p.mentorId}` },
+            message: { channel: 'push', userId: p.ownerUserId, subject: '서프', body: text, url: `/mentors/${p.mentorId}` },
         })
         ok = ok || out.status === 'sent'
     } catch (e) {

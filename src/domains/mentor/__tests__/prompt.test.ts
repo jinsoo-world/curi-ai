@@ -186,7 +186,7 @@ describe('buildSystemPrompt — 사용자 정보에 하는 일(온보딩) 넣기
         const p = buildSystemPrompt(봇, { displayName: '지민', occupation: '강사', orgName: '큐리어스', useCases: ['홍보', '기획'] } as never)
         expect(p).toContain('하는 일: 강사')
         expect(p).toContain('소속: 큐리어스')
-        expect(p).toContain('큐리AI로 하려는 일: 홍보, 기획')
+        expect(p).toContain('서프로 하려는 일: 홍보, 기획')
     })
     it('없으면 줄을 만들지 않는다', () => {
         const p = buildSystemPrompt(봇, { displayName: '지민' } as never)

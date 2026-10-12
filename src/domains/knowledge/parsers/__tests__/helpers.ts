@@ -1,5 +1,5 @@
 // 시험용 파일을 코드로 만든다 (저장소가 공개라 실제 문서 샘플은 깃에 두지 않는다).
-// 실제 파일 시험은 test/fixtures-local/ (깃 제외, 원본은 드라이브 03_CTO/2_큐리AI/진행중/1006_문서읽기_시험샘플/) 가 있을 때만 돈다.
+// 실제 파일 시험은 test/fixtures-local/ (깃 제외, 원본은 드라이브 03_CTO/2_서프/진행중/1006_문서읽기_시험샘플/) 가 있을 때만 돈다.
 import { existsSync, readFileSync } from 'fs'
 import path from 'path'
 import JSZip from 'jszip'

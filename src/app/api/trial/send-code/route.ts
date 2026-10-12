@@ -72,7 +72,7 @@ export async function POST(req: Request) {
             return Response.json({ error: '잠시 뒤 다시 해주세요.' }, { status: 500 })
         }
 
-        const 결과 = await sendSms(phone, `[큐리AI] 인증번호 ${code}\n${유효분}분 안에 입력해주세요.`)
+        const 결과 = await sendSms(phone, `[서프] 인증번호 ${code}\n${유효분}분 안에 입력해주세요.`)
         if (!결과.ok) {
             return Response.json({ error: 결과.error }, { status: 502 })
         }

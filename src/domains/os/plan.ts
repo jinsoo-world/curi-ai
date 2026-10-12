@@ -117,7 +117,7 @@ export function planIdFromOrderId(orderId: string | null | undefined): PaidPlanI
 
 /** 토스 결제창·영수증에 보이는 이름 */
 export function planOrderName(planId: PaidPlanId): string {
-    return `큐리AI ${getPlan(planId)!.name} 1개월`
+    return `서프 ${getPlan(planId)!.name} 1개월`
 }
 
 /** 요금제 순서. 무료 < 베이직 < 프로 (PLANS 표 순서) */

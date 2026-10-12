@@ -516,7 +516,7 @@ export default function CreatorManagePage() {
                                                 ) : (
                                                     <img
                                                         src="/logo.png"
-                                                        alt="큐리"
+                                                        alt="서프"
                                                         style={{ width: '70%', height: '70%', objectFit: 'contain', opacity: 0.35 }}
                                                     />
                                                 )}

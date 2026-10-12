@@ -1,7 +1,7 @@
 'use client'
 // /home 위 메뉴: 로고(/home), 가격 안내, 내 봇 팀, 더보기 (봇 마켓, 사진 도구, 도움말, 로그인 또는 내 정보)
 // 친구 초대는 추천 보상이 정해질 때까지(D2) 메뉴에서 뺐다. /invite 화면 자체는 남아 있다
-// 모양은 탈잉 첫 화면 위 메뉴(흰 바탕, 오른쪽 글자 메뉴와 작은 채운 단추). 큐리AI 글자는 브랜드 초록 (home.css)
+// 모양은 탈잉 첫 화면 위 메뉴(흰 바탕, 오른쪽 글자 메뉴와 작은 채운 단추). 서프 글자는 브랜드 초록 (home.css)
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -31,9 +31,9 @@ export default function HomeTopBar() {
     return (
         <header className="hm-top">
             <div className="hm-top-in">
-                <Link href="/home" className="hm-logo" aria-label="큐리AI 홈">
+                <Link href="/home" className="hm-logo" aria-label="서프 홈">
                     <Image src="/icons/curi-192.png" alt="" width={30} height={30} style={{ borderRadius: 8 }} />
-                    <span>큐리AI</span>
+                    <span>서프</span>
                 </Link>
                 <nav className="hm-nav" aria-label="메뉴">
                     <Link href="/os/charge">{n.pricing}</Link>

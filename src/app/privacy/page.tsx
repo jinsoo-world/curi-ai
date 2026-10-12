@@ -56,8 +56,8 @@ export default function PrivacyPage() {
                         WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                         textDecoration: 'none',
                     }}>
-                        <img src="/logo.png" alt="큐리 AI" style={{ width: 28, height: 28, borderRadius: 6 }} />
-                        큐리 AI
+                        <img src="/logo.png" alt="서프" style={{ width: 28, height: 28, borderRadius: 6 }} />
+                        서프
                     </a>
                 </div>
             </header>
@@ -104,7 +104,7 @@ export default function PrivacyPage() {
                     <div style={{ fontSize: 15, lineHeight: 1.8, color: 'var(--color-neutral-600)' }}>
 
                         <p>
-                            (주)미션드리븐(이하 &quot;회사&quot;)은 큐리 AI(이하 &quot;서비스&quot;) 이용자의 개인정보를 소중히 다루며,
+                            (주)미션드리븐(이하 &quot;회사&quot;)은 서프(이하 &quot;서비스&quot;) 이용자의 개인정보를 소중히 다루며,
                             개인정보 보호법 등 관련 법령을 준수합니다. 이 방침은 회사가 어떤 개인정보를 수집하고, 어떻게 이용하고, 어떻게 보호하는지 설명합니다.
                             서비스 이용에 관한 약속은 <a href="/terms" style={{ color: 'var(--color-blue-500)' }}>이용약관</a>에서,
                             결제 취소와 환불은 <a href="/refund" style={{ color: 'var(--color-blue-500)' }}>환불 안내</a>에서 볼 수 있습니다.

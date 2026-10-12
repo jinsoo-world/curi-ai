@@ -14,7 +14,7 @@ describe('S1 동의와 링크 판별', () => {
     it('필수 동의 2개는 리서치 4.2 원문, 가운데점과 긴 대시 없음', () => {
         expect(TWIN_DRAFT_CONSENTS).toHaveLength(2)
         expect(TWIN_DRAFT_CONSENTS[0]).toBe('(필수) 아래 링크는 제가 직접 운영하는 계정입니다. 이 계정의 글과 영상은 제가 만들었거나 쓸 권리가 있습니다.')
-        expect(TWIN_DRAFT_CONSENTS[1]).toBe('(필수) 큐리AI가 이 계정의 공개된 글과 영상만 읽어 제 봇의 자료와 소개 초안을 만드는 데 동의합니다.')
+        expect(TWIN_DRAFT_CONSENTS[1]).toBe('(필수) 서프가 이 계정의 공개된 글과 영상만 읽어 제 봇의 자료와 소개 초안을 만드는 데 동의합니다.')
         for (const v of [...TWIN_DRAFT_CONSENTS, ...Object.values(TWIN_DRAFT_COPY), ...Object.values(DRAFT_LINK_LABEL)]) {
             expect(v).not.toMatch(/[·—–]/)
             // 화면 어디에도 횟수 표기 없음 (대표 지시 0929)

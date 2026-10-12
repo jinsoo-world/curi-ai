@@ -4,8 +4,8 @@ import { 만든docx, 로컬샘플, 로컬샘플있음 } from './helpers'
 
 describe('parseWord — 코드로 만든 docx', () => {
     it('docx 한글을 읽는다', async () => {
-        const out = await parseDocx(await 만든docx(['안녕하세요. 큐리AI 시험 문서입니다.', '둘째 줄: 한글과 English 123.']))
-        expect(out).toContain('큐리AI 시험 문서입니다')
+        const out = await parseDocx(await 만든docx(['안녕하세요. 서프 시험 문서입니다.', '둘째 줄: 한글과 English 123.']))
+        expect(out).toContain('서프 시험 문서입니다')
         expect(out).toContain('한글과 English 123')
     })
     it('앞머리(PK)로 docx 를 가른다', async () => {
@@ -19,7 +19,7 @@ describe('parseWord — 코드로 만든 docx', () => {
 describe('parseDoc 옛 워드 — 실제 파일이 있을 때만', () => {
     it.skipIf(!로컬샘플있음('office', '한글.doc'))('옛 doc(워드 97) 한글을 읽는다', async () => {
         const buf = 로컬샘플('office', '한글.doc')
-        expect(await parseDoc(buf)).toContain('큐리AI 시험 문서입니다')
+        expect(await parseDoc(buf)).toContain('서프 시험 문서입니다')
         expect(await parseWord(buf)).toContain('둘째 줄')
     })
     it.skipIf(!로컬샘플있음('office', 'footnote.doc'))('영문 옛 doc(각주 있는 실파일)', async () => {

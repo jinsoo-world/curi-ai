@@ -261,7 +261,7 @@ export default function ElevenLabsWidget({
                             style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }}
                         />
                     ) : (
-                        <img src="/logo.png" alt="큐리 AI"
+                        <img src="/logo.png" alt="서프"
                             style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }}
                         />
                     )}
@@ -409,7 +409,7 @@ export default function ElevenLabsWidget({
                 borderTop: '1px solid var(--color-neutral-200)', background: '#fff',
             }}>
                 <p style={{ margin: 0, fontSize: 12, color: 'var(--color-neutral-400)' }}>
-                    Powered by ElevenLabs · 큐리 AI
+                    Powered by ElevenLabs · 서프
                 </p>
             </div>
 

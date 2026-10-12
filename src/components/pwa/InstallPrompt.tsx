@@ -108,7 +108,7 @@ export default function InstallPrompt() {
                                 <ol className="pwa-steps">
                                     <li><b>1</b><span>화면 아래(또는 위) <b>공유 단추</b> <span aria-hidden>⎋</span>를 눌러요.<br /><small>네모에서 화살표가 위로 나가는 모양이에요.</small></span></li>
                                     <li><b>2</b><span>목록을 조금 내려 <b>「홈 화면에 추가」</b>를 눌러요.</span></li>
-                                    <li><b>3</b><span>오른쪽 위 <b>「추가」</b>를 눌러요.<br /><small>홈 화면에 초록 네잎클로버 「큐리AI」가 생겨요.</small></span></li>
+                                    <li><b>3</b><span>오른쪽 위 <b>「추가」</b>를 눌러요.<br /><small>홈 화면에 초록 네잎클로버 「서프」가 생겨요.</small></span></li>
                                 </ol>
                                 <div className="pwa-note">크롬 앱으로 열었다면 사파리로 다시 열어 주세요. 아이폰은 사파리에서만 홈 화면에 넣을 수 있어요.</div>
                             </>
@@ -118,16 +118,16 @@ export default function InstallPrompt() {
                                 <div className="os-step">맥 사파리는 메뉴 한 번이면 돼요.</div>
                                 <ol className="pwa-steps">
                                     <li><b>1</b><span>위 메뉴 <b>파일 → Dock에 추가…</b>를 눌러요.</span></li>
-                                    <li><b>2</b><span>이름이 「큐리AI」인지 보고 <b>「추가」</b>를 눌러요.</span></li>
+                                    <li><b>2</b><span>이름이 「서프」인지 보고 <b>「추가」</b>를 눌러요.</span></li>
                                 </ol>
-                                <div className="pwa-note">Dock(화면 아래 아이콘 줄)에 큐리AI가 생기고, 앱처럼 따로 창이 열려요.</div>
+                                <div className="pwa-note">Dock(화면 아래 아이콘 줄)에 서프가 생기고, 앱처럼 따로 창이 열려요.</div>
                             </>
                         )}
                         {(kind === 'button' || kind === 'other') && (
                             <>
                                 <div className="os-step">크롬, 엣지에서는 주소창 오른쪽 끝 설치 아이콘을 눌러도 돼요.</div>
                                 <ol className="pwa-steps">
-                                    <li><b>1</b><span>주소창 오른쪽 끝 <b>설치 아이콘</b>(모니터에 화살표) 또는 메뉴 ⋮ → <b>「큐리AI 설치」</b></span></li>
+                                    <li><b>1</b><span>주소창 오른쪽 끝 <b>설치 아이콘</b>(모니터에 화살표) 또는 메뉴 ⋮ → <b>「서프 설치」</b></span></li>
                                     <li><b>2</b><span><b>「설치」</b>를 눌러요.</span></li>
                                 </ol>
                             </>

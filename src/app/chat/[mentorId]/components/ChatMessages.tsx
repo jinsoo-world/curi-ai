@@ -569,7 +569,7 @@ export default function ChatMessages({
                                 ) : (
                                     <img
                                         src="/logo.png"
-                                        alt="큐리 AI"
+                                        alt="서프"
                                         style={{
                                             width: 36,
                                             height: 36,

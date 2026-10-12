@@ -69,7 +69,7 @@ export function notificationText(i: InquiryInput): { subject: string; body: stri
     const chars = [...i.body]
     const preview = chars.length > 300 ? `${chars.slice(0, 300).join('')}…` : i.body
     return {
-        subject: `[큐리AI 문의] ${categoryLabel(i.category)}`,
+        subject: `[서프 문의] ${categoryLabel(i.category)}`,
         body: [
             `유형: ${categoryLabel(i.category)}`,
             `이메일: ${i.email}`,

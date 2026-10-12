@@ -22,11 +22,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const m = await getPublicMentorById(mentorId)
     if (!m) return { title: '소개' }
     return {
-        // 맨 위 layout 이 '— 큐리 AI' 를 붙인다. 여기서 또 붙이면 두 번 나온다(2026-09-16 실측)
+        // 맨 위 layout 이 '— 서프' 를 붙인다. 여기서 또 붙이면 두 번 나온다(2026-09-16 실측)
         title: m.name,
         description: m.title || m.description || '',
         openGraph: {
-            title: `${m.name} | 큐리 AI`,
+            title: `${m.name} | 서프`,
             description: m.title || m.description || '',
             images: m.avatar_url ? [m.avatar_url] : undefined,
         },

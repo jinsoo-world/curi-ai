@@ -43,7 +43,7 @@ export function createPushDriver(db: SupabaseClient): Driver {
             const subs = (data ?? []) as SubRow[]
             if (subs.length === 0) return { ok: false, error: '푸시를 받을 기기가 없어요. 알림 설정에서 푸시를 켜 주세요.' }
 
-            const payload = JSON.stringify({ title: msg.subject ?? '큐리AI', body: msg.body, url: msg.url ?? '/os' })
+            const payload = JSON.stringify({ title: msg.subject ?? '서프', body: msg.body, url: msg.url ?? '/os' })
             let sent = 0
             const dead: string[] = []
             for (const s of subs) {

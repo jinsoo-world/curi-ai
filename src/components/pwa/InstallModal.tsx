@@ -74,15 +74,15 @@ export default function InstallModal() {
             ? [
                 { 번호: 1, 글: '화면 아래(또는 위) 공유 단추를 눌러요.', 작게: '네모에서 화살표가 위로 나가는 모양이에요.' },
                 { 번호: 2, 글: '목록을 조금 내려 「홈 화면에 추가」를 눌러요.' },
-                { 번호: 3, 글: '오른쪽 위 「추가」를 눌러요.', 작게: '홈 화면에 초록 클로버 「큐리AI」가 생겨요.' },
+                { 번호: 3, 글: '오른쪽 위 「추가」를 눌러요.', 작게: '홈 화면에 초록 클로버 「서프」가 생겨요.' },
             ]
             : kind === 'mac-safari'
                 ? [
                     { 번호: 1, 글: '위 메뉴 파일 → Dock에 추가를 눌러요.' },
-                    { 번호: 2, 글: '이름이 「큐리AI」인지 보고 「추가」를 눌러요.' },
+                    { 번호: 2, 글: '이름이 「서프」인지 보고 「추가」를 눌러요.' },
                 ]
                 : [
-                    { 번호: 1, 글: '주소창 오른쪽 끝 설치 아이콘(모니터에 화살표) 또는 메뉴 ⋮ → 「큐리AI 설치」를 눌러요.' },
+                    { 번호: 1, 글: '주소창 오른쪽 끝 설치 아이콘(모니터에 화살표) 또는 메뉴 ⋮ → 「서프 설치」를 눌러요.' },
                     { 번호: 2, 글: '「설치」를 눌러요.' },
                 ]
 
@@ -107,7 +107,7 @@ export default function InstallModal() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <Image src="/icons/curi-192.png" alt="" width={40} height={40} style={{ borderRadius: 10, flex: 'none' }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-neutral-900)', lineHeight: 1.3 }}>큐리AI를 앱으로 설치해요</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-neutral-900)', lineHeight: 1.3 }}>서프를 앱으로 설치해요</div>
                     <div style={{ fontSize: 15, color: 'var(--color-neutral-600)', lineHeight: 1.4 }}>홈 화면에서 한 번 눌러 바로 열어요</div>
                 </div>
                 <button

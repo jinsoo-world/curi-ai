@@ -4,8 +4,8 @@ import { 만든hwpx, 로컬샘플, 로컬샘플있음 } from './helpers'
 
 describe('parseHangul — 코드로 만든 hwpx', () => {
     it('hwpx 한글 문단을 읽는다', async () => {
-        const out = await parseHangul(await 만든hwpx(['큐리AI 한글 문서', '둘째 문단입니다']))
-        expect(out).toContain('큐리AI 한글 문서')
+        const out = await parseHangul(await 만든hwpx(['서프 한글 문서', '둘째 문단입니다']))
+        expect(out).toContain('서프 한글 문서')
         expect(out).toContain('둘째 문단입니다')
     })
     it('깨진 파일은 던진다(호출쪽이 업스테이지 등으로 넘김)', async () => {

@@ -358,7 +358,7 @@ export default function CloverStorePage() {
                             클로버란 무엇일까요?
                         </h3>
                         <p style={{ fontSize: 14, color: 'var(--color-neutral-500)', lineHeight: 1.7 }}>
-                            클로버는 큐리 AI에서 받을 수 있는 새로운 보상이에요.<br />
+                            클로버는 서프에서 받을 수 있는 새로운 보상이에요.<br />
                             미션을 완료하고 클로버를 모아보세요.<br />
                             클로버는 스토어에서 모바일 상품권 등<br />
                             다양한 혜택으로 교환할 수 있어요!

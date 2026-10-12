@@ -1,4 +1,4 @@
-// 큐리AI 첫 화면에 보일 「할 일」 목록
+// 서프 첫 화면에 보일 「할 일」 목록
 //
 // 대표 확정 2026-09-14 = 「오늘 뭘 만들래가 맞겠다」
 //
@@ -110,7 +110,7 @@ export const GUIDE_ITEM: StudioItem = {
     id: 'manager',
     img: '/mentors/curi-manager.webp',
     title: '뭘 해야 할지 모르겠어요',
-    desc: '큐리 매니저가 맞는 곳으로 안내해드려요',
+    desc: '서프 매니저가 맞는 곳으로 안내해드려요',
     emoji: '🙂',
     href: '/mentors?c=안내',
     cost: 'free',

@@ -83,7 +83,7 @@ export default function InvitePage() {
                     친구초대
                 </h1>
                 <p style={{ fontSize: 'var(--글자-본문)', color: 'var(--먹연)', margin: '0 0 20px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                    내 주소를 친구에게 보내 큐리AI를 알려 주세요.
+                    내 주소를 친구에게 보내 서프를 알려 주세요.
                 </p>
 
                 {/* 추천 보상 안내 — 대표 확정(D2): 친구가 휴대폰 인증까지 마치면 한 번 준다 */}
@@ -133,7 +133,7 @@ export default function InvitePage() {
                     }}>
                         <p style={{ fontSize: 17, fontWeight: 800, margin: '0 0 7px' }}>로그인하면 내 주소가 생겨요</p>
                         <p style={{ fontSize: 14.5, color: 'var(--먹연)', margin: '0 0 20px', lineHeight: 1.6, wordBreak: 'keep-all' }}>
-                            그 주소를 친구에게 보내 큐리AI를 알려 줄 수 있어요.
+                            그 주소를 친구에게 보내 서프를 알려 줄 수 있어요.
                         </p>
                         <Link href="/login" style={{
                             display: 'inline-block', background: 'var(--먹)', color: '#fff',

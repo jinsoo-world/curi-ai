@@ -1,4 +1,4 @@
-/* /landing — 델파이(delphi.ai) 흐름 + 21st.dev uilayout 컴포넌트 구조를 가져와 큐리AI 색으로 다시 칠한 랜딩.
+/* /landing — 델파이(delphi.ai) 흐름 + 21st.dev uilayout 컴포넌트 구조를 가져와 서프 색으로 다시 칠한 랜딩.
    21st.dev의 uilayout.contact 라이브러리는 소스 보기가 로그인(계정 생성)을 요구해 그대로 못 긁었다(레지스트리 403).
    대신 로그인 없이 열리는 공개 미리보기(cdn.21st.dev bundle html)를 렌더링해 실제 구조(배지 pill, 그라데이션 강조
    글자, bento 카드 그리드, 번호 스텝 카드)를 확인하고 그 모양을 우리 색·글자로 다시 짰다. 세부는 보고 참고.

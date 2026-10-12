@@ -1,11 +1,11 @@
 /**
  * 봇 공유 미리보기(카톡·SNS에 링크를 붙였을 때 뜨는 카드) 글자·그림 정하기.
- * 공개 봇만 봇 이름·한 줄·얼굴을 보여 주고, 비공개 봇은 큐리AI 기본 카드로 둔다.
+ * 공개 봇만 봇 이름·한 줄·얼굴을 보여 주고, 비공개 봇은 서프 기본 카드로 둔다.
  */
 export const BRAND_GREEN = '#03C124'
 export const GENERIC_BOT_META = {
-    title: '큐리AI | 나를 닮은 AI 봇',
-    description: '큐리AI에서 AI 봇과 지금 바로 대화해 보세요',
+    title: '서프 | 나를 닮은 AI 봇',
+    description: '서프에서 AI 봇과 지금 바로 대화해 보세요',
 } as const
 
 export interface ShareBot {
@@ -43,7 +43,7 @@ export function botShareMeta(bot: ShareBot | null, baseUrl: string): BotShareMet
     if (!bot) return { ...GENERIC_BOT_META, image: null, isPublic: false }
     const base = baseUrl.replace(/\/+$/, '')
     return {
-        title: `${bot.name} | 큐리AI`,
+        title: `${bot.name} | 서프`,
         description: botOneLiner(bot),
         image: `${base}/api/og/bot/${encodeURIComponent(bot.id)}`,
         isPublic: true,

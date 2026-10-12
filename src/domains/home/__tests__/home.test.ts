@@ -123,7 +123,7 @@ describe('home feed (real data)', () => {
     it('stats hidden below threshold', () => {
         expect(gateStats({ bots: 3, chats: 50 })).toEqual({ bots: null, chats: null })
         expect(homeStatsLine({ bots: null, chats: null })).toBe('')
-        expect(homeStatsLine(gateStats({ bots: 150, chats: 20 }))).toBe('지금까지 큐리AI에서 만든 봇 150개')
+        expect(homeStatsLine(gateStats({ bots: 150, chats: 20 }))).toBe('지금까지 서프에서 만든 봇 150개')
     })
 })
 

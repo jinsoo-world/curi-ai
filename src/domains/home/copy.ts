@@ -76,7 +76,7 @@ export function homeStatsParts(s: { bots: number | null; chats: number | null })
     const parts: { label: string; value: string }[] = []
     if (s.bots != null) parts.push({ label: '만든 봇', value: `${s.bots.toLocaleString('ko-KR')}개` })
     if (s.chats != null) parts.push({ label: '나눈 대화', value: `${s.chats.toLocaleString('ko-KR')}번` })
-    return { lead: '지금까지 큐리AI에서', parts }
+    return { lead: '지금까지 서프에서', parts }
 }
 
 /** 누적 숫자 한 줄 (기준 넘은 것만) */

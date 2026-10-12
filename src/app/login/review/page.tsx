@@ -3,7 +3,7 @@
 // 카드사 심사용 로그인 — 2026-09-15 신설
 //
 // 왜 필요한가 = 토스 MID 신청서가 「결제창 진입이 가능한 테스트 계정(아이디/비밀번호)」을 요구하는데
-// 큐리AI 는 구글·카카오 버튼으로만 들어가게 돼 있어서 아이디와 비밀번호 한 쌍이 없었다.
+// 서프 는 구글·카카오 버튼으로만 들어가게 돼 있어서 아이디와 비밀번호 한 쌍이 없었다.
 //
 // 왜 /login 이 아니라 여기인가 = 일반 고객 화면은 소셜 두 개로 단순하게 두기로 한 제품 결정을 지킨다.
 // 이 주소를 아는 사람(심사관)만 들어온다. 검색에도 안 걸리게 robots 를 막았다.
@@ -55,7 +55,7 @@ export default function ReviewLoginPage() {
                     fontSize: 20, fontWeight: 800, color: 'var(--color-neutral-900)',
                     margin: '0 0 6px', letterSpacing: '-0.02em',
                 }}>
-                    🤖 큐리 AI
+                    🤖 서프
                 </h1>
                 <p style={{ fontSize: 13, color: 'var(--color-neutral-500)', margin: '0 0 24px' }}>
                     심사용 로그인

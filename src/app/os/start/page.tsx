@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import StartBody from './StartBody'
 
 export const metadata: Metadata = {
-    title: { absolute: '큐리AI | 시작하기' },
+    title: { absolute: '서프 | 시작하기' },
     robots: { index: false },
 }
 

@@ -1,4 +1,4 @@
-// 큐리AI 서비스 워커 = 브라우저 뒤에서 조용히 돌며 「앱 껍데기」를 저장해 두고, 인터넷이 끊기면 안내 화면을 보여준다.
+// 서프 서비스 워커 = 브라우저 뒤에서 조용히 돌며 「앱 껍데기」를 저장해 두고, 인터넷이 끊기면 안내 화면을 보여준다.
 // 파일은 블록 2개로 나눈다. 각 블록은 서로 다른 사람이 손대도 부딪히지 않게 표식 안에만 쓴다.
 //   1) === 캐시·오프라인 (설치형 앱) ===   ← 이 파일의 지금 내용
 //   2) === push (메시징) ===               ← 파일 끝. 알림(푸시) 담당이 채운다
@@ -113,7 +113,7 @@ self.addEventListener('message', (event) => {
 // 서버(web-push)가 보낸 알림을 화면에 띄우고, 누르면 /os 로 간다.
 // 이 블록만 메시징 담당. 캐시·오프라인 블록은 위에 따로 있다.
 self.addEventListener('push', (event) => {
-    let data = { title: '큐리AI', body: '', url: '/os' }
+    let data = { title: '서프', body: '', url: '/os' }
     try { data = { ...data, ...event.data.json() } } catch { if (event.data) data.body = event.data.text() }
     event.waitUntil(
         self.registration.showNotification(data.title, {

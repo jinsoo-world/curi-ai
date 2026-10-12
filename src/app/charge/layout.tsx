@@ -10,17 +10,17 @@ const DESCRIPTION = `무료로 시작하고, 봇을 더 많이 쓰고 싶을 때
 export const metadata: Metadata = {
     title: '요금제',
     description: DESCRIPTION,
-    keywords: ['큐리AI 가격', '큐리AI 요금제', 'AI 봇 팀'],
+    keywords: ['서프 가격', '서프 요금제', 'AI 봇 팀'],
     openGraph: {
-        title: '요금제 | 큐리AI',
+        title: '요금제 | 서프',
         description: DESCRIPTION,
         type: 'website',
         url: 'https://www.curi-ai.com/charge',
-        siteName: '큐리 AI',
+        siteName: '서프',
         locale: 'ko_KR',
-        images: [{ url: '/og-image.png', width: 1200, height: 630, alt: '요금제 | 큐리AI' }],
+        images: [{ url: '/og-image.png', width: 1200, height: 630, alt: '요금제 | 서프' }],
     },
-    twitter: { card: 'summary_large_image', title: '요금제 | 큐리AI', description: DESCRIPTION, images: ['/og-image.png'] },
+    twitter: { card: 'summary_large_image', title: '요금제 | 서프', description: DESCRIPTION, images: ['/og-image.png'] },
     alternates: { canonical: 'https://www.curi-ai.com/charge' },
     robots: { index: true, follow: true },
 }

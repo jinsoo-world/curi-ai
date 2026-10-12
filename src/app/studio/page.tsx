@@ -1,6 +1,6 @@
 'use client'
 
-// 큐리AI 첫 화면 — 「오늘 뭘 만들까요?」
+// 서프 첫 화면 — 「오늘 뭘 만들까요?」
 // 대표 확정 2026-09-14. 지금까지의 「누구와 대화할래」(AI 목록)를 대신한다.
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'

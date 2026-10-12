@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const user = await getUserByHandle(db, cleanHandle)
 
     if (!user) {
-        return { title: '크리에이터를 찾을 수 없습니다 | 큐리 AI' }
+        return { title: '크리에이터를 찾을 수 없습니다 | 서프' }
     }
 
     const name = user.display_name || cleanHandle
@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         title: name,
         description: `${name}의 AI 멘토와 대화를 시작하세요.`,
         openGraph: {
-            title: `${name} | 큐리 AI`,
+            title: `${name} | 서프`,
             description: `${name}의 AI 멘토와 대화를 시작하세요.`,
         },
     }
@@ -85,7 +85,7 @@ function MentorCard({
                     }}>
                         <Image
                             src="/logo.png"
-                            alt="큐리 AI"
+                            alt="서프"
                             width={80}
                             height={80}
                             style={{ borderRadius: 20, filter: 'grayscale(30%)' }}
@@ -310,10 +310,10 @@ export default async function CreatorProfilePage({ params }: PageProps) {
                         textDecoration: 'none', fontWeight: 600,
                     }}
                 >
-                    큐리 AI 둘러보기 →
+                    서프 둘러보기 →
                 </Link>
                 <p style={{ fontSize: 13, color: 'var(--color-neutral-300)', marginTop: 12 }}>
-                    © 2026 큐리 AI — 나를 아는 멘토
+                    © 2026 서프 — 나를 아는 멘토
                 </p>
             </footer>
 

@@ -178,13 +178,13 @@ export default function LoginPage() {
             }}>
                 {/* Logo */}
                 <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                    <span style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}><BotAvatar shape="clover" color="green" state="talking" size={96} name="큐리AI" /></span>
+                    <span style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}><BotAvatar shape="clover" color="green" state="talking" size={96} name="서프" /></span>
                     {/* 큐리 글자 = 브랜드 초록(globals.css --연두 = 큐리어스 #03C124). 검정 아님 (대표 0928) */}
                     <h1 style={{
                         fontSize: 28, lineHeight: '38px', fontWeight: 700, color: 'var(--연두, var(--color-primary-500))',
                         letterSpacing: '-0.0236em', marginBottom: 8,
                     }}>
-                        큐리 AI
+                        서프
                     </h1>
                     <p style={{ fontSize: 16, color: 'var(--color-neutral-600)', lineHeight: 1.6 }}>
                         로그인하고 내 봇 만들기를 시작해요

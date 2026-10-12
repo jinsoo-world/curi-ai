@@ -1,4 +1,4 @@
-// 큐리 AI — 토스페이먼츠 서버 유틸리티
+// 서프 — 토스페이먼츠 서버 유틸리티
 // 시크릿 키는 서버에서만 사용 (API Routes)
 
 const TOSS_API_BASE = 'https://api.tosspayments.com/v1'

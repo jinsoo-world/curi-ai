@@ -1,4 +1,4 @@
-// /api/creator/knowledge/summarize — 큐리 AI로 파일 내용 요약 생성
+// /api/creator/knowledge/summarize — 서프로 파일 내용 요약 생성
 import { NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'

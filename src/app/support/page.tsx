@@ -53,7 +53,7 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
                     }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src="/logo.png" alt="" style={{ width: 28, height: 28, borderRadius: 6 }} />
-                        큐리 AI
+                        서프
                     </Link>
                 </div>
             </header>

@@ -8,12 +8,12 @@ export async function botPageMetadata(mentorId: string, path: string): Promise<M
     let bot: ShareBot | null = null
     try { bot = (await getPublicMentorById(mentorId)) as ShareBot | null } catch { bot = null }
     const m = botShareMeta(bot, baseUrl)
-    const images = m.image ? [{ url: m.image, width: 1200, height: 630, alt: bot?.name ?? '큐리AI' }] : [{ url: `${baseUrl}/logo.png` }]
+    const images = m.image ? [{ url: m.image, width: 1200, height: 630, alt: bot?.name ?? '서프' }] : [{ url: `${baseUrl}/logo.png` }]
     return {
         title: m.title,
         description: m.description,
         robots: { index: false, follow: false },
-        openGraph: { title: m.title, description: m.description, type: 'website', url: `${baseUrl}${path}`, images, siteName: '큐리AI', locale: 'ko_KR' },
+        openGraph: { title: m.title, description: m.description, type: 'website', url: `${baseUrl}${path}`, images, siteName: '서프', locale: 'ko_KR' },
         twitter: { card: m.image ? 'summary_large_image' : 'summary', title: m.title, description: m.description, images: images.map(i => i.url) },
     }
 }

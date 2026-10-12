@@ -5,8 +5,8 @@ import SetHtmlLang from './SetHtmlLang'
 // 해외 방문자가 처음 만나는 유일한 영어 화면이다.
 // 서비스 화면은 아직 한국어 전용이라, 여기서 무엇을 하는 곳인지만 정확히 알린다.
 export const metadata: Metadata = {
-    // 루트 layout 의 '%s — 큐리 AI' 틀을 쓰면 영어 화면 제목에 한글이 붙는다
-    title: { absolute: 'Curi AI — Turn your experience into an AI that works for you' },
+    // 루트 layout 의 '%s — 서프' 틀을 쓰면 영어 화면 제목에 한글이 붙는다
+    title: { absolute: 'Surf — Turn your experience into an AI that works for you' },
     description:
         'Build an AI from what you already know, share it with the people who need it, and earn from it. No coding required.',
     // 한국어 짝은 루트(/)가 아니라 /login 이다. 루트는 307 리다이렉트라 짝이 될 수 없다.
@@ -21,25 +21,25 @@ export const metadata: Metadata = {
     // ⚠️ openGraph·twitter 는 루트 것과 합쳐지지 않고 통째로 덮인다.
     //    그래서 이미지·사이트명까지 여기서 다시 적는다. 안 적으면 공유 카드에서 사라진다.
     openGraph: {
-        title: 'Curi AI — Turn your experience into an AI that works for you',
+        title: 'Surf — Turn your experience into an AI that works for you',
         description:
             'Build an AI from what you already know, share it, and earn from it. No coding required.',
         type: 'website',
         url: 'https://www.curi-ai.com/en',
-        siteName: 'Curi AI',
+        siteName: 'Surf',
         locale: 'en_US',
         images: [
             {
                 url: '/og-image.png',
                 width: 1200,
                 height: 630,
-                alt: 'Curi AI',
+                alt: 'Surf',
             },
         ],
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'Curi AI — Turn your experience into an AI that works for you',
+        title: 'Surf — Turn your experience into an AI that works for you',
         description:
             'Build an AI from what you already know, share it, and earn from it. No coding required.',
         images: ['/og-image.png'],
@@ -100,7 +100,7 @@ export default function EnglishLandingPage() {
                             color: 'var(--진초록)',
                         }}
                     >
-                        🤖 Curi AI
+                        🤖 Surf
                     </span>
                     <Link
                         href="/login"
@@ -171,7 +171,7 @@ export default function EnglishLandingPage() {
                             maxWidth: 520,
                         }}
                     >
-                        You have spent years learning something well. Curi AI turns that into an AI
+                        You have spent years learning something well. Surf turns that into an AI
                         other people can talk to, any hour of the day.
                     </p>
                     <Link
