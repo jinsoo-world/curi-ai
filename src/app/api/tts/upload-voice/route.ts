@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
             try {
                 const elForm = new FormData()
                 elForm.append('name', `curi-${mentorId}-${Date.now()}`)
-                elForm.append('description', `Curi AI mentor voice`)
+                elForm.append('description', `Surf mentor voice`)
 
                 const fileBlob = new Blob([buffer], { type: file.type || 'audio/mpeg' })
                 elForm.append('files', fileBlob, file.name)

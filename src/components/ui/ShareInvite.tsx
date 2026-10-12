@@ -53,7 +53,7 @@ export default function ShareInvite({ code, compact = false }: { code: string; c
             K.Share.sendDefault({
                 objectType: 'feed',
                 content: {
-                    title: `큐리 AI 무료 체험권 ${TRIAL_DAYS}일`,
+                    title: `서프 무료 체험권 ${TRIAL_DAYS}일`,
                     description: `내 사진 한 장으로 프로필 사진을 만들어요. 체험권을 받으면 클로버 ${TRIAL_CLOVERS}개도 같이 드려요.`,
                     imageUrl: `${window.location.origin}/samples/after-man.webp`,
                     link: { mobileWebUrl: 주소, webUrl: 주소 },

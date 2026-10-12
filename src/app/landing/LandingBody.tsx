@@ -49,7 +49,7 @@ export default function LandingBody() {
         <div className="ld" data-theme="os">
             <nav className="ld-nav">
                 <div className="ld-nav-inner">
-                    <span className="ld-logo">큐리AI</span>
+                    <span className="ld-logo">서프</span>
                     <Link href="/os" className="ld-nav-cta">무료로 시작하기</Link>
                 </div>
             </nav>

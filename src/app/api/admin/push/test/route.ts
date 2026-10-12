@@ -26,7 +26,7 @@ export async function POST(req: Request) {
             type: 'TEST',
             category: 'info',
             title: text(b.title, '알림이 잘 와요', 80),
-            body: text(b.body, '큐리AI 앱 알림 시험이에요. 눌러 보세요.', 300),
+            body: text(b.body, '서프 앱 알림 시험이에요. 눌러 보세요.', 300),
             deeplink,
             ignoreLimits: true,
         }))

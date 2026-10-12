@@ -57,9 +57,9 @@ describe('os/plan — 요금제 표 (무료 / 베이직 9,900 / 프로 39,000, �
         expect(planIdFromOrderId(null)).toBeNull()
     })
 
-    it('토스 결제창에 보이는 이름은 「큐리AI 베이직 1개월」', () => {
-        expect(planOrderName('basic')).toBe('큐리AI 베이직 1개월')
-        expect(planOrderName('pro')).toBe('큐리AI 프로 1개월')
+    it('토스 결제창에 보이는 이름은 「서프 베이직 1개월」', () => {
+        expect(planOrderName('basic')).toBe('서프 베이직 1개월')
+        expect(planOrderName('pro')).toBe('서프 프로 1개월')
     })
 
     it('DB 행이 없거나 기한이 지났으면 무료로 본다', () => {

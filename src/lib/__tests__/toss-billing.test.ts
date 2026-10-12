@@ -27,7 +27,7 @@ describe('lib/toss — 자동결제 승인(chargeBilling)', () => {
             가짜응답(true, { paymentKey: 'pk_1', orderId: 'curi-monthly-1-abc', totalAmount: 9900, status: 'DONE' }),
         )
 
-        await chargeBilling('bk_1', 'cus_1', 9900, 'curi-monthly-1-abc', '큐리 AI 월간')
+        await chargeBilling('bk_1', 'cus_1', 9900, 'curi-monthly-1-abc', '서프 월간')
 
         expect(fetchSpy).toHaveBeenCalledTimes(1)
         const [url, init] = fetchSpy.mock.calls[0]
@@ -38,7 +38,7 @@ describe('lib/toss — 자동결제 승인(chargeBilling)', () => {
             customerKey: 'cus_1',
             amount: 9900,
             orderId: 'curi-monthly-1-abc',
-            orderName: '큐리 AI 월간',
+            orderName: '서프 월간',
         })
     })
 

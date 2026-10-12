@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     const t = readToken(req)
     if (!t.ok) return t.res
     const form = `<form method="post" action="/api/unsubscribe?t=${encodeURIComponent(t.token)}"><button type="submit">광고 그만 받기</button></form>`
-    return page('큐리AI 광고 수신 거부', `${LABEL[t.target]}로 오는 광고를 그만 받으시겠어요? 봇이 일을 마쳤다는 소식 같은 안내는 계속 받으실 수 있어요.`, 200, form)
+    return page('서프 광고 수신 거부', `${LABEL[t.target]}로 오는 광고를 그만 받으시겠어요? 봇이 일을 마쳤다는 소식 같은 안내는 계속 받으실 수 있어요.`, 200, form)
 }
 
 export async function POST(req: Request) {

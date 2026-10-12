@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     }
     const safe = code.replace(/[^0-9a-f]/g, '')
     const body = r.status === 'done'
-        ? `<p>큐리AI에 남아 있던 인스타그램 연결 정보와 배운 게시물 글을 모두 지웠어요.</p><p>Your Instagram data has been deleted from Curi AI.</p>`
+        ? `<p>서프에 남아 있던 인스타그램 연결 정보와 배운 게시물 글을 모두 지웠어요.</p><p>Your Instagram data has been deleted from Surf.</p>`
         : `<p>삭제 요청을 받았어요. 연결 열쇠와 계정 정보는 바로 지웠고, 배운 게시물 글은 24시간 안에 지워요.</p><p>We received your request. Your access token and account info were deleted immediately; learned post captions will be deleted within 24 hours.</p>`
     return new NextResponse(page(r.status === 'done' ? '삭제가 끝났어요' : '삭제 요청을 받았어요', `${body}<p>접수 번호 Confirmation code: <code>${safe}</code></p>`), { status: 200, headers })
 }

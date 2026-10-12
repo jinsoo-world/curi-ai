@@ -143,13 +143,13 @@ export default function MissionsPage() {
         if (sharing || missionStatus.sharesToday >= 3) return
 
         // 공유 창 열기
-        const shareText = '큐리 AI에서 사진 한 장으로 프로필 사진을 만들어보세요'
+        const shareText = '서프에서 사진 한 장으로 프로필 사진을 만들어보세요'
         const shareUrl = inviteLink
 
         try {
             if (navigator.share) {
                 await navigator.share({
-                    title: '큐리 AI',
+                    title: '서프',
                     text: shareText,
                     url: shareUrl,
                 })
@@ -165,7 +165,7 @@ export default function MissionsPage() {
                     w.Kakao.Share.sendDefault({
                         objectType: 'feed',
                         content: {
-                            title: '큐리 AI',
+                            title: '서프',
                             description: shareText,
                             imageUrl: 'https://www.curi-ai.com/icons/icon-512x512.png',
                             link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
@@ -249,7 +249,7 @@ export default function MissionsPage() {
             id: 'invite-friend',
             icon: '',
             title: '친구 초대하기',
-            description: '친구에게 큐리AI를 알려 주세요',
+            description: '친구에게 서프를 알려 주세요',
             reward: 100,
             rewardLabel: '',
             progress: missionStatus.friendsInvited,
@@ -676,7 +676,7 @@ export default function MissionsPage() {
                             공유 완료!
                         </h3>
                         <p style={{ fontSize: 14, color: 'var(--color-neutral-500)', lineHeight: 1.6, marginBottom: 24 }}>
-                            친구에게 큐리AI를 알려 주셔서 고마워요
+                            친구에게 서프를 알려 주셔서 고마워요
                         </p>
                         <button
                             onClick={() => setShowShareConfirm(false)}
@@ -786,13 +786,13 @@ export default function MissionsPage() {
                                         const shareParams = {
                                             objectType: 'feed' as const,
                                             content: {
-                                                title: '큐리 AI - 나만의 AI를 만들어보세요!',
+                                                title: '서프 - 나만의 AI를 만들어보세요!',
                                                 description: '사진 한 장으로 전문가 프로필 사진을 만들 수 있어요',
                                                 imageUrl: 'https://www.curi-ai.com/og-image.png',
                                                 link: { mobileWebUrl: inviteLink, webUrl: inviteLink },
                                             },
                                             buttons: [
-                                                { title: '큐리 AI 시작하기', link: { mobileWebUrl: inviteLink, webUrl: inviteLink } },
+                                                { title: '서프 시작하기', link: { mobileWebUrl: inviteLink, webUrl: inviteLink } },
                                             ],
                                         }
                                         if (w.Kakao?.Share?.sendDefault) {

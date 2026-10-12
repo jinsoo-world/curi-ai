@@ -290,7 +290,7 @@ function GeneralTab({ localeChoice, setLocaleChoice }: { localeChoice: LocaleCho
             <div className="os-card">
                 <div className="os-set-line">
                     <div className="os-set-text"><b>{t('contact.label')}</b><div className="os-set-hint">{t('contact.sub')}</div></div>
-                    <a href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('[큐리AI 1:1 문의]')}`} className="os-btn" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>{t('contact.send')}</a>
+                    <a href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('[서프 1:1 문의]')}`} className="os-btn" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>{t('contact.send')}</a>
                 </div>
                 {/* 고객센터 화면 = 앱스토어 지원 주소 (1002) */}
                 <div className="os-set-sub" style={{ marginTop: 10 }}>

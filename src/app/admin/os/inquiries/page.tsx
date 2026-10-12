@@ -70,7 +70,7 @@ export default function InquiriesPage() {
                                 <b style={{ color: '#1a1a2e' }}>{categoryLabel(i.category)}</b>
                                 <span>{STATUS_LABEL[i.status]}</span>
                                 <span>{new Date(i.created_at).toLocaleString('ko-KR')}</span>
-                                <a href={`mailto:${encodeURIComponent(i.email)}?subject=${encodeURIComponent('[큐리 AI 고객센터] 문의 답변')}`} style={{ color: '#2563eb' }}>{i.email}</a>
+                                <a href={`mailto:${encodeURIComponent(i.email)}?subject=${encodeURIComponent('[서프 고객센터] 문의 답변')}`} style={{ color: '#2563eb' }}>{i.email}</a>
                                 {i.platform && <span>{i.platform} {i.app_version ?? ''}</span>}
                                 {i.user_id && <a href={`/admin/users/${encodeURIComponent(i.user_id)}`} style={{ color: '#2563eb' }}>회원 보기</a>}
                                 {i.answered_at && <span>답한 시각 {new Date(i.answered_at).toLocaleString('ko-KR')}</span>}

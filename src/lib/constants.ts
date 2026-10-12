@@ -1,7 +1,7 @@
-// 큐리 AI — 상수 정의
+// 서프 — 상수 정의
 
 export const APP_CONFIG = {
-    name: '큐리 AI',
+    name: '서프',
     slogan: '언제든, 나를 아는 멘토에게 물어보세요',
     url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
 } as const

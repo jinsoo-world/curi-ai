@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { botShareMeta, botOneLiner, absoluteUrl, GENERIC_BOT_META } from '../botMeta'
 
 describe('botShareMeta', () => {
-    it('공개 봇 = 이름 | 큐리AI, 한 줄, 봇 그림 주소', () => {
+    it('공개 봇 = 이름 | 서프, 한 줄, 봇 그림 주소', () => {
         const m = botShareMeta({ id: 'b 1', name: '김선생', title: '수학을 쉽게' }, 'https://x.com/')
-        expect(m.title).toBe('김선생 | 큐리AI')
+        expect(m.title).toBe('김선생 | 서프')
         expect(m.description).toBe('수학을 쉽게')
         expect(m.image).toBe('https://x.com/api/og/bot/b%201')
         expect(m.isPublic).toBe(true)

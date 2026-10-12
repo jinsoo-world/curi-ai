@@ -27,7 +27,7 @@ const PREVIEW_LINES: Record<string, string> = {
     '봉이 김선달': '허허, 이 김선달이가 돈 버는 비법을 알려주지!',
     '신사임당': '반갑습니다. 지혜로운 삶과 예술에 대해 이야기 나눠볼까요?',
 }
-const DEFAULT_PREVIEW_LINE = '안녕하세요, 큐리 AI 봇입니다. 무엇이든 물어보세요!'
+const DEFAULT_PREVIEW_LINE = '안녕하세요, 서프 봇입니다. 무엇이든 물어보세요!'
 const OWNER_PREVIEW_MAX = 200
 /** 위기 상담 안내(통화에서도 읽는 고정 문구, 채팅 화면의 CRISIS_RESPONSE 를 소리용으로 줄인 것) */
 const CRISIS_SPOKEN = '지금 많이 힘드신 것 같아서 걱정돼요. 혼자 감당하지 않으셔도 돼요. 자살예방상담전화 1393, 정신건강위기상담전화 1577-0199로 지금 바로 연락해 보세요. 24시간 도움을 받으실 수 있어요.'
@@ -112,7 +112,7 @@ async function readGreeting(db: Db, user: { id: string; email?: string | null },
     const { data: prof } = await db.from('users').select('display_name').eq('id', user.id).maybeSingle()
     // 이름은 한글·영문·숫자만 10자(이름 칸에 글을 심어 읽히는 것을 막는다)
     const name = String((prof as { display_name?: string | null } | null)?.display_name || '').replace(/[^가-힣a-zA-Z0-9]/g, '').slice(0, 10) || '회원'
-    return { text: `네, ${name}님! ${mentor.name || '큐리'}입니다, 반갑습니다!`, voiceId: mentor.voice_id, mentorId: mentor.id }
+    return { text: `네, ${name}님! ${mentor.name || '서프'}입니다, 반갑습니다!`, voiceId: mentor.voice_id, mentorId: mentor.id }
 }
 
 /** ④ 미리 듣기 — 공개 봇은 고정 문구, 내 봇은 주인이 쓴 짧은 문장(200자) */

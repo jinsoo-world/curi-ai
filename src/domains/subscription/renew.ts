@@ -136,7 +136,7 @@ export async function runRenewals(deps: RenewDeps, opts: { now?: () => Date; dea
                     continue
                 }
                 try {
-                    paid = await deps.charge(sub, plan.price, orderId, `큐리AI ${plan.label} 갱신`)
+                    paid = await deps.charge(sub, plan.price, orderId, `서프 ${plan.label} 갱신`)
                 } catch (chargeErr) {
                     // 같은 주문번호가 이미 결제됐을 수 있다(앞 실행이 결제 후 죽음, 또는 응답만 늦음) → 토스에 물어 확인
                     let prior: OrderLookup | null | 'error'

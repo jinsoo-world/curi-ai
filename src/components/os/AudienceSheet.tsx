@@ -154,7 +154,7 @@ export default function AudienceSheet({ mentorId, botName, onClose }: { mentorId
                         <input type="number" min={0} value={limit} onChange={e => setLimit(e.target.value)} disabled={busy}
                             placeholder="정해 두지 않으면 각자 요금제 한도를 따라요" aria-label="방문자 1인당 주간 한도" />
                         <div style={{ color: 'var(--os-글-흐림)', fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>
-                            실제 한도는 방문자의 큐리 요금제 한도와 이 값 중 더 작은 쪽이에요. 내가 이 봇과 나누는 대화는 이 한도와 상관없어요(내 요금제 한도만 적용).
+                            실제 한도는 방문자의 서프 요금제 한도와 이 값 중 더 작은 쪽이에요. 내가 이 봇과 나누는 대화는 이 한도와 상관없어요(내 요금제 한도만 적용).
                         </div>
 
                         {level === 'insiders' && (

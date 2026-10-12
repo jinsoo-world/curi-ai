@@ -353,7 +353,7 @@ export default function EbookViewer({ ebook, meta, ctaLinks, onClose, onEditRequ
                 {theme === 'minimal' && (
                     <div style={{ marginTop: 'auto', textAlign: 'center' }}>
                         <p style={{ fontSize: 11, color: '#a8a29e', margin: 0 }}>
-                            {cover.subtitle ? '' : '큐리 AI · 전자책'}
+                            {cover.subtitle ? '' : '서프 · 전자책'}
                         </p>
                     </div>
                 )}

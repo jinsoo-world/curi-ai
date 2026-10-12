@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: { params: Promise<{ mentorId:
     const { mentorId } = await params
     const m = (await getPublicMentorById(mentorId)) as Mentor | null
     if (!m) return { title: '봇을 찾을 수 없어요' }
-    return { title: `${m.name} | 큐리AI`, description: m.title || m.description || `${m.name} 봇과 대화해 보세요` }
+    return { title: `${m.name} | 서프`, description: m.title || m.description || `${m.name} 봇과 대화해 보세요` }
 }
 
 export default async function MentorDetailPage({ params }: { params: Promise<{ mentorId: string }> }) {

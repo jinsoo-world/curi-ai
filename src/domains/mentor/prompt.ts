@@ -271,7 +271,7 @@ ${CONVERSATION_RULES}
             lines.push(`소속: ${userContext.orgName}`)
         }
         if (userContext.useCases?.length) {
-            lines.push(`큐리AI로 하려는 일: ${userContext.useCases.join(', ')}`)
+            lines.push(`서프로 하려는 일: ${userContext.useCases.join(', ')}`)
         }
         if (userContext.interests?.length) {
             lines.push(`관심사: ${userContext.interests.join(', ')}`)

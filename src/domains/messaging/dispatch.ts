@@ -198,7 +198,7 @@ export async function dispatch(input: DispatchInput, deps: DispatchDeps): Promis
         if (!deps.appPush) return block('driver_not_ready')
         const r = await deps.appPush({
             userId: message.userId, type: def.type, category: def.category,
-            title: message.subject ?? '큐리AI', body: message.body, deeplink: input.appPush!.deeplink,
+            title: message.subject ?? '서프', body: message.body, deeplink: input.appPush!.deeplink,
             dedupe: input.test ? undefined : input.dedupe, ignoreLimits: input.test === true,
         })
         if ('skipped' in r) return block('driver_not_ready')

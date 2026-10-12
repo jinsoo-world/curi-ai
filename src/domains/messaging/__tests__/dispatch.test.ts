@@ -75,7 +75,7 @@ function drivers(over: Partial<Record<Channel, Driver>> = {}): Record<Channel, D
 }
 
 const msg = (channel: Channel, extra: Partial<OutboundMessage> = {}): OutboundMessage => ({
-    channel, userId: 'u1', body: '루틴이 끝났어요', subject: '큐리AI', to: channel === 'sms' ? '01012345678' : channel === 'email' ? 'jin@mission-driven.kr' : undefined, ...extra,
+    channel, userId: 'u1', body: '루틴이 끝났어요', subject: '서프', to: channel === 'sms' ? '01012345678' : channel === 'email' ? 'jin@mission-driven.kr' : undefined, ...extra,
 })
 
 describe('messaging/dispatch — 모든 발신은 관문 한 곳을 지난다', () => {

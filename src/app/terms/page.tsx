@@ -26,7 +26,7 @@ export default function TermsPage() {
                             개인정보처리방침 화면과 같은 방식으로 진짜 로고 그림을 쓴다. */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src="/logo.png" alt="" style={{ width: 28, height: 28, borderRadius: 6 }} />
-                        큐리 AI
+                        서프
                     </a>
                 </div>
             </header>
@@ -56,7 +56,7 @@ export default function TermsPage() {
                             제1조 (목적)
                         </h2>
                         <p>
-                            본 약관은 큐리 AI(이하 &quot;서비스&quot;)가 제공하는 AI 멘토링 서비스의 이용 조건 및 절차,
+                            본 약관은 서프(이하 &quot;서비스&quot;)가 제공하는 AI 멘토링 서비스의 이용 조건 및 절차,
                             이용자와 서비스 간의 권리·의무 등 기본적인 사항을 규정함을 목적으로 합니다.
                         </p>
 

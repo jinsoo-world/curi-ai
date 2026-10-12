@@ -201,7 +201,7 @@ export default function StartBody() {
                 {step === 0 && (
                     <section>
                         <h1 className="onb-h1">두 가지만 알려 주세요</h1>
-                        <div className="onb-label" style={{ marginTop: 0 }}>큐리AI를 어떻게 알게 되셨어요?</div>
+                        <div className="onb-label" style={{ marginTop: 0 }}>서프를 어떻게 알게 되셨어요?</div>
                         <Chips list={ACQUISITION} value={a.acquisition_source} onPick={id => set('acquisition_source', id)} />
                         {(a.acquisition_source === 'ai_chatbot' || a.acquisition_source === 'other') && (
                             <input className="onb-input" value={a.acquisition_detail} maxLength={80}
@@ -227,7 +227,7 @@ export default function StartBody() {
 
                 {step === 1 && (
                     <section className="onb-done">
-                        <div className="onb-mascot"><BotAvatar shape="clover" color="green" state="talking" size={112} name="큐리" /></div>
+                        <div className="onb-mascot"><BotAvatar shape="clover" color="green" state="talking" size={112} name="서프" /></div>
                         <h1 className="onb-h1">{name ? `${name}님, ` : ''}내 AI 팀이 준비됐어요</h1>
                         <p className="onb-sub">이제 내 블로그나 SNS 주소를 넣으면 나를 닮은 봇이 생겨요</p>
                         {refNote && <p className="onb-ok">{refNote}</p>}

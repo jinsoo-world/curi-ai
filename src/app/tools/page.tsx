@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     title: '프로필 사진 만들기',
     description: '사진 한 장으로 프로페셔널한 프로필 사진을 만들어보세요. 강사 프로필, 배우 프로필, 화질 개선까지.',
     openGraph: {
-        title: '프로필 사진 만들기 — 큐리 AI',
+        title: '프로필 사진 만들기 — 서프',
         description: '강사 프로필, 배우 프로필, 화질 개선 도구를 제공합니다.',
     },
 }

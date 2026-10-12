@@ -88,7 +88,7 @@ export default function WelcomeGift() {
                 }}
             >
                 <p style={{ fontSize: 15, color: 'var(--먹연)', margin: '0 0 6px', fontWeight: 700 }}>
-                    큐리 AI 에 오신 것을 환영합니다
+                    서프 에 오신 것을 환영합니다
                 </p>
                 <h2 style={{ fontSize: 30, fontWeight: 900, letterSpacing: '-0.04em', margin: '0 0 22px', color: 'var(--먹)' }}>
                     클로버 {TRIAL_CLOVERS}개 받기

@@ -6,18 +6,18 @@ import OsMake from '@/components/os/OsMake'
 
 const DESC = '내 SNS 주소만 넣으면 나처럼 말하는 AI가 생겨요. 무료로 시작하세요.'
 export const metadata: Metadata = {
-    title: { absolute: '나처럼 말하는 AI 만들기 | 큐리AI' },
+    title: { absolute: '나처럼 말하는 AI 만들기 | 서프' },
     description: DESC,
     openGraph: {
-        title: '나처럼 말하는 AI 만들기 | 큐리AI',
+        title: '나처럼 말하는 AI 만들기 | 서프',
         description: DESC,
         type: 'website',
         url: 'https://www.curi-ai.com/os/make',
-        siteName: '큐리 AI',
+        siteName: '서프',
         locale: 'ko_KR',
-        images: [{ url: '/og-image.png', width: 1200, height: 630, alt: '큐리AI' }],
+        images: [{ url: '/og-image.png', width: 1200, height: 630, alt: '서프' }],
     },
-    twitter: { card: 'summary_large_image', title: '나처럼 말하는 AI 만들기 | 큐리AI', description: DESC, images: ['/og-image.png'] },
+    twitter: { card: 'summary_large_image', title: '나처럼 말하는 AI 만들기 | 서프', description: DESC, images: ['/og-image.png'] },
     alternates: { canonical: 'https://www.curi-ai.com/os/make' },
     robots: { index: true, follow: true },
 }

@@ -26,7 +26,7 @@ export interface CuriModel {
 export const CURI_MODELS: CuriModel[] = [
     {
         id: 'curi-v1',
-        label: '큐리 v1',
+        label: '서프 v1',
         badge: '우리 모델',
         desc: '중장년 얼굴이 딴사람이 되지 않게 우리가 손봤어요',
         engine: IMAGE_MODEL_PRO,

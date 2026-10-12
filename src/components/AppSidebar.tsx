@@ -131,10 +131,10 @@ export default function AppSidebar() {
         <header className="app-top">
             <div className="app-top-inner">
                 {/* 왼쪽 — 이름표 */}
-                <Link href="/" className="app-top-logo" aria-label="큐리AI 홈">
+                <Link href="/" className="app-top-logo" aria-label="서프 홈">
                     {/* 로고 = PWA 아이콘의 클로버 얼굴 하나로 통일 (대표 지시 0923). 파비콘도 같은 그림 */}
                     <Image src="/icons/curi-192.png" alt="" width={32} height={32} style={{ borderRadius: 9 }} />
-                    <span>큐리AI</span>
+                    <span>서프</span>
                 </Link>
 
                 {/* 가운데 — 메뉴 (넓은 화면에서만) */}

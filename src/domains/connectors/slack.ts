@@ -58,5 +58,5 @@ export async function slackPost(webhookUrl: string, text: string): Promise<Slack
 
 /** 연결 확인 — 진짜로 글을 한 줄 올려 본다(웹훅은 확인만 하는 길이 없다) */
 export async function slackPing(webhookUrl: string): Promise<SlackPostResult> {
-    return slackPost(webhookUrl, '큐리AI 연결 확인이에요. 이 글이 보이면 연결된 거예요 🍀')
+    return slackPost(webhookUrl, '서프 연결 확인이에요. 이 글이 보이면 연결된 거예요 🍀')
 }

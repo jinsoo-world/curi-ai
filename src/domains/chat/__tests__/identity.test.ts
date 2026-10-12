@@ -3,25 +3,25 @@ import { describe, it, expect } from 'vitest'
 import { identityGuardPrompt, scrubModelNames } from '../identity'
 
 describe('identityGuardPrompt', () => {
-    it('봇 이름과 큐리AI 를 넣고, 모델과 회사 이름을 말하지 말라고 한다', () => {
+    it('봇 이름과 서프 를 넣고, 모델과 회사 이름을 말하지 말라고 한다', () => {
         const p = identityGuardPrompt('열정진')
         expect(p).toContain('열정진')
-        expect(p).toContain('큐리AI')
+        expect(p).toContain('서프')
         for (const w of ['솔라', '업스테이지', '제미나이', 'GPT']) expect(p).toContain(w)
     })
     it('이름이 없어도 깨지지 않는다', () => {
-        expect(identityGuardPrompt(null)).toContain('큐리AI')
+        expect(identityGuardPrompt(null)).toContain('서프')
     })
 })
 
 describe('scrubModelNames — 봇 자신의 모델 이름 가리기', () => {
     it.each([
-        ['저는 업스테이지 솔라 4입니다', '저는 큐리AI입니다'],
-        ['I am Solar Pro by Upstage', 'I am 큐리AI'],
-        ['업스테이지의 솔라 프로 모델이에요', '큐리AI 모델이에요'],
-        ['저는 솔라예요. 반가워요', '저는 큐리AI예요. 반가워요'],
-        ['나는 구글 제미나이 기반이야', '나는 큐리AI 기반이야'],
-        ["I'm GPT-4o.", "I'm 큐리AI."],
+        ['저는 업스테이지 솔라 4입니다', '저는 서프입니다'],
+        ['I am Solar Pro by Upstage', 'I am 서프'],
+        ['업스테이지의 솔라 프로 모델이에요', '서프 모델이에요'],
+        ['저는 솔라예요. 반가워요', '저는 서프예요. 반가워요'],
+        ['나는 구글 제미나이 기반이야', '나는 서프 기반이야'],
+        ["I'm GPT-4o.", "I'm 서프."],
     ])('%s → %s', (input, want) => {
         expect(scrubModelNames(input)).toBe(want)
     })

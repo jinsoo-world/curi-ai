@@ -217,7 +217,7 @@ describe('readCurious', () => {
     })
 })
 
-describe('큐리AI 링크 읽기 연결', () => {
+describe('서프 링크 읽기 연결', () => {
     beforeEach(() => {
         cacheClear()
         vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
