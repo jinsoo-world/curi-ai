@@ -13,8 +13,8 @@ const OFFLINE_URL = '/offline.html'
 const SHELL_URLS = [
     OFFLINE_URL,
     '/manifest.json',
-    '/icons/curi-192.png',
-    '/icons/curi-512.png',
+    '/icons/curi-192.png?v=5',
+    '/icons/curi-512.png?v=5',
 ]
 
 // 설치 = 껍데기 저장 + 바로 새 워커로 교체

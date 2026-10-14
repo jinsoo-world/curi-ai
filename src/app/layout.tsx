@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.ico',
-    apple: '/icons/apple-touch-icon-180.png?v=4',
+    apple: '/icons/apple-touch-icon-180.png?v=5',
   },
   // 아이폰 「홈 화면에 추가」 = 주소창 없이 앱처럼 열리고, 상태바가 화면 위에 겹친다(검정 바탕이라 자연스럽다)
   appleWebApp: {
@@ -74,7 +74,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#03c124',   // 큐리어스 본체 초록 (1003)
+  themeColor: '#0072E1',   // 서프 Royal (1014 파도 브랜드)
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
